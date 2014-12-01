@@ -1,4 +1,4 @@
-neoexchange
+NEO Exchange
 ===========
 
-NEO observing portal
+Portal for scheduling observations of NEOs using LCOGT.

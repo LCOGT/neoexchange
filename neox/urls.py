@@ -1,17 +1,23 @@
-from django.conf.urls import patterns, include, url
+'''
+NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
+Copyright (C) 2014 LCOGT
 
-# Uncomment the next two lines to enable the admin:
-# from django.contrib import admin
-# admin.autodiscover()
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+'''
+from django.conf.urls import patterns, include, url
+from django.contrib import admin
+admin.autodiscover()
 
 urlpatterns = patterns('',
-    # Examples:
-    # url(r'^$', 'neox.views.home', name='home'),
-    # url(r'^neox/', include('neox.foo.urls')),
-
-    # Uncomment the admin/doc line below to enable admin documentation:
-    # url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-
-    # Uncomment the next line to enable the admin:
-    # url(r'^admin/', include(admin.site.urls)),
+    url(r'^$', 'neox.views.home', name='home'),
+    url(r'^neox/', include('neox.foo.urls')),
+    url(r'^admin/', include(admin.site.urls)),
 )
