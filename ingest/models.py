@@ -23,12 +23,13 @@ OBJECT_TYPES = (
 			)
 
 class Source(models.Model):
-	provisional_name 	= models.CharField('Provisional designation',max_length=15)
+	provisional_name 	= models.CharField('Provisional MPC designation',max_length=15)
 	provisional_packed 	= models.CharField('MPC name in packed format', max_length=7)
 	name 				= models.CharField('Designation',max_length=15, blank=True, null=True)
 	source_type 		= models.CharField('Type of object',max_length=1,choices=OBJECT_TYPES)
 	active 				= models.BooleanField('Actively following?', default=False)
-	fast_moving 		= models.BooleanField('is this object fast?', default=False)
+	fast_moving 		= models.BooleanField('Is this object fast?', default=False)
+	urgency				= models.IntegerField(help_text='how urgent is this?', blank=True, null=True)
     epochofel 			= models.FloatField('Epoch of elements in MJD')
     orbinc 				= models.FloatField('Orbital inclination in deg')
     longascnode 		= models.FloatField('Longitude of Ascending Node (deg)')
