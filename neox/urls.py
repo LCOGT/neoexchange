@@ -14,10 +14,10 @@ GNU General Public License for more details.
 '''
 from django.conf.urls import patterns, include, url
 from django.contrib import admin
+
 admin.autodiscover()
 
 urlpatterns = patterns('',
-    url(r'^$', 'neox.views.home', name='home'),
-    url(r'^neox/', include('neox.foo.urls')),
+    #url(r'^$', 'neox.views.home', name='home'),
     url(r'^admin/', include(admin.site.urls)),
 )
