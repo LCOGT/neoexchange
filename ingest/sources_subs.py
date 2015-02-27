@@ -34,8 +34,8 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False):
     try:
         response = opener.open(req_page)
     except urllib2.URLError as e:
-    	if not hasattr(e, "code"):
-	    raise
+        if not hasattr(e, "code"):
+            raise
         print "Page retrieval failed:", e
         return None
 
@@ -50,42 +50,42 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False):
     
 def fetch_previous_NEOCP_desigs(dbg=False):
     '''Fetches the "Previous NEO Confirmation Page Objects" from the MPC, parses
-    it and returns <some datastructure> of object, provisional designation, date
-    and MPEC.'''
+    it and returns a list of lists of object, provisional designation or failure
+    reason, date and MPEC.'''
     
     previous_NEOs_url='http://www.minorplanetcenter.net/iau/NEO/ToConfirm_PrevDes.html'
     
     page = fetchpage_and_make_soup(previous_NEOs_url)
     if page == None:
-    	return None
-	
+        return None
+
     divs = page.findAll('div', id="main")
     
     crossids = []
     for row in divs[0].findAll('li'):
-    	items = row.contents
-	if dbg: print items,len(items)
-	crossmatch = ['', '', '', '']
-	if len(items) == 1:
+        items = row.contents
+        if dbg: print items,len(items)
+        crossmatch = ['', '', '', '']
+        if len(items) == 1:
 # Is of the form "<foo> does not exist" or "<foo> was not confirmed"
-    	    chunks = items[0].split()
-	    none_id = ''
-	    if chunks[1].find('does') >= 0:
-	    	none_id = 'doesnotexist'
-	    elif chunks[1].find('was') >= 0:
-	    	none_id = 'wasnotconfirmed'
-	    
-    	    crossmatch = [chunks[0], none_id, '', ' '.join(chunks[-3:])]
-    	elif len(items) == 3:
+            chunks = items[0].split()
+            none_id = ''
+            if chunks[1].find('does') >= 0:
+                none_id = 'doesnotexist'
+            elif chunks[1].find('was') >= 0:
+                none_id = 'wasnotconfirmed'
+
+            crossmatch = [chunks[0], none_id, '', ' '.join(chunks[-3:])]
+        elif len(items) == 3:
 # Is of the form "<foo> = <bar>(<date> UT)"
-    	    if items[0].find('Comet') != 1:
-		newid = str(items[0]).lstrip()+items[1].string.strip()
-		provid_date = items[2].split('(')
-		provid = provid_date[0].replace(' = ','')
-		date = '('+provid_date[1].strip()
-		mpec = ''
-    	    else:
-	    	print "Comet found, parsing"
+            if items[0].find('Comet') != 1:
+                newid = str(items[0]).lstrip()+items[1].string.strip()
+                provid_date = items[2].split('(')
+                provid = provid_date[0].replace(' = ','')
+                date = '('+provid_date[1].strip()
+                mpec = ''
+            else:
+                if dbg: print "Comet found, parsing"
 #                print "Items=",items
                 items[0] = items[0].replace(' (', '(')
                 subitems = items[0].lstrip().split()
@@ -94,42 +94,42 @@ def fetch_previous_NEOCP_desigs(dbg=False):
                 provid = provid_date[0]
                 date = '('+provid_date[1] + ' ' + subitems[5] + ' ' + subitems[6]
                 mpec = items[1].contents[0].string + items[1].contents[1].string
-		
-	    crossmatch = [provid, newid, mpec, date]
-    	elif len(items) == 5:
+
+            crossmatch = [provid, newid, mpec, date]
+        elif len(items) == 5:
 # Is of the form "<foo> = <bar> (date UT) [see MPEC<x>]"
-	    newid = str(items[0]).lstrip()+items[1].string.strip()
-	    provid_date = items[2].split()
-	    provid = provid_date[1]
-	    date = ' '.join(provid_date[2:5])
-	    mpec = items[3].contents[0].string + items[3].contents[1].string
-	    crossmatch = [provid, newid, mpec, date]
-	else:
-	    print "Unknown number of fields"
+            newid = str(items[0]).lstrip()+items[1].string.strip()
+            provid_date = items[2].split()
+            provid = provid_date[1]
+            date = ' '.join(provid_date[2:5])
+            mpec = items[3].contents[0].string + items[3].contents[1].string
+            crossmatch = [provid, newid, mpec, date]
+        else:
+            print "Unknown number of fields"
 # Append to list
-    	if crossmatch !=  ['', '', '', '']:
-	    crossids.append(crossmatch)
+        if crossmatch !=  ['', '', '', '']:
+            crossids.append(crossmatch)
 
     return crossids
 
 def fetch_NEOCP(dbg=False):
 
-    '''Fetches the NEO Confirmation Page and extracts a list of objects, which is
-    returned.'''    
+    '''Fetches the NEO Confirmation Page and extracts a list of objects, which
+    is returned.'''
     
     NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/ToConfirm.html'
 
     neocp_page = fetchpage_and_make_soup(NEOCP_url)
     if neocp_page == None:
-    	return None
+        return None
 
 # Find all the input checkboxes with "obj" in the name    
     neocp_objects = neocp_page.findAll('input', attrs = {"name" : "obj"})
 
     new_objects = []
     for row in neocp_objects:
-    	new_objects.append(row['value'])
-	
+        new_objects.append(row['value'])
+
     return new_objects
 
 def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
@@ -160,8 +160,8 @@ def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
             neo_cand_fh = open(neocand_filename, 'w')
             for line in obs_page_list:
                 obs_page_line = "%80s" % ( line )
-	        print >> neo_cand_fh, obs_page_line
-	    neo_cand_fh.close()
+                print >> neo_cand_fh, obs_page_line
+            neo_cand_fh.close()
             lines_written =  len(obs_page_list)
             print "Wrote",lines_written,"MPC lines to",neocand_filename
         else:
@@ -175,7 +175,7 @@ def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
 def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
     '''Query the MPC's showobs service with the specified <obj_id> and
     it will write the orbit found into <savedir>/<obj_id>.neocp
-    Only the first of the potential orbits (the 'NEOCPNomin' nominal orbit) is 
+    Only the first of the potential orbits (the 'NEOCPNomin' nominal orbit) is
     returned if there are multiple orbits found.
     The file will not be overwritten if it exists unless 'delete=True'
     Returns the number of lines written or None if:
@@ -204,8 +204,8 @@ def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
                 if 'NEOCPNomin' in line:
                   neo_orbit_fh = open(neocand_filename, 'w')
 #                obs_page_line = "%80s" % ( line )
-	          print >> neo_orbit_fh, line
-	          neo_orbit_fh.close()
+                  print >> neo_orbit_fh, line
+                  neo_orbit_fh.close()
                   orbit_lines_written = orbit_lines_written + 1
             print "Wrote",orbit_lines_written,"orbit lines to",neocand_filename
         else:
@@ -224,14 +224,14 @@ def fetch_mpcobs(asteroid, file_to_save, debug=False):
     
     page = fetchpage_and_make_soup(query_url)
     if page == None:
-    	return None
+        return None
 
     if debug: print page
-# Find all the '<a foo' tags in the page. This will contain the links we need, 
+# Find all the '<a foo' tags in the page. This will contain the links we need,
 # plus other junk
     refs = page.findAll('a')
 
-# Use a list comprehension to find the 'tmp/<asteroid>.dat' link in among all 
+# Use a list comprehension to find the 'tmp/<asteroid>.dat' link in among all
 # the other links
     link = [x.get('href') for x in refs if 'tmp/'+asteroid in x.get('href')]
     
