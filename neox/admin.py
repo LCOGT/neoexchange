@@ -18,7 +18,12 @@ from django.contrib import admin
 import reversion
 
 class BodyAdmin(reversion.VersionAdmin):
-    pass
+    search_fields = ('provisional_name',)
+    list_display = ('provisional_name', 'name', 'origin', 'source_type', 
+      'active', 'fast_moving', 'urgency')
+    list_filter = ('origin', 'source_type', 'elements_type', 'active', 
+      'fast_moving', 'urgency')
+
 
 class BlockAdmin(reversion.VersionAdmin):
     pass

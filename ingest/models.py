@@ -21,9 +21,10 @@ OBJECT_TYPES = (
                 ('N','NEO'),
                 ('A','Asteroid'),
                 ('C','Comet'),
-                ('T','TNO'),
+                ('K','KBO'),
                 ('E','Centaur'),
-                ('R','Trojan')
+                ('T','Trojan'),
+                ('U','NEO Candidate')
             )
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
@@ -71,7 +72,7 @@ class Body(models.Model):
     argofperih          = models.FloatField('Arg of perihelion (deg)')
     eccentricity        = models.FloatField('Eccentricity')
     meandist            = models.FloatField('Mean distance (AU)', blank=True, null=True, help_text='for asteroids')
-    meananom            = models.FloatField('Mean Anomoly (deg)', blank=True, null=True, help_text='for asteroids')
+    meananom            = models.FloatField('Mean Anomaly (deg)', blank=True, null=True, help_text='for asteroids')
     perihdist           = models.FloatField('Perihelion distance (AU)', blank=True, null=True, help_text='for comets')
     epochofperih        = models.FloatField('Epoch of perihelion (MJD)', blank=True, null=True, help_text='for comets')
     ingest              = models.DateTimeField(default=datetime.now())
