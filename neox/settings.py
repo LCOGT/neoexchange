@@ -77,6 +77,11 @@ TEMPLATE_LOADERS = (
 #     'django.template.loaders.eggs.Loader',
 )
 
+TEMPLATE_CONTEXT_PROCESSORS = (
+    "django.core.context_processors.request",
+    'django.contrib.auth.context_processors.auth',
+)
+
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -98,7 +103,11 @@ TEMPLATE_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
 )
 
+# GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
+
 INSTALLED_APPS = (
+    # 'grappelli.dashboard',
+    'grappelli',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -108,6 +117,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'neox',
     'ingest',
+    'reversion',
 )
 
 ##################

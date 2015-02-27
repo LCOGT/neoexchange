@@ -61,7 +61,7 @@ class Body(models.Model):
     name                = models.CharField('Designation',max_length=15, blank=True, null=True)
     origin              = models.CharField('Where did this target come from?',max_length=1, choices=ORIGINS, default="M")
     source_type         = models.CharField('Type of object',max_length=1,choices=OBJECT_TYPES)
-    elements_type       = models.CharField('Elements type', max_length=1, choices=ELEMENTS_TYPES)
+    elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES)
     active              = models.BooleanField('Actively following?', default=False)
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
     urgency             = models.IntegerField(help_text='how urgent is this?', blank=True, null=True)

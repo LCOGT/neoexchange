@@ -12,13 +12,24 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
-from django.conf.urls import patterns, include, url
+from ingest.models import *
 from django.contrib import admin
 
-admin.autodiscover()
+import reversion
 
-urlpatterns = patterns('',
-    #url(r'^$', 'neox.views.home', name='home'),
-    (r'^grappelli/', include('grappelli.urls')),
-    url(r'^admin/', include(admin.site.urls)),
-)
+class BodyAdmin(reversion.VersionAdmin):
+    pass
+
+class BlockAdmin(reversion.VersionAdmin):
+    pass
+
+class RecordAdmin(reversion.VersionAdmin):
+    pass
+
+class ProposalAdmin(admin.ModelAdmin):
+    pass
+
+admin.site.register(Body,BodyAdmin)
+admin.site.register(Record,RecordAdmin)
+admin.site.register(Block,BlockAdmin)
+admin.site.register(Proposal,ProposalAdmin)
