@@ -24,7 +24,8 @@ OBJECT_TYPES = (
                 ('K','KBO'),
                 ('E','Centaur'),
                 ('T','Trojan'),
-                ('U','NEO Candidate')
+                ('U','NEO Candidate'),
+                ('X','Did not exist')
             )
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
@@ -43,6 +44,21 @@ TELESCOPE_CHOICES = (
                         ('2m0','2-meter'),
                         ('0m4','0.4-meter')
                     )
+
+def check_object_exists(objname,dbg=False):
+
+    try:
+        block_id = Body.objects.get(provisional_name__contains=objname)  
+    except Body.MultipleObjectsReturned:
+        if dbg: print "Multiple bodies found"
+        return 2
+    except Body.DoesNotExist:
+        if dbg: print "Body not found"
+        return 0
+    else:
+        if dbg: print "Body found"
+        return 1
+
 
 class Proposal(models.Model):
     code = models.CharField(max_length=20)

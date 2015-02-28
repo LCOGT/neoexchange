@@ -23,6 +23,7 @@ class BodyAdmin(reversion.VersionAdmin):
       'active', 'fast_moving', 'urgency')
     list_filter = ('origin', 'source_type', 'elements_type', 'active', 
       'fast_moving', 'urgency')
+    ordering = ('-ingest',)
 
 
 class BlockAdmin(reversion.VersionAdmin):

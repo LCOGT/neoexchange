@@ -20,17 +20,17 @@ import os
 from ingest.sources_subs import fetch_NEOCP, fetch_NEOCP_orbit
 from datetime import datetime, tzinfo
 from pytz import timezone
-# Need to set this so Django can find its settings
-os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
-from ingest.models import Body
 from rise_set.moving_objects import read_neocp_orbit
 
-dbg = True
-savedir = os.path.join('/tmp', 'neoexchange')
+# Need to set this so Django can find its settings
+os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
+from ingest.models import Body, check_object_exists
 
 def insert_new_object(elements):
     '''Creates new Body entries in the DB from the passed element dictionary if
-    the object doesn't exist already'''
+    the object doesn't already exist.
+    
+    Returns -1 if a Bad Thing happened or 0 if the new Body was inserted.'''
 
     status = -1
     try:
@@ -61,24 +61,38 @@ def insert_new_object(elements):
 
     return status
     
-# Fetch down a list of objects from the MPC's NEO Confirmation Page
-object_list = fetch_NEOCP()
+if __name__ == '__main__':
 
-if dbg: print object_list
-# Loop over objects, fetch the orbit from the MPC's NEO Confirmation Page links 
-# and insert into DB
-for astobj in object_list:
-# Fetch the orbit file for the candidate, which returns 0 if no lines of orbit 
-# data were read (object is no longer on the NEOCP)
-    num_read = fetch_NEOCP_orbit(astobj, savedir, delete=True)
-    
-    if num_read != 0:
-        neocp_orbit_file = os.path.join(savedir, astobj+ '.neocp')
-# Read the orbit file from disk (should bypass and read direct) and get back
-# an element dictionary
-        elements = read_neocp_orbit(neocp_orbit_file)
-# Set the source type to be 'U'nknown (NEO candidate) and the origin to be 'M'PC
-        elements['source_type'] = 'U' # NEO candidate
-        elements['origin'] = 'M' # MPC
-        if dbg: print elements
-        insert_status = insert_new_object(elements)
+    dbg = True
+    savedir = os.path.join('/tmp', 'neoexchange')
+
+    # Fetch down a list of objects from the MPC's NEO Confirmation Page
+    object_list = fetch_NEOCP()
+
+    if dbg: print object_list
+    # Loop over objects, fetch the orbit from the MPC's NEO Confirmation Page 
+    # links and insert into DB
+    for astobj in object_list:
+        # If the object doesn't already exist, try to get and insert
+        # XXX TODO find out if it has changed since last time and update
+        # if it has
+        if check_object_exists(astobj) == 0:
+            # Fetch the orbit file for the candidate, which returns 0 if no 
+            # lines of orbit data were read (object is no longer on the NEOCP)
+            num_read = fetch_NEOCP_orbit(astobj, savedir, delete=True)
+
+            if num_read != 0:
+                neocp_orbit_file = os.path.join(savedir, astobj+ '.neocp')
+                # Read the orbit file from disk (should bypass and read direct)
+                # and get back an element dictionary
+                elements = read_neocp_orbit(neocp_orbit_file)
+
+                # Set the source type to be 'U'nknown (NEO candidate) and the 
+                # origin to be 'M'PC
+                elements['source_type'] = 'U' # NEO candidate
+                elements['origin'] = 'M' # MPC
+                if dbg: print elements
+                insert_status = insert_new_object(elements)
+        else:
+            if dbg: print "Object", astobj, "already exists in the DB"
+            
