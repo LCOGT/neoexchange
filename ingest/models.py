@@ -22,10 +22,16 @@ OBJECT_TYPES = (
                 ('N','NEO'),
                 ('A','Asteroid'),
                 ('C','Comet'),
-                ('T','TNO'),
+                ('K','KBO'),
                 ('E','Centaur'),
+<<<<<<< HEAD
                 ('R','Trojan'),
                 ('U','Unknown/NEO candidate')
+=======
+                ('T','Trojan'),
+                ('U','NEO Candidate'),
+                ('X','Did not exist')
+>>>>>>> origin/master
             )
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
@@ -44,6 +50,21 @@ TELESCOPE_CHOICES = (
                         ('2m0','2-meter'),
                         ('0m4','0.4-meter')
                     )
+
+def check_object_exists(objname,dbg=False):
+
+    try:
+        block_id = Body.objects.get(provisional_name__contains=objname)  
+    except Body.MultipleObjectsReturned:
+        if dbg: print "Multiple bodies found"
+        return 2
+    except Body.DoesNotExist:
+        if dbg: print "Body not found"
+        return 0
+    else:
+        if dbg: print "Body found"
+        return 1
+
 
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
@@ -73,7 +94,7 @@ class Body(models.Model):
     argofperih          = models.FloatField('Arg of perihelion (deg)',blank=True, null=True)
     eccentricity        = models.FloatField('Eccentricity',blank=True, null=True)
     meandist            = models.FloatField('Mean distance (AU)', blank=True, null=True, help_text='for asteroids')
-    meananom            = models.FloatField('Mean Anomoly (deg)', blank=True, null=True, help_text='for asteroids')
+    meananom            = models.FloatField('Mean Anomaly (deg)', blank=True, null=True, help_text='for asteroids')
     perihdist           = models.FloatField('Perihelion distance (AU)', blank=True, null=True, help_text='for comets')
     epochofperih        = models.DateTimeField('Epoch of perihelion', blank=True, null=True, help_text='for comets')
     ingest              = models.DateTimeField(default=datetime.now())

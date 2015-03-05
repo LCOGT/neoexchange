@@ -17,6 +17,28 @@ GNU General Public License for more details.
 import urllib2, os
 from bs4 import BeautifulSoup
 
+def download_file(url, file_to_save):
+    '''Helper routine to download from a URL and save into a file with error trapping'''
+
+    attempts = 0
+    while attempts < 3:
+        try:
+            url_handle  = urllib2.urlopen(url)
+            file_handle = open(file_to_save, 'wb')
+            for line in url_handle:
+                file_handle.write(line)
+            url_handle.close()
+            file_handle.close()
+            print "Downloaded:", file_to_save
+            break
+        except urllib2.HTTPError, e:
+            attempts += 1
+            if hasattr(e, 'reason'):
+                print "HTTP Error %d: %s, retrying" % (e.code, e.reason)
+            else:
+                print "HTTP Error: %s" % (e.code,)
+
+
 def fetchpage_and_make_soup(url, fakeagent=False, dbg=False):
     '''Fetches the specified URL from <url> and parses it using BeautifulSoup.
     If <fakeagent> is set to True, we will pretend to be a Firefox browser on
@@ -47,7 +69,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False):
 
     return page
 
-    
+
 def fetch_previous_NEOCP_desigs(dbg=False):
     '''Fetches the "Previous NEO Confirmation Page Objects" from the MPC, parses
     it and returns a list of lists of object, provisional designation or failure
@@ -195,7 +217,7 @@ def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
     # Create save directory if it doesn't exist
         if not os.path.isdir(savedir): os.mkdir(savedir)
 
-        print "Will save files in", savedir
+        if dbg: print "Will save files in", savedir
         neocand_filename = os.path.join(savedir, obj_id + '.neocp')
         if delete and os.path.isfile(neocand_filename): os.remove(neocand_filename)
         orbit_lines_written = 0
@@ -207,12 +229,12 @@ def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
                   print >> neo_orbit_fh, line
                   neo_orbit_fh.close()
                   orbit_lines_written = orbit_lines_written + 1
-            print "Wrote",orbit_lines_written,"orbit lines to",neocand_filename
+            if dbg: print "Wrote",orbit_lines_written,"orbit lines to",neocand_filename
         else:
-            print "File",neocand_filename,"already exists, not overwriting."
+            if dbg: print "File",neocand_filename,"already exists, not overwriting."
             
     else:
-        print "Object",obj_id,"no longer exists on the NEOCP."
+        if dbg: print "Object",obj_id,"no longer exists on the NEOCP."
 
     return orbit_lines_written
 
