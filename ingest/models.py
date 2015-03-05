@@ -24,14 +24,9 @@ OBJECT_TYPES = (
                 ('C','Comet'),
                 ('K','KBO'),
                 ('E','Centaur'),
-<<<<<<< HEAD
-                ('R','Trojan'),
-                ('U','Unknown/NEO candidate')
-=======
                 ('T','Trojan'),
-                ('U','NEO Candidate'),
+                ('U','Unknown/NEO Candidate'),
                 ('X','Did not exist')
->>>>>>> origin/master
             )
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
