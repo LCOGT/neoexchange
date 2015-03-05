@@ -1,10 +1,26 @@
+'''
+NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
+Copyright (C) 2014-2015 LCOGT
+
+update_crossids.py -- Various routines to handle times.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+'''
 import os
 from datetime import datetime, timedelta
 from sources_subs import fetch_previous_NEOCP_desigs
 from time_subs import parse_neocp_date
+from django.conf import settings
 
 # Need to set this so Django can find its settings
-os.environ['DJANGO_SETTINGS_MODULE'] = 'neosite.settings'
 from neosite.neositeapp.models import ObsBlock, Crossident, check_object_exists
 
 # Fetch Previous NEOCP webpage and parse

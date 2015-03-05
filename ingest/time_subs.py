@@ -59,3 +59,48 @@ def round_datetime(date_to_round, round_mins=10, round_up=False):
                 	microseconds=date_to_round.microsecond)
 
     return date_to_round
+
+def extract_mpc_epoch(epochstring):
+    '''Convert packed MPC epoch format (e.g. 'J974L') from NEOCP orbit files
+    into a datetime.datetime epoch (e.g. '1997 4 21'). Returns -1 if invalid
+    length (no other sanity checking is done)'''
+
+
+    
+    if len(epochstring) != 5: return -1
+    year = 100 * (ord(epochstring[0]) - ord('A') + 10) + \
+        10 * (ord(epochstring[1]) - ord('0')) + \
+    (ord(epochstring[2]) - ord('0'))
+
+    month = extract_packed_date(epochstring[3])
+    day = extract_packed_date(epochstring[4])
+
+    return datetime(year, month, day, 0)
+
+def extract_packed_date(value):
+    lookup = {  'A'     : 10,
+            'B'     : 11,
+            'C'     : 12,
+            'D'     : 13,
+            'E'     : 14,
+            'F'     : 15,
+            'G'     : 16,
+            'H'     : 17,
+            'I'     : 18,
+            'J'     : 19,
+            'K'     : 20,
+            'L'     : 21,
+            'M'     : 22,
+            'N'     : 23,
+            'O'     : 24,
+            'P'     : 25,
+            'Q'     : 26,
+            'R'     : 27,
+            'S'     : 28,
+            'T'     : 29,
+            'U'     : 30,
+            'V'     : 31}
+    try:
+        return int(value) 
+    except ValueError:
+        return lookup[value]

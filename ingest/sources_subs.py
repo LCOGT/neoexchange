@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 import urllib2, os
-import BeautifulSoup as bs
+from bs4 import BeautifulSoup
 
 def fetchpage_and_make_soup(url, fakeagent=False, dbg=False):
     '''Fetches the specified URL from <url> and parses it using BeautifulSoup.
@@ -43,7 +43,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False):
     neo_page = response.read()
 
 # Parse into beautiful soup
-    page  = bs.BeautifulSoup(neo_page)
+    page  = BeautifulSoup(neo_page)
 
     return page
 
@@ -244,3 +244,68 @@ def fetch_mpcobs(asteroid, file_to_save, debug=False):
         return file_to_save
     
     return None
+
+class PackedError(Exception):
+    '''Raised when an invalid pack code is found'''
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return self.value
+    
+def validate_packcode(packcode):
+    '''Method to validate that <packcode> is a valid MPC packed designation.
+    Format is as described at: 
+    http://www.minorplanetcenter.org/iau/info/PackedDes.html'''
+    
+    valid_cent_codes = { 'I' : 18, 'J' : 19, 'K' : 20 }
+    valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
+
+    if len(packcode) != 7:
+        raise PackedError("Invalid packcode length")
+    if packcode[0] not in valid_cent_codes:
+        raise PackedError("Invalid century code")
+    if packcode[1:3].isdigit() == False:
+        raise PackedError("Invalid year")
+    if packcode[3] not in valid_half_months:
+        raise PackedError("Invalid half-month character")
+    if not packcode[6].isupper() or not packcode[6].isalpha():
+        raise PackedError("Invalid half-month order character")
+    return True
+
+def packed_to_normal(packcode):
+    '''Converts MPC packed provisional designations e.g. K10V01F to unpacked
+    normal desigination i.e. 2010VF1'''
+    
+# Convert initial letter to century
+    cent_codes = { 'I' : 18, 'J' : 19, 'K' : 20 }
+    
+    if not validate_packcode(packcode):
+        raise PackedError("Invalid packcode %s" % packcode)
+        return None       
+    else:
+        mpc_cent = cent_codes[packcode[0]]
+ 
+# Convert next 2 digits to year
+    mpc_year = packcode[1:3]
+    no_in_halfmonth = packcode[3] + packcode[6]
+# Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a 
+# consecutive integer by converting to ASCII code and skipping the non-alphanumerics 
+    cycle = ord(packcode[4])
+    if cycle >= ord('a'):
+            cycle = cycle - 61
+    elif cycle >= ord('A') and cycle < ord('Z'):
+            cycle = cycle - 55
+    else:
+            cycle = cycle - ord('0')
+    digit = int(packcode[5])
+    count = cycle * 10 + digit
+# No digits on the end of the unpacked designation if it's the first loop through
+    if cycle == 0 and digit == 0:
+            count = ''
+
+# Assemble unpacked code
+    normal_code = str(mpc_cent) + mpc_year + no_in_halfmonth + str(count)
+    
+    return normal_code

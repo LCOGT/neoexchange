@@ -15,7 +15,8 @@ GNU General Public License for more details.
 from django.db import models
 from datetime import datetime
 from django.utils.translation import ugettext as _
-
+from astropy.time import Time
+import reversion
 
 OBJECT_TYPES = (
                 ('N','NEO'),
@@ -23,7 +24,8 @@ OBJECT_TYPES = (
                 ('C','Comet'),
                 ('T','TNO'),
                 ('E','Centaur'),
-                ('R','Trojan')
+                ('R','Trojan'),
+                ('U','Unknown/NEO candidate')
             )
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
@@ -59,22 +61,30 @@ class Body(models.Model):
     provisional_name    = models.CharField('Provisional MPC designation',max_length=15,blank=True, null=True)
     provisional_packed  = models.CharField('MPC name in packed format', max_length=7,blank=True, null=True)
     name                = models.CharField('Designation',max_length=15, blank=True, null=True)
-    origin              = models.CharField('Where did this target come from?',max_length=1, choices=ORIGINS, default="M")
-    source_type         = models.CharField('Type of object',max_length=1,choices=OBJECT_TYPES)
-    elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES)
+    origin              = models.CharField('Where did this target come from?',max_length=1, choices=ORIGINS, default="M",blank=True, null=True)
+    source_type         = models.CharField('Type of object',max_length=1,choices=OBJECT_TYPES,blank=True, null=True)
+    elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES,blank=True, null=True)
     active              = models.BooleanField('Actively following?', default=False)
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
     urgency             = models.IntegerField(help_text='how urgent is this?', blank=True, null=True)
-    epochofel           = models.FloatField('Epoch of elements in MJD')
-    orbinc              = models.FloatField('Orbital inclination in deg')
-    longascnode         = models.FloatField('Longitude of Ascending Node (deg)')
-    argofperih          = models.FloatField('Arg of perihelion (deg)')
-    eccentricity        = models.FloatField('Eccentricity')
+    epochofel           = models.DateTimeField('Epoch of elements',blank=True, null=True)
+    orbinc              = models.FloatField('Orbital inclination in deg',blank=True, null=True)
+    longascnode         = models.FloatField('Longitude of Ascending Node (deg)',blank=True, null=True)
+    argofperih          = models.FloatField('Arg of perihelion (deg)',blank=True, null=True)
+    eccentricity        = models.FloatField('Eccentricity',blank=True, null=True)
     meandist            = models.FloatField('Mean distance (AU)', blank=True, null=True, help_text='for asteroids')
     meananom            = models.FloatField('Mean Anomoly (deg)', blank=True, null=True, help_text='for asteroids')
     perihdist           = models.FloatField('Perihelion distance (AU)', blank=True, null=True, help_text='for comets')
-    epochofperih        = models.FloatField('Epoch of perihelion (MJD)', blank=True, null=True, help_text='for comets')
+    epochofperih        = models.DateTimeField('Epoch of perihelion', blank=True, null=True, help_text='for comets')
     ingest              = models.DateTimeField(default=datetime.now())
+
+    def epochofel_mjd(self):
+        t = Time(self.epochofel.isoformat(), format='isot', scale='utc')
+        return t.mjd
+
+    def epochofperih_mjd(self):
+        t = Time(self.epochofperih.isoformat(), format='isot', scale='utc')
+        return t.mjd
 
     class Meta:
         verbose_name = _('Minor Body')
@@ -86,7 +96,7 @@ class Body(models.Model):
         else:
             text = 'not '
         return u'%s is %sactive' % (self.provisional_name,text)
-
+reversion.register(Body)
 
 
 class Block(models.Model):

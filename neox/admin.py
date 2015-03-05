@@ -18,7 +18,20 @@ from django.contrib import admin
 import reversion
 
 class BodyAdmin(reversion.VersionAdmin):
-    pass
+    list_filter = ['active','source_type','elements_type','origin']
+    list_display = ['provisional_name','name','origin','ingest']
+    date_heirarchy = 'ingest'
+    fieldsets = (
+        (None, {
+            'fields': ('provisional_name', 'provisional_packed', 'name','origin','source_type')
+        }),
+        ('Elements', {
+            'fields': ('elements_type', 'epochofel', 'orbinc','longascnode','argofperih','eccentricity','meandist','meananom','perihdist', 'epochofperih')
+       }),
+        ('Follow Up',{
+        	'fields' : ('active','fast_moving','ingest')
+        })
+    )
 
 class BlockAdmin(reversion.VersionAdmin):
     pass
