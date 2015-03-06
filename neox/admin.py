@@ -18,13 +18,6 @@ from django.contrib import admin
 import reversion
 
 class BodyAdmin(reversion.VersionAdmin):
-<<<<<<< HEAD
-
-=======
-    list_filter = ['active','source_type','elements_type','origin']
-    list_display = ['provisional_name','name','origin','ingest']
-    date_heirarchy = 'ingest'
->>>>>>> origin/master
     fieldsets = (
         (None, {
             'fields': ('provisional_name', 'provisional_packed', 'name','origin','source_type')
@@ -36,8 +29,6 @@ class BodyAdmin(reversion.VersionAdmin):
         	'fields' : ('active','fast_moving','ingest')
         })
     )
-<<<<<<< HEAD
-
     search_fields = ('provisional_name',)
     list_display = ('provisional_name', 'name', 'origin', 'source_type', 
       'active', 'fast_moving', 'urgency')
@@ -45,9 +36,6 @@ class BodyAdmin(reversion.VersionAdmin):
       'fast_moving', 'urgency')
     ordering = ('-ingest',)
 
-
-=======
->>>>>>> origin/master
 
 class BlockAdmin(reversion.VersionAdmin):
     pass
