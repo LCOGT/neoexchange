@@ -11,3 +11,4 @@ numpy==1.9.1
 wsgiref==0.1.2
 pytz
 rise_set>=0.3.9
+html5lib
