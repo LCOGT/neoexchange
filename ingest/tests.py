@@ -111,6 +111,12 @@ class TestIntToMutantHexChar(object):
 class TestNormalToPacked(object):
     '''Unit tests for normal_to_packed() method'''
     
+    def test_number_t0(self):
+        expected_desig = '00001       '
+        packed_desig, ret_code = normal_to_packed('1')
+        assert_equal(packed_desig, expected_desig)
+        assert_equal(ret_code, 0)
+    
     def test_number_t1(self):
         expected_desig = '00719       '
         packed_desig, ret_code = normal_to_packed('719')
