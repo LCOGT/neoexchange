@@ -142,7 +142,7 @@ except ImportError as e:
 # more details on how to customize your logging configuration.
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
+    'disable_existing_loggers': True,
     'formatters': {
         'verbose': {
             'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
@@ -164,11 +164,16 @@ LOGGING = {
             'class': 'django.utils.log.AdminEmailHandler'
         },
         'file': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': 'neox.log',
-            'formatter': 'verbose'
+            'formatter': 'verbose',
+            'filters': ['require_debug_false']
         },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+        }
     },
     'loggers': {
         'django.request': {
@@ -176,9 +181,14 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
-        'neox.ingest' : {
+        'django': {
+            'handlers':['file','console'],
+            'propagate': True,
+            'level':'DEBUG',
+        },
+        'ingest' : {
             'handlers' : ['file'],
-            'level'    : 'INFO',
+            'level'    : 'DEBUG',
         }
     }
 }
