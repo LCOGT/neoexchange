@@ -27,7 +27,7 @@ def home(request):
 def save_and_make_revision(body,kwargs):
     for k, v in kwargs.items():
         setattr(body, k, v)
-        with reversion.create_on_success():
+        with reversion.create_revision():
             body.save()
     return
 
