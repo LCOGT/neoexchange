@@ -58,7 +58,7 @@ def update_NEOCP_orbit(obj_id, dbg=False):
             # Find out if the details have changed, if they have, save a revision
             check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
             if check_body.count() == 1 and check_body[0] == body:
-                save_and_make_revision(check_body,kwargs)
+                save_and_make_revision(check_body[0],kwargs)
                 logger.info("Updated %s" % obj_id)
         else:
             save_and_make_revision(body,kwargs)
