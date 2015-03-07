@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from ingest.models import Body
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal
-from ingest.time_subs import extract_mpc_epoch
+from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
 import reversion
 import logging
 logger = logging.getLogger(__name__)
@@ -69,7 +69,8 @@ def update_NEOCP_orbit(obj_id, dbg=False):
     return True
 
 def clean_NEOCP_object(page_list):
-    # Parse response from the MPC NEOCP page making sure we only return parameters from the 'NEOCPNomin' (nominal orbit)
+    '''Parse response from the MPC NEOCP page making sure we only return 
+    parameters from the 'NEOCPNomin' (nominal orbit)'''
     current = False
     if page_list[0] == '':
         page_list.pop(0)
@@ -97,3 +98,70 @@ def clean_NEOCP_object(page_list):
         params = []
     return params
 
+def update_crossids(astobj, dbg=False):
+    '''Update the passed <astobj> for a new cross-identification.
+    <astobj> is expected to be a list of:
+    provisional id, final id/failure reason, reference, confirmation date
+    normally produced by the fetch_previous_NEOCP_desigs() method.'''
+
+    if len(astobj) != 4:
+        return False
+
+    obj_id = astobj[0].rstrip()
+
+    body, created = Body.objects.get_or_create(provisional_name=obj_id)
+    # Determine what type of new object it is and whether to keep it active
+    kwargs = clean_crossid(astobj, dbg)
+    if not created:
+        print "Did not create new Body"
+        # Find out if the details have changed, if they have, save a revision
+        check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
+        if check_body.count() == 1 and check_body[0] == body:
+            save_and_make_revision(check_body[0],kwargs)
+            logger.info("Updated cross identification for %s" % obj_id)
+    else:
+        # Didn't know about this object before so create but make inactive
+        kwargs['active'] = False
+        save_and_make_revision(body,kwargs)
+        logger.info("Added cross identification for %s" % obj_id)
+    return True
+
+
+def clean_crossid(astobj, dbg=False):
+
+    confirm_date = parse_neocp_date(astobj[3])
+    obj_id = astobj[0].rstrip()
+    desig = astobj[1]
+    reference = astobj[2]
+
+    active = True
+    if obj_id != '' and desig == 'wasnotconfirmed':
+        # Unconfirmed, no longer interesting so set inactive
+        objtype = 'U'
+        desig = ''
+        active = False
+    elif obj_id != '' and desig == 'doesnotexist':
+        # Did not exist, no longer interesting so set inactive
+        objtype = 'X'
+        desig = ''
+        active = False
+    elif obj_id != '' and desig != '':
+        # Confirmed
+        if 'CBET' in reference:
+            # There is a reference to an CBET so we assume it's "very
+            # interesting" i.e. a comet
+            objtype = 'C'
+        elif 'MPEC' in reference:
+            # There is a reference to an MPEC so we assume it's
+            # "interesting" i.e. an NEO
+            objtype = 'N'
+        else:
+            objtype = 'A'
+
+    params = { 'source_type'  : objtype,
+               'name'         : desig,
+               'active'       : active
+             }
+    if dbg: print "%07s->%s (%s) %s" % ( obj_id, params['name'], params['source_type'], params['active'])
+
+    return params
