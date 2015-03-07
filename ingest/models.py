@@ -95,11 +95,11 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=datetime.now())
 
     def epochofel_mjd(self):
-        t = Time(self.epochofel.isoformat(), format='isot', scale='utc')
+        t = Time(self.epochofel.isoformat(), format='isot', scale='tt')
         return t.mjd
 
     def epochofperih_mjd(self):
-        t = Time(self.epochofperih.isoformat(), format='isot', scale='utc')
+        t = Time(self.epochofperih.isoformat(), format='isot', scale='tt')
         return t.mjd
 
     class Meta:

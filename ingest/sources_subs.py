@@ -39,10 +39,13 @@ def download_file(url, file_to_save):
                 print "HTTP Error: %s" % (e.code,)
 
 
-def fetchpage_and_make_soup(url, fakeagent=False, dbg=False):
+def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
     '''Fetches the specified URL from <url> and parses it using BeautifulSoup.
-    If <fakeagent> is set to True, we will pretend to be a Firefox browser on
-    Linux rather than as Python-urllib (in case of anti-machine filtering)
+    If [fakeagent] is set to True, we will pretend to be a Firefox browser on
+    Linux rather than as Python-urllib (in case of anti-machine filtering).
+    If [parser] is specified, try and use that BeautifulSoup parser (which 
+    needs to be installed). Defaults to "html.parser" if not specified; may need
+    to use "html5lib" to properly parse malformed MPC pages.
     
     Returns the page as a BeautifulSoup object if all was OK or None if the 
     page retrieval failed.'''
@@ -65,7 +68,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False):
     neo_page = response.read()
 
 # Parse into beautiful soup
-    page  = BeautifulSoup(neo_page)
+    page  = BeautifulSoup(neo_page, parser)
 
     return page
 
@@ -77,14 +80,14 @@ def fetch_previous_NEOCP_desigs(dbg=False):
     
     previous_NEOs_url='http://www.minorplanetcenter.net/iau/NEO/ToConfirm_PrevDes.html'
     
-    page = fetchpage_and_make_soup(previous_NEOs_url)
+    page = fetchpage_and_make_soup(previous_NEOs_url, parser="html5lib")
     if page == None:
         return None
 
-    divs = page.findAll('div', id="main")
+    divs = page.find_all('div', id="main")
     
     crossids = []
-    for row in divs[0].findAll('li'):
+    for row in divs[0].find_all('li'):
         items = row.contents
         if dbg: print items,len(items)
         crossmatch = ['', '', '', '']
