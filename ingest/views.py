@@ -113,7 +113,7 @@ def update_crossids(astobj, dbg=False):
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
     if not created:
-        print "Did not create new Body"
+        if dbg: print "Did not create new Body"
         # Find out if the details have changed, if they have, save a revision
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 1 and check_body[0] == body:
