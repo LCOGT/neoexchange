@@ -16,6 +16,7 @@ GNU General Public License for more details.
 '''
 import urllib2, os
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 def download_file(url, file_to_save):
     '''Helper routine to download from a URL and save into a file with error trapping'''
@@ -334,3 +335,88 @@ def packed_to_normal(packcode):
     normal_code = str(mpc_cent) + mpc_year + no_in_halfmonth + str(count)
     
     return normal_code
+
+def parse_goldstone_chunks(chunks, dbg=False):
+    '''Tries to parse the Goldstone target line (a split()'ed list of fields)
+    to extract the object id. Could also parse the date of radar observation
+    and whether astrometry or photometry is needed'''
+
+    if dbg: print chunks
+    # Try to convert the 2nd field (counting from 0...) to an integer and if
+    # that suceeds, check it's greater than 31. If yes, it's an asteroid number
+    # (we assume asteroid #1-31 will never be observed with radar..)
+    object_id = ''
+
+    try:
+        astnum = int(chunks[2])
+    except ValueError:
+        print "Could not convert"
+        astnum = -1
+
+    if astnum > 31:
+        object_id = str(astnum)
+        # Check if the next 2 characters are uppercase in which it's a
+        # designation, not a name
+        if chunks[3][0].isupper() and chunks[3][1].isupper():
+            object_id = object_id + ' ' + str(chunks[3])
+    else:
+        if dbg: print "Specific date of observation"
+        # We got an error or a too small number (day of the month)
+        if astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit():
+            # We have something of the form [20, 2014, YB35; only need first
+            # bit
+            object_id = str(chunks[3])
+        elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isalnum():
+            object_id = str(chunks[3] + ' ' + chunks[4])
+        elif chunks[3].isdigit() and chunks[4].isalpha():
+            object_id = str(chunks[3] + ' ' + chunks[4])
+
+    return object_id
+
+def fetch_goldstone_targets(dbg=False):
+    '''Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year'''
+
+    goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
+
+    page = fetchpage_and_make_soup(goldstone_url)
+
+    if page == None:
+        return None
+
+    radar_objects = []
+    in_objects = False
+    current_year = datetime.now().year
+    current_year_str = str(current_year) + ' '
+    last_year_seen = current_year
+    # The Goldstone target page is just a ...page... of text... with no tags
+    # or table or anything much to search for. Do the best we can and look for
+    # the "table" header and then start reading and parsing lines until the
+    # first 5 characters no longer match our current year
+    for line in page.text.split("\n"):
+        if len(line.strip()) == 0:
+            continue
+        if 'Target      Astrometry?  Observations?' in line:
+            if dbg: print "Found start of table"
+            in_objects = True
+        else:
+            if in_objects == True:
+                chunks = line.lstrip().split()
+                #if dbg: print line
+                # Check if the start of the stripped line is no longer the
+                # current year.
+                # <sigh> we also need to check if the year goes backwards due
+                # to typos...
+                year = int(chunks[0])
+                if year < last_year_seen:
+                    print "WARN: Error in calendar seen (year=",year,"). Correcting"
+                    year = current_year
+                    chunks[0] = year
+                if year > last_year_seen:
+                    in_objects = False
+                    if dbg: print "Done with objects"
+                else:
+                    obj_id = parse_goldstone_chunks(chunks, dbg)
+                    radar_objects.append(obj_id)
+                last_year_seen = year
+    return  radar_objects
