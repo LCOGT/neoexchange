@@ -18,4 +18,4 @@ class Command(BaseCommand):
         radar_targets = fetch_goldstone_targets()
         for obj_id in radar_targets:
             logger.info("Adding %s to DB" % obj_id)
-            update_MPC_orbit(obj_id)
+            update_MPC_orbit(obj_id, origin='G')

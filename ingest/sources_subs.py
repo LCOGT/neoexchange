@@ -17,6 +17,7 @@ GNU General Public License for more details.
 import urllib2, os
 from bs4 import BeautifulSoup
 from datetime import datetime
+from re import sub
 
 def download_file(url, file_to_save):
     '''Helper routine to download from a URL and save into a file with error trapping'''
@@ -271,6 +272,42 @@ def fetch_mpcobs(asteroid, file_to_save, debug=False):
     
     return None
 
+def clean_element(element):
+    'Cleans an element (passed) by converting to ascii and removing any units'''
+    key = element[0].encode('ascii', 'ignore')
+    value = element[1].encode('ascii', 'ignore')
+    # Match a open parenthesis followed by 0 or more non-whitespace followed by 
+    # a close parenthesis and replace it with a blank string
+    key = sub(r' \(\S*\)','',key)
+    
+    return (key,value)
+
+def fetch_mpcorbit(asteroid, dbg=False):
+    '''Performs a search on the MPC Database for <asteroid> and returns a list
+    of the resulting orbital elements.'''
+
+    query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+
+    page = fetchpage_and_make_soup(query_url)
+    if page == None:
+        return None
+
+    if dbg: print page
+
+    data = []
+    # Find the table of elements and then the subtables within it
+    elements_table = page.find('table', { 'class' : 'nb'})
+    data_tables = elements_table.find_all('table')
+    for table in data_tables:
+        rows = table.find_all('tr')
+        for row in rows:
+            cols = row.find_all('td')
+            cols = [elem.text.strip() for elem in cols]
+            data.append([elem for elem in cols if elem])
+
+    elements = dict(clean_element(elem) for elem in data)
+    return elements
+
 class PackedError(Exception):
     '''Raised when an invalid pack code is found'''
 
@@ -417,6 +454,7 @@ def fetch_goldstone_targets(dbg=False):
                     if dbg: print "Done with objects"
                 else:
                     obj_id = parse_goldstone_chunks(chunks, dbg)
-                    radar_objects.append(obj_id)
+                    if obj_id != '':
+                        radar_objects.append(obj_id)
                 last_year_seen = year
     return  radar_objects

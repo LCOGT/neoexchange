@@ -14,8 +14,9 @@ GNU General Public License for more details.
 '''
 
 from ingest.models import Body
-from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal
+from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
+from datetime import datetime
 import reversion
 import logging
 logger = logging.getLogger(__name__)
@@ -113,7 +114,7 @@ def update_crossids(astobj, dbg=False):
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
     if not created:
-        print "Did not create new Body"
+        if dbg: print "Did not create new Body"
         # Find out if the details have changed, if they have, save a revision
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 1 and check_body[0] == body:
@@ -165,3 +166,45 @@ def clean_crossid(astobj, dbg=False):
     if dbg: print "%07s->%s (%s) %s" % ( obj_id, params['name'], params['source_type'], params['active'])
 
     return params
+
+def clean_mpcorbit(elements, dbg=False, origin='M'):
+    '''Takes a list of (proto) element lines from fetch_mpcorbit() and plucks
+    out the appropriate bits. origin defaults to 'M'(PC) if not specified'''
+
+    params = {}
+    if elements != None:
+        params = {
+                'epochofel'     : datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
+                'meananom'      : elements['mean anomaly'],
+                'argofperih'    : elements['argument of perihelion'],
+                'longascnode'   : elements['ascending node'],
+                'orbinc'        : elements['inclination'],
+                'eccentricity'  : elements['eccentricity'],
+                'meandist'      : elements['semimajor axis'],
+                'source_type'   : 'A',
+                'elements_type' : 'MPC_MINOR_PLANET',
+                'active'        : True,
+                'origin'        : origin,
+                }
+    return params
+
+    
+def update_MPC_orbit(obj_id, dbg=False, origin='M'):
+
+    elements = fetch_mpcorbit(obj_id)
+
+    body, created = Body.objects.get_or_create(name=obj_id)
+    # Determine what type of new object it is and whether to keep it active
+    kwargs = clean_mpcorbit(elements, dbg, origin)
+    if not created:
+        if dbg: print "Did not create new Body"
+        # Find out if the details have changed, if they have, save a revision
+        check_body = Body.objects.filter(name=obj_id, **kwargs)
+        if check_body.count() == 1 and check_body[0] == body:
+            save_and_make_revision(check_body[0],kwargs)
+            logger.info("Updated elements for %s" % obj_id)
+    else:
+        # Didn't know about this object before so create 
+        save_and_make_revision(body,kwargs)
+        logger.info("Added new orbit for %s" % obj_id)
+    return True
