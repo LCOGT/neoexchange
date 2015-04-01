@@ -191,7 +191,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     
 def update_MPC_orbit(obj_id, dbg=False, origin='M'):
 
-    elements = fetch_mpcorbit(obj_id)
+    elements = fetch_mpcorbit(obj_id, dbg)
 
     body, created = Body.objects.get_or_create(name=obj_id)
     # Determine what type of new object it is and whether to keep it active

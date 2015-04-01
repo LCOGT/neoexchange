@@ -111,7 +111,10 @@ class Body(models.Model):
             text = ''
         else:
             text = 'not '
-        return u'%s is %sactive' % (self.provisional_name,text)
+        return_name = self.provisional_name
+        if self.provisional_name == None and self.name != None:
+            return_name = self.name
+        return u'%s is %sactive' % (return_name,text)
 reversion.register(Body)
 
 

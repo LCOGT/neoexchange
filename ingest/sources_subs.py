@@ -286,17 +286,25 @@ def fetch_mpcorbit(asteroid, dbg=False):
     '''Performs a search on the MPC Database for <asteroid> and returns a list
     of the resulting orbital elements.'''
 
+    #Strip off any leading or trailing space and replace internal space with a
+    # plus sign
+    if dbg: print "Asteroid before=", asteroid
+    asteroid = asteroid.strip().replace(' ', '+')
+    if dbg: print "Asteroid  after=", asteroid
     query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
     page = fetchpage_and_make_soup(query_url)
     if page == None:
         return None
 
-    if dbg: print page
+#    if dbg: print page
 
     data = []
     # Find the table of elements and then the subtables within it
     elements_table = page.find('table', { 'class' : 'nb'})
+    if elements_table == None:
+        if dbg: "No element tables found"
+        return None
     data_tables = elements_table.find_all('table')
     for table in data_tables:
         rows = table.find_all('tr')
@@ -387,7 +395,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
     try:
         astnum = int(chunks[2])
     except ValueError:
-        print "Could not convert"
+        if dbg: print "Could not convert", chunks[2], "to asteroid number. Will try different method."
         astnum = -1
 
     if astnum > 31:
@@ -395,6 +403,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
         # Check if the next 2 characters are uppercase in which it's a
         # designation, not a name
         if chunks[3][0].isupper() and chunks[3][1].isupper():
+            if dbg: print "In case 1"
             object_id = object_id + ' ' + str(chunks[3])
     else:
         if dbg: print "Specific date of observation"
@@ -402,10 +411,22 @@ def parse_goldstone_chunks(chunks, dbg=False):
         if astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit():
             # We have something of the form [20, 2014, YB35; only need first
             # bit
+            if dbg: print "In case 2"
             object_id = str(chunks[3])
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isalnum():
-            object_id = str(chunks[3] + ' ' + chunks[4])
+            # Test if the first 2 characters of chunks[4] are uppercase
+            # If yes then we have a desigination e.g. [2014] 'UR' or [2015] 'FW117'
+            # If no, then we have a name e.g. [1566] 'Icarus'
+            # Hopefully some at Goldstone won't shout the name of the object
+            # e.g. '(99942) APOPHIS'! or we're hosed...
+           if chunks[4][0:2].isupper():
+              if dbg: print "In case 3a"
+              object_id = str(chunks[3] + ' ' + chunks[4])
+           else:
+              if dbg: print "In case 3b"
+              object_id = str(chunks[3])
         elif chunks[3].isdigit() and chunks[4].isalpha():
+            if dbg: print "In case 4"
             object_id = str(chunks[3] + ' ' + chunks[4])
 
     return object_id
@@ -444,7 +465,11 @@ def fetch_goldstone_targets(dbg=False):
                 # current year.
                 # <sigh> we also need to check if the year goes backwards due
                 # to typos...
-                year = int(chunks[0])
+                try:
+                    year = int(chunks[0])
+                except ValueError:
+                    year = 9999
+
                 if year < last_year_seen:
                     print "WARN: Error in calendar seen (year=",year,"). Correcting"
                     year = current_year

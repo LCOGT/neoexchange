@@ -17,5 +17,5 @@ class Command(BaseCommand):
         logger.info("==== %s ====" % datetime.now())
         radar_targets = fetch_goldstone_targets()
         for obj_id in radar_targets:
-            logger.info("Adding %s to DB" % obj_id)
-            update_MPC_orbit(obj_id, origin='G')
+            logger.info("Adding Goldstone target %s to DB" % obj_id)
+            update_MPC_orbit(obj_id, origin='G', dbg=False)
