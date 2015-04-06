@@ -55,3 +55,9 @@ target/
 
 neox/local_settings.py
 Diffs
+
+*.db
+
+*.db
+
+neox.db
