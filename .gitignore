@@ -58,3 +58,5 @@ Diffs
 
 neox.db
 neox.log
+
+*.db
