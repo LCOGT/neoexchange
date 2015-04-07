@@ -13,12 +13,13 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
+from datetime import datetime
+from django.forms.models import model_to_dict
 from ingest.models import Body
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
-from datetime import datetime
-import reversion
 import logging
+import reversion
 logger = logging.getLogger(__name__)
 
 
@@ -26,11 +27,21 @@ def home(request):
     return
 
 def save_and_make_revision(body,kwargs):
+    ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
+    '''
+    update = False
+    body_dict = model_to_dict(body)
     for k, v in kwargs.items():
-        setattr(body, k, v)
+        param = body_dict[k]
+        if type(body_dict[k]) == type(float()):
+            v = float(body_dict[k])
+        if v != param:
+            setattr(body, k, v)
+            update = True
+    if update:
         with reversion.create_revision():
             body.save()
-    return
+    return update
 
 def update_NEOCP_orbit(obj_id, dbg=False):
     '''Query the MPC's showobs service with the specified <obj_id> and
@@ -59,8 +70,8 @@ def update_NEOCP_orbit(obj_id, dbg=False):
             # Find out if the details have changed, if they have, save a revision
             check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
             if check_body.count() == 1 and check_body[0] == body:
-                save_and_make_revision(check_body[0],kwargs)
-                logger.info("Updated %s" % obj_id)
+                if save_and_make_revision(check_body[0],kwargs):
+                    logger.info("Updated %s" % obj_id)
         else:
             save_and_make_revision(body,kwargs)
             logger.info("Added %s" % obj_id)
@@ -197,12 +208,11 @@ def update_MPC_orbit(obj_id, dbg=False, origin='M'):
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
     if not created:
-        if dbg: print "Did not create new Body"
         # Find out if the details have changed, if they have, save a revision
         check_body = Body.objects.filter(name=obj_id, **kwargs)
         if check_body.count() == 1 and check_body[0] == body:
-            save_and_make_revision(check_body[0],kwargs)
-            logger.info("Updated elements for %s" % obj_id)
+            if save_and_make_revision(check_body[0],kwargs):
+                logger.info("Updated elements for %s" % obj_id)
     else:
         # Didn't know about this object before so create 
         save_and_make_revision(body,kwargs)

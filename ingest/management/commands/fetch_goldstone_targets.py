@@ -13,9 +13,8 @@ class Command(BaseCommand):
     help = 'Fetch Goldstone target list for the current year'
 
     def handle(self, *args, **options):
-        logger.info("==== %s ====" % 'Fetching Goldstone targets')
-        logger.info("==== %s ====" % datetime.now())
+        logger.info("==== Fetching Goldstone targets ====")
         radar_targets = fetch_goldstone_targets()
         for obj_id in radar_targets:
-            logger.info("Adding Goldstone target %s to DB" % obj_id)
-            update_MPC_orbit(obj_id, origin='G', dbg=False)
+            logger.info("Reading Goldstone target %s" % obj_id)
+            update_MPC_orbit(obj_id, origin='G')

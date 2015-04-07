@@ -13,7 +13,8 @@ class Command(BaseCommand):
     help = 'Check NEOCP for objects in need of follow up'
 
     def handle(self, *args, **options):
-        logger.info("==== %s ====" % datetime.now())
+        logger.info("==== Fetching NEOCP targets ====")
         objects = fetch_NEOCP()
         for obj_id in objects:
+            logger.info("Reading NEOCP target %s" % obj_id)
             update_NEOCP_orbit(obj_id)

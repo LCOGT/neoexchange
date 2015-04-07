@@ -1,5 +1,21 @@
 # Django settings for neox project.
 
+import os, sys
+
+CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
+PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
+BRANCH = os.environ.get('BRANCH',None)
+if BRANCH:
+    BRANCH = '-' + BRANCH
+else:
+    BRANCH = ''
+
+if PRODUCTION:
+  PREFIX= os.environ.get('PREFIX','/observations')
+else:
+  PREFIX =""
+BASE_DIR = os.path.dirname(CURRENT_PATH)
+
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
@@ -45,22 +61,13 @@ MEDIA_ROOT = ''
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
 MEDIA_URL = ''
 
-# Absolute path to the directory static files should be collected to.
-# Don't put anything in this directory yourself; store your static files
-# in apps' "static/" subdirectories and in STATICFILES_DIRS.
-# Example: "/home/media/media.lawrence.com/static/"
-STATIC_ROOT = ''
-
-# URL prefix for static files.
-# Example: "http://media.lawrence.com/static/"
-STATIC_URL = '/static/'
-
-# Additional locations of static files
-STATICFILES_DIRS = (
-    # Put strings here, like "/home/html/static" or "C:/www/django/static".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-)
+if PRODUCTION:
+    STATIC_ROOT = '/var/www/html/static/'
+    STATIC_URL = PREFIX + '/static/'
+else:
+    STATIC_ROOT = os.path.join(BASE_DIR,'ingest')
+    STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR,'static'),]
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -102,12 +109,12 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
+    ''
 )
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
-    # 'grappelli.dashboard',
     'grappelli',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -145,7 +152,7 @@ LOGGING = {
     'disable_existing_loggers': True,
     'formatters': {
         'verbose': {
-            'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'format' : "[%(asctime)s] %(levelname)s %(message)s",
             'datefmt' : "%d/%b/%Y %H:%M:%S"
         },
         'simple': {

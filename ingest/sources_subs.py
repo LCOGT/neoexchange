@@ -18,6 +18,8 @@ import urllib2, os
 from bs4 import BeautifulSoup
 from datetime import datetime
 from re import sub
+import logging
+logger = logging.getLogger(__name__)
 
 def download_file(url, file_to_save):
     '''Helper routine to download from a URL and save into a file with error trapping'''
@@ -455,7 +457,7 @@ def fetch_goldstone_targets(dbg=False):
         if len(line.strip()) == 0:
             continue
         if 'Target      Astrometry?  Observations?' in line:
-            if dbg: print "Found start of table"
+            logger.debug("Found start of table")
             in_objects = True
         else:
             if in_objects == True:
@@ -471,12 +473,12 @@ def fetch_goldstone_targets(dbg=False):
                     year = 9999
 
                 if year < last_year_seen:
-                    print "WARN: Error in calendar seen (year=",year,"). Correcting"
+                    logger.info("WARN: Error in calendar seen (year=%s). Correcting" % year)
                     year = current_year
                     chunks[0] = year
                 if year > last_year_seen:
                     in_objects = False
-                    if dbg: print "Done with objects"
+                    logger.debug("Done with objects")
                 else:
                     obj_id = parse_goldstone_chunks(chunks, dbg)
                     if obj_id != '':
