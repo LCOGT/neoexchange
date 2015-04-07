@@ -16,6 +16,10 @@ GNU General Public License for more details.
 '''
 import urllib2, os
 from bs4 import BeautifulSoup
+from datetime import datetime
+from re import sub
+import logging
+logger = logging.getLogger(__name__)
 
 def download_file(url, file_to_save):
     '''Helper routine to download from a URL and save into a file with error trapping'''
@@ -270,6 +274,50 @@ def fetch_mpcobs(asteroid, file_to_save, debug=False):
     
     return None
 
+def clean_element(element):
+    'Cleans an element (passed) by converting to ascii and removing any units'''
+    key = element[0].encode('ascii', 'ignore')
+    value = element[1].encode('ascii', 'ignore')
+    # Match a open parenthesis followed by 0 or more non-whitespace followed by 
+    # a close parenthesis and replace it with a blank string
+    key = sub(r' \(\S*\)','',key)
+    
+    return (key,value)
+
+def fetch_mpcorbit(asteroid, dbg=False):
+    '''Performs a search on the MPC Database for <asteroid> and returns a list
+    of the resulting orbital elements.'''
+
+    #Strip off any leading or trailing space and replace internal space with a
+    # plus sign
+    if dbg: print "Asteroid before=", asteroid
+    asteroid = asteroid.strip().replace(' ', '+')
+    if dbg: print "Asteroid  after=", asteroid
+    query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+
+    page = fetchpage_and_make_soup(query_url)
+    if page == None:
+        return None
+
+#    if dbg: print page
+
+    data = []
+    # Find the table of elements and then the subtables within it
+    elements_table = page.find('table', { 'class' : 'nb'})
+    if elements_table == None:
+        if dbg: "No element tables found"
+        return None
+    data_tables = elements_table.find_all('table')
+    for table in data_tables:
+        rows = table.find_all('tr')
+        for row in rows:
+            cols = row.find_all('td')
+            cols = [elem.text.strip() for elem in cols]
+            data.append([elem for elem in cols if elem])
+
+    elements = dict(clean_element(elem) for elem in data)
+    return elements
+
 class PackedError(Exception):
     '''Raised when an invalid pack code is found'''
 
@@ -334,3 +382,106 @@ def packed_to_normal(packcode):
     normal_code = str(mpc_cent) + mpc_year + no_in_halfmonth + str(count)
     
     return normal_code
+
+def parse_goldstone_chunks(chunks, dbg=False):
+    '''Tries to parse the Goldstone target line (a split()'ed list of fields)
+    to extract the object id. Could also parse the date of radar observation
+    and whether astrometry or photometry is needed'''
+
+    if dbg: print chunks
+    # Try to convert the 2nd field (counting from 0...) to an integer and if
+    # that suceeds, check it's greater than 31. If yes, it's an asteroid number
+    # (we assume asteroid #1-31 will never be observed with radar..)
+    object_id = ''
+
+    try:
+        astnum = int(chunks[2])
+    except ValueError:
+        if dbg: print "Could not convert", chunks[2], "to asteroid number. Will try different method."
+        astnum = -1
+
+    if astnum > 31:
+        object_id = str(astnum)
+        # Check if the next 2 characters are uppercase in which it's a
+        # designation, not a name
+        if chunks[3][0].isupper() and chunks[3][1].isupper():
+            if dbg: print "In case 1"
+            object_id = object_id + ' ' + str(chunks[3])
+    else:
+        if dbg: print "Specific date of observation"
+        # We got an error or a too small number (day of the month)
+        if astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit():
+            # We have something of the form [20, 2014, YB35; only need first
+            # bit
+            if dbg: print "In case 2"
+            object_id = str(chunks[3])
+        elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isalnum():
+            # Test if the first 2 characters of chunks[4] are uppercase
+            # If yes then we have a desigination e.g. [2014] 'UR' or [2015] 'FW117'
+            # If no, then we have a name e.g. [1566] 'Icarus'
+            # Hopefully some at Goldstone won't shout the name of the object
+            # e.g. '(99942) APOPHIS'! or we're hosed...
+           if chunks[4][0:2].isupper():
+              if dbg: print "In case 3a"
+              object_id = str(chunks[3] + ' ' + chunks[4])
+           else:
+              if dbg: print "In case 3b"
+              object_id = str(chunks[3])
+        elif chunks[3].isdigit() and chunks[4].isalpha():
+            if dbg: print "In case 4"
+            object_id = str(chunks[3] + ' ' + chunks[4])
+
+    return object_id
+
+def fetch_goldstone_targets(dbg=False):
+    '''Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year'''
+
+    goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
+
+    page = fetchpage_and_make_soup(goldstone_url)
+
+    if page == None:
+        return None
+
+    radar_objects = []
+    in_objects = False
+    current_year = datetime.now().year
+    current_year_str = str(current_year) + ' '
+    last_year_seen = current_year
+    # The Goldstone target page is just a ...page... of text... with no tags
+    # or table or anything much to search for. Do the best we can and look for
+    # the "table" header and then start reading and parsing lines until the
+    # first 5 characters no longer match our current year
+    for line in page.text.split("\n"):
+        if len(line.strip()) == 0:
+            continue
+        if 'Target      Astrometry?  Observations?' in line:
+            logger.debug("Found start of table")
+            in_objects = True
+        else:
+            if in_objects == True:
+                chunks = line.lstrip().split()
+                #if dbg: print line
+                # Check if the start of the stripped line is no longer the
+                # current year.
+                # <sigh> we also need to check if the year goes backwards due
+                # to typos...
+                try:
+                    year = int(chunks[0])
+                except ValueError:
+                    year = 9999
+
+                if year < last_year_seen:
+                    logger.info("WARN: Error in calendar seen (year=%s). Correcting" % year)
+                    year = current_year
+                    chunks[0] = year
+                if year > last_year_seen:
+                    in_objects = False
+                    logger.debug("Done with objects")
+                else:
+                    obj_id = parse_goldstone_chunks(chunks, dbg)
+                    if obj_id != '':
+                        radar_objects.append(obj_id)
+                last_year_seen = year
+    return  radar_objects

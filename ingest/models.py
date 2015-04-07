@@ -92,6 +92,8 @@ class Body(models.Model):
     meananom            = models.FloatField('Mean Anomaly (deg)', blank=True, null=True, help_text='for asteroids')
     perihdist           = models.FloatField('Perihelion distance (AU)', blank=True, null=True, help_text='for comets')
     epochofperih        = models.DateTimeField('Epoch of perihelion', blank=True, null=True, help_text='for comets')
+    abs_mag             = models.FloatField('H - absolute magnetude', blank=True, null=True)
+    slope               = models.FloatField('G - slope parameter', blank=True, null=True)
     ingest              = models.DateTimeField(default=datetime.now())
 
     def epochofel_mjd(self):
@@ -111,7 +113,10 @@ class Body(models.Model):
             text = ''
         else:
             text = 'not '
-        return u'%s is %sactive' % (self.provisional_name,text)
+        return_name = self.provisional_name
+        if self.provisional_name == None and self.name != None:
+            return_name = self.name
+        return u'%s is %sactive' % (return_name,text)
 reversion.register(Body)
 
 
