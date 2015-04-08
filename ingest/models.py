@@ -92,7 +92,7 @@ class Body(models.Model):
     meananom            = models.FloatField('Mean Anomaly (deg)', blank=True, null=True, help_text='for asteroids')
     perihdist           = models.FloatField('Perihelion distance (AU)', blank=True, null=True, help_text='for comets')
     epochofperih        = models.DateTimeField('Epoch of perihelion', blank=True, null=True, help_text='for comets')
-    abs_mag             = models.FloatField('H - absolute magnetude', blank=True, null=True)
+    abs_mag             = models.FloatField('H - absolute magnitude', blank=True, null=True)
     slope               = models.FloatField('G - slope parameter', blank=True, null=True)
     ingest              = models.DateTimeField(default=datetime.now())
 
