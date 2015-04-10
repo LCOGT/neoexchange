@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+{% load url from future %}
+{% load staticfiles %}
+<html>
+	<head>
+        <base href="{{base_url}}">
+		<title>{%block header %}{% endblock %} | LCOGT</title>
+		<meta charset="UTF-8" />
+		<meta name="author" content="Las Cumbres Observatory Global Telescope Network" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes" />
+		<meta name="version" content="{{site_version}}" />
+		{% block meta %}{% endblock %}
+		{% block favicon %}
+		<link rel="shortcut icon" href="{% static "ingest/images/favicon.ico" %}" type="image/x-icon" />
+		{% endblock %}
+		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
+		{% block css-content %}{% endblock %}
+		<link rel="stylesheet" href="{% static "ingest/css/styles.css" %}">
+        {% block last-css-content %}{% endblock %}
+        <!--[if lt IE 9]>
+        <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
+		<script type="text/javascript" src="ingest/js/jquery-1.10.2.js"></script>
+		<script type="text/javascript" src="ingest/js/jquery-ui-1.10.3.min.js"></script>
+        <script type="text/javascript" src="/static/selectable/js/jquery.dj.selectable.js?v=0.8.0"></script>
+		{% block script-content %}{% endblock %}
+	</head>
+	<body class="{% block bodyclass %}{% endblock %}">
+		{% block bodyscript %}{% endblock %}
+		<div id="page-wrapper">
+			<div id="page">
+				<div id="header-holder">
+					<div id="lcogt-bar">
+						<div id="lcogt-name">
+							<a target="_parent" href="http://lcogt.net/" title="LCOGT Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory </span><span class="g">G</span><span class="wide">lobal </span><span class="t">T</span><span class="wide">elescope Network</span></a>
+						</div>
+					</div>
+
+					<div id="header" role="banner">
+						<div id="logo">
+							<a href="http://lcogt.net/" title="LCOGT homepage" rel="home"><img src="{% static "ingest/images/lcogt.png" %}" alt="LCOGT" /></a>
+						</div>
+						<div id="site-name">
+							<strong>{% block title %}NEO exchange{% endblock %}</strong>
+							<nav id="navigation" role="navigation">
+								{% block nav %}
+								<ul class="navlist">
+									{% block navhome %}
+									<li>
+										<a rel="home" title="Home" href="{% url 'home'  %}">Home</a>
+									</li>
+									{% endblock %}
+									<li>
+										<a href="" title="NEO targets being actively followed">Targets</a>
+									</li>
+								</ul>
+								{% endblock %}
+							</nav>
+						</div>
+					</div>
+				</div>
+				{% block main-content %}{% endblock %}
+				{% block content %}{% endblock %}
+			</div>
+		</div>
+		<script>
+		  var _gaq = _gaq || [];
+		  _gaq.push(['_setAccount', 'UA-2087713-1']);
+		  _gaq.push(['_trackPageview']);
+
+		  (function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		  })();
+		</script>
+	</body>
+</html>

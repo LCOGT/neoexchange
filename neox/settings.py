@@ -16,12 +16,14 @@ else:
   PREFIX =""
 BASE_DIR = os.path.dirname(CURRENT_PATH)
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
+
+GRAPPELLI_ADMIN_TITLE = 'NEO exchange admin'
 
 MANAGERS = ADMINS
 
@@ -109,7 +111,7 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    ''
+    os.path.join(BASE_DIR,'ingest','templates'),
 )
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'

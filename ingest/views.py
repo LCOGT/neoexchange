@@ -15,6 +15,8 @@ GNU General Public License for more details.
 
 from datetime import datetime
 from django.forms.models import model_to_dict
+from django.shortcuts import render
+from django.views.generic import DetailView
 from ingest.models import Body
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
@@ -24,7 +26,19 @@ logger = logging.getLogger(__name__)
 
 
 def home(request):
-    return
+    return render(request,'ingest/home.html',{})
+
+class BodyDetailView(DetailView):
+
+    context_object_name = "body"
+    model = Body
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super(BodyDetailView, self).get_context_data(**kwargs)
+        # Add in a QuerySet of all the books
+        context['body_list'] = Body.objects.filter(active=True)
+        return context
 
 def save_and_make_revision(body,kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter

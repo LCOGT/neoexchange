@@ -1,0 +1,43 @@
+{% extends 'ingest/base.html' %}
+{% load url from future %}
+{% block header %}NEOx home{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+{% block main-content %}
+
+			<div id="extramenu">
+				<div class="extramenu_padder" role="menubar">
+					<div class="headingleft">
+						<div class="title"><h1>Object: {{body.current_name}}</h1></div>
+					</div>
+				</div>
+				<div id="msg"></div>
+			</div>
+			<div id="main">
+				<div class="bigpadded">
+					<div class="row">
+						<div class="fourcol">
+							<div class="observation">
+								<img src="" />
+							</div>
+							<div class="observation_caption">Observation from </div>
+
+						</div>
+						<div class="twocol lastcol">
+							<div class="">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
+							<table>
+								<thead>
+									<th colspan=2>Orbital Elements</th>
+								</thead>
+								<tbody>
+									<tr>
+										<td>Epoch of elements (MJD)</td>
+										<td>{{body.epochofel_mjd}}</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+{% endblock %}
