@@ -3,16 +3,12 @@
 {% block header %}NEOx home{% endblock %}
 
 {% block bodyclass %}inbox{% endblock %}
-{% block main-content %}
-
-			<div id="extramenu">
-				<div class="extramenu_padder" role="menubar">
-					<div class="headingleft row rowlast">
-						<div class="title"><h1>All Targets</h1></div>
+{% block extramenu %}
+					<div class="headingleft">
+						<h1>Active Targets</h1>
 					</div>
-				</div>
-				<div id="msg"></div>
-			</div>
+{% endblock%}
+{% block main-content %}
 			<div id="main" class="fill-height">
 				<div class="row rowfull">
 					<table>

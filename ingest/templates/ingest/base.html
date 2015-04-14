@@ -35,30 +35,40 @@
 							<a target="_parent" href="http://lcogt.net/" title="LCOGT Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory </span><span class="g">G</span><span class="wide">lobal </span><span class="t">T</span><span class="wide">elescope Network</span></a>
 						</div>
 					</div>
-
+					<div class="container">
 					<div id="header" role="banner">
 						<div id="logo">
 							<a href="http://lcogt.net/" title="LCOGT homepage" rel="home"><img src="{% static "ingest/images/lcogt.png" %}" alt="LCOGT" /></a>
 						</div>
 						<div id="site-name">
 							<strong>{% block title %}NEO exchange{% endblock %}</strong>
-							<nav id="navigation" role="navigation">
-								{% block nav %}
-								<ul class="navlist">
-									{% block navhome %}
-									<li>
-										<a rel="home" title="Home" href="{% url 'home'  %}">Home</a>
-									</li>
-									{% endblock %}
-									<li>
-										<a href="" title="NEO targets being actively followed">Targets</a>
-									</li>
-								</ul>
-								{% endblock %}
-							</nav>
 						</div>
 					</div>
+					</div>
 				</div>
+							<!-- Header region -->
+			<div id="extramenu">
+			<div class="container">
+				<div class="extramenu_padder" role="menubar">
+					{% block extramenu %}
+					{% endblock %}
+					<nav id="navigation" role="navigation">
+						{% block nav %}
+						<ul class="navlist">
+							{% block navhome %}
+							<li>
+								<a rel="home" title="Home" href="{% url 'home'  %}">Home</a>
+							</li>
+							{% endblock %}
+							<li>
+								<a href="{% url 'targetlist' %}" title="NEO targets being actively followed">Targets</a>
+							</li>
+						</ul>
+						{% endblock %}
+					</nav>
+				</div>
+			</div>
+			</div>
 				{% block main-content %}{% endblock %}
 				{% block content %}{% endblock %}
 			</div>

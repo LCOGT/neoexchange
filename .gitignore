@@ -58,3 +58,7 @@ Diffs
 
 neox.db
 neox.log
+
+ingest/static/ingest/css/admin.css
+
+ingest/static/ingest/css/dashboard.css

@@ -32,7 +32,7 @@ OBJECT_TYPES = (
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
 
 ORIGINS = (
-            ('M','MPC'),
+            ('M','Minor Planet Center'),
             ('N','NASA ARM'),
             ('S','Spaceguard'),
             ('D','NEODSYS'),
