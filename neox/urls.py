@@ -17,6 +17,7 @@ from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import ListView, DetailView
+from ingest.views import BodySearchView
 from ingest.models import Body
 
 admin.autodiscover()
@@ -25,6 +26,7 @@ urlpatterns = patterns('ingest.views',
     url(r'^$', 'home', name='home'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/$',DetailView.as_view(model=Body, context_object_name='body'), name='target'),
+    url(r'^search/$',BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', include(admin.site.urls)),
 )+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -3,15 +3,22 @@
 {% block header %}NEOx home{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
+{% block extramenucss %}extramenu-home{% endblock %}
+
 {% block extramenu %}
 {% endblock%}
 
 {% block main-content %}
-
-			<div id="main">
-				<div class="bigpadded">
-					<div class="row">
-					</div>
-				</div>
+		<div class="masthead">
+			<div class="container">
+				<a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
+					<div class="bigtext">{{targets}}</div>
+					<div class="smalltext">active targets</div>
+				</a>
+				<a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
+					<div class="bigtext">{{blocks}}</div>
+					<div class="smalltext">active blocks</div>
+				</a>
 			</div>
+		</div>
 {% endblock %}

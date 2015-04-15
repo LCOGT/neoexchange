@@ -46,6 +46,14 @@ TELESCOPE_CHOICES = (
                         ('0m4','0.4-meter')
                     )
 
+SITE_CHOICES = (
+                    ('ogg','Haleakala'),
+                    ('coj','Siding Spring'),
+                    ('lsc','Cerro Tololo'),
+                    ('elp','McDonald'),
+                    ('cpt','Sutherland'),
+    )
+
 def check_object_exists(objname,dbg=False):
 
     try:
@@ -70,7 +78,7 @@ class Proposal(models.Model):
             title = "%s..." % self.title[0:9]
         else:
             title = self.title[0:10]
-        return "%s %s"  % (code, title)
+        return "%s %s"  % (self.code, title)
 
 
 class Body(models.Model):
@@ -130,7 +138,7 @@ reversion.register(Body)
 
 class Block(models.Model):
     telclass = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
-    site = models.CharField(max_length=3)
+    site = models.CharField(max_length=3, choices=SITE_CHOICES)
     body = models.ForeignKey(Body)
     proposal = models.ForeignKey(Proposal)
     block_start =  models.DateTimeField(null=True, blank=True)

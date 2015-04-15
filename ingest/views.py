@@ -16,17 +16,22 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.forms.models import model_to_dict
 from django.shortcuts import render
-from django.views.generic import DetailView
-from ingest.models import Body
+from django.views.generic import DetailView, ListView
+from ingest.models import *
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
 import logging
 import reversion
+from django.db.models import Q
 logger = logging.getLogger(__name__)
 
 
 def home(request):
-    return render(request,'ingest/home.html',{})
+    params = {
+            'targets'   : Body.objects.filter(active=True).count(),
+            'blocks'    : Block.objects.filter(active=True).count()
+    }
+    return render(request,'ingest/home.html',params)
 
 class BodyDetailView(DetailView):
 
@@ -39,6 +44,22 @@ class BodyDetailView(DetailView):
         # Add in a QuerySet of all the books
         context['body_list'] = Body.objects.filter(active=True)
         return context
+
+class BodySearchView(ListView):
+    template_name = 'ingest/body_list.html'
+    model = Body
+
+    def get_queryset(self):
+        print self.kwargs
+        try:
+            name = self.request.REQUEST.get("q")
+        except:
+            name = ''
+        if (name != ''):
+            object_list = self.model.objects.filter(Q(provisional_name__icontains = name )|Q(provisional_packed__icontains = name)|Q(name__icontains = name))
+        else:
+            object_list = self.model.objects.all()
+        return object_list
 
 def save_and_make_revision(body,kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
