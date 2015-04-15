@@ -14,12 +14,15 @@ GNU General Public License for more details.
 '''
 
 from nose.tools import eq_, assert_equal, assert_almost_equal, raises, nottest
+from datetime import datetime
+from django.test import TestCase
 
 #Import module to test
 from ast_subs import *
 from sources_subs import parse_goldstone_chunks
+from ingest.views import clean_NEOCP_object
 
-class TestIntToMutantHexChar(object):
+class TestIntToMutantHexChar(TestCase):
     '''Unit tests for the int_to_mutant_hex_char() method'''
     
 # EricS says to run without the exception handler in place first to check it works as expected
@@ -109,7 +112,7 @@ class TestIntToMutantHexChar(object):
         assert_equal(char, expected_char)
 
 
-class TestNormalToPacked(object):
+class TestNormalToPacked(TestCase):
     '''Unit tests for normal_to_packed() method'''
     
     def test_number_t0(self):
@@ -232,7 +235,7 @@ class TestNormalToPacked(object):
         assert_equal(packed_desig, expected_desig)
         assert_equal(ret_code, -1)
 
-class TestGoldstoneChunkParser(object):
+class TestGoldstoneChunkParser(TestCase):
     '''Unit tests for the sources_subs.parse_goldstone_chunks() method'''
     
     def test_specficdate_provis_desig(self):
@@ -270,3 +273,29 @@ class TestGoldstoneChunkParser(object):
         chunks = ['2016', 'Jan', '1685', 'Toro', 'No', 'No', 'R']
         obj_id = parse_goldstone_chunks(chunks)
         assert_equal(expected_objid, obj_id)
+
+class TestClean_NEOCP_Object(TestCase):
+
+    def test_X33656(self):
+        obs_page = [u'X33656  23.9  0.15  K1548 330.99052  282.94050   31.81272   13.02458  0.7021329  0.45261672   1.6800247                  3   1    0 days 0.21         NEOCPNomin',
+                    u'X33656  23.9  0.15  K1548 250.56430  257.29551   60.34849    2.58054  0.0797769  0.87078998   1.0860765                  3   1    0 days 0.20         NEOCPV0001',
+                    u'X33656  23.9  0.15  K1548 256.86580  263.73491   53.18662    3.17001  0.1297341  0.88070404   1.0779106                  3   1    0 days 0.20         NEOCPV0002',
+                   ]
+        expected_elements = { 'abs_mag'     : 23.9,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2015, 4, 8, 0, 0, 0),
+                              'meananom'    : 330.99052,
+                              'argofperih'  : 282.94050,
+                              'longascnode' :  31.81272,
+                              'orbinc'      :  13.02458,
+                              'eccentricity':  0.7021329,
+                             # 'MDM':   0.45261672,
+                              'meandist'    :  1.6800247,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            assert_equal(expected_elements[element], elements[element])

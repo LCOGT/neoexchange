@@ -69,8 +69,8 @@ def update_NEOCP_orbit(obj_id, dbg=False):
         if not created:
             # Find out if the details have changed, if they have, save a revision
             check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
-            if check_body.count() == 1 and check_body[0] == body:
-                if save_and_make_revision(check_body[0],kwargs):
+            if check_body.count() == 0:
+                if save_and_make_revision(body,kwargs):
                     logger.info("Updated %s" % obj_id)
         else:
             save_and_make_revision(body,kwargs)
@@ -94,13 +94,15 @@ def clean_NEOCP_object(page_list):
             break
     if current:
         params = {
+                'abs_mag'       : float(current[1]),
+                'slope'         : float(current[2]),
                 'epochofel'     : extract_mpc_epoch(current[3]),
-                'meananom'      : current[4],
-                'argofperih'    : current[5],
-                'longascnode'   : current[6],
-                'orbinc'        : current[7],
-                'eccentricity'  : current[8],
-                'meandist'      : current[10],
+                'meananom'      : float(current[4]),
+                'argofperih'    : float(current[5]),
+                'longascnode'   : float(current[6]),
+                'orbinc'        : float(current[7]),
+                'eccentricity'  : float(current[8]),
+                'meandist'      : float(current[10]),
                 'source_type'   : 'U',
                 'elements_type' : 'MPC_MINOR_PLANET',
                 'active'        : True,
@@ -128,8 +130,8 @@ def update_crossids(astobj, dbg=False):
         if dbg: print "Did not create new Body"
         # Find out if the details have changed, if they have, save a revision
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
-        if check_body.count() == 1 and check_body[0] == body:
-            save_and_make_revision(check_body[0],kwargs)
+        if check_body.count() == 0:
+            save_and_make_revision(body,kwargs)
             logger.info("Updated cross identification for %s" % obj_id)
     else:
         # Didn't know about this object before so create but make inactive
