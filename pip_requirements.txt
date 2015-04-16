@@ -1,5 +1,5 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
-Django==1.4.19
+Django==1.4.20
 MySQL-python==1.2.5
 South==0.7.6
 astropy==1.0
