@@ -36,6 +36,10 @@ COPY neoexchange /var/www/apps/neoexchange
 # Install the LCOGT NEO exchange Python required packages
 RUN pip install pip==1.3 && pip install uwsgi==2.0.8
 RUN pip install -r /var/www/apps/neoexchange/pip_requirements.txt
+# LCOGT packages which have to be installed after the normal pip install
+RUN pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/
+RUN pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
+
 
 # Setup the Python Django environment
 ENV PYTHONPATH /var/www/apps
@@ -46,10 +50,12 @@ ENV BRANCH ${BRANCH}
 # Setup the LCOGT Mezzanine webapp
 RUN python /var/www/apps/neoexchange/manage.py validate
 RUN python /var/www/apps/neoexchange/manage.py collectstatic --noinput
+RUN python /var/www/apps/neoexchange/manage.py syncdb --noinput
+RUN python /var/www/apps/neoexchange/manage.py migrate --noinput
 
 # Copy configuration files
 COPY config/uwsgi.ini /etc/uwsgi.ini
-COPY config/nginx.conf /etc/nginx/nginx.conf
+COPY config/nginx/* /etc/nginx/
 COPY config/neoexchange.ini /etc/supervisord.d/neoexchange.ini
 
 # nginx runs on port 8200, uwsgi runs on port 8201
