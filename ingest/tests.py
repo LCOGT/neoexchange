@@ -299,3 +299,28 @@ class TestClean_NEOCP_Object(TestCase):
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
             assert_equal(expected_elements[element], elements[element])
+
+    def test_missing_absmag(self):
+        obs_page = ['Object   H     G    Epoch    M         Peri.      Node       Incl.        e           n         a                     NObs NOpp   Arc    r.m.s.       Orbit ID',
+                    'N007riz       0.15  K153J 340.52798   59.01148  160.84695   10.51732  0.3080134  0.56802014   1.4439768                  6   1    0 days 0.34         NEOCPNomin',
+                    'N007riz       0.15  K153J 293.77087  123.25671  129.78437    3.76739  0.0556350  0.93124537   1.0385481                  6   1    0 days 0.57         NEOCPV0001'
+                   ]
+
+        expected_elements = { 'abs_mag'     : 99.99,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2015, 3, 19, 0, 0, 0),
+                              'meananom'    : 340.52798,
+                              'argofperih'  :  59.01148,
+                              'longascnode' : 160.84695,
+                              'orbinc'      :  10.51732,
+                              'eccentricity':  0.3080134,
+                             # 'MDM':   0.56802014,
+                              'meandist'    :  1.4439768,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            assert_equal(expected_elements[element], elements[element])

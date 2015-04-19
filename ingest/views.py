@@ -90,24 +90,38 @@ def clean_NEOCP_object(page_list):
         page_list.pop(0)
     for line in page_list:
         if 'NEOCPNomin' in line:
-            current = line.split()
+            current = line.strip().split()
             break
     if current:
-        params = {
-                'abs_mag'       : float(current[1]),
-                'slope'         : float(current[2]),
-                'epochofel'     : extract_mpc_epoch(current[3]),
-                'meananom'      : float(current[4]),
-                'argofperih'    : float(current[5]),
-                'longascnode'   : float(current[6]),
-                'orbinc'        : float(current[7]),
-                'eccentricity'  : float(current[8]),
-                'meandist'      : float(current[10]),
-                'source_type'   : 'U',
-                'elements_type' : 'MPC_MINOR_PLANET',
-                'active'        : True,
-                'origin'        : 'M',
-                }
+        if len(current) == 16:
+            # Missing H parameter, probably...
+            try:
+                slope = float(current[2])
+            except ValueError:
+                # Insert a high magnitude for the missing H
+                current.insert(1,99.99)
+                logger.warn("Missing H magnitude for %s; assuming 99.99", current[0])
+            except:
+                logger.error("Missing field in NEOCP orbit for %s which wasn't correctable", current[0])
+
+        if len(current) == 17:
+            params = {
+                    'abs_mag'       : float(current[1]),
+                    'slope'         : float(current[2]),
+                    'epochofel'     : extract_mpc_epoch(current[3]),
+                    'meananom'      : float(current[4]),
+                    'argofperih'    : float(current[5]),
+                    'longascnode'   : float(current[6]),
+                    'orbinc'        : float(current[7]),
+                    'eccentricity'  : float(current[8]),
+                    'meandist'      : float(current[10]),
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        else:
+            params = []
     else:
         params = []
     return params
