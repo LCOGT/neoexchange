@@ -121,9 +121,10 @@ def clean_NEOCP_object(page_list):
                     'origin'        : 'M',
                     }
         else:
-            params = []
+            logger.warn("Did not get right number of parameters for %s. Values %s", current[0], current)
+            params = {}
     else:
-        params = []
+        params = {}
     return params
 
 def update_crossids(astobj, dbg=False):
