@@ -13,14 +13,14 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from nose.tools import eq_, assert_equal, assert_almost_equal, raises, nottest
+from nose.tools import eq_, assert_equal, assert_almost_equal, assert_dict_equal, raises, nottest
 from datetime import datetime
 from django.test import TestCase
 
 #Import module to test
 from ast_subs import *
 from sources_subs import parse_goldstone_chunks
-from ingest.views import clean_NEOCP_object
+from ingest.views import clean_NEOCP_object, clean_crossid
 
 class TestIntToMutantHexChar(TestCase):
     '''Unit tests for the int_to_mutant_hex_char() method'''
@@ -299,3 +299,61 @@ class TestClean_NEOCP_Object(TestCase):
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
             assert_equal(expected_elements[element], elements[element])
+
+
+class TestClean_Crossid(TestCase):
+
+    def test_object_was_not_confirmed(self):
+        obj_id = [u'P10kmlS', 'wasnotconfirmed', '', u'(Apr. 20.91 UT)']
+        expected_params = { 'source_type' : 'U',
+                            'name' : '',
+                            'active' : False
+                          }
+        crossid_params = clean_crossid(obj_id)
+        assert_dict_equal(expected_params, crossid_params)
+
+    def test_object_did_not_exist(self):
+        obj_id = [u'WH983CA', 'doesnotexist', '', u'(Apr. 20.92 UT)']
+        expected_params = { 'source_type' : 'X',
+                            'name' : '',
+                            'active' : False
+                          }
+        crossid_params = clean_crossid(obj_id)
+        assert_dict_equal(expected_params, crossid_params)
+
+    def test_object_was_a_NEO(self):
+        obj_id = [u'N007rdx', u'2015 GJ46', u'MPEC 2015-H60', u'(Apr. 20.99 UT)']
+        expected_params = { 'source_type' : 'N',
+                            'name' : '2015 GJ46',
+                            'active' : True
+                          }
+        crossid_params = clean_crossid(obj_id)
+        assert_dict_equal(expected_params, crossid_params)
+
+
+    def test_object_was_a_comet(self):
+        obj_id = [u'M503ujx', u'C/2015 G2', u'CBET 4092', u'(Apr. 10.80 UT)']
+        expected_params = { 'source_type' : 'C',
+                            'name' : 'C/2015 G2',
+                            'active' : True
+                          }
+        crossid_params = clean_crossid(obj_id)
+        assert_dict_equal(expected_params, crossid_params)
+
+    def test_object_was_an_asteroid(self):
+        obj_id = [u'WH2309D', u'2015 HE9', '', u'(Apr. 21.49 UT)']
+        expected_params = { 'source_type' : 'A',
+                            'name' : '2015 HE9',
+                            'active' : True
+                          }
+        crossid_params = clean_crossid(obj_id)
+        assert_dict_equal(expected_params, crossid_params)
+
+    def test_object_was_not_interesting(self):
+        obj_id = [u'N007riz', '', '', u'(Apr. 20.87 UT)']
+        expected_params = { 'source_type' : 'W',
+                            'name' : '',
+                            'active' : False
+                          }
+        crossid_params = clean_crossid(obj_id)
+        assert_dict_equal(expected_params, crossid_params)

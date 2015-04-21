@@ -159,6 +159,12 @@ def clean_crossid(astobj, dbg=False):
         objtype = 'X'
         desig = ''
         active = False
+    elif obj_id != '' and desig == '' and reference == '':
+        # "Was not interesting" (normally a satellite), no longer interesting 
+        # so set inactive
+        objtype = 'W'
+        desig = ''
+        active = False
     elif obj_id != '' and desig != '':
         # Confirmed
         if 'CBET' in reference:
