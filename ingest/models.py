@@ -49,7 +49,7 @@ TELESCOPE_CHOICES = (
 def check_object_exists(objname,dbg=False):
 
     try:
-        block_id = Body.objects.get(provisional_name__contains=objname)  
+        block_id = Body.objects.get(provisional_name__contains=objname)
     except Body.MultipleObjectsReturned:
         if dbg: print "Multiple bodies found"
         return 2
@@ -155,8 +155,8 @@ class Record(models.Model):
         verbose_name_plural = _('Observation Records')
 
     def __unicode__(self):
-    	if self.active:
-    		text = ''
-    	else:
-    		text = 'not '
+        if self.active:
+                text = ''
+        else:
+                text = 'not '
         return u'%s is %sactive' % (self.provisional_name,text)
