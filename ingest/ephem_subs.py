@@ -579,15 +579,15 @@ def get_mag_mapping(site):
     site = site.upper()
     if site == 'FTX' or site == 'FTS':
 # Mappings for FTN/FTS. Assumes Spectral+Solar filter
-    	mag_mapping = {
+        mag_mapping = {
                 19   : 45,
-               	19.5 : 60,
-               	20   : 100,
-               	20.5 : 120,
-               	21   : 150,
-               	21.5 : 215,
-               	22   : 240,
-               	23.3 : 300
+                19.5 : 60,
+                20   : 100,
+                20.5 : 120,
+                21   : 150,
+                21.5 : 215,
+                22   : 240,
+                23.3 : 300
                }
     elif site == 'SQA' :
 # Mappings for Sedgwick. Assumes kb18+parfocal clear
@@ -609,9 +609,9 @@ def get_mag_mapping(site):
                }
     else:
         mag_mapping = {}
-    
+
     return mag_mapping
-    
+
 
 def mag_to_exptime(site, mag, debug=False):
 
@@ -678,7 +678,7 @@ def get_sitepos(site_code, dbg=False):
         site_hgt = 3055.0
         site_name = 'Haleakala-Faulkes Telescope North (FTN)'
     elif site_code == 'E10' or site_code == 'FTS':
-# MPC code for FTS. Positions from JPL HORIZONS ( 149d04'13.0''E, 31d16'23.4''S, 1111.8 m )  
+# MPC code for FTS. Positions from JPL HORIZONS ( 149d04'13.0''E, 31d16'23.4''S, 1111.8 m )
         (site_lat, status)  =  (S.sla_daf2r(31, 16, 23.4))
         site_lat = -site_lat
         (site_long, status) = S.sla_daf2r(149, 04, 13.0)
@@ -894,14 +894,14 @@ def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec,
     dut = ut1_minus_utc(mjd_utc)
 
 # Compute local apparent sidereal time
-# Do GMST first which takes UT1 and then add East longitude and the equation of the equinoxes 
+# Do GMST first which takes UT1 and then add East longitude and the equation of the equinoxes
 # (which takes TDB)
 #
     gmst = S.sla_gmst(mjd_utc+(dut/86400.0))
     stl = gmst + obsvr_long + S.sla_eqeqx(mjd_tdb)
     if ( dbg ):
-    	print 'GMST, LAST, EQEQX, GAST, long=', gmst, stl, S.sla_eqeqx(mjd_tdb), gmst+S.sla_eqeqx(mjd_tdb), obsvr_long
-    
+        print 'GMST, LAST, EQEQX, GAST, long=', gmst, stl, S.sla_eqeqx(mjd_tdb), gmst+S.sla_eqeqx(mjd_tdb), obsvr_long
+
     (app_ra, app_dec) = S.sla_map(mean_ra, mean_dec, 0.0, 0.0, 0.0, 0.0, 2000.0, mjd_tdb)
     if dbg: print app_ra, app_dec, radec2strings(app_ra, app_dec)
     hour_angle = stl - app_ra
@@ -924,8 +924,8 @@ def sla_geoc_iers2003_au(p, h):
     *
     *  1  Geocentric latitude can be obtained by evaluating ATAN2(Z,R).
     *
-    *  2  This version is an update of the original sla_geoc (which used 
-    * 	  IAU 1976 constants) to use IERS2003 constants.
+    *  2  This version is an update of the original sla_geoc (which used
+    *     IAU 1976 constants) to use IERS2003 constants.
     *'''
 
 # Earth equatorial radius (metres)
@@ -946,7 +946,7 @@ def sla_geoc_iers2003_au(p, h):
     s = b * c
     r = ((a0*c + h) * cp)/au
     z = ((a0*s + h) * sp)/au
-    
+
     return (r, z)
 
 def tal_pvobs_2003(p, h, stl):
@@ -971,9 +971,9 @@ def tal_pvobs_2003(p, h, stl):
                   -v*s,
                   v*c,
                   0.0])
-                    
+
     return pv
-    
+
 def radec2strings(ra_radians, dec_radians, seperator=' '):
     '''Format an (RA, Dec) pair (in radians) into a tuple of strings, with 
     configurable seperator (defaults to <space>).
@@ -989,7 +989,7 @@ def radec2strings(ra_radians, dec_radians, seperator=' '):
     if rsign == '+' and ra_radians != dec_radians: rsign = ''
     ra_str = ra_format % ( rsign, ra[0], seperator, ra[1], seperator, ra[2],  ra[3] )
     dec_str = dec_format % ( dsign, dec[0], seperator, dec[1], seperator, dec[2], dec[3] )
-    
+
     return (ra_str, dec_str)
 
 def validate_radec(ra_radians, dec_radians):
@@ -1025,7 +1025,7 @@ def get_siteparams(site):
     exposure time and slot length.
     site_code is set to 'XXX' and the others are set to -1 in the event of an
     unrecognized site.'''
-    
+
     onem_fov = 15.5
     onem_pixscale = 0.464
     onem_sinistro_fov = 26.4
@@ -1034,7 +1034,7 @@ def get_siteparams(site):
     point4m_pixscale = 0.571
     normal_alt_limit = 30.0
     twom_alt_limit = 20.0
-    
+
     valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64' ] 
 
     site = site.upper()
