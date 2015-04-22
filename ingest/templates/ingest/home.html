@@ -1,0 +1,32 @@
+<html>
+    <title>NEOexchange</title>
+    <body>
+        <h1>Current Targets</h1>
+        <table id="id_neo_targets">
+            <thead>
+                <tr>
+                    <th class="list_title">
+                        <span class="sortable" id="name_id">Target Name</span>
+                    </th>
+                    <th class="list_project">
+                        <span class="sortable" id="type_id">Type</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="origin">Origin</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="timestamp">Ingested</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td>N007r0q</td>
+                    <td>Unknown/NEO Candidate</td>
+                    <td>MPC</td>
+                    <td>April 8, 2015, 9:23 p.m.</td>
+                </tr>
+        </table>
+        <input id="id_target" placeholder="Enter a target name"/>
+    </body>
+</html>

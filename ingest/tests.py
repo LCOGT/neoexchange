@@ -18,6 +18,7 @@ from datetime import datetime
 from django.test import TestCase
 from django.http import HttpRequest
 from django.core.urlresolvers import resolve
+from django.template.loader import render_to_string
 
 #Import module to test
 from ast_subs import *
@@ -336,6 +337,5 @@ class HomePageTest(TestCase):
     def test_home_page_returns_correct_html(self):
         request = HttpRequest()
         response = home(request)
-        self.assertTrue(response.content.startswith(b'<html>'))
-        self.assertIn(b'<title>NEOexchange</title>', response.content)
-        self.assertTrue(response.content.endswith(b'</html>'))
+        expected_html = render_to_string('ingest/home.html')
+        self.assertEqual(response.content.decode(), expected_html)

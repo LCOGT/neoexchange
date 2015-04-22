@@ -15,14 +15,21 @@ class NewVisitorTest(LiveServerTestCase):
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
         self.browser.get('http://localhost:8000')
-        
-        # He notices the page title has the name of the site and the header 
+
+        # He notices the page title has the name of the site and the header
         # mentions current targets
         self.assertIn('NEOexchange', self.browser.title)
-        header_text = self.browser.find_element_by_tag_name('h1'),text
+        header_text = self.browser.find_element_by_tag_name('h1').text
         self.assertIn('Current Targets', header_text)
 
         # He notices there are several targets that could be followed up
+        table = self.browser.find_element_by_id('id_neo_targets')
+        theader = table.find_element_by_tag_name('thead').text
+        self.assertEqual('Target Name Type Origin Ingested', theader)
+        rows = table.find_elements_by_tag_name('tr')
+        self.assertTrue(
+            any(row.text == 'N007r0q Unknown/NEO Candidate MPC April 8, 2015, 9:23 p.m.' for row in rows)
+        )
 
         # He is invited to enter a target to compute an ephemeris
         inputbox = self.browser.find_element_by_id('id_target')

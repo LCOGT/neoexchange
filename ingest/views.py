@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from datetime import datetime
 from django.forms.models import model_to_dict
-from django.http import HttpResponse
+from django.shortcuts import render
 
 from ingest.models import Body
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def home(request):
-    return HttpResponse('<html><title>NEOexchange</title></html>')
+    return render(request, 'ingest/home.html')
 
 def save_and_make_revision(body,kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
