@@ -16,11 +16,13 @@ GNU General Public License for more details.
 from nose.tools import eq_, assert_equal, assert_almost_equal, raises, nottest
 from datetime import datetime
 from django.test import TestCase
+from django.http import HttpRequest
+from django.core.urlresolvers import resolve
 
 #Import module to test
 from ast_subs import *
 from sources_subs import parse_goldstone_chunks
-from ingest.views import clean_NEOCP_object
+from ingest.views import home, clean_NEOCP_object
 
 class TestIntToMutantHexChar(TestCase):
     '''Unit tests for the int_to_mutant_hex_char() method'''
@@ -324,3 +326,16 @@ class TestClean_NEOCP_Object(TestCase):
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
             assert_equal(expected_elements[element], elements[element])
+
+class HomePageTest(TestCase):
+
+    def test_root_url_resolves_to_home_page_view(self):
+        found = resolve('/')
+        self.assertEqual(found.func, home)
+
+    def test_home_page_returns_correct_html(self):
+        request = HttpRequest()
+        response = home(request)
+        self.assertTrue(response.content.startswith(b'<html>'))
+        self.assertIn(b'<title>NEOexchange</title>', response.content)
+        self.assertTrue(response.content.endswith(b'</html>'))
