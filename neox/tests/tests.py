@@ -60,6 +60,8 @@ class NewVisitorTest(LiveServerTestCase):
         # as a function of time.
         inputbox.send_keys(Keys.ENTER)
 
+        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N007r0q')
+
         self.check_for_header_in_table('id_ephemeris_table',
             'Date (UT) RA Dec Mag "/min Alt Moon Phase Moon Dist. Moon Alt. Score FOV # H.A.'
         )

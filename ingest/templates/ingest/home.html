@@ -34,7 +34,16 @@
                 </tr>
             </tbody>
         </table>
-        <input id="id_target" placeholder="Enter a target name"/>
+        <form method="POST">
+            <input name="target_name" id="id_target" placeholder="Enter a target name"/>
+            {% csrf_token %}
+        </form>
+        <table id="id_planning_table">
+            <tbody>
+                <tr><td>Computing ephemeris for: {{ new_target_name }}</td></tr>
+            </tbody>
+        </table>
+        <br>
         <table id="id_ephemeris_table">
             <thead>
                 <tr>
