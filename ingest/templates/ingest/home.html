@@ -1,40 +1,54 @@
-<html>
-    <title>NEOexchange</title>
-    <body>
-        <h1>Current Targets</h1>
-        <table id="id_neo_targets">
-            <thead>
-                <tr>
-                    <th class="list_title">
-                        <span class="sortable" id="name_id">Target Name</span>
-                    </th>
-                    <th class="list_project">
-                        <span class="sortable" id="type_id">Type</span>
-                    </th>
-                    <th>
-                        <span class="sortable" id="origin">Origin</span>
-                    </th>
-                    <th>
-                        <span class="sortable" id="timestamp">Ingested</span>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="{% cycle 'odd' 'even' %}">
-                    <td>N007r0q</td>
-                    <td>Unknown/NEO Candidate</td>
-                    <td>MPC</td>
-                    <td>April 8, 2015, 9:23 p.m.</td>
-                </tr>
-                <tr class="{% cycle 'odd' 'even' %}">
-                    <td>P10kfud</td>
-                    <td>Unknown/NEO Candidate</td>
-                    <td>MPC</td>
-                    <td>April 8, 2015, 8:57 p.m.</td>
-                </tr>
-            </tbody>
-        </table>
-        <form method="POST">
+{% extends 'ingest/base.html' %}
+{% load url from future %}
+
+{% block header %}NEOexchange{% endblock %}
+
+{% block title %}Current Targets{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+{% block extramenucss %}extramenu-home{% endblock %}
+
+{% block extramenu %}
+{% endblock %}
+
+{% block main-content %}
+<div class="masthead">
+    <div class="container">
+        <div class="bigtext">
+            <table id="id_neo_targets" class="datatable">
+                <thead>
+                    <tr>
+                        <th class="list_title">
+                            <span class="sortable" id="name_id">Target Name</span>
+                        </th>
+                        <th class="list_project">
+                            <span class="sortable" id="type_id">Type</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="origin">Origin</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="timestamp">Ingested</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="{% cycle 'odd' 'even' %}">
+                        <td>N007r0q</td>
+                        <td>Unknown/NEO Candidate</td>
+                        <td>MPC</td>
+                        <td>April 8, 2015, 9:23 p.m.</td>
+                    </tr>
+                    <tr class="{% cycle 'odd' 'even' %}">
+                        <td>P10kfud</td>
+                        <td>Unknown/NEO Candidate</td>
+                        <td>MPC</td>
+                        <td>April 8, 2015, 8:57 p.m.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <form method="POST" style="display:inline-block;">
             <input name="target_name" id="id_target" placeholder="Enter a target name"/>
             {% csrf_token %}
         </form>
@@ -44,7 +58,7 @@
             </tbody>
         </table>
         <br>
-        <table id="id_ephemeris_table">
+        <table id="id_ephemeris_table" class="datatable">
             <thead>
                 <tr>
                     <th class="list_title">
@@ -102,5 +116,6 @@
                 </tr>
             </tbody>
         </table>
-    </body>
-</html>
+    </div>
+</div>
+{% endblock %}

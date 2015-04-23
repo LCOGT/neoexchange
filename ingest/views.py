@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.forms.models import model_to_dict
 from django.shortcuts import render
+from django.views.generic import DetailView, ListView
 from django.http import HttpResponse
 
 from ingest.models import Body
@@ -30,6 +31,9 @@ def home(request):
     return render(request, 'ingest/home.html',
         {'new_target_name' : request.POST.get('target_name', ''),}
     )
+
+class BodySearchView(ListView):
+    pass
 
 def save_and_make_revision(body,kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter

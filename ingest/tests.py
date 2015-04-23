@@ -17,13 +17,15 @@ from nose.tools import eq_, assert_equal, assert_almost_equal, raises, nottest
 from datetime import datetime
 from django.test import TestCase
 from django.http import HttpRequest
-from django.core.urlresolvers import resolve
+from django.core.urlresolvers import resolve, reverse
 from django.template.loader import render_to_string
+from django.views.generic import ListView
 
 #Import module to test
 from ast_subs import *
 from sources_subs import parse_goldstone_chunks
 from ingest.views import home, clean_NEOCP_object
+from ingest.models import Body
 
 class TestIntToMutantHexChar(TestCase):
     '''Unit tests for the int_to_mutant_hex_char() method'''
@@ -352,3 +354,16 @@ class HomePageTest(TestCase):
             {'new_target_name' : 'New target'}
         )
         self.assertEqual(response.content.decode(), expected_html)
+
+class TargetsPageTest(TestCase):
+
+    def test_target_url_resolves_to_targets_view(self):
+        found = reverse('targetlist')
+        self.assertEqual(found, '/target/')
+  
+    def test_target_page_returns_correct_html(self):
+        request = HttpRequest()
+        targetlist = ListView.as_view(model=Body, queryset=Body.objects.filter(active=True))
+        response = targetlist.render_to_response(targetlist)
+        expected_html = render_to_string('ingest/body_list.html')
+        self.assertEqual(response, expected_html)
