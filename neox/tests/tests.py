@@ -87,8 +87,9 @@ class NewVisitorTest(LiveServerTestCase):
 
         # She clicks the link to go to the TARGETS page
         link.click()
+        self.browser.implicitly_wait(3)
         new_url = self.browser.current_url
-        self.assertContains(new_url, target_url)
+        self.assertEqual(str(new_url), target_url)
 
     def test_layout_and_styling(self):
         # Eduardo goes to the homepage

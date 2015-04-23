@@ -20,6 +20,7 @@ from django.http import HttpRequest
 from django.core.urlresolvers import resolve, reverse
 from django.template.loader import render_to_string
 from django.views.generic import ListView
+from unittest import skipIf
 
 #Import module to test
 from ast_subs import *
@@ -361,6 +362,7 @@ class TargetsPageTest(TestCase):
         found = reverse('targetlist')
         self.assertEqual(found, '/target/')
   
+    @skipIf(True, "I don't want to run this test yet")
     def test_target_page_returns_correct_html(self):
         request = HttpRequest()
         targetlist = ListView.as_view(model=Body, queryset=Body.objects.filter(active=True))
