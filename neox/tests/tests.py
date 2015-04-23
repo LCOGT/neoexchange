@@ -29,7 +29,7 @@ class NewVisitorTest(LiveServerTestCase):
     def test_can_compute_ephemeris(self):
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
-        self.browser.get('http://localhost:8000')
+        self.browser.get(self.live_server_url)
 
         # He notices the page title has the name of the site and the header
         # mentions current targets
@@ -72,7 +72,18 @@ class NewVisitorTest(LiveServerTestCase):
         # There is a button asking whether to schedule the target
 
         # He clicks 'No' and is returned to the front page
-        self.fail('Finish the test!')
+        self.assertIn('NEOexchange', self.browser.title)
 
         # Satisfied, he goes back to sleep
-        browser.quit()
+
+    def test_layout_and_styling(self):
+        # Eduardo goes to the homepage
+        self.browser.get(self.live_server_url)
+        self.browser.set_window_size(1024, 768)
+
+        # He notices the input box is nicely centered
+        inputbox = self.get_item_input_box()
+        self.assertAlmostEqual(
+            inputbox.location['x'] + inputbox.size['width'] / 2,
+            512, delta=5
+        )
