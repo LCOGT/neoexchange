@@ -26,7 +26,7 @@ from unittest import skipIf
 from ast_subs import *
 from sources_subs import parse_goldstone_chunks
 from ingest.views import home, clean_NEOCP_object
-from ingest.models import Body
+from ingest.models import Body, Block
 
 class TestIntToMutantHexChar(TestCase):
     '''Unit tests for the int_to_mutant_hex_char() method'''
@@ -369,3 +369,28 @@ class TargetsPageTest(TestCase):
         response = targetlist.render_to_response(targetlist)
         expected_html = render_to_string('ingest/body_list.html')
         self.assertEqual(response, expected_html)
+
+class TestComputeEphem(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N007r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body = Body.objects.create(**params)
+        self.body.save()
+    
+    def test_body(self):
+        tbody = Body.objects.get(provisional_name='N007r0q')
+        self.assertIsInstance(tbody, Body)
