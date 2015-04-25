@@ -20,6 +20,7 @@ from django.http import HttpRequest
 from django.core.urlresolvers import resolve, reverse
 from django.template.loader import render_to_string
 from django.views.generic import ListView
+from django.forms.models import model_to_dict
 from unittest import skipIf
 
 #Import module to test
@@ -373,7 +374,7 @@ class TargetsPageTest(TestCase):
 class TestComputeEphem(TestCase):
 
     def setUp(self):
-        params = {  'provisional_name' : 'N007r0q',
+        params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
@@ -391,6 +392,24 @@ class TestComputeEphem(TestCase):
         self.body = Body.objects.create(**params)
         self.body.save()
     
-    def test_body(self):
-        tbody = Body.objects.get(provisional_name='N007r0q')
+    def test_body_is_correct_class(self):
+        tbody = Body.objects.get(provisional_name='N999r0q')
         self.assertIsInstance(tbody, Body)
+
+    def test_save_and_retrieve_bodies(self):
+        first_body = Body.objects.get(provisional_name='N999r0q')
+        body_dict = model_to_dict(first_body)
+
+        body_dict['provisional_name'] = 'N999z0z'
+        body_dict['eccentricity'] = 0.42
+        body_dict['id'] += 1
+        second_body = Body.objects.create(**body_dict)
+        second_body.save()
+
+        saved_items = Body.objects.all()
+        self.assertEqual(saved_items.count(), 2)
+
+        first_saved_item = saved_items[0]
+        second_saved_item = saved_items[1]
+        self.assertEqual(first_saved_item.provisional_name, 'N999r0q')
+        self.assertEqual(second_saved_item.provisional_name, 'N999z0z')
