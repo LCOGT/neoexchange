@@ -433,3 +433,36 @@ class TestComputeEphem(TestCase):
         second_saved_item = saved_items[1]
         self.assertEqual(first_saved_item.provisional_name, 'N999r0q')
         self.assertEqual(second_saved_item.provisional_name, 'N999z0z')
+
+    def test_compute_ephem_with_elements(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_ra  = 5.28722753669144
+        expected_dec = 0.522637696108887
+        expected_mag = 20.408525362626005
+        expected_motion = 2.4825093417658186
+        expected_alt =  -58.658929026981895
+        emp_line = compute_ephem(d, self.elements, '?', dbg=True, perturb=True, display=False)
+        self.assertEqual(d, emp_line[0])
+        precision = 11 
+        self.assertAlmostEqual(expected_ra, emp_line[1], precision)
+        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
+        self.assertAlmostEqual(expected_mag, emp_line[3], precision)
+        self.assertAlmostEqual(expected_motion, emp_line[4], precision)
+        self.assertAlmostEqual(expected_alt, emp_line[5], precision)
+
+    def test_compute_ephem_with_body(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_ra  = 5.28722753669144
+        expected_dec = 0.522637696108887
+        expected_mag = 20.408525362626005
+        expected_motion = 2.4825093417658186
+        expected_alt =  -58.658929026981895
+        body_elements = model_to_dict(self.body)
+        emp_line = compute_ephem(d, body_elements, '?', dbg=True, perturb=True, display=False)
+        self.assertEqual(d, emp_line[0])
+        precision = 11 
+        self.assertAlmostEqual(expected_ra, emp_line[1], precision)
+        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
+        self.assertAlmostEqual(expected_mag, emp_line[3], precision)
+        self.assertAlmostEqual(expected_motion, emp_line[4], precision)
+        self.assertAlmostEqual(expected_alt, emp_line[5], precision)

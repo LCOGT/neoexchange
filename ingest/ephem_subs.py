@@ -5,9 +5,9 @@ from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, f
 from numpy import array, concatenate, zeros
 
 # Local imports
-from timesubs import datetime2mjd_utc, mjd_utc2mjd_tt, datetime2mjd_tdb, \
-    ut1_minus_utc, round_datetime
-from astsubs import mpc_8lineformat
+#from time_subs import datetime2mjd_utc, mjd_utc2mjd_tt, datetime2mjd_tdb, \
+from time_subs import datetime2mjd_utc, ut1_minus_utc
+#from astsubs import mpc_8lineformat
 
 
 def compute_phase_angle(r, delta, es_Rsq, dbg=False):
@@ -28,27 +28,26 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     if dbg: print "Phase angle, beta (deg)=", beta,beta*(1.0/d2r)
     return beta
 
-def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
-
+def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
+    '''Routine to compute the geocentric or topocentric position, magnitude,
+    motion and altitude of an asteroid or comet for a specific date and time
+    from orbital elements.
+    
+    
+    '''
 
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
 
 # Compute MJD for UTC
-    (mjd, status) = S.sla_cldj(d.year, d.month, d.day)
-    (fday, status) = S.sla_dtf2d(d.hour, d.minute, d.second + (d.microsecond / 1e6))
-    mjd_utc = mjd + fday
+    mjd_utc = datetime2mjd_utc(d)
 
 # Compute epoch of the elements as a MJD
     ericformat = False
     if orbelems.has_key('epoch'): ericformat = True
     if ericformat == False:
-        (epoch_mjd, status) = S.sla_cldj(orbelems['Epoch'].year, orbelems['Epoch'].month, orbelems['Epoch'].day)
-        (fday, status) = S.sla_dtf2d(orbelems['Epoch'].hour, orbelems['Epoch'].minute, orbelems['Epoch'].second)
-        epoch_mjd = epoch_mjd + fday
-        #epoch_mjd= 55501.0
-        if status != 0:
-            print 'Error in MJD conversion'
+        epochofel = datetime.strptime(orbelems['epochofel'], '%Y-%m-%d %H:%M:%S')
+        epoch_mjd = datetime2mjd_utc(epochofel)
     else:
         epoch_mjd = orbelems['epoch']
 
@@ -95,7 +94,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
     pvobs = S.sla_pvobs(site_lat, site_hgt, stl)
 
     if site_name == '?':
-        print "WARN: No site co-ordinates found, computing for geocenter"
+        if dbg: print "WARN: No site co-ordinates found, computing for geocenter"
         pvobs = pvobs * 0.0
 
     if dbg: print "PVobs(orig)=", pvobs[0:3], "\n           ", pvobs[3:6]*86400.0
@@ -122,7 +121,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
     (e_pos_hel, e_vel_hel, e_pos_bar, e_vel_bar) = S.sla_epv(mjd_tt)
 # Uncomment the lines below to use JPL DE430 ephemeris. This, and the
 # associated code, needs to be installed...
-#    ephem = Ephemeris(423) #  Ephemeris(430)
+#    ephem = Ephemeris(430)
 #    (e_pos_hel, e_vel_hel, e_pos_bar, e_vel_bar ) = ephem.epv(mjd_tt)
     e_vel_hel = e_vel_hel/86400.0
 
@@ -162,6 +161,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
                           'SemiAxis' : orbelems['semi_axis'],
                           'Ecc' : orbelems['eccentricity']
                          }
+        p_orbelems['H'] = orbelems['H']
+        p_orbelems['G'] = orbelems['G']
         if perturb == True:
             if comet == True:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
@@ -181,12 +182,30 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
             p_epoch_mjd = epoch_mjd
             j = 0
     else:
-        p_orbelems = orbelems.copy()
+        # NEO exchange format
+
+        if comet == True:
+            p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
+                          'Inc' : radians(orbelems['orbinc']),
+                          'ArgPeri' : radians(orbelems['argofperih']),
+                          'SemiAxisOrQ' : orbelems['perihdist'],
+                          'Ecc' : orbelems['eccentricity'],
+                         }
+        else:
+            p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
+                          'Inc' : radians(orbelems['orbinc']),
+                          'ArgPeri' : radians(orbelems['argofperih']),
+                          'MeanAnom' : radians(orbelems['meananom']),
+                          'SemiAxis' : orbelems['meandist'],
+                          'Ecc' : orbelems['eccentricity']
+                         }
+        p_orbelems['H'] = orbelems['abs_mag']
+        p_orbelems['G'] = orbelems['slope']
         if perturb == True:
             (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-              p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( 2, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['Inc']), radians(orbelems['LongNode']),
-                        radians(orbelems['ArgPeri']), orbelems['SemiAxis'], orbelems['Ecc'],
-                        radians(orbelems['MeanAnom']))
+              p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( 2, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
+                        radians(orbelems['argofperih']), orbelems['meandist'], orbelems['eccentricity'],
+                        radians(orbelems['meananom']))
         else:
             p_epoch_mjd = epoch_mjd
             j = 0
@@ -219,10 +238,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
         if dbg: print "Sun->Asteroid [x,y,z]=", pv[0:3], status
         if dbg: print "Sun->Asteroid [xdot,ydot,zdot]=", pv[3:6], status
 
-
-        #for earth_vec, ast_vec, rel_pos in zip(e_pos_hel, a_pos, pos):
-        #    rel_pos = -earth_vec + ast_vec
-
         for i, e_pos in enumerate(e_pos_hel):
             pos[i] = pv[i] - e_pos
 
@@ -249,9 +264,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
     if dbg: print "Earth->Asteroid [x,y,z]=", pos
     if dbg: print "Earth->Asteroid [x,y,z]= %20.15E %20.15E %20.15E" % (pos[0], pos[1], pos[2])
     if dbg: print "Earth->Asteroid [xdot,ydot,zdot]=", vel*86400.0
-    (ra, dec) = S.sla_dcc2s(pos)
-    (rsign, ra_geo_deg) = S.sla_dr2tf(2,ra)
-    (dsign, dec_geo_deg) = S.sla_dr2af(1,dec)
 
 # Convert Cartesian to RA, Dec
     (ra, dec) = S.sla_dcc2s(pos)
@@ -260,22 +272,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
     if dbg: print "ra,dec=", ra, dec
     (rsign, ra_geo_deg) = S.sla_dr2tf(2,ra)
     (dsign, dec_geo_deg) = S.sla_dr2af(1,dec)
-
-# Compute topocentric apparent ra,dec of asteroid
-#    (ra_app, dec_app, r, status) = S.sla_plante(mjd_tt, site_long, site_lat, 2,
-#                    p_epoch_mjd,
-#                    p_orbelems['Inc'], p_orbelems['LongNode'],
-#                    p_orbelems['ArgPeri'], p_orbelems['SemiAxis'], p_orbelems['Ecc'],
-#                    p_orbelems['MeanAnom'], 0.0)
-
-    #print "Topocentric apparent (rad)=", ra_app, dec_app
-# Convert radians to Hours, Min, Sec and Degrees, Arcmin, Arcsec
-#    (rsign,  ra_app_deg) = S.sla_dr2tf(2,ra_app)
-#    (dsign, dec_app_deg) = S.sla_dr2af(1,dec_app)
-
-#    print "Topocentric apparent : %s%02.2dh %02.2dm %02.2d.%02.2ds %s%02.2dd %02.2d\' %02.2d.%d\"" % ( rsign,
-#        ra_app_deg[0], ra_app_deg[1], ra_app_deg[2], ra_app_deg[3],
-#        dsign, dec_app_deg[0], dec_app_deg[1], dec_app_deg[2], dec_app_deg[3] )
 
 # Compute r, the Sun-Target distance. Correct for light travel time first
     cposx = pv[0] - (ltt * pv[3])
@@ -303,7 +299,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
     # Calculate magnitude of comet
     # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
     # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the
-        mag = orbelems['H'] + 5.0 * log10(delta) + 2.5 * orbelems['G'] * log10(r)
+        mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
 
     else:
     # Compute phase angle, beta (Sun-Target-Earth angle)
@@ -315,8 +311,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=True, perturb=True, display=True):
     #    if dbg: print "Phi1, phi2=", phi1,phi2
 
     # Calculate magnitude of object
-        mag = orbelems['H'] + 5.0 * log10(r * delta) - \
-            (2.5 * log10((1.0 - orbelems['G'])*phi1 + orbelems['G']*phi2))
+        mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
+            (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
 
     az_rad,alt_rad = moon_alt_az(d, ra, dec, site_long, site_lat, site_hgt)
     airmass = S.sla_airmas((pi/2.0)-alt_rad)
@@ -404,10 +400,10 @@ def call_compute_ephem(orbit_file, dark_start, dark_end, site_code, ephem_step_s
     print "Reading from",orbit_file, "for", ast
     elements = read_neocp_orbit(orbit_file)
 
-    print
-    formatted_elem_lines = mpc_8lineformat(elements)
-    for line in formatted_elem_lines:
-        print line
+#    print
+#    formatted_elem_lines = mpc_8lineformat(elements)
+#    for line in formatted_elem_lines:
+#        print line
 
     step_size_secs = 300
     if ephem_step_size[-1] == 'm':
