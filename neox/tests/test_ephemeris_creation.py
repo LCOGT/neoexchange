@@ -1,30 +1,9 @@
-from django.test import LiveServerTestCase
+from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from ingest.models import Body
 
-class NewVisitorTest(LiveServerTestCase):
-
-    def setUp(self):
-        self.browser = webdriver.Firefox()
-        self.browser.implicitly_wait(3)
-
-    def tearDown(self):
-        self.browser.quit()
-
-    def check_for_row_in_table(self, table_id, row_text):
-        table = self.browser.find_element_by_id(table_id)
-        table_body = table.find_element_by_tag_name('tbody')
-        rows = table_body.find_elements_by_tag_name('tr')
-        self.assertIn(row_text, [row.text for row in rows])
-
-    def check_for_header_in_table(self, table_id, header_text):
-        table = self.browser.find_element_by_id(table_id)
-        table_header = table.find_element_by_tag_name('thead').text
-        self.assertEqual(header_text, table_header)
-
-    def get_item_input_box(self):
-        return self.browser.find_element_by_id('id_target')
+class NewVisitorTest(FunctionalTest):
 
     def insert_test_body(self):
         params = {  'provisional_name' : 'N999r0q',
@@ -100,42 +79,3 @@ class NewVisitorTest(LiveServerTestCase):
         self.assertIn('NEOexchange', self.browser.title)
 
         # Satisfied, he goes back to sleep
-
-    def test_cannot_get_ephem_for_bad_objects(self):
-        # Eduardo goes to the site and accidentally tries to submit a blank
-        # form. He hits Enter on the empty input box
-        self.browser.get(self.live_server_url)
-        inputbox = self.get_item_input_box()
-        inputbox.send_keys(Keys.ENTER)
-
-        # The page refreshes and there is an error message saying that targets'
-        # can't be blank
-        error = self.browser.find_element_by_css_selector('.error')
-        self.assertEqual(error.text, "You didn't specify a target")
-
-    def test_can_view_targets(self):
-        # A new user comes along to the site
-        self.browser.get(self.live_server_url)
-
-        # She sees a link to TARGETS
-        link = self.browser.find_element_by_link_text('TARGETS')
-        target_url = self.live_server_url + '/target/'
-        self.assertEqual(link.get_attribute('href'), target_url)
-
-        # She clicks the link to go to the TARGETS page
-        link.click()
-        self.browser.implicitly_wait(3)
-        new_url = self.browser.current_url
-        self.assertEqual(str(new_url), target_url)
-
-    def test_layout_and_styling(self):
-        # Eduardo goes to the homepage
-        self.browser.get(self.live_server_url)
-        self.browser.set_window_size(1280, 1024)
-
-        # He notices the input box is nicely centered
-        inputbox = self.get_item_input_box()
-        self.assertAlmostEqual(
-            inputbox.location['x'] + inputbox.size['width'] / 2,
-            640, delta=7
-        )
