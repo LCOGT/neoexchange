@@ -1,6 +1,7 @@
 from django.test import LiveServerTestCase
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from ingest.models import Body
 
 class NewVisitorTest(LiveServerTestCase):
 
@@ -25,8 +26,30 @@ class NewVisitorTest(LiveServerTestCase):
     def get_item_input_box(self):
         return self.browser.find_element_by_id('id_target')
 
+    def insert_test_body(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body = Body.objects.create(**params)
+        self.body.save()
+
 
     def test_can_compute_ephemeris(self):
+        ## Insert test body otherwise things will fail
+        self.insert_test_body()
+
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
         self.browser.get(self.live_server_url)
@@ -41,7 +64,7 @@ class NewVisitorTest(LiveServerTestCase):
         self.check_for_header_in_table('id_neo_targets',
             'Target Name Type Origin Ingested')
         self.check_for_row_in_table('id_neo_targets',
-            'N007r0q Unknown/NEO Candidate MPC April 8, 2015, 9:23 p.m.')
+            'N999r0q Unknown/NEO Candidate MPC April 8, 2015, 9:23 p.m.')
         self.check_for_row_in_table('id_neo_targets',
             'P10kfud Unknown/NEO Candidate MPC April 8, 2015, 8:57 p.m.')
 
@@ -52,21 +75,23 @@ class NewVisitorTest(LiveServerTestCase):
             'Enter a target name'
         )
 
-        # He types N007r0q into the textbox (he is most interested in NEOWISE targets)
-        inputbox.send_keys('N007r0q')
+        # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
+        inputbox.send_keys('N999r0q')
 
-        # When he hits Enter, the page updates and now the page shows an ephemeris
+        # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
         inputbox.send_keys(Keys.ENTER)
 
-        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N007r0q')
+        eduardo_ephem_url = self.browser.current_url
+        self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
+        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q')
 
         self.check_for_header_in_table('id_ephemeris_table',
-            'Date (UT) RA Dec Mag "/min Alt Moon Phase Moon Dist. Moon Alt. Score FOV # H.A.'
+            'Date/Time (UTC) RA Dec Mag "/min Alt Moon Phase Moon Dist. Moon Alt. Score H.A.'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 21 17:35 13 22 02.92 -22 24 34.6 21.1 7.49 +31 0.11 134 +09 +027 0 -04:26'
+            '2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25'
         )
 
         # There is a button asking whether to schedule the target
@@ -79,7 +104,7 @@ class NewVisitorTest(LiveServerTestCase):
     def test_can_view_targets(self):
         # A new user comes along to the site
         self.browser.get(self.live_server_url)
-        
+
         # She sees a link to TARGETS
         link = self.browser.find_element_by_link_text('TARGETS')
         target_url = self.live_server_url + '/target/'
@@ -94,11 +119,11 @@ class NewVisitorTest(LiveServerTestCase):
     def test_layout_and_styling(self):
         # Eduardo goes to the homepage
         self.browser.get(self.live_server_url)
-        self.browser.set_window_size(1024, 768)
+        self.browser.set_window_size(1280, 1024)
 
         # He notices the input box is nicely centered
         inputbox = self.get_item_input_box()
         self.assertAlmostEqual(
             inputbox.location['x'] + inputbox.size['width'] / 2,
-            512, delta=5
+            640, delta=7
         )

@@ -34,7 +34,7 @@
                 </thead>
                 <tbody>
                     <tr class="{% cycle 'odd' 'even' %}">
-                        <td>N007r0q</td>
+                        <td>N999r0q</td>
                         <td>Unknown/NEO Candidate</td>
                         <td>MPC</td>
                         <td>April 8, 2015, 9:23 p.m.</td>
@@ -48,74 +48,16 @@
                 </tbody>
             </table>
         </div>
-        <form method="POST" style="display:inline-block;">
-            <input name="target_name" id="id_target" placeholder="Enter a target name"/>
-            {% csrf_token %}
+        <div class="fivecol">
+        <div class="threecol">
+        </div>
+        <form action="/ephemeris/" method="GET" style="display:inline-block;">
+            <input type="text" name="target_name" id="id_target" placeholder="Enter a target name"/ style="color: #000;">
+            <input type="submit" class="button keepvisible" value="Compute">
         </form>
-        <table id="id_planning_table">
-            <tbody>
-                <tr><td>Computing ephemeris for: {{ new_target_name }}</td></tr>
-            </tbody>
-        </table>
-        <br>
-        <table id="id_ephemeris_table" class="datatable">
-            <thead>
-                <tr>
-                    <th class="list_title">
-                        <span id="date">Date (UT)</span>
-                    </th>
-                    <th class="list_project">
-                        <span id="ra">RA</span>
-                    </th>
-                    <th>
-                        <span id="dec">Dec</span>
-                    </th>
-                    <th>
-                        <span id="magnitude">Mag</span>
-                    </th>
-                    <th>
-                        <span id="speed">"/min</span>
-                    </th>
-                    <th>
-                        <span id="altitude">Alt</span>
-                    </th>
-                    <th>
-                        <span id="moonphase">Moon Phase</span>
-                    </th>
-                    <th>
-                        <span id="moondist">Moon Dist.</span>
-                    </th>
-                    <th>
-                        <span id="moonalt">Moon Alt.</span>
-                    </th>
-                    <th>
-                        <span id="score">Score</span>
-                    </th>
-                     <th>
-                        <span id="fov_number">FOV #</span>
-                    </th>
-                    <th>
-                        <span id="hourangle">H.A.</span>
-                    </th>
-               </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>2015 04 21 17:35</td>
-                    <td>13 22 02.92</td>
-                    <td>-22 24 34.6</td>
-                    <td>21.1</td>
-                    <td>7.49</td>
-                    <td>+31</td>
-                    <td>0.11</td>
-                    <td>134</td>
-                    <td>+09</td>
-                    <td>+027</td>
-                    <td>0</td>
-                    <td>-04:26</td>
-                </tr>
-            </tbody>
-        </table>
+        </div>
+        <div class="onecol lastcol">
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -26,6 +26,7 @@ urlpatterns = patterns('ingest.views',
     url(r'^$', 'home', name='home'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
+    url(r'^ephemeris/$', 'ephemeris', name='ephemeris'),
     url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', include(admin.site.urls)),
 )+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

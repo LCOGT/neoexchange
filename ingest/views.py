@@ -15,25 +15,49 @@ GNU General Public License for more details.
 
 from datetime import datetime
 from django.forms.models import model_to_dict
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView
 from django.http import HttpResponse
 
 from ingest.models import Body
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
+from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
 import logging
 import reversion
 logger = logging.getLogger(__name__)
 
 
 def home(request):
-    return render(request, 'ingest/home.html',
-        {'new_target_name' : request.POST.get('target_name', ''),}
-    )
+    if 'target_name' in request.GET:
+        return redirect('/ephemeris/',
+            data = {'new_target_name' : request.GET.get('target_name', '')}
+        )
+    return render(request, 'ingest/home.html')
 
 class BodySearchView(ListView):
     pass
+
+def ephemeris(request):
+
+    name = request.GET.get('target_name', '')
+    ephem_lines = []
+    if name != '':
+        try:
+            body = Body.objects.get(provisional_name = name)
+            body_elements = model_to_dict(body)
+            site_code = 'V37'
+            utc_date = datetime(2015, 4, 21, 3,0,0)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date )
+            ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
+        except Body.DoesNotExist:
+            name = "Error ! No object found"
+        except Body.MultipleObjectsReturned:
+            name = "Error ! Multiple objects specified"
+
+    return render(request, 'ingest/ephem.html',
+        {'new_target_name' : name, 'ephem_lines'  : ephem_lines}
+    )
 
 def save_and_make_revision(body,kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter

@@ -1,12 +1,10 @@
 from datetime import datetime, timedelta
-import os 
 import slalib as S
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10
 from numpy import array, concatenate, zeros
 
 # Local imports
-#from time_subs import datetime2mjd_utc, mjd_utc2mjd_tt, datetime2mjd_tdb, \
-from time_subs import datetime2mjd_utc, ut1_minus_utc
+from time_subs import datetime2mjd_utc, datetime2mjd_tdb, ut1_minus_utc, round_datetime
 #from astsubs import mpc_8lineformat
 
 
@@ -31,9 +29,13 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
 def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
     '''Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
-    from orbital elements.
+    from a dictionary of orbital elements.
     
-    
+    <orbelems> can be in one of two forms, so called "Eric format" as produced
+    by rise_set.moving_objects.read_neocp_orbit and used in the scheduler/RequestDB
+    or the format used by NEO exchange. Selection is automatically handled based on
+    whether the epoch of the elements dictionary key is 'epoch' (Eric format) or
+    'epochofel' (NEO exchange format)
     '''
 
 # Light travel time for 1 AU (in sec)
@@ -46,7 +48,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     ericformat = False
     if orbelems.has_key('epoch'): ericformat = True
     if ericformat == False:
-        epochofel = datetime.strptime(orbelems['epochofel'], '%Y-%m-%d %H:%M:%S')
+        try:
+            epochofel = datetime.strptime(orbelems['epochofel'], '%Y-%m-%d %H:%M:%S')
+        except TypeError:
+            epochofel = orbelems['epochofel']
         epoch_mjd = datetime2mjd_utc(epochofel)
     else:
         epoch_mjd = orbelems['epoch']
@@ -387,18 +392,59 @@ def compute_sky_motion(sky_vel, delta, dbg=True):
 
     return (total_motion, sky_pa, ra_motion, dec_motion)
 
-def call_compute_ephem(orbit_file, dark_start, dark_end, site_code, ephem_step_size):
+def format_emp_line(emp_line, site_code):
+
+# Get site and mount parameters
+    (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
+    (ha_neg_limit, ha_pos_limit, alt_limit) = get_mountlimits(site_code)
+
+    blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
+
+# Convert radians for RA, Dec into strings for printing
+    (ra_string, dec_string ) = radec2strings(emp_line[1], emp_line[2], ' ')
+# Compute apparent RA, Dec of the Moon
+    (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt) 
+# Convert to alt, az (only the alt is actually needed)
+    (moon_az, moon_alt) = moon_alt_az(emp_line[0], moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
+    moon_alt = degrees(moon_alt)
+# Compute object<->Moon seperation and convert to degrees
+    moon_obj_sep = S.sla_dsep(emp_line[1], emp_line[2], moon_app_ra, moon_app_dec)
+    moon_obj_sep = degrees(moon_obj_sep)
+# Calculate Moon phase (in range 0.0..1.0)
+    moon_phase = moonphase(emp_line[0], site_long, site_lat, site_hgt)
+
+# Compute H.A.
+    ha = compute_hourangle(emp_line[0], site_long, site_lat, site_hgt, emp_line[1], emp_line[2])
+    ha_in_deg =  degrees(ha)
+# Check HA is in limits, skip this slot if not
+    if ( ha_in_deg >= ha_pos_limit or ha_in_deg <= ha_neg_limit ):
+            ha_string = 'Limits'
+    else:
+        (ha_string,junk) = radec2strings(ha, ha, ':')
+        ha_string = ha_string[0:6]
+
+# Calculate slot score
+    slot_score = compute_score(emp_line[5], moon_alt, moon_obj_sep, alt_limit)
+
+# Calculate the no. of FOVs from the starting position
+#    pointings_sep = S.sla_dsep(emp_line[1], emp_line[2], start_ra, start_dec)
+#    num_fov = int(pointings_sep/ccd_fov)
+
+# Format time and print out the overall ephemeris
+    emp_time = datetime.strftime(emp_line[0], '%Y %m %d %H:%M')
+
+    formatted_line = blk_row_format % ( emp_time, ra_string, dec_string, \
+        emp_line[3], emp_line[4], emp_line[5],\
+        moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
+
+    line_as_list = formatted_line.split('|')
+    return line_as_list
+
+def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size):
     '''Wrapper for compute_ephem to enable use within plan_obs (or other codes)
     by making repeated calls for datetimes from <dark_start> -> <dark_end> spaced
     by <ephem_step_size> seconds. The results are assembled into a list of tuples
     in the same format as returned by read_findorb_ephem()'''
-    from urlsubs import fetch_NEOCP_orbit
-    from rise_set.moving_objects import read_neocp_orbit
-
-    ast = os.path.basename(orbit_file)
-    ast = ast.replace('.neocp', '')
-    print "Reading from",orbit_file, "for", ast
-    elements = read_neocp_orbit(orbit_file)
 
 #    print
 #    formatted_elem_lines = mpc_8lineformat(elements)
@@ -406,7 +452,7 @@ def call_compute_ephem(orbit_file, dark_start, dark_end, site_code, ephem_step_s
 #        print line
 
     step_size_secs = 300
-    if ephem_step_size[-1] == 'm':
+    if str(ephem_step_size)[-1] == 'm':
         try:
             step_size_secs = float(ephem_step_size[0:-1]) * 60
         except ValueError:
@@ -416,19 +462,33 @@ def call_compute_ephem(orbit_file, dark_start, dark_end, site_code, ephem_step_s
     emp = []
     while ephem_time < dark_end:
         emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=True, display=False)
-        emp.append(emp_line)
+        emp.append(format_emp_line(emp_line, site_code))
         ephem_time = ephem_time + timedelta(seconds=step_size_secs)
-    print
 
-# Construct ephem_info
-    ephem_info = { 'obj_id' : ast,
-                   'emp_sitecode' : site_code,
-                   'emp_timesys': '(UT)',
-                   'emp_rateunits': '"/min'
-                 }
+    return emp
 
-    return ephem_info, emp
+def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False):
 
+    # Check if current date is greater than the end of the last night's astro darkness
+    # Add 1 hour to this to give a bit of slack at the end and not suddenly jump
+    # into the next day
+    (start_of_darkness, end_of_darkness) = astro_darkness(site_code, utc_date.replace(hour=0, minute=0, second=0, microsecond=0))
+    end_of_darkness = end_of_darkness+timedelta(hours=1)
+    if debug: print "Start,End of darkness=", start_of_darkness, end_of_darkness
+    if utc_date > end_of_darkness:
+        if debug: print "Planning for the next night"
+        utc_date = utc_date + timedelta(days=1)
+    elif start_of_darkness.hour > end_of_darkness.hour and  utc_date.hour < end_of_darkness.hour:
+        if debug: print "Planning for the previous night"
+        utc_date = utc_date + timedelta(days=-1)
+
+    utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
+    if debug: print "Planning observations for", utc_date, "for", site_name
+    # Get hours of darkness for site
+    (dark_start, dark_end) = astro_darkness(site_code, utc_date)
+    if debug: print "Dark from ", dark_start, "to", dark_end
+
+    return dark_start, dark_end
 
 def astro_darkness(sitecode, utc_date, round_ad=True):
 
@@ -907,69 +967,6 @@ def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec,
 
     return hour_angle
 
-def sla_geoc_iers2003_au(p, h):
-    '''Convert geodetic position to geocentric.
-    *  Given:
-    *     p     dp     latitude (geodetic, radians)
-    *     h     dp     height above reference spheroid (geodetic, metres)
-    *
-    *  Returned:
-    *     r     dp     distance from Earth axis (km)
-    *     z     dp     distance from plane of Earth equator (km)
-    *  Notes:
-    *
-    *  1  Geocentric latitude can be obtained by evaluating ATAN2(Z,R).
-    *
-    *  2  This version is an update of the original sla_geoc (which used
-    *     IAU 1976 constants) to use IERS2003 constants.
-    *'''
-
-# Earth equatorial radius (metres)
-    a0=6378137.0
-
-#  Astronomical unit in metres
-    au=1.49597870700e11
-
-# Reference spheroid flattening factor and useful function
-    f=1.0/298.257223563
-    b=(1.0-f)**2
-
-# Geodetic to geocentric conversion
-#
-    sp = sin(p)
-    cp = cos(p)
-    c = 1.0 / sqrt(cp * cp + b * sp * sp )
-    s = b * c
-    r = ((a0*c + h) * cp)/au
-    z = ((a0*s + h) * sp)/au
-
-    return (r, z)
-
-def tal_pvobs_2003(p, h, stl):
-
-#  Mean sidereal rate (at J2000) in radians per (UT1) second
-    sr = 7.292115855306589e-5
-    
-#  Geodetic to geocentric conversion
-    (r, z) = sla_geoc_iers2003_au(p, h)
-
-#  Functions of Sidereal Time
-    s=sin(stl)
-    c=cos(stl)
-
-#  Speed
-    v=sr*r
-
-# Form  Position and Velocity array
-    pv = array([  r*c,
-                  r*s,
-                  z,
-                  -v*s,
-                  v*c,
-                  0.0])
-
-    return pv
-
 def radec2strings(ra_radians, dec_radians, seperator=' '):
     '''Format an (RA, Dec) pair (in radians) into a tuple of strings, with 
     configurable seperator (defaults to <space>).
@@ -988,32 +985,27 @@ def radec2strings(ra_radians, dec_radians, seperator=' '):
 
     return (ra_str, dec_str)
 
-def validate_radec(ra_radians, dec_radians):
+def get_mountlimits(site_code_or_name):
+    '''Returns the negative, positive and altitude mount limits (in degrees)
+    for the LCOGT telescopes specified by <site_code_or_name>.
 
-    twopi = pi * 2.0
-    valid = True
-    
-    if (ra_radians < 0 or ra_radians > twopi ):
-        valid = False
+    <site_code_or_name> can either be a MPC site code e.g. 'V37' (=ELP 1m),
+    or by desigination e.g. 'OGG-CLMA-2M0A' (=FTN)'''
 
-    if (dec_radians < -pi or dec_radians > pi ):
-        valid = False
-
-    return valid
-
-def get_mountlimits(site):
-
+    site = site_code_or_name.upper()
     ha_pos_limit = 12.0 * 15.0
     ha_neg_limit = -12.0 * 15.0
+    alt_limit = 25.0
 
-    if '-1M0A' in site:
+    if '-1M0A' in site or site in ['V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64']:
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
+        alt_limit = 30.0
     elif '-AQWA' in site:
         ha_pos_limit = 4.25 * 15.0
         ha_neg_limit = -4.25 * 15.0
 
-    return (ha_neg_limit, ha_pos_limit)
+    return (ha_neg_limit, ha_pos_limit, alt_limit)
 
 
 def get_siteparams(site):

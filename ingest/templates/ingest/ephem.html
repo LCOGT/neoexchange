@@ -1,0 +1,86 @@
+{% extends 'ingest/base.html' %}
+{% load url from future %}
+
+{% block header %}NEOexchange{% endblock %}
+
+{% block title %}Current Targets{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+{% block extramenucss %}extramenu-home{% endblock %}
+
+{% block extramenu %}
+{% endblock %}
+
+{% block main-content %}
+<div class="masthead">
+    <div class="container">
+        <div class="bigtext">
+
+            <table id="id_planning_table">
+                <tbody>
+                    <tr><td>Computing ephemeris for: {{ new_target_name }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="smalltext">
+            <br>
+            <table id="id_ephemeris_table" class="datatable">
+                <thead>
+                    <tr>
+                        <th class="wider">
+                            <span id="date">Date/Time (UTC)</span>
+                        </th>
+                        <th>
+                            <span id="ra">RA</span>
+                        </th>
+                        <th>
+                            <span id="dec">Dec</span>
+                        </th>
+                        <th>
+                            <span id="magnitude">Mag</span>
+                        </th>
+                        <th>
+                            <span id="speed">"/min</span>
+                        </th>
+                        <th>
+                            <span id="altitude">Alt</span>
+                        </th>
+                        <th>
+                            <span id="moonphase">Moon Phase</span>
+                        </th>
+                        <th>
+                            <span id="moondist">Moon Dist.</span>
+                        </th>
+                        <th>
+                            <span id="moonalt">Moon Alt.</span>
+                        </th>
+                        <th>
+                            <span id="score">Score</span>
+                        </th>
+                        <th>
+                            <span id="hourangle">H.A.</span>
+                        </th>
+                   </tr>
+                </thead>
+                <tbody>
+                    {% for line in ephem_lines %}
+                    <tr>
+                        <td>{{ line.0 }}</td>
+                        <td>{{ line.1 }}</td>
+                        <td>{{ line.2 }}</td>
+                        <td>{{ line.3 }}</td>
+                        <td>{{ line.4 }}</td>
+                        <td>{{ line.5 }}</td>
+                        <td>{{ line.6}}</td>
+                        <td>{{ line.7 }}</td>
+                        <td>{{ line.8 }}</td>
+                        <td>{{ line.9 }}</td>
+                        <td>{{ line.10 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
