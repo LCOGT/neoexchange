@@ -55,6 +55,11 @@
             <input type="text" name="target_name" id="id_target" placeholder="Enter a target name" style="color: #000;"/>
             <input type="submit" class="button keepvisible" value="Compute">
         </form>
+        {% if error %}
+            <div class="messages error">
+                <span class="warning">{{ error }}</span>
+            </div>
+        {% endif %}
         </div>
         <div class="onecol lastcol">
         </div>

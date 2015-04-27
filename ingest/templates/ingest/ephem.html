@@ -21,6 +21,11 @@
                     <tr><td>Computing ephemeris for: {{ new_target_name }}</td></tr>
                 </tbody>
             </table>
+                {% if error %}
+                    <div class="messages error">
+                        <span class="warning">{{ error }}</span>
+                    </div>
+                {% endif %}
         </div>
         <div class="smalltext">
             <br>

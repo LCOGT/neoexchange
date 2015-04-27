@@ -42,6 +42,7 @@ def ephemeris(request):
 
     name = request.GET.get('target_name', '')
     ephem_lines = []
+    error = ''
     if name != '':
         try:
             body = Body.objects.get(provisional_name = name)
@@ -51,9 +52,12 @@ def ephemeris(request):
             dark_start, dark_end = determine_darkness_times(site_code, utc_date )
             ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         except Body.DoesNotExist:
-            name = "Error ! No object found"
+            error = "Error ! No object found"
         except Body.MultipleObjectsReturned:
-            name = "Error ! Multiple objects specified"
+            error = "Error ! Multiple objects specified"
+    else:
+        error = "You didn't specify a target"
+        return render(request, 'ingest/home.html', {'error' : error})
 
     return render(request, 'ingest/ephem.html',
         {'new_target_name' : name, 'ephem_lines'  : ephem_lines}

@@ -20,12 +20,13 @@ from django.core.urlresolvers import resolve, reverse
 from django.template.loader import render_to_string
 from django.views.generic import ListView
 from django.forms.models import model_to_dict
+from django.utils.html import escape
 from unittest import skipIf
 from rise_set.angle import Angle
 
 #Import module to test
 from ingest.ast_subs import *
-from ingest.ephem_subs import compute_ephem, call_compute_ephem, get_mountlimits
+from ingest.ephem_subs import compute_ephem, call_compute_ephem, get_mountlimits, determine_darkness_times
 from ingest.sources_subs import parse_goldstone_chunks
 from ingest.views import home, clean_NEOCP_object
 from ingest.models import Body
@@ -418,26 +419,37 @@ class EphemPageTest(TestCase):
         self.body = Body.objects.create(**params)
         self.body.save()
 
-    @skipIf(True, "broken")
     def test_home_page_can_save_a_GET_request(self):
 
 
         response = self.client.get('/ephemeris/',
-            data={'new_target_name' : 'N999r0q'})
+            data={'target_name' : 'N999r0q'})
         self.assertIn('N999r0q', response.content.decode())
+        body_elements = model_to_dict(self.body)
+        site_code = 'V37'
+        utc_date = datetime(2015, 4, 21, 3,0,0)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date )
+        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         expected_html = render_to_string(
             'ingest/ephem.html', 
-            {'new_target_name' : 'N999r0q'}
+            {'new_target_name' : 'N999r0q',  'ephem_lines'  : ephem_lines }
         )
         self.assertMultiLineEqual(response.content.decode(), expected_html)
 
     def test_displays_ephem(self):
-        response = self.client.get('/ephemeris/')
+        response = self.client.get('/ephemeris/', data={'target_name' : 'N999r0q'})
         self.assertContains(response, 'Computing ephemeris for')
 
     def test_uses_ephem_template(self):
-        response = self.client.get('/ephemeris/')
+        response = self.client.get('/ephemeris/', data={'target_name' : 'N999r0q'})
         self.assertTemplateUsed(response, 'ingest/ephem.html')
+
+    def test_form_errors_are_sent_back_to_home_page(self):
+        response = self.client.get('/ephemeris/', data={'target_name' : ''})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'ingest/home.html')
+        expected_error = escape("You didn't specify a target")
+        self.assertContains(response, expected_error)
 
 class TargetsPageTest(TestCase):
 

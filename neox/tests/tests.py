@@ -101,6 +101,18 @@ class NewVisitorTest(LiveServerTestCase):
 
         # Satisfied, he goes back to sleep
 
+    def test_cannot_get_ephem_for_bad_objects(self):
+        # Eduardo goes to the site and accidentally tries to submit a blank
+        # form. He hits Enter on the empty input box
+        self.browser.get(self.live_server_url)
+        inputbox = self.get_item_input_box()
+        inputbox.send_keys(Keys.ENTER)
+
+        # The page refreshes and there is an error message saying that targets'
+        # can't be blank
+        error = self.browser.find_element_by_css_selector('.error')
+        self.assertEqual(error.text, "You didn't specify a target")
+
     def test_can_view_targets(self):
         # A new user comes along to the site
         self.browser.get(self.live_server_url)
