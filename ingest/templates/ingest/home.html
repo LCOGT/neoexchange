@@ -51,8 +51,8 @@
         <div class="fivecol">
         <div class="threecol">
         </div>
-        <form action="/ephemeris/" method="GET" style="display:inline-block;">
-            <input type="text" name="target_name" id="id_target" placeholder="Enter a target name"/ style="color: #000;">
+        <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
+            <input type="text" name="target_name" id="id_target" placeholder="Enter a target name" style="color: #000;"/>
             <input type="submit" class="button keepvisible" value="Compute">
         </form>
         </div>
