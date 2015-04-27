@@ -47,38 +47,38 @@
 									</tr>
 									<tr>
 										<td class="kv-key">Arg of perihelion (deg)</td>
-										<td  class="kv-value">{{body.argofperih}}</td>
+										<td class="kv-value">{{body.argofperih}}</td>
 									</tr>
 									<tr>
 										<td class="kv-key">Eccentricity</td>
-										<td  class="kv-value">{{body.eccentricity}}</td>
+										<td class="kv-value">{{body.eccentricity}}</td>
 									</tr>
 									{% if body.elements_type  == 'MPC_MINOR_PLANET' %}
 									<tr>
 										<td class="kv-key">Mean distance (AU)</td>
-										<td  class="kv-value">{{body.meandist}}</td>
+										<td class="kv-value">{{body.meandist}}</td>
 									</tr>
 									<tr>
 										<td class="kv-key">Mean Anomaly (deg)</td>
-										<td  class="kv-value">{{body.meananom}}</td>
+										<td class="kv-value">{{body.meananom}}</td>
 									</tr>
 									{% else %}
 									<tr>
 										<td class="kv-key">Perihelion distance (AU)</td>
-										<td  class="kv-value">{{body.perihdist}}</td>
+										<td class="kv-value">{{body.perihdist}}</td>
 									</tr>
 									<tr>
 										<td class="kv-key">Epoch of perihelion</td>
-										<td  class="kv-value">{{body.epochofperih}}</td>
+										<td class="kv-value">{{body.epochofperih}}</td>
 									</tr>
 									{% endif %}
 									<tr>
 										<td class="kv-key">Absolute Magnitude (H)</td>
-										<td  class="kv-value">{{body.abs_mag}}</td>
+										<td class="kv-value">{{body.abs_mag}}</td>
 									</tr>
 									<tr>
 										<td class="kv-key">Slope Parameter (G)</td>
-										<td  class="kv-value">{{body.slope}}</td>
+										<td class="kv-value">{{body.slope}}</td>
 									</tr>
 								</tbody>
 							</table>
@@ -87,3 +87,4 @@
 				</div>
 			</div>
 {% endblock %}
+
