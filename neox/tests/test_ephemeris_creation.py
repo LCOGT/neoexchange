@@ -153,14 +153,14 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
-        site_choices = Select(self.browser.find_element_by_id('id_sitecode'))
+        site_choices = Select(self.get_item_input_box('id_sitecode'))
         self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
 
         site_choices.select_by_visible_text('ELP (V37)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
-        datebox = self.browser.find_element_by_id('id_date')
+        datebox = self.get_item_input_box('id_date')
         current_date = datetime.utcnow().date()
         current_date_str = current_date.strftime('%Y-%m-%d')
         self.assertEqual(

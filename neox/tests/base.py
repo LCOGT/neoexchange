@@ -23,5 +23,5 @@ class FunctionalTest(LiveServerTestCase):
         table_header = table.find_element_by_tag_name('thead').text
         self.assertEqual(header_text, table_header)
 
-    def get_item_input_box(self):
-        return self.browser.find_element_by_id('id_target')
+    def get_item_input_box(self, element_id='id_target'):
+        return self.browser.find_element_by_id(element_id)
