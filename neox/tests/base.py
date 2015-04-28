@@ -5,9 +5,11 @@ class FunctionalTest(LiveServerTestCase):
 
     def setUp(self):
         self.browser = webdriver.Firefox()
-        self.browser.implicitly_wait(3)
+        self.browser.implicitly_wait(5)
 
     def tearDown(self):
+        self.browser.refresh()
+#        self.browser.implicitly_wait(5)
         self.browser.quit()
 
     def check_for_row_in_table(self, table_id, row_text):

@@ -126,18 +126,20 @@ class EphemPageTest(TestCase):
 
     def test_home_page_can_save_a_GET_request(self):
 
-
-        response = self.client.get('/ephemeris/',
-            data={'target_name' : 'N999r0q'})
-        self.assertIn('N999r0q', response.content.decode())
-        body_elements = model_to_dict(self.body)
         site_code = 'V37'
         utc_date = datetime(2015, 4, 21, 3,0,0)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date )
+
+        response = self.client.get('/ephemeris/',
+            data={'target_name' : 'N999r0q', 'site_code' : site_code})
+        self.assertIn('N999r0q', response.content.decode())
+        body_elements = model_to_dict(self.body)
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         expected_html = render_to_string(
             'ingest/ephem.html',
-            {'new_target_name' : 'N999r0q',  'ephem_lines'  : ephem_lines }
+            {'new_target_name' : 'N999r0q',  
+            'ephem_lines'  : ephem_lines,
+            'site_code' : site_code }
         )
         self.assertMultiLineEqual(response.content.decode(), expected_html)
 
@@ -155,6 +157,12 @@ class EphemPageTest(TestCase):
         self.assertTemplateUsed(response, 'ingest/home.html')
         expected_error = escape("You didn't specify a target")
         self.assertContains(response, expected_error)
+
+    def test_ephem_page_displays_site_code(self):
+        response = self.client.get('/ephemeris/', 
+            data={'target_name' : 'N999r0q', 'site_code' : 'F65'})
+        self.assertContains(response, 
+            'Computing ephemeris for: N999r0q for F65')
 
 class TargetsPageTest(TestCase):
 

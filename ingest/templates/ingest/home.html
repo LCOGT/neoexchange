@@ -48,11 +48,19 @@
                 </tbody>
             </table>
         </div>
-        <div class="fivecol">
-        <div class="threecol">
+        <div class="sixcol">
+        <div class="twocol">
         </div>
         <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
             <input type="text" name="target_name" id="id_target" placeholder="Enter a target name" style="color: #000;"/>
+            <select name="site_code" id="id_sitecode" style="color: #000;"/>
+                <option value="V37">ELP (V37)</option>
+                <option value="F65">FTN (F65)</option>
+                <option value="E10">FTS (E10)</option>
+                <option value="W86">LSC (W85-87)</option>
+                <option value="K92">CPT (K91-93)</option>
+                <option value="Q63">COJ (Q63-64)</option>
+            </select>
             <input type="submit" class="button keepvisible" value="Compute">
         </form>
         {% if error %}

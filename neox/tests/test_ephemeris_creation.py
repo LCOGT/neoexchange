@@ -1,6 +1,7 @@
 from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import Select
 from ingest.models import Body
 
 class NewVisitorTest(FunctionalTest):
@@ -64,7 +65,7 @@ class NewVisitorTest(FunctionalTest):
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
-        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q')
+        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for V37')
 
         self.check_for_header_in_table('id_ephemeris_table',
             'Date/Time (UTC) RA Dec Mag "/min Alt Moon Phase Moon Dist. Moon Alt. Score H.A.'
@@ -79,3 +80,39 @@ class NewVisitorTest(FunctionalTest):
         self.assertIn('NEOexchange', self.browser.title)
 
         # Satisfied, he goes back to sleep
+
+
+    def test_can_compute_ephemeris_for_specific_site(self):
+        ## Insert test body otherwise things will fail
+        self.insert_test_body()
+
+        # Eduardo has heard about a new website for NEOs. He goes to the
+        # homepage
+        self.browser.get(self.live_server_url)
+
+        # He is invited to enter a target to compute an ephemeris
+        inputbox = self.get_item_input_box()
+        self.assertEqual(
+            inputbox.get_attribute('placeholder'),
+            'Enter a target name'
+        )
+
+        # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
+        inputbox.send_keys('N999r0q')
+
+        # He notices a new selection for the site code and chooses FTN (F65)
+        # XXX Code smell: Too many static text constants
+        site_choices = Select(self.browser.find_element_by_id('id_sitecode'))
+        self.assertIn('FTN (F65)', [option.text for option in site_choices.options])
+
+        site_choices.select_by_visible_text('FTN (F65)')
+
+        # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
+        # for the target with a column header and a series of rows for the position
+        # as a function of time.
+        # The name of the selected site is displayed
+        inputbox.send_keys(Keys.ENTER)
+
+        eduardo_ephem_url = self.browser.current_url
+        self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
+        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for F65')

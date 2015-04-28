@@ -42,12 +42,16 @@ def ephemeris(request):
 
     name = request.GET.get('target_name', '')
     ephem_lines = []
+    site_code = ''
     error = ''
     if name != '':
         try:
             body = Body.objects.get(provisional_name = name)
             body_elements = model_to_dict(body)
-            site_code = 'V37'
+            try:
+                site_code = request.GET['site_code']
+            except KeyError:
+                error = "Error ! You didn't specify a site"
             utc_date = datetime(2015, 4, 21, 3,0,0)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date )
             ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
@@ -60,7 +64,9 @@ def ephemeris(request):
         return render(request, 'ingest/home.html', {'error' : error})
 
     return render(request, 'ingest/ephem.html',
-        {'new_target_name' : name, 'ephem_lines'  : ephem_lines}
+        {'new_target_name' : name, 
+         'ephem_lines'  : ephem_lines, 
+         'site_code' : site_code}
     )
 
 def save_and_make_revision(body,kwargs):
