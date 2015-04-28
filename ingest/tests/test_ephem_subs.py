@@ -174,3 +174,19 @@ class TestComputeEphem(TestCase):
         while line < len(expected_ephem_lines):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
+
+    def test_call_compute_ephem_with_body_F65(self):
+        start = datetime(2015, 4, 21, 11, 30, 00)
+        end = datetime(2015, 4, 21, 11, 35, 01)
+        site_code = 'F65'
+        step_size = 300
+        body_elements = model_to_dict(self.body)
+        expected_ephem_lines = [['2015 04 21 11:30', '20 10 38.15', '+29 56 52.1', '20.4', ' 2.45', '+20', '0.09', '108', '-47', '-999', '-05:09'],
+                                ['2015 04 21 11:35', '20 10 39.09', '+29 56 52.4', '20.4', ' 2.45', '+21', '0.09', '108', '-48', '-999', '-05:04']]
+
+        ephem_lines = call_compute_ephem(body_elements, start, end, site_code, step_size)
+        line = 0
+        self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
+        while line < len(expected_ephem_lines):
+            self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
+            line += 1

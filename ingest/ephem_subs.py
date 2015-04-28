@@ -4,7 +4,7 @@ from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, f
 from numpy import array, concatenate, zeros
 
 # Local imports
-from time_subs import datetime2mjd_utc, datetime2mjd_tdb, ut1_minus_utc, round_datetime
+from ingest.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
 #from astsubs import mpc_8lineformat
 
 
@@ -23,14 +23,14 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
         beta = acos(arg)
 
     if dbg: print
-    if dbg: print "Phase angle, beta (deg)=", beta,beta*(1.0/d2r)
+    if dbg: print "Phase angle, beta (deg)=", beta, degrees(beta)
     return beta
 
 def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
     '''Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
     from a dictionary of orbital elements.
-    
+
     <orbelems> can be in one of two forms, so called "Eric format" as produced
     by rise_set.moving_objects.read_neocp_orbit and used in the scheduler/RequestDB
     or the format used by NEO exchange. Selection is automatically handled based on
@@ -60,12 +60,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     if dbg: print 'MJD(UTC) =  ', mjd_utc
     if dbg: print ' JD(UTC) =', mjd_utc + 2400000.5
 
-# UTC->TT offset
-    tt_utc = S.sla_dtt(mjd_utc)
-    if dbg: print 'TT-UTC(s)=', tt_utc
-
-# Correct MJD to MJD(TT)
-    mjd_tt = mjd_utc + (tt_utc/86400.0)
+# Convert MJD(UTC) to MJD(TT)
+    mjd_tt = mjd_utc2mjd_tt(mjd_utc)
     if dbg: print 'MJD(TT)  =  %.15f' % (mjd_tt)
 
 # Compute UT1-UTC
@@ -171,14 +167,14 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         if perturb == True:
             if comet == True:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                  p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( 3, epoch_mjd,
+                  p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(3, epoch_mjd,
                             mjd_tt, epoch_mjd, orbelems['inclination'].in_radians(), orbelems['long_node'].in_radians(),
                             orbelems['arg_perihelion'].in_radians(), orbelems['perihdist'], orbelems['eccentricity'],
                             0.0)
                 p_epoch_mjd = orbelems['epochofperih']
             else:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                  p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( 2, epoch_mjd,
+                  p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(2, epoch_mjd,
                             mjd_tt, epoch_mjd, orbelems['inclination'].in_radians(), orbelems['long_node'].in_radians(),
                             orbelems['arg_perihelion'].in_radians(), orbelems['semi_axis'], orbelems['eccentricity'],
                             orbelems['mean_anomaly'].in_radians())
@@ -226,7 +222,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     vel = zeros(3)
     #rel_pos= [0.0, 0.0, 0.0]
 
-    while ( fabs(delta - r3) > .01):
+    while (fabs(delta - r3) > .01):
         r3 = delta
         if comet == True:
             (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), 3, p_epoch_mjd,
@@ -275,8 +271,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     if dbg: print "ra,dec=", ra, dec
     ra = S.sla_dranrm(ra)
     if dbg: print "ra,dec=", ra, dec
-    (rsign, ra_geo_deg) = S.sla_dr2tf(2,ra)
-    (dsign, dec_geo_deg) = S.sla_dr2af(1,dec)
+    (rsign, ra_geo_deg) = S.sla_dr2tf(2, ra)
+    (dsign, dec_geo_deg) = S.sla_dr2af(1, dec)
 
 # Compute r, the Sun-Target distance. Correct for light travel time first
     cposx = pv[0] - (ltt * pv[3])
@@ -295,10 +291,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Compute sky motion
 
     sky_vel = compute_relative_velocity_vectors(e_pos_hel, e_vel_hel, pos, vel, delta, dbg)
-    if dbg: print "vel1, vel2, r= %15.10lf %15.10lf %15.10lf" % (sky_vel[1],  sky_vel[2] , delta)
-    if dbg: print "vel1, vel2, r= %15.10e %15.10e %15.10lf\n" % (sky_vel[1],  sky_vel[2] , delta)
+    if dbg: print "vel1, vel2, r= %15.10lf %15.10lf %15.10lf" % (sky_vel[1], sky_vel[2], delta)
+    if dbg: print "vel1, vel2, r= %15.10e %15.10e %15.10lf\n" % (sky_vel[1], sky_vel[2], delta)
 
-    total_motion, sky_pa, ra_motion, dec_motion  = compute_sky_motion(sky_vel, delta, dbg)
+    total_motion, sky_pa, ra_motion, dec_motion = compute_sky_motion(sky_vel, delta, dbg)
 
     if comet == True:
     # Calculate magnitude of comet
@@ -319,7 +315,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
             (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
 
-    az_rad,alt_rad = moon_alt_az(d, ra, dec, site_long, site_lat, site_hgt)
+    az_rad, alt_rad = moon_alt_az(d, ra, dec, site_long, site_lat, site_hgt)
     airmass = S.sla_airmas((pi/2.0)-alt_rad)
     alt_deg = degrees(alt_rad)
 
@@ -331,7 +327,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     emp_line = (d, ra, dec, mag, total_motion, alt_deg)
 
-    return emp_line # (ra,dec)
+    return emp_line
 
 
 def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel, delta, dbg=True):
@@ -349,12 +345,12 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
         j2000_vel[i] = obj_vel[i] - obs_vel_hel[i]
         matrix[i] = obj_pos[i] / delta
         i += 1
-    if dbg: print "   obj_vel= %15.10f %15.10f %15.10f" % ( obj_vel[0], obj_vel[1], obj_vel[2])
-    if dbg: print "   obs_vel= %15.10f %15.10f %15.10f" % ( obs_vel_hel[0], obs_vel_hel[1], obs_vel_hel[2])
-    if dbg: print "   obs_vel= %15.10e %15.10e %15.10e" % ( obs_vel_hel[0], obs_vel_hel[1], obs_vel_hel[2])
+    if dbg: print "   obj_vel= %15.10f %15.10f %15.10f" % (obj_vel[0], obj_vel[1], obj_vel[2])
+    if dbg: print "   obs_vel= %15.10f %15.10f %15.10f" % (obs_vel_hel[0], obs_vel_hel[1], obs_vel_hel[2])
+    if dbg: print "   obs_vel= %15.10e %15.10e %15.10e" % (obs_vel_hel[0], obs_vel_hel[1], obs_vel_hel[2])
 
-    if dbg: print " j2000_vel= %15.10e %15.10e %15.10e" % ( j2000_vel[0], j2000_vel[1], j2000_vel[2])
-    if dbg: print "matrix_vel= %15.10f %15.10f %15.10f" % ( matrix[0], matrix[1], matrix[2] )
+    if dbg: print " j2000_vel= %15.10e %15.10e %15.10e" % (j2000_vel[0], j2000_vel[1], j2000_vel[2])
+    if dbg: print "matrix_vel= %15.10f %15.10f %15.10f" % (matrix[0], matrix[1], matrix[2] )
 
     length = sqrt( matrix[0] * matrix[0] + matrix[1] * matrix[1])
     matrix[3] =  matrix[1] / length
@@ -401,7 +397,7 @@ def format_emp_line(emp_line, site_code):
     blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
 # Convert radians for RA, Dec into strings for printing
-    (ra_string, dec_string ) = radec2strings(emp_line[1], emp_line[2], ' ')
+    (ra_string, dec_string) = radec2strings(emp_line[1], emp_line[2], ' ')
 # Compute apparent RA, Dec of the Moon
     (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt) 
 # Convert to alt, az (only the alt is actually needed)
@@ -415,9 +411,9 @@ def format_emp_line(emp_line, site_code):
 
 # Compute H.A.
     ha = compute_hourangle(emp_line[0], site_long, site_lat, site_hgt, emp_line[1], emp_line[2])
-    ha_in_deg =  degrees(ha)
+    ha_in_deg = degrees(ha)
 # Check HA is in limits, skip this slot if not
-    if ( ha_in_deg >= ha_pos_limit or ha_in_deg <= ha_neg_limit ):
+    if (ha_in_deg >= ha_pos_limit or ha_in_deg <= ha_neg_limit):
             ha_string = 'Limits'
     else:
         (ha_string,junk) = radec2strings(ha, ha, ':')
@@ -433,7 +429,7 @@ def format_emp_line(emp_line, site_code):
 # Format time and print out the overall ephemeris
     emp_time = datetime.strftime(emp_line[0], '%Y %m %d %H:%M')
 
-    formatted_line = blk_row_format % ( emp_time, ra_string, dec_string, \
+    formatted_line = blk_row_format % (emp_time, ra_string, dec_string, \
         emp_line[3], emp_line[4], emp_line[5],\
         moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
 
@@ -483,7 +479,7 @@ def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False)
         utc_date = utc_date + timedelta(days=-1)
 
     utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
-    if debug: print "Planning observations for", utc_date, "for", site_name
+    if debug: print "Planning observations for", utc_date, "for", site_code
     # Get hours of darkness for site
     (dark_start, dark_end) = astro_darkness(site_code, utc_date)
     if debug: print "Dark from ", dark_start, "to", dark_end
@@ -528,8 +524,8 @@ def crude_astro_darkness(sitecode, utc_date):
         ad_start = utc_date + timedelta(hours=0, minutes=0)
         ad_end = utc_date + timedelta(hours=4, minutes=39)
     else:
-        print "Unsupported sitecode",sitecode
-        return (None,None)
+        print "Unsupported sitecode", sitecode
+        return (None, None)
 
     return ad_start, ad_end
 
@@ -541,17 +537,17 @@ def accurate_astro_darkness(sitecode, utc_date, debug=False):
     T = (mjd_utc - 51544.5)/36525.0
 
 # Mean longitude of the Sun
-    sun_mean_long = ( 280.46645 + T * (36000.76983 + T * 0.0003032) ) % 360
+    sun_mean_long = (280.46645 + T * (36000.76983 + T * 0.0003032) ) % 360
 
 # Mean anomaly of the Sun
-    sun_mean_anom = ( 357.52910 + T * (35999.05030 - T * ( 0.0001559 - 0.00000048 * T ) ) ) % 360
+    sun_mean_anom = (357.52910 + T * (35999.05030 - T * (0.0001559 - 0.00000048 * T ) ) ) % 360
 
 # Earth's eccentricity
-    earth_e = 0.016708617 - T * ( 0.000042037 - T * 0.0000001236 )
+    earth_e = 0.016708617 - T * (0.000042037 - T * 0.0000001236)
 
 # Sun's equation of the center
     sun_eqcent = (1.914600 - T * (0.004817 - 0.000014 * T)) * sin(radians(sun_mean_anom)) +\
-                 (0.019993 - T * 0.000101 ) * sin(2.0 *radians(sun_mean_anom)) +\
+                 (0.019993 - T * 0.000101) * sin(2.0 *radians(sun_mean_anom)) +\
                  0.000290 * sin(3.0 *radians(sun_mean_anom))
 # Sun's true longitude
     sun_true_long = sun_mean_long + sun_eqcent
@@ -580,20 +576,21 @@ def accurate_astro_darkness(sitecode, utc_date, debug=False):
 
     eqtime = 4.0 * (sun_mean_long - 0.0057183 - degrees(sun_app_ra) + degrees(dpsi) * cos(radians(eps)))
     solarnoon = (720-4*degrees(site_long)-eqtime)/1440
-    sunrise = ( solarnoon - hourangle*4/1440  ) % 1
-    sunset = ( solarnoon + hourangle*4/1440 ) % 1
+    sunrise = (solarnoon - hourangle*4/1440) % 1
+    sunset = (solarnoon + hourangle*4/1440) % 1
     if debug: print solarnoon + hourangle*4/1440, solarnoon - hourangle*4/1440
-    if debug: print sunset,sunrise
+    if debug: print sunset, sunrise
 
     if sunrise < sunset:
         sunrise = sunrise + 1
     if debug:
-        to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent, sun_true_long, degrees(omega), sun_app_long, \
-            degrees(eps0), eps, degrees(sun_app_ra), degrees(sun_app_dec), eqtime, hourangle ]
+        to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent, \
+            sun_true_long, degrees(omega), sun_app_long, degrees(eps0), eps, \
+            degrees(sun_app_ra), degrees(sun_app_dec), eqtime, hourangle]
         print to_return
 
     else:
-        to_return = ( utc_date+timedelta(days=sunset), utc_date+timedelta(days=sunrise) )
+        to_return = (utc_date+timedelta(days=sunset), utc_date+timedelta(days=sunrise))
 
     return to_return
 
@@ -645,7 +642,7 @@ def get_mag_mapping(site):
                 22   : 240,
                 23.3 : 300
                }
-    elif site == 'SQA' :
+    elif site == 'SQA':
 # Mappings for Sedgwick. Assumes kb18+parfocal clear
         mag_mapping = {
                 18   : 45,
@@ -711,7 +708,7 @@ def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
         score = bad_score
     else:
 # Prefer when object is highest and moon is lowest
-        score = (objalt_wgt * obj_alt) - (moonalt_wgt * moon_alt )
+        score = (objalt_wgt * obj_alt) - (moonalt_wgt * moon_alt)
 
     return score
 
@@ -896,7 +893,7 @@ def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat,\
     xp = yp = 0.0
 
 # Compute MJD_UTC
-    mjd_utc =  datetime2mjd_utc(date)
+    mjd_utc = datetime2mjd_utc(date)
     if dbg: print mjd_utc
 # Compute UT1-UTC
 
@@ -923,8 +920,8 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 
     (sun_ra, sun_dec, sun_diam) = S.sla_rdplan (mjd_tdb, 0, obsvr_long, obsvr_lat)
 
-    cosphi = ( sin( sun_dec ) * sin( moon_dec ) + cos( sun_dec ) \
-        * cos( moon_dec ) * cos( sun_ra - moon_ra ) )
+    cosphi = ( sin(sun_dec) * sin(moon_dec) + cos(sun_dec) \
+        * cos(moon_dec) * cos(sun_ra - moon_ra) )
     if dbg: print "cos(phi)=", cosphi
 
 # Full formula for phase angle, i. Requires r (Earth-Sun distance) and del(ta) (the
@@ -935,7 +932,7 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 
     cosi = -cosphi
     if dbg: print "cos(i)=", cosi
-    mphase = ( 1.0 + cosi ) / 2.0
+    mphase = (1.0 + cosi) / 2.0
 
     return mphase
 
@@ -955,7 +952,7 @@ def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec,
 #
     gmst = S.sla_gmst(mjd_utc+(dut/86400.0))
     stl = gmst + obsvr_long + S.sla_eqeqx(mjd_tdb)
-    if ( dbg ):
+    if dbg:
         print 'GMST, LAST, EQEQX, GAST, long=', gmst, stl, S.sla_eqeqx(mjd_tdb), gmst+S.sla_eqeqx(mjd_tdb), obsvr_long
 
     (app_ra, app_dec) = S.sla_map(mean_ra, mean_dec, 0.0, 0.0, 0.0, 0.0, 2000.0, mjd_tdb)

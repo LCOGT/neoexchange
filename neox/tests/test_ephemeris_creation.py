@@ -110,9 +110,23 @@ class NewVisitorTest(FunctionalTest):
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        # The name of the selected site is displayed
+        # The name of the selected site is displayed.
         inputbox.send_keys(Keys.ENTER)
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
         self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for F65')
+
+        # Check the results for V37 are not in the table
+        table = self.browser.find_element_by_id('id_ephemeris_table')
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = table_body.find_elements_by_tag_name('tr')
+        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
+
+        # Check the values are correct for F65
+        self.check_for_row_in_table('id_ephemeris_table',
+            '2015 04 21 11:30 20 10 38.15 +29 56 52.1 20.4 2.45 +20 0.09 108 -47 -999 -05:09'
+        )
+        self.check_for_row_in_table('id_ephemeris_table',
+            '2015 04 21 11:35 20 10 39.09 +29 56 52.4 20.4 2.45 +21 0.09 108 -48 -999 -05:04'
+        )
