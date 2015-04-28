@@ -2,6 +2,7 @@ from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
+from datetime import datetime
 from ingest.models import Body
 
 class NewVisitorTest(FunctionalTest):
@@ -129,4 +130,67 @@ class NewVisitorTest(FunctionalTest):
         )
         self.check_for_row_in_table('id_ephemeris_table',
             '2015 04 21 11:35 20 10 39.09 +29 56 52.4 20.4 2.45 +21 0.09 108 -48 -999 -05:04'
+        )
+
+
+    def test_can_compute_ephemeris_for_specific_date(self):
+        ## Insert test body otherwise things will fail
+        self.insert_test_body()
+
+        # Eduardo has heard about a new website for NEOs. He goes to the
+        # homepage
+        self.browser.get(self.live_server_url)
+
+        # He is invited to enter a target to compute an ephemeris
+        inputbox = self.get_item_input_box()
+        self.assertEqual(
+            inputbox.get_attribute('placeholder'),
+            'Enter a target name'
+        )
+
+        # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
+        inputbox.send_keys('N999r0q')
+
+        # He notices a new selection for the site code and chooses ELP (V37)
+        # XXX Code smell: Too many static text constants
+        site_choices = Select(self.browser.find_element_by_id('id_sitecode'))
+        self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
+
+        site_choices.select_by_visible_text('ELP (V37)')
+
+        # He notices a new textbox for the date that is wanted which is filled
+        # in with the current date
+        datebox = self.browser.find_element_by_id('id_date')
+        current_date = datetime.utcnow().date()
+        current_date_str = current_date.strftime('%Y-%m-%d')
+        self.assertEqual(
+            datebox.get_attribute('placeholder'),
+            current_date_str
+        )
+
+        # He decides to see where it will be on a specific date in a future
+        datebox.send_keys('2015-04-28')
+
+        # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
+        # for the target with a column header and a series of rows for the position
+        # as a function of time.
+        # The name of the selected site is displayed.
+        inputbox.send_keys(Keys.ENTER)
+
+        eduardo_ephem_url = self.browser.current_url
+        self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
+        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for V37')
+
+        # Check the results for default date are not in the table
+        table = self.browser.find_element_by_id('id_ephemeris_table')
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = table_body.find_elements_by_tag_name('tr')
+        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
+
+        # Check the values are correct for F65
+        self.check_for_row_in_table('id_ephemeris_table',
+            '2015 04 28 10:20 20 40 36.53 +29 36 33.1 20.6 2.08 +52 0.72 136 -15 +058 -02:53'
+        )
+        self.check_for_row_in_table('id_ephemeris_table',
+            '2015 04 28 10:25 20 40 37.32 +29 36 32.5 20.6 2.08 +54 0.72 136 -16 +059 -02:48'
         )

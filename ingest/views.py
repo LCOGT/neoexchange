@@ -52,7 +52,15 @@ def ephemeris(request):
                 site_code = request.GET['site_code']
             except KeyError:
                 error = "Error ! You didn't specify a site"
-            utc_date = datetime(2015, 4, 21, 3,0,0)
+            try:
+                utc_date_str = request.GET['utc_date']
+                try:
+                    utc_date = datetime.strptime(utc_date_str, '%Y-%m-%d')
+                except ValueError:
+                    utc_date = datetime(2015, 4, 21, 3,0,0)
+            except KeyError:
+                utc_date = datetime(2015, 4, 21, 3,0,0)
+
             dark_start, dark_end = determine_darkness_times(site_code, utc_date )
             ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         except Body.DoesNotExist:

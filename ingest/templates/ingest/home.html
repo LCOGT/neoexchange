@@ -48,7 +48,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="sixcol">
+        <div class="sevencol">
         <div class="twocol">
         </div>
         <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
@@ -61,6 +61,7 @@
                 <option value="K92">CPT (K91-93)</option>
                 <option value="Q63">COJ (Q63-64)</option>
             </select>
+            <input type="text" name="utc_date" id="id_date" placeholder={% now "Y-m-d" %} style="color: #000;"/>
             <input type="submit" class="button keepvisible" value="Compute">
         </form>
         {% if error %}

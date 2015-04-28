@@ -102,6 +102,9 @@ class HomePageTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['location'], '/ephemeris/')
 
+    def test_home_page_ephem_form_shows_current_date(self):
+        pass
+
 class EphemPageTest(TestCase):
     maxDiff = None
 
