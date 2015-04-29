@@ -31,7 +31,7 @@ def home(request):
     params = {
             'targets'   : Body.objects.filter(active=True).count(),
             'blocks'    : Block.objects.filter(active=True).count(),
-            'date'      : Body.objects.latest('ingest')
+            'latest'      : Body.objects.latest('ingest')
     }
     return render(request,'ingest/home.html',params)
 

@@ -43,6 +43,7 @@ table.datatable th, table.datatable td { text-align: left; padding: 8px; border:
 table.datatable th { padding: 16px 8px; font-weight: bold; border-bottom: 1px solid #aaa;}
 table.datatable td { border-bottom: 1px solid #e6e6e6; color: #202020; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 table.datatable td a { display: block; }
+table.datatable .wider { width: 12%; }
 
 table.datatable  tr.odd {
     background-color: #eee;
@@ -86,7 +87,7 @@ table.datatable  tr:hover {
 .LPL { background-color: #aaaaaa!important; color: black; }
 .LSC { background-color: #ffffff!important; color: black; }
 .clear { clear: both; }
-.onecol, .twocol, .threecol, .fourcol, .fivecol, .sixcol, .oneofsix, .twoofsix, .threeofsix, .fourofsix, fiveofsix, sixofsix, .oneoften, .twooften, .threeoften, .fouroften, .fiveoften, .sixoften, .sevenoften, .eightoften, .nineoften, .tenoften {
+.onecol, .twocol, .threecol, .fourcol, .fivecol, .sixcol, .oneofsix, .twoofsix, .threeofsix, .fourofsix, .fiveofsix, .sixofsix, .oneoften, .twooften, .threeoften, .fouroften, .fiveoften, .sixoften, .sevenoften, .eightoften, .nineoften, .tenoften {
 	margin-right: 16px;
 	float: left;
 	min-height: 1px;
