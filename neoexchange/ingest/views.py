@@ -236,11 +236,24 @@ def update_crossids(astobj, dbg=False):
 
 
 def clean_crossid(astobj, dbg=False):
+    '''Takes an <astobj> (a list of new designation, provisional designation,
+    reference and confirm date produced from the MPC's Previous NEOCP Objects
+    page) and determines the type and whether it should still be followed.
+
+    Objects that were not confirmed, did not exist or "were not interesting
+    (normally a satellite) are set inactive immediately. For NEOs and comets,
+    we set it to inactive if more than 3 days have passed since the
+    confirmation date'''
+
+    interesting_cutoff = 3 * 86400  # 3 days in seconds
 
     confirm_date = parse_neocp_date(astobj[3])
     obj_id = astobj[0].rstrip()
     desig = astobj[1]
     reference = astobj[2]
+
+    time_from_confirm = datetime.utcnow() - confirm_date
+    time_from_confirm = time_from_confirm.total_seconds()
 
     active = True
     if obj_id != '' and desig == 'wasnotconfirmed':
@@ -265,12 +278,17 @@ def clean_crossid(astobj, dbg=False):
             # There is a reference to an CBET so we assume it's "very
             # interesting" i.e. a comet
             objtype = 'C'
+            if time_from_confirm > interesting_cutoff:
+                active = False
         elif 'MPEC' in reference:
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
             objtype = 'N'
+            if time_from_confirm > interesting_cutoff:
+                active = False
         else:
             objtype = 'A'
+            active = False
 
     params = { 'source_type'  : objtype,
                'name'         : desig,
