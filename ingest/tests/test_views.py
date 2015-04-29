@@ -134,7 +134,10 @@ class EphemPageTest(TestCase):
         dark_start, dark_end = determine_darkness_times(site_code, utc_date )
 
         response = self.client.get('/ephemeris/',
-            data={'target_name' : 'N999r0q', 'site_code' : site_code})
+            data={'target_name' : 'N999r0q', 
+                  'site_code' : site_code,
+                  'utc_date' : '2015-04-21'}
+        )
         self.assertIn('N999r0q', response.content.decode())
         body_elements = model_to_dict(self.body)
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )

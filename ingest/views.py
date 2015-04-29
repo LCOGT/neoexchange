@@ -52,10 +52,7 @@ def ephemeris(request):
                 site_code = request.GET['site_code']
             except KeyError:
                 error = "Error ! You didn't specify a site"
-            try:
-                utc_date_str = request.GET['utc_date']
-            except KeyError:
-                utc_date = datetime(2015, 4, 21, 3,0,0)
+            utc_date_str = request.GET.get('utc_date', '')
             if utc_date_str != '':
                 try:
                     utc_date = datetime.strptime(utc_date_str.strip(), '%Y-%m-%d')
@@ -63,8 +60,10 @@ def ephemeris(request):
                     utc_date = datetime(2015, 4, 21, 3,0,0)
             else:
                 utc_date = datetime.utcnow()
+
+            alt_limit = request.GET.get('alt_limit', 0.0)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date )
-            ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
+            ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, 300, alt_limit )
         except Body.DoesNotExist:
             error = "Error ! No object found"
             return render(request, 'ingest/home.html', {'error' : error})
