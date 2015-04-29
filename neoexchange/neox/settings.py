@@ -3,7 +3,7 @@
 import os, sys
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
-PRODUCTION = True # if CURRENT_PATH.startswith('/var/www') else False
+PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
 DEBUG = False
 BRANCH = os.environ.get('BRANCH',None)
 if BRANCH:

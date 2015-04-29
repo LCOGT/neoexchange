@@ -62,3 +62,5 @@ neox.log
 ingest/static/ingest/css/admin.css
 
 ingest/static/ingest/css/dashboard.css
+
+neoexchange/neox/local_settings.py

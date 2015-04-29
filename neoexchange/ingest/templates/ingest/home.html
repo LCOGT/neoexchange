@@ -15,10 +15,14 @@
 					<div class="bigtext">{{targets}}</div>
 					<div class="smalltext">active targets</div>
 				</a>
-				<a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
+				<a class="btn btn-transparent btn-jumbo" href="{% url 'blocklist' %}">
 					<div class="bigtext">{{blocks}}</div>
 					<div class="smalltext">active blocks</div>
 				</a>
+				<div class="btn btn-transparent btn-jumbo">
+					<div class="bigtext">{{ingest_date}}</div>
+					<div class="smalltext">latest ingest</div>
+				</div>
 			</div>
 		</div>
 {% endblock %}
