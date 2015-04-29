@@ -206,3 +206,21 @@ class TestComputeEphem(TestCase):
         while line < len(expected_ephem_lines):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
+
+    def test_call_compute_ephem_with_altlimit(self):
+        start = datetime(2015, 9, 3, 17, 20, 00)
+        end = datetime(2015, 9, 3, 19, 40, 01)
+        site_code = 'K91'
+        step_size = 300
+        alt_limit = 30
+        body_elements = model_to_dict(self.body)
+        expected_ephem_lines = [['2015 09 03 19:35', '23 53 33.81', '-12 45 53.8', '19.3', ' 1.87', '+30', '0.67', ' 57', '-26', '+039', '-04:05'],
+                                ['2015 09 03 19:40', '23 53 33.46', '-12 46 01.5', '19.3', ' 1.87', '+32', '0.67', ' 58', '-25', '+040', '-04:00']]
+
+        ephem_lines = call_compute_ephem(body_elements, start, end,
+            site_code, step_size, alt_limit)
+        line = 0
+        self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
+        while line < len(expected_ephem_lines):
+            self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
+            line += 1

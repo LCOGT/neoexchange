@@ -436,7 +436,7 @@ def format_emp_line(emp_line, site_code):
     line_as_list = formatted_line.split('|')
     return line_as_list
 
-def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size):
+def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size, alt_limit=0):
     '''Wrapper for compute_ephem to enable use within plan_obs (or other codes)
     by making repeated calls for datetimes from <dark_start> -> <dark_end> spaced
     by <ephem_step_size> seconds. The results are assembled into a list of tuples
@@ -447,24 +447,38 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 #    for line in formatted_elem_lines:
 #        print line
 
+    slot_length = 0 # XXX temporary hack
     step_size_secs = 300
     if str(ephem_step_size)[-1] == 'm':
         try:
             step_size_secs = float(ephem_step_size[0:-1]) * 60
         except ValueError:
             pass
+    else:
+        step_size_secs = ephem_step_size
     ephem_time = round_datetime(dark_start, step_size_secs / 60, False)
 
-    emp = []
+    full_emp = []
     while ephem_time < dark_end:
         emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=True, display=False)
-        emp.append(format_emp_line(emp_line, site_code))
+        full_emp.append(emp_line)
         ephem_time = ephem_time + timedelta(seconds=step_size_secs)
+
+# Get subset of ephemeris when it's dark and object is up
+    visible_emp = dark_and_object_up(full_emp, dark_start, dark_end, slot_length, alt_limit)
+    emp = []
+    for line in visible_emp:
+        emp.append(format_emp_line(line, site_code))
 
     return emp
 
 def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False):
-
+    '''Determine the times of darkness at the site specified by <site_code>
+    for the date of [utc_date] (which defaults to UTC now if not given).
+    The darkness times given are when the Sun is lower than -15 degrees
+    altitude (intermediate between nautical (-12) and astronomical (-18)
+    darkness, which has been chosen as more appropriate for fainter asteroids.
+    '''
     # Check if current date is greater than the end of the last night's astro darkness
     # Add 1 hour to this to give a bit of slack at the end and not suddenly jump
     # into the next day

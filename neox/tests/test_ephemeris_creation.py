@@ -194,3 +194,73 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_row_in_table('id_ephemeris_table',
             '2015 04 28 10:25 20 40 37.32 +29 36 32.5 20.6 2.08 +54 0.72 136 -16 +059 -02:48'
         )
+
+
+    def test_can_compute_ephemeris_for_specific_alt_limit(self):
+        ## Insert test body otherwise things will fail
+        self.insert_test_body()
+
+        # Eduardo has heard about a new website for NEOs. He goes to the
+        # homepage
+        self.browser.get(self.live_server_url)
+
+        # He is invited to enter a target to compute an ephemeris
+        inputbox = self.get_item_input_box()
+        self.assertEqual(
+            inputbox.get_attribute('placeholder'),
+            'Enter a target name'
+        )
+
+        # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
+        inputbox.send_keys('N999r0q')
+
+        # He notices a new selection for the site code and chooses CPT (K91)
+        # XXX Code smell: Too many static text constants
+        site_choices = Select(self.get_item_input_box('id_sitecode'))
+        self.assertIn('CPT (K91-93)', [option.text for option in site_choices.options])
+
+        site_choices.select_by_visible_text('CPT (K91-93)')
+
+        # He notices a new textbox for the date that is wanted which is filled
+        # in with the current date
+        datebox = self.get_item_input_box('id_date')
+        current_date = datetime.utcnow().date()
+        current_date_str = current_date.strftime('%Y-%m-%d')
+        self.assertEqual(
+            datebox.get_attribute('placeholder'),
+            current_date_str
+        )
+
+        # He decides to see where it will be on a specific date in a future
+        datebox.send_keys('2015-09-04')
+
+        # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
+        # for the target with a column header and a series of rows for the position
+        # as a function of time.
+        # The name of the selected site is displayed.
+        inputbox.send_keys(Keys.ENTER)
+
+        eduardo_ephem_url = self.browser.current_url
+        self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
+        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for K92')
+
+        # Check the results for default date are not in the table
+        table = self.browser.find_element_by_id('id_ephemeris_table')
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = table_body.find_elements_by_tag_name('tr')
+
+        # Check the default settings are not present
+        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
+        # Check values before the altitude cutoff are not present
+        self.assertNotIn('2015 09 03 17:20 23 53 43.05 -12 42 22.9 19.3 1.84 +2 0.68 56 -53 -999 Limits', [row.text for row in rows])
+
+        # Check the values are correct for K92
+        self.check_for_row_in_table('id_ephemeris_table',
+            '2015 09 03 19:35 23 53 33.81 -12 45 53.8 19.3 1.87 +30 0.67 57 -26 +039 -04:05'
+        )
+        self.check_for_row_in_table('id_ephemeris_table',
+            '2015 09 03 19:40 23 53 33.46 -12 46 01.5 19.3 1.87 +32 0.67 58 -25 +040 -04:00'
+        )
+        self.check_for_row_in_table('id_ephemeris_table',
+            '2015 09 04 03:20 23 52 59.34 -12 57 44.8 19.3 1.83 +35 0.64 61 +41 +022 +03:41'
+        )

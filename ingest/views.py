@@ -54,17 +54,20 @@ def ephemeris(request):
                 error = "Error ! You didn't specify a site"
             try:
                 utc_date_str = request.GET['utc_date']
-                try:
-                    utc_date = datetime.strptime(utc_date_str, '%Y-%m-%d')
-                except ValueError:
-                    utc_date = datetime(2015, 4, 21, 3,0,0)
             except KeyError:
                 utc_date = datetime(2015, 4, 21, 3,0,0)
-
+            if utc_date_str != '':
+                try:
+                    utc_date = datetime.strptime(utc_date_str.strip(), '%Y-%m-%d')
+                except ValueError:
+                    utc_date = datetime(2015, 4, 21, 3,0,0)
+            else:
+                utc_date = datetime.utcnow()
             dark_start, dark_end = determine_darkness_times(site_code, utc_date )
             ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         except Body.DoesNotExist:
             error = "Error ! No object found"
+            return render(request, 'ingest/home.html', {'error' : error})
         except Body.MultipleObjectsReturned:
             error = "Error ! Multiple objects specified"
     else:
@@ -74,7 +77,8 @@ def ephemeris(request):
     return render(request, 'ingest/ephem.html',
         {'new_target_name' : name, 
          'ephem_lines'  : ephem_lines, 
-         'site_code' : site_code}
+         'site_code' : site_code,
+         'error' : error }
     )
 
 def save_and_make_revision(body,kwargs):
