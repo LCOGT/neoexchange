@@ -33,7 +33,7 @@ OBJECT_TYPES = (
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
 
 ORIGINS = (
-            ('M','MPC'),
+            ('M','Minor Planet Center'),
             ('N','NASA ARM'),
             ('S','Spaceguard'),
             ('D','NEODSYS'),
@@ -47,10 +47,18 @@ TELESCOPE_CHOICES = (
                         ('0m4','0.4-meter')
                     )
 
+SITE_CHOICES = (
+                    ('ogg','Haleakala'),
+                    ('coj','Siding Spring'),
+                    ('lsc','Cerro Tololo'),
+                    ('elp','McDonald'),
+                    ('cpt','Sutherland'),
+    )
+
 def check_object_exists(objname,dbg=False):
 
     try:
-        block_id = Body.objects.get(provisional_name__contains=objname)  
+        block_id = Body.objects.get(provisional_name__contains=objname)
     except Body.MultipleObjectsReturned:
         if dbg: print "Multiple bodies found"
         return 2
@@ -71,7 +79,7 @@ class Proposal(models.Model):
             title = "%s..." % self.title[0:9]
         else:
             title = self.title[0:10]
-        return "%s %s"  % (code, title)
+        return "%s %s"  % (self.code, title)
 
 
 class Body(models.Model):
@@ -105,6 +113,14 @@ class Body(models.Model):
         t = Time(self.epochofperih.isoformat(), format='isot', scale='tt')
         return t.mjd
 
+    def current_name(self):
+        if self.name:
+            return self.name
+        elif self.provisional_name:
+            return self.provisional_name
+        else:
+            return "Unknown"
+
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
@@ -123,7 +139,7 @@ reversion.register(Body)
 
 class Block(models.Model):
     telclass = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
-    site = models.CharField(max_length=3)
+    site = models.CharField(max_length=3, choices=SITE_CHOICES)
     body = models.ForeignKey(Body)
     proposal = models.ForeignKey(Proposal)
     block_start =  models.DateTimeField(null=True, blank=True)
@@ -156,8 +172,8 @@ class Record(models.Model):
         verbose_name_plural = _('Observation Records')
 
     def __unicode__(self):
-    	if self.active:
-    		text = ''
-    	else:
-    		text = 'not '
+        if self.active:
+                text = ''
+        else:
+                text = 'not '
         return u'%s is %sactive' % (self.provisional_name,text)

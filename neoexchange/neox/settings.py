@@ -4,24 +4,23 @@ import os, sys
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
+DEBUG = False
 BRANCH = os.environ.get('BRANCH',None)
 if BRANCH:
     BRANCH = '-' + BRANCH
 else:
     BRANCH = ''
 
-if PRODUCTION:
-  PREFIX= os.environ.get('PREFIX','/observations')
-else:
-  PREFIX =""
+PREFIX =""
 BASE_DIR = os.path.dirname(CURRENT_PATH)
 
-DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
+
+GRAPPELLI_ADMIN_TITLE = 'NEO exchange admin'
 
 MANAGERS = ADMINS
 
@@ -54,20 +53,16 @@ USE_TZ = False
 
 # Absolute filesystem path to the directory that will hold user-uploaded files.
 # Example: "/home/media/media.lawrence.com/media/"
-MEDIA_ROOT = ''
+MEDIA_ROOT = '/var/www/html/media/'
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash.
 # Examples: "http://media.lawrence.com/media/", "http://example.com/media/"
-MEDIA_URL = ''
+MEDIA_URL = '/media/'
 
-if PRODUCTION:
-    STATIC_ROOT = '/var/www/html/static/'
-    STATIC_URL = PREFIX + '/static/'
-else:
-    STATIC_ROOT = os.path.join(BASE_DIR,'ingest')
-    STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'static'),]
+STATIC_ROOT = '/var/www/html/static/'
+STATIC_URL = PREFIX + '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR,'ingest'),]
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -109,7 +104,7 @@ TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    ''
+    os.path.join(BASE_DIR,'ingest','templates'),
 )
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
@@ -128,6 +123,19 @@ INSTALLED_APPS = (
     'reversion',
     'south'
 )
+
+##################
+# LOCAL SETTINGS #
+##################
+
+# Allow any settings to be defined in local_settings.py which should be
+# ignored in your version control system allowing for settings to be
+# defined per machine.
+try:
+    from local_settings import *
+except ImportError as e:
+    if "local_settings" not in str(e):
+        raise e
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -187,15 +195,3 @@ LOGGING = {
     }
 }
 
-##################
-# LOCAL SETTINGS #
-##################
-
-# Allow any settings to be defined in local_settings.py which should be
-# ignored in your version control system allowing for settings to be
-# defined per machine.
-try:
-    from local_settings import *
-except ImportError as e:
-    if "local_settings" not in str(e):
-        raise e

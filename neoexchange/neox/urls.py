@@ -16,11 +16,19 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.generic import ListView, DetailView
+from ingest.views import BodySearchView
+from ingest.models import Body, Block
 
 admin.autodiscover()
 
-urlpatterns = patterns('',
-    #url(r'^$', 'neox.views.home', name='home'),
-    (r'^grappelli/', include('grappelli.urls')),
+urlpatterns = patterns('ingest.views',
+    url(r'^$', 'home', name='home'),
+    url(r'^block/list/$', ListView.as_view(model=Block, queryset=Block.objects.filter(active=True).order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
+    url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
+    url(r'^target/(?P<pk>\d+)/$',DetailView.as_view(model=Body, context_object_name='body'), name='target'),
+    url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
+    url(r'^ephemeris/$', 'ephemeris', name='ephemeris'),
+    url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', include(admin.site.urls)),
 )+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
