@@ -57,7 +57,7 @@ SITE_CHOICES = (
 def check_object_exists(objname,dbg=False):
 
     try:
-        block_id = Body.objects.get(provisional_name__contains=objname)  
+        block_id = Body.objects.get(provisional_name__contains=objname)
     except Body.MultipleObjectsReturned:
         if dbg: print "Multiple bodies found"
         return 2
@@ -100,7 +100,7 @@ class Body(models.Model):
     meananom            = models.FloatField('Mean Anomaly (deg)', blank=True, null=True, help_text='for asteroids')
     perihdist           = models.FloatField('Perihelion distance (AU)', blank=True, null=True, help_text='for comets')
     epochofperih        = models.DateTimeField('Epoch of perihelion', blank=True, null=True, help_text='for comets')
-    abs_mag             = models.FloatField('H - absolute magnetude', blank=True, null=True)
+    abs_mag             = models.FloatField('H - absolute magnitude', blank=True, null=True)
     slope               = models.FloatField('G - slope parameter', blank=True, null=True)
     ingest              = models.DateTimeField(default=datetime.now())
 
@@ -171,8 +171,8 @@ class Record(models.Model):
         verbose_name_plural = _('Observation Records')
 
     def __unicode__(self):
-    	if self.active:
-    		text = ''
-    	else:
-    		text = 'not '
+        if self.active:
+                text = ''
+        else:
+                text = 'not '
         return u'%s is %sactive' % (self.provisional_name,text)

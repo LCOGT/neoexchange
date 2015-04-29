@@ -23,7 +23,7 @@ class BodyAdmin(reversion.VersionAdmin):
             'fields': ('provisional_name', 'provisional_packed', 'name','origin','source_type')
         }),
         ('Elements', {
-            'fields': ('elements_type', 'epochofel', 'orbinc','longascnode','argofperih','eccentricity','meandist','meananom','perihdist', 'epochofperih')
+            'fields': ('elements_type', 'epochofel', 'abs_mag', 'slope', 'orbinc','longascnode','argofperih','eccentricity','meandist','meananom','perihdist', 'epochofperih')
        }),
         ('Follow Up',{
         	'fields' : ('active','fast_moving','ingest')
@@ -31,7 +31,7 @@ class BodyAdmin(reversion.VersionAdmin):
     )
     search_fields = ('provisional_name',)
     list_display = ('provisional_name', 'name', 'origin', 'source_type', 
-      'active', 'fast_moving', 'urgency')
+      'active', 'fast_moving', 'urgency', 'ingest')
     list_filter = ('origin', 'source_type', 'elements_type', 'active', 
       'fast_moving', 'urgency')
     ordering = ('-ingest',)

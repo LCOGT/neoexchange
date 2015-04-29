@@ -20,6 +20,7 @@ from django.views.generic import DetailView, ListView
 from ingest.models import *
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
+from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
 import logging
 import reversion
 from django.db.models import Q
@@ -61,6 +62,48 @@ class BodySearchView(ListView):
         else:
             object_list = self.model.objects.all()
         return object_list
+
+def ephemeris(request):
+
+    name = request.GET.get('target_name', '')
+    ephem_lines = []
+    site_code = ''
+    error = ''
+    if name != '':
+        try:
+            body = Body.objects.get(provisional_name = name)
+            body_elements = model_to_dict(body)
+            try:
+                site_code = request.GET['site_code']
+            except KeyError:
+                error = "Error ! You didn't specify a site"
+            utc_date_str = request.GET.get('utc_date', '')
+            if utc_date_str != '':
+                try:
+                    utc_date = datetime.strptime(utc_date_str.strip(), '%Y-%m-%d')
+                except ValueError:
+                    utc_date = datetime(2015, 4, 21, 3,0,0)
+            else:
+                utc_date = datetime.utcnow()
+
+            alt_limit = request.GET.get('alt_limit', 0.0)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date )
+            ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, 300, alt_limit )
+        except Body.DoesNotExist:
+            error = "Error ! No object found"
+            return render(request, 'ingest/home.html', {'error' : error})
+        except Body.MultipleObjectsReturned:
+            error = "Error ! Multiple objects specified"
+    else:
+        error = "You didn't specify a target"
+        return render(request, 'ingest/home.html', {'error' : error})
+
+    return render(request, 'ingest/ephem.html',
+        {'new_target_name' : name, 
+         'ephem_lines'  : ephem_lines, 
+         'site_code' : site_code,
+         'error' : error }
+    )
 
 def save_and_make_revision(body,kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
@@ -105,8 +148,8 @@ def update_NEOCP_orbit(obj_id, dbg=False):
         if not created:
             # Find out if the details have changed, if they have, save a revision
             check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
-            if check_body.count() == 1 and check_body[0] == body:
-                if save_and_make_revision(check_body[0],kwargs):
+            if check_body.count() == 0:
+                if save_and_make_revision(body,kwargs):
                     logger.info("Updated %s" % obj_id)
         else:
             save_and_make_revision(body,kwargs)
@@ -126,24 +169,41 @@ def clean_NEOCP_object(page_list):
         page_list.pop(0)
     for line in page_list:
         if 'NEOCPNomin' in line:
-            current = line.split()
+            current = line.strip().split()
             break
     if current:
-        params = {
-                'epochofel'     : extract_mpc_epoch(current[3]),
-                'meananom'      : current[4],
-                'argofperih'    : current[5],
-                'longascnode'   : current[6],
-                'orbinc'        : current[7],
-                'eccentricity'  : current[8],
-                'meandist'      : current[10],
-                'source_type'   : 'U',
-                'elements_type' : 'MPC_MINOR_PLANET',
-                'active'        : True,
-                'origin'        : 'M',
-                }
+        if len(current) == 16:
+            # Missing H parameter, probably...
+            try:
+                slope = float(current[2])
+            except ValueError:
+                # Insert a high magnitude for the missing H
+                current.insert(1,99.99)
+                logger.warn("Missing H magnitude for %s; assuming 99.99", current[0])
+            except:
+                logger.error("Missing field in NEOCP orbit for %s which wasn't correctable", current[0])
+
+        if len(current) == 17:
+            params = {
+                    'abs_mag'       : float(current[1]),
+                    'slope'         : float(current[2]),
+                    'epochofel'     : extract_mpc_epoch(current[3]),
+                    'meananom'      : float(current[4]),
+                    'argofperih'    : float(current[5]),
+                    'longascnode'   : float(current[6]),
+                    'orbinc'        : float(current[7]),
+                    'eccentricity'  : float(current[8]),
+                    'meandist'      : float(current[10]),
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        else:
+            logger.warn("Did not get right number of parameters for %s. Values %s", current[0], current)
+            params = {}
     else:
-        params = []
+        params = {}
     return params
 
 def update_crossids(astobj, dbg=False):
@@ -164,8 +224,8 @@ def update_crossids(astobj, dbg=False):
         if dbg: print "Did not create new Body"
         # Find out if the details have changed, if they have, save a revision
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
-        if check_body.count() == 1 and check_body[0] == body:
-            save_and_make_revision(check_body[0],kwargs)
+        if check_body.count() == 0:
+            save_and_make_revision(body,kwargs)
             logger.info("Updated cross identification for %s" % obj_id)
     else:
         # Didn't know about this object before so create but make inactive
