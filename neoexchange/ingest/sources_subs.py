@@ -27,7 +27,7 @@ def download_file(url, file_to_save):
     attempts = 0
     while attempts < 3:
         try:
-            url_handle  = urllib2.urlopen(url)
+            url_handle = urllib2.urlopen(url)
             file_handle = open(file_to_save, 'wb')
             for line in url_handle:
                 file_handle.write(line)
@@ -47,16 +47,16 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     '''Fetches the specified URL from <url> and parses it using BeautifulSoup.
     If [fakeagent] is set to True, we will pretend to be a Firefox browser on
     Linux rather than as Python-urllib (in case of anti-machine filtering).
-    If [parser] is specified, try and use that BeautifulSoup parser (which 
+    If [parser] is specified, try and use that BeautifulSoup parser (which
     needs to be installed). Defaults to "html.parser" if not specified; may need
     to use "html5lib" to properly parse malformed MPC pages.
-    
-    Returns the page as a BeautifulSoup object if all was OK or None if the 
+
+    Returns the page as a BeautifulSoup object if all was OK or None if the
     page retrieval failed.'''
 
     req_headers = {}
     if fakeagent == True:
-        req_headers = { 'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0",
+        req_headers = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0",
                       }
     req_page = urllib2.Request(url, headers=req_headers)
     opener = urllib2.build_opener() # create an opener object
@@ -72,7 +72,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     neo_page = response.read()
 
 # Parse into beautiful soup
-    page  = BeautifulSoup(neo_page, parser)
+    page = BeautifulSoup(neo_page, parser)
 
     return page
 
@@ -81,15 +81,15 @@ def fetch_previous_NEOCP_desigs(dbg=False):
     '''Fetches the "Previous NEO Confirmation Page Objects" from the MPC, parses
     it and returns a list of lists of object, provisional designation or failure
     reason, date and MPEC.'''
-    
-    previous_NEOs_url='http://www.minorplanetcenter.net/iau/NEO/ToConfirm_PrevDes.html'
-    
+
+    previous_NEOs_url = 'http://www.minorplanetcenter.net/iau/NEO/ToConfirm_PrevDes.html'
+
     page = fetchpage_and_make_soup(previous_NEOs_url, parser="html5lib")
     if page == None:
         return None
 
     divs = page.find_all('div', id="main")
-    
+
     crossids = []
     for row in divs[0].find_all('li'):
         items = row.contents
@@ -113,7 +113,7 @@ def fetch_previous_NEOCP_desigs(dbg=False):
             if items[0].find('Comet') != 1:
                 newid = str(items[0]).lstrip()+items[1].string.strip()
                 provid_date = items[2].split('(')
-                provid = provid_date[0].replace(' = ','')
+                provid = provid_date[0].replace(' = ', '')
                 date = '('+provid_date[1].strip()
                 mpec = ''
             else:
@@ -139,7 +139,7 @@ def fetch_previous_NEOCP_desigs(dbg=False):
         else:
             logger.warn("Unknown number of fields. items=%s", items)
 # Append to list
-        if crossmatch !=  ['', '', '', '']:
+        if crossmatch != ['', '', '', '']:
             crossids.append(crossmatch)
 
     return crossids
@@ -148,15 +148,15 @@ def fetch_NEOCP(dbg=False):
 
     '''Fetches the NEO Confirmation Page and extracts a list of objects, which
     is returned.'''
-    
+
     NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/ToConfirm.html'
 
     neocp_page = fetchpage_and_make_soup(NEOCP_url)
     if neocp_page == None:
         return None
 
-# Find all the input checkboxes with "obj" in the name    
-    neocp_objects = neocp_page.findAll('input', attrs = {"name" : "obj"})
+# Find all the input checkboxes with "obj" in the name
+    neocp_objects = neocp_page.findAll('input', attrs={"name" : "obj"})
 
     new_objects = []
     for row in neocp_objects:
@@ -173,11 +173,11 @@ def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
       (b) the file already exists and [delete] is not True'''
 
     NEOCP_obs_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
-    
+
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
-    
+
     obs_page_list = neocp_obs_page.text.split('\n')
-    
+
 # If the object has left the NEOCP, the HTML will say 'None available at this time.'
 # and the length of the list will be 1
     lines_written = None
@@ -191,16 +191,16 @@ def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
         if os.path.isfile(neocand_filename) == False:
             neo_cand_fh = open(neocand_filename, 'w')
             for line in obs_page_list:
-                obs_page_line = "%80s" % ( line )
+                obs_page_line = "%80s" % (line)
                 print >> neo_cand_fh, obs_page_line
             neo_cand_fh.close()
-            lines_written =  len(obs_page_list)
-            print "Wrote",lines_written,"MPC lines to",neocand_filename
+            lines_written = len(obs_page_list)
+            print "Wrote", lines_written, "MPC lines to", neocand_filename
         else:
-            print "File",neocand_filename,"already exists, not overwriting."
-            
+            print "File", neocand_filename, "already exists, not overwriting."
+
     else:
-        print "Object",obj_id,"no longer exists on the NEOCP."
+        print "Object", obj_id, "no longer exists on the NEOCP."
 
     return lines_written
 
@@ -215,11 +215,11 @@ def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
       (b) the file already exists and [delete] is not True'''
 
     NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&orb=y'
-    
+
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
-    
+
     obs_page_list = neocp_obs_page.text.split('\n')
-    
+
 # If the object has left the NEOCP, the HTML will say 'None available at this time.'
 # and the length of the list will be 1
     orbit_lines_written = None
@@ -234,26 +234,26 @@ def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
         if os.path.isfile(neocand_filename) == False:
             for line in obs_page_list:
                 if 'NEOCPNomin' in line:
-                  neo_orbit_fh = open(neocand_filename, 'w')
+                    neo_orbit_fh = open(neocand_filename, 'w')
 #                obs_page_line = "%80s" % ( line )
-                  print >> neo_orbit_fh, line
-                  neo_orbit_fh.close()
-                  orbit_lines_written = orbit_lines_written + 1
-            if dbg: print "Wrote",orbit_lines_written,"orbit lines to",neocand_filename
+                    print >> neo_orbit_fh, line
+                    neo_orbit_fh.close()
+                    orbit_lines_written = orbit_lines_written + 1
+            if dbg: print "Wrote", orbit_lines_written, "orbit lines to", neocand_filename
         else:
-            if dbg: print "File",neocand_filename,"already exists, not overwriting."
-            
+            if dbg: print "File", neocand_filename, "already exists, not overwriting."
+
     else:
-        if dbg: print "Object",obj_id,"no longer exists on the NEOCP."
+        if dbg: print "Object", obj_id, "no longer exists on the NEOCP."
 
     return orbit_lines_written
 
 def fetch_mpcobs(asteroid, file_to_save, debug=False):
-    '''Performs a search on the MPC Database for <asteroid> and saves the 
+    '''Performs a search on the MPC Database for <asteroid> and saves the
     resulting observations into <file_to_save>.'''
 
     query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
-    
+
     page = fetchpage_and_make_soup(query_url)
     if page == None:
         return None
@@ -266,7 +266,7 @@ def fetch_mpcobs(asteroid, file_to_save, debug=False):
 # Use a list comprehension to find the 'tmp/<asteroid>.dat' link in among all
 # the other links
     link = [x.get('href') for x in refs if 'tmp/'+asteroid in x.get('href')]
-    
+
     if len(link) == 1:
 # Replace the '..' part with proper URL
 
@@ -274,18 +274,18 @@ def fetch_mpcobs(asteroid, file_to_save, debug=False):
         download_file(astfile_link, file_to_save)
 
         return file_to_save
-    
+
     return None
 
 def clean_element(element):
     'Cleans an element (passed) by converting to ascii and removing any units'''
     key = element[0].encode('ascii', 'ignore')
     value = element[1].encode('ascii', 'ignore')
-    # Match a open parenthesis followed by 0 or more non-whitespace followed by 
+    # Match a open parenthesis followed by 0 or more non-whitespace followed by
     # a close parenthesis and replace it with a blank string
-    key = sub(r' \(\S*\)','',key)
-    
-    return (key,value)
+    key = sub(r' \(\S*\)','', key)
+
+    return (key, value)
 
 def fetch_mpcorbit(asteroid, dbg=False):
     '''Performs a search on the MPC Database for <asteroid> and returns a list
@@ -306,7 +306,7 @@ def fetch_mpcorbit(asteroid, dbg=False):
 
     data = []
     # Find the table of elements and then the subtables within it
-    elements_table = page.find('table', { 'class' : 'nb'})
+    elements_table = page.find('table', {'class' : 'nb'})
     if elements_table == None:
         if dbg: "No element tables found"
         return None
@@ -329,13 +329,13 @@ class PackedError(Exception):
 
     def __str__(self):
         return self.value
-    
+
 def validate_packcode(packcode):
     '''Method to validate that <packcode> is a valid MPC packed designation.
-    Format is as described at: 
+    Format is as described at:
     http://www.minorplanetcenter.org/iau/info/PackedDes.html'''
-    
-    valid_cent_codes = { 'I' : 18, 'J' : 19, 'K' : 20 }
+
+    valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
 
     if len(packcode) != 7:
@@ -353,37 +353,37 @@ def validate_packcode(packcode):
 def packed_to_normal(packcode):
     '''Converts MPC packed provisional designations e.g. K10V01F to unpacked
     normal desigination i.e. 2010VF1'''
-    
+
 # Convert initial letter to century
-    cent_codes = { 'I' : 18, 'J' : 19, 'K' : 20 }
-    
+    cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
+
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
-        return None       
+        return None
     else:
         mpc_cent = cent_codes[packcode[0]]
- 
+
 # Convert next 2 digits to year
     mpc_year = packcode[1:3]
     no_in_halfmonth = packcode[3] + packcode[6]
-# Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a 
-# consecutive integer by converting to ASCII code and skipping the non-alphanumerics 
+# Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
+# consecutive integer by converting to ASCII code and skipping the non-alphanumerics
     cycle = ord(packcode[4])
     if cycle >= ord('a'):
-            cycle = cycle - 61
+        cycle = cycle - 61
     elif cycle >= ord('A') and cycle < ord('Z'):
-            cycle = cycle - 55
+        cycle = cycle - 55
     else:
-            cycle = cycle - ord('0')
+        cycle = cycle - ord('0')
     digit = int(packcode[5])
     count = cycle * 10 + digit
 # No digits on the end of the unpacked designation if it's the first loop through
     if cycle == 0 and digit == 0:
-            count = ''
+        count = ''
 
 # Assemble unpacked code
     normal_code = str(mpc_cent) + mpc_year + no_in_halfmonth + str(count)
-    
+
     return normal_code
 
 def parse_goldstone_chunks(chunks, dbg=False):
@@ -424,12 +424,12 @@ def parse_goldstone_chunks(chunks, dbg=False):
             # If no, then we have a name e.g. [1566] 'Icarus'
             # Hopefully some at Goldstone won't shout the name of the object
             # e.g. '(99942) APOPHIS'! or we're hosed...
-           if chunks[4][0:2].isupper():
-              if dbg: print "In case 3a"
-              object_id = str(chunks[3] + ' ' + chunks[4])
-           else:
-              if dbg: print "In case 3b"
-              object_id = str(chunks[3])
+            if chunks[4][0:2].isupper():
+                if dbg: print "In case 3a"
+                object_id = str(chunks[3] + ' ' + chunks[4])
+            else:
+                if dbg: print "In case 3b"
+                object_id = str(chunks[3])
         elif chunks[3].isdigit() and chunks[4].isalpha():
             if dbg: print "In case 4"
             object_id = str(chunks[3] + ' ' + chunks[4])
@@ -450,7 +450,6 @@ def fetch_goldstone_targets(dbg=False):
     radar_objects = []
     in_objects = False
     current_year = datetime.now().year
-    current_year_str = str(current_year) + ' '
     last_year_seen = current_year
     # The Goldstone target page is just a ...page... of text... with no tags
     # or table or anything much to search for. Do the best we can and look for
