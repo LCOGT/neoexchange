@@ -1,18 +1,31 @@
 {% extends 'ingest/base.html' %}
 {% load url from future %}
-
-{% block header %}NEOexchange{% endblock %}
-
-{% block title %}Current Targets{% endblock %}
+{% block header %}NEOx home{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 {% block extramenucss %}extramenu-home{% endblock %}
 
 {% block extramenu %}
-{% endblock %}
+{% endblock%}
 
 {% block main-content %}
-<div class="masthead">
+		<div class="masthead">
+			<div class="container">
+				<a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
+					<div class="bigtext">{{targets}}</div>
+					<div class="smalltext">active targets</div>
+				</a>
+				<a class="btn btn-transparent btn-jumbo" href="{% url 'blocklist' %}">
+					<div class="bigtext">{{blocks}}</div>
+					<div class="smalltext">active blocks</div>
+				</a>
+				<div class="btn btn-transparent btn-jumbo">
+					<div class="bigtext">{{latest.ingest|date:"d M Y"}}</div>
+					<div class="smalltext">latest ingest</div>
+				</div>
+			</div>
+		</div>
+
     <div class="container">
         <div class="bigtext">
             <table id="id_neo_targets" class="datatable">
@@ -48,9 +61,6 @@
                 </tbody>
             </table>
         </div>
-        <div class="sevencol">
-        <div class="onecol">
-        </div>
         <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
             <input type="text" name="target_name" id="id_target" placeholder="Enter a target name" style="color: #000;"/>
             <select name="site_code" id="id_sitecode" style="color: #000;"/>
@@ -70,9 +80,5 @@
                 <span class="warning">{{ error }}</span>
             </div>
         {% endif %}
-        </div>
-        <div class="onecol lastcol">
-        </div>
     </div>
-</div>
 {% endblock %}

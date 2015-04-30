@@ -93,12 +93,10 @@ def fetch_previous_NEOCP_desigs(dbg=False):
     crossids = []
     for row in divs[0].find_all('li'):
         items = row.contents
-
         if dbg: print items,len(items)
 # Skip the first "Processing" list item
         if items[0].strip() == 'Processing':
             continue
-
         crossmatch = ['', '', '', '']
         if len(items) == 1:
 # Is of the form "<foo> does not exist" or "<foo> was not confirmed"
