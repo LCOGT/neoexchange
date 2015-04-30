@@ -93,7 +93,12 @@ def fetch_previous_NEOCP_desigs(dbg=False):
     crossids = []
     for row in divs[0].find_all('li'):
         items = row.contents
-        if dbg: print items, len(items)
+
+        if dbg: print items,len(items)
+# Skip the first "Processing" list item
+        if items[0].strip() == 'Processing':
+            continue
+
         crossmatch = ['', '', '', '']
         if len(items) == 1:
 # Is of the form "<foo> does not exist" or "<foo> was not confirmed"
@@ -134,7 +139,7 @@ def fetch_previous_NEOCP_desigs(dbg=False):
             mpec = items[3].contents[0].string + items[3].contents[1].string
             crossmatch = [provid, newid, mpec, date]
         else:
-            print "Unknown number of fields"
+            logger.warn("Unknown number of fields. items=%s", items)
 # Append to list
         if crossmatch != ['', '', '', '']:
             crossids.append(crossmatch)
