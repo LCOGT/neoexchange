@@ -59,6 +59,9 @@ class NewVisitorTest(FunctionalTest):
         # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
         inputbox.send_keys('N999r0q')
 
+        datebox = self.get_item_input_box('id_date')
+        datebox.send_keys('2015-04-21')
+
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
@@ -107,6 +110,9 @@ class NewVisitorTest(FunctionalTest):
         self.assertIn('FTN (F65)', [option.text for option in site_choices.options])
 
         site_choices.select_by_visible_text('FTN (F65)')
+
+        datebox = self.get_item_input_box('id_date')
+        datebox.send_keys('2015-04-21')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
@@ -234,6 +240,13 @@ class NewVisitorTest(FunctionalTest):
         # He decides to see where it will be on a specific date in a future
         datebox.send_keys('2015-09-04')
 
+        # He notices a new textbox for the altitude limit that is wanted, below
+        # which he doesn't want to see ephemeris output. It is filled in with 
+        # the default value of 30.0 degrees
+        datebox = self.get_item_input_box('id_altlimit')
+        self.assertEqual(datebox.get_attribute('value'), str(30.0))
+
+
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
@@ -259,8 +272,8 @@ class NewVisitorTest(FunctionalTest):
             '2015 09 03 19:35 23 53 33.81 -12 45 53.8 19.3 1.87 +30 0.67 57 -26 +039 -04:05'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 03 19:40 23 53 33.46 -12 46 01.5 19.3 1.87 +32 0.67 58 -25 +040 -04:00'
+            '2015 09 03 19:40 23 53 33.46 -12 46 01.6 19.3 1.87 +32 0.67 58 -25 +040 -04:00'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 04 03:20 23 52 59.34 -12 57 44.8 19.3 1.83 +35 0.64 61 +41 +022 +03:41'
+            '2015 09 04 03:20 23 52 59.34 -12 57 44.9 19.3 1.83 +35 0.64 61 +41 +022 +03:41'
         )

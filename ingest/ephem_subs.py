@@ -392,7 +392,7 @@ def format_emp_line(emp_line, site_code):
 
 # Get site and mount parameters
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
-    (ha_neg_limit, ha_pos_limit, alt_limit) = get_mountlimits(site_code)
+    (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(site_code)
 
     blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
@@ -420,7 +420,7 @@ def format_emp_line(emp_line, site_code):
         ha_string = ha_string[0:6]
 
 # Calculate slot score
-    slot_score = compute_score(emp_line[5], moon_alt, moon_obj_sep, alt_limit)
+    slot_score = compute_score(emp_line[5], moon_alt, moon_obj_sep, mount_alt_limit)
 
 # Calculate the no. of FOVs from the starting position
 #    pointings_sep = S.sla_dsep(emp_line[1], emp_line[2], start_ra, start_dec)
@@ -618,10 +618,10 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
 
     for x in emp:
         visible = False
-        if  (x[0]>=dark_start and x[0]<=dark_end-timedelta(minutes=slot_length)) and x[5] >= alt_limit:
+        if  (x[0]>=dark_start and x[0]<=dark_end-timedelta(minutes=slot_length)) and x[5] >= float(alt_limit):
             visible = True
             dark_up_emp.append(x)
-        if debug: print x[0].date(), x[0].time(), (x[0]>=dark_start and x[0]<dark_end-timedelta(minutes=slot_length)), x[5], visible
+        if debug: print x[0].date(), x[0].time(), (x[0]>=dark_start and x[0]<dark_end-timedelta(minutes=slot_length)), x[5], alt_limit, visible
 
 
     return dark_up_emp
