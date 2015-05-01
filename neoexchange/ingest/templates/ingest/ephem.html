@@ -1,34 +1,22 @@
 {% extends 'ingest/base.html' %}
 {% load url from future %}
 
-{% block header %}NEOexchange{% endblock %}
+{% block header %}NEOx{% endblock %}
 
-{% block title %}Current Targets{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
-{% block extramenucss %}extramenu-home{% endblock %}
+{% block extramenucss %}extramenu{% endblock %}
 
 {% block extramenu %}
-{% endblock %}
+                    <div class="headingleft">
+                        <h1>Emphemeris for {{ new_target_name }} at {{ site_code }}</h1>
+                    </div>
+{% endblock%}
 
 {% block main-content %}
-<div class="masthead">
-    <div class="container">
-        <div class="bigtext">
-
-            <table id="id_planning_table">
-                <tbody>
-                    <tr><td>Computing ephemeris for: {{ new_target_name }} for {{ site_code }}</td></tr>
-                </tbody>
-            </table>
-                {% if error %}
-                    <div class="messages error">
-                        <span class="warning">{{ error }}</span>
-                    </div>
-                {% endif %}
-        </div>
+<div id="main" class="fill-height">
+    <div class="row rowfull">
         <div class="smalltext">
-            <br>
             <table id="id_ephemeris_table" class="datatable">
                 <thead>
                     <tr>
@@ -69,7 +57,7 @@
                 </thead>
                 <tbody>
                     {% for line in ephem_lines %}
-                    <tr>
+                    <tr  class="{% cycle 'odd' 'even' %}">
                         <td>{{ line.0 }}</td>
                         <td>{{ line.1 }}</td>
                         <td>{{ line.2 }}</td>

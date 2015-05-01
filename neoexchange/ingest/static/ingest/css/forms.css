@@ -138,6 +138,43 @@ form.proposalsubmit_admin .proposalsubmit_credit label {
         min-width:50px;
 }
 
+
+.home-form .inline-fields input {
+	display:inline-block;
+}
+
+.home-form label {
+	font-size: 70%;
+}
+
+.home-form input[type="text"],
+.home-form input[type="date"],
+.home-form input[type="datetime"],
+.home-form input[type="email"],
+.home-form input[type="number"],
+.home-form input[type="search"],
+.home-form input[type="time"],
+.home-form input[type="url"],
+.home-form input[type="password"],
+.home-form textarea,
+.home-form select 
+{
+    box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    outline: none;
+    padding: 7px;
+    border: none;
+    border-bottom: 1px solid #ddd;
+    background: transparent;
+    margin-bottom: 10px;
+    height: 45px;
+}
+
+.home-form input[type="submit"] {
+	color:#555;
+}
+
 @media (max-width: 800px), (max-device-width: 800px) {
 	.pform { padding: 10px; margin:0px 20px 20px 20px; width:auto; }
 }
