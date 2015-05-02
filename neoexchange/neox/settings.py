@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Django settings for neox project.
 
 import os, sys
@@ -137,11 +138,6 @@ except ImportError as e:
     if "local_settings" not in str(e):
         raise e
 
-# A sample logging configuration. The only tangible logging
-# performed by this configuration is to send an email to
-# the site admins on every HTTP 500 error when DEBUG=False.
-# See http://docs.djangoproject.com/en/dev/topics/logging for
-# more details on how to customize your logging configuration.
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
@@ -189,7 +185,7 @@ LOGGING = {
             'level':'DEBUG',
         },
         'ingest' : {
-            'handlers' : ['file'],
+            'handlers' : ['file','console'],
             'level'    : 'DEBUG',
         }
     }

@@ -14,7 +14,7 @@
 # docker run -d -p 8200:8200 --name=neoexchange lcogtwebmaster/lcogt:neoexchange_$BRANCH
 #
 # To run with nginx + uwsgi both exposed:
-# docker run -d -p 8200:8200 -p 8201:8201 --name=neoexchange lcogtwebmaster/lcogt:neoexchange_$BRANCH
+# docker run -d -p 8200:8200 -p 8201:8201 --name=neox lcogtwebmaster/lcogt:neoexchange_$BRANCH
 #
 # See the notes in the code below about NFS mounts.
 #
@@ -57,6 +57,7 @@ RUN python /var/www/apps/neoexchange/manage.py migrate --noinput
 COPY config/uwsgi.ini /etc/uwsgi.ini
 COPY config/nginx/* /etc/nginx/
 COPY config/neoexchange.ini /etc/supervisord.d/neoexchange.ini
+COPY config/crontab.root /var/spool/cron/root
 
 # nginx runs on port 8200, uwsgi runs on port 8201
 EXPOSE 8200 8201
