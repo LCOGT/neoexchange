@@ -508,7 +508,7 @@ def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False)
         utc_date = datetime.combine(utc_date, time())
     (start_of_darkness, end_of_darkness) = astro_darkness(site_code, utc_date)
     end_of_darkness = end_of_darkness+timedelta(hours=1)
-    logger.debug("Start,End of darkness=", start_of_darkness, end_of_darkness)
+    logger.debug("Start,End of darkness=%s %s", start_of_darkness, end_of_darkness)
     if utc_date > end_of_darkness:
         logger.debug("Planning for the next night")
         utc_date = utc_date + timedelta(days=1)
@@ -517,10 +517,10 @@ def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False)
         utc_date = utc_date + timedelta(days=-1)
 
     utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
-    logger.debug("Planning observations for", utc_date, "for", site_code)
+    logger.debug("Planning observations for %s for %s", utc_date, site_code)
     # Get hours of darkness for site
     (dark_start, dark_end) = astro_darkness(site_code, utc_date)
-    logger.debug("Dark from ", dark_start, "to", dark_end)
+    logger.debug("Dark from %s to %s", dark_start, dark_end)
 
     return dark_start, dark_end
 
