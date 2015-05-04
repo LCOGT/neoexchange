@@ -18,8 +18,8 @@ from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.shortcuts import render
 from django.views.generic import DetailView, ListView
-from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
-from ingest.forms import EphemQuery
+from ingest.ephem_subs import call_compute_ephem, compute_ephem, determine_darkness_times
+from ingest.forms import EphemQuery, ScheduleForm
 from ingest.models import *
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
@@ -79,10 +79,54 @@ def ephemeris(request):
         return render(request, 'ingest/home.html', {'form' : form})
 
     return render(request, 'ingest/ephem.html',
-        {'new_target_name' : form['target'].value, 
+        {'new_target_name' : form['target'].value,
          'ephem_lines'  : ephem_lines, 
          'site_code' : form['site_code'].value(),
         }
+    )
+
+def schedule(request):
+
+    body_id = request.GET.get('body_id', 1)
+    form = ScheduleForm(request.GET, initial={'body_id' : body_id})
+    body = Body.objects.get(id=form.initial['body_id'])
+    if form.is_valid():
+        data = form.cleaned_data
+        body_elements = model_to_dict(body)
+        #proposal = Proposal.objects.get(title__icontains = 'NEO Follow-up Network')
+        # Check for valid proposal
+
+        # Determine magnitude
+        dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
+        dark_midpoint = dark_start + (dark_end-dark_start)/2
+        emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], False, False, False)
+        magnitude = emp[3]
+        speed = emp[4]
+
+        # Determine slot length
+        slot_length = 30
+    #   slot_length = determine_slot_length(body_elements.provisional_name, magnitude, site_code)
+
+        # Determine exposure length and count
+    #   exp_length, exp_count = determine_exptime_count(speed, site_code, slot_length)
+
+        # Assemble request
+    #   make_request(body_elements, params)
+    # Record block and submit to scheduler
+#    if check_block_exists == 0:
+#        submit_block_to_scheduler()
+#        record_block()
+        return render(request, 'ingest/schedule.html',
+            {'target_name' : body.current_name(),
+             'magnitude' : magnitude,
+             'speed' : speed,
+             'slot_length' : slot_length}
+        )
+    else:
+        return render(request, 'ingest/schedule.html', {'form' : form})
+
+    return render(request, 'ingest/schedule.html',
+        {'target_name' : body.current_name()}
     )
 
 def save_and_make_revision(body,kwargs):

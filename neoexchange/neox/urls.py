@@ -29,6 +29,7 @@ urlpatterns = patterns('ingest.views',
     url(r'^target/(?P<pk>\d+)/$',DetailView.as_view(model=Body, context_object_name='body'), name='target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', 'ephemeris', name='ephemeris'),
+    url(r'^schedule/$', 'schedule', name='schedule'),
     url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', include(admin.site.urls)),
 )+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
