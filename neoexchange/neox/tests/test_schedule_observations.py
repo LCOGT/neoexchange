@@ -108,4 +108,6 @@ class ScheduleObservations(FunctionalTest):
         exp_length = self.browser.find_element_by_id('id_exp_length').text
         self.assertIn('Exp length: 50.0 secs', exp_length)
 
+        # At this point, a 'Schedule this object' button appears
+        link = self.browser.find_element_by_link_text('Schedule this Object')
         self.fail("Finish the test!")

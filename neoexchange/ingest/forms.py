@@ -31,3 +31,4 @@ class ScheduleForm(forms.Form):
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=datetime.utcnow().date(), required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
     body_id = forms.IntegerField(widget=forms.HiddenInput())
+    ok_to_schedule = forms.BooleanField(initial=False, required=False, widget=forms.HiddenInput())

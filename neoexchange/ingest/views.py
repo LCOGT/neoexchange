@@ -22,7 +22,8 @@ from ingest.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count
 from ingest.forms import EphemQuery, ScheduleForm
 from ingest.models import *
-from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
+from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
+    fetch_mpcorbit, submit_block_to_scheduler
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
 import logging
 import reversion
@@ -89,13 +90,16 @@ def ephemeris(request):
 def schedule(request):
 
     body_id = request.GET.get('body_id', 1)
-    form = ScheduleForm(request.GET, initial={'body_id' : body_id})
+    ok_to_schedule = request.GET.get('ok_to_schedule', False)
+    print "top of form", ok_to_schedule, body_id
+    form = ScheduleForm(request.GET, initial={'body_id' : body_id, 'ok_to_schedule' : ok_to_schedule})
     body = Body.objects.get(id=form.initial['body_id'])
     if form.is_valid():
         data = form.cleaned_data
+        print data
         body_elements = model_to_dict(body)
-        #proposal = Proposal.objects.get(title__icontains = 'NEO Follow-up Network')
         # Check for valid proposal
+        # validate_proposal_time(data['proposal_code'])
 
         # Determine magnitude
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
@@ -105,27 +109,44 @@ def schedule(request):
         speed = emp[4]
 
         # Determine slot length
-        slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
-
+        try:
+            slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+        except MagRangeError:
+            ok_to_schedule = False
         # Determine exposure length and count
         exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
+        if exp_length == None or exp_count == None:
+            ok_to_schedule = False
 
-        # Assemble request
-    #   make_request(body_elements, params)
-    # Record block and submit to scheduler
+        if data['ok_to_schedule'] == True:
+            print body_elements
+            # Assemble request
+            body_elements['epochofel_mjd'] = body.epochofel_mjd()
+            body_elements['current_name'] = body.current_name()
+            params = {  'proposal_code' : data['proposal_code'],
+                        'exp_count' : exp_count,
+                        'exp_time' : exp_length,
+                        'site_code' : data['site_code'],
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + data['site_code'].upper() + '-'  + datetime.strftime(data['utc_date'], '%Y%m%d')
+                     }
+            # Record block and submit to scheduler
 #    if check_block_exists == 0:
-#        submit_block_to_scheduler()
+            request_number = submit_block_to_scheduler(body_elements, params)
 #        record_block()
         return render(request, 'ingest/schedule.html',
-            {'target_name' : body.current_name(),
+            {'form' : form, 'target_name' : body.current_name(),
              'magnitude' : magnitude,
              'speed' : speed,
              'slot_length' : slot_length,
              'exp_count' : exp_count,
-             'exp_length' : exp_length}
+             'exp_length' : exp_length,
+             'schedule_ok' : ok_to_schedule,
+             'request_number' : request_number}
         )
     else:
-        return render(request, 'ingest/schedule.html', {'form' : form})
+        return render(request, 'ingest/schedule.html', {'form' : form, 'target_name' : body.current_name()})
 
     return render(request, 'ingest/schedule.html',
         {'target_name' : body.current_name()}

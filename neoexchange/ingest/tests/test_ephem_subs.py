@@ -84,8 +84,7 @@ class TestComputeEphem(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-        self.body = Body.objects.create(**params)
-        self.body.save()
+        self.body, created = Body.objects.get_or_create(**params)
 
         self.elements = {'G': 0.15,
                          'H': 21.0,
@@ -547,6 +546,32 @@ class TestDetermineExpTimeCount(TestCase):
 
         expected_exptime = 254.5
         expected_expcount = 4
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_superfast_2m(self):
+        speed = 1800.0
+        site_code = 'E10'
+        slot_len = 15
+
+        expected_exptime = 1.0
+        expected_expcount = 30
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_block_too_short(self):
+        speed = 0.18
+        site_code = 'F65'
+        slot_len = 2
+
+        expected_exptime = None
+        expected_expcount = None
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
 

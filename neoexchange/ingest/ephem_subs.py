@@ -771,7 +771,9 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins):
         ( slot_length/60.0, slot_length, exp_count, exp_time))
     if exp_time == None or exp_time <= 0.0 or exp_count < 1:
         logger.debug("Invalid exposure count")
-        return False
+        exp_time = None
+        exp_count = None
+
     return exp_time, exp_count
 
 def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
