@@ -1,7 +1,7 @@
 NEO Exchange
 ============
 
-Portal for scheduling observations of NEOs using LCOGT (Version 0.1.0)
+Portal for scheduling observations of NEOs using LCOGT (Version 0.1.1)
 
 Setup
 -----
@@ -16,4 +16,42 @@ or:
 `source <path to virtualenv>/bin/activate.csh # for (t)csh-shells`  
 `pip install -r pip-requirements.txt`  
 
+Local Testing
+-------------
 
+For local testing you will probably want to create a
+`neoexchange/neox/local_settings.py` file to point at a local test database and
+to switch on `DEBUG` for easier testing. An example file would look like:
+```
+import sys, os
+
+CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
+BASE_DIR = os.path.dirname(CURRENT_PATH)
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3', 
+        'NAME': 'neox.db',                      # Or path to database file if using sqlite3.
+        'USER': '',                      # Not used with sqlite3.
+        'PASSWORD': '',                  # Not used with sqlite3.
+        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
+        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
+    }
+}
+
+DEBUG = True
+
+# Use a different database file when testing or exploring in the shell.
+if 'test' in sys.argv or 'test_coverage' in sys.argv or 'shell' in sys.argv:
+    DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
+    DATABASES['default']['NAME'] = 'test.db'
+    DATABASES['default']['USER'] = ''
+    DATABASES['default']['PASSWORD'] = ''
+
+STATIC_ROOT = os.path.abspath(os.path.join(BASE_DIR, '../../static/'))
+```
+
+To prepare the local SQLite DB for use, you should follow these steps:
+1. `cd neoexchange\neoexchange`
+2. Run `python manage.py syncdb`
+3. Migrate the apps with `python manage.py migrate`
