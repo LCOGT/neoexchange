@@ -11,6 +11,6 @@ class LayoutAndStylingTest(FunctionalTest):
         # He notices the input box is nicely centered
         link = self.browser.find_element_by_partial_link_text('active targets')
         self.assertAlmostEqual(
-            link.location['x'] + link.size['width'] /2 ,
-            640, delta=50
+            link.location['x'] + link.size['width'] ,
+            640, delta=27
         )

@@ -1,0 +1,60 @@
+{% extends 'ingest/base.html' %}
+{% load url from future %}
+{% block header %}NEOx scheduling{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Scheduling for: {{target_name}}</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div class="masthead">
+        <div class="container">
+            <div class="btn btn-transparent btn-jumbo home-form">
+                <form action="{% url 'schedule' %}" method="GET" style="display:inline-block;">
+                    <div class="inline-fields">
+                        {{ form.proposal_code }}
+                        {{ form.site_code }}
+                    </div>
+                    <div class="inline-fields">
+                        {{ form.body_id }}
+                        <label for="id_utc_date">UTC date</label>{{ form.utc_date }}
+                        {% if schedule_ok %}
+                            <input type="hidden" name="ok_to_schedule" value=True id="id_schedule_ok" />
+                            <input type="submit" class="btn btn-secondary btn-jumbo keepvisible" value="Schedule this Object">
+                        {% else %}
+                            <input type="hidden" name="ok_to_schedule" value=False id="id_schedule_ok" />
+                            <input type="submit" class="button keepvisible" value="Compute">
+                        {% endif %}
+                    </div>
+                    {% for key, error in form.errors.items %}
+                        <div class="messages error">
+                            {{ error }}
+                        </div>
+                   {% endfor %}
+                </form>
+            </div>
+        </div>
+    </div>
+    {% if schedule_ok %}
+        <div class="container">
+            <div class="bigtext">
+                <a class="btn btn-secondary" id="id_magnitude">Magnitude: {{ magnitude|floatformat:2 }}</a>
+                <a class="btn btn-secondary" id="id_speed">Speed: {{ speed|floatformat:2 }} '/min</a>
+                <a class="btn btn-secondary" id="id_slot_length">Slot length: {{ slot_length }} mins</a>
+                <a class="btn btn-secondary" id="id_no_of_exps">No. of exp: {{ exp_count }}</a>
+                <a class="btn btn-secondary" id="id_exp_length">Exp length: {{ exp_length|floatformat:1 }} secs</a>
+            </div>
+        </div>
+    {% endif %}
+    {% if request_number != '' %}
+        <div class="container">
+            <div class="bigtext">
+                <a class="btn btn-secondary" id="id_request_number">Scheduled as Request Number: {{ request_number }}</a>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -17,9 +17,9 @@ from django.test import TestCase
 from ingest.models import Body
 
 #Import module to test
-from ingest.forms import EphemQuery
+from ingest.forms import EphemQuery, ScheduleForm
 
-class EphemQueryFormTest(TestCase):
+class TestEphemQueryForm(TestCase):
 
     def setUp(self):
         params = {  'provisional_name' : 'N999r0q',
@@ -37,8 +37,7 @@ class EphemQueryFormTest(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-        self.body = Body.objects.create(**params)
-        self.body.save()
+        self.body, created = Body.objects.get_or_create(**params)
 
     def test_form_has_label(self):
         form = EphemQuery()
@@ -66,3 +65,30 @@ class EphemQueryFormTest(TestCase):
                                   'alt_limit' : 30.0
                                   })
         self.assertTrue(form.is_valid())
+
+
+class TestScheduleForm(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+    def test_form_has_fields(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('Proposal', form.as_p())
+        self.assertIn('Site code:', form.as_p())
