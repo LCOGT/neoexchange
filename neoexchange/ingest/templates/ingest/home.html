@@ -1,5 +1,9 @@
 {% extends 'ingest/base.html' %}
 {% load url from future %}
+{% load staticfiles %}
+
+{% block css-content %}<link rel="stylesheet" href="{% static "ingest/css/forms.css" %}">{% endblock %}
+
 {% block header %}NEOx home{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -11,6 +15,25 @@
 {% block main-content %}
 		<div class="masthead">
 			<div class="container">
+				<div class="btn btn-transparent btn-jumbo home-form">
+					    <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
+					        <input type="text" name="{{ form.target.name }}" id="id_target" value="" placeholder="{{ form.target.label }}">
+
+				            <div class="inline-fields">
+					            <label for="id_utc_date">UTC date</label>{{ form.utc_date }}
+					            {{ form.site_code }}
+				            </div>
+				            <div class="inline-fields">
+					            <label for="id_alt_limit">Alt Limit (optional)</label>{{ form.alt_limit }}
+					            <input type="submit" class="button keepvisible" value="Compute">
+				            </div>
+				        {% for key, error in form.errors.items %}
+				            <div class="messages error">
+				                {{ error }}
+				            </div>
+				        {% endfor %}
+				        </form>				        
+				</div>
 				<a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
 					<div class="bigtext">{{targets}}</div>
 					<div class="smalltext">active targets</div>
@@ -19,10 +42,6 @@
 					<div class="bigtext">{{blocks}}</div>
 					<div class="smalltext">active blocks</div>
 				</a>
-				<div class="btn btn-transparent btn-jumbo">
-					<div class="bigtext">{{latest.ingest|date:"d M Y"}}</div>
-					<div class="smalltext">latest ingest</div>
-				</div>
 			</div>
 		</div>
 
@@ -61,24 +80,5 @@
                 </tbody>
             </table>
         </div>
-        <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
-            <input type="text" name="target_name" id="id_target" placeholder="Enter a target name" style="color: #000;"/>
-            <select name="site_code" id="id_sitecode" style="color: #000;"/>
-                <option value="V37">ELP (V37)</option>
-                <option value="F65">FTN (F65)</option>
-                <option value="E10">FTS (E10)</option>
-                <option value="W86">LSC (W85-87)</option>
-                <option value="K92">CPT (K91-93)</option>
-                <option value="Q63">COJ (Q63-64)</option>
-            </select>
-            <input type="text" name="utc_date" id="id_date" placeholder={% now "Y-m-d" %} style="color: #000;"/>
-            <input type="text" name="alt_limit" id="id_altlimit" value=30.0 style="color: #000;"/>
-            <input type="submit" class="button keepvisible" value="Compute">
-        </form>
-        {% if error %}
-            <div class="messages error">
-                <span class="warning">{{ error }}</span>
-            </div>
-        {% endif %}
     </div>
 {% endblock %}

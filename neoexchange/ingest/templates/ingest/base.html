@@ -11,7 +11,7 @@
 		<meta name="version" content="{{site_version}}" />
 		{% block meta %}{% endblock %}
 		{% block favicon %}
-		<link rel="shortcut icon" href="{% static "ingest/images/favicon.ico" %}" type="image/x-icon" />
+		<link rel="shortcut icon" href="{% static "ingest/images/favicon.ico" %}" type="image/vnd.microsoft.icon" />
 		{% endblock %}
 		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
 		{% block css-content %}{% endblock %}
@@ -22,7 +22,7 @@
         <![endif]-->
 		<script type="text/javascript" src="{% static "ingest/js/jquery-1.10.2.js" %}"></script>
 		<script type="text/javascript" src="{% static "ingest/js/jquery-ui-1.10.3.min.js" %}"></script>
-        <script type="text/javascript" src="{% static "/static/selectable/js/jquery.dj.selectable.js?v=0.8.0" %}"></script>
+		<script type="text/javascript" src="{% static "/static/selectable/js/jquery.dj.selectable.js?v=0.8.0" %}"></script>
 		{% block script-content %}{% endblock %}
 	</head>
 	<body class="{% block bodyclass %}{% endblock %}">

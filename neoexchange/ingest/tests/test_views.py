@@ -27,6 +27,7 @@ from unittest import skipIf
 from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
 from ingest.views import home, clean_NEOCP_object
 from ingest.models import Body
+from ingest.forms import EphemQuery
 
 
 class TestClean_NEOCP_Object(TestCase):
@@ -82,28 +83,33 @@ class TestClean_NEOCP_Object(TestCase):
 
 class HomePageTest(TestCase):
 
-    def test_root_url_resolves_to_home_page_view(self):
-        found = resolve('/')
-        self.assertEqual(found.func, home)
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body = Body.objects.create(**params)
+        self.body.save()
 
-    def test_home_page_returns_correct_html(self):
-        request = HttpRequest()
-        response = home(request)
-        expected_html = render_to_string('ingest/home.html')
-        self.assertEqual(response.content.decode(), expected_html)
+    def test_home_page_renders_home_template(self):
+        response = self.client.get('/')
+        self.assertTemplateUsed(response, 'ingest/home.html')
 
-    def test_home_page_redirects_after_GET(self):
-        request = HttpRequest()
-        request.method = 'GET'
-        request.GET['target_name'] = 'New target'
+    def test_home_page_uses_ephemquery_form(self):
+        response = self.client.get('/')
+        self.assertIsInstance(response.context['form'], EphemQuery)
 
-        response = home(request)
-
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['location'], '/ephemeris/')
-
-    def test_home_page_ephem_form_shows_current_date(self):
-        pass
 
 class EphemPageTest(TestCase):
     maxDiff = None
@@ -134,41 +140,58 @@ class EphemPageTest(TestCase):
         dark_start, dark_end = determine_darkness_times(site_code, utc_date )
 
         response = self.client.get('/ephemeris/',
-            data={'target_name' : 'N999r0q', 
-                  'site_code' : site_code,
-                  'utc_date' : '2015-04-21'}
+            data={'target'      : 'N999r0q',
+                  'site_code'   : site_code,
+                  'utc_date'    : '2015-04-21',
+                  'alt_limit'   : 0}
         )
         self.assertIn('N999r0q', response.content.decode())
         body_elements = model_to_dict(self.body)
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         expected_html = render_to_string(
             'ingest/ephem.html',
-            {'new_target_name' : 'N999r0q',  
+            {'new_target_name' : 'N999r0q',
             'ephem_lines'  : ephem_lines,
             'site_code' : site_code }
         )
         self.assertMultiLineEqual(response.content.decode(), expected_html)
 
     def test_displays_ephem(self):
-        response = self.client.get('/ephemeris/', data={'target_name' : 'N999r0q'})
-        self.assertContains(response, 'Computing ephemeris for')
+        response = self.client.get('/ephemeris/',
+            data ={'target' : 'N999r0q',
+                   'utc_date' : '2015-05-11',
+                   'site_code' : 'V37',
+                   'alt_limit' : 30.0
+                   }
+            )
+        self.assertContains(response, 'Ephemeris for')
 
     def test_uses_ephem_template(self):
-        response = self.client.get('/ephemeris/', data={'target_name' : 'N999r0q'})
+        response = self.client.get('/ephemeris/',
+            data = {'target' : 'N999r0q',
+                    'site_code' : 'W86',
+                    'utc_date'  : '2015-04-20',
+                    'alt_limit' : 40.0
+                    }
+            )
         self.assertTemplateUsed(response, 'ingest/ephem.html')
 
     def test_form_errors_are_sent_back_to_home_page(self):
-        response = self.client.get('/ephemeris/', data={'target_name' : ''})
+        response = self.client.get('/ephemeris/', data={'target' : ''})
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'ingest/home.html')
-        expected_error = escape("You didn't specify a target")
+        expected_error = escape("Target name is required")
         self.assertContains(response, expected_error)
 
     def test_ephem_page_displays_site_code(self):
-        response = self.client.get('/ephemeris/', 
-            data={'target_name' : 'N999r0q', 'site_code' : 'F65'})
-        self.assertContains(response, 
-            'Computing ephemeris for: N999r0q for F65')
+        response = self.client.get('/ephemeris/',
+            data = {'target' : 'N999r0q',
+                    'site_code' : 'F65',
+                    'utc_date'  : '2015-04-20',
+                    'alt_limit' : 30.0
+                    }
+            )
+        self.assertContains(response, 'Ephemeris for N999r0q at F65')
 
 class TargetsPageTest(TestCase):
 

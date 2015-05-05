@@ -14,16 +14,18 @@ GNU General Public License for more details.
 '''
 
 from datetime import datetime
+from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.shortcuts import render
 from django.views.generic import DetailView, ListView
+from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
+from ingest.forms import EphemQuery
 from ingest.models import *
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
-from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
 import logging
 import reversion
-from django.db.models import Q
+
 logger = logging.getLogger(__name__)
 
 
@@ -31,7 +33,8 @@ def home(request):
     params = {
             'targets'   : Body.objects.filter(active=True).count(),
             'blocks'    : Block.objects.filter(active=True).count(),
-            'latest'      : Body.objects.latest('ingest')
+            'latest'    : Body.objects.latest('ingest'),
+            'form'      : EphemQuery()
     }
     return render(request,'ingest/home.html',params)
 
@@ -65,44 +68,21 @@ class BodySearchView(ListView):
 
 def ephemeris(request):
 
-    name = request.GET.get('target_name', '')
+    form = EphemQuery(request.GET)
     ephem_lines = []
-    site_code = ''
-    error = ''
-    if name != '':
-        try:
-            body = Body.objects.get(provisional_name = name)
-            body_elements = model_to_dict(body)
-            try:
-                site_code = request.GET['site_code']
-            except KeyError:
-                error = "Error ! You didn't specify a site"
-            utc_date_str = request.GET.get('utc_date', '')
-            if utc_date_str != '':
-                try:
-                    utc_date = datetime.strptime(utc_date_str.strip(), '%Y-%m-%d')
-                except ValueError:
-                    utc_date = datetime(2015, 4, 21, 3,0,0)
-            else:
-                utc_date = datetime.utcnow()
-
-            alt_limit = request.GET.get('alt_limit', 0.0)
-            dark_start, dark_end = determine_darkness_times(site_code, utc_date )
-            ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, 300, alt_limit )
-        except Body.DoesNotExist:
-            error = "Error ! No object found"
-            return render(request, 'ingest/home.html', {'error' : error})
-        except Body.MultipleObjectsReturned:
-            error = "Error ! Multiple objects specified"
+    if form.is_valid():
+        data = form.cleaned_data
+        body_elements = model_to_dict(data['target'])
+        dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
+        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, data['site_code'], 300, data['alt_limit'] )
     else:
-        error = "You didn't specify a target"
-        return render(request, 'ingest/home.html', {'error' : error})
+        return render(request, 'ingest/home.html', {'form' : form})
 
     return render(request, 'ingest/ephem.html',
-        {'new_target_name' : name, 
+        {'new_target_name' : form['target'].value, 
          'ephem_lines'  : ephem_lines, 
-         'site_code' : site_code,
-         'error' : error }
+         'site_code' : form['site_code'].value(),
+        }
     )
 
 def save_and_make_revision(body,kwargs):
@@ -236,11 +216,24 @@ def update_crossids(astobj, dbg=False):
 
 
 def clean_crossid(astobj, dbg=False):
+    '''Takes an <astobj> (a list of new designation, provisional designation,
+    reference and confirm date produced from the MPC's Previous NEOCP Objects
+    page) and determines the type and whether it should still be followed.
+
+    Objects that were not confirmed, did not exist or "were not interesting
+    (normally a satellite) are set inactive immediately. For NEOs and comets,
+    we set it to inactive if more than 3 days have passed since the
+    confirmation date'''
+
+    interesting_cutoff = 3 * 86400  # 3 days in seconds
 
     confirm_date = parse_neocp_date(astobj[3])
     obj_id = astobj[0].rstrip()
     desig = astobj[1]
     reference = astobj[2]
+
+    time_from_confirm = datetime.utcnow() - confirm_date
+    time_from_confirm = time_from_confirm.total_seconds()
 
     active = True
     if obj_id != '' and desig == 'wasnotconfirmed':
@@ -253,18 +246,29 @@ def clean_crossid(astobj, dbg=False):
         objtype = 'X'
         desig = ''
         active = False
+    elif obj_id != '' and desig == '' and reference == '':
+        # "Was not interesting" (normally a satellite), no longer interesting 
+        # so set inactive
+        objtype = 'W'
+        desig = ''
+        active = False
     elif obj_id != '' and desig != '':
         # Confirmed
         if 'CBET' in reference:
             # There is a reference to an CBET so we assume it's "very
             # interesting" i.e. a comet
             objtype = 'C'
+            if time_from_confirm > interesting_cutoff:
+                active = False
         elif 'MPEC' in reference:
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
             objtype = 'N'
+            if time_from_confirm > interesting_cutoff:
+                active = False
         else:
             objtype = 'A'
+            active = False
 
     params = { 'source_type'  : objtype,
                'name'         : desig,
