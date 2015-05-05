@@ -102,10 +102,10 @@ class ScheduleObservations(FunctionalTest):
         speed = self.browser.find_element_by_id('id_speed').text
         self.assertIn("Speed: 2.52 '/min", speed)
         slot_length = self.browser.find_element_by_id('id_slot_length').text
-        self.assertIn('Slot length: 20 mins', slot_length)
+        self.assertIn('Slot length: 22.5 mins', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').text
-        self.assertIn('No. of exp.: 16', num_exp)
+        self.assertIn('No. of exp: 18', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').text
-        self.assertIn('Exp length: 50 secs', speed)
+        self.assertIn('Exp length: 50.0 secs', exp_length)
 
         self.fail("Finish the test!")

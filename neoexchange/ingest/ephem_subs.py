@@ -659,44 +659,52 @@ class MagRangeError(Exception):
     def __str__(self):
         return self.value
 
-BRIGHTEST_ALLOWABLE_MAG = 5
+BRIGHTEST_ALLOWABLE_MAG = 10
 
-def get_mag_mapping(site):
+def get_mag_mapping(site_code):
     '''Defines the site-specific mappings from target magnitude to desired
-    exposure time. A null dictionary is returned if the site name isn't
-    recognized'''
+    slot length (in minutes). A null dictionary is returned if the site name
+    isn't recognized'''
+
+    twom_site_codes = ['F65', 'E10']
+    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
+    # COJ normally has bad seeing, allow more time
+    bad_onem_site_codes = ['Q63', 'Q64']
 
 # Magnitudes represent upper bin limits
-    site = site.upper()
-    if site == 'FTX' or site == 'FTS':
+    site_code = site_code.upper()
+    if site_code in twom_site_codes:
 # Mappings for FTN/FTS. Assumes Spectral+Solar filter
         mag_mapping = {
-                19   : 45,
-                19.5 : 60,
-                20   : 100,
-                20.5 : 120,
-                21   : 150,
-                21.5 : 215,
-                22   : 240,
-                23.3 : 300
+                19   : 15,
+                20   : 20,
+                20.5 : 22.5,
+                21   : 25,
+                21.5 : 27.5,
+                22   : 30,
+                23.3 : 35
                }
-    elif site == 'SQA':
-# Mappings for Sedgwick. Assumes kb18+parfocal clear
-        mag_mapping = {
-                18   : 45,
-                19   : 100,
-                20   : 150,
-                21   : 240,
-                21.6 : 300
-                }
-    elif site == 'ELP' or site == 'LSC' or site == 'CPT':
+    elif site_code in good_onem_site_codes:
 # Mappings for McDonald. Assumes kb74+w
         mag_mapping = {
-                18   : 45,
-                19   : 100,
-                20   : 150,
-                21   : 240,
-                22.0 : 300
+                18   : 15,
+                20   : 20,
+                20.5 : 22.5,
+                21   : 25,
+                21.5 : 30,
+                22.0 : 40,
+                22.5 : 45
+               }
+    elif site_code in bad_onem_site_codes:
+# COJ normally has bad seeing, allow more time
+        mag_mapping = {
+                18   : 17.5,
+                19.5 : 20,
+                20   : 22.5,
+                20.5 : 25,
+                21   : 27.5,
+                21.5 : 32.5,
+                22.0 : 35
                }
     else:
         mag_mapping = {}
@@ -704,17 +712,17 @@ def get_mag_mapping(site):
     return mag_mapping
 
 
-def mag_to_exptime(site, mag, debug=False):
+def determine_slot_length(target_name, mag, site_code, debug=False):
 
     if mag < BRIGHTEST_ALLOWABLE_MAG:
         raise MagRangeError("Target too bright")
 
-# Obtain magnitude->exp. time mapping dictionary
-    mag_mapping = get_mag_mapping(site)
+# Obtain magnitude->slot length mapping dictionary
+    mag_mapping = get_mag_mapping(site_code)
     if debug: print mag_mapping
-    if mag_mapping == {}: return 9999
+    if mag_mapping == {}: return 0
 
-    # Derive your tuple from the magnitude-exposure mapping data structure
+    # Derive your tuple from the magnitude->slot length mapping data structure
     upper_mags = tuple(sorted(mag_mapping.keys()))
 
     for upper_mag in upper_mags:
@@ -730,6 +738,41 @@ def estimate_exptime(rate, pixscale=0.304, roundtime=10.0):
     exptime = (60.0 / rate / pixscale)*1.0
     round_exptime = max(int(exptime/roundtime)*roundtime, 1.0)
     return (round_exptime, exptime)
+
+def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
+    (round_exptime, full_exptime) =  estimate_exptime(speed, pixel_scale, 5.0)
+
+    if ( round_exptime > max_exp_time ):
+        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds" % \
+            (round_exptime, max_exp_time))
+        round_exptime = full_exptime = max_exp_time
+    if ( round_exptime < 10.0 ):
+# If under 10 seconds, re-round to nearest half second
+        (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 0.5)
+    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime ,full_exptime))
+
+    return round_exptime
+
+def determine_exp_time_count(speed, site_code, slot_length_in_mins):
+    exp_time = None
+    exp_count = None
+
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
+
+    exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
+
+    slot_length = slot_length_in_mins * 60.0
+    exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
+    if exp_count < 4:
+        exp_count = 4
+        exp_time = (slot_length - setup_overhead - (exp_overhead * float(exp_count))) / exp_count
+        logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count ))
+    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % \
+        ( slot_length/60.0, slot_length, exp_count, exp_time))
+    if exp_time == None or exp_time <= 0.0 or exp_count < 1:
+        logger.debug("Invalid exposure count")
+        return False
+    return exp_time, exp_count
 
 def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
     '''Simple noddy scoring calculation for choosing best slot'''
@@ -1043,9 +1086,9 @@ def get_mountlimits(site_code_or_name):
     return (ha_neg_limit, ha_pos_limit, alt_limit)
 
 
-def get_siteparams(site):
+def get_sitecam_params(site):
     '''Translates <site> (e.g. 'FTN') to MPC site code, pixel scale, maximum
-    exposure time and slot length.
+    exposure time, setup and exposure overheads.
     site_code is set to 'XXX' and the others are set to -1 in the event of an
     unrecognized site.'''
 
@@ -1058,115 +1101,47 @@ def get_siteparams(site):
     normal_alt_limit = 30.0
     twom_alt_limit = 20.0
 
+    onem_exp_overhead = 15.5
+    sinistro_exp_overhead = 48.0
+    onem_setup_overhead = 120.0
+    twom_setup_overhead = 180.0
+    twom_exp_overhead = 22.5
+    point4m_exp_overhead = 7.5 # for BPL
+
     valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64' ] 
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA' in site or site == 'F65':
         site_code = 'F65'
-        slot_length =  30
+        setup_overhead = twom_setup_overhead
+        exp_overhead = twom_exp_overhead
         pixel_scale = 0.304
         fov = arcmins_to_radians(10.0)
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
     elif site == 'FTS' or 'COJ-CLMA' in site or site == 'E10':
         site_code = 'E10'
-        slot_length = 30
+        setup_overhead = twom_setup_overhead
+        exp_overhead = twom_exp_overhead
         pixel_scale = 0.304
         fov = arcmins_to_radians(10.0)
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
-    elif 'SQA' in site:
-        site_code = 'G51'
-        slot_length = 30
-        pixel_scale = 0.57
-        fov = arcmins_to_radians(12.0)
-        max_exp_length = 300.0
-        alt_limit = normal_alt_limit
-    elif 'ELP-DOM' in site:
-        site_code = 'V37'
-        slot_length = 35
-        pixel_scale = onem_pixscale
-        fov = arcmins_to_radians(onem_fov)
-        max_exp_length = 300.0
-        alt_limit = normal_alt_limit
-    elif 'BPL-DOM' in site:
-        site_code = 'G51'
-        slot_length = 30
-        pixel_scale = onem_sinistro_pixscale
-        fov = arcmins_to_radians(onem_sinistro_fov)
-        max_exp_length = 300.0
-        alt_limit = normal_alt_limit
-    elif 'ELP-SITE' in site or 'LSC-SITE' in site or 'CPT-SITE' in site or 'COJ-SITE' in site:
-# Overall metasite for Planck observations
-        pond_site_codes = { 'ELP-SITE' : 'V37', 
-                            'LSC-SITE' : 'W85',
-                            'CPT-SITE' : 'K91',
-                            'ELP-SITE-1M0A' : 'V37',
-                            'LSC-SITE-1M0A' : 'W85',
-                            'CPT-SITE-1M0A' : 'K91',
-                            'COJ-SITE-1M0A' : 'Q63',
-                          }
-        site_code = pond_site_codes.get(site, 'XXX')
-# Lookup failed, set to unrecognized
-        if site_code == 'XXX':
-            slot_length = pixel_scale = fov = max_exp_length = alt_limit = -1 
-        else:
-# Site code found, set parameters
-            slot_length = 35.0
-            pixel_scale = onem_pixscale
-            fov = arcmins_to_radians(onem_fov)
-            if 'LSC-SITE' in site:
-                pixel_scale = onem_sinistro_pixscale
-                fov = arcmins_to_radians(onem_sinistro_fov)
-            max_exp_length = 300.0
-            alt_limit = normal_alt_limit
-# Used for GAIA
-#            max_exp_length = 90.0
-#            alt_limit = 40.0
-    elif 'LSC-DOM' in site or 'CPT-DOM' in site or 'COJ-DOM' in site:
-        pond_site_codes = { 'LSC-DOMA-1M0A' : 'W85',
-                            'LSC-DOMB-1M0A' : 'W86',
-                            'LSC-DOMC-1M0A' : 'W87',
-                            'CPT-DOMA-1M0A' : 'K91',
-                            'CPT-DOMB-1M0A' : 'K92',
-                            'CPT-DOMC-1M0A' : 'K93',
-                            'COJ-DOMA-1M0A' : 'Q63',
-                            'COJ-DOMB-1M0A' : 'Q64',
-                          }
-        site_code = pond_site_codes.get(site, 'XXX')
-# Lookup failed, set to unrecognized
-        if site_code == 'XXX':
-            slot_length = pixel_scale = fov = max_exp_length = alt_limit = -1
-        else:
-# Site code found, set parameters
-            slot_length = 35.0
-            pixel_scale = onem_pixscale
-            fov = arcmins_to_radians(onem_fov)
-            if 'LSC-DOMB' in site or 'LSC-DOMC' in site:
-                pixel_scale = onem_sinistro_pixscale
-                fov = arcmins_to_radians(onem_sinistro_fov)
-            max_exp_length = 300.0
-            alt_limit = normal_alt_limit
-    elif 'LSC-AQWA-0M4A' in site:
-        site_code = 'W85' #  XXX Wrong
-        slot_length = 30
-        pixel_scale = point4m_pixscale
-        fov = arcmins_to_radians(point4m_fov)
-        max_exp_length = 300.0
-        alt_limit = 17.0
     elif site in valid_site_codes:
-        slot_length = 25
+        setup_overhead = onem_setup_overhead
+        exp_overhead = onem_exp_overhead
         pixel_scale = onem_pixscale
         fov = arcmins_to_radians(onem_fov)
         if 'W86' in site or 'W87' in site:
             pixel_scale = onem_sinistro_pixscale
             fov = arcmins_to_radians(onem_sinistro_fov)
+            exp_overhead = sinistro_exp_overhead
         max_exp_length = 300.0
         alt_limit = normal_alt_limit
         site_code = site
     else:
 # Unrecognized site
         site_code = 'XXX'
-        slot_length = pixel_scale = fov = max_exp_length = alt_limit = -1
+        setup_overhead = exp_overhead = pixel_scale = fov = max_exp_length = alt_limit = -1
 
-    return (site_code, slot_length, pixel_scale, fov, max_exp_length, alt_limit)
+    return (site_code, setup_overhead, exp_overhead, pixel_scale, fov, max_exp_length, alt_limit)

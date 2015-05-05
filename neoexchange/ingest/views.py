@@ -18,7 +18,8 @@ from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.shortcuts import render
 from django.views.generic import DetailView, ListView
-from ingest.ephem_subs import call_compute_ephem, compute_ephem, determine_darkness_times
+from ingest.ephem_subs import call_compute_ephem, compute_ephem, \
+    determine_darkness_times, determine_slot_length, determine_exp_time_count
 from ingest.forms import EphemQuery, ScheduleForm
 from ingest.models import *
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
@@ -104,11 +105,10 @@ def schedule(request):
         speed = emp[4]
 
         # Determine slot length
-        slot_length = 30
-    #   slot_length = determine_slot_length(body_elements.provisional_name, magnitude, site_code)
+        slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
 
         # Determine exposure length and count
-    #   exp_length, exp_count = determine_exptime_count(speed, site_code, slot_length)
+        exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
 
         # Assemble request
     #   make_request(body_elements, params)
@@ -120,7 +120,9 @@ def schedule(request):
             {'target_name' : body.current_name(),
              'magnitude' : magnitude,
              'speed' : speed,
-             'slot_length' : slot_length}
+             'slot_length' : slot_length,
+             'exp_count' : exp_count,
+             'exp_length' : exp_length}
         )
     else:
         return render(request, 'ingest/schedule.html', {'form' : form})
