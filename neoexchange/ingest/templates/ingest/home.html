@@ -17,7 +17,7 @@
 			<div class="container">
 				<div class="btn btn-transparent btn-jumbo home-form">
 					    <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
-					        <input type="text" name="{{ form.target.name }}" value="" placeholder="{{ form.target.label }}">
+					        <input type="text" name="{{ form.target.name }}" id="id_target" value="" placeholder="{{ form.target.label }}">
 
 				            <div class="inline-fields">
 					            <label for="id_utc_date">UTC date</label>{{ form.utc_date }}

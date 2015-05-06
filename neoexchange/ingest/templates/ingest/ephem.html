@@ -9,7 +9,7 @@
 
 {% block extramenu %}
                     <div class="headingleft">
-                        <h1>Emphemeris for {{ new_target_name }} at {{ site_code }}</h1>
+                        <h1>Ephemeris for {{ new_target_name }} at {{ site_code }}</h1>
                     </div>
 {% endblock%}
 
@@ -74,6 +74,12 @@
                 </tbody>
             </table>
         </div>
+    </div>
+</div>
+<div id="schedule_obs" class="masthead">
+<div class="fivecol">
+    <a class="btn btn-secondary">Schedule Observations?</a>
+    <a class="btn btn-secondary btn-jumbo" href="{% url 'home' %}">No</a>
     </div>
 </div>
 {% endblock %}
