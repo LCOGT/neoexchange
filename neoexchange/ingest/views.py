@@ -17,7 +17,8 @@ from datetime import datetime
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.shortcuts import render
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, FormView, TemplateView
+from django.core.urlresolvers import reverse
 from ingest.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count
 from ingest.forms import EphemQuery, ScheduleForm
@@ -32,32 +33,32 @@ logger = logging.getLogger(__name__)
 
 
 def home(request):
+    latest = Body.objects.latest('ingest')
+    newest = Body.objects.filter(ingest=latest.ingest)
     params = {
             'targets'   : Body.objects.filter(active=True).count(),
             'blocks'    : Block.objects.filter(active=True).count(),
-            'latest'    : Body.objects.latest('ingest'),
+            'latest'    : latest,
+            'newest'    : newest,
             'form'      : EphemQuery()
     }
     return render(request,'ingest/home.html',params)
 
 class BodyDetailView(DetailView):
-
     context_object_name = "body"
     model = Body
 
     def get_context_data(self, **kwargs):
-        # Call the base implementation first to get a context
         context = super(BodyDetailView, self).get_context_data(**kwargs)
-        # Add in a QuerySet of all the books
-        context['body_list'] = Body.objects.filter(active=True)
+        context['form'] = EphemQuery()
         return context
+
 
 class BodySearchView(ListView):
     template_name = 'ingest/body_list.html'
     model = Body
 
     def get_queryset(self):
-        print self.kwargs
         try:
             name = self.request.REQUEST.get("q")
         except:
@@ -79,25 +80,85 @@ def ephemeris(request):
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, data['site_code'], 300, data['alt_limit'] )
     else:
         return render(request, 'ingest/home.html', {'form' : form})
-
     return render(request, 'ingest/ephem.html',
-        {'new_target_name' : form['target'].value,
-         'ephem_lines'  : ephem_lines, 
-         'site_code' : form['site_code'].value(),
+        {'target'  : data['target'],
+         'ephem_lines'      : ephem_lines, 
+         'site_code'        : form['site_code'].value(),
         }
     )
 
-def schedule(request):
+class ScheduleTarget(FormView):
+    template_name = 'ingest/schedule.html'
+    form_class = ScheduleForm
+    success_url = reverse('schedule-success')
+
+    def form_valid(self, form):
+        data = schedule(form)
+        logger.debug(data)
+        self.request.session['results'] = data
+        return super(ScheduleTarget, self).form_valid(form)
+
+def schedule(data):
+    body_elements = model_to_dict(data['body_id'])
+    # Check for valid proposal
+    # validate_proposal_time(data['proposal_code'])
+
+    # Determine magnitude
+    dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
+    dark_midpoint = dark_start + (dark_end-dark_start)/2
+    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], False, False, False)
+    magnitude = emp[3]
+    speed = emp[4]
+
+    # Determine slot length
+    try:
+        slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+    except MagRangeError:
+        ok_to_schedule = False
+    # Determine exposure length and count
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
+    if exp_length == None or exp_count == None:
+        ok_to_schedule = False
+
+    if data['ok_to_schedule'] == True:
+        logger.info(body_elements)
+        # Assemble request
+        body_elements['epochofel_mjd'] = body.epochofel_mjd()
+        body_elements['current_name'] = body.current_name()
+        params = {  'proposal_code' : data['proposal_code'],
+                    'exp_count' : exp_count,
+                    'exp_time' : exp_length,
+                    'site_code' : data['site_code'],
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : body_elements['current_name'] + '_' + data['site_code'].upper() + '-'  + datetime.strftime(data['utc_date'], '%Y%m%d')
+                 }
+        # Record block and submit to scheduler
+#    if check_block_exists == 0:
+        request_number = submit_block_to_scheduler(body_elements, params)
+    resp =   {
+             'target_name' : body.current_name(),
+             'magnitude' : magnitude,
+             'speed' : speed,
+             'slot_length' : slot_length,
+             'exp_count' : exp_count,
+             'exp_length' : exp_length,
+             'schedule_ok' : ok_to_schedule,
+             'request_number' : request_number
+             }
+    return resp
+
+
+def schedule_old(request):
 
     body_id = request.GET.get('body_id', 1)
     ok_to_schedule = request.GET.get('ok_to_schedule', False)
-    print "top of form", ok_to_schedule, body_id
-    form = ScheduleForm(request.GET, initial={'body_id' : body_id, 'ok_to_schedule' : ok_to_schedule})
-    body = Body.objects.get(id=form.initial['body_id'])
+    logger.info("top of form", ok_to_schedule, body_id)
+    form = ScheduleForm()
     if form.is_valid():
         data = form.cleaned_data
-        print data
-        body_elements = model_to_dict(body)
+        logger.info(data)
+        body_elements = model_to_dict(data['body_id'])
         # Check for valid proposal
         # validate_proposal_time(data['proposal_code'])
 
@@ -119,7 +180,7 @@ def schedule(request):
             ok_to_schedule = False
 
         if data['ok_to_schedule'] == True:
-            print body_elements
+            logger.info(body_elements)
             # Assemble request
             body_elements['epochofel_mjd'] = body.epochofel_mjd()
             body_elements['current_name'] = body.current_name()
@@ -136,7 +197,8 @@ def schedule(request):
             request_number = submit_block_to_scheduler(body_elements, params)
 #        record_block()
         return render(request, 'ingest/schedule.html',
-            {'form' : form, 'target_name' : body.current_name(),
+            {'form' : form,
+             'target_name' : body.current_name(),
              'magnitude' : magnitude,
              'speed' : speed,
              'slot_length' : slot_length,
@@ -146,6 +208,8 @@ def schedule(request):
              'request_number' : request_number}
         )
     else:
+        logger.debug(form)
+        body = Body.objects.get(id=body_id)
         return render(request, 'ingest/schedule.html', {'form' : form, 'target_name' : body.current_name()})
 
     return render(request, 'ingest/schedule.html',
