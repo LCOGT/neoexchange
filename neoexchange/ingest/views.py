@@ -90,7 +90,7 @@ def ephemeris(request):
 class ScheduleTarget(FormView):
     template_name = 'ingest/schedule.html'
     form_class = ScheduleForm
-    success_url = reverse('schedule-success')
+    success_url = '/schedule/' #reverse('schedule-success')
 
     def form_valid(self, form):
         data = schedule(form)
