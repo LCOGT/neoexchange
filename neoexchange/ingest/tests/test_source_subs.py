@@ -14,9 +14,13 @@ GNU General Public License for more details.
 '''
 
 from django.test import TestCase
+from django.forms.models import model_to_dict
+from ingest.models import Body
+from datetime import datetime
 
+from ingest.ephem_subs import determine_darkness_times
 #Import module to test
-from ingest.sources_subs import parse_goldstone_chunks
+from ingest.sources_subs import parse_goldstone_chunks, submit_block_to_scheduler
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -57,3 +61,43 @@ class TestGoldstoneChunkParser(TestCase):
         chunks = ['2016', 'Jan', '1685', 'Toro', 'No', 'No', 'R']
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+
+class TestSubmitBlockToScheduler(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : datetime(2015,03,19,00,00,00),
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+    def test_submit_body_for_cpt(self):
+
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'K92'
+        utc_date = datetime(2015, 4, 21, 0, 0, 0)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_code' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d')
+
+                 }
+
+        request_number = submit_block_to_scheduler(body_elements, params)

@@ -1,6 +1,9 @@
 {% extends 'ingest/base.html' %}
 {% load url from future %}
-{% block header %}NEOx home{% endblock %}
+{% load staticfiles %}
+
+{% block css-content %}<link rel="stylesheet" href="{% static "ingest/css/forms.css" %}">{% endblock %}
+{% block header %}{{body.current_name}} details{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 
@@ -15,11 +18,35 @@
 			<div class="container">
 				<div id="main">
 					<div class="row">
+						<a class="btn btn-secondary" href="{% url 'schedule-body' body.id %}">Schedule Observations</a>
+					</div>
+					<div class="row">
 						<div class="fourcol">
 							<h3  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h3>
 							<h3  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span></h3>
 							<h3  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h3>
-							<a class="btn btn-secondary">Schedule Observations</a>
+							<div class="section-title">
+							<form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
+						        <input type="hidden" name="{{ form.target.name }}" id="id_target" value="{{body.current_name}}" />
+						            <div class="inline-fields">
+						            	<div class="compact-field">
+							            {{ form.utc_date }}<label for="id_utc_date">UTC date</label>
+							            </div>
+							            <div class="compact-field">
+							            {{ form.site_code }}<label for="id_site_code">Site</label>
+							            </div>
+							            <div class="compact-field">
+							            {{ form.alt_limit }}<label for="id_alt_limit">Min Altitude</label>
+							            </div>
+							            <input type="submit" class="btn btn-secondary" value="Calculate Ephemerides">
+						            </div>
+						        {% for key, error in form.errors.items %}
+						            <div class="messages error">
+						                {{ error }}
+						            </div>
+						        {% endfor %}
+						        </form>
+					        </div>
 							<h3  class="section-title">Recent Observations</h2>
 							<div class="observation">
 								<img src="" />

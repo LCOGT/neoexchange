@@ -9,12 +9,17 @@
 
 {% block extramenu %}
                     <div class="headingleft">
-                        <h1>Ephemeris for {{ new_target_name }} at {{ site_code }}</h1>
+                        <h1>Ephemeris for <a href="{% url 'target' target.pk %}">{{ target.current_name }}</a> at {{ site_code }}</h1>
                     </div>
 {% endblock%}
 
 {% block main-content %}
 <div id="main" class="fill-height">
+    <div id="schedule_obs" class="row">
+        <div class="sixcol">
+            <a class="btn btn-secondary" href="{% url 'schedule-body' target.id %}">Schedule Observations</a>
+        </div>
+    </div>
     <div class="row rowfull">
         <div class="smalltext">
             <table id="id_ephemeris_table" class="datatable">

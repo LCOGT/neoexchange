@@ -22,36 +22,20 @@
 FROM centos:centos7
 MAINTAINER LCOGT <webmaster@lcogt.net>
 
-# Install package repositories
-RUN yum -y install epel-release
-
 # Install packages and update base system
-RUN yum -y install nginx python-pip mysql-devel python-devel supervisor
-RUN yum -y groupinstall "Development Tools"
-RUN yum -y update
+RUN yum -y install epel-release \
+        && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel supervisor \
+        && yum -y groupinstall "Development Tools" \
+        && yum -y update
 
-# Copy the LCOGT Mezzanine webapp files
-COPY neoexchange /var/www/apps/neoexchange
-
-# Install the LCOGT NEO exchange Python required packages
-RUN pip install pip==1.3 && pip install uwsgi==2.0.8
-RUN pip install -r /var/www/apps/neoexchange/pip_requirements.txt
-# LCOGT packages which have to be installed after the normal pip install
-RUN pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/
-RUN pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
-
+# Ensure crond will run on all host operating systems
+RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
 
 # Setup the Python Django environment
 ENV PYTHONPATH /var/www/apps
 ENV DJANGO_SETTINGS_MODULE neox.settings
 ENV BRANCH ${BRANCH}
 #ENV BUILDDATE ${BUILDDATE}
-
-# Setup the LCOGT Mezzanine webapp
-RUN python /var/www/apps/neoexchange/manage.py validate
-RUN python /var/www/apps/neoexchange/manage.py collectstatic --noinput
-RUN python /var/www/apps/neoexchange/manage.py syncdb --noinput
-RUN python /var/www/apps/neoexchange/manage.py migrate --noinput
 
 # Copy configuration files
 COPY config/uwsgi.ini /etc/uwsgi.ini
@@ -64,3 +48,19 @@ EXPOSE 8200 8201
 
 # Entry point is the supervisord daemon
 ENTRYPOINT [ "/usr/bin/supervisord", "-n" ]
+
+# Copy the LCOGT Mezzanine webapp files
+COPY neoexchange /var/www/apps/neoexchange
+
+# Install the LCOGT NEO exchange Python required packages
+RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
+		&& pip install -r /var/www/apps/neoexchange/pip_requirements.txt \
+# LCOGT packages which have to be installed after the normal pip install
+		&& pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
+		&& pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
+
+# Setup the LCOGT Mezzanine webapp
+RUN python /var/www/apps/neoexchange/manage.py validate
+RUN python /var/www/apps/neoexchange/manage.py collectstatic --noinput
+RUN python /var/www/apps/neoexchange/manage.py syncdb --noinput
+RUN python /var/www/apps/neoexchange/manage.py migrate --noinput

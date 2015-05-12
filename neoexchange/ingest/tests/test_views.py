@@ -26,7 +26,7 @@ from unittest import skipIf
 #Import module to test
 from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
 from ingest.views import home, clean_NEOCP_object
-from ingest.models import Body
+from ingest.models import Body, Proposal
 from ingest.forms import EphemQuery
 
 
@@ -99,8 +99,7 @@ class HomePageTest(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-        self.body = Body.objects.create(**params)
-        self.body.save()
+        self.body, created = Body.objects.get_or_create(**params)
 
     def test_home_page_renders_home_template(self):
         response = self.client.get('/')
@@ -130,8 +129,7 @@ class EphemPageTest(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-        self.body = Body.objects.create(**params)
-        self.body.save()
+        self.body, created = Body.objects.get_or_create(**params)
 
     def test_home_page_can_save_a_GET_request(self):
 
@@ -206,3 +204,54 @@ class TargetsPageTest(TestCase):
         response = targetlist.render_to_response(targetlist)
         expected_html = render_to_string('ingest/body_list.html')
         self.assertEqual(response, expected_html)
+
+class ScheduleTargetsPageTest(TestCase):
+    maxDiff = None
+
+    def setUp(self):
+        # Initialise with a test body and two test proposals
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        test_proposal_params = { 'code'  : 'LCOEngineering',
+                                 'title' : 'Test Proposal'
+                               }
+        self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
+
+    def test_uses_schedule_template(self):
+        response = self.client.get('/schedule/',
+            data = {'body_id'   : self.body.pk,
+                    'site_code' : 'F65',
+                    'utc_date'  : '2015-04-20',
+                    }
+        )
+        self.assertTemplateUsed(response, 'ingest/schedule.html')
+
+    def test_schedule_page_contains_object_name(self):
+        response = self.client.get('/schedule/',
+            data = {'body_id'   : self.body.pk,
+                    'site_code' : 'F65',
+                    'utc_date'  : '2015-04-20',
+                    'proposal_code' : self.neo_proposal.code
+                    }
+            )
+        self.assertContains(response, 'Scheduling for: ' + self.body.current_name())
