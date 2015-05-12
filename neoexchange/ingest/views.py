@@ -17,11 +17,15 @@ from datetime import datetime
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.shortcuts import render
-from django.views.generic import DetailView, ListView
-from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
-from ingest.forms import EphemQuery
+from django.core.urlresolvers import reverse
+from django.views.generic import DetailView, ListView, FormView, TemplateView, View
+from django.views.generic.detail import SingleObjectMixin
+from ingest.ephem_subs import call_compute_ephem, compute_ephem, \
+    determine_darkness_times, determine_slot_length, determine_exp_time_count
+from ingest.forms import EphemQuery, ScheduleForm, ScheduleBlockForm
 from ingest.models import *
-from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, fetch_mpcorbit
+from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
+    fetch_mpcorbit, submit_block_to_scheduler
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
 import logging
 import reversion
@@ -30,32 +34,32 @@ logger = logging.getLogger(__name__)
 
 
 def home(request):
+    latest = Body.objects.latest('ingest')
+    newest = Body.objects.filter(ingest=latest.ingest)
     params = {
             'targets'   : Body.objects.filter(active=True).count(),
             'blocks'    : Block.objects.filter(active=True).count(),
-            'latest'    : Body.objects.latest('ingest'),
+            'latest'    : latest,
+            'newest'    : newest,
             'form'      : EphemQuery()
     }
     return render(request,'ingest/home.html',params)
 
 class BodyDetailView(DetailView):
-
     context_object_name = "body"
     model = Body
 
     def get_context_data(self, **kwargs):
-        # Call the base implementation first to get a context
         context = super(BodyDetailView, self).get_context_data(**kwargs)
-        # Add in a QuerySet of all the books
-        context['body_list'] = Body.objects.filter(active=True)
+        context['form'] = EphemQuery()
         return context
+
 
 class BodySearchView(ListView):
     template_name = 'ingest/body_list.html'
     model = Body
 
     def get_queryset(self):
-        print self.kwargs
         try:
             name = self.request.REQUEST.get("q")
         except:
@@ -77,13 +81,162 @@ def ephemeris(request):
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, data['site_code'], 300, data['alt_limit'] )
     else:
         return render(request, 'ingest/home.html', {'form' : form})
-
     return render(request, 'ingest/ephem.html',
-        {'new_target_name' : form['target'].value, 
-         'ephem_lines'  : ephem_lines, 
-         'site_code' : form['site_code'].value(),
+        {'target'  : data['target'],
+         'ephem_lines'      : ephem_lines, 
+         'site_code'        : form['site_code'].value(),
         }
     )
+
+class ScheduleSuccess(TemplateView):
+    template_name='ingest/schedule.html'
+
+class SchedFormDisplay(DetailView):
+    template_name = 'ingest/schedule.html'
+    model = Body
+
+    def get_context_data(self, **kwargs):
+        context = super(SchedFormDisplay, self).get_context_data(**kwargs)
+        context['form'] = ScheduleForm
+        return context
+
+class ScheduleProcess(SingleObjectMixin, FormView):
+    template_name = 'ingest/schedule.html'
+    form_class = ScheduleForm
+    model = Body
+    ok_to_schedule = False
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        #self.confirm = kwargs['confirm']
+        return super(ScheduleProcess, self).post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        data = schedule_check(form.cleaned_data, self.object, self.ok_to_schedule)
+        #logger.debug(self.confirm)
+        self.request.session['confirm'] = {'data': data, 'body':self.object,'form':form}
+        return super(ScheduleProcess, self).form_valid(form)
+
+    def get_success_url(self):
+        body = self.get_object()
+        return reverse('schedule-confirm', kwargs={'pk':body.pk})
+
+class ScheduleCheck(View):
+    '''
+    Controls the Scheduling forms 
+    GET will render the from - SchedFormDisplay
+    POST will process the results - ScheduleProcess
+    '''
+
+    def get(self, request, *args, **kwargs):
+        view = SchedFormDisplay.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = ScheduleProcess.as_view()
+        return view(request, *args, **kwargs)
+
+
+class SchedConfDisplay(DetailView):
+    template_name = 'ingest/schedule_confirm.html'
+    model = Body
+
+    def get_context_data(self, **kwargs):
+        context = super(SchedConfDisplay, self).get_context_data(**kwargs)
+        form = ScheduleBlockForm(self.request.session['confirm']['data'])
+        context['form'] = form
+        return context
+
+class ScheduleSubmit(SingleObjectMixin, FormView):
+    template_name = 'ingest/schedule_confirm.html'
+    form_class = ScheduleBlockForm
+    model = Body
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super(ScheduleSubmit, self).post(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        response = schedule_submit(form.cleaned_data, self.object)
+        logger.debug(response)
+        return super(ScheduleSubmit, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse('home')
+
+class ScheduleConfirm(View):
+    '''
+    Controls the Scheduling forms 
+    GET will render the intermedia confirmation page (including hidden form) - SchedConfDisplay
+    POST will post to the scheduler - ScheduleSubmit
+    '''
+
+    def get(self, request, *args, **kwargs):
+        view = SchedConfDisplay.as_view()
+        return view(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        view = ScheduleSubmit.as_view()
+        return view(request, *args, **kwargs)
+
+
+def schedule_check(data,body,ok_to_schedule):
+    body_elements = model_to_dict(body)
+    # Check for valid proposal
+    # validate_proposal_time(data['proposal_code'])
+    ok_to_schedule = True
+
+    # Determine magnitude
+    dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
+    dark_midpoint = dark_start + (dark_end-dark_start)/2
+    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], False, False, False)
+    magnitude = emp[3]
+    speed = emp[4]
+
+    # Determine slot length
+    try:
+        slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+    except MagRangeError:
+        ok_to_schedule = False
+    # Determine exposure length and count
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
+    if exp_length == None or exp_count == None:
+        ok_to_schedule = False
+
+    resp =   {
+             'target_name' : body.current_name(),
+             'magnitude' : magnitude,
+             'speed' : speed,
+             'slot_length' : slot_length,
+             'exp_count' : exp_count,
+             'exp_length' : exp_length,
+             'schedule_ok' : ok_to_schedule,
+             'site_code' : data['site_code'],
+             'proposal_code' : data['proposal_code'],
+             'group_id' : body.current_name() + '_' + data['site_code'].upper() + '-'  + datetime.strftime(data['utc_date'], '%Y%m%d'),
+             'utc_date' : data['utc_date'],
+             'start_time' : dark_start,
+             'end_time' : dark_end,
+             }
+    return resp
+
+def schedule_submit(data,body):
+    # Assemble request
+    # Send to scheduler
+    body_elements = model_to_dict(body)
+    body_elements['epochofel_mjd'] = body.epochofel_mjd()
+    body_elements['current_name'] = body.current_name()
+    params = {  'proposal_code' : data['proposal_code'],
+                'exp_count' : data['exp_count'],
+                'exp_time' : data['exp_length'],
+                'site_code' : data['site_code'],
+                'start_time' : data['start_time'],
+                'end_time' : data['end_time'],
+                'group_id' : data['group_id']
+             }
+    # Record block and submit to scheduler
+    request_number = submit_block_to_scheduler(body_elements, params)
+    return request_number
 
 def save_and_make_revision(body,kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter

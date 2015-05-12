@@ -73,6 +73,8 @@ def check_object_exists(objname,dbg=False):
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
+    pi = models.CharField(max_length=50, default='')
+    tag = models.CharField(max_length=10, default='LCO')
 
     def __unicode__(self):
         if len(self.title)>=10:

@@ -175,6 +175,18 @@ form.proposalsubmit_admin .proposalsubmit_credit label {
 	color:#555;
 }
 
+.compact-field {
+	float:left;
+	padding-right: 16px;
+}
+.compact-field input, .compact-field label {
+	display: table-row;
+}
+.compact-field label {
+	font-size: 70%;
+	color:#aaa;
+}
+
 @media (max-width: 800px), (max-device-width: 800px) {
 	.pform { padding: 10px; margin:0px 20px 20px 20px; width:auto; }
 }

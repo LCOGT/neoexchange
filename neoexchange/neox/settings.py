@@ -169,7 +169,7 @@ LOGGING = {
             'filters': ['require_debug_false']
         },
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
         }
     },
@@ -180,9 +180,9 @@ LOGGING = {
             'propagate': True,
         },
         'django': {
-            'handlers':['file','console'],
+            'handlers':['file'],
             'propagate': True,
-            'level':'DEBUG',
+            'level':'ERROR',
         },
         'ingest' : {
             'handlers' : ['file','console'],
