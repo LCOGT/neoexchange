@@ -1,6 +1,6 @@
 from django.test import LiveServerTestCase
 from selenium import webdriver
-from ingest.models import Body
+from ingest.models import Body, Proposal
 
 class FunctionalTest(LiveServerTestCase):
 
@@ -23,10 +23,23 @@ class FunctionalTest(LiveServerTestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+    def insert_test_proposals(self):
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        test_proposal_params = { 'code'  : 'LCOEngineering',
+                                 'title' : 'Test Proposal'
+                               }
+        self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
+
     def setUp(self):
         self.browser = webdriver.Firefox()
         self.browser.implicitly_wait(5)
         self.insert_test_body()
+        self.insert_test_proposals()
 
     def tearDown(self):
         self.browser.refresh()

@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from ingest.models import Body
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ingest.ephem_subs import determine_darkness_times
 #Import module to test
@@ -88,7 +88,7 @@ class TestSubmitBlockToScheduler(TestCase):
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
         site_code = 'K92'
-        utc_date = datetime(2015, 4, 21, 0, 0, 0)
+        utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         params = {  'proposal_code' : 'LCO2015A-009',
                     'exp_count' : 18,

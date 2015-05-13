@@ -138,7 +138,7 @@ class EphemPageTest(TestCase):
         utc_date = datetime(2015, 4, 21, 3,0,0)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date )
 
-        response = self.client.get('/ephemeris/',
+        response = self.client.get(reverse('ephemeris'),
             data={'target'      : 'N999r0q',
                   'site_code'   : site_code,
                   'utc_date'    : '2015-04-21',
@@ -149,14 +149,14 @@ class EphemPageTest(TestCase):
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         expected_html = render_to_string(
             'ingest/ephem.html',
-            {'new_target_name' : 'N999r0q',
+            {'target' : self.body,
             'ephem_lines'  : ephem_lines,
             'site_code' : site_code }
         )
         self.assertMultiLineEqual(response.content.decode(), expected_html)
 
     def test_displays_ephem(self):
-        response = self.client.get('/ephemeris/',
+        response = self.client.get(reverse('ephemeris'),
             data ={'target' : 'N999r0q',
                    'utc_date' : '2015-05-11',
                    'site_code' : 'V37',
@@ -176,14 +176,14 @@ class EphemPageTest(TestCase):
         self.assertTemplateUsed(response, 'ingest/ephem.html')
 
     def test_form_errors_are_sent_back_to_home_page(self):
-        response = self.client.get('/ephemeris/', data={'target' : ''})
+        response = self.client.get(reverse('ephemeris'), data={'target' : ''})
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'ingest/home.html')
         expected_error = escape("Target name is required")
         self.assertContains(response, expected_error)
 
     def test_ephem_page_displays_site_code(self):
-        response = self.client.get('/ephemeris/',
+        response = self.client.get(reverse('ephemeris'),
             data = {'target' : 'N999r0q',
                     'site_code' : 'F65',
                     'utc_date'  : '2015-04-20',
@@ -239,7 +239,7 @@ class ScheduleTargetsPageTest(TestCase):
         self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
 
     def test_uses_schedule_template(self):
-        response = self.client.get('/schedule/',
+        response = self.client.get(reverse('schedule-body', kwargs={'pk':self.body.pk}),
             data = {'body_id'   : self.body.pk,
                     'site_code' : 'F65',
                     'utc_date'  : '2015-04-20',
@@ -248,11 +248,11 @@ class ScheduleTargetsPageTest(TestCase):
         self.assertTemplateUsed(response, 'ingest/schedule.html')
 
     def test_schedule_page_contains_object_name(self):
-        response = self.client.get('/schedule/',
+        response = self.client.get(reverse('schedule-body', kwargs={'pk':self.body.pk}),
             data = {'body_id'   : self.body.pk,
                     'site_code' : 'F65',
                     'utc_date'  : '2015-04-20',
                     'proposal_code' : self.neo_proposal.code
                     }
             )
-        self.assertContains(response, 'Scheduling for: ' + self.body.current_name())
+        self.assertContains(response, 'Parameters for: ' + self.body.current_name())
