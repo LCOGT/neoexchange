@@ -35,17 +35,16 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices the page title has the name of the site and the header
         # mentions current targets
-        self.assertIn('NEOx home | LCOGT', self.browser.title)
+        self.assertIn('Home | LCOGT NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('masthead').text
         self.assertIn('active targets', header_text)
 
         # He notices there are several targets that could be followed up
         self.check_for_header_in_table('id_neo_targets',
             'Target Name Type Origin Ingested')
-        self.check_for_row_in_table('id_neo_targets',
-            'N999r0q Unknown/NEO Candidate MPC April 8, 2015, 9:23 p.m.')
-        self.check_for_row_in_table('id_neo_targets',
-            'P10kfud Unknown/NEO Candidate MPC April 8, 2015, 8:57 p.m.')
+        testlines =[u'N999r0q\nUnknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M'),
+                    u'P10kfud\nUnknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M')]
+        self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # He is invited to enter a target to compute an ephemeris
         inputbox = self.get_item_input_box()
@@ -77,12 +76,12 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25'
         )
 
-        # There is a button asking whether to schedule the target
-        link = self.browser.find_element_by_link_text('No')
+        # # There is a button asking whether to schedule the target
+        # link = self.browser.find_element_by_link_text('No')
 
-        # He clicks 'No' and is returned to the front page
-        link.click()
-        self.assertIn('NEOx home | LCOGT', self.browser.title)
+        # # He clicks 'No' and is returned to the front page
+        # link.click()
+        # self.assertIn('NEOx home | LCOGT', self.browser.title)
 
         # Satisfied, he goes back to sleep
 

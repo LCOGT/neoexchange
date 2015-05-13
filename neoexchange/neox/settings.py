@@ -125,19 +125,6 @@ INSTALLED_APPS = (
     'south'
 )
 
-##################
-# LOCAL SETTINGS #
-##################
-
-# Allow any settings to be defined in local_settings.py which should be
-# ignored in your version control system allowing for settings to be
-# defined per machine.
-try:
-    from local_settings import *
-except ImportError as e:
-    if "local_settings" not in str(e):
-        raise e
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
@@ -186,8 +173,44 @@ LOGGING = {
         },
         'ingest' : {
             'handlers' : ['file','console'],
-            'level'    : 'DEBUG',
+            'level'    : 'INFO',
         }
     }
 }
+
+#######################
+# Test Database setup #
+#######################
+
+if 'test' in sys.argv:
+    # If you also want to speed up password hashing in test cases.
+    PASSWORD_HASHERS = (
+        'django.contrib.auth.hashers.MD5PasswordHasher',
+    )
+    # Use SQLite3 for the database engine during testing.
+    DATABASES = { 'default':
+        {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'test_db', # Add the name of your SQLite3 database file here.
+        },
+        'rbauth':
+                {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'test_rbauth', # Add the name of your SQLite3 database file here.
+        }
+    }
+
+##################
+# LOCAL SETTINGS #
+##################
+
+# Allow any settings to be defined in local_settings.py which should be
+# ignored in your version control system allowing for settings to be
+# defined per machine.
+try:
+    from local_settings import *
+except ImportError as e:
+    if "local_settings" not in str(e):
+        raise e
+
 

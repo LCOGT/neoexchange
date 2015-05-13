@@ -620,7 +620,7 @@ def submit_block_to_scheduler(elements, params):
     params = configure_defaults(params)
 # Create Location (site, observatory etc) and add to Request
     location = make_location(params)
-    logger.debug("Location=",location)
+    logger.debug("Location=%s" % location)
     request.set_location(location)
 # Create Target (pointing) and add to Request
     if len(elements) > 0:
@@ -629,17 +629,17 @@ def submit_block_to_scheduler(elements, params):
     else:
         logger.debug("Making a static object")
         target = make_target(params)
-    logger.debug("Target=",target)
+    logger.debug("Target=%s" % target)
     request.set_target(target)
 # Create Window and add to Request
     window = make_window(params)
-    logger.debug("Window=",window)
+    logger.debug("Window=%s" % window)
     request.add_window(window)
 # Create Molecule and add to Request
     molecule = make_molecule(params)
     request.add_molecule(molecule) # add exposure to the request
     request.set_note('Submitted by NEOexchange')
-    logger.debug("Request=",request)
+    logger.debug("Request=%s" % request)
 
     constraints = make_constraints(params)
     request.set_constraints(constraints)
@@ -658,6 +658,6 @@ def submit_block_to_scheduler(elements, params):
     request_numbers =  response_data.get('request_numbers', '')
 #    request_numbers = (-42,)
     request_number = request_numbers[0]
-    logger.debug("Req number=", request_number)
+    logger.debug("Req number=%s" % request_number)
 
     return request_number
