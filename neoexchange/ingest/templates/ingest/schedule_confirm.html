@@ -68,7 +68,13 @@
             <form action="{% url  'schedule-confirm' vars.body.id %}" method="POST" >
                 {% csrf_token %}
                 {{form}}
+                {% for key, error in form.errors.items %}
+                        <div class="messages error">
+                            {{ error }}
+                        </div>
+                {% empty %}
                 <input type="submit" class="btn btn-secondary" value="Schedule this Object" id="id_submit_button">
+                {% endfor %}
             </form>
         </div>
     </div>

@@ -10,11 +10,14 @@
 # just default to using the nginx port only (recommended). There is no
 # requirement to map all exposed container ports onto host ports.
 #
-# To run with nginx only:
-# docker run -d -p 8200:8200 --name=neoexchange lcogtwebmaster/lcogt:neoexchange_$BRANCH
+# Build with
+# docker build -t registry.lcogt.net/neoexchange:latest .
+#
+# Push to Registry with
+# docker push registry.lcogt.net/neoexchange:latest
 #
 # To run with nginx + uwsgi both exposed:
-# docker run -d -p 8200:8200 -p 8201:8201 --name=neox lcogtwebmaster/lcogt:neoexchange_$BRANCH
+# docker run -d -p 8200:8200 -p 8201:8201 --name=neox registry.lcogt.net/neoexchange:latest
 #
 # See the notes in the code below about NFS mounts.
 #
@@ -40,7 +43,7 @@ ENV BRANCH ${BRANCH}
 # Copy configuration files
 COPY config/uwsgi.ini /etc/uwsgi.ini
 COPY config/nginx/* /etc/nginx/
-COPY config/neoexchange.ini /etc/supervisord.d/neoexchange.ini
+COPY config/processes.ini /etc/supervisord.d/processes.ini
 COPY config/crontab.root /var/spool/cron/root
 
 # nginx runs on port 8200, uwsgi runs on port 8201
@@ -62,5 +65,6 @@ RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
 # Setup the LCOGT Mezzanine webapp
 RUN python /var/www/apps/neoexchange/manage.py validate
 RUN python /var/www/apps/neoexchange/manage.py collectstatic --noinput
+# If any schema changed have happened but not been appliedc
 RUN python /var/www/apps/neoexchange/manage.py syncdb --noinput
 RUN python /var/www/apps/neoexchange/manage.py migrate --noinput

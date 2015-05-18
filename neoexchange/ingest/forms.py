@@ -48,3 +48,17 @@ class ScheduleBlockForm(forms.Form):
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
 
+    def clean_start(self):
+        start = self.cleaned_data['start_time']
+        if start <= datetime.now():
+            raise forms.ValidationError("Window cannot start in the past")
+        else:
+            return self.cleaned_data
+
+    def clean_end(self):
+        end = self.cleaned_data['end_time']
+        if end <= datetime.now():
+            raise forms.ValidationError("Window cannot end in the past")
+        else:
+            return self.cleaned_data
+

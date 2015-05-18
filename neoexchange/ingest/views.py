@@ -158,7 +158,6 @@ class ScheduleSubmit(SingleObjectMixin, FormView):
 
     def form_valid(self, form):
         response = schedule_submit(form.cleaned_data, self.object)
-        logger.debug(response)
         return super(ScheduleSubmit, self).form_valid(form)
 
     def get_success_url(self):
@@ -167,7 +166,7 @@ class ScheduleSubmit(SingleObjectMixin, FormView):
 class ScheduleConfirm(View):
     '''
     Controls the Scheduling forms 
-    GET will render the intermedia confirmation page (including hidden form) - SchedConfDisplay
+    GET will render the intermediate confirmation page (including hidden form) - SchedConfDisplay
     POST will post to the scheduler - ScheduleSubmit
     '''
 
