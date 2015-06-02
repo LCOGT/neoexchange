@@ -154,7 +154,6 @@ class HomePageTest(TestCase):
                     'active'        : True,
                     'origin'        : 'M',
                     }
-
         self.body, created = Body.objects.get_or_create(**params)
 
     def test_home_page_renders_home_template(self):

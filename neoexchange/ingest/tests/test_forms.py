@@ -19,7 +19,8 @@ from ingest.models import Body
 #Import module to test
 from ingest.forms import EphemQuery, ScheduleForm
 
-class TestEphemQueryForm(TestCase):
+class EphemQueryFormTest(TestCase):
+
 
     def setUp(self):
         params = {  'provisional_name' : 'N999r0q',
@@ -92,3 +93,4 @@ class TestScheduleForm(TestCase):
         self.assertIsInstance(form, ScheduleForm)
         self.assertIn('Proposal', form.as_p())
         self.assertIn('Site code:', form.as_p())
+
