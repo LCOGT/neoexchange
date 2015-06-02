@@ -23,7 +23,7 @@ img { border: 0px; }
 .padded-horizontal { padding-top: 0px; padding-bottom: 0px; }
 #lcogt-bar { -o-background-size: 100% 100%;-moz-background-size: 100% 100%;-webkit-background-size: 100% 100%;background-size: 100% 100%;/* Internet Explorer */*background: #33363c;background: #33363c;filter: progid:DXImageTransform.Microsoft.gradient(gradientType=0, startColorstr=#FF222429, endColorstr=#FF33363c);/* Recent browsers */background-image: -webkit-gradient(linear,left top, left bottom,from(#222429),to(#33363c));background-image: -webkit-linear-gradient(top,#222429,#33363c);background-image: -moz-linear-gradient(top,#222429,#33363c);background-image: -o-linear-gradient(top,#222429,#33363c);background-image: linear-gradient(top,#222429,#33363c);color: white; }
 div.compactonly { display: none; }
-#header-holder { background: url("http://lcogt.net/sites/default/themes/lcogt/images/new-header-bg.png") no-repeat scroll -100px top #d4d4d4; }
+#header-holder { background: url("http://lcogt.net/files/new-header-bg.png") no-repeat scroll -100px top #d4d4d4; }
 #lcogt-bar { margin: 0; height: 32px; clear:both; line-height: 26px; color: #cccccc; font-size: 0.9em; overflow: hidden; }
 #lcogt-bar a { color: #e6e6e6; text-decoration: none; }
 #lcogt-bar ul { margin: 0; padding: 0; list-style: none; }

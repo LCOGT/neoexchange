@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     '''Method to compute the phase angle (beta), trapping bad values'''
     # Compute phase angle, beta (Sun-Target-Earth angle)
-    if dbg: print "r,r^2,delta,delta^2,es_Rsq=",r,r*r,delta,delta*delta,es_Rsq
+    logger.debug("r(%s), r^2 (%s),delta (%s),delta^2 (%s), es_Rsq (%s)" % (r,r*r,delta,delta*delta,es_Rsq))
     arg = (r*r+delta*delta-es_Rsq)/(2.0*r*delta)
     if dbg: print "arg=", arg
 

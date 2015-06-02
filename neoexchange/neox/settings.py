@@ -173,7 +173,7 @@ LOGGING = {
         },
         'ingest' : {
             'handlers' : ['file','console'],
-            'level'    : 'INFO',
+            'level'    : 'DEBUG',
         }
     }
 }

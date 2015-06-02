@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 def home(request):
     latest = Body.objects.latest('ingest')
-    newest = Body.objects.filter(ingest=latest.ingest)
+    newest = Body.objects.filter(ingest=latest.ingest,active=True)
     params = {
             'targets'   : Body.objects.filter(active=True).count(),
             'blocks'    : Block.objects.filter(active=True).count(),
@@ -288,7 +288,7 @@ def update_NEOCP_orbit(obj_id, dbg=False):
             save_and_make_revision(body,kwargs)
             logger.info("Added %s" % obj_id)
     else:
-        save_and_make_revision(check_body,{'active':False})
+        save_and_make_revision(body,{'active':False})
         logger.info("Object %s no longer exists on the NEOCP." % obj_id)
     return True
 
@@ -454,20 +454,27 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
 
     
 def update_MPC_orbit(obj_id, dbg=False, origin='M'):
-
+    '''
+    Performs remote look up of orbital elements for object with id obj_id,
+    Gets or creates corresponding Body instance and updates entry
+    '''
     elements = fetch_mpcorbit(obj_id, dbg)
-
-    body, created = Body.objects.get_or_create(name=obj_id)
+    try:
+        body, created = Body.objects.get_or_create(name=obj_id)
+    except MultipleObjectsReturned:
+        # When the crossid happens we end up with multiple versions of the body.
+        # Need to pick the one has been most recently updated
+        bodies = Body.objects.filter(name=obj_id,provisional_name__isnull=False).order('-ingest')
+        created = False
+        if not bodies:
+            bodies = Body.objects.filter(name=obj_id).order('-ingest')
+        body = bodies[0]
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
+    # Save, make revision, or do not update depending on the what has happened to the object
+    save_and_make_revision(body,kwargs)
     if not created:
-        # Find out if the details have changed, if they have, save a revision
-        check_body = Body.objects.filter(name=obj_id, **kwargs)
-        if check_body.count() == 1 and check_body[0] == body:
-            if save_and_make_revision(check_body[0],kwargs):
-                logger.info("Updated elements for %s" % obj_id)
+        logger.info("Updated elements for %s" % obj_id)
     else:
-        # Didn't know about this object before so create 
-        save_and_make_revision(body,kwargs)
         logger.info("Added new orbit for %s" % obj_id)
     return True
