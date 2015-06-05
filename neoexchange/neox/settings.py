@@ -15,8 +15,6 @@ else:
 PREFIX =""
 BASE_DIR = os.path.dirname(CURRENT_PATH)
 
-TEMPLATE_DEBUG = DEBUG
-
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
@@ -73,18 +71,6 @@ STATICFILES_FINDERS = (
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
-)
-
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.core.context_processors.request",
-    'django.contrib.auth.context_processors.auth',
-)
-
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -101,12 +87,12 @@ ROOT_URLCONF = 'neox.urls'
 # Python dotted path to the WSGI application used by Django's runserver.
 WSGI_APPLICATION = 'neox.wsgi.application'
 
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    os.path.join(BASE_DIR,'ingest','templates'),
-)
+TEMPLATES = [
+    {
+        'BACKEND'   : 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS'  : True,
+    },
+]
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
@@ -122,7 +108,6 @@ INSTALLED_APPS = (
     'neox',
     'ingest',
     'reversion',
-    'south'
 )
 
 LOGGING = {
