@@ -18,7 +18,7 @@
             <form action="{% url 'schedule-body' body.id %}" method="POST">
             <div class="row">
                     {% csrf_token %}
-                    <h3 class="section-title">Parameters for: {{body.name}}</h3>
+                    <h3 class="section-title">Parameters for: {{body.current_name}}</h3>
                     <table class="keyvalue-table" style="width:100%">
                         <tbody>
                             <tr>

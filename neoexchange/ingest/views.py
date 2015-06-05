@@ -20,6 +20,7 @@ from django.shortcuts import render
 from django.core.urlresolvers import reverse
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.detail import SingleObjectMixin
+from django.http import Http404
 from ingest.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, MagRangeError
 from ingest.forms import EphemQuery, ScheduleForm, ScheduleBlockForm
@@ -89,64 +90,39 @@ def ephemeris(request):
         }
     )
 
-class ScheduleSuccess(TemplateView):
-    template_name='ingest/schedule.html'
+class LookUpBodyMixin(object):
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            body = Body.objects.get(pk=kwargs['pk'])
+            self.body = body
+            return super(LookUpBodyMixin, self).dispatch(request, *args, **kwargs)
+        except Body.DoesNotExist:
+            raise Http404("Body does not exist")
 
-class SchedFormDisplay(DetailView):
-    template_name = 'ingest/schedule.html'
-    model = Body
-
-    def get_context_data(self, **kwargs):
-        context = super(SchedFormDisplay, self).get_context_data(**kwargs)
-        context['form'] = ScheduleForm
-        return context
-
-class ScheduleProcess(SingleObjectMixin, FormView):
+class ScheduleParameters(LookUpBodyMixin, FormView):
     template_name = 'ingest/schedule.html'
     form_class = ScheduleForm
-    model = Body
     ok_to_schedule = False
 
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        #self.confirm = kwargs['confirm']
-        return super(ScheduleProcess, self).post(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        data = schedule_check(form.cleaned_data, self.object, self.ok_to_schedule)
-        #logger.debug()
-        self.request.session['confirm'] = {'data': data, 'body': {'id': self.object.pk,'name': self.object.current_name()},'form':form}
-        return super(ScheduleProcess, self).form_valid(form)
-
-    def get_success_url(self):
-        body = self.get_object()
-        return reverse('schedule-confirm', kwargs={'pk':body.pk})
-
-class ScheduleCheck(View):
-    '''
-    Controls the Scheduling forms 
-    GET will render the from - SchedFormDisplay
-    POST will process the results - ScheduleProcess
-    '''
-
     def get(self, request, *args, **kwargs):
-        view = SchedFormDisplay.as_view()
-        return view(request, *args, **kwargs)
+        form = self.get_form()
+        # logger.debug(self.body)
+        return self.render_to_response(self.get_context_data(form=form,body=self.body))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
+        #logger.debug()
+        new_form = ScheduleBlockForm(data)
+        return render(request,'ingest/schedule_confirm.html', {'form':new_form, 'data': data,'body':self.body})
 
     def post(self, request, *args, **kwargs):
-        view = ScheduleProcess.as_view()
-        return view(request, *args, **kwargs)
+        form = self.get_form()
+        logger.debug(form)
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form,body=self.body))
 
-
-class SchedConfDisplay(DetailView):
-    template_name = 'ingest/schedule_confirm.html'
-    model = Body
-
-    def get_context_data(self, **kwargs):
-        context = super(SchedConfDisplay, self).get_context_data(**kwargs)
-        form = ScheduleBlockForm(self.request.session['confirm']['data'])
-        context['form'] = form
-        return context
 
 class ScheduleSubmit(SingleObjectMixin, FormView):
     template_name = 'ingest/schedule_confirm.html'
@@ -163,21 +139,6 @@ class ScheduleSubmit(SingleObjectMixin, FormView):
 
     def get_success_url(self):
         return reverse('home')
-
-class ScheduleConfirm(View):
-    '''
-    Controls the Scheduling forms 
-    GET will render the intermediate confirmation page (including hidden form) - SchedConfDisplay
-    POST will post to the scheduler - ScheduleSubmit
-    '''
-
-    def get(self, request, *args, **kwargs):
-        view = SchedConfDisplay.as_view()
-        return view(request, *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
-        view = ScheduleSubmit.as_view()
-        return view(request, *args, **kwargs)
 
 
 def schedule_check(data,body,ok_to_schedule):

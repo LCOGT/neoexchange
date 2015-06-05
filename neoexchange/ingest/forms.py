@@ -46,25 +46,37 @@ class ScheduleForm(forms.Form):
 
 
 class ScheduleBlockForm(forms.Form):
-    start_time = forms.DateTimeField(widget=forms.HiddenInput())
-    end_time = forms.DateTimeField(widget=forms.HiddenInput())
+    start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
+    end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput())
     exp_length = forms.FloatField(widget=forms.HiddenInput())
     proposal_code = forms.CharField(max_length=15,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
 
-    def clean_start(self):
+    def clean_start_time(self):
         start = self.cleaned_data['start_time']
         if start <= datetime.now():
             raise forms.ValidationError("Window cannot start in the past")
         else:
             return self.cleaned_data
 
-    def clean_end(self):
+    def clean_end_time(self):
         end = self.cleaned_data['end_time']
         if end <= datetime.now():
             raise forms.ValidationError("Window cannot end in the past")
         else:
             return self.cleaned_data
+
+    def clean_exp_length(self):
+        if self.cleaned_data['exp_length'] > 0.:
+            return self.cleaned_data
+        else:
+            raise forms.ValidationError("Exposure length is too short")
+
+    def clean_exp_count(self):
+        if self.cleaned_data['exp_count'] > 1:
+            return self.cleaned_data
+        else:
+            raise forms.ValidationError("There must be more than 1 exposure")
 
