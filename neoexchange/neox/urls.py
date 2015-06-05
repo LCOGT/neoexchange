@@ -18,7 +18,7 @@ from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.views.generic import ListView, DetailView
 from ingest.models import Body, Block
-from ingest.views import BodySearchView,BodyDetailView, ScheduleParameters, ScheduleConfirm, ephemeris, home
+from ingest.views import BodySearchView,BodyDetailView, ScheduleParameters, ephemeris, home
 
 admin.autodiscover()
 
@@ -29,7 +29,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/$',BodyDetailView.as_view(model=Body), name='target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
-    url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleConfirm.as_view(), name='schedule-confirm'),
+    # url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleConfirm.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     # url(r'^schedule/success/$',ScheduleSuccess.as_view(), name='schedule-success'),
     # url(r'^schedule/$', SchedFormDisplay.as_view(), name='schedule'),
