@@ -58,21 +58,13 @@ class ScheduleBlockForm(forms.Form):
         start = self.cleaned_data['start_time']
         if start <= datetime.now():
             raise forms.ValidationError("Window cannot start in the past")
-<<<<<<< HEAD
-        return start
-=======
         else:
             return self.cleaned_data
->>>>>>> release
 
     def clean_end(self):
         end = self.cleaned_data['end_time']
         if end <= datetime.now():
             raise forms.ValidationError("Window cannot end in the past")
-<<<<<<< HEAD
-        return end
-=======
         else:
             return self.cleaned_data
 
->>>>>>> release

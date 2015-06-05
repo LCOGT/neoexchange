@@ -16,6 +16,7 @@ def banner():
 
     # The raw banner split into lines.
     lines = ("""
+        
 .__   __.  _______   ______   ___   ___ 
 |  \ |  | |   ____| /  __  \  \  \ /  / 
 |   \|  | |  |__   |  |  |  |  \  V  /  

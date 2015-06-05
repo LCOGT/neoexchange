@@ -21,7 +21,7 @@ from django.core.urlresolvers import reverse
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.detail import SingleObjectMixin
 from ingest.ephem_subs import call_compute_ephem, compute_ephem, \
-    determine_darkness_times, determine_slot_length, determine_exp_time_count
+    determine_darkness_times, determine_slot_length, determine_exp_time_count, MagRangeError
 from ingest.forms import EphemQuery, ScheduleForm, ScheduleBlockForm
 from ingest.models import *
 from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
@@ -29,6 +29,7 @@ from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
 from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
 import logging
 import reversion
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -113,8 +114,8 @@ class ScheduleProcess(SingleObjectMixin, FormView):
 
     def form_valid(self, form):
         data = schedule_check(form.cleaned_data, self.object, self.ok_to_schedule)
-        #logger.debug(self.confirm)
-        self.request.session['confirm'] = {'data': data, 'body':self.object,'form':form}
+        #logger.debug()
+        self.request.session['confirm'] = {'data': data, 'body': {'id': self.object.pk,'name': self.object.current_name()},'form':form}
         return super(ScheduleProcess, self).form_valid(form)
 
     def get_success_url(self):
@@ -196,6 +197,7 @@ def schedule_check(data,body,ok_to_schedule):
     try:
         slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
     except MagRangeError:
+        slot_length = 0.
         ok_to_schedule = False
     # Determine exposure length and count
     exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
@@ -213,9 +215,9 @@ def schedule_check(data,body,ok_to_schedule):
              'site_code' : data['site_code'],
              'proposal_code' : data['proposal_code'],
              'group_id' : body.current_name() + '_' + data['site_code'].upper() + '-'  + datetime.strftime(data['utc_date'], '%Y%m%d'),
-             'utc_date' : data['utc_date'],
-             'start_time' : dark_start,
-             'end_time' : dark_end,
+             'utc_date' : data['utc_date'].isoformat(),
+             'start_time' : dark_start.isoformat(),
+             'end_time' : dark_end.isoformat()
              }
     return resp
 
