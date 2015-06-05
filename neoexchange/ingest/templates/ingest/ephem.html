@@ -18,6 +18,7 @@
     <div id="schedule_obs" class="row">
         <div class="sixcol">
             <a class="btn btn-secondary" href="{% url 'schedule-body' target.id %}">Schedule Observations</a>
+            <a href="{% url 'target' target.pk %}">Back to info page for {{ target.current_name }} &rarr;</a>
         </div>
     </div>
     <div class="row rowfull">

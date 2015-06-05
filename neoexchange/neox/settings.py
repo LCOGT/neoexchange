@@ -5,7 +5,7 @@ import os, sys
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
-DEBUG = False
+DEBUG = True
 BRANCH = os.environ.get('BRANCH',None)
 if BRANCH:
     BRANCH = '-' + BRANCH
@@ -14,8 +14,6 @@ else:
 
 PREFIX =""
 BASE_DIR = os.path.dirname(CURRENT_PATH)
-
-TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -68,29 +66,15 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR,'ingest'),]
 # List of finder classes that know how to find static files in
 # various locations.
 STATICFILES_FINDERS = (
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
-)
-
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
-)
-
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.core.context_processors.request",
-    'django.contrib.auth.context_processors.auth',
-)
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder"
+ )
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.middleware.transaction.TransactionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -101,17 +85,28 @@ ROOT_URLCONF = 'neox.urls'
 # Python dotted path to the WSGI application used by Django's runserver.
 WSGI_APPLICATION = 'neox.wsgi.application'
 
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    os.path.join(BASE_DIR,'ingest','templates'),
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
     'grappelli',
+    'neox',
+    'ingest',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -119,10 +114,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.messages',
-    'neox',
-    'ingest',
     'reversion',
-    'south'
 )
 
 LOGGING = {
@@ -173,8 +165,23 @@ LOGGING = {
         },
         'ingest' : {
             'handlers' : ['file','console'],
-            'level'    : 'INFO',
+            'level'    : 'DEBUG',
         }
+    }
+}
+
+SECRET_KEY = os.environ['SECRET_KEY']
+
+DATABASES = {
+    "default": {
+        # Live DB
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "neoexchange",
+        "USER": os.environ['NEOX_DB_USER'],
+        "PASSWORD": os.environ['NEOX_DB_PASSWD'],
+        "HOST": os.environ['NEOX_DB_HOST'],
+        "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
+
     }
 }
 
@@ -207,10 +214,10 @@ if 'test' in sys.argv:
 # Allow any settings to be defined in local_settings.py which should be
 # ignored in your version control system allowing for settings to be
 # defined per machine.
-try:
-    from local_settings import *
-except ImportError as e:
-    if "local_settings" not in str(e):
-        raise e
+# try:
+#     from local_settings import *
+# except ImportError as e:
+#     if "local_settings" not in str(e):
+#         raise e
 
 

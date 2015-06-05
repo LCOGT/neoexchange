@@ -6,34 +6,31 @@
 
 
 {% block extramenu %}
-{% with vars=request.session.confirm %}
     <div class="headingleft">
         <h1>Confirm Scheduling for: {{body.current_name}}</h1>
     </div>
-{% endwith %}
 {% endblock%}
 
 {% block main-content %}
-    {% with vars=request.session.confirm %}
     <div class="container">
         <div id="main">
         <div class="row">
 
-        {% if vars.data %}
+        {% if data %}
         <h3 class="section-title">Submitted Parameters</h3>
         <table class="keyvalue-table" style="width:100%">
             <tbody>
                 <tr id="id_proposal">
                     <td class="kv-key">Proposal</td>
-                    <td class="kv-value">{{ vars.data.proposal_code }}</td>
+                    <td class="kv-value">{{ data.proposal_code }}</td>
                 </tr>
                 <tr id="id_site">
                     <td class="kv-key">Site</td>
-                    <td class="kv-value">{{vars.data.site_code}}</td>
+                    <td class="kv-value">{{data.site_code}}</td>
                 </tr>
                 <tr id="id_utc_date">
                     <td class="kv-key">UTC date</td>
-                    <td class="kv-value">{{ vars.data.utc_date}}</td>
+                    <td class="kv-value">{{ data.utc_date}}</td>
                 </tr> 
             </tbody>
         </table>               
@@ -42,36 +39,45 @@
             <tbody>
                 <tr id="id_magnitude">
                     <td class="kv-key">Magnitude</td>
-                    <td class="kv-value">{{ vars.data.magnitude|floatformat:2 }}</td>
+                    <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
                 </tr>
                 <tr id="id_speed">
                     <td class="kv-key">Speed</td>
-                    <td class="kv-value">{{ vars.data.speed|floatformat:2 }} '/min</td>
+                    <td class="kv-value">{{ data.speed|floatformat:2 }} '/min</td>
                 </tr>
                 <tr id="id_slot_length">
                     <td class="kv-key">Slot length</td>
-                    <td class="kv-value">{{ vars.data.slot_length }} mins</td>
+                    <td class="kv-value">{{ data.slot_length }} mins</td>
                 </tr>
                 <tr id="id_no_of_exps">
                     <td class="kv-key">No. of exposures</td>
-                    <td class="kv-value">{{ vars.data.exp_count }}</td>
+                    <td class="kv-value">{{ data.exp_count }}</td>
                 </tr>
                 <tr id="id_exp_length">
                     <td class="kv-key">Exposure length</td>
-                    <td class="kv-value">{{ vars.data.exp_length|floatformat:1 }} secs</td>
+                    <td class="kv-value">{{ data.exp_length|floatformat:1 }} secs</td>
                 </tr>
             </tbody>
         </table> 
     {% endif %}
         </div>
         <div class="row">
-            <form action="{% url  'schedule-confirm' vars.body.id %}" method="POST" >
+            <form action="{% url  'schedule-confirm' body.id %}" method="POST" >
                 {% csrf_token %}
-                {{form}}
+                {% for key, error in form.errors.items %}
+                        <div class="messages error">
+                            {{ error }}
+                        </div>
+
+                {% empty %}
                 <input type="submit" class="btn btn-secondary" value="Schedule this Object" id="id_submit_button">
+                {% endfor %}
+                {% if form.errors%}
+                <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
+                {% endif%}
+                {{form}}
             </form>
         </div>
     </div>
     </div>
-{% endwith %}
 {% endblock %}

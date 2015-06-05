@@ -25,7 +25,7 @@ from unittest import skipIf
 
 #Import module to test
 from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
-from ingest.views import home, clean_NEOCP_object
+from ingest.views import home, clean_NEOCP_object, save_and_make_revision
 from ingest.models import Body, Proposal
 from ingest.forms import EphemQuery
 
@@ -80,6 +80,61 @@ class TestClean_NEOCP_Object(TestCase):
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
+
+    def save_N007riz(self):
+        obj_id ='N007riz'
+        elements = { 'abs_mag'     : 23.9,
+                      'slope'       : 0.15,
+                      'epochofel'   : datetime(2015, 3, 19, 0, 0, 0),
+                      'meananom'    : 340.52798,
+                      'argofperih'  :  59.01148,
+                      'longascnode' : 160.84695,
+                      'orbinc'      :  10.51732,
+                      'eccentricity':  0.3080134,
+                      'meandist'    :  1.4439768,
+                      'elements_type': 'MPC_MINOR_PLANET',
+                      'origin'      : 'M',
+                      'source_type' : 'U',
+                      'active'      : True
+                    }
+        body, created = Body.objects.get_or_create(provisional_name=obj_id)
+        # We are creating this object
+        self.assertEqual(True,created)
+        resp = save_and_make_revision(body,elements)
+        # We are saving all the detailing elements
+        self.assertEqual(True,resp)
+
+    def test_revise_N007riz(self):
+        self.save_N007riz()
+        obj_id ='N007riz'
+        elements = { 'abs_mag'     : 23.9,
+                      'slope'       : 0.15,
+                      'epochofel'   : datetime(2015, 4, 19, 0, 0, 0),
+                      'meananom'    : 340.52798,
+                      'argofperih'  :  59.01148,
+                      'longascnode' : 160.84695,
+                      'orbinc'      :  10.51732,
+                      'eccentricity':  0.4080134,
+                      'meandist'    :  1.4439768,
+                      'elements_type': 'MPC_MINOR_PLANET',
+                      'origin'      : 'M',
+                      'source_type' : 'U',
+                      'active'      : False
+                    }
+        body, created = Body.objects.get_or_create(provisional_name=obj_id)
+        # Created should now be false
+        self.assertEqual(False, created)
+        resp = save_and_make_revision(body,elements)
+        # Saving the new elements
+        self.assertEqual(True,resp)
+
+    def test_update_MPC(self):
+
+    def test_update_MPC_duplicate(self):
+        self.save_N007riz()
+        obj_id ='N007riz'
+        update_MPC_orbit(obj_id)
+
 
 class HomePageTest(TestCase):
 

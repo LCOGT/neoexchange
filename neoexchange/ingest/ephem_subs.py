@@ -31,9 +31,9 @@ logger = logging.getLogger(__name__)
 def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     '''Method to compute the phase angle (beta), trapping bad values'''
     # Compute phase angle, beta (Sun-Target-Earth angle)
-    if dbg: print "r,r^2,delta,delta^2,es_Rsq=",r,r*r,delta,delta*delta,es_Rsq
+    logger.debug("r(%s), r^2 (%s),delta (%s),delta^2 (%s), es_Rsq (%s)" % (r,r*r,delta,delta*delta,es_Rsq))
     arg = (r*r+delta*delta-es_Rsq)/(2.0*r*delta)
-    if dbg: print "arg=", arg
+    logger.debug("arg=%s" % arg)
 
     if arg >= 1.0:
         beta = 0.0
@@ -42,8 +42,7 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     else:
         beta = acos(arg)
 
-    if dbg: print
-    if dbg: print "Phase angle, beta (deg)=", beta, degrees(beta)
+    logger.debug("Phase angle, beta (deg)=%s %s" % (beta, degrees(beta)))
     return beta
 
 def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
@@ -76,33 +75,32 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     else:
         epoch_mjd = orbelems['epoch']
 
-    if dbg: print 'Element Epoch=', epoch_mjd
-    if dbg: print 'MJD(UTC) =  ', mjd_utc
-    if dbg: print ' JD(UTC) =', mjd_utc + 2400000.5
+    logger.debug('Element Epoch=', epoch_mjd)
+    logger.debug('MJD(UTC) =  ', mjd_utc)
+    logger.debug(' JD(UTC) =', mjd_utc + 2400000.5)
 
 # Convert MJD(UTC) to MJD(TT)
     mjd_tt = mjd_utc2mjd_tt(mjd_utc)
-    if dbg: print 'MJD(TT)  =  %.15f' % (mjd_tt)
+    logger.debug('MJD(TT)  =  %.15f' % (mjd_tt))
 
 # Compute UT1-UTC
 
     dut = ut1_minus_utc(mjd_utc)
-    if dbg: print "UT1-UTC  =", dut
+    logger.debug("UT1-UTC  =%s" % dut)
 
 # Obtain precession-nutation 3x3 rotation matrix
 # Should really be TDB but "TT will do" says The Wallace...
 
     rmat = S.sla_prenut(2000.0, mjd_tt)
 
-    if dbg: print rmat
+    logger.debug(rmat)
 
 # Obtain latitude, longitude of the observing site.
 # Reverse longitude to get the more normal East-positive convention
 #    (site_num, site_name, site_long, site_lat, site_hgt) = S.sla_obs(0, 'SAAO74')
 #    site_long = -site_long
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
-    if dbg: print
-    if dbg: print sitecode, site_name, site_long, site_lat, site_hgt
+    logger.debug(sitecode, site_name, site_long, site_lat, site_hgt)
 
 # Compute local apparent sidereal time
 # Do GMST first which takes UT1 and then add East longitiude and the equation of the equinoxes
@@ -115,10 +113,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     pvobs = S.sla_pvobs(site_lat, site_hgt, stl)
 
     if site_name == '?':
-        if dbg: print "WARN: No site co-ordinates found, computing for geocenter"
+        logger.debug("WARN: No site co-ordinates found, computing for geocenter")
         pvobs = pvobs * 0.0
 
-    if dbg: print "PVobs(orig)=", pvobs[0:3], "\n           ", pvobs[3:6]*86400.0
+    logger.debug("PVobs(orig)=%s\n            %s" % (pvobs[0:3],pvobs[3:6]*86400.0))
 
 # Apply transpose of precession/nutation matrix to pv vector to go from
 # true equator and equinox of date to J2000.0 mean equator and equinox (to
@@ -127,7 +125,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     pos_new = S.sla_dimxv(rmat, pvobs[0:3])
     vel_new = S.sla_dimxv(rmat, pvobs[3:6])
     pvobs_new = concatenate([pos_new, vel_new])
-    if dbg: print "PVobs(new)=", pvobs_new[0:3], "\n           ", pvobs_new[3:6]*86400.0
+    logger.debug("PVobs(new)=%s\n            %s" % (pvobs_new[0:3],pvobs_new[3:6]*86400.0))
 
 # Earth position and velocity
 
@@ -146,18 +144,16 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 #    (e_pos_hel, e_vel_hel, e_pos_bar, e_vel_bar ) = ephem.epv(mjd_tt)
     e_vel_hel = e_vel_hel/86400.0
 
-    if dbg: print
-    if dbg: print "Sun->Earth [X, Y, Z]=", e_pos_hel
-    if dbg: print "Sun->Earth [X, Y, Z]= %20.15E %20.15E %20.15E" % (e_pos_hel[0], e_pos_hel[1], e_pos_hel[2])
-    if dbg: print "Sun->Earth [Xdot, Ydot, Zdot]=", e_vel_hel
-    if dbg: print "Sun->Earth [Xdot, Ydot, Zdot]= %20.15E %20.15E %20.15E" % (e_vel_hel[0]*86400.0, e_vel_hel[1]*86400.0, e_vel_hel[2]*86400.0)
+    logger.debug("Sun->Earth [X, Y, Z]=%s" % e_pos_hel)
+    logger.debug("Sun->Earth [X, Y, Z]= %20.15E %20.15E %20.15E" % (e_pos_hel[0], e_pos_hel[1], e_pos_hel[2]))
+    logger.debug("Sun->Earth [Xdot, Ydot, Zdot]=%s" % e_vel_hel)
+    logger.debug("Sun->Earth [Xdot, Ydot, Zdot]= %20.15E %20.15E %20.15E" % (e_vel_hel[0]*86400.0, e_vel_hel[1]*86400.0, e_vel_hel[2]*86400.0))
 
 # Add topocentric offset in position and velocity
     e_pos_hel = e_pos_hel + pvobs_new[0:3]
     e_vel_hel = e_vel_hel + pvobs_new[3:6]
-    if dbg: print
-    if dbg: print "Sun->Obsvr [X, Y, Z]=", e_pos_hel
-    if dbg: print "Sun->Obsvr [Xdot, Ydot, Zdot]=", e_vel_hel
+    logger.debug("Sun->Obsvr [X, Y, Z]=%s" % e_pos_hel)
+    logger.debug("Sun->Obsvr [Xdot, Ydot, Zdot]=%s" % e_vel_hel)
 
 # Asteroid position (and velocity)
 
@@ -199,7 +195,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                             orbelems['arg_perihelion'].in_radians(), orbelems['semi_axis'], orbelems['eccentricity'],
                             orbelems['mean_anomaly'].in_radians())
         else:
-            if dbg: print "Not perturbing"
+            logger.debug("Not perturbing")
             p_epoch_mjd = epoch_mjd
             j = 0
     else:
@@ -232,7 +228,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
             j = 0
 
     if j != 0:
-        print "Perturbing error=", j
+        print "Perturbing error=%s" % j
 
 
     r3 = -100.
@@ -256,8 +252,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                             p_orbelems['MeanAnom'], 0.0)
 
 
-        if dbg: print "Sun->Asteroid [x,y,z]=", pv[0:3], status
-        if dbg: print "Sun->Asteroid [xdot,ydot,zdot]=", pv[3:6], status
+        logger.debug("Sun->Asteroid [x,y,z]=%s %s" % (pv[0:3], status))
+        logger.debug("Sun->Asteroid [xdot,ydot,zdot]=%s %s" % (pv[3:6], status))
 
         for i, e_pos in enumerate(e_pos_hel):
             pos[i] = pv[i] - e_pos
@@ -265,32 +261,31 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         for i, e_vel in enumerate(e_vel_hel):
             vel[i] = pv[i+3] - e_vel
 
-        if dbg: print "Earth->Asteroid [x,y,z]=", pos
-        if dbg: print "Earth->Asteroid [xdot,ydot,zdot]=", vel
+        logger.debug("Earth->Asteroid [x,y,z]=%s" % pos)
+        logger.debug("Earth->Asteroid [xdot,ydot,zdot]=%s" % vel)
 
 # geometric distance, delta (AU)
         delta = sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2])
-        if dbg: print
-        if dbg: print "Geometric distance, delta (AU)=", delta
+
+        logger.debug("Geometric distance, delta (AU)=%s" % delta)
 
 # Light travel time to asteroid
         ltt = tau * delta
-        if dbg: print "Light travel time (sec, min, days)=", ltt, ltt/60.0, ltt/86400.0
+        logger.debug("Light travel time (sec, min, days)=%s %s %s" % (ltt, ltt/60.0, ltt/86400.0))
 
 # Correct position for planetary aberration
     for i, a_pos in enumerate(pos):
         pos[i] = a_pos - (ltt * vel[i])
 
-    if dbg: print
-    if dbg: print "Earth->Asteroid [x,y,z]=", pos
-    if dbg: print "Earth->Asteroid [x,y,z]= %20.15E %20.15E %20.15E" % (pos[0], pos[1], pos[2])
-    if dbg: print "Earth->Asteroid [xdot,ydot,zdot]=", vel*86400.0
+    logger.debug("Earth->Asteroid [x,y,z]=%s" % pos)
+    logger.debug("Earth->Asteroid [x,y,z]= %20.15E %20.15E %20.15E" % (pos[0], pos[1], pos[2]))
+    logger.debug("Earth->Asteroid [xdot,ydot,zdot]=%s %s %s" % (vel[0]*86400.0,vel[1]*86400.0,vel[2]*86400.0))
 
 # Convert Cartesian to RA, Dec
     (ra, dec) = S.sla_dcc2s(pos)
-    if dbg: print "ra,dec=", ra, dec
+    logger.debug("ra,dec=%s %s" % (ra, dec))
     ra = S.sla_dranrm(ra)
-    if dbg: print "ra,dec=", ra, dec
+    logger.debug("ra,dec=%s %s" % (ra, dec))
     (rsign, ra_geo_deg) = S.sla_dr2tf(2, ra)
     (dsign, dec_geo_deg) = S.sla_dr2af(1, dec)
 
@@ -300,19 +295,19 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     cposz = pv[2] - (ltt * pv[5])
     r = sqrt(cposx*cposx + cposy*cposy + cposz*cposz)
 
-    if dbg: print "r (AU) =", r
+    logger.debug("r (AU) =%s" % r)
 
 # Compute R, the Earth-Sun distance. (Only actually need R^2 for the mag. formula)
     es_Rsq = (e_pos_hel[0]*e_pos_hel[0] + e_pos_hel[1]*e_pos_hel[1] + e_pos_hel[2]*e_pos_hel[2])
 
-    if dbg: print "R (AU) =", sqrt(es_Rsq)
-    if dbg: print "delta (AU)=", delta
+    logger.debug("R (AU) =%s" % sqrt(es_Rsq))
+    logger.debug("delta (AU)=%s" % delta)
 
 # Compute sky motion
 
     sky_vel = compute_relative_velocity_vectors(e_pos_hel, e_vel_hel, pos, vel, delta, dbg)
-    if dbg: print "vel1, vel2, r= %15.10lf %15.10lf %15.10lf" % (sky_vel[1], sky_vel[2], delta)
-    if dbg: print "vel1, vel2, r= %15.10e %15.10e %15.10lf\n" % (sky_vel[1], sky_vel[2], delta)
+    logger.debug("vel1, vel2, r= %15.10lf %15.10lf %15.10lf" % (sky_vel[1], sky_vel[2], delta))
+    logger.debug("vel1, vel2, r= %15.10e %15.10e %15.10lf\n" % (sky_vel[1], sky_vel[2], delta))
 
     total_motion, sky_pa, ra_motion, dec_motion = compute_sky_motion(sky_vel, delta, dbg)
 
@@ -329,7 +324,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         phi1 = exp(-3.33 * (tan(beta/2.0))**0.63)
         phi2 = exp(-1.87 * (tan(beta/2.0))**1.22)
 
-    #    if dbg: print "Phi1, phi2=", phi1,phi2
+    #    logger.debug("Phi1, phi2=%s" % phi1,phi2)
 
     # Calculate magnitude of object
         mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
@@ -365,12 +360,12 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
         j2000_vel[i] = obj_vel[i] - obs_vel_hel[i]
         matrix[i] = obj_pos[i] / delta
         i += 1
-    if dbg: print "   obj_vel= %15.10f %15.10f %15.10f" % (obj_vel[0], obj_vel[1], obj_vel[2])
-    if dbg: print "   obs_vel= %15.10f %15.10f %15.10f" % (obs_vel_hel[0], obs_vel_hel[1], obs_vel_hel[2])
-    if dbg: print "   obs_vel= %15.10e %15.10e %15.10e" % (obs_vel_hel[0], obs_vel_hel[1], obs_vel_hel[2])
+    logger.debug("   obj_vel= %15.10f %15.10f %15.10f" % (obj_vel[0], obj_vel[1], obj_vel[2]))
+    logger.debug("   obs_vel= %15.10f %15.10f %15.10f" % (obs_vel_hel[0], obs_vel_hel[1], obs_vel_hel[2]))
+    logger.debug("   obs_vel= %15.10e %15.10e %15.10e" % (obs_vel_hel[0], obs_vel_hel[1], obs_vel_hel[2]))
 
-    if dbg: print " j2000_vel= %15.10e %15.10e %15.10e" % (j2000_vel[0], j2000_vel[1], j2000_vel[2])
-    if dbg: print "matrix_vel= %15.10f %15.10f %15.10f" % (matrix[0], matrix[1], matrix[2] )
+    logger.debug(" j2000_vel= %15.10e %15.10e %15.10e" % (j2000_vel[0], j2000_vel[1], j2000_vel[2]))
+    logger.debug("matrix_vel= %15.10f %15.10f %15.10f" % (matrix[0], matrix[1], matrix[2] ))
 
     length = sqrt( matrix[0] * matrix[0] + matrix[1] * matrix[1])
     matrix[3] =  matrix[1] / length
@@ -401,10 +396,10 @@ def compute_sky_motion(sky_vel, delta, dbg=True):
     dec_motion = dec_motion * 60.0 / 24.0
 
     sky_pa = 180.0 + degrees(atan2(-ra_motion, -dec_motion))
-    if dbg: print  "RA motion, Dec motion, PA=%10.7f %10.7f %6.1f" % (ra_motion, dec_motion, sky_pa )
+    logger.debug( "RA motion, Dec motion, PA=%10.7f %10.7f %6.1f" % (ra_motion, dec_motion, sky_pa ))
 
     total_motion = sqrt(ra_motion * ra_motion + dec_motion * dec_motion)
-    if dbg: print  "Total motion=%10.7f" % (total_motion)
+    logger.debug( "Total motion=%10.7f" % (total_motion))
 
     return (total_motion, sky_pa, ra_motion, dec_motion)
 
@@ -920,8 +915,7 @@ def get_sitepos(site_code, dbg=False):
         site_name = site_name.rstrip()
         site_long = -site_long
 
-    if dbg: print
-    if dbg: print site_name, site_long, site_lat, site_hgt
+    logger.debug(site_name, site_long, site_lat, site_hgt)
     return (site_name, site_long, site_lat, site_hgt)
 
 def moon_ra_dec(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
@@ -938,7 +932,7 @@ def moon_ra_dec(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 # Compute Moon's apparent RA, Dec, diameter (all in radians)
     (moon_ra, moon_dec, diam) = S.sla_rdplan(mjd_tdb, body, obsvr_long, obsvr_lat)
 
-    if dbg: print "Moon RA, Dec, diam=", moon_ra, moon_dec, diam
+    logger.debug("Moon RA, Dec, diam=%s %s %s" % (moon_ra, moon_dec, diam))
     return (moon_ra, moon_dec, diam)
 
 def atmos_params(airless):
@@ -977,11 +971,11 @@ def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat,\
 
 # Compute MJD_UTC
     mjd_utc = datetime2mjd_utc(date)
-    if dbg: print mjd_utc
+    logger.debug(mjd_utc)
 # Compute UT1-UTC
 
     dut = ut1_minus_utc(mjd_utc)
-    if dbg: print dut
+    logger.debug(dut)
 # Perform apparent->observed place transformation
     (obs_az, obs_zd, obs_ha, obs_dec, obs_ra) = S.sla_aop(moon_app_ra, moon_app_dec,\
         mjd_utc, dut, obsvr_long, obsvr_lat, obsvr_hgt, xp, yp, \
@@ -993,7 +987,7 @@ def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat,\
 # due to observers' elevation above sea level)
 
     obs_alt = (pi/2.0)-obs_zd
-    if dbg: print obs_az, obs_zd, obs_alt
+    logger.debug(obs_az, obs_zd, obs_alt)
     return (obs_az, obs_alt)
 
 def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
@@ -1005,7 +999,7 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 
     cosphi = ( sin(sun_dec) * sin(moon_dec) + cos(sun_dec) \
         * cos(moon_dec) * cos(sun_ra - moon_ra) )
-    if dbg: print "cos(phi)=", cosphi
+    logger.debug("cos(phi)=%s" % cosphi)
 
 # Full formula for phase angle, i. Requires r (Earth-Sun distance) and del(ta) (the
 # Earth-Moon distance) neither of which we have with our methods. However Meeus
@@ -1014,7 +1008,7 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 #    i = atan2( r * sin(phi), del - r * cos(phi) )
 
     cosi = -cosphi
-    if dbg: print "cos(i)=", cosi
+    logger.debug("cos(i)=%s" % cosi)
     mphase = (1.0 + cosi) / 2.0
 
     return mphase
@@ -1039,11 +1033,11 @@ def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec,
         print 'GMST, LAST, EQEQX, GAST, long=', gmst, stl, S.sla_eqeqx(mjd_tdb), gmst+S.sla_eqeqx(mjd_tdb), obsvr_long
 
     (app_ra, app_dec) = S.sla_map(mean_ra, mean_dec, 0.0, 0.0, 0.0, 0.0, 2000.0, mjd_tdb)
-    if dbg: print app_ra, app_dec, radec2strings(app_ra, app_dec)
+    logger.debug(app_ra, app_dec, radec2strings(app_ra, app_dec))
     hour_angle = stl - app_ra
-    if dbg: print hour_angle
+    logger.debug(hour_angle)
     hour_angle = S.sla_drange(hour_angle)
-    if dbg: print hour_angle
+    logger.debug(hour_angle)
 
     return hour_angle
 

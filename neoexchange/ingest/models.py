@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 from django.db import models
-from datetime import datetime
+from django.utils.timezone import now
 from django.utils.translation import ugettext as _
 from astropy.time import Time
 import reversion
@@ -105,7 +105,7 @@ class Body(models.Model):
     epochofperih        = models.DateTimeField('Epoch of perihelion', blank=True, null=True, help_text='for comets')
     abs_mag             = models.FloatField('H - absolute magnitude', blank=True, null=True)
     slope               = models.FloatField('G - slope parameter', blank=True, null=True)
-    ingest              = models.DateTimeField(default=datetime.now())
+    ingest              = models.DateTimeField(default=now)
 
     def epochofel_mjd(self):
         t = Time(self.epochofel.isoformat(), format='isot', scale='tt')
