@@ -11,13 +11,13 @@
 # requirement to map all exposed container ports onto host ports.
 #
 # Build with
-# docker build -t registry.lcogt.net/neoexchange:latest .
+# docker build -t docker.lcogt.net/neoexchange:latest .
 #
-# Push to Registry with
-# docker push registry.lcogt.net/neoexchange:latest
+# Push to docker registry with
+# docker push docker.lcogt.net/neoexchange:latest
 #
 # To run with nginx + uwsgi both exposed:
-# docker run -d -p 8200:8200 -p 8201:8201 --name=neox registry.lcogt.net/neoexchange:latest
+# docker run -d -p 8200:8200  --name=neox docker.lcogt.net/neoexchange:latest
 #
 # See the notes in the code below about NFS mounts.
 #
@@ -40,6 +40,12 @@ ENV DJANGO_SETTINGS_MODULE neox.settings
 ENV BRANCH ${BRANCH}
 #ENV BUILDDATE ${BUILDDATE}
 
+# Setup the secret Django settings
+ENV NEOX_DB_HOST ${DB_HOST_DEPLOY}
+ENV NEOX_DB_USER ${NEOX_DB_USER_DEPLOY}
+ENV NEOX_DB_PASSWD ${NEOX_DB_PASSWD_DEPLOY}
+ENV SECRET_KEY ${SECRET_KEY_DEPLOY}
+
 # Copy configuration files
 COPY config/uwsgi.ini /etc/uwsgi.ini
 COPY config/nginx/* /etc/nginx/
@@ -47,7 +53,7 @@ COPY config/processes.ini /etc/supervisord.d/processes.ini
 COPY config/crontab.root /var/spool/cron/root
 
 # nginx runs on port 8200, uwsgi runs on port 8201
-EXPOSE 8200 8201
+EXPOSE 80
 
 # Entry point is the supervisord daemon
 ENTRYPOINT [ "/usr/bin/supervisord", "-n" ]
@@ -57,7 +63,7 @@ COPY neoexchange /var/www/apps/neoexchange
 
 # Install the LCOGT NEO exchange Python required packages
 RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
-		&& pip install -r /var/www/apps/neoexchange/pip_requirements.txt \
+		&& pip install -r /var/www/apps/neoexchange/requirements.txt \
 # LCOGT packages which have to be installed after the normal pip install
 		&& pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
 		&& pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
