@@ -1,0 +1,12 @@
+web:
+  build: .
+  ports:
+    - "8200:80"
+  restart: "always"
+  mem_limit: "64m"
+
+  environment:
+    - NEOX_DB_HOST_DEPLOY=
+    - NEOX_DB_USER_DEPLOY=
+    - NEOX_DB_PASSWD_DEPLOY=
+    - SECRET_KEY=

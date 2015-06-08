@@ -170,16 +170,16 @@ LOGGING = {
     }
 }
 
-SECRET_KEY = os.environ['SECRET_KEY']
+SECRET_KEY = os.environ.get('SECRET_KEY','')
 
 DATABASES = {
     "default": {
         # Live DB
         "ENGINE": "django.db.backends.mysql",
         "NAME": "neoexchange",
-        "USER": os.environ['NEOX_DB_USER'],
-        "PASSWORD": os.environ['NEOX_DB_PASSWD'],
-        "HOST": os.environ['NEOX_DB_HOST'],
+        "USER": os.environ.get('NEOX_DB_USER_DEPLOY','') if PRODUCTION else os.environ.get('NEOX_DB_USER',''),
+        "PASSWORD": os.environ.get('NEOX_DB_PASSWD_DEPLOY','') if PRODUCTION else os.environ.get('NEOX_DB_PASSWD',''),
+        "HOST": os.environ.get('NEOX_DB_HOST_DEPLOY','') if PRODUCTION else os.environ.get('NEOX_DB_HOST',''),
         "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
 
     }
