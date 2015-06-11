@@ -1,7 +1,7 @@
 from datetime import datetime
 from django import forms
 from django.db.models import Q
-from ingest.models import Body, Proposal
+from .models import Body, Proposal
 from django.utils.translation import ugettext as _
 
 class EphemQuery(forms.Form):

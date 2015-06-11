@@ -14,10 +14,10 @@ GNU General Public License for more details.
 '''
 
 from django.test import TestCase
-from ingest.models import Body
+from core.models import Body
 
 #Import module to test
-from ingest.forms import EphemQuery, ScheduleForm
+from core.forms import EphemQuery, ScheduleForm
 
 class EphemQueryFormTest(TestCase):
 

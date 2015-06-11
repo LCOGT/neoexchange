@@ -20,7 +20,7 @@ from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, f
 from numpy import array, concatenate, zeros
 
 # Local imports
-from ingest.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
+from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
 #from astsubs import mpc_8lineformat
 
 import logging

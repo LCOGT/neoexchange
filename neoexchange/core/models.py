@@ -76,6 +76,9 @@ class Proposal(models.Model):
     pi = models.CharField(max_length=50, default='')
     tag = models.CharField(max_length=10, default='LCO')
 
+    class Meta:
+        db_table = 'ingest_proposal'
+
     def __unicode__(self):
         if len(self.title)>=10:
             title = "%s..." % self.title[0:9]
@@ -132,6 +135,7 @@ class Body(models.Model):
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
+        db_table = 'ingest_body'
 
     def __unicode__(self):
         if self.active:
@@ -159,6 +163,7 @@ class Block(models.Model):
     class Meta:
         verbose_name = _('Observation Block')
         verbose_name_plural = _('Observation Blocks')
+        db_table = 'ingest_block'
 
     def __unicode__(self):
         pass
@@ -178,6 +183,7 @@ class Record(models.Model):
     class Meta:
         verbose_name = _('Observation Record')
         verbose_name_plural = _('Observation Records')
+        db_table = 'ingest_record'
 
     def __unicode__(self):
         if self.active:

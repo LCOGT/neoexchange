@@ -17,8 +17,8 @@ from django.conf.urls import include, url
 from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.views.generic import ListView, DetailView
-from ingest.models import Body, Block
-from ingest.views import BodySearchView,BodyDetailView, ScheduleParameters, ephemeris, home
+from core.models import Body, Block
+from core.views import BodySearchView,BodyDetailView, ScheduleParameters, ephemeris, home
 
 admin.autodiscover()
 

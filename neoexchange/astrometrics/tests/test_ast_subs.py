@@ -17,7 +17,7 @@ from datetime import datetime
 from django.test import TestCase
 
 #Import module to test
-from ingest.ast_subs import *
+from astrometrics.ast_subs import *
 
 
 class TestIntToMutantHexChar(TestCase):

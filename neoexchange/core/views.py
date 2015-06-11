@@ -21,13 +21,13 @@ from django.core.urlresolvers import reverse
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404
-from ingest.ephem_subs import call_compute_ephem, compute_ephem, \
+from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, MagRangeError
-from ingest.forms import EphemQuery, ScheduleForm, ScheduleBlockForm
-from ingest.models import *
-from ingest.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
+from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm
+from .models import *
+from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcorbit, submit_block_to_scheduler
-from ingest.time_subs import extract_mpc_epoch, parse_neocp_date
+from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
 import logging
 import reversion
 import json
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 def home(request):
-    latest = Body.objects.latest('ingest')
+    latest = Body.objects.filter(active=True).latest('ingest')
     newest = Body.objects.filter(ingest=latest.ingest,active=True)
     params = {
             'targets'   : Body.objects.filter(active=True).count(),
@@ -45,7 +45,7 @@ def home(request):
             'newest'    : newest,
             'form'      : EphemQuery()
     }
-    return render(request,'ingest/home.html',params)
+    return render(request,'core/home.html',params)
 
 class BodyDetailView(DetailView):
     context_object_name = "body"
@@ -58,7 +58,7 @@ class BodyDetailView(DetailView):
 
 
 class BodySearchView(ListView):
-    template_name = 'ingest/body_list.html'
+    template_name = 'core/body_list.html'
     model = Body
 
     def get_queryset(self):
@@ -82,8 +82,8 @@ def ephemeris(request):
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, data['site_code'], 300, data['alt_limit'] )
     else:
-        return render(request, 'ingest/home.html', {'form' : form})
-    return render(request, 'ingest/ephem.html',
+        return render(request, 'core/home.html', {'form' : form})
+    return render(request, 'core/ephem.html',
         {'target'  : data['target'],
          'ephem_lines'      : ephem_lines, 
          'site_code'        : form['site_code'].value(),
@@ -100,7 +100,7 @@ class LookUpBodyMixin(object):
             raise Http404("Body does not exist")
 
 class ScheduleParameters(LookUpBodyMixin, FormView):
-    template_name = 'ingest/schedule.html'
+    template_name = 'core/schedule.html'
     form_class = ScheduleForm
     ok_to_schedule = False
 
@@ -113,7 +113,7 @@ class ScheduleParameters(LookUpBodyMixin, FormView):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         #logger.debug()
         new_form = ScheduleBlockForm(data)
-        return render(request,'ingest/schedule_confirm.html', {'form':new_form, 'data': data,'body':self.body})
+        return render(request,'core/schedule_confirm.html', {'form':new_form, 'data': data,'body':self.body})
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -125,7 +125,7 @@ class ScheduleParameters(LookUpBodyMixin, FormView):
 
 
 class ScheduleSubmit(SingleObjectMixin, FormView):
-    template_name = 'ingest/schedule_confirm.html'
+    template_name = 'core/schedule_confirm.html'
     form_class = ScheduleBlockForm
     model = Body
 

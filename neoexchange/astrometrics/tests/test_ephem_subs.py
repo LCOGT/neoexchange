@@ -20,8 +20,8 @@ from rise_set.angle import Angle
 from math import radians
 
 #Import module to test
-from ingest.ephem_subs import *
-from ingest.models import Body
+from astrometrics.ephem_subs import *
+from core.models import Body
 
 
 class TestGetMountLimits(TestCase):

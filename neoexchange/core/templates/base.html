@@ -11,17 +11,17 @@
 		<meta name="version" content="{{site_version}}" />
 		{% block meta %}{% endblock %}
 		{% block favicon %}
-		<link rel="shortcut icon" href="{% static "ingest/images/favicon.ico" %}" type="image/vnd.microsoft.icon" />
+		<link rel="shortcut icon" href="{% static "core/images/favicon.ico" %}" type="image/vnd.microsoft.icon" />
 		{% endblock %}
 		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
 		{% block css-content %}{% endblock %}
-		<link rel="stylesheet" href="{% static "ingest/css/styles.css" %}">
+		<link rel="stylesheet" href="{% static "core/css/styles.css" %}">
         {% block last-css-content %}{% endblock %}
         <!--[if lt IE 9]>
         <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
         <![endif]-->
-		<script type="text/javascript" src="{% static "ingest/js/jquery-1.10.2.js" %}"></script>
-		<script type="text/javascript" src="{% static "ingest/js/jquery-ui-1.10.3.min.js" %}"></script>
+		<script type="text/javascript" src="{% static "core/js/jquery-1.10.2.js" %}"></script>
+		<script type="text/javascript" src="{% static "core/js/jquery-ui-1.10.3.min.js" %}"></script>
 		<script type="text/javascript" src="{% static "/static/selectable/js/jquery.dj.selectable.js?v=0.8.0" %}"></script>
 		{% block script-content %}{% endblock %}
 	</head>
@@ -38,7 +38,7 @@
 					<div class="container">
 					<div id="header" role="banner">
 						<div id="logo">
-							<a href="http://lcogt.net/" title="LCOGT homepage" rel="home"><img src="{% static "ingest/images/lcogt.png" %}" alt="LCOGT" /></a>
+							<a href="http://lcogt.net/" title="LCOGT homepage" rel="home"><img src="{% static "core/images/lcogt.png" %}" alt="LCOGT" /></a>
 						</div>
 						<div id="site-name">
 							<strong>{% block title %}NEO exchange{% endblock %}</strong>

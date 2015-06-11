@@ -15,12 +15,12 @@ GNU General Public License for more details.
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
-from ingest.models import Body
+from core.models import Body
 from datetime import datetime, timedelta
 
-from ingest.ephem_subs import determine_darkness_times
+from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
-from ingest.sources_subs import parse_goldstone_chunks, submit_block_to_scheduler
+from astrometrics.sources_subs import parse_goldstone_chunks, submit_block_to_scheduler
 
 
 class TestGoldstoneChunkParser(TestCase):

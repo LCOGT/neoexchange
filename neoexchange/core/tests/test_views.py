@@ -24,10 +24,10 @@ from django.utils.html import escape
 from unittest import skipIf
 
 #Import module to test
-from ingest.ephem_subs import call_compute_ephem, determine_darkness_times
-from ingest.views import home, clean_NEOCP_object, save_and_make_revision
-from ingest.models import Body, Proposal
-from ingest.forms import EphemQuery
+from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
+from core.views import home, clean_NEOCP_object, save_and_make_revision, update_MPC_orbit
+from core.models import Body, Proposal
+from core.forms import EphemQuery
 
 
 class TestClean_NEOCP_Object(TestCase):
@@ -128,8 +128,6 @@ class TestClean_NEOCP_Object(TestCase):
         # Saving the new elements
         self.assertEqual(True,resp)
 
-    def test_update_MPC(self):
-
     def test_update_MPC_duplicate(self):
         self.save_N007riz()
         obj_id ='N007riz'
@@ -158,7 +156,7 @@ class HomePageTest(TestCase):
 
     def test_home_page_renders_home_template(self):
         response = self.client.get('/')
-        self.assertTemplateUsed(response, 'ingest/home.html')
+        self.assertTemplateUsed(response, 'core/home.html')
 
     def test_home_page_uses_ephemquery_form(self):
         response = self.client.get('/')
@@ -202,7 +200,7 @@ class EphemPageTest(TestCase):
         body_elements = model_to_dict(self.body)
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         expected_html = render_to_string(
-            'ingest/ephem.html',
+            'core/ephem.html',
             {'target' : self.body,
             'ephem_lines'  : ephem_lines,
             'site_code' : site_code }
@@ -227,12 +225,12 @@ class EphemPageTest(TestCase):
                     'alt_limit' : 40.0
                     }
             )
-        self.assertTemplateUsed(response, 'ingest/ephem.html')
+        self.assertTemplateUsed(response, 'core/ephem.html')
 
     def test_form_errors_are_sent_back_to_home_page(self):
         response = self.client.get(reverse('ephemeris'), data={'target' : ''})
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'ingest/home.html')
+        self.assertTemplateUsed(response, 'core/home.html')
         expected_error = escape("Target name is required")
         self.assertContains(response, expected_error)
 
@@ -257,7 +255,7 @@ class TargetsPageTest(TestCase):
         request = HttpRequest()
         targetlist = ListView.as_view(model=Body, queryset=Body.objects.filter(active=True))
         response = targetlist.render_to_response(targetlist)
-        expected_html = render_to_string('ingest/body_list.html')
+        expected_html = render_to_string('core/body_list.html')
         self.assertEqual(response, expected_html)
 
 class ScheduleTargetsPageTest(TestCase):
@@ -299,7 +297,7 @@ class ScheduleTargetsPageTest(TestCase):
                     'utc_date'  : '2015-04-20',
                     }
         )
-        self.assertTemplateUsed(response, 'ingest/schedule.html')
+        self.assertTemplateUsed(response, 'core/schedule.html')
 
     def test_schedule_page_contains_object_name(self):
         response = self.client.get(reverse('schedule-body', kwargs={'pk':self.body.pk}),
