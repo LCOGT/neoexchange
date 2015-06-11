@@ -25,10 +25,24 @@ Deployment
 You will need to set up 3 environment variables before deploying (if you are just locally testing see instructions below).
 
 If you are using BASH or ZSH add the following to your .profile or .zshrc files:
-
+```
 export NEOX_DB_USER='<insert your DB username>'
 export NEOX_DB_PASSWORD='<insert your DB password>'
 export NEOX_DB_HOST='<insert the name of your DB server>'
+```
+
+Docker
+------
+If you are building a Docker container use the following syntax:
+```
+docker build -t docker.lcogt.net/neoexchange:latest .
+```
+This will build a Docker image which will need to be pushed into a Docker registry with:
+```
+docker push docker.lcogt.net/neoexchange:latest
+```
+Starting a Docker container from this image can be done with a `docker run` command or using `docker-compose`.
+
 
 Local Testing
 -------------
