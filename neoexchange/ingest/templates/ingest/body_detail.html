@@ -22,6 +22,9 @@
 					</div>
 					<div class="row">
 						<div class="fourcol">
+							{% if body.old_name %}
+							<h3  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h3>
+							{% endif %}
 							<h3  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h3>
 							<h3  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span></h3>
 							<h3  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h3>

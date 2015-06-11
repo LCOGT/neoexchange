@@ -123,6 +123,12 @@ class Body(models.Model):
         else:
             return "Unknown"
 
+    def old_name(self):
+        if self.provisional_name and self.name:
+            return self.provisional_name
+        else:
+            return False
+
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')

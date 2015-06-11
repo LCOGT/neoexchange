@@ -2,6 +2,7 @@
 # Django settings for neox project.
 
 import os, sys
+from django.utils.crypto import get_random_string
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -170,16 +171,17 @@ LOGGING = {
     }
 }
 
-SECRET_KEY = os.environ.get('SECRET_KEY','')
+chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+SECRET_KEY = get_random_string(50, chars)
 
 DATABASES = {
     "default": {
         # Live DB
         "ENGINE": "django.db.backends.mysql",
         "NAME": "neoexchange",
-        "USER": os.environ.get('NEOX_DB_USER_DEPLOY','') if PRODUCTION else os.environ.get('NEOX_DB_USER',''),
-        "PASSWORD": os.environ.get('NEOX_DB_PASSWD_DEPLOY','') if PRODUCTION else os.environ.get('NEOX_DB_PASSWD',''),
-        "HOST": os.environ.get('NEOX_DB_HOST_DEPLOY','') if PRODUCTION else os.environ.get('NEOX_DB_HOST',''),
+        "USER": os.environ.get('NEOX_DB_USER',''),
+        "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
+        "HOST": os.environ.get('NEOX_DB_HOST',''),
         "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
 
     }
@@ -214,10 +216,11 @@ if 'test' in sys.argv:
 # Allow any settings to be defined in local_settings.py which should be
 # ignored in your version control system allowing for settings to be
 # defined per machine.
-# try:
-#     from local_settings import *
-# except ImportError as e:
-#     if "local_settings" not in str(e):
-#         raise e
+if not CURRENT_PATH.startswith('/var/www'):
+    try:
+        from local_settings import *
+    except ImportError as e:
+        if "local_settings" not in str(e):
+            raise e
 
 

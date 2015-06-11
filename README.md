@@ -1,7 +1,7 @@
 NEO Exchange
 ============
 
-Portal for scheduling observations of NEOs using LCOGT (Version 0.1.1)
+Portal for scheduling observations of NEOs using LCOGT (Version 1.0)
 
 Setup
 -----
@@ -14,7 +14,21 @@ Construct a Python Virtual Enviroment (virtualenv) by executing:
 or:  
 
 `source <path to virtualenv>/bin/activate.csh # for (t)csh-shells`  
-`pip install -r pip-requirements.txt`  
+
+then:
+
+`pip install -r neox/requirements.txt`
+
+Deployment
+----------
+
+You will need to set up 3 environment variables before deploying (if you are just locally testing see instructions below).
+
+If you are using BASH or ZSH add the following to your .profile or .zshrc files:
+
+export NEOX_DB_USER='<insert your DB username>'
+export NEOX_DB_PASSWORD='<insert your DB password>'
+export NEOX_DB_HOST='<insert the name of your DB server>'
 
 Local Testing
 -------------
@@ -53,5 +67,4 @@ STATIC_ROOT = os.path.abspath(os.path.join(BASE_DIR, '../../static/'))
 
 To prepare the local SQLite DB for use, you should follow these steps:
 1. `cd neoexchange\neoexchange`
-2. Run `python manage.py syncdb`
-3. Migrate the apps with `python manage.py migrate`
+2. Run `python manage.py syncdb`. This is perform migrations as necessary.
