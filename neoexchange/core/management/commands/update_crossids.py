@@ -1,6 +1,6 @@
-from ingest.sources_subs import fetch_previous_NEOCP_desigs
-from ingest.views import update_crossids
-from ingest.models import *
+from astrometrics.sources_subs import fetch_previous_NEOCP_desigs
+from core.views import update_crossids
+from core.models import *
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q

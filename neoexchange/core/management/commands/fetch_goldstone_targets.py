@@ -1,6 +1,5 @@
-from ingest.sources_subs import fetch_goldstone_targets
-from ingest.views import update_MPC_orbit
-from ingest.models import *
+from astrometrics.sources_subs import fetch_goldstone_targets
+from core.views import update_MPC_orbit
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q

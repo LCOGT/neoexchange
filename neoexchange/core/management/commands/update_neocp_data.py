@@ -1,6 +1,5 @@
-from ingest.sources_subs import fetch_NEOCP
-from ingest.views import update_NEOCP_orbit
-from ingest.models import *
+from astrometrics.sources_subs import fetch_NEOCP
+from core.views import update_NEOCP_orbit
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
