@@ -1,7 +1,7 @@
 from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-from ingest.models import Body
+from core.models import Body
 
 class EphemerisValidationTest(FunctionalTest):
 

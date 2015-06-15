@@ -131,7 +131,6 @@ class ScheduleParameters(LoginRequiredMixin,LookUpBodyMixin, FormView):
         else:
             return self.render_to_response(self.get_context_data(form=form,body=self.body))
 
-
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     template_name = 'core/schedule_confirm.html'
     form_class = ScheduleBlockForm

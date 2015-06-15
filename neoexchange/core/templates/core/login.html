@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load url from future %}
+{% block header %}NEOx Login{% endblock %}
+{% block css-content %}
+	{% stylesheet_link_tag "core/css/forms.css" %}
+{% endblock %}
+{% block script-content %}
+	<script type="text/javascript">
+	$(document).ready(function(){
+		$('#username').focus().select();
+	});
+	</script>
+{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+{% block main-content %}
+
+{% if form.errors %}
+			<div class="menuholder">
+				{% for e in form.non_field_errors %}
+				<div id="msg" class="error" style="display:block;">{{e}}</div>
+				{% endfor %}
+			</div>
+{% endif %}
+			<div id="extramenu">
+				<div class="extramenu_padder" role="menubar">
+					<div class="headingleft">
+						<div class="title"><h1>Login to your account</h1></div>
+					</div>
+				</div>
+				<div id="msg"></div>
+			</div>
+			<div id="main">
+
+				<div class="bigpadded">
+					<div class="row">
+						<span style="font-family: 'Open Sans', sans-serif; font-weight:600; font-size:72; color:#004459; line-height:100%; letter-spacing:-3px;">NEO</span>
+						<span style="font-family: 'Open Sans', sans-serif; font-weight:600; font-size:72; color:#ff9900; line-height:100%; letter-spacing:-3px;">x</span>
+
+						<span style="font-family: 'Open Sans', sans-serif; font-weight:300; font-size:12; color:#004459;">the </span>
+						<span style="font-family: 'Open Sans', sans-serif; font-weight:300; font-size:36; color:#004459;">Near Earth Object</span>
+						<span style="font-family: 'Open Sans', sans-serif; font-weight:300; font-size:36; color:#ff9900;">Exchange</span>
+
+					</div>
+					<div class="row">
+					</div>
+					<form action="" method="post"  id="customForm" >
+						{% csrf_token %}
+						<div class="row">
+							<label for="username">Email Address:</label>
+							<input type="text" name="username" value="{% if form.username.value %}{{ form.username.value }}{% endif %}" id="username">
+							<div class="red">{{form.username.errors.as_text}}</div>
+						</div>
+						<div class="row">
+							<label for="password">Password:</label>
+							<input type="password" name="password" value="" id="password">
+							<div class="red">{{form.password.errors.as_text}}</div>
+						</div>
+						<input type="hidden" name="next" value="{{ next }}">
+						<div class="row">
+							<input type="submit" value="login" class="button" />
+                            <div class="tos">By logging in, you agree to <a href="http://lcogt.net/observatory/termsofuse" target="_blank">the LCOGT terms of use</a>.</div>
+						</div>
+						<div class="row">
+							{% if form.errors %}
+							<a href="{% url 'auth_resend_activation' form.username.value as resendurl %}{{ resendurl }}" style="color:#999;">Resend the activation email?</a>
+							&nbsp;
+							{% endif %}
+							<a href="{% url 'registration_register' as regme %}{{ regme }}" style="color:#999;">Need an account?</a>
+							&nbsp;
+							<a href="{% url 'auth_password_reset' as reseturl %}{{ reseturl }}" style="color:#999;">Forgot your password?</a>
+						</div>
+					</form>
+				</div>
+			</div>
+{% endblock %}
