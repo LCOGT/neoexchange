@@ -164,7 +164,7 @@ LOGGING = {
             'propagate': True,
             'level':'ERROR',
         },
-        'ingest' : {
+        'core' : {
             'handlers' : ['file','console'],
             'level'    : 'DEBUG',
         }
