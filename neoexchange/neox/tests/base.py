@@ -1,6 +1,6 @@
 from django.test import LiveServerTestCase
 from selenium import webdriver
-from ingest.models import Body, Proposal
+from core.models import Body, Proposal
 
 class FunctionalTest(LiveServerTestCase):
 

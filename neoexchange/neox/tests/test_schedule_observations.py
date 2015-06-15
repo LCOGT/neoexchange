@@ -4,7 +4,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from datetime import datetime
 from django.core.urlresolvers import reverse
-from ingest.models import Body, Proposal
+from core.models import Body, Proposal
 
 class ScheduleObservations(FunctionalTest):
 

@@ -15,3 +15,4 @@ wsgiref
 requests
 selenium
 reqdbclient
+pytest-django

@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from datetime import datetime
-from ingest.models import Body
+from core.models import Body
 
 class NewVisitorTest(FunctionalTest):
 

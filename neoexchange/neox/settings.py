@@ -62,7 +62,7 @@ MEDIA_URL = '/media/'
 
 STATIC_ROOT = '/var/www/html/static/'
 STATIC_URL = PREFIX + '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'ingest'),]
+STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -107,7 +107,7 @@ TEMPLATES = [
 INSTALLED_APPS = (
     'grappelli',
     'neox',
-    'ingest',
+    'core',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
