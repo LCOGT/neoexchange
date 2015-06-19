@@ -408,6 +408,8 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     if elements != None:
         params = {
                 'epochofel'     : datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
+                'abs_mag'       : elements['absolute magnitude'],
+                'slope'         : elements['phase slope'],
                 'meananom'      : elements['mean anomaly'],
                 'argofperih'    : elements['argument of perihelion'],
                 'longascnode'   : elements['ascending node'],
