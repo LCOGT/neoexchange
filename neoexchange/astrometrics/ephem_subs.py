@@ -2,7 +2,7 @@
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
 Copyright (C) 2014-2015 LCOGT
 
-ast_subs.py -- Asteroid desigination related routines.
+ephem_subs.py -- Asteroid ephemeris related routines.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

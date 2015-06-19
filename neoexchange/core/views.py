@@ -29,6 +29,7 @@ from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcorbit, submit_block_to_scheduler
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
+from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
 import json
@@ -416,7 +417,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
                 'orbinc'        : elements['inclination'],
                 'eccentricity'  : elements['eccentricity'],
                 'meandist'      : elements['semimajor axis'],
-                'source_type'   : 'A',
+                'source_type'   : determine_asteroid_type(float(elements['perihelion distance']), float(elements['eccentricity'])),
                 'elements_type' : 'MPC_MINOR_PLANET',
                 'active'        : True,
                 'origin'        : origin,

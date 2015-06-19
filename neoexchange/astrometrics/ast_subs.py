@@ -134,3 +134,37 @@ def normal_to_packed(obj_name, dbg=False):
         packed_desig = ' ' * 12
         rval = -1
     return ( packed_desig, rval)
+
+def determine_asteroid_type(perihdist, eccentricity):
+    '''Determines the object class from the perihelion distance <perihdist> and
+    the eccentricity <eccentricity> and returns it as a single character code
+    as defined in core/models.py.
+
+    Currently the checked types are:
+    1) NEO (perihelion < 1.3 AU)
+    2) Centaur (perihelion > 5.5 AU (orbit of Jupiter) & semi-major axis < 30.1 AU
+        (orbit of Neptune)
+    3) KBO (perihelion > 30.1 AU (orbit of Neptune)'''
+
+    jupiter_semidist = 5.5
+    neptune_semidist = 30.1
+    juptrojan_lowlimit = 5.05
+    juptrojan_hilimit = 5.35
+
+    obj_type = 'A'
+    if perihdist <= 1.3 and eccentricity < 0.999:
+        obj_type = 'N'  # NEO
+    else:
+        # Test for eccentricity close to or greater than 1.0
+        if abs(eccentricity-1.0) >=  1e-3 and eccentricity < 1.0:
+            semi_axis = perihdist / (1.0 - eccentricity )
+            if perihdist >= jupiter_semidist and semi_axis >= jupiter_semidist \
+                and semi_axis <= neptune_semidist:
+                obj_type = 'E' # Centaur
+            elif perihdist > neptune_semidist:
+                obj_type = 'K'
+            elif semi_axis >= juptrojan_lowlimit and semi_axis <= juptrojan_hilimit:
+                obj_type = 'T'
+        else:
+            obj_type = 'C'  # Comet
+    return obj_type

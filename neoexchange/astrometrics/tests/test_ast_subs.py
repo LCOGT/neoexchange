@@ -232,3 +232,90 @@ class TestNormalToPacked(TestCase):
         packed_desig, ret_code = normal_to_packed('12345 A')
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, -1)
+
+class TestDetermineAsteroidType(TestCase):
+
+    def test_neo1(self):
+        expected_type = 'N'
+        obj_type = determine_asteroid_type(1.0, 0.1)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_neo2(self):
+        expected_type = 'N'
+        obj_type = determine_asteroid_type(1.299, 0.4)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_neo3(self):
+        expected_type = 'N'
+        obj_type = determine_asteroid_type(1.3, 0.99)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_nonneo1(self):
+        expected_type = 'A'
+        obj_type = determine_asteroid_type(1.301, 0.1)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_nonneo2(self):
+        expected_type = 'A'
+        obj_type = determine_asteroid_type(1.301, 0.9)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_comet1(self):
+        expected_type = 'C'
+        obj_type = determine_asteroid_type(0.301, 0.9991)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_comet2(self):
+        expected_type = 'C'
+        obj_type = determine_asteroid_type(1.301, 1.0000)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_comet3(self):
+        expected_type = 'C'
+        obj_type = determine_asteroid_type(5.51, 1.00001)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_centaur1(self):
+        expected_type = 'E'
+        obj_type = determine_asteroid_type(5.51, 0.1)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_centaur2(self):
+        expected_type = 'E'
+        obj_type = determine_asteroid_type(5.5, 0.817275747508)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_centaur3(self):
+        expected_type = 'E'
+        obj_type = determine_asteroid_type(30.099, 0.0)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_centaur4(self):
+        expected_type = 'A'
+        obj_type = determine_asteroid_type(5.49, 0.82)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_kbo1(self):
+        expected_type = 'K'
+        obj_type = determine_asteroid_type(30.1001, 0.0)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_kbo2(self):
+        expected_type = 'K'
+        obj_type = determine_asteroid_type(42, 0.998)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_trojan1(self):
+        expected_type = 'T'
+        obj_type = determine_asteroid_type(5.05, 0.0)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_trojan2(self):
+        expected_type = 'T'
+        obj_type = determine_asteroid_type(5.05, 0.05607)
+        self.assertEqual(obj_type, expected_type)
+
+    def test_trojan3(self):
+        expected_type = 'A'
+        obj_type = determine_asteroid_type(5.05, 0.0561)
+        self.assertEqual(obj_type, expected_type)
