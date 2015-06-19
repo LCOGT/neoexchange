@@ -430,13 +430,13 @@ def update_MPC_orbit(obj_id, dbg=False, origin='M'):
     elements = fetch_mpcorbit(obj_id, dbg)
     try:
         body, created = Body.objects.get_or_create(name=obj_id)
-    except MultipleObjectsReturned:
+    except Body.MultipleObjectsReturned:
         # When the crossid happens we end up with multiple versions of the body.
         # Need to pick the one has been most recently updated
-        bodies = Body.objects.filter(name=obj_id,provisional_name__isnull=False).order('-ingest')
+        bodies = Body.objects.filter(name=obj_id,provisional_name__isnull=False).order_by('-ingest')
         created = False
         if not bodies:
-            bodies = Body.objects.filter(name=obj_id).order('-ingest')
+            bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
         body = bodies[0]
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
