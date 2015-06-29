@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block header %}NEOx Login{% endblock %}
+{% block last-css-content %}
+	<link rel="stylesheet" href="{% static "core/css/forms.css" %}">
+{% endblock %}
+
+
+{% block bodyclass %}page{% endblock %}
+{% block main-content %}
+
+			<div id="main">
+
+				<div class="bigpadded">
+					<div class="row">
+					<h1>You have been logged out.</h1>
+					<p><a href="{% url 'auth_login' %}">Log in again?</a></p>
+					</div>
+				</div>
+			</div>
+		</div>
+{% endblock %}

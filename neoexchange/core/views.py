@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib.auth.decorators import login_required
@@ -46,7 +46,9 @@ class LoginRequiredMixin(object):
 
 def home(request):
     latest = Body.objects.filter(active=True).latest('ingest')
-    newest = Body.objects.filter(ingest=latest.ingest,active=True)
+    max_dt = latest.ingest
+    min_dt = max_dt - timedelta(minutes=30)
+    newest = Body.objects.filter(ingest__range=(min_dt,max_dt) ,active=True)
     params = {
             'targets'   : Body.objects.filter(active=True).count(),
             'blocks'    : Block.objects.filter(active=True).count(),

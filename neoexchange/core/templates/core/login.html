@@ -1,16 +1,11 @@
 {% extends 'base.html' %}
-{% load url from future %}
+{% load staticfiles %}
+
 {% block header %}NEOx Login{% endblock %}
-{% block css-content %}
-	{% stylesheet_link_tag "core/css/forms.css" %}
+{% block last-css-content %}
+	<link rel="stylesheet" href="{% static "core/css/forms.css" %}">
 {% endblock %}
-{% block script-content %}
-	<script type="text/javascript">
-	$(document).ready(function(){
-		$('#username').focus().select();
-	});
-	</script>
-{% endblock %}
+
 
 {% block bodyclass %}page{% endblock %}
 {% block main-content %}
@@ -22,32 +17,14 @@
 				{% endfor %}
 			</div>
 {% endif %}
-			<div id="extramenu">
-				<div class="extramenu_padder" role="menubar">
-					<div class="headingleft">
-						<div class="title"><h1>Login to your account</h1></div>
-					</div>
-				</div>
-				<div id="msg"></div>
-			</div>
 			<div id="main">
 
 				<div class="bigpadded">
 					<div class="row">
-						<span style="font-family: 'Open Sans', sans-serif; font-weight:600; font-size:72; color:#004459; line-height:100%; letter-spacing:-3px;">NEO</span>
-						<span style="font-family: 'Open Sans', sans-serif; font-weight:600; font-size:72; color:#ff9900; line-height:100%; letter-spacing:-3px;">x</span>
-
-						<span style="font-family: 'Open Sans', sans-serif; font-weight:300; font-size:12; color:#004459;">the </span>
-						<span style="font-family: 'Open Sans', sans-serif; font-weight:300; font-size:36; color:#004459;">Near Earth Object</span>
-						<span style="font-family: 'Open Sans', sans-serif; font-weight:300; font-size:36; color:#ff9900;">Exchange</span>
-
-					</div>
-					<div class="row">
-					</div>
 					<form action="" method="post"  id="customForm" >
 						{% csrf_token %}
 						<div class="row">
-							<label for="username">Email Address:</label>
+							<label for="username">Username/Email Address:</label>
 							<input type="text" name="username" value="{% if form.username.value %}{{ form.username.value }}{% endif %}" id="username">
 							<div class="red">{{form.username.errors.as_text}}</div>
 						</div>
@@ -73,4 +50,5 @@
 					</form>
 				</div>
 			</div>
+		</div>
 {% endblock %}

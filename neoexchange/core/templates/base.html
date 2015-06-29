@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-{% load url from future %}
 {% load staticfiles %}
 <html>
 	<head>
@@ -22,7 +21,7 @@
         <![endif]-->
 		<script type="text/javascript" src="{% static "core/js/jquery-1.10.2.js" %}"></script>
 		<script type="text/javascript" src="{% static "core/js/jquery-ui-1.10.3.min.js" %}"></script>
-		<script type="text/javascript" src="{% static "/static/selectable/js/jquery.dj.selectable.js?v=0.8.0" %}"></script>
+		<script type="text/javascript" src="{% static "core/js/jquery.dj.selectable.js?v=0.8.0" %}"></script>
 		{% block script-content %}{% endblock %}
 	</head>
 	<body class="{% block bodyclass %}{% endblock %}">
@@ -31,6 +30,24 @@
 			<div id="page">
 				<div id="header-holder">
 					<div id="lcogt-bar">
+						{% block login %}
+						<div id="login" class="block">
+							<ul>
+								{% if user.is_authenticated %}
+								<li>
+									{% if user.first_name %}{{ user.first_name }}{% else %}{{user.username}}{% endif %}
+								</li>
+								<li>
+									<a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}"> Logout</a>
+								</li>
+								{% else %}
+								<li>
+									<a target="_parent" href="{% url 'auth_login' as loginurl %}{{ loginurl }}">Login</a>
+								</li>
+								{% endif %}
+							</ul>
+						</div>
+						{% endblock %}
 						<div id="lcogt-name">
 							<a target="_parent" href="http://lcogt.net/" title="LCOGT Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory </span><span class="g">G</span><span class="wide">lobal </span><span class="t">T</span><span class="wide">elescope Network</span></a>
 						</div>
@@ -38,10 +55,10 @@
 					<div class="container">
 					<div id="header" role="banner">
 						<div id="logo">
-							<a href="http://lcogt.net/" title="LCOGT homepage" rel="home"><img src="{% static "core/images/lcogt.png" %}" alt="LCOGT" /></a>
+							<a href="{% url 'home' %}" title="NEO exchange homepage" rel="home"><img src="{% static "core/images/NEO-logo_sm.jpg" %}" alt="NEO exchange" /></a>
 						</div>
 						<div id="site-name">
-							<strong>{% block title %}NEO exchange{% endblock %}</strong>
+							<strong>{% block title %}Minor planet follow-up portal{% endblock %}</strong>
 						</div>
 					</div>
 					</div>

@@ -101,6 +101,8 @@ TEMPLATES = [
     },
 ]
 
+LOGIN_REDIRECT_URL = '/'
+
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
@@ -122,7 +124,7 @@ OPBEAT = {
     'ORGANIZATION_ID': os.environ.get('NEOX_OPBEAT_ORGID',''),
     'APP_ID': os.environ.get('NEOX_OPBEAT_APPID',''),
     'SECRET_TOKEN': os.environ.get('NEOX_OPBEAT_TOKEN',''),
-    'DEBUG': DEBUG,
+    'DEBUG': False,
 }
 
 LOGGING = {

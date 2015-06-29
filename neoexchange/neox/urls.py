@@ -17,8 +17,10 @@ from django.conf.urls import include, url
 from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.views.generic import ListView, DetailView
+from django.core.urlresolvers import reverse_lazy
 from core.models import Body, Block
 from core.views import BodySearchView,BodyDetailView, ScheduleParameters, ephemeris, home
+from django.contrib.auth.views import login, logout
 
 admin.autodiscover()
 
@@ -33,6 +35,8 @@ urlpatterns = [
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     # url(r'^schedule/success/$',ScheduleSuccess.as_view(), name='schedule-success'),
     # url(r'^schedule/$', SchedFormDisplay.as_view(), name='schedule'),
+    url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
+    url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout' ),
     url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', include(admin.site.urls)),
 ]
