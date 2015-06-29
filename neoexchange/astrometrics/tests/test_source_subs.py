@@ -17,6 +17,7 @@ from django.test import TestCase
 from django.forms.models import model_to_dict
 from core.models import Body
 from datetime import datetime, timedelta
+from unittest import skipIf
 
 from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
@@ -82,6 +83,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+    @skipIf(True, "needs mocking, submits to real scheduler")
     def test_submit_body_for_cpt(self):
 
         body_elements = model_to_dict(self.body)

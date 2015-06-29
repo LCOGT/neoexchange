@@ -29,6 +29,7 @@ from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcorbit, submit_block_to_scheduler
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
+from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
 import json
@@ -408,13 +409,15 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     if elements != None:
         params = {
                 'epochofel'     : datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
+                'abs_mag'       : elements['absolute magnitude'],
+                'slope'         : elements['phase slope'],
                 'meananom'      : elements['mean anomaly'],
                 'argofperih'    : elements['argument of perihelion'],
                 'longascnode'   : elements['ascending node'],
                 'orbinc'        : elements['inclination'],
                 'eccentricity'  : elements['eccentricity'],
                 'meandist'      : elements['semimajor axis'],
-                'source_type'   : 'A',
+                'source_type'   : determine_asteroid_type(float(elements['perihelion distance']), float(elements['eccentricity'])),
                 'elements_type' : 'MPC_MINOR_PLANET',
                 'active'        : True,
                 'origin'        : origin,
@@ -430,13 +433,13 @@ def update_MPC_orbit(obj_id, dbg=False, origin='M'):
     elements = fetch_mpcorbit(obj_id, dbg)
     try:
         body, created = Body.objects.get_or_create(name=obj_id)
-    except MultipleObjectsReturned:
+    except Body.MultipleObjectsReturned:
         # When the crossid happens we end up with multiple versions of the body.
         # Need to pick the one has been most recently updated
-        bodies = Body.objects.filter(name=obj_id,provisional_name__isnull=False).order('-ingest')
+        bodies = Body.objects.filter(name=obj_id,provisional_name__isnull=False).order_by('-ingest')
         created = False
         if not bodies:
-            bodies = Body.objects.filter(name=obj_id).order('-ingest')
+            bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
         body = bodies[0]
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
