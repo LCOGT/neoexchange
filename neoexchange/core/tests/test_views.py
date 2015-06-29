@@ -21,6 +21,7 @@ from django.template.loader import render_to_string
 from django.views.generic import ListView
 from django.forms.models import model_to_dict
 from django.utils.html import escape
+from django.contrib.auth.models import User
 from unittest import skipIf
 
 #Import module to test
@@ -289,8 +290,18 @@ class ScheduleTargetsPageTest(TestCase):
                                  'title' : 'Test Proposal'
                                }
         self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
+        # Create a user to test login
+        self.bart= User.objects.create_user(username='bart', password='simpson', email='bart@simpson.org')
+        self.bart.first_name= 'Bart'
+        self.bart.last_name = 'Simpson'
+        self.bart.is_active=1
+        self.bart.save()
+
+    def login(self):
+        self.assertTrue(self.client.login(username='bart', password='simpson'))
 
     def test_uses_schedule_template(self):
+        self.login()
         response = self.client.get(reverse('schedule-body', kwargs={'pk':self.body.pk}),
             data = {'body_id'   : self.body.pk,
                     'site_code' : 'F65',
@@ -300,6 +311,7 @@ class ScheduleTargetsPageTest(TestCase):
         self.assertTemplateUsed(response, 'core/schedule.html')
 
     def test_schedule_page_contains_object_name(self):
+        self.login()
         response = self.client.get(reverse('schedule-body', kwargs={'pk':self.body.pk}),
             data = {'body_id'   : self.body.pk,
                     'site_code' : 'F65',

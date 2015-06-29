@@ -4,9 +4,21 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from datetime import datetime
 from django.core.urlresolvers import reverse
+from django.contrib.auth.models import User
 from core.models import Body, Proposal
 
 class ScheduleObservations(FunctionalTest):
+
+    def setUp(self):
+        # Create a user to test login
+        self.bart= User.objects.create_user(username='bart', password='simpson', email='bart@simpson.org')
+        self.bart.first_name= 'Bart'
+        self.bart.last_name = 'Simpson'
+        self.bart.is_active=1
+        self.bart.save()
+
+    def login(self):
+        self.assertTrue(self.client.login(username='bart', password='simpson'))
 
     def insert_test_bodies(self):
         params1 = { 'provisional_name' : 'N999r0q',
@@ -44,6 +56,7 @@ class ScheduleObservations(FunctionalTest):
         self.body2, created = Body.objects.get_or_create(**params2)
 
     def test_can_schedule_observations(self):
+        self.login()
 
         ## Insert test bodies and proposals otherwise things will fail
         self.insert_test_bodies()
@@ -102,3 +115,13 @@ class ScheduleObservations(FunctionalTest):
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object',submit)
         self.fail("Finish the test!")
+
+    def test_cannot_schedule_observations(self):
+        # Sharon tries the same as above but forgets to login
+        start_url = reverse('target',kwargs={'pk':1})
+        self.browser.get(self.live_server_url + start_url)
+        link = self.browser.find_element_by_link_text('Schedule Observations')
+        link.click()
+        self.browser.implicitly_wait(10)
+        new_url = self.browser.current_url
+        self.assertContains(str(new_url), 'login')

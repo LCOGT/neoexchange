@@ -72,13 +72,12 @@ STATICFILES_FINDERS = (
  )
 
 MIDDLEWARE_CLASSES = (
+    'opbeat.contrib.django.middleware.OpbeatAPMMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    # Uncomment the next line for simple clickjacking protection:
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
 ROOT_URLCONF = 'neox.urls'
@@ -116,7 +115,15 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.messages',
     'reversion',
+    'opbeat.contrib.django',
 )
+
+OPBEAT = {
+    'ORGANIZATION_ID': os.environ.get('NEOX_OPBEAT_ORGID',''),
+    'APP_ID': os.environ.get('NEOX_OPBEAT_APPID',''),
+    'SECRET_TOKEN': os.environ.get('NEOX_OPBEAT_TOKEN',''),
+    'DEBUG': DEBUG,
+}
 
 LOGGING = {
     'version': 1,

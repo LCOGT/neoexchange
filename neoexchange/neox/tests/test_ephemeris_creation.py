@@ -42,8 +42,8 @@ class NewVisitorTest(FunctionalTest):
         # He notices there are several targets that could be followed up
         self.check_for_header_in_table('id_neo_targets',
             'Target Name Type Origin Ingested')
-        testlines =[u'N999r0q\nUnknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M'),
-                    u'P10kfud\nUnknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M')]
+        testlines =[u'N999r0q Unknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M'),
+                    u'P10kfud Unknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M')]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # He is invited to enter a target to compute an ephemeris
