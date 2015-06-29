@@ -30,6 +30,16 @@ RUN yum -y install epel-release \
         && yum -y groupinstall "Development Tools" \
         && yum -y update
 
+# Setup our python env now so it can be cached
+COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
+# Install the LCOGT NEO exchange Python required packages
+RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
+		&& pip install -r /var/www/apps/neoexchange/requirements.txt
+
+# LCOGT packages which have to be installed after the normal pip install
+RUN pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
+		&& pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
+
 # Ensure crond will run on all host operating systems
 RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
 
@@ -55,14 +65,6 @@ COPY config/init /init
 
 # Copy the LCOGT Mezzanine webapp files
 COPY neoexchange /var/www/apps/neoexchange
-
-# Install the LCOGT NEO exchange Python required packages
-RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
-		&& pip install -r /var/www/apps/neoexchange/requirements.txt
-
-# LCOGT packages which have to be installed after the normal pip install
-RUN pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
-		&& pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
 
 # Setup the LCOGT NEOx webapp
 RUN python /var/www/apps/neoexchange/manage.py collectstatic --noinput
