@@ -27,7 +27,8 @@ OBJECT_TYPES = (
                 ('T','Trojan'),
                 ('U','Unknown/NEO Candidate'),
                 ('X','Did not exist'),
-                ('W','Was not interesting')
+                ('W','Was not interesting'),
+                ('D','Discovery, non NEO'),
             )
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
@@ -38,7 +39,8 @@ ORIGINS = (
             ('S','Spaceguard'),
             ('D','NEODSYS'),
             ('G','Goldstone'),
-            ('A','Arecibo')
+            ('A','Arecibo'),
+            ('L','LCOGT')
             )
 
 TELESCOPE_CHOICES = (
@@ -74,7 +76,7 @@ class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
     pi = models.CharField(max_length=50, default='')
-    tag = models.CharField(max_length=10, default='LCO')
+    tag = models.CharField(max_length=10, default='LCOGT')
 
     class Meta:
         db_table = 'ingest_proposal'
@@ -111,12 +113,22 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=now)
 
     def epochofel_mjd(self):
-        t = Time(self.epochofel.isoformat(), format='isot', scale='tt')
-        return t.mjd
+        mjd = None
+        try:
+            t = Time(self.epochofel.isoformat(), format='isot', scale='tt')
+            mjd = t.mjd
+        except:
+            pass
+        return mjd
 
     def epochofperih_mjd(self):
-        t = Time(self.epochofperih.isoformat(), format='isot', scale='tt')
-        return t.mjd
+        mjd = None
+        try:
+            t = Time(self.epochofperih.isoformat(), format='isot', scale='tt')
+            mjd = t.mjd
+        except:
+            pass
+        return mjd
 
     def current_name(self):
         if self.name:
