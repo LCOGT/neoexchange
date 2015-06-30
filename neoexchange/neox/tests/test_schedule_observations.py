@@ -16,6 +16,7 @@ class ScheduleObservations(FunctionalTest):
         self.bart.last_name = 'Simpson'
         self.bart.is_active=1
         self.bart.save()
+        super(ScheduleObservations,self).setUp()
 
     def login(self):
         self.assertTrue(self.client.login(username='bart', password='simpson'))

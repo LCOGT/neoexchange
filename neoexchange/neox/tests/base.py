@@ -1,8 +1,8 @@
-from django.test import LiveServerTestCase
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium import webdriver
 from core.models import Body, Proposal
 
-class FunctionalTest(LiveServerTestCase):
+class FunctionalTest(StaticLiveServerTestCase):
 
 
     def insert_test_body(self):
