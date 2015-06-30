@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Substitute the prefix into the nginx configuration
+# If any schema changed have happened but not been applied
+python /var/www/apps/neoexchange/manage.py migrate --noinput
+
+# Run under supervisord
+exec /usr/bin/supervisord -n -c /etc/supervisord.conf

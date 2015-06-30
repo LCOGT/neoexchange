@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from datetime import datetime
-from ingest.models import Body
+from core.models import Body
 
 class NewVisitorTest(FunctionalTest):
 
@@ -28,8 +28,6 @@ class NewVisitorTest(FunctionalTest):
 
 
     def test_can_compute_ephemeris(self):
-        ## Insert test body otherwise things will fail
-        self.insert_test_body()
 
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
@@ -37,29 +35,28 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices the page title has the name of the site and the header
         # mentions current targets
-        self.assertIn('NEOexchange', self.browser.title)
-        header_text = self.browser.find_element_by_tag_name('h1').text
-        self.assertIn('Current Targets', header_text)
+        self.assertIn('Home | LCOGT NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('masthead').text
+        self.assertIn('active targets', header_text)
 
         # He notices there are several targets that could be followed up
         self.check_for_header_in_table('id_neo_targets',
             'Target Name Type Origin Ingested')
-        self.check_for_row_in_table('id_neo_targets',
-            'N999r0q Unknown/NEO Candidate MPC April 8, 2015, 9:23 p.m.')
-        self.check_for_row_in_table('id_neo_targets',
-            'P10kfud Unknown/NEO Candidate MPC April 8, 2015, 8:57 p.m.')
+        testlines =[u'N999r0q Unknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M'),
+                    u'P10kfud Unknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M')]
+        self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # He is invited to enter a target to compute an ephemeris
         inputbox = self.get_item_input_box()
         self.assertEqual(
             inputbox.get_attribute('placeholder'), 
-            'Enter a target name'
+            'Enter target name...'
         )
 
         # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
         inputbox.send_keys('N999r0q')
 
-        datebox = self.get_item_input_box('id_date')
+        datebox = self.get_item_input_box_and_clear('id_utc_date')
         datebox.send_keys('2015-04-21')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
@@ -69,7 +66,8 @@ class NewVisitorTest(FunctionalTest):
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
-        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for V37')
+        menu = self.browser.find_element_by_id('extramenu').text
+        self.assertIn('Ephemeris for N999r0q at V37', menu)
 
         self.check_for_header_in_table('id_ephemeris_table',
             'Date/Time (UTC) RA Dec Mag "/min Alt Moon Phase Moon Dist. Moon Alt. Score H.A.'
@@ -78,17 +76,17 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25'
         )
 
-        # There is a button asking whether to schedule the target
+        # # There is a button asking whether to schedule the target
+        # link = self.browser.find_element_by_link_text('No')
 
-        # He clicks 'No' and is returned to the front page
-        self.assertIn('NEOexchange', self.browser.title)
+        # # He clicks 'No' and is returned to the front page
+        # link.click()
+        # self.assertIn('NEOx home | LCOGT', self.browser.title)
 
         # Satisfied, he goes back to sleep
 
 
     def test_can_compute_ephemeris_for_specific_site(self):
-        ## Insert test body otherwise things will fail
-        self.insert_test_body()
 
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
@@ -98,7 +96,7 @@ class NewVisitorTest(FunctionalTest):
         inputbox = self.get_item_input_box()
         self.assertEqual(
             inputbox.get_attribute('placeholder'),
-            'Enter a target name'
+            'Enter target name...'
         )
 
         # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
@@ -106,13 +104,18 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices a new selection for the site code and chooses FTN (F65)
         # XXX Code smell: Too many static text constants
-        site_choices = Select(self.browser.find_element_by_id('id_sitecode'))
+        site_choices = Select(self.browser.find_element_by_id('id_site_code'))
         self.assertIn('FTN (F65)', [option.text for option in site_choices.options])
 
         site_choices.select_by_visible_text('FTN (F65)')
 
-        datebox = self.get_item_input_box('id_date')
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
         datebox.send_keys('2015-04-21')
+
+        altlimitbox = self.get_item_input_box('id_alt_limit')
+        altlimitbox.clear()
+        altlimitbox.send_keys('20')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
@@ -122,7 +125,8 @@ class NewVisitorTest(FunctionalTest):
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
-        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for F65')
+        menu = self.browser.find_element_by_id('extramenu').text
+        self.assertIn('Ephemeris for N999r0q at F65', menu)
 
         # Check the results for V37 are not in the table
         table = self.browser.find_element_by_id('id_ephemeris_table')
@@ -140,8 +144,6 @@ class NewVisitorTest(FunctionalTest):
 
 
     def test_can_compute_ephemeris_for_specific_date(self):
-        ## Insert test body otherwise things will fail
-        self.insert_test_body()
 
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
@@ -151,7 +153,7 @@ class NewVisitorTest(FunctionalTest):
         inputbox = self.get_item_input_box()
         self.assertEqual(
             inputbox.get_attribute('placeholder'),
-            'Enter a target name'
+            'Enter target name...'
         )
 
         # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
@@ -159,22 +161,24 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
-        site_choices = Select(self.get_item_input_box('id_sitecode'))
+        site_choices = Select(self.get_item_input_box('id_site_code'))
         self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
 
         site_choices.select_by_visible_text('ELP (V37)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
-        datebox = self.get_item_input_box('id_date')
+        datebox = self.get_item_input_box('id_utc_date')
         current_date = datetime.utcnow().date()
         current_date_str = current_date.strftime('%Y-%m-%d')
         self.assertEqual(
-            datebox.get_attribute('placeholder'),
+            datebox.get_attribute('value'),
             current_date_str
         )
 
         # He decides to see where it will be on a specific date in a future
+        # so clears the box and put his new date in
+        datebox.clear()
         datebox.send_keys('2015-04-28')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
@@ -185,7 +189,8 @@ class NewVisitorTest(FunctionalTest):
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
-        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for V37')
+        menu = self.browser.find_element_by_id('extramenu').text
+        self.assertIn('Ephemeris for N999r0q at V37', menu)
 
         # Check the results for default date are not in the table
         table = self.browser.find_element_by_id('id_ephemeris_table')
@@ -203,8 +208,6 @@ class NewVisitorTest(FunctionalTest):
 
 
     def test_can_compute_ephemeris_for_specific_alt_limit(self):
-        ## Insert test body otherwise things will fail
-        self.insert_test_body()
 
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
@@ -214,7 +217,7 @@ class NewVisitorTest(FunctionalTest):
         inputbox = self.get_item_input_box()
         self.assertEqual(
             inputbox.get_attribute('placeholder'),
-            'Enter a target name'
+            'Enter target name...'
         )
 
         # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
@@ -222,28 +225,29 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices a new selection for the site code and chooses CPT (K91)
         # XXX Code smell: Too many static text constants
-        site_choices = Select(self.get_item_input_box('id_sitecode'))
+        site_choices = Select(self.get_item_input_box('id_site_code'))
         self.assertIn('CPT (K91-93)', [option.text for option in site_choices.options])
 
         site_choices.select_by_visible_text('CPT (K91-93)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
-        datebox = self.get_item_input_box('id_date')
+        datebox = self.get_item_input_box('id_utc_date')
         current_date = datetime.utcnow().date()
         current_date_str = current_date.strftime('%Y-%m-%d')
         self.assertEqual(
-            datebox.get_attribute('placeholder'),
+            datebox.get_attribute('value'),
             current_date_str
         )
 
         # He decides to see where it will be on a specific date in a future
+        datebox.clear()
         datebox.send_keys('2015-09-04')
 
         # He notices a new textbox for the altitude limit that is wanted, below
         # which he doesn't want to see ephemeris output. It is filled in with 
         # the default value of 30.0 degrees
-        datebox = self.get_item_input_box('id_altlimit')
+        datebox = self.get_item_input_box('id_alt_limit')
         self.assertEqual(datebox.get_attribute('value'), str(30.0))
 
 
@@ -255,7 +259,8 @@ class NewVisitorTest(FunctionalTest):
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
-        self.check_for_row_in_table('id_planning_table', 'Computing ephemeris for: N999r0q for K92')
+        menu = self.browser.find_element_by_id('extramenu').text
+        self.assertIn('Ephemeris for N999r0q at K92', menu)
 
         # Check the results for default date are not in the table
         table = self.browser.find_element_by_id('id_ephemeris_table')

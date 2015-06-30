@@ -1,11 +1,45 @@
-from django.test import LiveServerTestCase
+from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium import webdriver
+from core.models import Body, Proposal
 
-class FunctionalTest(LiveServerTestCase):
+class FunctionalTest(StaticLiveServerTestCase):
+
+
+    def insert_test_body(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+    def insert_test_proposals(self):
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        test_proposal_params = { 'code'  : 'LCOEngineering',
+                                 'title' : 'Test Proposal'
+                               }
+        self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
 
     def setUp(self):
         self.browser = webdriver.Firefox()
         self.browser.implicitly_wait(5)
+        self.insert_test_body()
+        self.insert_test_proposals()
 
     def tearDown(self):
         self.browser.refresh()
@@ -25,3 +59,8 @@ class FunctionalTest(LiveServerTestCase):
 
     def get_item_input_box(self, element_id='id_target'):
         return self.browser.find_element_by_id(element_id)
+
+    def get_item_input_box_and_clear(self, element_id='id_target'):
+        inputbox = self.browser.find_element_by_id(element_id)
+        inputbox.clear()
+        return inputbox

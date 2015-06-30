@@ -2,10 +2,11 @@
 # Django settings for neox project.
 
 import os, sys
+from django.utils.crypto import get_random_string
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
-DEBUG = False
+DEBUG = True
 BRANCH = os.environ.get('BRANCH',None)
 if BRANCH:
     BRANCH = '-' + BRANCH
@@ -14,8 +15,6 @@ else:
 
 PREFIX =""
 BASE_DIR = os.path.dirname(CURRENT_PATH)
-
-TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -63,37 +62,22 @@ MEDIA_URL = '/media/'
 
 STATIC_ROOT = '/var/www/html/static/'
 STATIC_URL = PREFIX + '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'ingest'),]
+STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
 
 # List of finder classes that know how to find static files in
 # various locations.
 STATICFILES_FINDERS = (
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
-)
-
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
-)
-
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.core.context_processors.request",
-    'django.contrib.auth.context_processors.auth',
-)
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder"
+ )
 
 MIDDLEWARE_CLASSES = (
+    'opbeat.contrib.django.middleware.OpbeatAPMMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.middleware.transaction.TransactionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    # Uncomment the next line for simple clickjacking protection:
-    # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
 ROOT_URLCONF = 'neox.urls'
@@ -101,17 +85,30 @@ ROOT_URLCONF = 'neox.urls'
 # Python dotted path to the WSGI application used by Django's runserver.
 WSGI_APPLICATION = 'neox.wsgi.application'
 
-TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-    # Always use forward slashes, even on Windows.
-    # Don't forget to use absolute paths, not relative paths.
-    os.path.join(BASE_DIR,'ingest','templates'),
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
+LOGIN_REDIRECT_URL = '/'
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
     'grappelli',
+    'neox',
+    'core',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -119,24 +116,16 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.messages',
-    'neox',
-    'ingest',
     'reversion',
-    'south'
+    'opbeat.contrib.django',
 )
 
-##################
-# LOCAL SETTINGS #
-##################
-
-# Allow any settings to be defined in local_settings.py which should be
-# ignored in your version control system allowing for settings to be
-# defined per machine.
-try:
-    from local_settings import *
-except ImportError as e:
-    if "local_settings" not in str(e):
-        raise e
+OPBEAT = {
+    'ORGANIZATION_ID': os.environ.get('NEOX_OPBEAT_ORGID',''),
+    'APP_ID': os.environ.get('NEOX_OPBEAT_APPID',''),
+    'SECRET_TOKEN': os.environ.get('NEOX_OPBEAT_TOKEN',''),
+    'DEBUG': False,
+}
 
 LOGGING = {
     'version': 1,
@@ -169,7 +158,7 @@ LOGGING = {
             'filters': ['require_debug_false']
         },
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
         }
     },
@@ -180,14 +169,67 @@ LOGGING = {
             'propagate': True,
         },
         'django': {
-            'handlers':['file','console'],
+            'handlers':['file'],
             'propagate': True,
-            'level':'DEBUG',
+            'level':'ERROR',
         },
-        'ingest' : {
+        'core' : {
             'handlers' : ['file','console'],
             'level'    : 'DEBUG',
         }
     }
 }
+
+chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+SECRET_KEY = get_random_string(50, chars)
+
+DATABASES = {
+    "default": {
+        # Live DB
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "neoexchange",
+        "USER": os.environ.get('NEOX_DB_USER',''),
+        "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
+        "HOST": os.environ.get('NEOX_DB_HOST',''),
+        "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
+
+    }
+}
+
+#######################
+# Test Database setup #
+#######################
+
+if 'test' in sys.argv:
+    # If you also want to speed up password hashing in test cases.
+    PASSWORD_HASHERS = (
+        'django.contrib.auth.hashers.MD5PasswordHasher',
+    )
+    # Use SQLite3 for the database engine during testing.
+    DATABASES = { 'default':
+        {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'test_db', # Add the name of your SQLite3 database file here.
+        },
+        'rbauth':
+                {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'test_rbauth', # Add the name of your SQLite3 database file here.
+        }
+    }
+
+##################
+# LOCAL SETTINGS #
+##################
+
+# Allow any settings to be defined in local_settings.py which should be
+# ignored in your version control system allowing for settings to be
+# defined per machine.
+if not CURRENT_PATH.startswith('/var/www'):
+    try:
+        from local_settings import *
+    except ImportError as e:
+        if "local_settings" not in str(e):
+            raise e
+
 

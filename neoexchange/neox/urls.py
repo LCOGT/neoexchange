@@ -12,23 +12,36 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
-from django.conf.urls import patterns, include, url
-from django.contrib import admin
 from django.conf import settings
-from django.conf.urls.static import static
+from django.conf.urls import include, url
+from django.contrib.staticfiles import views
+from django.contrib import admin
 from django.views.generic import ListView, DetailView
-from ingest.views import BodySearchView
-from ingest.models import Body, Block
+from django.core.urlresolvers import reverse_lazy
+from core.models import Body, Block
+from core.views import BodySearchView,BodyDetailView, ScheduleParameters, ephemeris, home
+from django.contrib.auth.views import login, logout
 
 admin.autodiscover()
 
-urlpatterns = patterns('ingest.views',
-    url(r'^$', 'home', name='home'),
+urlpatterns = [
+    url(r'^$', home, name='home'),
     url(r'^block/list/$', ListView.as_view(model=Block, queryset=Block.objects.filter(active=True).order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
-    url(r'^target/(?P<pk>\d+)/$',DetailView.as_view(model=Body, context_object_name='body'), name='target'),
+    url(r'^target/(?P<pk>\d+)/$',BodyDetailView.as_view(model=Body), name='target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
-    url(r'^ephemeris/$', 'ephemeris', name='ephemeris'),
+    url(r'^ephemeris/$', ephemeris, name='ephemeris'),
+    # url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleConfirm.as_view(), name='schedule-confirm'),
+    url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
+    # url(r'^schedule/success/$',ScheduleSuccess.as_view(), name='schedule-success'),
+    # url(r'^schedule/$', SchedFormDisplay.as_view(), name='schedule'),
+    url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
+    url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout' ),
     url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', include(admin.site.urls)),
-)+ static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+]
+
+if settings.DEBUG:
+    urlpatterns += [
+        url(r'^static/(?P<path>.*)$', views.serve),
+    ]

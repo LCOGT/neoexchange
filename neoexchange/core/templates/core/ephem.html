@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load url from future %}
+
+{% block header %}Ephemeris for {{ target.current_name }} at {{ site_code }}{% endblock %}
+
+
+{% block bodyclass %}page{% endblock %}
+{% block extramenucss %}extramenu{% endblock %}
+
+{% block extramenu %}
+                    <div class="headingleft">
+                        <h1>Ephemeris for <a href="{% url 'target' target.pk %}">{{ target.current_name }}</a> at {{ site_code }}</h1>
+                    </div>
+{% endblock%}
+
+{% block main-content %}
+<div id="main" class="fill-height">
+    <div id="schedule_obs" class="row">
+        <div class="sixcol">
+            <a class="btn btn-secondary" href="{% url 'schedule-body' target.id %}">Schedule Observations</a>
+            <a href="{% url 'target' target.pk %}">Back to info page for {{ target.current_name }} &rarr;</a>
+        </div>
+    </div>
+    <div class="row rowfull">
+        <div class="smalltext">
+            <table id="id_ephemeris_table" class="datatable">
+                <thead>
+                    <tr>
+                        <th class="wider">
+                            <span id="date">Date/Time (UTC)</span>
+                        </th>
+                        <th>
+                            <span id="ra">RA</span>
+                        </th>
+                        <th>
+                            <span id="dec">Dec</span>
+                        </th>
+                        <th>
+                            <span id="magnitude">Mag</span>
+                        </th>
+                        <th>
+                            <span id="speed">"/min</span>
+                        </th>
+                        <th>
+                            <span id="altitude">Alt</span>
+                        </th>
+                        <th>
+                            <span id="moonphase">Moon Phase</span>
+                        </th>
+                        <th>
+                            <span id="moondist">Moon Dist.</span>
+                        </th>
+                        <th>
+                            <span id="moonalt">Moon Alt.</span>
+                        </th>
+                        <th>
+                            <span id="score">Score</span>
+                        </th>
+                        <th>
+                            <span id="hourangle">H.A.</span>
+                        </th>
+                   </tr>
+                </thead>
+                <tbody>
+                    {% for line in ephem_lines %}
+                    <tr  class="{% cycle 'odd' 'even' %}">
+                        <td>{{ line.0 }}</td>
+                        <td>{{ line.1 }}</td>
+                        <td>{{ line.2 }}</td>
+                        <td>{{ line.3 }}</td>
+                        <td>{{ line.4 }}</td>
+                        <td>{{ line.5 }}</td>
+                        <td>{{ line.6}}</td>
+                        <td>{{ line.7 }}</td>
+                        <td>{{ line.8 }}</td>
+                        <td>{{ line.9 }}</td>
+                        <td>{{ line.10 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

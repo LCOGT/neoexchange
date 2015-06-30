@@ -1,4 +1,4 @@
 # Put your cron jobs here
 10 5 * * * python /var/www/apps/neoexchange/manage.py fetch_goldstone_targets
-10 5 * * * python /var/www/apps/neoexchange/manage.py update_neocp_data
-10 5 * * * python /var/www/apps/neoexchange/manage.py update_crossids
+20 5 * * * python /var/www/apps/neoexchange/manage.py update_neocp_data
+30 5 * * * python /var/www/apps/neoexchange/manage.py update_crossids
