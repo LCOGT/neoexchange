@@ -134,6 +134,36 @@ class TestClean_NEOCP_Object(TestCase):
         obj_id ='N007riz'
         update_MPC_orbit(obj_id)
 
+    def test_create_discovered_object(self):
+        obj_id ='LSCTLF8'
+        elements = { 'abs_mag'     : 16.2,
+                      'slope'       : 0.15,
+                      'epochofel'   : datetime(2015, 6, 23, 0, 0, 0),
+                      'meananom'    : 333.70614,
+                      'argofperih'  :  40.75306,
+                      'longascnode' : 287.97838,
+                      'orbinc'      :  23.61657,
+                      'eccentricity':  0.1186953,
+                      'meandist'    :  2.7874893,
+                      'elements_type': 'MPC_MINOR_PLANET',
+                      'origin'      : 'L',
+                      'source_type' : 'D',
+                      'active'      : True
+                    }
+        body, created = Body.objects.get_or_create(provisional_name=obj_id)
+        # We are creating this object
+        self.assertEqual(True,created)
+        resp = save_and_make_revision(body,elements)
+        # Need to call full_clean() to validate the fields as this is not
+        # done on save() (called by get_or_create() or save_and_make_revision())
+        body.full_clean()
+        # We are saving all the detailing elements
+        self.assertEqual(True,resp)
+
+        # Test it came from LCOGT as a discovery
+        self.assertEqual('L', body.origin)
+        self.assertEqual('D', body.source_type)
+
 
 class HomePageTest(TestCase):
 
