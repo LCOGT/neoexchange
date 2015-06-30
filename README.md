@@ -1,7 +1,7 @@
 NEO Exchange
 ============
 
-Portal for scheduling observations of NEOs using LCOGT (Version 1.0)
+Portal for scheduling observations of NEOs using LCOGT (Version 1.0.1)
 
 Setup
 -----
@@ -81,4 +81,4 @@ STATIC_ROOT = os.path.abspath(os.path.join(BASE_DIR, '../../static/'))
 
 To prepare the local SQLite DB for use, you should follow these steps:
 1. `cd neoexchange\neoexchange`
-2. Run `python manage.py syncdb`. This is perform migrations as necessary.
+2. Run `python manage.py syncdb`. This will perform migrations as necessary.
