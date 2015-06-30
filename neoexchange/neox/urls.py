@@ -19,7 +19,7 @@ from django.contrib import admin
 from django.views.generic import ListView, DetailView
 from django.core.urlresolvers import reverse_lazy
 from core.models import Body, Block
-from core.views import BodySearchView,BodyDetailView, ScheduleParameters, ephemeris, home
+from core.views import BodySearchView,BodyDetailView, ScheduleParameters, ScheduleSubmit, ephemeris, home
 from django.contrib.auth.views import login, logout
 
 admin.autodiscover()
@@ -31,7 +31,7 @@ urlpatterns = [
     url(r'^target/(?P<pk>\d+)/$',BodyDetailView.as_view(model=Body), name='target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
-    # url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleConfirm.as_view(), name='schedule-confirm'),
+    url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     # url(r'^schedule/success/$',ScheduleSuccess.as_view(), name='schedule-success'),
     # url(r'^schedule/$', SchedFormDisplay.as_view(), name='schedule'),
