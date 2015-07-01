@@ -32,21 +32,12 @@ RUN yum -y install epel-release \
 
 # Setup our python env now so it can be cached
 COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
-<<<<<<< HEAD
 
 # Install the LCOGT NEO exchange Python required packages
 # Then the LCOGT packages which have to be installed after the normal pip install
 RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
 		&& pip install -r /var/www/apps/neoexchange/requirements.txt
 		&& pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
-=======
-# Install the LCOGT NEO exchange Python required packages
-RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
-		&& pip install -r /var/www/apps/neoexchange/requirements.txt
-
-# LCOGT packages which have to be installed after the normal pip install
-RUN pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
->>>>>>> origin/master
 		&& pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
 
 # Ensure crond will run on all host operating systems
