@@ -36,7 +36,7 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # Install the LCOGT NEO exchange Python required packages
 # Then the LCOGT packages which have to be installed after the normal pip install
 RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
-		&& pip install -r /var/www/apps/neoexchange/requirements.txt
+		&& pip install -r /var/www/apps/neoexchange/requirements.txt \
 		&& pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
 		&& pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
 

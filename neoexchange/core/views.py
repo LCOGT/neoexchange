@@ -135,6 +135,7 @@ class ScheduleParameters(LoginRequiredMixin,LookUpBodyMixin, FormView):
             return self.render_to_response(self.get_context_data(form=form,body=self.body))
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
+
     template_name = 'core/schedule_confirm.html'
     form_class = ScheduleBlockForm
     model = Body
@@ -193,6 +194,7 @@ def schedule_check(data,body,ok_to_schedule):
     return resp
 
 def schedule_submit(data,body):
+
     # Assemble request
     # Send to scheduler
     body_elements = model_to_dict(body)

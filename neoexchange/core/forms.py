@@ -59,24 +59,24 @@ class ScheduleBlockForm(forms.Form):
         if start <= datetime.now():
             raise forms.ValidationError("Window cannot start in the past")
         else:
-            return self.cleaned_data
+            return self.cleaned_data['start_time']
 
     def clean_end_time(self):
         end = self.cleaned_data['end_time']
         if end <= datetime.now():
             raise forms.ValidationError("Window cannot end in the past")
         else:
-            return self.cleaned_data
+            return self.cleaned_data['end_time']
 
     def clean_exp_length(self):
         if self.cleaned_data['exp_length'] > 0.:
-            return self.cleaned_data
+            return self.cleaned_data['exp_length']
         else:
             raise forms.ValidationError("Exposure length is too short")
 
     def clean_exp_count(self):
         if self.cleaned_data['exp_count'] > 1:
-            return self.cleaned_data
+            return self.cleaned_data['exp_count']
         else:
             raise forms.ValidationError("There must be more than 1 exposure")
 
