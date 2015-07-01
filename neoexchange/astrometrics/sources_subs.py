@@ -494,7 +494,7 @@ def fetch_goldstone_targets(dbg=False):
 def make_location(params):
     location = {
         'telescope_class' : params['pondtelescope'][0:3],
-        'site'        : params['site'],
+        'site'        : params['site'].lower(),
         'observatory' : params['observatory'],
         'telescope'   : '',
     }
