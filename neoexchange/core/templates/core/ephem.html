@@ -76,6 +76,12 @@
                         <td>{{ line.9 }}</td>
                         <td>{{ line.10 }}</td>
                     </tr>
+                    {% empty %}
+                        <div class="row">
+                            <div class="messages error">
+                                No visibility for this target from this site on this date.
+                            </div>
+                        </div>
                     {% endfor %}
                 </tbody>
             </table>
