@@ -75,18 +75,18 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     else:
         epoch_mjd = orbelems['epoch']
 
-    logger.debug('Element Epoch=', epoch_mjd)
-    logger.debug('MJD(UTC) =  ', mjd_utc)
-    logger.debug(' JD(UTC) =', mjd_utc + 2400000.5)
+    logger.debug('Element Epoch= %.1f' % (epoch_mjd))
+    logger.debug('MJD(UTC) =   %.15f' % (mjd_utc))
+    logger.debug(' JD(UTC) = %.8f' % (mjd_utc + 2400000.5))
 
 # Convert MJD(UTC) to MJD(TT)
     mjd_tt = mjd_utc2mjd_tt(mjd_utc)
-    logger.debug('MJD(TT)  =  %.15f' % (mjd_tt))
+    logger.debug('MJD(TT)  =   %.15f' % (mjd_tt))
 
 # Compute UT1-UTC
 
     dut = ut1_minus_utc(mjd_utc)
-    logger.debug("UT1-UTC  =%s" % dut)
+    logger.debug("UT1-UTC  = %.15f" % (dut))
 
 # Obtain precession-nutation 3x3 rotation matrix
 # Should really be TDB but "TT will do" says The Wallace...
@@ -100,7 +100,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 #    (site_num, site_name, site_long, site_lat, site_hgt) = S.sla_obs(0, 'SAAO74')
 #    site_long = -site_long
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
-    logger.debug(sitecode, site_name, site_long, site_lat, site_hgt)
+    logger.debug("Site code/name, lat/long/height=%s %s %f %f %.1f" % (sitecode, site_name, site_long, site_lat, site_hgt))
 
 # Compute local apparent sidereal time
 # Do GMST first which takes UT1 and then add East longitiude and the equation of the equinoxes
@@ -108,8 +108,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 #
     gmst = S.sla_gmst(mjd_utc+(dut/86400.0))
     stl = gmst + site_long + S.sla_eqeqx(mjd_tt)
-    if dbg:
-        print 'GMST, LAST, EQEQX, GAST, long=', gmst, stl, S.sla_eqeqx(mjd_tt), gmst+S.sla_eqeqx(mjd_tt), site_long
+    logger.debug('GMST, LAST, EQEQX, GAST, long= %.17f %.17f %E %.17f %.17f' % (gmst, stl, S.sla_eqeqx(mjd_tt), gmst+S.sla_eqeqx(mjd_tt), site_long))
     pvobs = S.sla_pvobs(site_lat, site_hgt, stl)
 
     if site_name == '?':
@@ -915,7 +914,7 @@ def get_sitepos(site_code, dbg=False):
         site_name = site_name.rstrip()
         site_long = -site_long
 
-    logger.debug(site_name, site_long, site_lat, site_hgt)
+    logger.debug("Site name, lat/long/height=%s %f %f %.1f" % (site_name, site_long, site_lat, site_hgt))
     return (site_name, site_long, site_lat, site_hgt)
 
 def moon_ra_dec(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
