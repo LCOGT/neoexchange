@@ -986,7 +986,7 @@ def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat,\
 # due to observers' elevation above sea level)
 
     obs_alt = (pi/2.0)-obs_zd
-    logger.debug(obs_az, obs_zd, obs_alt)
+    logger.debug("Az, ZD, Alt=%f %f %f" % (obs_az, obs_zd, obs_alt))
     return (obs_az, obs_alt)
 
 def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
@@ -1028,11 +1028,12 @@ def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec,
 #
     gmst = S.sla_gmst(mjd_utc+(dut/86400.0))
     stl = gmst + obsvr_long + S.sla_eqeqx(mjd_tdb)
-    if dbg:
-        print 'GMST, LAST, EQEQX, GAST, long=', gmst, stl, S.sla_eqeqx(mjd_tdb), gmst+S.sla_eqeqx(mjd_tdb), obsvr_long
+
+    logger.debug('GMST, LAST, EQEQX, GAST, long= %.17f %.17f %E %.17f %.17f' % (gmst, stl, S.sla_eqeqx(mjd_tdb), gmst+S.sla_eqeqx(mjd_tdb), obsvr_long))
 
     (app_ra, app_dec) = S.sla_map(mean_ra, mean_dec, 0.0, 0.0, 0.0, 0.0, 2000.0, mjd_tdb)
-    logger.debug(app_ra, app_dec, radec2strings(app_ra, app_dec))
+    (ra_str, dec_str) = radec2strings(app_ra, app_dec)
+    logger.debug("%f %f %s %s" % (app_ra, app_dec, ra_str, dec_str))
     hour_angle = stl - app_ra
     logger.debug(hour_angle)
     hour_angle = S.sla_drange(hour_angle)
