@@ -57,6 +57,10 @@
                     <td class="kv-key">Exposure length</td>
                     <td class="kv-value">{{ data.exp_length|floatformat:1 }} secs</td>
                 </tr>
+                <tr id="id_window">
+                    <td class="kv-key">Window (UTC)</td>
+                    <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
+                </tr>
             </tbody>
         </table> 
     {% endif %}

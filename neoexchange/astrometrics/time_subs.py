@@ -123,7 +123,7 @@ def datetime2mjd_utc(d):
 def mjd_utc2mjd_tt(mjd_utc, dbg=False):
     '''Converts a MJD in UTC (MJD_UTC) to a MJD in TT (Terrestial Time) which is
     needed for any position/ephemeris-based calculations.
-    UTC->TT consists of: UTC->TAI = 10s offset + 24 leapseconds (last one 2009 Jan 1.)
+    UTC->TT consists of: UTC->TAI = 10s offset + 26 leapseconds (last one 2015 Jul 1.)
                          TAI->TT  = 32.184s fixed offset'''
 # UTC->TT offset
     tt_utc = S.sla_dtt(mjd_utc)

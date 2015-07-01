@@ -1,8 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django import forms
 from django.db.models import Q
 from .models import Body, Proposal
 from django.utils.translation import ugettext as _
+import logging
+logger = logging.getLogger(__name__)
 
 class EphemQuery(forms.Form):
     SITES = (('V37','ELP (V37)'),('F65','FTN (F65)'),('E10', 'FTS (E10)'),('W86','LSC (W85-87)'),('K92','CPT (K91-93)'),('Q63','COJ (Q63-64)'))
@@ -56,7 +58,10 @@ class ScheduleBlockForm(forms.Form):
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
-        if start <= datetime.now():
+        logger.debug("cleaned_data=%s" % (self.cleaned_data))
+        window_cutoff = datetime.now() - timedelta(days=1)
+        logger.debug("In clean_start_time %s %s" % (start, window_cutoff))
+        if start <= window_cutoff:
             raise forms.ValidationError("Window cannot start in the past")
         else:
             return self.cleaned_data['start_time']

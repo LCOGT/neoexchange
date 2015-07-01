@@ -75,7 +75,7 @@ def check_object_exists(objname,dbg=False):
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
-    pi = models.CharField(max_length=50, default='')
+    pi = models.CharField("PI", max_length=50, default='', help_text='Principal Investigator (PI)')
     tag = models.CharField(max_length=10, default='LCOGT')
 
     class Meta:
