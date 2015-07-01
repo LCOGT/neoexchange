@@ -576,7 +576,7 @@ def make_proposal(params):
     '''Construct needed proposal info'''
 
     proposal = {
-                 'proposal_id'   : params['proposal_code'],
+                 'proposal_id'   : params['proposal_id'],
                  'user_id'       : params['user_id'],
                  'tag_id'        : params['tag_id'],
                  'priority'      : params['priority'],
@@ -608,9 +608,6 @@ def configure_defaults(params):
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['filter'] = 'solar'
-    params['user_id'] = 'tlister@lcogt.net'
-    params['tag_id'] = 'LCOGT'
-    params['priority'] = 15
 
     return params
 
