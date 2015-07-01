@@ -200,7 +200,13 @@ def schedule_submit(data,body):
     body_elements = model_to_dict(body)
     body_elements['epochofel_mjd'] = body.epochofel_mjd()
     body_elements['current_name'] = body.current_name()
-    params = {  'proposal_code' : data['proposal_code'],
+    # Get proposal details
+    proposal = Proposal.objects.get(code=data['proposal_code'])
+    params = {   'proposal_id'   : proposal.code,
+                 'user_id'       : proposal.pi, # XXX should be logged-in user, how to get this?
+                 'tag_id'        : proposal.tag,
+                 'priority'      : data.get('priority', 15),
+
                 'exp_count' : data['exp_count'],
                 'exp_time' : data['exp_length'],
                 'site_code' : data['site_code'],
