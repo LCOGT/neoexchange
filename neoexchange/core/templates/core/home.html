@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
-{% load url from future %}
-{% load staticfiles %}
+{% load staticfiles basic_tags %}
 
 {% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
 
@@ -74,9 +73,8 @@
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td class="list_title"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
                     <td>{{body.get_source_type_display}}</td>
-                    {% for coord in body.compute_position %}
-                        <td>{{coord}}</td>
-                    {% endfor %}
+                    <td>{{body.compute_position.0|degreestohms:" "}}</td>
+                    <td>{{body.compute_position.1|degreestodms:" "}}</td>
                     <td>{{body.get_origin_display}}</td>
                     <td>
                         <time class="datestamp nicedate" datetime="{{ body.ingest|date:'c' }}">

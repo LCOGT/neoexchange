@@ -200,3 +200,68 @@ def round_datetime(date_to_round, round_mins=10, round_up=False):
                         microseconds=date_to_round.microsecond)
 
     return date_to_round
+
+def hourstodegrees(value,arg):
+    "Converts decimal hours to decimal degrees"
+    if ":" in str(value):
+        return value
+    return value*15
+
+def degreestohours(value):
+    "Converts decimal degrees to decimal hours"
+    if ":" in str(value):
+        return value
+    return float(value)/15
+
+def degreestodms(value, sep):
+    "Converts decimal degrees to decimal degrees minutes and seconds"
+    if ":" in str(value):
+        return value
+    try:
+        if(value < 0):
+            sign = "-"
+        else:
+            sign = ""
+        value = abs(value)
+        d = int(value)
+        m = int((value - d)*60)
+        s = ((value - d)*3600 - m*60)
+        return "%s%02d%c%02d%c%05.2f" % (sign,d,sep,m,sep,s)
+    except:
+        return ""
+
+def degreestohms(value, sep):
+    "Converts decimal degrees to decimal hours minutes and seconds"
+    if ":" in str(value):
+        return value
+    try:
+        value = float(value)/15
+        d = int(value)
+        m = int((value - d)*60)
+        s = ((value - d)*3600 - m*60)
+        return "%02d%c%02d%c%05.2f" % (d,sep,m,sep,s)
+    except:
+        return ""
+
+def dmstodegrees(value):
+    if ":" not in str(value):
+        return value
+    el = value.split(":")
+    deg = float(el[0])
+    if deg < 0:
+        sign = -1.
+    else:
+        sign = 1
+    return deg + sign*float(el[1])/60. + sign*float(el[2])/3600.
+
+def hmstodegrees(value):
+    if ":" not in str(value):
+        return value
+    el = value.split(":")
+    return float(el[0])*15 + float(el[1])/60. + float(el[2])/3600.
+
+def hmstohours(value):
+    if ":" not in str(value):
+        return value
+    el = value.split(":")
+    return float(el[0]) + float(el[1])/60. + float(el[2])/3600.

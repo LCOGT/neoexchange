@@ -16,7 +16,7 @@ from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext as _
 from django.forms.models import model_to_dict
-from astrometrics.ephem_subs import compute_ephem, radec2strings
+from astrometrics.ephem_subs import compute_ephem
 from astropy.time import Time
 from datetime import datetime
 import reversion
@@ -152,10 +152,8 @@ class Body(models.Model):
         orbelems = model_to_dict(self)
         sitecode = '500'
         emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
-        # Convert radians for RA, Dec into strings for printing
-        (ra_string, dec_string) = radec2strings(emp_line[1], emp_line[2], ' ')
-
-        return (ra_string, dec_string)
+        # Return just numerical values
+        return (emp_line[1], emp_line[2])
 
     class Meta:
         verbose_name = _('Minor Body')
