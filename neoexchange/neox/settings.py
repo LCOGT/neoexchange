@@ -6,7 +6,7 @@ from django.utils.crypto import get_random_string
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
-DEBUG = True
+DEBUG = False
 BRANCH = os.environ.get('BRANCH',None)
 if BRANCH:
     BRANCH = '-' + BRANCH
@@ -21,7 +21,10 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
-GRAPPELLI_ADMIN_TITLE = 'NEO exchange admin'
+ADMIN_TITLE = 'NEO exchange admin'
+SUIT_CONFIG = {
+    'ADMIN_NAME': 'NEO exchange admin'
+}
 
 MANAGERS = ADMINS
 
@@ -107,9 +110,9 @@ LOGIN_REDIRECT_URL = '/'
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
-    'grappelli',
     'neox',
     'core',
+    'suit',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',

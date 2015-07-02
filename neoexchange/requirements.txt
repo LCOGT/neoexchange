@@ -3,7 +3,7 @@ Django>1.8,<1.9
 MySQL-python
 astropy==1.0
 beautifulsoup4==4.3.2
-django-grappelli==2.4.12
+django-suit==0.2.13
 django-reversion==1.8.7
 html5lib==1.0b3
 ipython

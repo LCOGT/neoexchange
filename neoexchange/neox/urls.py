@@ -37,7 +37,7 @@ urlpatterns = [
     # url(r'^schedule/$', SchedFormDisplay.as_view(), name='schedule'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout' ),
-    url(r'^grappelli/', include('grappelli.urls')),
+    #url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', include(admin.site.urls)),
 ]
 
