@@ -102,18 +102,18 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
     logger.debug("Site code/name, lat/long/height=%s %s %f %f %.1f" % (sitecode, site_name, site_long, site_lat, site_hgt))
 
+    if site_name == '?':
+        logger.debug("WARN: No site co-ordinates found, computing for geocenter")
+        pvobs = zeros(6)
+    else:
 # Compute local apparent sidereal time
 # Do GMST first which takes UT1 and then add East longitiude and the equation of the equinoxes
 # (which takes TDB; but we use TT here)
 #
-    gmst = S.sla_gmst(mjd_utc+(dut/86400.0))
-    stl = gmst + site_long + S.sla_eqeqx(mjd_tt)
-    logger.debug('GMST, LAST, EQEQX, GAST, long= %.17f %.17f %E %.17f %.17f' % (gmst, stl, S.sla_eqeqx(mjd_tt), gmst+S.sla_eqeqx(mjd_tt), site_long))
-    pvobs = S.sla_pvobs(site_lat, site_hgt, stl)
-
-    if site_name == '?':
-        logger.debug("WARN: No site co-ordinates found, computing for geocenter")
-        pvobs = pvobs * 0.0
+        gmst = S.sla_gmst(mjd_utc+(dut/86400.0))
+        stl = gmst + site_long + S.sla_eqeqx(mjd_tt)
+        logger.debug('GMST, LAST, EQEQX, GAST, long= %.17f %.17f %E %.17f %.17f' % (gmst, stl, S.sla_eqeqx(mjd_tt), gmst+S.sla_eqeqx(mjd_tt), site_long))
+        pvobs = S.sla_pvobs(site_lat, site_hgt, stl)
 
     logger.debug("PVobs(orig)=%s\n            %s" % (pvobs[0:3],pvobs[3:6]*86400.0))
 
@@ -404,48 +404,56 @@ def compute_sky_motion(sky_vel, delta, dbg=True):
 
 def format_emp_line(emp_line, site_code):
 
-# Get site and mount parameters
-    (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
-    (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(site_code)
-
-    blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
-
 # Convert radians for RA, Dec into strings for printing
     (ra_string, dec_string) = radec2strings(emp_line[1], emp_line[2], ' ')
+# Format time and print out the overall ephemeris
+    emp_time = datetime.strftime(emp_line[0], '%Y %m %d %H:%M')
+
+    if str(site_code) == '500':
+# Geocentric position, so no altitude. moon parameters, score or hour angle
+        geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|N/A|N/A|N/A|N/A|N/A|N/A"
+
+        formatted_line = geo_row_format % (emp_time, ra_string, dec_string, \
+            emp_line[3], emp_line[4])
+
+    else:
+# Get site and mount parameters
+        (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
+        (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(site_code)
+
+        blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
+
 # Compute apparent RA, Dec of the Moon
-    (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt) 
+        (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt) 
 # Convert to alt, az (only the alt is actually needed)
-    (moon_az, moon_alt) = moon_alt_az(emp_line[0], moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
-    moon_alt = degrees(moon_alt)
+        (moon_az, moon_alt) = moon_alt_az(emp_line[0], moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
+        moon_alt = degrees(moon_alt)
 # Compute object<->Moon seperation and convert to degrees
-    moon_obj_sep = S.sla_dsep(emp_line[1], emp_line[2], moon_app_ra, moon_app_dec)
-    moon_obj_sep = degrees(moon_obj_sep)
+        moon_obj_sep = S.sla_dsep(emp_line[1], emp_line[2], moon_app_ra, moon_app_dec)
+        moon_obj_sep = degrees(moon_obj_sep)
 # Calculate Moon phase (in range 0.0..1.0)
-    moon_phase = moonphase(emp_line[0], site_long, site_lat, site_hgt)
+        moon_phase = moonphase(emp_line[0], site_long, site_lat, site_hgt)
 
 # Compute H.A.
-    ha = compute_hourangle(emp_line[0], site_long, site_lat, site_hgt, emp_line[1], emp_line[2])
-    ha_in_deg = degrees(ha)
+        ha = compute_hourangle(emp_line[0], site_long, site_lat, site_hgt, emp_line[1], emp_line[2])
+        ha_in_deg = degrees(ha)
 # Check HA is in limits, skip this slot if not
-    if (ha_in_deg >= ha_pos_limit or ha_in_deg <= ha_neg_limit):
+        if (ha_in_deg >= ha_pos_limit or ha_in_deg <= ha_neg_limit):
             ha_string = 'Limits'
-    else:
-        (ha_string,junk) = radec2strings(ha, ha, ':')
-        ha_string = ha_string[0:6]
+        else:
+            (ha_string,junk) = radec2strings(ha, ha, ':')
+            ha_string = ha_string[0:6]
 
 # Calculate slot score
-    slot_score = compute_score(emp_line[5], moon_alt, moon_obj_sep, mount_alt_limit)
+        slot_score = compute_score(emp_line[5], moon_alt, moon_obj_sep, mount_alt_limit)
 
 # Calculate the no. of FOVs from the starting position
 #    pointings_sep = S.sla_dsep(emp_line[1], emp_line[2], start_ra, start_dec)
 #    num_fov = int(pointings_sep/ccd_fov)
 
-# Format time and print out the overall ephemeris
-    emp_time = datetime.strftime(emp_line[0], '%Y %m %d %H:%M')
-
-    formatted_line = blk_row_format % (emp_time, ra_string, dec_string, \
-        emp_line[3], emp_line[4], emp_line[5],\
-        moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
+        formatted_line = blk_row_format % (emp_time, ra_string, dec_string, \
+            emp_line[3], emp_line[4], emp_line[5],\
+            moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
 
     line_as_list = formatted_line.split('|')
     return line_as_list
