@@ -2,6 +2,9 @@ from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
+from mock import patch
+from neox.tests.mocks import MockDateTime
+#from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
 
@@ -26,7 +29,11 @@ class NewVisitorTest(FunctionalTest):
         self.body = Body.objects.create(**params)
         self.body.save()
 
+# The homepage computes the RA, Dec of each body for 'now' so we need to mock
+# patch the datetime used by models.Body.compute_position to give the same
+# consistent answer.
 
+    @patch('core.models.datetime', MockDateTime)
     def test_can_compute_ephemeris(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -41,9 +48,10 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices there are several targets that could be followed up
         self.check_for_header_in_table('id_neo_targets',
-            'Target Name Type Origin Ingested')
-        testlines =[u'N999r0q Unknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M'),
-                    u'P10kfud Unknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M')]
+            'Target Name Type R.A. Dec. Origin Ingested')
+#        testlines =[u'N999r0qUnknown/NEO Candidate 23 43 12.75 +19 58 55.6 Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M'),
+#                    u'P10kfud Unknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M')]
+        testlines =[u'N999r0q\nUnknown/NEO Candidate 23 43 12.75 +19 58 55.6 Minor Planet Center %s' % self.body.ingest.strftime('%-d %b %Y, %H:%M'),]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # He is invited to enter a target to compute an ephemeris

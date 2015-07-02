@@ -46,41 +46,48 @@
 		</div>
 
     <div class="container">
-        <div class="bigtext">
-            <table id="id_neo_targets" class="datatable">
-                <thead>
-                    <tr>
-                        <th class="list_title">
-                            <span class="sortable" id="name_id">Target Name</span>
-                        </th>
-                        <th class="list_project">
-                            <span class="sortable" id="type_id">Type</span>
-                        </th>
-                        <th>
-                            <span class="sortable" id="origin">Origin</span>
-                        </th>
-                        <th>
-                            <span class="sortable" id="timestamp">Ingested</span>
-                        </th>
+        <table id="id_neo_targets" class="datatable">
+            <thead>
+                <tr>
+                    <th class="list_title">
+                        <span class="sortable" id="name_id">Target Name</span>
+                    </th>
+                    <th class="list_project">
+                        <span class="sortable" id="type_id">Type</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="ra">R.A.</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="origin">Dec.</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="origin">Origin</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="timestamp">Ingested</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for body in newest%}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td class="list_title"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
+                    <td>{{body.get_source_type_display}}</td>
+                    {% for coord in body.compute_position %}
+                        <td>{{coord}}</td>
+                    {% endfor %}
+                    <td>{{body.get_origin_display}}</td>
+                    <td>
+                        <time class="datestamp nicedate" datetime="{{ body.ingest|date:'c' }}">
+                            {{ body.ingest|date:'j M Y, H:i' }}
+                        </time>
+                    </td>
                     </tr>
-                </thead>
-                <tbody>
-                    {% for body in newest%}
-                    <tr class="{% cycle 'odd' 'even' %}">
-                        <td class="list_title"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
-                        <td>{{body.get_source_type_display}}</td>
-                        <td>{{body.get_origin_display}}</td>
-                        <td>
-                            <time class="datestamp nicedate" datetime="{{ body.ingest|date:'c' }}">
-                                {{ body.ingest|date:'j M Y, H:i' }}
-                            </time>
-                        </td>
-                        </tr>
-                    {% empty%}
-                    <tr><td colspan=4> No new targets</td></tr>
-                    {% endfor%}
-                </tbody>
-            </table>
-        </div>
+                {% empty%}
+                <tr><td colspan=4> No new targets</td></tr>
+                {% endfor%}
+            </tbody>
+        </table>
     </div>
 {% endblock %}

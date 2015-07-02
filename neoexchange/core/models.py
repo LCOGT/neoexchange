@@ -15,7 +15,10 @@ GNU General Public License for more details.
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext as _
+from django.forms.models import model_to_dict
+from astrometrics.ephem_subs import compute_ephem, radec2strings
 from astropy.time import Time
+from datetime import datetime
 import reversion
 
 OBJECT_TYPES = (
@@ -143,6 +146,16 @@ class Body(models.Model):
             return self.provisional_name
         else:
             return False
+
+    def compute_position(self):
+        d = datetime.utcnow()
+        orbelems = model_to_dict(self)
+        sitecode = '500'
+        emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+        # Convert radians for RA, Dec into strings for printing
+        (ra_string, dec_string) = radec2strings(emp_line[1], emp_line[2], ' ')
+
+        return (ra_string, dec_string)
 
     class Meta:
         verbose_name = _('Minor Body')
