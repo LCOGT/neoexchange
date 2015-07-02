@@ -225,6 +225,23 @@ class TestComputeEphem(TestCase):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
 
+    def test_call_compute_ephem_for_geocenter(self):
+        start = datetime(2015, 7, 5, 7, 20, 00)
+        end = datetime(2015, 7, 5, 7, 20, 59)
+        site_code = '500'
+        step_size = 60
+        alt_limit = 0
+        body_elements = model_to_dict(self.body)
+        expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'],]
+
+        ephem_lines = call_compute_ephem(body_elements, start, end,
+            site_code, step_size, alt_limit)
+        line = 0
+        self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
+        while line < len(expected_ephem_lines):
+            self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
+            line += 1
+
 class TestDetermineSlotLength(TestCase):
 
     def test_bad_site_code(self):
