@@ -47,6 +47,9 @@ RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
 ENV PYTHONPATH /var/www/apps
 ENV DJANGO_SETTINGS_MODULE neox.settings
 
+# Set the PREFIX env variable
+ENV PREFIX /neoexchange
+
 # Copy configuration files
 COPY config/uwsgi.ini /etc/uwsgi.ini
 COPY config/nginx/* /etc/nginx/

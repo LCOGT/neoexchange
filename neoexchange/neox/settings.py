@@ -13,7 +13,8 @@ if BRANCH:
 else:
     BRANCH = ''
 
-PREFIX =""
+PREFIX = os.environ.get('PREFIX', '')
+
 BASE_DIR = os.path.dirname(CURRENT_PATH)
 
 ADMINS = (
