@@ -15,4 +15,6 @@ class Command(BaseCommand):
         for obj_id in objects:
             self.stdout.write("Reading NEOCP target %s" % obj_id)
             resp = update_NEOCP_orbit(str(obj_id))
+            if resp:
+                self.stdout.write(resp)
             

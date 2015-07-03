@@ -1,4 +1,3 @@
-# Put your cron jobs here
-10 5 * * * python /var/www/apps/neoexchange/manage.py fetch_goldstone_targets
-20 5 * * * python /var/www/apps/neoexchange/manage.py update_neocp_data
-30 5 * * * python /var/www/apps/neoexchange/manage.py update_crossids
+10 5 * * * source /etc/docker-environment; python /var/www/apps/neoexchange/manage.py fetch_goldstone_targets >> /cron_debug.log
+20 5 * * * source /etc/docker-environment; python /var/www/apps/neoexchange/manage.py update_neocp_data >> /cron_debug.log
+30 5 * * * source /etc/docker-environment; python /var/www/apps/neoexchange/manage.py update_crossids >> /cron_debug.log

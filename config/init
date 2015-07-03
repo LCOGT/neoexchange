@@ -3,6 +3,7 @@
 # Substitute the prefix into the nginx configuration
 echo "Running with PREFIX=${PREFIX}"
 sed -i -e "s:@PREFIX@:${PREFIX}:g" /etc/nginx/nginx.conf
+env > /etc/docker-environment
 
 # If any schema changed have happened but not been applied
 python /var/www/apps/neoexchange/manage.py migrate --noinput

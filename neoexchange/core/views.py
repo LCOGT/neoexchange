@@ -36,27 +36,29 @@ import json
 
 logger = logging.getLogger(__name__)
 
+
 class LoginRequiredMixin(object):
+
     @classmethod
     def as_view(cls, **initkwargs):
         view = super(LoginRequiredMixin, cls).as_view(**initkwargs)
         return login_required(view)
 
 
-
 def home(request):
     latest = Body.objects.filter(active=True).latest('ingest')
     max_dt = latest.ingest
     min_dt = max_dt - timedelta(minutes=30)
-    newest = Body.objects.filter(ingest__range=(min_dt,max_dt) ,active=True)
+    newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
     params = {
-            'targets'   : Body.objects.filter(active=True).count(),
-            'blocks'    : Block.objects.filter(active=True).count(),
-            'latest'    : latest,
-            'newest'    : newest,
-            'form'      : EphemQuery()
+        'targets': Body.objects.filter(active=True).count(),
+        'blocks': Block.objects.filter(active=True).count(),
+        'latest': latest,
+        'newest': newest,
+        'form': EphemQuery()
     }
-    return render(request,'core/home.html',params)
+    return render(request, 'core/home.html', params)
+
 
 class BodyDetailView(DetailView):
     context_object_name = "body"
@@ -78,10 +80,12 @@ class BodySearchView(ListView):
         except:
             name = ''
         if (name != ''):
-            object_list = self.model.objects.filter(Q(provisional_name__icontains = name )|Q(provisional_packed__icontains = name)|Q(name__icontains = name))
+            object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(
+                provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
         return object_list
+
 
 def ephemeris(request):
 
@@ -90,18 +94,22 @@ def ephemeris(request):
     if form.is_valid():
         data = form.cleaned_data
         body_elements = model_to_dict(data['target'])
-        dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
-        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, data['site_code'], 300, data['alt_limit'] )
+        dark_start, dark_end = determine_darkness_times(
+            data['site_code'], data['utc_date'])
+        ephem_lines = call_compute_ephem(
+            body_elements, dark_start, dark_end, data['site_code'], 300, data['alt_limit'])
     else:
-        return render(request, 'core/home.html', {'form' : form})
+        return render(request, 'core/home.html', {'form': form})
     return render(request, 'core/ephem.html',
-        {'target'  : data['target'],
-         'ephem_lines'      : ephem_lines, 
-         'site_code'        : form['site_code'].value(),
-        }
-    )
+                  {'target': data['target'],
+                   'ephem_lines': ephem_lines,
+                   'site_code': form['site_code'].value(),
+                   }
+                  )
+
 
 class LookUpBodyMixin(object):
+
     def dispatch(self, request, *args, **kwargs):
         try:
             body = Body.objects.get(pk=kwargs['pk'])
@@ -110,7 +118,8 @@ class LookUpBodyMixin(object):
         except Body.DoesNotExist:
             raise Http404("Body does not exist")
 
-class ScheduleParameters(LoginRequiredMixin,LookUpBodyMixin, FormView):
+
+class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
     template_name = 'core/schedule.html'
     form_class = ScheduleForm
     ok_to_schedule = False
@@ -118,13 +127,14 @@ class ScheduleParameters(LoginRequiredMixin,LookUpBodyMixin, FormView):
     def get(self, request, *args, **kwargs):
         form = self.get_form()
         # logger.debug(self.body)
-        return self.render_to_response(self.get_context_data(form=form,body=self.body))
+        return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
-        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
-        #logger.debug()
+        data = schedule_check(
+            form.cleaned_data, self.body, self.ok_to_schedule)
+        # logger.debug()
         new_form = ScheduleBlockForm(data)
-        return render(request,'core/schedule_confirm.html', {'form':new_form, 'data': data,'body':self.body})
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -132,7 +142,8 @@ class ScheduleParameters(LoginRequiredMixin,LookUpBodyMixin, FormView):
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form,body=self.body))
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
@@ -152,48 +163,53 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         return reverse('home')
 
 
-def schedule_check(data,body,ok_to_schedule):
+def schedule_check(data, body, ok_to_schedule):
     body_elements = model_to_dict(body)
     # Check for valid proposal
     # validate_proposal_time(data['proposal_code'])
     ok_to_schedule = True
 
     # Determine magnitude
-    dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
-    dark_midpoint = dark_start + (dark_end-dark_start)/2
-    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], False, False, False)
+    dark_start, dark_end = determine_darkness_times(
+        data['site_code'], data['utc_date'])
+    dark_midpoint = dark_start + (dark_end - dark_start) / 2
+    emp = compute_ephem(
+        dark_midpoint, body_elements, data['site_code'], False, False, False)
     magnitude = emp[3]
     speed = emp[4]
 
     # Determine slot length
     try:
-        slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+        slot_length = determine_slot_length(
+            body_elements['provisional_name'], magnitude, data['site_code'])
     except MagRangeError:
         slot_length = 0.
         ok_to_schedule = False
     # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
+    exp_length, exp_count = determine_exp_time_count(
+        speed, data['site_code'], slot_length)
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
-    resp =   {
-             'target_name' : body.current_name(),
-             'magnitude' : magnitude,
-             'speed' : speed,
-             'slot_length' : slot_length,
-             'exp_count' : exp_count,
-             'exp_length' : exp_length,
-             'schedule_ok' : ok_to_schedule,
-             'site_code' : data['site_code'],
-             'proposal_code' : data['proposal_code'],
-             'group_id' : body.current_name() + '_' + data['site_code'].upper() + '-'  + datetime.strftime(data['utc_date'], '%Y%m%d'),
-             'utc_date' : data['utc_date'].isoformat(),
-             'start_time' : dark_start.isoformat(),
-             'end_time' : dark_end.isoformat()
-             }
+    resp = {
+        'target_name': body.current_name(),
+        'magnitude': magnitude,
+        'speed': speed,
+        'slot_length': slot_length,
+        'exp_count': exp_count,
+        'exp_length': exp_length,
+        'schedule_ok': ok_to_schedule,
+        'site_code': data['site_code'],
+        'proposal_code': data['proposal_code'],
+        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
+        'utc_date': data['utc_date'].isoformat(),
+        'start_time': dark_start.isoformat(),
+        'end_time': dark_end.isoformat()
+    }
     return resp
 
-def schedule_submit(data,body):
+
+def schedule_submit(data, body):
 
     # Assemble request
     # Send to scheduler
@@ -202,23 +218,25 @@ def schedule_submit(data,body):
     body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
-    params = {   'proposal_id'   : proposal.code,
-                 'user_id'       : proposal.pi, # XXX should be logged-in user, how to get this?
-                 'tag_id'        : proposal.tag,
-                 'priority'      : data.get('priority', 15),
+    params = {'proposal_id': proposal.code,
+              # XXX should be logged-in user, how to get this?
+              'user_id': proposal.pi,
+              'tag_id': proposal.tag,
+              'priority': data.get('priority', 15),
 
-                'exp_count' : data['exp_count'],
-                'exp_time' : data['exp_length'],
-                'site_code' : data['site_code'],
-                'start_time' : data['start_time'],
-                'end_time' : data['end_time'],
-                'group_id' : data['group_id']
-             }
+              'exp_count': data['exp_count'],
+              'exp_time': data['exp_length'],
+              'site_code': data['site_code'],
+              'start_time': data['start_time'],
+              'end_time': data['end_time'],
+              'group_id': data['group_id']
+              }
     # Record block and submit to scheduler
     request_number = submit_block_to_scheduler(body_elements, params)
     return request_number
 
-def save_and_make_revision(body,kwargs):
+
+def save_and_make_revision(body, kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
     '''
     update = False
@@ -235,6 +253,7 @@ def save_and_make_revision(body,kwargs):
             body.save()
     return update
 
+
 def update_NEOCP_orbit(obj_id):
     '''Query the MPC's showobs service with the specified <obj_id> and
     it will write the orbit found into the neox database.
@@ -245,31 +264,38 @@ def update_NEOCP_orbit(obj_id):
     NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
 
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
-    
+
     if neocp_obs_page:
         obs_page_list = neocp_obs_page.text.split('\n')
     else:
         return False
-    
+
 # If the object has left the NEOCP, the HTML will say 'None available at this time.'
 # and the length of the list will be 1
-    body, created = Body.objects.get_or_create(provisional_name=obj_id)
+    try:
+        body, created = Body.objects.get_or_create(provisional_name=obj_id)
+    except:
+        logger.debug("Multiple objects found called %s" % obj_id)
+        return False
     if len(obs_page_list) > 1:
         # Clean up the header and top line of input
         kwargs = clean_NEOCP_object(obs_page_list)
         if not created:
-            # Find out if the details have changed, if they have, save a revision
+            # Find out if the details have changed, if they have, save a
+            # revision
             check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
             if check_body.count() == 0:
-                if save_and_make_revision(body,kwargs):
-                    logger.info("Updated %s" % obj_id)
+                if save_and_make_revision(body, kwargs):
+                    msg = "Updated %s" % obj_id
         else:
-            save_and_make_revision(body,kwargs)
-            logger.info("Added %s" % obj_id)
+            save_and_make_revision(body, kwargs)
+            msg = "Added %s" % obj_id
     else:
-        save_and_make_revision(body,{'active':False})
-        logger.info("Object %s no longer exists on the NEOCP." % obj_id)
-    return True
+        save_and_make_revision(body, {'active': False})
+        msg = "Object %s no longer exists on the NEOCP." % obj_id
+    logger.info(msg)
+    return msg
+
 
 def clean_NEOCP_object(page_list):
     '''Parse response from the MPC NEOCP page making sure we only return 
@@ -290,33 +316,37 @@ def clean_NEOCP_object(page_list):
                 slope = float(current[2])
             except ValueError:
                 # Insert a high magnitude for the missing H
-                current.insert(1,99.99)
-                logger.warn("Missing H magnitude for %s; assuming 99.99", current[0])
+                current.insert(1, 99.99)
+                logger.warn(
+                    "Missing H magnitude for %s; assuming 99.99", current[0])
             except:
-                logger.error("Missing field in NEOCP orbit for %s which wasn't correctable", current[0])
+                logger.error(
+                    "Missing field in NEOCP orbit for %s which wasn't correctable", current[0])
 
         if len(current) == 17:
             params = {
-                    'abs_mag'       : float(current[1]),
-                    'slope'         : float(current[2]),
-                    'epochofel'     : extract_mpc_epoch(current[3]),
-                    'meananom'      : float(current[4]),
-                    'argofperih'    : float(current[5]),
-                    'longascnode'   : float(current[6]),
-                    'orbinc'        : float(current[7]),
-                    'eccentricity'  : float(current[8]),
-                    'meandist'      : float(current[10]),
-                    'source_type'   : 'U',
-                    'elements_type' : 'MPC_MINOR_PLANET',
-                    'active'        : True,
-                    'origin'        : 'M',
-                    }
+                'abs_mag': float(current[1]),
+                'slope': float(current[2]),
+                'epochofel': extract_mpc_epoch(current[3]),
+                'meananom': float(current[4]),
+                'argofperih': float(current[5]),
+                'longascnode': float(current[6]),
+                'orbinc': float(current[7]),
+                'eccentricity': float(current[8]),
+                'meandist': float(current[10]),
+                'source_type': 'U',
+                'elements_type': 'MPC_MINOR_PLANET',
+                'active': True,
+                'origin': 'M',
+            }
         else:
-            logger.warn("Did not get right number of parameters for %s. Values %s", current[0], current)
+            logger.warn(
+                "Did not get right number of parameters for %s. Values %s", current[0], current)
             params = {}
     else:
         params = {}
     return params
+
 
 def update_crossids(astobj, dbg=False):
     '''Update the passed <astobj> for a new cross-identification.
@@ -329,20 +359,25 @@ def update_crossids(astobj, dbg=False):
 
     obj_id = astobj[0].rstrip()
 
-    body, created = Body.objects.get_or_create(provisional_name=obj_id)
+    try:
+        body, created = Body.objects.get_or_create(provisional_name=obj_id)
+    except:
+        logger.debug("Multiple objects found called %s" % obj_id)
+        return False
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
     if not created:
-        if dbg: print "Did not create new Body"
+        if dbg:
+            print "Did not create new Body"
         # Find out if the details have changed, if they have, save a revision
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 0:
-            save_and_make_revision(body,kwargs)
+            save_and_make_revision(body, kwargs)
             logger.info("Updated cross identification for %s" % obj_id)
     else:
         # Didn't know about this object before so create but make inactive
         kwargs['active'] = False
-        save_and_make_revision(body,kwargs)
+        save_and_make_revision(body, kwargs)
         logger.info("Added cross identification for %s" % obj_id)
     return True
 
@@ -379,7 +414,7 @@ def clean_crossid(astobj, dbg=False):
         desig = ''
         active = False
     elif obj_id != '' and desig == '' and reference == '':
-        # "Was not interesting" (normally a satellite), no longer interesting 
+        # "Was not interesting" (normally a satellite), no longer interesting
         # so set inactive
         objtype = 'W'
         desig = ''
@@ -402,13 +437,15 @@ def clean_crossid(astobj, dbg=False):
             objtype = 'A'
             active = False
 
-    params = { 'source_type'  : objtype,
-               'name'         : desig,
-               'active'       : active
-             }
-    if dbg: print "%07s->%s (%s) %s" % ( obj_id, params['name'], params['source_type'], params['active'])
+    params = {'source_type': objtype,
+              'name': desig,
+              'active': active
+              }
+    if dbg:
+        print "%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active'])
 
     return params
+
 
 def clean_mpcorbit(elements, dbg=False, origin='M'):
     '''Takes a list of (proto) element lines from fetch_mpcorbit() and plucks
@@ -417,23 +454,23 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
     params = {}
     if elements != None:
         params = {
-                'epochofel'     : datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
-                'abs_mag'       : elements['absolute magnitude'],
-                'slope'         : elements['phase slope'],
-                'meananom'      : elements['mean anomaly'],
-                'argofperih'    : elements['argument of perihelion'],
-                'longascnode'   : elements['ascending node'],
-                'orbinc'        : elements['inclination'],
-                'eccentricity'  : elements['eccentricity'],
-                'meandist'      : elements['semimajor axis'],
-                'source_type'   : determine_asteroid_type(float(elements['perihelion distance']), float(elements['eccentricity'])),
-                'elements_type' : 'MPC_MINOR_PLANET',
-                'active'        : True,
-                'origin'        : origin,
-                }
+            'epochofel': datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
+            'abs_mag': elements['absolute magnitude'],
+            'slope': elements['phase slope'],
+            'meananom': elements['mean anomaly'],
+            'argofperih': elements['argument of perihelion'],
+            'longascnode': elements['ascending node'],
+            'orbinc': elements['inclination'],
+            'eccentricity': elements['eccentricity'],
+            'meandist': elements['semimajor axis'],
+            'source_type': determine_asteroid_type(float(elements['perihelion distance']), float(elements['eccentricity'])),
+            'elements_type': 'MPC_MINOR_PLANET',
+            'active': True,
+            'origin': origin,
+        }
     return params
 
-    
+
 def update_MPC_orbit(obj_id, dbg=False, origin='M'):
     '''
     Performs remote look up of orbital elements for object with id obj_id,
@@ -445,15 +482,17 @@ def update_MPC_orbit(obj_id, dbg=False, origin='M'):
     except Body.MultipleObjectsReturned:
         # When the crossid happens we end up with multiple versions of the body.
         # Need to pick the one has been most recently updated
-        bodies = Body.objects.filter(name=obj_id,provisional_name__isnull=False).order_by('-ingest')
+        bodies = Body.objects.filter(
+            name=obj_id, provisional_name__isnull=False).order_by('-ingest')
         created = False
         if not bodies:
             bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
         body = bodies[0]
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
-    # Save, make revision, or do not update depending on the what has happened to the object
-    save_and_make_revision(body,kwargs)
+    # Save, make revision, or do not update depending on the what has happened
+    # to the object
+    save_and_make_revision(body, kwargs)
     if not created:
         logger.info("Updated elements for %s" % obj_id)
     else:

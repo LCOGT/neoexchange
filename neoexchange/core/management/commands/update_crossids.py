@@ -12,4 +12,6 @@ class Command(BaseCommand):
         self.stdout.write("==== %s ====" % datetime.now())
         objects = fetch_previous_NEOCP_desigs()
         for obj_id in objects:
-            update_crossids(obj_id, dbg=False)
+            resp = update_crossids(obj_id, dbg=False)
+            if resp:
+                self.stdout.write(resp)
