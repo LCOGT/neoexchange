@@ -235,16 +235,15 @@ def save_and_make_revision(body,kwargs):
             body.save()
     return update
 
-def update_NEOCP_orbit(obj_id, dbg=False):
+def update_NEOCP_orbit(obj_id):
     '''Query the MPC's showobs service with the specified <obj_id> and
     it will write the orbit found into the neox database.
     a) If the object does not have a response it will be marked as active = False
     b) If the object's parameters have changed they will be updated and a revision logged
     c) New objects get marked as active = True automatically 
     '''
+    NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
 
-    NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&orb=y'
-    
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
     
     if neocp_obs_page:
