@@ -9,7 +9,7 @@ html5lib==1.0b3
 ipython
 nose==1.3.6
 numpy==1.9.2
-pytz==2015.2
+pytz
 six==1.9.0
 wsgiref
 requests

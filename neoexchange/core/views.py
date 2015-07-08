@@ -287,6 +287,10 @@ def update_NEOCP_orbit(obj_id):
             if check_body.count() == 0:
                 if save_and_make_revision(body, kwargs):
                     msg = "Updated %s" % obj_id
+                else:
+                    msg = "No changes saved for %s" % obj_id
+            else:
+                msg = "No changes needed for %s" % obj_id
         else:
             save_and_make_revision(body, kwargs)
             msg = "Added %s" % obj_id
@@ -314,6 +318,17 @@ def clean_NEOCP_object(page_list):
             # Missing H parameter, probably...
             try:
                 slope = float(current[2])
+                # ...nope guess again... Could be missing RMS...
+                try:
+                    rms = float(current[15])
+                except ValueError:
+                     # Insert a high value for the missing rms
+                    current.insert(15, 99.99)
+                    logger.warn(
+                        "Missing RMS for %s; assuming 99.99", current[0])
+                except:
+                    logger.error(
+                        "Missing field in NEOCP orbit for %s which wasn't correctable", current[0])
             except ValueError:
                 # Insert a high magnitude for the missing H
                 current.insert(1, 99.99)
