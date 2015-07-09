@@ -389,11 +389,14 @@ def update_crossids(astobj, dbg=False):
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
             logger.info("Updated cross identification for %s" % obj_id)
-    else:
+    elif kwargs != {}:
         # Didn't know about this object before so create but make inactive
         kwargs['active'] = False
         save_and_make_revision(body, kwargs)
         logger.info("Added cross identification for %s" % obj_id)
+    else:
+        logger.warn("Could not add cross identification for %s" % obj_id)
+        return False
     return True
 
 
@@ -418,6 +421,7 @@ def clean_crossid(astobj, dbg=False):
     time_from_confirm = time_from_confirm.total_seconds()
 
     active = True
+    objtype = ''
     if obj_id != '' and desig == 'wasnotconfirmed':
         # Unconfirmed, no longer interesting so set inactive
         objtype = 'U'
@@ -452,12 +456,16 @@ def clean_crossid(astobj, dbg=False):
             objtype = 'A'
             active = False
 
-    params = {'source_type': objtype,
-              'name': desig,
-              'active': active
-              }
-    if dbg:
-        print "%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active'])
+    if objtype != '':
+        params = {'source_type': objtype,
+                  'name': desig,
+                  'active': active
+                  }
+        if dbg:
+            print "%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active'])
+    else:
+        logger.warn("Unparseable cross-identification: %s" % astobj)
+        params = {}
 
     return params
 

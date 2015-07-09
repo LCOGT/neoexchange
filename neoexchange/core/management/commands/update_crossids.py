@@ -14,4 +14,5 @@ class Command(BaseCommand):
         for obj_id in objects:
             resp = update_crossids(obj_id, dbg=False)
             if resp:
-                self.stdout.write(resp)
+                msg = "Updated crossid for %s" % obj_id
+                self.stdout.write(msg)
