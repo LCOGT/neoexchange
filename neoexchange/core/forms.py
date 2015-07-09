@@ -52,7 +52,7 @@ class ScheduleBlockForm(forms.Form):
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput())
     exp_length = forms.FloatField(widget=forms.HiddenInput())
-    proposal_code = forms.CharField(max_length=15,widget=forms.HiddenInput())
+    proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
 
