@@ -525,7 +525,7 @@ def make_moving_target(elements):
     print elements
     # Generate initial dictionary of things in common
     target = {
-                  'name'                : elements['provisional_name'],
+                  'name'                : elements['current_name'],
                   'type'                : 'NON_SIDEREAL',
                   'scheme'              : elements['elements_type'],
                   # Moving object param
