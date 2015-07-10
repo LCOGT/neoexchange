@@ -237,14 +237,17 @@ def schedule_submit(data, body):
 
 
 def save_and_make_revision(body, kwargs):
-    ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
+    ''' 
+    Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
+    Converts current model instance in to a dict and compares each element with incoming version.
+    Incoming variables may be generically formatted as strings, so use the type of original to covert and then compare.
     '''
     update = False
     body_dict = model_to_dict(body)
     for k, v in kwargs.items():
         param = body_dict[k]
         if type(body_dict[k]) == type(float()):
-            v = float(body_dict[k])
+            v = float(v)
         if v != param:
             setattr(body, k, v)
             update = True
