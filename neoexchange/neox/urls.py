@@ -26,7 +26,7 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^block/list/$', ListView.as_view(model=Block, queryset=Block.objects.filter(active=True).order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
+    url(r'^block/list/$', ListView.as_view(model=Block, queryset=Block.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/$',BodyDetailView.as_view(model=Body), name='target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),

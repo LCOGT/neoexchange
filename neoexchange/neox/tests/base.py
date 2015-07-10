@@ -54,7 +54,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
-                         'active'   : True
+                         'active'   : False
                        }
         self.test_block2 = Block.objects.create(**block_params2)
 
