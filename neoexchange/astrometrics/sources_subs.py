@@ -653,8 +653,9 @@ def submit_block_to_scheduler(elements, params):
     response_data = client.submit(user_request)
     client.print_submit_response()
     request_numbers =  response_data.get('request_numbers', '')
+    tracking_number =  response_data.get('tracking_number', '')
 #    request_numbers = (-42,)
     request_number = request_numbers[0]
-    logger.debug("Req number=%s" % request_number)
+    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))
 
-    return request_number
+    return tracking_number, params
