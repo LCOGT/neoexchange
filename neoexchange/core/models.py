@@ -166,7 +166,8 @@ class Body(models.Model):
         else:
             text = 'not '
         return_name = self.provisional_name
-        if self.provisional_name == None and self.name != None:
+        if (self.provisional_name == None or self.provisional_name == u'') \
+            and self.name != None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name,text)
 reversion.register(Body)
@@ -189,7 +190,12 @@ class Block(models.Model):
         db_table = 'ingest_block'
 
     def __unicode__(self):
-        pass
+        if self.active:
+            text = ''
+        else:
+            text = 'not '
+
+        return u'%s is %sactive' % (self.tracking_number,text)
 
     
 class Record(models.Model):
