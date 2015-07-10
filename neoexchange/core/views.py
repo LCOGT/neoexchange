@@ -244,8 +244,8 @@ def record_block(tracking_number, params, form_data, body):
     logger.debug("form data=%s" % form_data)
     logger.debug("   params=%s" % params)
 
-    block_kwargs = { 'telclass' : params['pondtelescope'],
-                     'site'     : params['site'],
+    block_kwargs = { 'telclass' : params['pondtelescope'].lower(),
+                     'site'     : params['site'].lower(),
                      'body'     : body,
                      'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                      'block_start' : form_data['start_time'],
