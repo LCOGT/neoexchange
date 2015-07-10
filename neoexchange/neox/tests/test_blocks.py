@@ -22,13 +22,13 @@ class BlocksValidationTest(FunctionalTest):
         # mentions current targets
         self.assertIn('Blocks | LCOGT NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Active Blocks', header_text)
+        self.assertIn('Observing Blocks', header_text)
 
         # He notices there are several blocks that are listed
         self.check_for_header_in_table('id_blocks',
-            'Target Name Site Telescope Type Proposal Tracking Number')
-        testlines = [u'N999r0q CPT 1m0 LCO2015A-009 00042',
-                     u'N999r0q COJ 2m0 LCOEngineering 00043']
+            'Target Name Site Telescope Type Proposal Tracking Number Active?')
+        testlines = [u'N999r0q CPT 1m0 LCO2015A-009 00042 Active',
+                     u'N999r0q COJ 2m0 LCOEngineering 00043 Not Active']
         self.check_for_row_in_table('id_blocks', testlines[0])
         self.check_for_row_in_table('id_blocks', testlines[1])
 

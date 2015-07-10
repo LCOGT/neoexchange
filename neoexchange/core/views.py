@@ -258,9 +258,11 @@ def record_block(tracking_number, params, form_data, body):
 
 def save_and_make_revision(body, kwargs):
     ''' 
-    Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
-    Converts current model instance in to a dict and compares each element with incoming version.
-    Incoming variables may be generically formatted as strings, so use the type of original to covert and then compare.
+    Make a revision if any of the parameters have changed, but only do it once
+    per ingest not for each parameter.
+    Converts current model instance into a dict and compares each element with
+    incoming version. Incoming variables may be generically formatted as strings,
+    so use the type of original to convert and then compare.
     '''
     update = False
     body_dict = model_to_dict(body)
