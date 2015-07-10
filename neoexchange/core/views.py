@@ -156,7 +156,9 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         return super(ScheduleSubmit, self).post(request, *args, **kwargs)
 
     def form_valid(self, form):
-        response = schedule_submit(form.cleaned_data, self.object)
+        tracking_num, sched_params = schedule_submit(form.cleaned_data, self.object)
+        if tracking_num != None:
+            record_block(tracking_num, sched_params, form.cleaned_data, self.object)
         return super(ScheduleSubmit, self).form_valid(form)
 
     def get_success_url(self):
@@ -232,9 +234,27 @@ def schedule_submit(data, body):
               'group_id': data['group_id']
               }
     # Record block and submit to scheduler
-    request_number = submit_block_to_scheduler(body_elements, params)
-    return request_number
+    tracking_number = submit_block_to_scheduler(body_elements, params)
+    return tracking_number
 
+def record_block(tracking_number, params, form_data, body):
+    '''Records a just-submitted observation as a Block in the database.
+    '''
+
+    logger.debug("form data=%s" % form_data)
+    logger.debug("   params=%s" % params)
+
+    block_kwargs = { 'telclass' : params['pondtelescope'],
+                     'site'     : params['site'],
+                     'body'     : body,
+                     'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                     'block_start' : form_data['start_time'],
+                     'block_end'   : form_data['end_time'],
+                     'tracking_number' : tracking_number,
+                     'active'   : True
+                   }
+    pk = Block.objects.create(**block_kwargs)
+    return
 
 def save_and_make_revision(body, kwargs):
     ''' Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
