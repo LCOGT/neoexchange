@@ -19,7 +19,6 @@ export NEOX_OPBEAT_TOKEN="${NEOX_OPBEAT_TOKEN}"
 export NEOX_OPBEAT_ORGID="${NEOX_OPBEAT_ORGID}"
 export NEOX_OPBEAT_APPID="${NEOX_OPBEAT_APPID}"
 
-exec "$@"
 EOF
 
 # Make cron wrapper executable

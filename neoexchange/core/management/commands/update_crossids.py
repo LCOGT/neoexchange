@@ -9,7 +9,7 @@ class Command(BaseCommand):
     help = 'Update objects for new cross-identifications from the Previous NEO Confirmation Page Objects page'
 
     def handle(self, *args, **options):
-        self.stdout.write("==== %s ====" % datetime.now())
+        self.stdout.write("==== Updating Cross-IDs %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         objects = fetch_previous_NEOCP_desigs()
         for obj_id in objects:
             resp = update_crossids(obj_id, dbg=False)
