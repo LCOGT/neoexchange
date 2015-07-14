@@ -43,6 +43,8 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
                          'active'   : True
                        }
         self.test_block = Block.objects.create(**block_params)
@@ -54,6 +56,8 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-20 13:00:00',
                          'tracking_number' : '00043',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
                          'active'   : False
                        }
         self.test_block2 = Block.objects.create(**block_params2)
