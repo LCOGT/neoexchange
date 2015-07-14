@@ -251,6 +251,8 @@ def record_block(tracking_number, params, form_data, body):
                      'block_start' : form_data['start_time'],
                      'block_end'   : form_data['end_time'],
                      'tracking_number' : tracking_number,
+                     'num_exposures'   : form_data['exp_count'],
+                     'exp_length'      : form_data['exp_length'],
                      'active'   : True
                    }
     pk = Block.objects.create(**block_kwargs)
