@@ -73,8 +73,8 @@
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td class="list_title"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
                     <td>{{body.get_source_type_display}}</td>
-                    <td>{{body.compute_position.0|degreestohms:" "}}</td>
-                    <td>{{body.compute_position.1|degreestodms:" "}}</td>
+                    <td>{{body.compute_position.0|radianstohms:" "}}</td>
+                    <td>{{body.compute_position.1|radianstodms:" "}}</td>
                     <td>{{body.get_origin_display}}</td>
                     <td>
                         <time class="datestamp nicedate" datetime="{{ body.ingest|date:'c' }}">
