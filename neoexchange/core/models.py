@@ -167,6 +167,8 @@ class Block(models.Model):
     block_start =  models.DateTimeField(null=True, blank=True)
     block_end =  models.DateTimeField(null=True, blank=True)
     tracking_number = models.CharField(max_length=10,null=True, blank=True)
+    num_exposures = models.IntegerField(null=True, blank=True)
+    exp_length = models.FloatField('Exposure length in seconds', null=True, blank=True)
     when_observed =  models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=False)
 
