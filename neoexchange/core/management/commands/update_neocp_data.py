@@ -11,7 +11,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("==== Fetching NEOCP targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         obj_ids = fetch_NEOCP()
-        self.stdout.write("==== Found %s NEOCP targets ====" % len(objects))
+        self.stdout.write("==== Found %s NEOCP targets ====" % len(obj_ids))
         for obj_id in obj_ids:
             self.stdout.write("Reading NEOCP target %s" % obj_id)
             resp = update_NEOCP_orbit(str(obj_id))
