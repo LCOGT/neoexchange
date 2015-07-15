@@ -169,8 +169,11 @@ class Block(models.Model):
     tracking_number = models.CharField(max_length=10,null=True, blank=True)
     num_exposures = models.IntegerField(null=True, blank=True)
     exp_length = models.FloatField('Exposure length in seconds', null=True, blank=True)
+    num_observed = models.IntegerField(null=True, blank=True)
     when_observed =  models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=False)
+    reported = models.BooleanField(default=False)
+    when_reported =  models.DateTimeField(null=True, blank=True)
 
     def make_obsblock_link(self):
         url = ''
