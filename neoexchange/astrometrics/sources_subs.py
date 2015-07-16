@@ -594,7 +594,7 @@ def make_constraints(params):
 
 def configure_defaults(params):
 
-    site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'COJ' : 'Q63', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
+    site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]

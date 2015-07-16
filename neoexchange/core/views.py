@@ -242,9 +242,33 @@ def schedule_submit(data, body):
               'end_time': data['end_time'],
               'group_id': data['group_id']
               }
-    # Record block and submit to scheduler
-    tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
+    # Check for pre-existing block
+    if check_for_block(data, params, body) == 0:
+        # Record block and submit to scheduler
+        tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
+
+def check_for_block(form_data, params, new_body):
+	'''Checks if a block with the given name exists in the Django DB.
+	Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
+
+        # XXX Code smell, duplicated from sources_subs.configure_defaults()
+        site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
+
+	try:
+    	    block_id = Block.objects.get(body=Body.objects.get(provisional_name=new_body.provisional_name),
+	    	    	    	    	 groupid__contains=form_data['group_id'],
+                                         proposal=Proposal.objects.get(code=form_data['proposal_code']),
+					 site=site_list[params['site_code']])
+	except Block.MultipleObjectsReturned:
+    	    logger.debug("Multiple blocks found")
+	    return 2
+	except Block.DoesNotExist:
+    	    logger.debug("Block not found")
+    	    return 0
+	else:
+    	    logger.debug("Block found")
+    	    return 1
 
 def record_block(tracking_number, params, form_data, body):
     '''Records a just-submitted observation as a Block in the database.
@@ -257,6 +281,7 @@ def record_block(tracking_number, params, form_data, body):
                          'site'     : params['site'].lower(),
                          'body'     : body,
                          'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                         'groupid'  : form_data['group_id'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
                          'tracking_number' : tracking_number,

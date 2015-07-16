@@ -13,6 +13,11 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='block',
+            name='groupid',
+            field=models.CharField(max_length=55, null=True, blank=True),
+        ),
+        migrations.AddField(
+            model_name='block',
             name='num_observed',
             field=models.IntegerField(null=True, blank=True),
         ),
