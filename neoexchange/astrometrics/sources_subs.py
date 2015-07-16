@@ -655,6 +655,9 @@ def submit_block_to_scheduler(elements, params):
     request_numbers =  response_data.get('request_numbers', '')
     tracking_number =  response_data.get('tracking_number', '')
 #    request_numbers = (-42,)
+    if not tracking_number or not request_numbers:
+        logger.error("No Tracking/Request number received")
+        return False, params
     request_number = request_numbers[0]
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))
 

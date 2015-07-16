@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 from django.db.models import Q
 from django.forms.models import model_to_dict
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.shortcuts import render
@@ -156,9 +157,17 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         return super(ScheduleSubmit, self).post(request, *args, **kwargs)
 
     def form_valid(self, form):
-        tracking_num, sched_params = schedule_submit(form.cleaned_data, self.object)
-        if tracking_num != None:
-            record_block(tracking_num, sched_params, form.cleaned_data, self.object)
+        target = self.get_object()
+        tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
+        if tracking_num:
+            messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
+            block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+            if block_resp:
+                messages.success(self.request,"Block recorded")
+            else:
+                messages.warning(self.request, "Record not created")
+        else:
+            messages.warning(self.request,"It was not possible to submit your request to the scheduler")
         return super(ScheduleSubmit, self).form_valid(form)
 
     def get_success_url(self):
@@ -234,8 +243,8 @@ def schedule_submit(data, body):
               'group_id': data['group_id']
               }
     # Record block and submit to scheduler
-    tracking_number = submit_block_to_scheduler(body_elements, params)
-    return tracking_number
+    tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
+    return tracking_number, resp_params
 
 def record_block(tracking_number, params, form_data, body):
     '''Records a just-submitted observation as a Block in the database.
@@ -243,20 +252,22 @@ def record_block(tracking_number, params, form_data, body):
 
     logger.debug("form data=%s" % form_data)
     logger.debug("   params=%s" % params)
-
-    block_kwargs = { 'telclass' : params['pondtelescope'].lower(),
-                     'site'     : params['site'].lower(),
-                     'body'     : body,
-                     'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
-                     'block_start' : form_data['start_time'],
-                     'block_end'   : form_data['end_time'],
-                     'tracking_number' : tracking_number,
-                     'num_exposures'   : form_data['exp_count'],
-                     'exp_length'      : form_data['exp_length'],
-                     'active'   : True
-                   }
-    pk = Block.objects.create(**block_kwargs)
-    return
+    if tracking_number:
+        block_kwargs = { 'telclass' : params['pondtelescope'].lower(),
+                         'site'     : params['site'].lower(),
+                         'body'     : body,
+                         'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                         'block_start' : form_data['start_time'],
+                         'block_end'   : form_data['end_time'],
+                         'tracking_number' : tracking_number,
+                         'num_exposures'   : form_data['exp_count'],
+                         'exp_length'      : form_data['exp_length'],
+                         'active'   : True
+                       }
+        pk = Block.objects.create(**block_kwargs)
+        return True
+    else:
+        return False
 
 def save_and_make_revision(body, kwargs):
     ''' 
