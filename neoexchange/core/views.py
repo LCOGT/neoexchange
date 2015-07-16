@@ -215,7 +215,10 @@ def schedule_check(data, body, ok_to_schedule):
         'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
         'utc_date': data['utc_date'].isoformat(),
         'start_time': dark_start.isoformat(),
-        'end_time': dark_end.isoformat()
+        'end_time': dark_end.isoformat(),
+        'mid_time': dark_midpoint.isoformat(),
+        'ra_midpoint': emp[1],
+        'dec_midpoint': emp[2]
     }
     return resp
 
