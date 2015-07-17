@@ -32,4 +32,3 @@ class BlocksValidationTest(FunctionalTest):
         self.check_for_row_in_table('id_blocks', testlines[0])
         self.check_for_row_in_table('id_blocks', testlines[1])
 
-        self.fail("Finish the test!")

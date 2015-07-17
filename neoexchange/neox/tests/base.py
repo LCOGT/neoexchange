@@ -1,5 +1,6 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from selenium import webdriver
+from selenium.webdriver.support.wait import WebDriverWait
 from core.models import Body, Proposal, Block
 
 class FunctionalTest(StaticLiveServerTestCase):
@@ -20,8 +21,9 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
                     'origin'        : 'M',
+                    'ingest'        : '2015-05-11 17:20:00',
                     }
-        self.body, created = Body.objects.get_or_create(**params)
+        self.body, created = Body.objects.get_or_create(pk=1, **params)
 
     def insert_test_proposals(self):
 
@@ -47,7 +49,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'exp_length' : 42.0,
                          'active'   : True
                        }
-        self.test_block = Block.objects.create(**block_params)
+        self.test_block = Block.objects.get_or_create(**block_params)
 
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
@@ -60,7 +62,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'exp_length' : 30.0,
                          'active'   : False
                        }
-        self.test_block2 = Block.objects.create(**block_params2)
+        self.test_block2 = Block.objects.get_or_create(**block_params2)
 
     def setUp(self):
         self.browser = webdriver.Firefox()
@@ -92,3 +94,11 @@ class FunctionalTest(StaticLiveServerTestCase):
         inputbox = self.browser.find_element_by_id(element_id)
         inputbox.clear()
         return inputbox
+
+    def wait_for_element_with_id(self, element_id):
+        WebDriverWait(self.browser, timeout=10).until(
+            lambda b: b.find_element_by_id(element_id),
+            'Could not find element with id {}. Page text was:\n{}'.format(
+                element_id, self.browser.find_element_by_tag_name('body').text
+            )
+        )

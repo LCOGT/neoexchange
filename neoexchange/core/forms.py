@@ -42,7 +42,7 @@ class ScheduleForm(forms.Form):
     #         raise forms.ValidationError("Object not found.")
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
-        if start < datetime.now().date():
+        if start < datetime.utcnow().date():
             raise forms.ValidationError("Window cannot start in the past")
         return start
 
@@ -59,7 +59,7 @@ class ScheduleBlockForm(forms.Form):
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
         logger.debug("cleaned_data=%s" % (self.cleaned_data))
-        window_cutoff = datetime.now() - timedelta(days=1)
+        window_cutoff = datetime.utcnow() - timedelta(days=1)
         logger.debug("In clean_start_time %s %s" % (start, window_cutoff))
         if start <= window_cutoff:
             raise forms.ValidationError("Window cannot start in the past")
@@ -68,7 +68,7 @@ class ScheduleBlockForm(forms.Form):
 
     def clean_end_time(self):
         end = self.cleaned_data['end_time']
-        if end <= datetime.now():
+        if end <= datetime.utcnow():
             raise forms.ValidationError("Window cannot end in the past")
         else:
             return self.cleaned_data['end_time']
