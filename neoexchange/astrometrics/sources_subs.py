@@ -525,7 +525,7 @@ def make_moving_target(elements):
     print elements
     # Generate initial dictionary of things in common
     target = {
-                  'name'                : elements['provisional_name'],
+                  'name'                : elements['current_name'],
                   'type'                : 'NON_SIDEREAL',
                   'scheme'              : elements['elements_type'],
                   # Moving object param
@@ -594,7 +594,7 @@ def make_constraints(params):
 
 def configure_defaults(params):
 
-    site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'COJ' : 'Q63', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
+    site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
@@ -653,8 +653,12 @@ def submit_block_to_scheduler(elements, params):
     response_data = client.submit(user_request)
     client.print_submit_response()
     request_numbers =  response_data.get('request_numbers', '')
+    tracking_number =  response_data.get('tracking_number', '')
 #    request_numbers = (-42,)
+    if not tracking_number or not request_numbers:
+        logger.error("No Tracking/Request number received")
+        return False, params
     request_number = request_numbers[0]
-    logger.debug("Req number=%s" % request_number)
+    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))
 
-    return request_number
+    return tracking_number, params

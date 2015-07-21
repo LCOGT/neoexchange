@@ -14,6 +14,7 @@
 		{% endblock %}
 		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
 		{% block css-content %}{% endblock %}
+		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 		<link rel="stylesheet" href="{% static "core/css/styles.css" %}">
         {% block last-css-content %}{% endblock %}
         <!--[if lt IE 9]>
@@ -22,6 +23,25 @@
 		<script type="text/javascript" src="{% static "core/js/jquery-1.10.2.js" %}"></script>
 		<script type="text/javascript" src="{% static "core/js/jquery-ui-1.10.3.min.js" %}"></script>
 		<script type="text/javascript" src="{% static "core/js/jquery.dj.selectable.js?v=0.8.0" %}"></script>
+		<script type="text/javascript">
+			$(document).ready(function(){
+
+				$(document).on('click','#messages-inbox',function(event){
+					centreDiv('#show-messages');
+					if ($('#show-messages').is(':visible')) $('#show-messages').fadeOut("fast");
+					else $('#show-messages').fadeIn("fast");
+					$('#show-messages-close').bind("click",function(){
+						$('#show-messages').fadeOut("fast");
+					});
+					return false;
+				})
+				centreDiv = function(el){
+					var wide = $(window).width();
+					var tall = $(window).height();
+					$(el).css({left:(wide-$(el).outerWidth())/2,top:($(window).scrollTop()+(tall-$(el).outerHeight())/2)});
+				}
+			});
+		</script>
 		{% block script-content %}{% endblock %}
 	</head>
 	<body class="{% block bodyclass %}{% endblock %}">
@@ -34,6 +54,9 @@
 						<div id="login" class="block">
 							<ul>
 								{% if user.is_authenticated %}
+								<li>
+									<a href="#" id="messages-inbox" class="fa fa-inbox{% if messages %} highlight{% endif %}"></a>
+								</li>
 								<li>
 									{% if user.first_name %}{{ user.first_name }}{% else %}{{user.username}}{% endif %}
 								</li>
@@ -64,34 +87,44 @@
 					</div>
 				</div>
 							<!-- Header region -->
-			<div id="{% block extramenucss %}extramenu{% endblock %}">
-			<div class="container">
-				<div class="extramenu_padder" role="menubar">
-					{% block extramenu %}
-					{% endblock %}
-					<nav id="navigation" role="navigation">
-						{% block nav %}
-						<ul class="navlist">
-							{% block navhome %}
-							<li>
-								<a rel="home" title="Home" class="navitem" href="{% url 'home'  %}">Home</a>
-							</li>
+				<div id="{% block extramenucss %}extramenu{% endblock %}">
+					<div class="container">
+						<div class="extramenu_padder" role="menubar">
+							{% block extramenu %}
 							{% endblock %}
-							<li>
-								<a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Targets</a>
-							</li>
-						</ul>
-						{% endblock %}
-						<form action="{% url 'search' %}" method="GET" style="display:inline-block;">
-							<input type='text' placeholder="Object name" name="q" /> 
-							<input type="submit" class="button keepvisible" role="menuitem" value="Search">
-						</form>
-					</nav>
+							<nav id="navigation" role="navigation">
+								{% block nav %}
+								<ul class="navlist">
+									{% block navhome %}
+									<li>
+										<a rel="home" title="Home" class="navitem" href="{% url 'home'  %}">Home</a>
+									</li>
+									{% endblock %}
+									<li>
+										<a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Targets</a>
+									</li>
+								</ul>
+								{% endblock %}
+								<form action="{% url 'search' %}" method="GET" style="display:inline-block;">
+									<input type='text' placeholder="Object name" name="q" /> 
+									<input type="submit" class="button keepvisible" role="menuitem" value="Search">
+								</form>
+							</nav>
+						</div>
+					</div>
 				</div>
-			</div>
-			</div>
 				{% block main-content %}{% endblock %}
 				{% block content %}{% endblock %}
+			</div>
+		</div>
+		<div id="show-messages" style="display:none;">
+			<div id="show-messages-inner">
+			<div id="show-messages-close">×</div>
+			{% for m in messages %}
+			<li class="{{m.tags}}">{{m}}</li>
+			{% empty %}
+			<li>No messages.</li>
+			{% endfor %}
 			</div>
 		</div>
 		<script>

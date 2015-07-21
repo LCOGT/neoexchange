@@ -15,6 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta
+from math import degrees
 import slalib as S
 
 def parse_neocp_date(neocp_datestr, dbg=False):
@@ -221,12 +222,23 @@ def degreestodms(value, sep):
         if(value < 0):
             sign = "-"
         else:
-            sign = ""
+            sign = "+"
         value = abs(value)
         d = int(value)
         m = int((value - d)*60)
         s = ((value - d)*3600 - m*60)
-        return "%s%02d%c%02d%c%05.2f" % (sign,d,sep,m,sep,s)
+        return "%s%02d%c%02d%c%04.1f" % (sign,d,sep,m,sep,s)
+    except:
+        return ""
+
+def radianstodms(value, sep):
+    '''Convert radians e.g a Dec from SLALIB routines to decimal hours minutes
+    and seconds'''
+    if ":" in str(value):
+        return value
+    try:
+        value = degrees(float(value))
+        return degreestodms(value, sep)
     except:
         return ""
 
@@ -240,6 +252,17 @@ def degreestohms(value, sep):
         m = int((value - d)*60)
         s = ((value - d)*3600 - m*60)
         return "%02d%c%02d%c%05.2f" % (d,sep,m,sep,s)
+    except:
+        return ""
+
+def radianstohms(value, sep):
+    '''Convert radians e.g an RA from SLALIB routines to decimal hours minutes
+    and seconds'''
+    if ":" in str(value):
+        return value
+    try:
+        value = degrees(float(value))
+        return degreestohms(value, sep)
     except:
         return ""
 

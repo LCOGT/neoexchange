@@ -9,7 +9,7 @@ class Command(BaseCommand):
     help = 'Fetch Goldstone target list for the current year'
 
     def handle(self, *args, **options):
-        self.stdout.write("==== Fetching Goldstone targets ====")
+        self.stdout.write("==== Fetching Goldstone targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         radar_targets = fetch_goldstone_targets()
         for obj_id in radar_targets:
             self.stdout.write("Reading Goldstone target %s" % obj_id)

@@ -9,7 +9,7 @@ class MockDateTimeType(type):
     def __init__(cls, name, bases, d):
         type.__init__(cls, name, bases, d)
         cls.year = 2015
-        cls.month =  7
+        cls.month =  4
         cls.day = 1
         cls.hour = 17
         cls.minute = 0
@@ -22,6 +22,12 @@ class MockDateTimeType(type):
 class MockDateTime(datetime):
 
     __metaclass__ = MockDateTimeType
+
+    @classmethod
+    def change_date(cls, year, month, day):
+        cls.year = year
+        cls.month = month
+        cls.day = day
 
     @classmethod
     def utcnow(cls):

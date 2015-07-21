@@ -58,22 +58,8 @@ SITE_CHOICES = (
                     ('lsc','Cerro Tololo'),
                     ('elp','McDonald'),
                     ('cpt','Sutherland'),
+                    ('tfn','Tenerife'),
     )
-
-def check_object_exists(objname,dbg=False):
-
-    try:
-        block_id = Body.objects.get(provisional_name__contains=objname)
-    except Body.MultipleObjectsReturned:
-        if dbg: print "Multiple bodies found"
-        return 2
-    except Body.DoesNotExist:
-        if dbg: print "Body not found"
-        return 0
-    else:
-        if dbg: print "Body found"
-        return 1
-
 
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
@@ -166,7 +152,8 @@ class Body(models.Model):
         else:
             text = 'not '
         return_name = self.provisional_name
-        if self.provisional_name == None and self.name != None:
+        if (self.provisional_name == None or self.provisional_name == u'') \
+            and self.name != None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name,text)
 reversion.register(Body)
@@ -177,11 +164,28 @@ class Block(models.Model):
     site = models.CharField(max_length=3, choices=SITE_CHOICES)
     body = models.ForeignKey(Body)
     proposal = models.ForeignKey(Proposal)
+    groupid = models.CharField(max_length=55, null=True, blank=True)
     block_start =  models.DateTimeField(null=True, blank=True)
     block_end =  models.DateTimeField(null=True, blank=True)
-    tracking_number = models.CharField(max_length=10,null=True, blank=True)
+    tracking_number = models.CharField(max_length=10, null=True, blank=True)
+    num_exposures = models.IntegerField(null=True, blank=True)
+    exp_length = models.FloatField('Exposure length in seconds', null=True, blank=True)
+    num_observed = models.IntegerField(null=True, blank=True)
     when_observed =  models.DateTimeField(null=True, blank=True)
     active = models.BooleanField(default=False)
+    reported = models.BooleanField(default=False)
+    when_reported =  models.DateTimeField(null=True, blank=True)
+
+    def make_obsblock_link(self):
+        url = ''
+        point_at_reqdb = False
+        if self.tracking_number != None and self.tracking_number != '':
+            url = 'http://lcogt.net/observe/request/%s/' % (self.tracking_number)
+            if point_at_reqdb:
+                url = 'http://scheduler1.lco.gtn/requestdb/admin/requestdb/userrequests/'
+# Strip off leading zeros
+                url = url + self.tracking_number.lstrip('0') + '/'
+        return url
 
     class Meta:
         verbose_name = _('Observation Block')
@@ -189,7 +193,12 @@ class Block(models.Model):
         db_table = 'ingest_block'
 
     def __unicode__(self):
-        pass
+        if self.active:
+            text = ''
+        else:
+            text = 'not '
+
+        return u'%s is %sactive' % (self.tracking_number,text)
 
     
 class Record(models.Model):

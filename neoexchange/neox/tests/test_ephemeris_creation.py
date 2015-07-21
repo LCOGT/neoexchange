@@ -36,6 +36,7 @@ class NewVisitorTest(FunctionalTest):
     @patch('core.models.datetime', MockDateTime)
     def test_can_compute_ephemeris(self):
 
+        MockDateTime.change_date(2015, 7, 1)
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
         self.browser.get(self.live_server_url)
@@ -43,15 +44,14 @@ class NewVisitorTest(FunctionalTest):
         # He notices the page title has the name of the site and the header
         # mentions current targets
         self.assertIn('Home | LCOGT NEOx', self.browser.title)
-        header_text = self.browser.find_element_by_class_name('masthead').text
-        self.assertIn('active targets', header_text)
+        header_text = self.browser.find_element_by_id('site-name').text
+        self.assertIn('Minor planet follow-up portal', header_text)
 
         # He notices there are several targets that could be followed up
         self.check_for_header_in_table('id_neo_targets',
             'Target Name Type R.A. Dec. Origin Ingested')
-#        testlines =[u'N999r0qUnknown/NEO Candidate 23 43 12.75 +19 58 55.6 Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M'),
-#                    u'P10kfud Unknown/NEO Candidate Minor Planet Center %s' % self.body.ingest.strftime('%-d %B %Y, %H:%M')]
-        testlines =[u'N999r0q\nUnknown/NEO Candidate 23 43 12.75 +19 58 55.6 Minor Planet Center %s' % self.body.ingest.strftime('%-d %b %Y, %H:%M'),]
+        # Position below computed for 2015-07-01 17:00:00
+        testlines =[u'N999r0q Unknown/NEO Candidate 23 43 12.75 +19 58 55.6 Minor Planet Center %s' % self.body.ingest.strftime('%-d %b %Y, %H:%M'),]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # He is invited to enter a target to compute an ephemeris

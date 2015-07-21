@@ -26,18 +26,15 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^block/list/$', ListView.as_view(model=Block, queryset=Block.objects.filter(active=True).order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
+    url(r'^block/list/$', ListView.as_view(model=Block, queryset=Block.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/$',BodyDetailView.as_view(model=Body), name='target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
-    # url(r'^schedule/success/$',ScheduleSuccess.as_view(), name='schedule-success'),
-    # url(r'^schedule/$', SchedFormDisplay.as_view(), name='schedule'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout' ),
-    #url(r'^grappelli/', include('grappelli.urls')),
     url(r'^admin/', include(admin.site.urls)),
 ]
 

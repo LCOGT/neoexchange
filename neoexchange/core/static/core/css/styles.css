@@ -678,7 +678,7 @@ input.button { padding: 6px 8px; /* Bug fix for Firefox over-riding the line-hei
   cursor: not-allowed;
 }
 .yes, .no { margin-left: 8px; }
-#messages, .messages { text-align: center; position: relative; }
+#show-messages, .messages { text-align: center; position: relative; }
 .warning {  background-color: #fee57f; }
 .error {  background-color: #df0000; color: white; }
 .msgpadded {
@@ -689,11 +689,11 @@ input.button { padding: 6px 8px; /* Bug fix for Firefox over-riding the line-hei
 	padding: 8px 32px;
 }
 
-#messages .warning, #messages .error, .messages .warning, .messages .error {  border-bottom: 1px solid #ccc; }
-#messages .close, .messages .close { position: absolute; right: 32px; top: 8px; padding: 0px 0px 0px 8px; cursor: pointer; height: 16px; }
-#messages ul, .messages ul { margin: 0; padding: 0; list-style: none; }
-#messages li, .messages li { padding: 8px 0; border-top: 1px solid white; }
-#messages li:first-child, .messages li:first-child { border-top: 0; }
+#show-messages .warning, #show-messages .error, .messages .warning, .messages .error {  border-bottom: 1px solid #ccc; }
+#show-messages .close, .messages .close { position: absolute; right: 32px; top: 8px; padding: 0px 0px 0px 8px; cursor: pointer; height: 16px; }
+#show-messages ul, .messages ul { margin: 0; padding: 0; list-style: none; }
+#show-messages li, .messages li { padding: 8px 0; border-top: 1px solid white; list-style: none;}
+#show-messages li:first-child, .messages li:first-child { border-top: 0; }
 .success { background-color: white; }
 
 /* Sprites */
@@ -1030,6 +1030,47 @@ body.inbox #main td a.copyit {
 .project_inp {
 	display:inline-block;
 }
+
+/* System messages */
+div#show-messages {
+  display:none;
+  border: 0px;
+  background: white;
+  position:absolute;
+  width: 500px;
+  box-shadow:0px 0px 40px #000;
+  -moz-box-shadow:0px 0px 40px #000;
+  -webkit-box-shadow:0px 0px 40px #000;
+  border-radius: 8px;
+  -moz-border-radius: 8px;
+  -webkit-border-radius: 8px;
+  font-size: 1em;
+}
+div#show-messages-inner {
+  padding: 32px;
+  overflow: auto;
+}
+div#show-messages-close {
+    border: 0 solid #bbb;
+    color: #808080;
+    cursor: pointer;
+    float: right;
+    font-weight: bold;
+    line-height: 1em;
+    position:relative;
+    top:-16px;
+    right:-16px;
+    margin-right: -8px;
+    margin-top: -4px;
+    padding: 4px 8px;
+    text-align: center;
+}
+div#show-messages-close:hover { color: #444; background-color: #eee; }
+
+.highlight {
+ text-shadow: 0 0 5px #00ff00; 
+}
+
 /* Responsive design styles */
 
 @media (max-width: 1280px), (max-device-width: 1280px) {
