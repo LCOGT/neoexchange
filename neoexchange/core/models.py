@@ -139,12 +139,13 @@ class Body(models.Model):
         sitecode = '500'
         emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
         # Return just numerical values
-        return (emp_line[1], emp_line[2])
+        return (emp_line[1], emp_line[2], emp_line[3])
 
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
         db_table = 'ingest_body'
+        ordering = ['-ingest', '-active']
 
     def __unicode__(self):
         if self.active:

@@ -49,7 +49,7 @@ class LoginRequiredMixin(object):
 def home(request):
     latest = Body.objects.filter(active=True).latest('ingest')
     max_dt = latest.ingest
-    min_dt = max_dt - timedelta(minutes=30)
+    min_dt = max_dt - timedelta(days=5)
     newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
     params = {
         'targets': Body.objects.filter(active=True).count(),

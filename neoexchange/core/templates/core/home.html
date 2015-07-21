@@ -58,7 +58,10 @@
                         <span class="sortable" id="ra">R.A.</span>
                     </th>
                     <th>
-                        <span class="sortable" id="origin">Dec.</span>
+                        <span class="sortable" id="dec">Dec.</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="mag">Mag.</span>
                     </th>
                     <th>
                         <span class="sortable" id="origin">Origin</span>
@@ -75,6 +78,7 @@
                     <td>{{body.get_source_type_display}}</td>
                     <td>{{body.compute_position.0|radianstohms:" "}}</td>
                     <td>{{body.compute_position.1|radianstodms:" "}}</td>
+                    <td>{{body.compute_position.2|floatformat:1 }}</td>
                     <td>{{body.get_origin_display}}</td>
                     <td>
                         <time class="datestamp nicedate" datetime="{{ body.ingest|date:'c' }}">
@@ -83,7 +87,7 @@
                     </td>
                     </tr>
                 {% empty%}
-                <tr><td colspan=4> No new targets</td></tr>
+                    <tr><td colspan=7> No new targets</td></tr>
                 {% endfor%}
             </tbody>
         </table>
