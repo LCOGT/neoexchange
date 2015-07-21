@@ -1,7 +1,7 @@
 NEO Exchange
 ============
 
-Portal for scheduling observations of NEOs using LCOGT (Version 1.0.4)
+Portal for scheduling observations of NEOs using LCOGT (Version 1.0.5)
 
 Setup
 -----
