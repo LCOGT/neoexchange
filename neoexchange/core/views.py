@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 from django.db.models import Q
 from django.forms.models import model_to_dict
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.urlresolvers import reverse
 from django.shortcuts import render
@@ -156,7 +157,17 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         return super(ScheduleSubmit, self).post(request, *args, **kwargs)
 
     def form_valid(self, form):
-        response = schedule_submit(form.cleaned_data, self.object)
+        target = self.get_object()
+        tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
+        if tracking_num:
+            messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
+            block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+            if block_resp:
+                messages.success(self.request,"Block recorded")
+            else:
+                messages.warning(self.request, "Record not created")
+        else:
+            messages.warning(self.request,"It was not possible to submit your request to the scheduler")
         return super(ScheduleSubmit, self).form_valid(form)
 
     def get_success_url(self):
@@ -204,7 +215,10 @@ def schedule_check(data, body, ok_to_schedule):
         'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
         'utc_date': data['utc_date'].isoformat(),
         'start_time': dark_start.isoformat(),
-        'end_time': dark_end.isoformat()
+        'end_time': dark_end.isoformat(),
+        'mid_time': dark_midpoint.isoformat(),
+        'ra_midpoint': emp[1],
+        'dec_midpoint': emp[2]
     }
     return resp
 
@@ -231,16 +245,67 @@ def schedule_submit(data, body):
               'end_time': data['end_time'],
               'group_id': data['group_id']
               }
-    # Record block and submit to scheduler
-    request_number = submit_block_to_scheduler(body_elements, params)
-    return request_number
+    # Check for pre-existing block
+    tracking_number = None
+    resp_params = None
+    if check_for_block(data, params, body) == 0:
+        # Record block and submit to scheduler
+        tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
+    return tracking_number, resp_params
 
+def check_for_block(form_data, params, new_body):
+	'''Checks if a block with the given name exists in the Django DB.
+	Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
+
+        # XXX Code smell, duplicated from sources_subs.configure_defaults()
+        site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
+
+	try:
+    	    block_id = Block.objects.get(body=Body.objects.get(provisional_name=new_body.provisional_name),
+	    	    	    	    	 groupid__contains=form_data['group_id'],
+                                         proposal=Proposal.objects.get(code=form_data['proposal_code']),
+					 site=site_list[params['site_code']])
+	except Block.MultipleObjectsReturned:
+    	    logger.debug("Multiple blocks found")
+	    return 2
+	except Block.DoesNotExist:
+    	    logger.debug("Block not found")
+    	    return 0
+	else:
+    	    logger.debug("Block found")
+    	    return 1
+
+def record_block(tracking_number, params, form_data, body):
+    '''Records a just-submitted observation as a Block in the database.
+    '''
+
+    logger.debug("form data=%s" % form_data)
+    logger.debug("   params=%s" % params)
+    if tracking_number:
+        block_kwargs = { 'telclass' : params['pondtelescope'].lower(),
+                         'site'     : params['site'].lower(),
+                         'body'     : body,
+                         'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                         'groupid'  : form_data['group_id'],
+                         'block_start' : form_data['start_time'],
+                         'block_end'   : form_data['end_time'],
+                         'tracking_number' : tracking_number,
+                         'num_exposures'   : form_data['exp_count'],
+                         'exp_length'      : form_data['exp_length'],
+                         'active'   : True
+                       }
+        pk = Block.objects.create(**block_kwargs)
+        return True
+    else:
+        return False
 
 def save_and_make_revision(body, kwargs):
     ''' 
-    Make a revision if any of the parameters have changed, but only do it once per ingest not for each parameter
-    Converts current model instance in to a dict and compares each element with incoming version.
-    Incoming variables may be generically formatted as strings, so use the type of original to covert and then compare.
+    Make a revision if any of the parameters have changed, but only do it once
+    per ingest not for each parameter.
+    Converts current model instance into a dict and compares each element with
+    incoming version. Incoming variables may be generically formatted as strings,
+    so use the type of original to convert and then compare.
     '''
     update = False
     body_dict = model_to_dict(body)

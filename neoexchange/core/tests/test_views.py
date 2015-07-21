@@ -227,7 +227,7 @@ class EphemPageTest(TestCase):
                   'utc_date'    : '2015-04-21',
                   'alt_limit'   : 0}
         )
-        self.assertIn('N999r0q', response.content.decode())
+        self.assertIn(u'N999r0q', response.content.decode('utf-8'))
         body_elements = model_to_dict(self.body)
         ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
         expected_html = render_to_string(
@@ -236,7 +236,7 @@ class EphemPageTest(TestCase):
             'ephem_lines'  : ephem_lines,
             'site_code' : site_code }
         )
-        self.assertMultiLineEqual(response.content.decode(), expected_html)
+        self.assertMultiLineEqual(response.content.decode('utf-8'), expected_html)
 
     def test_displays_ephem(self):
         response = self.client.get(reverse('ephemeris'),
