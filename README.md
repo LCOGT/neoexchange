@@ -6,7 +6,7 @@ Portal for scheduling observations of NEOs using LCOGT (Version 1.0.4)
 Setup
 -----
 
-Construct a Python Virtual Enviroment (virtualenv) by executing:  
+Construct a Python Virtual Environment (virtualenv) by executing:  
 
 `virtualenv <path to virtualenv>`  
 `source <path to virtualenv>/bin/activate # for bash-shells`  
