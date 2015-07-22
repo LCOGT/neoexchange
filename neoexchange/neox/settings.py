@@ -15,6 +15,8 @@ else:
 
 PREFIX = os.environ.get('PREFIX', '')
 
+FORCE_SCRIPT_NAME = '/neoexchange'
+
 BASE_DIR = os.path.dirname(CURRENT_PATH)
 
 ADMINS = (
@@ -105,6 +107,8 @@ TEMPLATES = [
     },
 ]
 
+LOGIN_URL = PREFIX +'/accounts/login/'
+
 LOGIN_REDIRECT_URL = PREFIX + '/'
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
@@ -162,7 +166,7 @@ LOGGING = {
             'filters': ['require_debug_false']
         },
         'console': {
-            'level': 'DEBUG',
+            'level': 'ERROR',
             'class': 'logging.StreamHandler',
         }
     },
@@ -180,6 +184,10 @@ LOGGING = {
         'core' : {
             'handlers' : ['file','console'],
             'level'    : 'DEBUG',
+        },
+        'astrometrics' : {
+            'handlers' : ['file','console'],
+            'level'    : 'ERROR',
         }
     }
 }

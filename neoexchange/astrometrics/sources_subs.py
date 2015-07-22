@@ -14,14 +14,15 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
-import urllib2, os
+
 from bs4 import BeautifulSoup
 from datetime import datetime
-from reqdb.requests import Request, UserRequest
-from reqdb.client import SchedulerClient
-
 from re import sub
+from reqdb.client import SchedulerClient
+from reqdb.requests import Request, UserRequest
 import logging
+import urllib2, os
+
 logger = logging.getLogger(__name__)
 
 def download_file(url, file_to_save):

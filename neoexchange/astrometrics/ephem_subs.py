@@ -70,7 +70,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
             epochofel = datetime.strptime(orbelems['epochofel'], '%Y-%m-%d %H:%M:%S')
         except TypeError:
             epochofel = orbelems['epochofel']
-        print epochofel
         epoch_mjd = datetime2mjd_utc(epochofel)
     else:
         epoch_mjd = orbelems['epoch']

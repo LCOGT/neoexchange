@@ -40,6 +40,8 @@ logger = logging.getLogger(__name__)
 
 class LoginRequiredMixin(object):
 
+    #login_url = reverse('auth_login')
+
     @classmethod
     def as_view(cls, **initkwargs):
         view = super(LoginRequiredMixin, cls).as_view(**initkwargs)
