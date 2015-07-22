@@ -135,11 +135,15 @@ class Body(models.Model):
 
     def compute_position(self):
         d = datetime.utcnow()
-        orbelems = model_to_dict(self)
-        sitecode = '500'
-        emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
-        # Return just numerical values
-        return (emp_line[1], emp_line[2], emp_line[3])
+        if self.epochofel:
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+            # Return just numerical values
+            return (emp_line[1], emp_line[2], emp_line[3])
+        else:
+            # Catch the case where there is no Epoch
+            return False
 
     class Meta:
         verbose_name = _('Minor Body')

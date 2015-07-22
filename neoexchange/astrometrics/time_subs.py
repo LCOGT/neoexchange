@@ -109,7 +109,6 @@ def extract_packed_date(value):
 def datetime2mjd_utc(d):
     '''Converts a passed datetime object in UTC to the equivalent Modified Julian
     Date (MJD), which is returned'''
-
 # Compute MJD for UTC
     (mjd, status) = S.sla_cldj(d.year, d.month, d.day)
     if status != 0:

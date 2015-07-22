@@ -56,7 +56,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     whether the epoch of the elements dictionary key is 'epoch' (Eric format) or
     'epochofel' (NEO exchange format)
     '''
-
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
 
@@ -71,6 +70,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
             epochofel = datetime.strptime(orbelems['epochofel'], '%Y-%m-%d %H:%M:%S')
         except TypeError:
             epochofel = orbelems['epochofel']
+        print epochofel
         epoch_mjd = datetime2mjd_utc(epochofel)
     else:
         epoch_mjd = orbelems['epoch']
