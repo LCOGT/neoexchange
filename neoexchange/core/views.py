@@ -47,10 +47,15 @@ class LoginRequiredMixin(object):
 
 
 def home(request):
-    latest = Body.objects.filter(active=True).latest('ingest')
-    max_dt = latest.ingest
-    min_dt = max_dt - timedelta(days=5)
-    newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
+    try:
+        # If we don't have any Body instances, return None instead of breaking
+        latest = Body.objects.filter(active=True).latest('ingest')
+        max_dt = latest.ingest
+        min_dt = max_dt - timedelta(days=5)
+        newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
+    except:
+        latest = None
+        newest = None
     params = {
         'targets': Body.objects.filter(active=True).count(),
         'blocks': Block.objects.filter(active=True).count(),
@@ -110,7 +115,9 @@ def ephemeris(request):
 
 
 class LookUpBodyMixin(object):
-
+    '''
+    A Mixin for finding a Body from a pk and if it exists, return the Body instance.
+    '''
     def dispatch(self, request, *args, **kwargs):
         try:
             body = Body.objects.get(pk=kwargs['pk'])
@@ -127,19 +134,16 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def get(self, request, *args, **kwargs):
         form = self.get_form()
-        # logger.debug(self.body)
         return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
         data = schedule_check(
             form.cleaned_data, self.body, self.ok_to_schedule)
-        # logger.debug()
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
-        logger.debug(form)
         if form.is_valid():
             return self.form_valid(form, request)
         else:
@@ -147,7 +151,10 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
-
+    '''
+    Takes the hidden form input from ScheduleParameters, validates them as a double check.
+    Then submits to the scheduler. If a tracking number is returned, the object has been scheduled and we record a Block.
+    '''
     template_name = 'core/schedule_confirm.html'
     form_class = ScheduleBlockForm
     model = Body
