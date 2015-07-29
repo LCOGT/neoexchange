@@ -26,9 +26,9 @@ class BlocksValidationTest(FunctionalTest):
 
         # He notices there are several blocks that are listed
         self.check_for_header_in_table('id_blocks',
-            'Target Name Site Telescope Type Proposal Tracking Number Obs. Details Active?')
-        testlines = [u'N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Active',
-                     u'N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs Not Active']
+            'Target Name Site Telescope Type Proposal Tracking Number Obs. Details Active? Observed? Reported?')
+        testlines = [u'N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Active None Not Reported',
+                     u'N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs Not Active 1 Reported']
         self.check_for_row_in_table('id_blocks', testlines[0])
         self.check_for_row_in_table('id_blocks', testlines[1])
 

@@ -35,6 +35,12 @@
 						<th>
 							<span class="sortable" id="block_active">Active?</span>
 						</th>
+                                                <th>
+                                                        <span class="sortable" id="block_observed">Observed?</span>
+                                                </th>
+                                                <th>
+                                                        <span class="sortable" id="block_reported">Reported?</span>
+                                                </th>
 					</tr>
 				</thead>
 				<tbody>
@@ -47,7 +53,9 @@
                                                 <td><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
 						<td>{{block.num_exposures}}x{{block.exp_length}} secs</td>
 	                                        <td><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
-			</tr>
+                                                <td>{{block.num_observed}}</td>
+                                                <td><span class="">{% if block.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
+                        </tr>
 				{% endfor %}
 				</tbody>
 			</table>

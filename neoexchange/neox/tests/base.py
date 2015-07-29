@@ -60,7 +60,9 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'tracking_number' : '00043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
-                         'active'   : False
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'reported' : True
                        }
         self.test_block2 = Block.objects.get_or_create(**block_params2)
 
