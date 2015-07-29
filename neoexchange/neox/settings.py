@@ -15,7 +15,8 @@ else:
 
 PREFIX = os.environ.get('PREFIX', '')
 
-FORCE_SCRIPT_NAME = '/neoexchange'
+if PREFIX != '':
+    FORCE_SCRIPT_NAME = '/neoexchange'
 
 BASE_DIR = os.path.dirname(CURRENT_PATH)
 
