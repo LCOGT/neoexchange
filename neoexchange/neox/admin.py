@@ -29,8 +29,8 @@ class BodyAdmin(reversion.VersionAdmin):
         	'fields' : ('active','fast_moving','ingest')
         })
     )
-    search_fields = ('provisional_name',)
-    list_display = ('provisional_name', 'name', 'origin', 'source_type', 
+    search_fields = ('provisional_name','name')
+    list_display = ('id', 'provisional_name', 'name', 'origin', 'source_type', 
       'active', 'fast_moving', 'urgency', 'ingest')
     list_filter = ('origin', 'source_type', 'elements_type', 'active', 
       'fast_moving', 'urgency')
