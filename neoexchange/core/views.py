@@ -94,6 +94,13 @@ class BodySearchView(ListView):
             object_list = self.model.objects.all()
         return object_list
 
+class BlockDetailView(DetailView):
+    context_object_name = "block"
+    model = Block
+
+    def get_context_data(self, **kwargs):
+        context = super(BlockDetailView, self).get_context_data(**kwargs)
+        return context
 
 def ephemeris(request):
 

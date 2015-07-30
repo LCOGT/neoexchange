@@ -15,6 +15,9 @@
                                 <thead>
                                         <tr>
                                                 <th class="list_title">
+                                                        <span class="sortable" id="block_id">Block #</span>
+                                                </th>
+                                                <th class="list_title">
                                                         <span class="sortable" id="name_id">Target Name</span>
                                                 </th>
                                                 <th class="list_project">
@@ -46,6 +49,7 @@
                                 <tbody>
                                 {% for block in block_list %}
                                         <tr class="{% cycle 'odd' 'even' %}">
+                                                <td class="list_title"><a href="{% url 'block' block.pk %}">{{block.pk}}</a></td>
                                                 <td class="list_title"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
                                                 <td>{{block.site|upper}}</td>
                                                 <td>{{block.telclass}}</td>
