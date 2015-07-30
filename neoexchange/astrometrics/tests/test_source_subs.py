@@ -63,6 +63,12 @@ class TestGoldstoneChunkParser(TestCase):
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
+    def test_multimonth_split(self):
+        expected_objid = '410777' # '(410777) 2009 FD'
+        chunks = [u'2015', u'Oct', u'25-Nov', u'1', u'410777', u'2009', u'FD', u'No', u'Yes', u'R']
+        obj_id = parse_goldstone_chunks(chunks)
+        self.assertEqual(expected_objid, obj_id)
+
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
