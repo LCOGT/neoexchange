@@ -18,9 +18,11 @@ from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.messages.views import SuccessMessageMixin
 from django.core.urlresolvers import reverse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
+from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
@@ -69,8 +71,8 @@ def home(request):
 
 
 class BodyDetailView(DetailView):
-    context_object_name = "body"
     model = Body
+    context_object_name = "body"
 
     def get_context_data(self, **kwargs):
         context = super(BodyDetailView, self).get_context_data(**kwargs)
@@ -95,12 +97,22 @@ class BodySearchView(ListView):
         return object_list
 
 class BlockDetailView(DetailView):
-    context_object_name = "block"
     model = Block
+    context_object_name = "block"
 
     def get_context_data(self, **kwargs):
         context = super(BlockDetailView, self).get_context_data(**kwargs)
         return context
+
+class BlockReport(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        block = Block.objects.get(pk=kwargs['pk'])
+        block.active = False
+        block.reported = True
+        block.when_reported = datetime.utcnow()
+        block.save()
+        return redirect(reverse('home'))
 
 def ephemeris(request):
 

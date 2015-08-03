@@ -15,71 +15,76 @@
     <!-- Main body -->
     <div class="container">
         <div id="main">
-            <div class="twocol lastcol">
-                <h3 class="section-title">Details of the Block</h3>
-                <table class="keyvalue-table" id="id_blockdetail">
-                    <thead>
-                        <tr>
-                            <th class="list_title" colspan=2>
-                                <span class="sortable" id="block_id">Block details</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="kv-key">Telescope class</td>
-                            <td class="kv-value">{{object.telclass}}</td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Site</td>
-                            <td class="kv-value">{{object.site|upper}}</td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Body</td>
-                            <td class="kv-value"><a href="{% url 'target' object.body.pk %}">{{object.body.current_name}}</a></td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Proposal</td>
-                            <td class="kv-value">{{object.proposal.title}} ({{object.proposal.code}})</td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Block start</td>
-                            <td class="kv-value">{{object.block_start|date:"Y-m-d H:i"}}</td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Block end</td>
-                            <td class="kv-value">{{object.block_end|date:"Y-m-d H:i"}}</td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Tracking number</td>
-                            <td class="kv-value"><a href="{{object.make_obsblock_link}}">{{object.tracking_number}}</a></td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Number of exposures</td>
-                            <td class="kv-value">{{object.num_exposures}}</td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Exposure length</td>
-                            <td class="kv-value">{{object.exp_length}} seconds</td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Last observed</td>
-                            <td class="kv-value">{% if object.num_observed == 0 %}{{object.when_observed|date:"Y-m-d H:i"}}{% else %}Not Observed{% endif %}</td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Active?</td>
-                            <td class="kv-value"><span class="">{% if object.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">Reported?</td>
-                            <td class="kv-value"><span class="">{% if object.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
-                        </tr>
-                        <tr>
-                            <td class="kv-key">When Reported</td>
-                            <td class="kv-value"><span class="">{% if object.reported %}<span class="warning msgpadded">{{object.when_reported|date:"Y-m-d H:i"}}</span>{% else %}Not Reported{% endif %}</span></td>
-                        </tr>
-                  </tbody>
-                </table>
+            <div class="row">
+                <div class="fourcol">
+                    <h3 class="section-title">Details of the Block</h3>
+                    <table class="keyvalue-table" id="id_blockdetail">
+                        <tbody>
+                            <tr>
+                                <td class="kv-key">Telescope class</td>
+                                <td class="kv-value">{{object.telclass}}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Site</td>
+                                <td class="kv-value">{{object.site|upper}}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Body</td>
+                                <td class="kv-value"><a href="{% url 'target' object.body.pk %}">{{object.body.current_name}}</a></td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Proposal</td>
+                                <td class="kv-value">{{object.proposal.title}} ({{object.proposal.code}})</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Block start</td>
+                                <td class="kv-value">{{object.block_start|date:"Y-m-d H:i"}}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Block end</td>
+                                <td class="kv-value">{{object.block_end|date:"Y-m-d H:i"}}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Tracking number</td>
+                                <td class="kv-value"><a href="{{object.make_obsblock_link}}">{{object.tracking_number}}</a></td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Number of exposures</td>
+                                <td class="kv-value">{{object.num_exposures}}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Exposure length</td>
+                                <td class="kv-value">{{object.exp_length}} seconds</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Last observed</td>
+                                <td class="kv-value">{% if object.num_observed == 0 %}{{object.when_observed|date:"Y-m-d H:i"}}{% else %}Not Observed{% endif %}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Active?</td>
+                                <td class="kv-value"><span class="">{% if object.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Reported?</td>
+                                <td class="kv-value"><span class="">{% if object.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">When Reported</td>
+                                <td class="kv-value"><span class="">{% if object.reported %}<span class="warning msgpadded">{{object.when_reported|date:"Y-m-d H:i"}}</span>{% else %}Not Reported{% endif %}</span></td>
+                            </tr>
+                      </tbody>
+                    </table>
+                </div>
+                <div class="twocol lastcol">
+                    <h3 class="section-title">Actions</h3>
+                    <div class="row">
+                        {% if request.user.is_authenticated %}
+                        {% if not object.reported and object.active and object.num_observed > 0 %}<a class="btn btn-secondary" href="{% url 'report-block' object.id %}">Report</a>{%else%}No actions available{% endif %}
+                        {% else %}
+                        <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

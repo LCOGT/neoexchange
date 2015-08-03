@@ -1,6 +1,6 @@
 /* Styles from the main website */
 body { margin: 0px; padding: 0px; font-size: 1em; color: #202020; font-family: Helvetica,"Bitstream Vera Sans",Arial,sans-serif; }
-a { color: #3366DD; text-decoration: none; }
+a, a:visited { color: #3366DD; text-decoration: none; }
 a:visited { color: #3366DD; }
 a:hover, a:focus { color: #F46262; text-decoration: underline; }
 a:active { color: #A2C0DD; text-decoration: underline; }
@@ -244,6 +244,8 @@ a.btn-secondary{    text-decoration:none;}
     box-shadow: inset 0 3px 5px rgba(0, 0, 0, .125)
 }
 
+.btn-secondary:visited {color:#fff;}
+
 .btn-secondary.active,
 .btn-secondary:active,
 .btn-secondary:focus,
@@ -477,8 +479,7 @@ li.dropdown-menu:after {
   width: 100%;
   height: 1px;
   z-index: 9;
-  background: #e6e6e6;
-}
+  background: none;
 }
 
 #main-holder { display: inline-block; }
