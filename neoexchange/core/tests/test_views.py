@@ -27,7 +27,7 @@ from unittest import skipIf
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.views import home, clean_NEOCP_object, save_and_make_revision, update_MPC_orbit
-from core.models import Body, Proposal
+from core.models import Body, Proposal, Block
 from core.forms import EphemQuery
 
 
@@ -350,3 +350,78 @@ class ScheduleTargetsPageTest(TestCase):
                     }
             )
         self.assertContains(response, 'Parameters for: ' + self.body.current_name())
+
+class BlocksPageTest(TestCase):
+
+    def setUp(self):
+        # Initialise with a test body and two test proposals
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        test_proposal_params = { 'code'  : 'LCOEngineering',
+                                 'title' : 'Test Proposal'
+                               }
+        self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        self.test_block = Block.objects.get_or_create(**block_params)
+
+        block_params2 = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body,
+                         'proposal' : self.test_proposal,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'tracking_number' : '00043',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'reported' : True
+                       }
+        self.test_block2 = Block.objects.get_or_create(**block_params2)
+
+    def test_block_url_resolves_to_blocks_view(self):
+        found = reverse('blocklist')
+        self.assertEqual(found, '/block/list/')
+
+    def test_block_list_page_renders_template(self):
+        response = self.client.get(reverse('blocklist'))
+        self.assertTemplateUsed(response, 'core/block_list.html')
+
+    def test_block_detail_url_resolves_to_block_detail_view(self):
+        found = reverse('block',kwargs={'pk':1})
+        self.assertEqual(found, '/block/1/')
+
+    def test_block_detail_page_renders_template(self):
+        response = self.client.get(reverse('block',kwargs={'pk':1}))
+        self.assertTemplateUsed(response, 'core/block_detail.html')

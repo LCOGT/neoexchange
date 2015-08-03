@@ -5,52 +5,64 @@
 {% block bodyclass %}page{% endblock %}
 {% block extramenu %}
         <div class="headingleft">
-		<h1>Observing Blocks</h1>
-	</div>
+                <h1>Observing Blocks</h1>
+        </div>
 {% endblock%}
 {% block main-content %}
         <div id="main" class="fill-height">
-		<div class="row rowfull">
-			<table class="datatable" id="id_blocks">
-				<thead>
-					<tr>
-						<th class="list_title">
-							<span class="sortable" id="name_id">Target Name</span>
-						</th>
-						<th class="list_project">
-							<span class="sortable" id="site_id">Site</span>
-						</th>
-						<th>
-							<span class="sortable" id="telescope_type">Telescope Type</span>
-						</th>
-						<th>
-							<span class="sortable" id="proposal">Proposal</span>
-						</th>
-						<th>
-							<span class="sortable" id="tracknum">Tracking Number</span>
-						</th>
-						<th>
-							<span class="sortable" id="obs_details">Obs. Details</span>
-						</th>
-						<th>
-							<span class="sortable" id="block_active">Active?</span>
-						</th>
-					</tr>
-				</thead>
-				<tbody>
-				{% for block in block_list %}
-					<tr class="{% cycle 'odd' 'even' %}">
-						<td class="list_title"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
-						<td>{{block.site|upper}}</td>
-						<td>{{block.telclass}}</td>
-						<td>{{block.proposal.code}}</td>
+                <div class="row rowfull">
+                        <table class="datatable" id="id_blocks">
+                                <thead>
+                                        <tr>
+                                                <th class="list_title">
+                                                        <span class="sortable" id="block_id">Block #</span>
+                                                </th>
+                                                <th class="list_title">
+                                                        <span class="sortable" id="name_id">Target Name</span>
+                                                </th>
+                                                <th class="list_project">
+                                                        <span class="sortable" id="site_id">Site</span>
+                                                </th>
+                                                <th>
+                                                        <span class="sortable" id="telescope_type">Telescope Type</span>
+                                                </th>
+                                                <th>
+                                                        <span class="sortable" id="proposal">Proposal</span>
+                                                </th>
+                                                <th>
+                                                        <span class="sortable" id="tracknum">Tracking Number</span>
+                                                </th>
+                                                <th>
+                                                        <span class="sortable" id="obs_details">Obs. Details</span>
+                                                </th>
+                                                <th>
+                                                        <span class="sortable" id="block_active">Active?</span>
+                                                </th>
+                                                <th>
+                                                        <span class="sortable" id="block_observed">Observed?</span>
+                                                </th>
+                                                <th>
+                                                        <span class="sortable" id="block_reported">Reported?</span>
+                                                </th>
+                                        </tr>
+                                </thead>
+                                <tbody>
+                                {% for block in block_list %}
+                                        <tr class="{% cycle 'odd' 'even' %}">
+                                                <td class="list_title"><a href="{% url 'block' block.pk %}">{{block.pk}}</a></td>
+                                                <td class="list_title"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
+                                                <td>{{block.site|upper}}</td>
+                                                <td>{{block.telclass}}</td>
+                                                <td>{{block.proposal.code}}</td>
                                                 <td><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
-						<td>{{block.num_exposures}}x{{block.exp_length}} secs</td>
-	                                        <td><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
-			</tr>
-				{% endfor %}
-				</tbody>
-			</table>
-		</div>
-	</div>
+                                                <td>{{block.num_exposures}}x{{block.exp_length}} secs</td>
+                                                <td><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
+                                                <td>{{block.num_observed}}</td>
+                                                <td><span class="">{% if block.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
+                        </tr>
+                                {% endfor %}
+                                </tbody>
+                        </table>
+                </div>
+        </div>
 {% endblock %}

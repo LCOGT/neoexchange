@@ -49,7 +49,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'exp_length' : 42.0,
                          'active'   : True
                        }
-        self.test_block = Block.objects.get_or_create(**block_params)
+        self.test_block = Block.objects.create(pk=1, **block_params)
 
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
@@ -60,9 +60,11 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'tracking_number' : '00043',
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
-                         'active'   : False
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'reported' : True
                        }
-        self.test_block2 = Block.objects.get_or_create(**block_params2)
+        self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
     def setUp(self):
         self.browser = webdriver.Firefox()

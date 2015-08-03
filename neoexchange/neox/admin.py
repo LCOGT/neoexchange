@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014 LCOGT
+Copyright (C) 2014-2015 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -29,8 +29,8 @@ class BodyAdmin(reversion.VersionAdmin):
         	'fields' : ('active','fast_moving','ingest')
         })
     )
-    search_fields = ('provisional_name',)
-    list_display = ('provisional_name', 'name', 'origin', 'source_type', 
+    search_fields = ('provisional_name','name')
+    list_display = ('id', 'provisional_name', 'name', 'origin', 'source_type', 
       'active', 'fast_moving', 'urgency', 'ingest')
     list_filter = ('origin', 'source_type', 'elements_type', 'active', 
       'fast_moving', 'urgency')
@@ -38,7 +38,18 @@ class BodyAdmin(reversion.VersionAdmin):
 
 
 class BlockAdmin(reversion.VersionAdmin):
-    pass
+    def format_block_start(self, obj):
+        return obj.block_start.strftime('%Y-%m-%d %H:%M')
+    format_block_start.short_description = 'Block start'
+    format_block_start.admin_order_field = 'block_start'
+
+    def body_name(self, obj):
+        return obj.body.current_name()
+
+    list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported',  )
+    list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
+
+    ordering = ('-block_start',)
 
 class RecordAdmin(reversion.VersionAdmin):
     pass
