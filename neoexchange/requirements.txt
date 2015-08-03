@@ -1,8 +1,8 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
 Django>1.8,<1.9
 MySQL-python
-astropy==1.0
-beautifulsoup4==4.3.2
+astropy
+beautifulsoup4
 django-suit==0.2.13
 django-reversion==1.8.7
 html5lib==1.0b3
@@ -14,6 +14,6 @@ six==1.9.0
 wsgiref
 requests
 selenium
-reqdbclient
+reqdbclient==0.6.17
 pytest-django
 opbeat
