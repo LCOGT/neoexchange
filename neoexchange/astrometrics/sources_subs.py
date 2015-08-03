@@ -417,11 +417,15 @@ def parse_goldstone_chunks(chunks, dbg=False):
     else:
         if dbg: print "Specific date of observation"
         # We got an error or a too small number (day of the month)
-        if astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit():
+        if astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isdigit():
             # We have something of the form [20, 2014, YB35; only need first
             # bit
-            if dbg: print "In case 2"
+            if dbg: print "In case 2a"
             object_id = str(chunks[3])
+        elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isalnum():
+            # We have something that straddles months 
+            if dbg: print "In case 2b"
+            object_id = str(chunks[4])
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isalnum():
             # Test if the first 2 characters of chunks[4] are uppercase
             # If yes then we have a desigination e.g. [2014] 'UR' or [2015] 'FW117'
