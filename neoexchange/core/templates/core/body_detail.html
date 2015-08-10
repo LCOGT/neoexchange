@@ -49,10 +49,14 @@
 						        {% endfor %}
 						        </form>
 					        </div>
-							<h3  class="section-title">Recent Observations</h2>
-							<div class="observation">
-								<img src="" />
-							</div>
+							<h3  class="section-title">Recent Blocks Scheduled</h2>
+							<ul>
+								{% for b in blocks %}
+								<li><a href="{% url 'block' b.id %}"></a></li>
+								{% empty %}
+								<li>No blocks have been scheduled</li>
+								{% endfor %}
+							</ul>
 						</div>
 						<div class="twocol lastcol rightsidebar">
 							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>

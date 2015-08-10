@@ -26,7 +26,8 @@ MAINTAINER LCOGT <webmaster@lcogt.net>
 
 # Install packages and update base system
 RUN yum -y install epel-release \
-        && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel supervisor \
+        && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
+        && yum -y install supervisor libssl \
         && yum -y groupinstall "Development Tools" \
         && yum -y update
 

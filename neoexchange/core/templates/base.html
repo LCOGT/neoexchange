@@ -102,6 +102,9 @@
 									<li>
 										<a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Targets</a>
 									</li>
+									<li>
+										<a href="{% url 'blocklist' %}" title="Blocks scheduled for NEO follow-up" class="navitem">Blocks</a>
+									</li>
 								</ul>
 								{% endblock %}
 								<form action="{% url 'search' %}" method="GET" style="display:inline-block;">

@@ -25,6 +25,8 @@ from django.views.generic import DetailView, ListView, FormView, TemplateView, V
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404
+from httplib import REQUEST_TIMEOUT, HTTPSConnection
+import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, MagRangeError
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm
@@ -98,11 +100,35 @@ class BodySearchView(ListView):
 
 class BlockDetailView(DetailView):
     model = Block
-    context_object_name = "block"
 
     def get_context_data(self, **kwargs):
         context = super(BlockDetailView, self).get_context_data(**kwargs)
+        context['images'] = fetch_observations(context['block'].tracking_number, context['block'].proposal.code)
         return context
+
+def fetch_observations(tracking_num, proposal_code):
+    query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num) 
+    data = framedb_lookup(query)
+    if data:
+        imgs = [(d["date_obs"],d["origname"][:-5]) for d in data]
+        return imgs
+    else:
+        return False
+
+def framedb_lookup(query):
+    try:
+        conn = HTTPSConnection("data.lcogt.net", timeout=20)
+        params = urllib.urlencode(
+            {'username': 'egomez@lcogt.net', 'password': 'ncc1701'})
+        #query = "/find?%s" % params
+        conn.request("POST", query, params)
+        response = conn.getresponse()
+        r = response.read()
+        data = json.loads(r)
+    except:
+        return False
+    return data
+
 
 class BlockReport(LoginRequiredMixin, View):
 
@@ -112,7 +138,7 @@ class BlockReport(LoginRequiredMixin, View):
         block.reported = True
         block.when_reported = datetime.utcnow()
         block.save()
-        return redirect(reverse('home'))
+        return redirect(reverse('blocklist'))
 
 def ephemeris(request):
 
