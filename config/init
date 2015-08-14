@@ -24,5 +24,8 @@ EOF
 # Make cron wrapper executable
 chmod +x /var/www/apps/neoexchange/cronwrapper
 
+# Setup the LCOGT NEOx webapp
+python /var/www/apps/neoexchange/manage.py collectstatic --noinput
+
 # Run under supervisord
 exec /usr/bin/supervisord -n -c /etc/supervisord.conf
