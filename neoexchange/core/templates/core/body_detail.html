@@ -52,7 +52,11 @@
 							<h3  class="section-title">Recent Blocks Scheduled</h2>
 							<ul>
 								{% for b in blocks %}
-								<li><a href="{% url 'block' b.id %}"></a></li>
+								<li>
+								    {% if b.active %}<i class="fa fa-clock-o" style="color: #FF9933;"></i>{% else %}<i class="fa fa-thumbs-o-up" style="color:#339933;"></i>{% endif %}
+
+<a href="{% url 'block' b.id %}">{{b.block_start|date:"c"}}&nbsp;<i class="fa fa-long-arrow-right">&nbsp;</i>{{b.block_end|date:"c"}}</a>
+								</li>
 								{% empty %}
 								<li>No blocks have been scheduled</li>
 								{% endfor %}

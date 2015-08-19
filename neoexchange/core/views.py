@@ -79,6 +79,7 @@ class BodyDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super(BodyDetailView, self).get_context_data(**kwargs)
         context['form'] = EphemQuery()
+        context['blocks'] = Block.objects.filter(body=self.object).order_by('block_start')
         return context
 
 
