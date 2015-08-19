@@ -24,6 +24,20 @@
 FROM centos:centos7
 MAINTAINER LCOGT <webmaster@lcogt.net>
 
+# nginx runs on port 80, uwsgi is linked in the nginx conf
+EXPOSE 80
+
+# The entry point is our init script, which runs startup tasks, then
+# execs the supervisord daemon
+ENTRYPOINT [ "/init" ]
+
+# Setup the Python Django environment
+ENV PYTHONPATH /var/www/apps
+ENV DJANGO_SETTINGS_MODULE neox.settings
+
+# Set the PREFIX env variable
+ENV PREFIX /neoexchange
+
 # Install packages and update base system
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
@@ -44,31 +58,14 @@ RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
 # Ensure crond will run on all host operating systems
 RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
 
-# Setup the Python Django environment
-ENV PYTHONPATH /var/www/apps
-ENV DJANGO_SETTINGS_MODULE neox.settings
-
-# Set the PREFIX env variable
-ENV PREFIX /neoexchange
-
 # Copy configuration files
 COPY config/uwsgi.ini /etc/uwsgi.ini
 COPY config/nginx/* /etc/nginx/
 COPY config/processes.ini /etc/supervisord.d/processes.ini
 COPY config/crontab.root /var/spool/cron/root
 
-# nginx runs on port 80, uwsgi is linked in the nginx conf
-EXPOSE 80
-
-# The entry point is our init script, which runs startup tasks, then
-# execs the supervisord daemon
-ENTRYPOINT [ "/init" ]
-
 # Copy configuration files
 COPY config/init /init
 
 # Copy the LCOGT Mezzanine webapp files
 COPY neoexchange /var/www/apps/neoexchange
-
-# Setup the LCOGT NEOx webapp
-RUN python /var/www/apps/neoexchange/manage.py collectstatic --noinput
