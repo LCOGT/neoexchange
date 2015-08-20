@@ -103,10 +103,8 @@ def parse_previous_NEOCP_id(items, dbg=False):
         else:
             if dbg: print "Comet found, parsing"
 #            print "Items=",items
-            if '  (' in items[0]:
-                items[0] = items[0].replace('  (', '(')
-            else:
-                items[0] = items[0].replace(' (', '(')
+
+            items[0] = sub(r"\s+\(", r"(", items[0])
             subitems = items[0].lstrip().split()
             newid = subitems[1] + ' ' + subitems[2]
             provid_date = subitems[4].split('(')
