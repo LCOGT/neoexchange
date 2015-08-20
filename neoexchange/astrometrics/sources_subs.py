@@ -80,6 +80,53 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
 
     return page
 
+def parse_previous_NEOCP_id(items, dbg=False):
+    crossmatch = ['', '', '', '']
+    if len(items) == 1:
+# Is of the form "<foo> does not exist" or "<foo> was not confirmed"
+        chunks = items[0].split()
+        none_id = ''
+        if chunks[1].find('does') >= 0:
+            none_id = 'doesnotexist'
+        elif chunks[1].find('was') >= 0:
+            none_id = 'wasnotconfirmed'
+
+        crossmatch = [chunks[0], none_id, '', ' '.join(chunks[-3:])]
+    elif len(items) == 3:
+# Is of the form "<foo> = <bar>(<date> UT)"
+        if items[0].find('Comet') != 1:
+            newid = str(items[0]).lstrip()+items[1].string.strip()
+            provid_date = items[2].split('(')
+            provid = provid_date[0].replace(' = ', '')
+            date = '('+provid_date[1].strip()
+            mpec = ''
+        else:
+            if dbg: print "Comet found, parsing"
+#            print "Items=",items
+            if '  (' in items[0]:
+                items[0] = items[0].replace('  (', '(')
+            else:
+                items[0] = items[0].replace(' (', '(')
+            subitems = items[0].lstrip().split()
+            newid = subitems[1] + ' ' + subitems[2]
+            provid_date = subitems[4].split('(')
+            provid = provid_date[0]
+            date = '('+provid_date[1] + ' ' + subitems[5] + ' ' + subitems[6]
+            mpec = items[1].contents[0].string + items[1].contents[1].string
+
+        crossmatch = [provid, newid, mpec, date]
+    elif len(items) == 5:
+# Is of the form "<foo> = <bar> (date UT) [see MPEC<x>]"
+        newid = str(items[0]).lstrip()+items[1].string.strip()
+        provid_date = items[2].split()
+        provid = provid_date[1]
+        date = ' '.join(provid_date[2:5])
+        mpec = items[3].contents[0].string + items[3].contents[1].string
+        crossmatch = [provid, newid, mpec, date]
+    else:
+        logger.warn("Unknown number of fields. items=%s", items)
+
+    return crossmatch
 
 def fetch_previous_NEOCP_desigs(dbg=False):
     '''Fetches the "Previous NEO Confirmation Page Objects" from the MPC, parses
@@ -101,47 +148,7 @@ def fetch_previous_NEOCP_desigs(dbg=False):
 # Skip the first "Processing" list item
         if items[0].strip() == 'Processing':
             continue
-        crossmatch = ['', '', '', '']
-        if len(items) == 1:
-# Is of the form "<foo> does not exist" or "<foo> was not confirmed"
-            chunks = items[0].split()
-            none_id = ''
-            if chunks[1].find('does') >= 0:
-                none_id = 'doesnotexist'
-            elif chunks[1].find('was') >= 0:
-                none_id = 'wasnotconfirmed'
-
-            crossmatch = [chunks[0], none_id, '', ' '.join(chunks[-3:])]
-        elif len(items) == 3:
-# Is of the form "<foo> = <bar>(<date> UT)"
-            if items[0].find('Comet') != 1:
-                newid = str(items[0]).lstrip()+items[1].string.strip()
-                provid_date = items[2].split('(')
-                provid = provid_date[0].replace(' = ', '')
-                date = '('+provid_date[1].strip()
-                mpec = ''
-            else:
-                if dbg: print "Comet found, parsing"
-#                print "Items=",items
-                items[0] = items[0].replace(' (', '(')
-                subitems = items[0].lstrip().split()
-                newid = subitems[1] + ' ' + subitems[2]
-                provid_date = subitems[4].split('(')
-                provid = provid_date[0]
-                date = '('+provid_date[1] + ' ' + subitems[5] + ' ' + subitems[6]
-                mpec = items[1].contents[0].string + items[1].contents[1].string
-
-            crossmatch = [provid, newid, mpec, date]
-        elif len(items) == 5:
-# Is of the form "<foo> = <bar> (date UT) [see MPEC<x>]"
-            newid = str(items[0]).lstrip()+items[1].string.strip()
-            provid_date = items[2].split()
-            provid = provid_date[1]
-            date = ' '.join(provid_date[2:5])
-            mpec = items[3].contents[0].string + items[3].contents[1].string
-            crossmatch = [provid, newid, mpec, date]
-        else:
-            logger.warn("Unknown number of fields. items=%s", items)
+        crossmatch = parse_previous_NEOCP_id(items)
 # Append to list
         if crossmatch != ['', '', '', '']:
             crossids.append(crossmatch)

@@ -18,10 +18,12 @@ from django.forms.models import model_to_dict
 from core.models import Body
 from datetime import datetime, timedelta
 from unittest import skipIf
+from bs4 import BeautifulSoup
 
 from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
-from astrometrics.sources_subs import parse_goldstone_chunks, submit_block_to_scheduler
+from astrometrics.sources_subs import parse_goldstone_chunks, \
+    submit_block_to_scheduler, parse_previous_NEOCP_id
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -109,3 +111,71 @@ class TestSubmitBlockToScheduler(TestCase):
                  }
 
         request_number = submit_block_to_scheduler(body_elements, params)
+
+class TestPreviousNEOCPParser(TestCase):
+    '''Unit tests for the sources_subs.parse_previous_NEOCP_id() method'''
+
+    def test_was_not_confirmed(self):
+
+        items = [u' P10ngMD was not confirmed (Aug. 19.96 UT)\n']
+        expected = [u'P10ngMD', 'wasnotconfirmed', '', u'(Aug. 19.96 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_does_not_exist(self):
+    
+        items = [u' N008b6e does not exist (Aug. 14.77 UT)\n']
+        expected = [u'N008b6e', 'doesnotexist', '', u'(Aug. 14.77 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_non_neo(self):
+
+        items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>').sub, u' = WQ39346(Aug. 19.79 UT)\n']
+        expected = [u'WQ39346', '2015 QF', '', u'(Aug. 19.79 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+        
+
+    def test_neo(self):
+
+        items = [u' 2015 PK', BeautifulSoup('<sub>229</sub>').sub, u' = P10n00U (Aug. 17.98 UT)  [see ', BeautifulSoup('<a href="/mpec/K15/K15Q10.html"><i>MPEC</i> 2015-Q10</a>').a, u']\n']
+        expected = [u'P10n00U', u'2015 PK229', u'MPEC 2015-Q10', u'(Aug. 17.98 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_good_comet(self):
+
+        items = [u' Comet C/2015 Q1 = SW40sQ (Aug. 19.49 UT)  [see ',
+            BeautifulSoup('<a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>').a,
+            u']\n']
+        expected = [u'SW40sQ', u'C/2015 Q1', u'IAUC 2015-', u'(Aug. 19.49 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_good_comet_cbet(self):
+
+        items = [u' Comet C/2015 O1 = P10ms6N(July 21.99 UT)  [see ',
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>').a,
+            u']\n']
+
+        expected = [u'P10ms6N', u'C/2015 O1', u'CBET 4119', u'(July 21.99 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+    
+
+    def test_bad_comet(self):
+
+        items = [u' Comet C/2015 P3 = MAT01  (Aug. 11.23 UT)  [see ',
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004136.txt"><i>CBET</i> 4136</a>').a,
+             u']\n']
+        expected = [u'MAT01', u'C/2015 P3', u'CBET 4136', u'(Aug. 11.23 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
