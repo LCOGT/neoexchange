@@ -1,10 +1,10 @@
 NEO Exchange
 ============
 
-Portal for scheduling observations of NEOs using LCOGT (Version 1.0.5.1)
+Portal for scheduling observations of NEOs using LCOGT (Version 1.0.5.2)
 
 Local Setup
------
+-----------
 
 Construct a Python Virtual Environment (virtualenv) by executing:  
 
