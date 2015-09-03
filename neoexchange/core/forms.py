@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from django import forms
 from django.db.models import Q
 from .models import Body, Proposal
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 import logging
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ GNU General Public License for more details.
 '''
 from django.db import models
 from django.utils.timezone import now
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from astrometrics.ephem_subs import compute_ephem
 from astropy.time import Time
