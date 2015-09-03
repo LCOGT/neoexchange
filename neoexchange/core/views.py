@@ -477,6 +477,23 @@ def clean_NEOCP_object(page_list):
                 'active': True,
                 'origin': 'M',
             }
+        elif len(current) == 22:
+            params = {
+                'abs_mag': float(current[1]),
+                'slope': float(current[2]),
+                'epochofel': extract_mpc_epoch(current[3]),
+                'meananom': float(current[4]),
+                'argofperih': float(current[5]),
+                'longascnode': float(current[6]),
+                'orbinc': float(current[7]),
+                'eccentricity': float(current[8]),
+                'meandist': float(current[10]),
+                'source_type': 'U',
+                'elements_type': 'MPC_MINOR_PLANET',
+                'active': True,
+                'origin': 'L',
+                'provisional_name' : current[0]
+            }
         else:
             logger.warn(
                 "Did not get right number of parameters for %s. Values %s", current[0], current)
