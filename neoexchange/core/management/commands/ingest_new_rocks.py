@@ -41,13 +41,14 @@ class Command(BaseCommand):
         orblines = orbfile_fh.readlines()
 
         orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
-        self.stdout.write(orblines)
+        dbg_msg = orblines[0]
+        self.stdout.write(dbg_msg)
         kwargs = clean_NEOCP_object(orblines)
-        self.stdout.write(kwargs)
         if kwargs != {}:
             obj_id = kwargs['provisional_name']
             body, created = Body.objects.get_or_create(provisional_name=obj_id)
-            self.stdout.write(body, created)
+            dbg_msg = "%s %s" % (body, created)
+            self.stdout.write(dbg_msg)
             if not created:
                 # Find out if the details have changed, if they have, save a
                 # revision
@@ -61,6 +62,6 @@ class Command(BaseCommand):
                     msg = "No changes needed for %s" % obj_id
             else:
                 save_and_make_revision(body, kwargs)
-                msg = "Added %s" % obj_id
+                msg = "Added new local target %s" % obj_id
 
             self.stdout.write(msg)
