@@ -165,21 +165,21 @@ reversion.register(Body)
 
 
 class Block(models.Model):
-    telclass = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
-    site = models.CharField(max_length=3, choices=SITE_CHOICES)
-    body = models.ForeignKey(Body)
-    proposal = models.ForeignKey(Proposal)
-    groupid = models.CharField(max_length=55, null=True, blank=True)
-    block_start =  models.DateTimeField(null=True, blank=True)
-    block_end =  models.DateTimeField(null=True, blank=True)
+    telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
+    site            = models.CharField(max_length=3, choices=SITE_CHOICES)
+    body            = models.ForeignKey(Body)
+    proposal        = models.ForeignKey(Proposal)
+    groupid         = models.CharField(max_length=55, null=True, blank=True)
+    block_start     = models.DateTimeField(null=True, blank=True)
+    block_end       = models.DateTimeField(null=True, blank=True)
     tracking_number = models.CharField(max_length=10, null=True, blank=True)
-    num_exposures = models.IntegerField(null=True, blank=True)
-    exp_length = models.FloatField('Exposure length in seconds', null=True, blank=True)
-    num_observed = models.IntegerField(null=True, blank=True)
-    when_observed =  models.DateTimeField(null=True, blank=True)
-    active = models.BooleanField(default=False)
-    reported = models.BooleanField(default=False)
-    when_reported =  models.DateTimeField(null=True, blank=True)
+    num_exposures   = models.IntegerField(null=True, blank=True)
+    exp_length      = models.FloatField('Exposure length in seconds', null=True, blank=True)
+    num_observed    = models.IntegerField(null=True, blank=True)
+    when_observed   = models.DateTimeField(null=True, blank=True)
+    active          = models.BooleanField(default=False)
+    reported        = models.BooleanField(default=False)
+    when_reported   = models.DateTimeField(null=True, blank=True)
 
     def make_obsblock_link(self):
         url = ''
@@ -205,17 +205,17 @@ class Block(models.Model):
 
         return u'%s is %sactive' % (self.tracking_number,text)
 
-    
+
 class Record(models.Model):
     ''' Log of observations successfully made and filename of data which resulted
     '''
-    site    = models.CharField('3-letter site code', max_length=3)
-    instrument = models.CharField('instrument code', max_length=4)
-    filter = models.CharField('filter class', max_length=15)
-    filename = models.CharField(max_length=31)
-    exp = models.FloatField('exposure time in seconds')
-    whentaken = models.DateTimeField()
-    block = models.ForeignKey(Block)
+    site        = models.CharField('3-letter site code', max_length=3)
+    instrument  = models.CharField('instrument code', max_length=4)
+    filter      = models.CharField('filter class', max_length=15)
+    filename    = models.CharField(max_length=31)
+    exp         = models.FloatField('exposure time in seconds')
+    whentaken   = models.DateTimeField()
+    block       = models.ForeignKey(Block)
 
     class Meta:
         verbose_name = _('Observation Record')

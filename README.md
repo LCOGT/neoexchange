@@ -17,7 +17,7 @@ or:
 
 then:
 
-`pip install -r neox/requirements.txt`
+`pip install -r neoexchange/requirements.txt`
 
 Deployment
 ----------
