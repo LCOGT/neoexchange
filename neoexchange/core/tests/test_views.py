@@ -82,6 +82,38 @@ class TestClean_NEOCP_Object(TestCase):
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
+    def test_findorb_without_replace(self):
+        obs_page = [u'LSCTLFr 18.04  0.15 K158Q 359.91024    8.53879  335.41846    3.06258  0.1506159  0.29656016   2.2270374    FO 150826     3   1 10.4 min  0.08         Find_Orb   0000 LSCTLFr                     20150826',
+                   ]
+        expected_elements = {}
+        elements = clean_NEOCP_object(obs_page)
+        self.assertEqual(expected_elements, elements)
+
+    def test_findorb(self):
+        obs_page = [u'LSCTLFr 18.04  0.15 K158Q 359.91024    8.53879  335.41846    3.06258  0.1506159  0.29656016   2.2270374    FO 150826     3   1 10.4 min  0.08         Find_Orb   0000 LSCTLFr                     20150826',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 18.04,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2015, 8, 26, 0, 0, 0),
+                              'meananom'    : 359.91024,
+                              'argofperih'  : 8.53879,
+                              'longascnode' : 335.41846,
+                              'orbinc'      :   3.06258,
+                              'eccentricity':  0.1506159,
+                             # 'MDM':   0.29656016,
+                              'meandist'    :  2.2270374,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'L',
+                              'source_type' : 'U',
+                              'active'      : True
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+
     def save_N007riz(self):
         obj_id ='N007riz'
         elements = { 'abs_mag'     : 23.9,
