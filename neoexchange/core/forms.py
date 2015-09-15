@@ -6,14 +6,16 @@ from django.utils.translation import ugettext_lazy as _
 import logging
 logger = logging.getLogger(__name__)
 
+SITES = (('V37','ELP (V37)'),
+         ('F65','FTN (F65)'),
+         ('E10', 'FTS (E10)'),
+         ('W85','LSC (W85; SBIG)'),
+         ('W86','LSC (W86-87)'),
+         ('K92','CPT (K91-93)'),
+         ('Q63','COJ (Q63-64)'))
+
 class EphemQuery(forms.Form):
-    SITES = (('V37','ELP (V37)'),
-             ('F65','FTN (F65)'),
-             ('E10', 'FTS (E10)'),
-             ('W85','LSC (W85)'),
-             ('W86','LSC (W86-87)'),
-             ('K92','CPT (K91-93)'),
-             ('Q63','COJ (Q63-64)'))
+    
     target = forms.CharField(label="Enter target name...", max_length=10, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=datetime.utcnow().date(), required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
@@ -30,13 +32,7 @@ class EphemQuery(forms.Form):
             raise forms.ValidationError("Multiple objects found.")
 
 class ScheduleForm(forms.Form):
-    SITES = (('V37','ELP (V37)'),
-             ('F65','FTN (F65)'),
-             ('E10', 'FTS (E10)'),
-             ('W85','LSC (W85; SBIG)'),
-             ('W86','LSC (W86-87)'),
-             ('K92','CPT (K91-93)'),
-             ('Q63','COJ (Q63-64)'))
+
     proposals = Proposal.objects.all()
     proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
 
