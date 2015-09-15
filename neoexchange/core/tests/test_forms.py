@@ -94,3 +94,19 @@ class TestScheduleForm(TestCase):
         self.assertIn('Proposal', form.as_p())
         self.assertIn('Site code:', form.as_p())
 
+    def test_form_has_lsc_field(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('LSC (W85; SBIG)', form.as_p())
+        self.assertIn('LSC (W86-87)', form.as_p())
+
+    def test_form_has_all_sites(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('ELP (V37)', form.as_p())
+        self.assertIn('FTN (F65)', form.as_p())
+        self.assertIn('FTS (E10)', form.as_p())
+        self.assertIn('LSC (W85; SBIG)', form.as_p())
+        self.assertIn('LSC (W86-87)', form.as_p())
+        self.assertIn('CPT (K91-93)', form.as_p())
+        self.assertIn('COJ (Q63-64)', form.as_p())
