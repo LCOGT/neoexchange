@@ -113,6 +113,30 @@ class TestClean_NEOCP_Object(TestCase):
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
+    def test_findorb_with_perturbers(self):
+        obs_page = [u'CPTTL89 19.03  0.15 K159F 343.17326  209.67924  172.85027   25.18528  0.0920324  0.36954350   1.9232054    FO 150916    30   1    3 days 0.14 M-P 06  Find_Orb   0000 CPTTL89                     20150915',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 19.03,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2015, 9, 15, 0, 0, 0),
+                              'meananom'    : 343.17326,
+                              'argofperih'  : 209.67924,
+                              'longascnode' : 172.85027,
+                              'orbinc'      :  25.18528,
+                              'eccentricity':  0.0920324,
+                             # 'MDM':   0.36954350,
+                              'meandist'    :  1.9232054,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'L',
+                              'source_type' : 'U',
+                              'active'      : True
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
 
     def save_N007riz(self):
         obj_id ='N007riz'

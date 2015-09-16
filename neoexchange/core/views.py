@@ -477,7 +477,7 @@ def clean_NEOCP_object(page_list):
                 'active': True,
                 'origin': 'M',
             }
-        elif len(current) == 22:
+        elif len(current) == 22 or len(current) == 24:
             params = {
                 'abs_mag': float(current[1]),
                 'slope': float(current[2]),
