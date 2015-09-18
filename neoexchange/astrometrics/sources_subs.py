@@ -617,6 +617,7 @@ def configure_defaults(params):
         params['instrument'] = '1M0-SCICAM-SINISTRO'
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
+        params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
 
     return params
