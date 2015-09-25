@@ -1,4 +1,4 @@
-from astrometrics.sources_subs import fetch_NEOCP
+from astrometrics.sources_subs import fetch_NEOCP, parse_NEOCP
 from core.views import update_NEOCP_orbit
 
 from django.core.management.base import BaseCommand, CommandError
@@ -10,7 +10,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("==== Fetching NEOCP targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-        obj_ids = fetch_NEOCP()
+        neocp_page = fetch_NEOCP()
+        obj_ids = parse_NEOCP(neocp_page)
         self.stdout.write("==== Found %s NEOCP targets ====" % len(obj_ids))
         for obj_id in obj_ids:
             self.stdout.write("Reading NEOCP target %s" % obj_id)

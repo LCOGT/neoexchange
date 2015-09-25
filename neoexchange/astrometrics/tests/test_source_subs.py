@@ -19,11 +19,12 @@ from core.models import Body
 from datetime import datetime, timedelta
 from unittest import skipIf
 from bs4 import BeautifulSoup
+import os
 
 from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, \
-    submit_block_to_scheduler, parse_previous_NEOCP_id
+    submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -179,3 +180,63 @@ class TestPreviousNEOCPParser(TestCase):
         
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
+
+class TestParseNEOCP(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_neocp_page.html'), 'r')
+        self.test_neocp_page = BeautifulSoup(test_fh, "html.parser")
+
+    def test_parse_neocp(self):
+        expected_obj_ids = ['WSB0D7B',
+                            'CAH024',
+                            'P10o56w',
+                            'WS0CB7B',
+                            'WS0D4AD',
+                            'WSB0B67',
+                            'WSB07F4',
+                            'WSB07F2',
+                            'WSB07D3',
+                            'WS0B4C6',
+                            'P10o4Gp',
+                            'P10o4Go',
+                            'P10o4EL',
+                            'P10o41o',
+                            'P10o41l',
+                            'P10o41n',
+                            'P10o3d9',
+                            'P10o3da',
+                            'P10o2VR',
+                            'P10o2ur',
+                            'P10o1Gq',
+                            'P10o1Fl',
+                            'P10o1Fm',
+                            'P10o14r',
+                            'WSF2BB6',
+                            'LM02Ei5',
+                            'P10o10e',
+                            'P10o0Zx',
+                            'WSAF769',
+                            'WSAFE31',
+                            'WSAFCA9',
+                            'WSAF76B',
+                            'P10o0Jv',
+                            'P10o0Jo',
+                            'P10o0Ha',
+                            'P10o0Hc',
+                            'CAH002',
+                            'WSAEABF',
+                            'WSAC540',
+                            'WSAC5DA',
+                            'WS03256',
+                            'WSAD60C',
+                            'WR0159E',
+                            'LM01vOQ',
+                            'P10nI6D',
+                            'P10nw2g',
+                            ]
+
+        obj_ids = parse_NEOCP(self.test_neocp_page)
+
+        self.assertEqual(len(expected_obj_ids), len(obj_ids))
+        self.assertEqual(expected_obj_ids, obj_ids)

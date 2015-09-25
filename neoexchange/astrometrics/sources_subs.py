@@ -155,13 +155,21 @@ def fetch_previous_NEOCP_desigs(dbg=False):
 
 def fetch_NEOCP(dbg=False):
 
-    '''Fetches the NEO Confirmation Page and extracts a list of objects, which
-    is returned.'''
+    '''Fetches the NEO Confirmation Page and returns a BeautifulSoup object
+    of the page.'''
 
     NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/ToConfirm.html'
 
     neocp_page = fetchpage_and_make_soup(NEOCP_url)
-    if neocp_page == None:
+    return neocp_page
+
+
+def parse_NEOCP(neocp_page, dbg=False):
+
+    '''Takes a BeautifulSoup object of the NEO Confirmation Page and extracts a
+    list of objects, which is returned.'''
+
+    if type(neocp_page) != BeautifulSoup:
         return None
 
 # Find all the input checkboxes with "obj" in the name
