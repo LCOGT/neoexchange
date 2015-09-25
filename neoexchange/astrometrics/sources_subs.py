@@ -158,7 +158,7 @@ def fetch_NEOCP(dbg=False):
     '''Fetches the NEO Confirmation Page and returns a BeautifulSoup object
     of the page.'''
 
-    NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/ToConfirm.html'
+    NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
     neocp_page = fetchpage_and_make_soup(NEOCP_url)
     return neocp_page
