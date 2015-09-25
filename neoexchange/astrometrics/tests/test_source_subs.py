@@ -304,3 +304,15 @@ class TestParseNEOCP(TestCase):
 
         self.assertEqual(len(expected_obj_ids), len(obj_ids))
         self.assertEqual(expected_obj_ids, obj_ids)
+
+    def test_parse_neocp_not_soup(self):
+
+        obj_ids = parse_NEOCP(None)
+
+        self.assertEqual(obj_ids, None)
+
+    def test_parse_neocp_no_objects(self):
+
+        obj_ids = parse_NEOCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+
+        self.assertEqual(obj_ids, None)

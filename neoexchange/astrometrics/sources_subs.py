@@ -173,6 +173,8 @@ def parse_NEOCP(neocp_page, dbg=False):
 
 # Find all the input checkboxes with "obj" in the name
     neocp_objects = neocp_page.findAll('input', attrs={"name" : "obj"})
+    if len(neocp_objects) == 0:
+        return None
 
     new_objects = []
     for row in neocp_objects:
@@ -192,7 +194,11 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False, dbg2=False):
 
 # Find the table with the objects
     table = neocp_page.find("table", { "class" : "tablesorter" })
+    if len(table) == 0:
+        return None
     table_body = table.find("tbody")
+    if len(table_body) == 0:
+        return None
 
     new_objects = []
     for row in table_body.findAll("tr"):
