@@ -386,7 +386,7 @@ class TestParseNEOCPExtraParams(TestCase):
                                         'nobs' : 6,
                                         'arc_length' : 0.06,
                                         'not_seen' : 4.878,
-                                        'update_date': u'A2457290.449504'
+                                        'update_date': datetime(2015, 9, 24, 22, 47, 17)
                                        }
         )
         self.assertNotEqual(None, obj_ids)

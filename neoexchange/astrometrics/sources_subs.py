@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from re import sub
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 import logging
 import urllib2, os
 
@@ -182,7 +183,7 @@ def parse_NEOCP(neocp_page, dbg=False):
 
     return new_objects
 
-def parse_NEOCP_extra_params(neocp_page, dbg=False, dbg2=False):
+def parse_NEOCP_extra_params(neocp_page, dbg=False):
 
     '''Takes a BeautifulSoup object of the NEO Confirmation Page and extracts a
     list of objects along with a dictionary of extra parameters (score, 
@@ -201,32 +202,56 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False, dbg2=False):
         return None
 
     new_objects = []
+    object_list = []
     for row in table_body.findAll("tr"):
         cols = row.findAll("td")
-        # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
-        cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
-        if dbg2: print "Cols=",cols
-        chunks = cols[2].split(' ')
-        if dbg2: print chunks
-        if len(chunks) != 3: return None
-        day_chunks = chunks[2].split('.') 
-        if dbg2: print day_chunks
-        neocp_datetime = datetime(year=int(chunks[0]), month=int(chunks[1]), day=int(day_chunks[0]))
+        if len(cols) != 0:
+            # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
+            cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
+            if dbg: print "Cols=",cols, len(cols)
+            try:
+                score = int(cols[1][0:3])
+            except:
+                score = None
+            neocp_datetime = parse_neocp_decimal_date(cols[2])
+            try:
+                update_date = cols[6].split()[0]
+                if 'Moved' in update_date:
+                    update_date = None
+                else:
+                    update_jd = update_date[1:]
+                    update_date = jd_utc2datetime(update_jd)
+            except:
+                update_date = None
+            try:
+                nobs = int(cols[8])
+            except:
+                nobs = None
+            try:
+                arc_length = float(cols[9])
+            except:
+                arc_length = None
+            try:
+                not_seen = float(cols[11])
+            except:
+                not_seen = None
 
-        decimal_day = float('0.' + day_chunks[1].split()[0])
-        neocp_datetime = neocp_datetime + timedelta(days=decimal_day)
-        
-        obj_id = cols[0].split()[0]
-        params = { 'score' : int(cols[1][0:3]),
-                   'discover_date' :  neocp_datetime,
-                   'update_date' : cols[6].split()[0],
-                   'nobs' : int(cols[8]),
-                   'arc_length' : float(cols[9]),
-                   'not_seen' : float(cols[11])
-                 }
-        new_object = (obj_id, params)
-        if dbg: print new_object
-        new_objects.append(new_object)
+            obj_id = cols[0].split()
+            if len(obj_id) == 2:
+                obj_id = obj_id[0]
+            else:
+                obj_id = obj_id[0][0:7]
+            params = { 'score' : score,
+                       'discover_date' :  neocp_datetime,
+                       'update_date' : update_date,
+                       'nobs' : nobs,
+                       'arc_length' : arc_length,
+                       'not_seen' : not_seen
+                     }
+            if obj_id not in object_list:
+                object_list.append(obj_id)
+                new_object = (obj_id, params)
+                new_objects.append(new_object)
        
     return new_objects
 
