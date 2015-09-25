@@ -194,10 +194,10 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False, dbg2=False):
 
 # Find the table with the objects
     table = neocp_page.find("table", { "class" : "tablesorter" })
-    if len(table) == 0:
+    if table == None:
         return None
     table_body = table.find("tbody")
-    if len(table_body) == 0:
+    if table_body == None:
         return None
 
     new_objects = []
@@ -205,7 +205,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False, dbg2=False):
         cols = row.findAll("td")
         # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
         cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
-        if dbg2: print cols
+        if dbg2: print "Cols=",cols
         chunks = cols[2].split(' ')
         if dbg2: print chunks
         if len(chunks) != 3: return None
