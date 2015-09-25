@@ -16,7 +16,7 @@ GNU General Public License for more details.
 '''
 
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 from re import sub
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
@@ -163,7 +163,6 @@ def fetch_NEOCP(dbg=False):
     neocp_page = fetchpage_and_make_soup(NEOCP_url)
     return neocp_page
 
-
 def parse_NEOCP(neocp_page, dbg=False):
 
     '''Takes a BeautifulSoup object of the NEO Confirmation Page and extracts a
@@ -179,6 +178,50 @@ def parse_NEOCP(neocp_page, dbg=False):
     for row in neocp_objects:
         new_objects.append(row['value'])
 
+    return new_objects
+
+def parse_NEOCP_extra_params(neocp_page, dbg=False, dbg2=False):
+
+    '''Takes a BeautifulSoup object of the NEO Confirmation Page and extracts a
+    list of objects along with a dictionary of extra parameters (score, 
+    discovery date, update date, # obs, arc length (in days) and not seen (in days)
+    which are returned.'''
+
+    if type(neocp_page) != BeautifulSoup:
+        return None
+
+# Find the table with the objects
+    table = neocp_page.find("table", { "class" : "tablesorter" })
+    table_body = table.find("tbody")
+
+    new_objects = []
+    for row in table_body.findAll("tr"):
+        cols = row.findAll("td")
+        # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
+        cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
+        if dbg2: print cols
+        chunks = cols[2].split(' ')
+        if dbg2: print chunks
+        if len(chunks) != 3: return None
+        day_chunks = chunks[2].split('.') 
+        if dbg2: print day_chunks
+        neocp_datetime = datetime(year=int(chunks[0]), month=int(chunks[1]), day=int(day_chunks[0]))
+
+        decimal_day = float('0.' + day_chunks[1].split()[0])
+        neocp_datetime = neocp_datetime + timedelta(days=decimal_day)
+        
+        obj_id = cols[0].split()[0]
+        params = { 'score' : int(cols[1][0:3]),
+                   'discover_date' :  neocp_datetime,
+                   'update_date' : cols[6].split()[0],
+                   'nobs' : int(cols[8]),
+                   'arc_length' : float(cols[9]),
+                   'not_seen' : float(cols[11])
+                 }
+        new_object = (obj_id, params)
+        if dbg: print new_object
+        new_objects.append(new_object)
+       
     return new_objects
 
 def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
