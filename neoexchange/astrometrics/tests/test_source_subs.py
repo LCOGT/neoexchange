@@ -382,12 +382,13 @@ class TestParseNEOCPExtraParams(TestCase):
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'CAH024', {'score' : 99,
-                                        'discover_date' : datetime(2015,9,20),
+                                        'discovery_date' : datetime(2015,9,20),
                                         'nobs' : 6,
                                         'arc_length' : 0.06,
                                         'not_seen' : 4.878,
-                                        'update_date': datetime(2015, 9, 24, 22, 47, 17)
-                                       }
+                                        'update_date': datetime(2015, 9, 24, 22, 47, 17),
+                                        'updated' : False
+                                }
         )
         self.assertNotEqual(None, obj_ids)
         self.assertEqual(expected_obj_ids[0], obj_ids[0][0])
@@ -413,12 +414,44 @@ class TestParseNEOCPExtraParams(TestCase):
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'WR0159E', {'score' : None,
-                                        'discover_date' : None,
+                                        'discovery_date' : None,
                                         'nobs' : None,
                                         'arc_length' : None,
                                         'not_seen' : None,
-                                        'update_date': None
+                                        'update_date': None,
+                                        'updated' : None
                                        }
+        )
+        self.assertNotEqual(None, obj_ids)
+        self.assertEqual(expected_obj_ids[0], obj_ids[0][0])
+        self.assertEqual(expected_obj_ids[1], obj_ids[0][1])
+
+    def test_parse_neocpep_good_entry_updated(self):
+        html = BeautifulSoup(self.table_header + \
+        '''
+        <tr><td><span style="display:none">P10o4Gp</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10o4Gp"> P10o4Gp</td>
+        <td align="right"><span style="display:none">088</span> 88&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 23.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">206.8747</span>&nbsp;&nbsp;01 52.5 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">091.0662</span>&nbsp;&nbsp;+01 04&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">29.2</span>&nbsp;&nbsp;20.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457290.163043</span>&nbsp;Updated Sept. 24.66 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   7&nbsp;</td>
+        <td align="right">&nbsp;  0.86&nbsp;</td>
+        <td align="right">&nbsp;20.5&nbsp;</td>
+        <td align="right">&nbsp; 0.665&nbsp;</td>
+        ''' + self.table_footer)
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = (u'P10o4Gp', {'score' : 88,
+                                        'discovery_date' : datetime(2015,9,23,9,36),
+                                        'nobs' : 7,
+                                        'arc_length' : 0.86,
+                                        'not_seen' : 0.665,
+                                        'update_date': datetime(2015, 9, 24, 15, 54, 47),
+                                        'updated' : True
+                                }
         )
         self.assertNotEqual(None, obj_ids)
         self.assertEqual(expected_obj_ids[0], obj_ids[0][0])

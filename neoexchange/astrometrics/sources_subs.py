@@ -217,11 +217,18 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
             try:
                 update_date = cols[6].split()[0]
                 if 'Moved' in update_date:
+                    updated = None
                     update_date = None
                 else:
+                    updated = None
+                    if update_date[0] == 'U':
+                        updated = True
+                    elif update_date[0] == 'A':
+                        updated = False
                     update_jd = update_date[1:]
                     update_date = jd_utc2datetime(update_jd)
             except:
+                updated = None
                 update_date = None
             try:
                 nobs = int(cols[8])
@@ -242,11 +249,12 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
             else:
                 obj_id = obj_id[0][0:7]
             params = { 'score' : score,
-                       'discover_date' :  neocp_datetime,
+                       'discovery_date' :  neocp_datetime,
                        'update_date' : update_date,
                        'nobs' : nobs,
                        'arc_length' : arc_length,
-                       'not_seen' : not_seen
+                       'not_seen' : not_seen,
+                       'updated' : updated
                      }
             if obj_id not in object_list:
                 object_list.append(obj_id)
