@@ -99,7 +99,14 @@ class Body(models.Model):
     epochofperih        = models.DateTimeField('Epoch of perihelion', blank=True, null=True, help_text='for comets')
     abs_mag             = models.FloatField('H - absolute magnitude', blank=True, null=True)
     slope               = models.FloatField('G - slope parameter', blank=True, null=True)
+    score               = models.IntegerField(help_text='NEOCP digest2 score', blank=True, null=True)
+    discovery_date      = models.DateTimeField(blank=True, null=True)
+    num_obs             = models.IntegerField('Number of observations', blank=True, null=True)
+    arc_length          = models.FloatField('Length of observed arc (days)', blank=True, null=True)
+    not_seen            = models.FloatField('Time since last observation (days)', blank=True, null=True)
+    updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=now)
+    update_time         = models.DateTimeField(blank=True, null=True)
 
     def epochofel_mjd(self):
         mjd = None

@@ -26,7 +26,7 @@ class BodyAdmin(reversion.VersionAdmin):
             'fields': ('elements_type', 'epochofel', 'abs_mag', 'slope', 'orbinc','longascnode','argofperih','eccentricity','meandist','meananom','perihdist', 'epochofperih')
        }),
         ('Follow Up',{
-        	'fields' : ('active','fast_moving','ingest')
+                'fields' : ('active','fast_moving','ingest','score','discovery_date','num_obs','arc_length','not_seen','update_time','updated')
         })
     )
     search_fields = ('provisional_name','name')
