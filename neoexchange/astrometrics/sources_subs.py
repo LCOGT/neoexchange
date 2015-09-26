@@ -250,8 +250,8 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                 obj_id = obj_id[0][0:7]
             params = { 'score' : score,
                        'discovery_date' :  neocp_datetime,
-                       'update_date' : update_date,
-                       'nobs' : nobs,
+                       'update_time' : update_date,
+                       'num_obs' : nobs,
                        'arc_length' : arc_length,
                        'not_seen' : not_seen,
                        'updated' : updated

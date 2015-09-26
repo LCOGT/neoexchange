@@ -383,10 +383,10 @@ class TestParseNEOCPExtraParams(TestCase):
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'CAH024', {'score' : 99,
                                         'discovery_date' : datetime(2015,9,20),
-                                        'nobs' : 6,
+                                        'num_obs' : 6,
                                         'arc_length' : 0.06,
                                         'not_seen' : 4.878,
-                                        'update_date': datetime(2015, 9, 24, 22, 47, 17),
+                                        'update_time': datetime(2015, 9, 24, 22, 47, 17),
                                         'updated' : False
                                 }
         )
@@ -415,10 +415,10 @@ class TestParseNEOCPExtraParams(TestCase):
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'WR0159E', {'score' : None,
                                         'discovery_date' : None,
-                                        'nobs' : None,
+                                        'num_obs' : None,
                                         'arc_length' : None,
                                         'not_seen' : None,
-                                        'update_date': None,
+                                        'update_time': None,
                                         'updated' : None
                                        }
         )
@@ -446,10 +446,10 @@ class TestParseNEOCPExtraParams(TestCase):
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'P10o4Gp', {'score' : 88,
                                         'discovery_date' : datetime(2015,9,23,9,36),
-                                        'nobs' : 7,
+                                        'num_obs' : 7,
                                         'arc_length' : 0.86,
                                         'not_seen' : 0.665,
-                                        'update_date': datetime(2015, 9, 24, 15, 54, 47),
+                                        'update_time': datetime(2015, 9, 24, 15, 54, 47),
                                         'updated' : True
                                 }
         )
@@ -477,10 +477,10 @@ class TestParseNEOCPExtraParams(TestCase):
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'P10nw2g', {'score' : 100,
                                         'discovery_date' : datetime(2015,9,6,7,12,00),
-                                        'nobs' : 6,
+                                        'num_obs' : 6,
                                         'arc_length' : 1.16,
                                         'not_seen' : 17.455,
-                                        'update_date': datetime(2015, 9, 16, 1, 30, 34),
+                                        'update_time': datetime(2015, 9, 16, 1, 30, 34),
                                         'updated' : True
                                 }
         )
@@ -520,18 +520,18 @@ class TestParseNEOCPExtraParams(TestCase):
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = [(u'P10nI6D', {'score' : 60,
                                         'discovery_date' : datetime(2015,9,9,7,12,00),
-                                        'nobs' : 6,
+                                        'num_obs' : 6,
                                         'arc_length' : 1.84,
                                         'not_seen' : 13.761,
-                                        'update_date': datetime(2015, 9, 11, 15, 24, 44),
+                                        'update_time': datetime(2015, 9, 11, 15, 24, 44),
                                         'updated' : True
                                 }),
                            (u'P10nw2g', {'score' : 100,
                                         'discovery_date' : datetime(2015,9,6,7,12,00),
-                                        'nobs' : 6,
+                                        'num_obs' : 6,
                                         'arc_length' : 1.16,
                                         'not_seen' : 17.455,
-                                        'update_date': datetime(2015, 9, 16, 1, 30, 34),
+                                        'update_time': datetime(2015, 9, 16, 1, 30, 34),
                                         'updated' : True
                                 })
         ]
