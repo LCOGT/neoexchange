@@ -119,6 +119,35 @@
 									</tr>
 								</tbody>
 							</table>
+							<h3 class="section-title">Follow-up Details</h3>
+							<table class="keyvalue-table">
+								<tbody>
+                                                                        {% if body.score %}
+									<tr>
+										<td class="kv-key">NEOCP <i>digest2</i> score</td>
+										<td class="kv-value">{{body.score}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.num_obs %}
+									<tr>
+										<td class="kv-key">Number of observations</td>
+										<td class="kv-value">{{body.num_obs}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.arc_length %}
+									<tr>
+										<td class="kv-key">Arc length (days)</td>
+										<td class="kv-value">{{body.arc_length}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.not_seen %}
+									<tr>
+										<td class="kv-key">Time since last observation (days)</td>
+										<td class="kv-value">{{body.not_seen}}</td>
+									</tr>
+                                                                        {% endif %}
+								</tbody>
+							</table>
 						</div>
 					</div>
 				</div>
