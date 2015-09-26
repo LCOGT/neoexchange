@@ -31,9 +31,9 @@ class BodyAdmin(reversion.VersionAdmin):
     )
     search_fields = ('provisional_name','name')
     list_display = ('id', 'provisional_name', 'name', 'origin', 'source_type', 
-      'active', 'fast_moving', 'urgency', 'ingest')
+      'active', 'num_obs', 'not_seen', 'ingest')
     list_filter = ('origin', 'source_type', 'elements_type', 'active', 
-      'fast_moving', 'urgency')
+      'fast_moving', 'updated')
     ordering = ('-ingest',)
 
 
