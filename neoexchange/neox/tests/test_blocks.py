@@ -70,8 +70,6 @@ class BlockDetailValidationTest(FunctionalTest):
 
         # He notices there is a table which lists a lot more details about
         # the Block.
-        self.check_for_header_in_table('id_blockdetail',
-            'Block details')
 
         testlines = [u'TELESCOPE CLASS ' + self.test_block.telclass,
                      u'SITE ' + self.test_block.site.upper()]
