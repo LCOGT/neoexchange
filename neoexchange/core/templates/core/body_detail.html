@@ -65,7 +65,7 @@
 						<div class="twocol lastcol rightsidebar">
 							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
 							<h3 class="section-title">Orbital Elements</h3>
-							<table class="keyvalue-table">
+							<table class="keyvalue-table" id="id_orbelements">
 								<tbody>
 									<tr>
 										<td class="kv-key" colspan=2>{{body.get_elements_type_display}}</td>
@@ -120,7 +120,7 @@
 								</tbody>
 							</table>
 							<h3 class="section-title">Follow-up Details</h3>
-							<table class="keyvalue-table">
+							<table class="keyvalue-table" id="id_followup">
 								<tbody>
                                                                         {% if body.score %}
 									<tr>
