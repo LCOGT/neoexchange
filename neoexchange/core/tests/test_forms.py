@@ -43,7 +43,7 @@ class EphemQueryFormTest(TestCase):
     def test_form_has_label(self):
         form = EphemQuery()
         self.assertIn('Enter target name...', form.as_p())
-        self.assertIn('Site code:', form.as_p())    
+        self.assertIn('Site code:', form.as_p())
 
     def test_form_validation_for_blank_target(self):
         form = EphemQuery(data = {'target' : ''})
@@ -106,6 +106,13 @@ class TestScheduleForm(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+        active_prop_params = { 'code'  : 'LCO2015A-009',
+                                 'title' : 'LCOGT NEO Follow-up Network',
+                                 'pi'    : 'tlister@lcogt.net',
+                                 'tag'   : 'LCOGT',
+                                 'active': True
+                               }
+
         inactive_prop_params = { 'code'  : 'LCO2010B-999',
                                  'title' : 'Old NEO Follow-up Proposal',
                                  'pi'    : 'tlister@lcogt.net',
@@ -113,6 +120,7 @@ class TestScheduleForm(TestCase):
                                  'active': False
                                }
         self.old_prop, created = Proposal.objects.get_or_create(**inactive_prop_params)
+        self.prop, created = Proposal.objects.get_or_create(**active_prop_params)
 
     def test_form_has_fields(self):
         form = ScheduleForm()
