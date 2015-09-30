@@ -14,7 +14,7 @@ GNU General Public License for more details.
 '''
 
 from django.test import TestCase
-from core.models import Body
+from core.models import Body, Proposal
 
 #Import module to test
 from core.forms import EphemQuery, ScheduleForm
@@ -43,7 +43,7 @@ class EphemQueryFormTest(TestCase):
     def test_form_has_label(self):
         form = EphemQuery()
         self.assertIn('Enter target name...', form.as_p())
-        self.assertIn('Site code:', form.as_p())    
+        self.assertIn('Site code:', form.as_p())
 
     def test_form_validation_for_blank_target(self):
         form = EphemQuery(data = {'target' : ''})
@@ -67,6 +67,24 @@ class EphemQueryFormTest(TestCase):
                                   })
         self.assertTrue(form.is_valid())
 
+    def test_ephem_form_has_all_sites(self):
+        form = EphemQuery()
+        self.assertIsInstance(form, EphemQuery)
+        self.assertIn('ELP (V37)', form.as_p())
+        self.assertIn('value="V37"', form.as_p())
+        self.assertIn('FTN (F65)', form.as_p())
+        self.assertIn('value="F65"', form.as_p())
+        self.assertIn('FTS (E10)', form.as_p())
+        self.assertIn('value="E10"', form.as_p())
+        self.assertIn('LSC (W85; SBIG)', form.as_p())
+        self.assertIn('value="W85"', form.as_p())
+        self.assertIn('LSC (W86-87)', form.as_p())
+        self.assertIn('value="W86"', form.as_p())
+        self.assertIn('CPT (K91-93)', form.as_p())
+        self.assertIn('value="K92"', form.as_p())
+        self.assertIn('COJ (Q63-64)', form.as_p())
+        self.assertIn('value="Q63"', form.as_p())
+
 
 class TestScheduleForm(TestCase):
 
@@ -87,6 +105,22 @@ class TestScheduleForm(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
+
+        active_prop_params = { 'code'  : 'LCO2015A-009',
+                                 'title' : 'LCOGT NEO Follow-up Network',
+                                 'pi'    : 'tlister@lcogt.net',
+                                 'tag'   : 'LCOGT',
+                                 'active': True
+                               }
+
+        inactive_prop_params = { 'code'  : 'LCO2010B-999',
+                                 'title' : 'Old NEO Follow-up Proposal',
+                                 'pi'    : 'tlister@lcogt.net',
+                                 'tag'   : 'LCOGT',
+                                 'active': False
+                               }
+        self.old_prop, created = Proposal.objects.get_or_create(**inactive_prop_params)
+        self.prop, created = Proposal.objects.get_or_create(**active_prop_params)
 
     def test_form_has_fields(self):
         form = ScheduleForm()
@@ -118,20 +152,10 @@ class TestScheduleForm(TestCase):
         self.assertIn('COJ (Q63-64)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
 
-    def test_ephem_form_has_all_sites(self):
-        form = EphemQuery()
-        self.assertIsInstance(form, EphemQuery)
-        self.assertIn('ELP (V37)', form.as_p())
-        self.assertIn('value="V37"', form.as_p())
-        self.assertIn('FTN (F65)', form.as_p())
-        self.assertIn('value="F65"', form.as_p())
-        self.assertIn('FTS (E10)', form.as_p())
-        self.assertIn('value="E10"', form.as_p())
-        self.assertIn('LSC (W85; SBIG)', form.as_p())
-        self.assertIn('value="W85"', form.as_p())
-        self.assertIn('LSC (W86-87)', form.as_p())
-        self.assertIn('value="W86"', form.as_p())
-        self.assertIn('CPT (K91-93)', form.as_p())
-        self.assertIn('value="K92"', form.as_p())
-        self.assertIn('COJ (Q63-64)', form.as_p())
-        self.assertIn('value="Q63"', form.as_p())
+    def test_sched_form_hides_inactive_proposals(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('LCO2015A-009', form.as_p())
+        self.assertIn('LCOGT NEO Follow-up Network', form.as_p())
+        self.assertNotIn('LCO2010B-999', form.as_p())
+        self.assertNotIn('Old NEO Follow-up Proposal', form.as_p())
