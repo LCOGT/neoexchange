@@ -16,9 +16,15 @@
 # Push to docker registry with
 # docker push docker.lcogt.net/neoexchange:latest
 #
-# To run with nginx + uwsgi both exposed:
-# docker run -d -p 8200:80  --name=neox docker.lcogt.net/neoexchange:latest
-# Or use the docker-compose.yml from  github.com/LCOGT/docker/compose/neoexchange/
+#### To deploy
+### Use the docker-compose.yml from  github.com/LCOGT/docker/compose/neoexchange/
+### On docknode06.lco.gtn
+# docker pull docker.lcogt.net/neoexchange:latest
+### Stop and remove the running container
+# docker stop neoexchange_web_1
+# docker rm neoexchange_web_1
+### Start the new container
+# docker-compose up -d
 #
 ################################################################################
 FROM centos:centos7
