@@ -15,7 +15,7 @@ SITES = (('V37','ELP (V37)'),
          ('Q63','COJ (Q63-64)'))
 
 class EphemQuery(forms.Form):
-    
+
     target = forms.CharField(label="Enter target name...", max_length=10, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=datetime.utcnow().date(), required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
@@ -32,11 +32,7 @@ class EphemQuery(forms.Form):
             raise forms.ValidationError("Multiple objects found.")
 
 class ScheduleForm(forms.Form):
-
-    proposals = Proposal.objects.filter(active=True)
-    proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
-
-    proposal_code = forms.ChoiceField(required=True, choices=proposal_choices)
+    proposal_code = forms.ChoiceField(required=True)
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=datetime.utcnow().date(), required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
     # body_id = forms.IntegerField(widget=forms.HiddenInput())
@@ -53,6 +49,13 @@ class ScheduleForm(forms.Form):
         if start < datetime.utcnow().date():
             raise forms.ValidationError("Window cannot start in the past")
         return start
+
+    def __init__(self, *args, **kwargs):
+        self.proposal_code = kwargs.pop('proposal_code', None)
+        super(ScheduleForm, self).__init__(*args, **kwargs)
+        proposals = Proposal.objects.filter(active=True)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        self.fields['proposal_code'].choices = proposal_choices
 
 
 class ScheduleBlockForm(forms.Form):
@@ -92,4 +95,3 @@ class ScheduleBlockForm(forms.Form):
             return self.cleaned_data['exp_count']
         else:
             raise forms.ValidationError("There must be more than 1 exposure")
-
