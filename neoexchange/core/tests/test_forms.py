@@ -109,7 +109,8 @@ class TestScheduleForm(TestCase):
         inactive_prop_params = { 'code'  : 'LCO2010B-999',
                                  'title' : 'Old NEO Follow-up Proposal',
                                  'pi'    : 'tlister@lcogt.net',
-                                 'tag'   : 'LCOGT'
+                                 'tag'   : 'LCOGT',
+                                 'active': False
                                }
         self.old_prop, created = Proposal.objects.get_or_create(**inactive_prop_params)
 

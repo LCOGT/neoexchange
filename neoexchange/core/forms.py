@@ -33,7 +33,7 @@ class EphemQuery(forms.Form):
 
 class ScheduleForm(forms.Form):
 
-    proposals = Proposal.objects.all()
+    proposals = Proposal.objects.filter(active=True)
     proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
 
     proposal_code = forms.ChoiceField(required=True, choices=proposal_choices)
