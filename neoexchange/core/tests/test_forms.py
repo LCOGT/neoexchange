@@ -14,7 +14,7 @@ GNU General Public License for more details.
 '''
 
 from django.test import TestCase
-from core.models import Body
+from core.models import Body, Proposal
 
 #Import module to test
 from core.forms import EphemQuery, ScheduleForm
@@ -106,6 +106,13 @@ class TestScheduleForm(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+        inactive_prop_params = { 'code'  : 'LCO2010B-999',
+                                 'title' : 'Old NEO Follow-up Proposal',
+                                 'pi'    : 'tlister@lcogt.net',
+                                 'tag'   : 'LCOGT'
+                               }
+        self.old_prop, created = Proposal.objects.get_or_create(**inactive_prop_params)
+
     def test_form_has_fields(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
@@ -135,3 +142,11 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('COJ (Q63-64)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
+
+    def test_sched_form_hides_inactive_proposals(self):
+        form = ScheduleForm()
+        self.assertIsInstance(form, ScheduleForm)
+        self.assertIn('LCO2015A-009', form.as_p())
+        self.assertIn('LCOGT NEO Follow-up Network', form.as_p())
+        self.assertNotIn('LCO2010B-999', form.as_p())
+        self.assertNotIn('Old NEO Follow-up Proposal', form.as_p())
