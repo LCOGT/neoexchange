@@ -19,11 +19,13 @@ from core.models import Body
 from datetime import datetime, timedelta
 from unittest import skipIf
 from bs4 import BeautifulSoup
+import os
 
 from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, \
-    submit_block_to_scheduler, parse_previous_NEOCP_id
+    submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
+    parse_NEOCP_extra_params, parse_PCCP
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -179,3 +181,496 @@ class TestPreviousNEOCPParser(TestCase):
         
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
+
+class TestParseNEOCP(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the non-tabular and HTML table versions of
+        # the NEOCP
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_neocp_page.html'), 'r')
+        self.test_neocp_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_neocp_page_table.html'), 'r')
+        self.test_neocp_page_table = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        # Set to None to show all differences
+        self.maxDiff = None
+
+    def test_parse_neocp(self):
+        expected_obj_ids = [
+                            u'CAH024',
+                            u'P10o56w',
+                            u'WS0CB7B',
+                            u'WS0D4AD',
+                            u'WSB0B67',
+                            u'WSB07F4',
+                            u'WSB07F2',
+                            u'WSB07D3',
+                            u'WS0B4C6',
+                            u'P10o4Gp',
+                            u'P10o4Go',
+                            u'P10o4EL',
+                            u'P10o41o',
+                            u'P10o41l',
+                            u'P10o41n',
+                            u'P10o3d9',
+                            u'P10o3da',
+                            u'P10o2VR',
+                            u'P10o2ur',
+                            u'P10o1Gq',
+                            u'P10o1Fl',
+                            u'P10o1Fm',
+                            u'P10o14r',
+                            u'WSF2BB6',
+                            u'LM02Ei5',
+                            u'P10o10e',
+                            u'P10o0Zx',
+                            u'WSAF769',
+                            u'WSAFE31',
+                            u'WSAFCA9',
+                            u'WSAF76B',
+                            u'P10o0Jv',
+                            u'P10o0Jo',
+                            u'P10o0Ha',
+                            u'P10o0Hc',
+                            u'CAH002',
+                            u'WSAEABF',
+                            u'WSAC540',
+                            u'WSAC5DA',
+                            u'WS03256',
+                            u'WSAD60C',
+                            u'WR0159E',
+                            u'LM01vOQ',
+                            u'P10nI6D',
+                            u'P10nw2g',
+                            ]
+
+        obj_ids = parse_NEOCP(self.test_neocp_page)
+
+        self.assertEqual(len(expected_obj_ids), len(obj_ids))
+        self.assertEqual(expected_obj_ids, obj_ids)
+
+    def test_parse_neocp_table(self):
+        expected_obj_ids = [
+                            u'CAH024',
+                            u'P10o56w',
+                            u'WS0CB7B',
+                            u'WS0D4AD',
+                            u'WSB0B67',
+                            u'WSB07F4',
+                            u'WSB07F2',
+                            u'WSB07D3',
+                            u'WS0B4C6',
+                            u'P10o4Gp',
+                            u'P10o4Go',
+                            u'P10o4EL',
+                            u'P10o41o',
+                            u'P10o41l',
+                            u'P10o41n',
+                            u'P10o3d9',
+                            u'P10o3da',
+                            u'P10o2VR',
+                            u'P10o2ur',
+                            u'P10o1Gq',
+                            u'P10o1Fl',
+                            u'P10o1Fm',
+                            u'P10o14r',
+                            u'WSF2BB6',
+                            u'LM02Ei5',
+                            u'P10o10e',
+                            u'P10o0Zx',
+                            u'WSAF769',
+                            u'WSAFE31',
+                            u'WSAFCA9',
+                            u'WSAF76B',
+                            u'P10o0Jv',
+                            u'P10o0Jo',
+                            u'P10o0Ha',
+                            u'P10o0Hc',
+                            u'CAH002',
+                            u'WSAEABF',
+                            u'WSAC540',
+                            u'WSAC5DA',
+                            u'WS03256',
+                            u'WSAD60C',
+#                            u'WR0159E',
+                            u'LM01vOQ',
+                            u'P10nI6D',
+                            u'P10nw2g',
+                            ]
+
+        obj_ids = parse_NEOCP(self.test_neocp_page_table)
+
+        self.assertEqual(len(expected_obj_ids), len(obj_ids))
+        self.assertEqual(expected_obj_ids, obj_ids)
+
+    def test_parse_neocp_not_soup(self):
+
+        obj_ids = parse_NEOCP(None)
+
+        self.assertEqual(obj_ids, None)
+
+    def test_parse_neocp_no_objects(self):
+
+        obj_ids = parse_NEOCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+
+        self.assertEqual(obj_ids, None)
+
+class TestParseNEOCPExtraParams(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the HTML table versions of the NEOCP
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_neocp_page_table.html'), 'r')
+        self.test_neocp_page_table = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.table_header = '''<table class="tablesorter">
+          <thead>
+            <tr>
+              <th>&nbsp;&nbsp;Temp Desig&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Score&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Discovery</th>
+              <th>&nbsp;&nbsp;R.A.&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Decl.&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;V&nbsp;&nbsp;</th>
+              <th>Updated</th>
+              <th>&nbsp;Note&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;NObs&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;Arc&nbsp;&nbsp;</th>
+              <th>&nbsp;H&nbsp;&nbsp;</th>
+              <th>&nbsp;Not Seen/dys&nbsp;&nbsp;</th>
+            </tr>
+          </thead>
+
+          <tbody>'''
+        self.table_footer = "</tbody>\n</table>"
+
+
+        # Set to None to show all differences
+        self.maxDiff = None
+
+    def test_parse_neocpep_not_soup(self):
+
+        obj_ids = parse_NEOCP_extra_params(None)
+
+        self.assertEqual(obj_ids, None)
+
+    def test_parse_neocpep_no_objects(self):
+
+        obj_ids = parse_NEOCP_extra_params(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+
+        self.assertEqual(obj_ids, None)
+
+    def test_parse_neocpep_good_entry(self):
+        html = BeautifulSoup(self.table_header + \
+        '''
+        <tr><td><span style="display:none">CAH024</span>&nbsp;<input type="checkbox" name="obj" VALUE="CAH024"> CAH024</td>
+        <td align="right"><span style="display:none">099</span> 99&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 20.0&nbsp;&nbsp;</td>
+        <td><span style="display:none">005.2866</span>&nbsp;&nbsp;12 26.2 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">097.0712</span>&nbsp;&nbsp;+07 04&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none"> 8.4</span>&nbsp;&nbsp;41.6&nbsp;&nbsp;</td>
+        <td><span style="display:none">A2457290.449504</span>&nbsp;Added Sept. 24.95 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   6&nbsp;</td>
+        <td align="right">&nbsp;  0.06&nbsp;</td>
+        <td align="right">&nbsp;31.0&nbsp;</td>
+        <td align="right">&nbsp; 4.878&nbsp;</td>
+        ''' + self.table_footer)
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = (u'CAH024', {'score' : 99,
+                                        'discovery_date' : datetime(2015,9,20),
+                                        'num_obs' : 6,
+                                        'arc_length' : 0.06,
+                                        'not_seen' : 4.878,
+                                        'update_time': datetime(2015, 9, 24, 22, 47, 17),
+                                        'updated' : False
+                                }
+        )
+        self.assertNotEqual(None, obj_ids)
+        self.assertEqual(expected_obj_ids[0], obj_ids[0][0])
+        self.assertEqual(expected_obj_ids[1], obj_ids[0][1])
+
+    @skipIf(True, "need to mock URL fetch of PCCP. Tested in TestParsePCCP")
+    def test_parse_neocpep_bad_entry(self):
+        '''Test of 'Moved to the PCCP' entries'''
+
+        html = BeautifulSoup(self.table_header + \
+        '''
+        <tr><td><span style="display:none">WR0159E</span><center>WR0159E</center></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Moved to the <a href="/iau/NEO/pccp_tabular.html">PCCP</a></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td><td></td></tr>
+        ''' + self.table_footer)
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = (u'WR0159E', {'score' : None,
+                                        'discovery_date' : None,
+                                        'num_obs' : None,
+                                        'arc_length' : None,
+                                        'not_seen' : None,
+                                        'update_time': None,
+                                        'updated' : None
+                                       }
+        )
+        self.assertNotEqual(None, obj_ids)
+        self.assertEqual(expected_obj_ids[0], obj_ids[0][0])
+        self.assertEqual(expected_obj_ids[1], obj_ids[0][1])
+
+    def test_parse_neocpep_good_entry_updated(self):
+        html = BeautifulSoup(self.table_header + \
+        '''
+        <tr><td><span style="display:none">P10o4Gp</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10o4Gp"> P10o4Gp</td>
+        <td align="right"><span style="display:none">088</span> 88&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 23.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">206.8747</span>&nbsp;&nbsp;01 52.5 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">091.0662</span>&nbsp;&nbsp;+01 04&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">29.2</span>&nbsp;&nbsp;20.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457290.163043</span>&nbsp;Updated Sept. 24.66 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   7&nbsp;</td>
+        <td align="right">&nbsp;  0.86&nbsp;</td>
+        <td align="right">&nbsp;20.5&nbsp;</td>
+        <td align="right">&nbsp; 0.665&nbsp;</td>
+        ''' + self.table_footer)
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = (u'P10o4Gp', {'score' : 88,
+                                        'discovery_date' : datetime(2015,9,23,9,36),
+                                        'num_obs' : 7,
+                                        'arc_length' : 0.86,
+                                        'not_seen' : 0.665,
+                                        'update_time': datetime(2015, 9, 24, 15, 54, 47),
+                                        'updated' : True
+                                }
+        )
+        self.assertNotEqual(None, obj_ids)
+        self.assertEqual(expected_obj_ids[0], obj_ids[0][0])
+        self.assertEqual(expected_obj_ids[1], obj_ids[0][1])
+
+    def test_parse_neocpep_good_entry_updated2(self):
+        html = BeautifulSoup(self.table_header + \
+        '''
+        <tr><td><span style="display:none">P10nw2g</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10nw2g"> P10nw2g</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 06.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">150.4235</span>&nbsp;&nbsp;22 06.7 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">091.1616</span>&nbsp;&nbsp;+01 10&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">27.2</span>&nbsp;&nbsp;22.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457281.562894</span>&nbsp;Updated Sept. 16.06 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   6&nbsp;</td>
+        <td align="right">&nbsp;  1.16&nbsp;</td>
+        <td align="right">&nbsp;24.4&nbsp;</td>
+        <td align="right">&nbsp;17.455&nbsp;</td>
+        ''' + self.table_footer)
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = (u'P10nw2g', {'score' : 100,
+                                        'discovery_date' : datetime(2015,9,6,7,12,00),
+                                        'num_obs' : 6,
+                                        'arc_length' : 1.16,
+                                        'not_seen' : 17.455,
+                                        'update_time': datetime(2015, 9, 16, 1, 30, 34),
+                                        'updated' : True
+                                }
+        )
+        self.assertNotEqual(None, obj_ids)
+        self.assertEqual(expected_obj_ids[0], obj_ids[0][0])
+        self.assertEqual(expected_obj_ids[1], obj_ids[0][1])
+
+    def test_parse_neocpep_good_multi_entries(self):
+        html = BeautifulSoup(self.table_header + \
+        '''
+        <tr><td><span style="display:none">P10nI6D</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10nI6D"> P10nI6D</td>
+        <td align="right"><span style="display:none">060</span> 60&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 09.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">146.3672</span>&nbsp;&nbsp;21 50.5 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">078.3569</span>&nbsp;&nbsp;-11 39&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">27.3</span>&nbsp;&nbsp;22.7&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457277.142173</span>&nbsp;Updated Sept. 11.64 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   6&nbsp;</td>
+        <td align="right">&nbsp;  1.84&nbsp;</td>
+        <td align="right">&nbsp;20.1&nbsp;</td>
+        <td align="right">&nbsp;13.761&nbsp;</td><tr>
+        <tr><td><span style="display:none">P10nw2g</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10nw2g"> P10nw2g</td>
+        <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 06.3&nbsp;&nbsp;</td>
+        <td><span style="display:none">150.4235</span>&nbsp;&nbsp;22 06.7 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">091.1616</span>&nbsp;&nbsp;+01 10&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">27.2</span>&nbsp;&nbsp;22.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457281.562894</span>&nbsp;Updated Sept. 16.06 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp;   6&nbsp;</td>
+        <td align="right">&nbsp;  1.16&nbsp;</td>
+        <td align="right">&nbsp;24.4&nbsp;</td>
+        <td align="right">&nbsp;17.455&nbsp;</td><tr>
+        ''' + self.table_footer)
+
+        obj_ids = parse_NEOCP_extra_params(html)
+        expected_obj_ids = [(u'P10nI6D', {'score' : 60,
+                                        'discovery_date' : datetime(2015,9,9,7,12,00),
+                                        'num_obs' : 6,
+                                        'arc_length' : 1.84,
+                                        'not_seen' : 13.761,
+                                        'update_time': datetime(2015, 9, 11, 15, 24, 44),
+                                        'updated' : True
+                                }),
+                           (u'P10nw2g', {'score' : 100,
+                                        'discovery_date' : datetime(2015,9,6,7,12,00),
+                                        'num_obs' : 6,
+                                        'arc_length' : 1.16,
+                                        'not_seen' : 17.455,
+                                        'update_time': datetime(2015, 9, 16, 1, 30, 34),
+                                        'updated' : True
+                                })
+        ]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj+=1
+
+class TestParsePCCP(TestCase):
+
+    def setUp(self):
+        self.table_header = '''<table class="tablesorter">
+          <thead>
+            <tr>
+              <th>&nbsp;&nbsp;Temp Desig&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Score&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Discovery</th>
+              <th>&nbsp;&nbsp;R.A.&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;Decl.&nbsp;&nbsp;</th>
+              <th>&nbsp;&nbsp;V&nbsp;&nbsp;</th>
+              <th>Updated</th>
+              <th>&nbsp;Note&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;NObs&nbsp;&nbsp;&nbsp;</th>
+              <th>&nbsp;Arc&nbsp;&nbsp;</th>
+              <th>&nbsp;H&nbsp;&nbsp;</th>
+              <th>&nbsp;Not Seen/dys&nbsp;&nbsp;</th>
+            </tr>
+          </thead>
+
+          <tbody>'''
+        self.table_footer = "</tbody>\n</table>"
+
+
+        # Set to None to show all differences
+        self.maxDiff = None
+
+    def test_parse_pccp_not_soup(self):
+
+        obj_ids = parse_PCCP(None)
+
+        self.assertEqual(obj_ids, None)
+
+    def test_parse_pccp_no_objects(self):
+
+        obj_ids = parse_PCCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+
+        self.assertEqual(obj_ids, None)
+
+    def test_parse_pccp_entry(self):
+
+        html = BeautifulSoup(self.table_header + \
+        '''
+        <tr><td><span style="display:none">WR0159E</span>&nbsp;<input type="checkbox" name="obj" VALUE="WR0159E"> WR0159E</td>
+        <td align="right"><span style="display:none">010</span> 10&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 13.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">190.5617</span>&nbsp;&nbsp;01 01.5 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">089.7649</span>&nbsp;&nbsp;-00 14&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">31.2</span>&nbsp;&nbsp;18.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457294.241781</span>&nbsp;Updated Sept. 28.74 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp; 222&nbsp;</td>
+        <td align="right">&nbsp; 15.44&nbsp;</td>
+        <td align="right">&nbsp;14.4&nbsp;</td>
+        <td align="right">&nbsp; 0.726&nbsp;</td>
+        ''' + self.table_footer)
+
+        obj_ids = parse_PCCP(html)
+        expected_obj_ids = [(u'WR0159E', {'score' : 10,
+                                        'discovery_date' : datetime(2015, 9, 13, 9, 36),
+                                        'num_obs' : 222,
+                                        'arc_length' : 15.44,
+                                        'not_seen' : 0.726,
+                                        'update_time': datetime(2015, 9, 28, 17, 48, 10),
+                                        'updated' : True
+                                       }
+                            ),]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj+=1
+
+    def test_parse_pccp_multientries(self):
+
+        html = BeautifulSoup(self.table_header + \
+        '''
+        <tr><td><span style="display:none">WR0159E</span>&nbsp;<input type="checkbox" name="obj" VALUE="WR0159E"> WR0159E</td>
+        <td align="right"><span style="display:none">010</span> 10&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 13.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">190.5617</span>&nbsp;&nbsp;01 01.5 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">089.7649</span>&nbsp;&nbsp;-00 14&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">31.2</span>&nbsp;&nbsp;18.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457294.241781</span>&nbsp;Updated Sept. 28.74 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp; 222&nbsp;</td>
+        <td align="right">&nbsp; 15.44&nbsp;</td>
+        <td align="right">&nbsp;14.4&nbsp;</td>
+        <td align="right">&nbsp; 0.726&nbsp;</td>
+        <tr><td><span style="display:none">WR0159X</span>&nbsp;<input type="checkbox" name="obj" VALUE="WR0159E"> WR0159E</td>
+        <td align="right"><span style="display:none">007</span>  7&nbsp;&nbsp;&nbsp;</td>
+        <td>&nbsp;&nbsp;2015 09 13.4&nbsp;&nbsp;</td>
+        <td><span style="display:none">190.5617</span>&nbsp;&nbsp;01 01.5 &nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">089.7649</span>&nbsp;&nbsp;-00 14&nbsp;&nbsp;</td>
+        <td align="right"><span style="display:none">31.2</span>&nbsp;&nbsp;18.8&nbsp;&nbsp;</td>
+        <td><span style="display:none">U2457294.241781</span>&nbsp;Updated Sept. 28.74 UT&nbsp;</td>
+        <td align="center">&nbsp;&nbsp;</td>
+        <td align="right">&nbsp; 42&nbsp;</td>
+        <td align="right">&nbsp; 15.44&nbsp;</td>
+        <td align="right">&nbsp;14.4&nbsp;</td>
+        <td align="right">&nbsp; 0.726&nbsp;</td>
+        ''' + self.table_footer)
+
+        obj_ids = parse_PCCP(html)
+        expected_obj_ids = [(u'WR0159E', {'score' : 10,
+                                        'discovery_date' : datetime(2015, 9, 13, 9, 36),
+                                        'num_obs' : 222,
+                                        'arc_length' : 15.44,
+                                        'not_seen' : 0.726,
+                                        'update_time': datetime(2015, 9, 28, 17, 48, 10),
+                                        'updated' : True
+                                       }
+                            ),
+                            (u'WR0159X', {'score' : 7,
+                                        'discovery_date' : datetime(2015, 9, 13, 9, 36),
+                                        'num_obs' : 42,
+                                        'arc_length' : 15.44,
+                                        'not_seen' : 0.726,
+                                        'update_time': datetime(2015, 9, 28, 17, 48, 10),
+                                        'updated' : True
+                                       }
+                            ),
+                            ]
+        self.assertNotEqual(None, obj_ids)
+        obj = 0
+        while obj < len(expected_obj_ids):
+            self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
+            self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
+            obj+=1

@@ -47,7 +47,22 @@ def parse_neocp_date(neocp_datestr, dbg=False):
     neocp_datetime = neocp_datetime + timedelta(days=decimal_day)
     
     return neocp_datetime
-    
+
+def parse_neocp_decimal_date(neocp_datestr, dbg=False):
+    '''Parse decimal dates from the NEOCP (e.g. '2015 09 22.5' ) into a datetime
+    object and return this. No sanity checking of the input is done'''
+    chunks = neocp_datestr.split(' ')
+    if dbg: print chunks
+    if len(chunks) != 3: return None
+    day_chunks = chunks[2].split('.')
+    if dbg: print day_chunks
+    neocp_datetime = datetime(year=int(chunks[0]), month=int(chunks[1]), day=int(day_chunks[0]))
+
+    decimal_day = float('0.' + day_chunks[1].split()[0])
+    neocp_datetime = neocp_datetime + timedelta(days=decimal_day)
+
+    return neocp_datetime
+
 def round_datetime(date_to_round, round_mins=10, round_up=False):
     '''Rounds the passed datetime object, <date_to_round>, to the
     'floor' (default) or the 'ceiling' (if [roundup=True]) of
@@ -105,6 +120,24 @@ def extract_packed_date(value):
         return int(value) 
     except ValueError:
         return lookup[value]
+
+def jd_utc2datetime(jd):
+    '''Converts a passed Julian date to a Python datetime object. 'None' is
+    returned if the conversion was not possible.'''
+
+    try:
+        mjd_utc = jd-2400000.5
+    except TypeError:
+        try:
+            mjd_utc = float(jd)-2400000.5
+        except:
+            return None
+    year, month,day, frac, status = S.sla_djcl(mjd_utc)
+    if status != 0:
+        return None
+    sign, hms = S.sla_dd2tf(0, frac)
+    dt = datetime(year, month, day, hms[0], hms[1], hms[2])
+    return dt
 
 def datetime2mjd_utc(d):
     '''Converts a passed datetime object in UTC to the equivalent Modified Julian

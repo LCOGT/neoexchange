@@ -65,7 +65,7 @@
 						<div class="twocol lastcol rightsidebar">
 							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
 							<h3 class="section-title">Orbital Elements</h3>
-							<table class="keyvalue-table">
+							<table class="keyvalue-table" id="id_orbelements">
 								<tbody>
 									<tr>
 										<td class="kv-key" colspan=2>{{body.get_elements_type_display}}</td>
@@ -117,6 +117,35 @@
 										<td class="kv-key">Slope Parameter (G)</td>
 										<td class="kv-value">{{body.slope}}</td>
 									</tr>
+								</tbody>
+							</table>
+							<h3 class="section-title">Follow-up Details</h3>
+							<table class="keyvalue-table" id="id_followup">
+								<tbody>
+                                                                        {% if body.score %}
+									<tr>
+										<td class="kv-key">NEOCP <i>digest2</i> score</td>
+										<td class="kv-value">{{body.score}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.num_obs %}
+									<tr>
+										<td class="kv-key">Number of observations</td>
+										<td class="kv-value">{{body.num_obs}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.arc_length %}
+									<tr>
+										<td class="kv-key">Arc length (days)</td>
+										<td class="kv-value">{{body.arc_length}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.not_seen %}
+									<tr>
+										<td class="kv-key">Time since last observation (days)</td>
+										<td class="kv-value">{{body.not_seen}}</td>
+									</tr>
+                                                                        {% endif %}
 								</tbody>
 							</table>
 						</div>

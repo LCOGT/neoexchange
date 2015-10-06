@@ -16,10 +16,11 @@ GNU General Public License for more details.
 '''
 
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
 from re import sub
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 import logging
 import urllib2, os
 
@@ -155,22 +156,204 @@ def fetch_previous_NEOCP_desigs(dbg=False):
 
 def fetch_NEOCP(dbg=False):
 
-    '''Fetches the NEO Confirmation Page and extracts a list of objects, which
-    is returned.'''
+    '''Fetches the NEO Confirmation Page and returns a BeautifulSoup object
+    of the page.'''
 
-    NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/ToConfirm.html'
+    NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
     neocp_page = fetchpage_and_make_soup(NEOCP_url)
-    if neocp_page == None:
+    return neocp_page
+
+def parse_NEOCP(neocp_page, dbg=False):
+
+    '''Takes a BeautifulSoup object of the NEO Confirmation Page and extracts a
+    list of objects, which is returned.'''
+
+    if type(neocp_page) != BeautifulSoup:
         return None
 
 # Find all the input checkboxes with "obj" in the name
     neocp_objects = neocp_page.findAll('input', attrs={"name" : "obj"})
+    if len(neocp_objects) == 0:
+        return None
 
     new_objects = []
     for row in neocp_objects:
         new_objects.append(row['value'])
 
+    return new_objects
+
+def parse_NEOCP_extra_params(neocp_page, dbg=False):
+
+    '''Takes a BeautifulSoup object of the NEO Confirmation Page and extracts a
+    list of objects along with a dictionary of extra parameters (score, 
+    discovery date, update date, # obs, arc length (in days) and not seen (in days)
+    which are returned.'''
+
+    PCCP_url = 'http://www.minorplanetcenter.net/iau/NEO/pccp_tabular.html'
+
+    if type(neocp_page) != BeautifulSoup:
+        return None
+
+# Find the table with the objects
+    table = neocp_page.find("table", { "class" : "tablesorter" })
+    if table == None:
+        return None
+    table_body = table.find("tbody")
+    if table_body == None:
+        return None
+
+    new_objects = []
+    object_list = []
+    pccp_page = None
+    for row in table_body.findAll("tr"):
+        cols = row.findAll("td")
+        if len(cols) != 0:
+            # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
+            cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
+            if dbg: print "Cols=",cols, len(cols)
+            pccp = False
+            try:
+                update_date = cols[6].split()[0]
+                if 'Moved' in update_date:
+                    pccp = True
+                    updated = None
+                    update_date = None
+                else:
+                    updated = None
+                    if update_date[0] == 'U':
+                        updated = True
+                    elif update_date[0] == 'A':
+                        updated = False
+                    update_jd = update_date[1:]
+                    update_date = jd_utc2datetime(update_jd)
+            except:
+                updated = None
+                update_date = None
+            if pccp != True:
+                try:
+                    score = int(cols[1][0:3])
+                except:
+                    score = None
+                neocp_datetime = parse_neocp_decimal_date(cols[2])
+                try:
+                    nobs = int(cols[8])
+                except:
+                    nobs = None
+                try:
+                    arc_length = float(cols[9])
+                except:
+                    arc_length = None
+                try:
+                    not_seen = float(cols[11])
+                except:
+                    not_seen = None
+
+                obj_id = cols[0].split()
+                if len(obj_id) == 2:
+                    obj_id = obj_id[0]
+                else:
+                    obj_id = obj_id[0][0:7]
+
+                params = { 'score' : score,
+                           'discovery_date' :  neocp_datetime,
+                           'update_time' : update_date,
+                           'num_obs' : nobs,
+                           'arc_length' : arc_length,
+                           'not_seen' : not_seen,
+                           'updated' : updated
+                         }
+                if obj_id not in object_list:
+                    object_list.append(obj_id)
+                    new_object = (obj_id, params)
+                    new_objects.append(new_object)
+            else:
+                if pccp_page == None:
+                    pccp_page = fetchpage_and_make_soup(PCCP_url)
+                comet_objects = parse_PCCP(pccp_page)
+                if dbg: print comet_objects
+                for comet in comet_objects:
+                    obj_id = comet[0]
+                    if dbg: print "obj_id=", obj_id
+                    if obj_id not in object_list:
+                        object_list.append(obj_id)
+                        new_object = (obj_id, comet[1])
+                        new_objects.append(new_object)
+
+    return new_objects
+
+def parse_PCCP(pccp_page, dbg=False):
+
+    if type(pccp_page) != BeautifulSoup:
+        return None
+
+# Find the table with the objects
+    table = pccp_page.find("table", { "class" : "tablesorter" })
+    if table == None:
+        return None
+    table_body = table.find("tbody")
+    if table_body == None:
+        return None
+
+    new_objects = []
+    object_list = []
+    pccp_page = None
+    for row in table_body.findAll("tr"):
+        cols = row.findAll("td")
+        if len(cols) != 0:
+            # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
+            cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
+            if dbg: print "Cols=",cols, len(cols)
+            pccp = False
+            try:
+                update_date = cols[6].split()[0]
+                updated = None
+                if update_date[0] == 'U':
+                    updated = True
+                elif update_date[0] == 'A':
+                    updated = False
+                update_jd = update_date[1:]
+                update_date = jd_utc2datetime(update_jd)
+            except:
+                updated = None
+                update_date = None
+            try:
+                score = int(cols[1][0:3])
+            except:
+                score = None
+            neocp_datetime = parse_neocp_decimal_date(cols[2])
+            try:
+                nobs = int(cols[8])
+            except:
+                nobs = None
+            try:
+                arc_length = float(cols[9])
+            except:
+                arc_length = None
+            try:
+                not_seen = float(cols[11])
+            except:
+                not_seen = None
+
+            obj_id = cols[0].split()
+            if len(obj_id) == 2:
+                obj_id = obj_id[0]
+            else:
+                obj_id = obj_id[0][0:7]
+
+            params = { 'score' : score,
+                       'discovery_date' :  neocp_datetime,
+                       'update_time' : update_date,
+                       'num_obs' : nobs,
+                       'arc_length' : arc_length,
+                       'not_seen' : not_seen,
+                       'updated' : updated
+                     }
+            if obj_id not in object_list:
+                object_list.append(obj_id)
+                new_object = (obj_id, params)
+                new_objects.append(new_object)
+       
     return new_objects
 
 def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
