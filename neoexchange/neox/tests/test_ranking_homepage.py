@@ -25,6 +25,9 @@ class NewVisitorTest(FunctionalTest):
         self.assertIn('Home | LCOGT NEOx', self.browser.title)
         self.check_for_header_in_table('id_neo_targets',\
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
+        # Position below computed for 2015-07-01 17:00:00
+        testlines =[u'1 N999r0q Unknown/NEO Candidate 23 43 12.75 +19 58 55.6 20.7 17 3.0 0.42 90 True',]
+        self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         #He clicks on the top ranked NEO and is taken to a page that has more information on the object.
         self.browser.implicitly_wait(30)
