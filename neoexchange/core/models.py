@@ -66,6 +66,7 @@ class Proposal(models.Model):
     title = models.CharField(max_length=255)
     pi = models.CharField("PI", max_length=50, default='', help_text='Principal Investigator (PI)')
     tag = models.CharField(max_length=10, default='LCOGT')
+    active = models.BooleanField('Proposal active?', default=True)
 
     class Meta:
         db_table = 'ingest_proposal'

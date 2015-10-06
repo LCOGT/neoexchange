@@ -55,7 +55,7 @@ class RecordAdmin(reversion.VersionAdmin):
     pass
 
 class ProposalAdmin(admin.ModelAdmin):
-    list_display = ('code', 'title', 'pi', 'tag')
+    list_display = ('code', 'title', 'pi', 'tag', 'active')
 
 
 admin.site.register(Body,BodyAdmin)
