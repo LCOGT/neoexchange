@@ -308,6 +308,9 @@ def schedule_submit(data, body):
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
 
+def ranking(request):
+    return render(request, 'core/ranking.html')
+
 def check_for_block(form_data, params, new_body):
 	'''Checks if a block with the given name exists in the Django DB.
 	Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
