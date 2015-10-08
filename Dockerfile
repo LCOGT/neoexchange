@@ -10,7 +10,7 @@
 # just default to using the nginx port only (recommended). There is no
 # requirement to map all exposed container ports onto host ports.
 #
-# Build with
+# Starting from the checked-out neoexchange directory (containing this Dockerfile), build with
 # docker build -t docker.lcogt.net/neoexchange:latest .
 #
 # Push to docker registry with
@@ -23,6 +23,8 @@
 ### Stop and remove the running container
 # docker stop neoexchange_web_1
 # docker rm neoexchange_web_1
+### Change to the right place
+# cd bin/compose/neox
 ### Start the new container
 # docker-compose up -d
 #
