@@ -48,7 +48,7 @@ class RankingPageTest(FunctionalTest):
         self.assertNotIn('Home | LCOGT NEOx', self.browser.title)
         self.assertIn('Ranking Page | LCOGT NEOx', self.browser.title)
         self.check_for_header_in_table('id_ranked_targets',\
-            'Rank FOM Target Name NEOCP Score Discovery Date R.A. Dec. South Polar Distance V mag. Updated? Num.Obs. Arc H mag. Not Seen (days) Observed? Reported?')
+            'Rank FOM Target Name NEOCP Score Discovery Date R.A. Dec. South Polar Distance V Mag. Updated? Num. Obs. Arc H Mag. Not Seen (days) Observed? Reported?')
             
         #Satisfied, she leaves for the day.
         self.fail('Finish the test!')
