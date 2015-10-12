@@ -309,7 +309,23 @@ def schedule_submit(data, body):
     return tracking_number, resp_params
 
 def ranking(request):
-    return render(request, 'core/ranking.html')
+    try:
+        # If we don't have any Body instances, return None instead of breaking
+        latest = Body.objects.filter(active=True).latest('ingest')
+        max_dt = latest.ingest
+        min_dt = max_dt - timedelta(days=5)
+        newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
+    except:
+        latest = None
+        newest = None
+    params = {
+        'targets': Body.objects.filter(active=True).count(),
+        'blocks': Block.objects.filter(active=True).count(),
+        'latest': latest,
+        'newest': newest,
+        'form': EphemQuery()
+    }
+    return render(request, 'core/ranking.html', params)
 
 def check_for_block(form_data, params, new_body):
 	'''Checks if a block with the given name exists in the Django DB.

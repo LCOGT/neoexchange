@@ -7,7 +7,7 @@ from core.models import Body
 class RankingPageTest(FunctionalTest):
 
     def insert_extra_test_body(self):
-        params = {  'name'          : '1995 YR1',
+        params = {  'name'          : 'q382918r',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
@@ -22,7 +22,7 @@ class RankingPageTest(FunctionalTest):
                     'active'        : True,
                     'origin'        : 'G',
                     'ingest'        : '2015-05-11 17:20:00',
-                    'score'         : None,
+                    'score'         : 85,
                     'discovery_date': '2015-05-10 12:00:00',
                     'update_time'   : '2015-05-18 05:00:00',
                     'num_obs'       : 35,
@@ -30,7 +30,7 @@ class RankingPageTest(FunctionalTest):
                     'not_seen'      : 2.22,
                     'updated'       : False
                     }
-        self.body, created = Body.objects.get_or_create(pk=2, **params)
+        self.body, created = Body.objects.get_or_create(pk=3, **params)
 
 # The ranking page computes the RA, Dec of each body for 'now' so we need to mock
 # patch the datetime used by models.Body.compute_position to give the same
@@ -49,6 +49,11 @@ class RankingPageTest(FunctionalTest):
         self.assertIn('Ranking Page | LCOGT NEOx', self.browser.title)
         self.check_for_header_in_table('id_ranked_targets',\
             'Rank FOM Target Name NEOCP Score Discovery Date R.A. Dec. South Polar Distance V Mag. Updated? Num. Obs. Arc H Mag. Not Seen (days) Observed? Reported?')
+        # Position below computed for 2015-07-01 17:00:00
+        testlines =[u'1 N999r0q Unknown/NEO Candidate 23 43 12.75 +19 58 55.6 20.7 17 3.0 0.42 90 True',
+                    u'2 q382918r NEO 23 43 12.75 +19 58 55.6 20.7 35 42.0 2.22 85 False']
+        self.check_for_row_in_table('id_ranked_targets', testlines[0])
+        self.check_for_row_in_table('id_ranked_targets', testlines[1])
             
         #Satisfied, she leaves for the day.
         self.fail('Finish the test!')
