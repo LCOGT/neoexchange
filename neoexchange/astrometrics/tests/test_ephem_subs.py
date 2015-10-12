@@ -159,6 +159,21 @@ class TestComputeEphem(TestCase):
         self.assertAlmostEqual(expected_mag, emp_line[3], precision)
         self.assertAlmostEqual(expected_motion, emp_line[4], precision)
         self.assertAlmostEqual(expected_alt, emp_line[5], precision)
+        
+    def test_compute_south_polar_distance_with_elements(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_spd = 119.94694444444444
+        emp_line = compute_ephem(d, self.elements, '?', dbg=False, perturb=True, display=False)
+        precision = 11
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        
+    def test_compute_south_polar_distance_with_body(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_spd = 119.94694444444444
+        body_elements = model_to_dict(self.body)
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        precision = 11
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
 
     def test_call_compute_ephem_with_body(self):
         start = datetime(2015, 4, 21, 8, 45, 00)
