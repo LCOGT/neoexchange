@@ -339,15 +339,15 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         mag, total_motion, sky_pa, alt_deg, airmass )
         
 # Compute South Polar Distance from Dec
+    dec_arcsec_decimal = dec_geo_deg[2] + dec_geo_deg[3]
+    dec_arcmin_decimal = dec_geo_deg[1] + (dec_arcsec_decimal/60.)
+    dec_deg_decimal = dec_geo_deg[0] + (dec_arcmin_decimal/60.)
     if '+' in dsign:
-        dec_arcsec_decimal = dec_geo_deg[2] + dec_geo_deg[3]
-        dec_arcmin_decimal = dec_geo_deg[1] + (dec_arcsec_decimal/60.)
-        dec_deg_decimal = dec_geo_deg[0] + (dec_arcmin_decimal/60.)
+        spd = 90. + dec_deg_decimal
+    elif '-' in dsign:
+        spd = 90. - dec_deg_decimal
     else:
-        dec_arcsec_decimal = dec_geo_deg[2] - dec_geo_deg[3]
-        dec_arcmin_decimal = dec_geo_deg[1] - (dec_arcsec_decimal/60.)
-        dec_deg_decimal = dec_geo_deg[0] - (dec_arcmin_decimal/60.)
-    spd = dec_deg_decimal + 90.
+        spd = None
 
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd)
 
