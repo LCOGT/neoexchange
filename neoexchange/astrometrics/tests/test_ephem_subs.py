@@ -257,6 +257,47 @@ class TestComputeEphem(TestCase):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
 
+class TestComputeFOM(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+    def test_compute_FOM_with_body(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_FOM = 137.1187602774659
+        expected_not_seen = 2.3942
+        expected_arc_length = 0.4859
+        expected_score = 83
+        expected_abs_mag = 19.8
+        body_elements = model_to_dict(self.body)
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        FOM = comp_FOM(body_elements, emp_line)
+        precision = 11
+        self.assertAlmostEqual(expected_not_seen, body_elements['not_seen'], precision)
+        self.assertAlmostEqual(expected_arc_length, body_elements['arc_length'], precision)
+        self.assertAlmostEqual(expected_score, body_elements['score'], precision)
+        self.assertAlmostEqual(expected_abs_mag, body_elements['abs_mag'], precision)
+        self.assertAlmostEqual(expected_FOM, FOM, precision)
+
 class TestDetermineSlotLength(TestCase):
 
     def test_bad_site_code(self):

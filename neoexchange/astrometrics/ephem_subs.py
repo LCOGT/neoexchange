@@ -1159,3 +1159,9 @@ def get_sitecam_params(site):
         setup_overhead = exp_overhead = pixel_scale = fov = max_exp_length = alt_limit = -1
 
     return (site_code, setup_overhead, exp_overhead, pixel_scale, fov, max_exp_length, alt_limit)
+
+def comp_FOM(orbelems, emp_line):
+
+    FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line[3])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line[6]-60.)**2)/180.))
+
+    return FOM
