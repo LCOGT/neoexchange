@@ -309,26 +309,26 @@ def schedule_submit(data, body):
     return tracking_number, resp_params
 
 def check_for_block(form_data, params, new_body):
-	'''Checks if a block with the given name exists in the Django DB.
-	Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
+        '''Checks if a block with the given name exists in the Django DB.
+        Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
 
         # XXX Code smell, duplicated from sources_subs.configure_defaults()
         site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
 
-	try:
-    	    block_id = Block.objects.get(body=Body.objects.get(provisional_name=new_body.provisional_name),
-	    	    	    	    	 groupid__contains=form_data['group_id'],
+        try:
+            block_id = Block.objects.get(body=Body.objects.get(provisional_name=new_body.provisional_name),
+                                         groupid__contains=form_data['group_id'],
                                          proposal=Proposal.objects.get(code=form_data['proposal_code']),
-					 site=site_list[params['site_code']])
-	except Block.MultipleObjectsReturned:
-    	    logger.debug("Multiple blocks found")
-	    return 2
-	except Block.DoesNotExist:
-    	    logger.debug("Block not found")
-    	    return 0
-	else:
-    	    logger.debug("Block found")
-    	    return 1
+                                         site=site_list[params['site_code']])
+        except Block.MultipleObjectsReturned:
+            logger.debug("Multiple blocks found")
+            return 2
+        except Block.DoesNotExist:
+            logger.debug("Block not found")
+            return 0
+        else:
+            logger.debug("Block found")
+            return 1
 
 def record_block(tracking_number, params, form_data, body):
     '''Records a just-submitted observation as a Block in the database.
