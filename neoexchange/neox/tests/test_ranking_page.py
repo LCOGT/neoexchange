@@ -17,10 +17,10 @@ class RankingPageTest(FunctionalTest):
                     'orbinc'        : 8.34739,
                     'eccentricity'  : 0.1896865,
                     'meandist'      : 1.2176312,
-                    'source_type'   : 'N',
+                    'source_type'   : 'U',
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
-                    'origin'        : 'G',
+                    'origin'        : 'M',
                     'ingest'        : '2015-05-11 17:20:00',
                     'score'         : 85,
                     'discovery_date': '2015-05-10 12:00:00',
@@ -50,8 +50,8 @@ class RankingPageTest(FunctionalTest):
         self.check_for_header_in_table('id_ranked_targets',\
             'Rank FOM Target Name NEOCP Score Discovery Date R.A. Dec. South Polar Distance V Mag. Updated? Num. Obs. Arc H Mag. Not Seen (days) Observed? Reported?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 N999r0q 90 May 10, 2015, noon 23 43 12.75 +19 58 55.6 109.984 20.7 True 17 3.0 21.0 0.42',
-                    u'2 q382918r 85 May 10, 2015, noon 23 43 12.75 +19 58 55.6 109.984 20.7 False 35 42.0 21.0 2.22']
+        testlines =[u'1 0.25275911901 N999r0q 90 May 10, 2015, noon 23 43 12.75 +19 58 55.6 109.984 20.7 True 17 3.0 21.0 0.42',
+                    u'2 0.153401873374 q382918r 85 May 10, 2015, noon 23 43 12.75 +19 58 55.6 109.984 20.7 False 35 42.0 21.0 2.22']
         self.check_for_row_in_table('id_ranked_targets', testlines[0])
         self.check_for_row_in_table('id_ranked_targets', testlines[1])
             

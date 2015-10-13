@@ -70,6 +70,7 @@
                 {% for body in newest%}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td>{{forloop.counter}}</td>
+                    <td>{{body.compute_FOM}}</td>
                     <td class="list_title"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
                     <td>{{body.score}}</td>
                     <td>{{body.discovery_date}}</td>

@@ -16,7 +16,7 @@ from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
-from astrometrics.ephem_subs import compute_ephem
+from astrometrics.ephem_subs import compute_ephem, comp_FOM
 from astropy.time import Time
 from datetime import datetime
 import reversion
@@ -152,6 +152,21 @@ class Body(models.Model):
         else:
             # Catch the case where there is no Epoch
             return False
+
+    def compute_FOM(self):
+        d = datetime.utcnow()
+        if self.epochofel:
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+            if 'U' in orbelems['source_type']:
+                FOM = comp_FOM(orbelems, emp_line)
+                return FOM
+            else:
+                return None
+           # Catch the case where there is no Epoch
+        else:
+            return None
 
     class Meta:
         verbose_name = _('Minor Body')
