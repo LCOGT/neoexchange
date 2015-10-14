@@ -32,7 +32,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
-    fetch_mpcorbit, submit_block_to_scheduler
+    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
@@ -648,7 +648,12 @@ def update_MPC_orbit(obj_id, dbg=False, origin='M'):
     Performs remote look up of orbital elements for object with id obj_id,
     Gets or creates corresponding Body instance and updates entry
     '''
-    elements = fetch_mpcorbit(obj_id, dbg)
+    page = fetch_mpcdb_page(obj_id, dbg)
+    if page == None:
+        logger.warn("Could not find elements for %s" % obj_id)
+        return False
+
+    elements = parse_mpcorbit(page, dbg)
     try:
         body, created = Body.objects.get_or_create(name=obj_id)
     except Body.MultipleObjectsReturned:

@@ -25,7 +25,7 @@ from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, \
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
-    parse_NEOCP_extra_params, parse_PCCP
+    parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -674,3 +674,59 @@ class TestParsePCCP(TestCase):
             self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
             obj+=1
+
+class TestFetchMPCOrbit(TestCase):
+
+    def setUp(self):
+        # Read and make soup from a static version of the HTML table/page for
+        # an object
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_2014UR.html'), 'r')
+        self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        # Set to None to show all differences
+        self.maxDiff = None
+
+    def test_fetch_2014UR(self):
+
+        expected_elements = {'P-vector [x]': '-0.38101678',
+                             'P-vector [y]': '-0.80462138',
+                             'P-vector [z]': '-0.45542359',
+                             'Q-vector [x]': '0.92259236',
+                             'Q-vector [y]': '-0.29869255',
+                             'Q-vector [z]': '-0.24414360',
+                             'Tisserand w.r.t. Jupiter': '6.1',
+                             'V w.r.t. Earth': '6.0',
+                             'absolute magnitude': '26.6',
+                             'aphelion distance': '1.009',
+                             'arc length': '357',
+                             'argument of perihelion': '222.91160',
+                             'ascending node': '24.87559',
+                             'computer name': 'MPCALB',
+                             'eccentricity': '0.0120915',
+                             'epoch': '2016-01-13.0',
+                             'epoch JD': '2457400.5',
+                             'first observation date used': '2014-10-17.0',
+                             'first opposition used': '2014',
+                             'inclination': '8.25708',
+                             'last observation date used': '2015-10-09.0',
+                             'last opposition used': '2015',
+                             'mean anomaly': '221.74204',
+                             'mean daily motion': '0.99040030',
+                             'observations used': '147',
+                             'oppositions': '2',
+                             'perihelion JD': '2457540.09806',
+                             'perihelion date': '2016-05-31.59806',
+                             'perihelion distance': '0.9847185',
+                             'period': '1.0',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '003Eh',
+                             'phase slope': '0.15',
+                             'reference': 'MPEC 2015-T44',
+                             'residual rms': '0.57',
+                             'semimajor axis': '0.9967710',
+                             'uncertainty': '1'}
+
+        elements = parse_mpcorbit(self.test_mpcdb_page)
+        self.assertEqual(expected_elements, elements)
+        

@@ -479,9 +479,9 @@ def clean_element(element):
 
     return (key, value)
 
-def fetch_mpcorbit(asteroid, dbg=False):
-    '''Performs a search on the MPC Database for <asteroid> and returns a list
-    of the resulting orbital elements.'''
+def fetch_mpcdb_page(asteroid, dbg=False):
+    '''Performs a search on the MPC Database for <asteroid> and returns a 
+    BeautifulSoup object of the page (for future use by parse_mpcorbit())'''
 
     #Strip off any leading or trailing space and replace internal space with a
     # plus sign
@@ -495,6 +495,9 @@ def fetch_mpcorbit(asteroid, dbg=False):
         return None
 
 #    if dbg: print page
+    return page
+
+def parse_mpcorbit(page, dbg=False):
 
     data = []
     # Find the table of elements and then the subtables within it
