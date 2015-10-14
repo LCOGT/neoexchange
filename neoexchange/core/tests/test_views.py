@@ -568,6 +568,23 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params3)
 
+        block_params4 = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_no_provname1,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_no_provname1.current_name() + \
+                            '_LSC-20150421',
+                         'block_start' : '2015-04-21 23:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'tracking_number' : '00045',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : True,
+                         'num_observed' : 0,
+                         'reported' : False
+                       }
+        self.test_block4 = Block.objects.create(**block_params4)
+
     def test_body_with_provname_no_blocks(self):
     
         new_body = self.body_with_provname
@@ -596,7 +613,7 @@ class TestCheck_for_block(TestCase):
 
         self.assertEqual(expected_state, block_state)
         
-    def test_body_with_provname_two_blockS(self):
+    def test_body_with_provname_two_blocks(self):
     
         new_body = self.body_with_provname
         params = { 'site_code' : 'K92'
@@ -605,6 +622,34 @@ class TestCheck_for_block(TestCase):
                       'group_id' : self.body_with_provname.current_name() + '_CPT-20150420'
                     }
         expected_state = 2
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+
+    def test_body_with_no_provname1_no_blocks(self):
+    
+        new_body = self.body_no_provname1
+        params = { 'site_code' : 'K92'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                    }
+        expected_state = 0
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+        
+    def test_body_with_no_provname1_one_block(self):
+    
+        new_body = self.body_no_provname1
+        params = { 'site_code' : 'W86'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_no_provname1.current_name() + '_LSC-20150421'
+                    }
+        expected_state = 1
 
         block_state = check_for_block(form_data, params, new_body)
 
