@@ -640,6 +640,11 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             'elements_type': 'MPC_MINOR_PLANET',
             'active': True,
             'origin': origin,
+            'updated' : True,
+            'num_obs' : elements['observations used'],
+            'arc_length' : elements['arc length'],
+            'discovery_date' : datetime.strptime(elements['first observation date used'].replace('.0', ''), '%Y-%m-%d'),
+            'update_time' : datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d'),
         }
     return params
 

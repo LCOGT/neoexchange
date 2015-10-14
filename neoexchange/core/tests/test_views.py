@@ -751,15 +751,15 @@ class TestUpdate_MPC_orbit(TestCase):
                              'slope': 0.15,
                              'origin' : u'M',
                              'active' : True,
-                             'arc_length': None,
-                             'discovery_date': None,
+                             'arc_length': 357.0,
+                             'discovery_date': datetime(2014, 10, 17, 0),
                              'not_seen' : None,
-                             'num_obs' : None,
+                             'num_obs' : 147,
                              'fast_moving' : False,
                              'score' : None,
                              'source_type' : 'N',
-                             'update_time' : None,
-                             'updated' : False,
+                             'update_time' : datetime(2015, 10, 9, 0),
+                             'updated' : True,
                              'urgency' : None
                              }
 
@@ -819,14 +819,13 @@ class TestClean_mpcorbit(TestCase):
                              'origin' : 'M',
                              'active' : True,
                              'source_type' : 'N',
-#                             'num_obs': None , # '147',
-#                             'arc_length': None,
-#                             'discovery_date': None,
+                             'discovery_date': datetime(2014,10,17,0),
+                             'num_obs': '147',
+                             'arc_length': '357',
 #                             'not_seen' : None,
-#                             'num_obs' : None,
 #                             'score' : None,
-#                             'update_time' : None,
-#                             'updated' : False,
+                             'update_time' : datetime(2015,10,9,0),
+                             'updated' : True
                              }
 
         self.maxDiff = None
