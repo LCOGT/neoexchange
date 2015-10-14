@@ -717,3 +717,70 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
+
+class TestUpdate_MPC_orbit(TestCase):
+
+    def setUp(self):
+        self.nocheck_keys = ['ingest']   # Involves datetime.utcnow(), hard to check
+
+        self.expected_elements = {u'id' : 1,
+                             'name' : u'2014 UR',
+                             'provisional_name': None,
+                             'provisional_packed': None,
+                             'elements_type': u'MPC_MINOR_PLANET',
+                             'abs_mag' : 26.6,
+                             'argofperih': 222.91160,
+                             'longascnode': 24.87559,
+                             'eccentricity': 0.0120915,
+                             'epochofel': datetime(2016,01,13,0),
+                             'meandist': 0.9967710,
+                             'orbinc': 8.25708,
+                             'meananom': 221.74204,
+                             'num_obs': None , # '147',
+                             'epochofperih': None,
+                             'perihdist': None,
+                             'slope': 0.15,
+                             'origin' : u'M',
+                             'active' : True,
+                             'arc_length': None,
+                             'discovery_date': None,
+                             'not_seen' : None,
+                             'num_obs' : None,
+                             'fast_moving' : False,
+                             'score' : None,
+                             'source_type' : 'N',
+                             'update_time' : None,
+                             'updated' : False,
+                             'urgency' : None
+                             }
+
+        self.maxDiff = None
+
+    def test_2014UR_MPC(self):
+    
+        status = update_MPC_orbit('2014 UR', origin='M')
+        self.assertEqual(True, status)
+        
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(self.expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in self.expected_elements:
+            if key not in self.nocheck_keys:
+                self.assertEqual(self.expected_elements[key], new_body_elements[key])
+
+    def test_2014UR_Goldstone(self):
+    
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'G'
+
+        status = update_MPC_orbit('2014 UR', origin='G')
+        self.assertEqual(True, status)
+        
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys:
+                self.assertEqual(expected_elements[key], new_body_elements[key])
