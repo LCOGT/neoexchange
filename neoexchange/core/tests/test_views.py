@@ -29,7 +29,7 @@ import os
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block
+    update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit
 from core.models import Body, Proposal, Block
 from core.forms import EphemQuery
 
@@ -793,3 +793,46 @@ class TestUpdate_MPC_orbit(TestCase):
         for key in expected_elements:
             if key not in self.nocheck_keys:
                 self.assertEqual(expected_elements[key], new_body_elements[key])
+
+class TestClean_mpcorbit(TestCase):
+
+    def setUp(self):
+        # Read and make soup from a static version of the HTML table/page for
+        # an object
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_2014UR.html'), 'r')
+        test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.test_elements = parse_mpcorbit(test_mpcdb_page)
+
+        self.expected_params = {
+                             'elements_type': 'MPC_MINOR_PLANET',
+                             'abs_mag' : '26.6',
+                             'argofperih': '222.91160',
+                             'longascnode': '24.87559',
+                             'eccentricity': '0.0120915',
+                             'epochofel': datetime(2016,01,13,0),
+                             'meandist': '0.9967710',
+                             'orbinc': '8.25708',
+                             'meananom': '221.74204',
+                             'slope': '0.15',
+                             'origin' : 'M',
+                             'active' : True,
+                             'source_type' : 'N',
+#                             'num_obs': None , # '147',
+#                             'arc_length': None,
+#                             'discovery_date': None,
+#                             'not_seen' : None,
+#                             'num_obs' : None,
+#                             'score' : None,
+#                             'update_time' : None,
+#                             'updated' : False,
+                             }
+
+        self.maxDiff = None
+
+    def test_clean_2014UR(self):
+        params = clean_mpcorbit(self.test_elements)
+
+        self.assertEqual(self.expected_params, params)
+        
