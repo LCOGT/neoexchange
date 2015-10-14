@@ -385,7 +385,7 @@ def save_and_make_revision(body, kwargs):
     return update
 
 
-def update_NEOCP_orbit(obj_id):
+def update_NEOCP_orbit(obj_id, extra_params={}):
     '''Query the MPC's showobs service with the specified <obj_id> and
     it will write the orbit found into the neox database.
     a) If the object does not have a response it will be marked as active = False
@@ -410,7 +410,9 @@ def update_NEOCP_orbit(obj_id):
         return False
     if len(obs_page_list) > 1:
         # Clean up the header and top line of input
-        kwargs = clean_NEOCP_object(obs_page_list)
+        first_kwargs = clean_NEOCP_object(obs_page_list)
+        kwargs = first_kwargs.copy()
+        kwargs.update(extra_params)
         if not created:
             # Find out if the details have changed, if they have, save a
             # revision
@@ -509,7 +511,6 @@ def clean_NEOCP_object(page_list):
     else:
         params = {}
     return params
-
 
 def update_crossids(astobj, dbg=False):
     '''Update the passed <astobj> for a new cross-identification.
