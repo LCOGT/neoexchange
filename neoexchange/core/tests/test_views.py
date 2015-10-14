@@ -26,7 +26,8 @@ from unittest import skipIf
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
-from core.views import home, clean_NEOCP_object, save_and_make_revision, update_MPC_orbit
+from core.views import home, clean_NEOCP_object, save_and_make_revision, \
+    update_MPC_orbit, check_for_block
 from core.models import Body, Proposal, Block
 from core.forms import EphemQuery
 
@@ -481,3 +482,238 @@ class BlocksPageTest(TestCase):
     def test_block_detail_page_renders_template(self):
         response = self.client.get(reverse('block',kwargs={'pk':1}))
         self.assertTemplateUsed(response, 'core/block_detail.html')
+
+class TestCheck_for_block(TestCase):
+
+
+    def setUp(self):
+        # Initialise with three test bodies a test proposal and several blocks.
+        # The first body has a provisional name (e.g. a NEO candidate), the 
+        # other 2 do not (e.g. Goldstone targets)
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body_with_provname, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = ''
+        params['name'] = '2014 UR'
+        params['origin'] = 'G'
+        self.body_no_provname1, created = Body.objects.get_or_create(**params)
+ 
+        params['name'] = '436724'
+        self.body_no_provname2, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_provname,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_provname,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'tracking_number' : '00043',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'reported' : True
+                       }
+        self.test_block2 = Block.objects.create(**block_params2)
+
+        block_params3 = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_provname.current_name() + \
+                            '_LSC-20150421',
+                         'block_start' : '2015-04-21 23:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'tracking_number' : '00044',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : True,
+                         'num_observed' : 0,
+                         'reported' : False
+                       }
+        self.test_block3 = Block.objects.create(**block_params3)
+
+        block_params4 = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_no_provname1,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_no_provname1.current_name() + \
+                            '_LSC-20150421',
+                         'block_start' : '2015-04-21 23:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'tracking_number' : '00045',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : True,
+                         'num_observed' : 0,
+                         'reported' : False
+                       }
+        self.test_block4 = Block.objects.create(**block_params4)
+
+        block_params5 = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_no_provname2,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_no_provname2.current_name() + \
+                            '_ELP-20141121_lc',
+                         'block_start' : '2014-11-21 03:00:00',
+                         'block_end'   : '2014-11-21 13:00:00',
+                         'tracking_number' : '00006',
+                         'num_exposures' : 77,
+                         'exp_length' : 30.0,
+                         'active'   : True,
+                         'num_observed' : 0,
+                         'reported' : False
+                       }
+        self.test_block5 = Block.objects.create(**block_params5)
+
+        block_params6 = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_no_provname2,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_no_provname2.current_name() + \
+                            '_ELP-20141121',
+                         'block_start' : '2014-11-21 03:00:00',
+                         'block_end'   : '2014-11-21 13:00:00',
+                         'tracking_number' : '00007',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : True,
+                         'num_observed' : 0,
+                         'reported' : False
+                       }
+        self.test_block6 = Block.objects.create(**block_params6)
+
+    def test_body_with_provname_no_blocks(self):
+    
+        new_body = self.body_with_provname
+        params = { 'site_code' : 'K92'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_with_provname.current_name() + '_CPT-20150422'
+                    }
+        expected_state = 0
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+        
+    def test_body_with_provname_one_block(self):
+    
+        new_body = self.body_with_provname
+        params = { 'site_code' : 'W86'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_with_provname.current_name() + '_LSC-20150421'
+                    }
+        expected_state = 1
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+        
+    def test_body_with_provname_two_blocks(self):
+    
+        new_body = self.body_with_provname
+        params = { 'site_code' : 'K92'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_with_provname.current_name() + '_CPT-20150420'
+                    }
+        expected_state = 2
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+
+    def test_body_with_no_provname1_no_blocks(self):
+    
+        new_body = self.body_no_provname1
+        params = { 'site_code' : 'K92'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                    }
+        expected_state = 0
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+        
+    def test_body_with_no_provname1_one_block(self):
+    
+        new_body = self.body_no_provname1
+        params = { 'site_code' : 'W86'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_no_provname1.current_name() + '_LSC-20150421'
+                    }
+        expected_state = 1
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+        
+    def test_body_with_no_provname2_two_blocks(self):
+    
+        new_body = self.body_no_provname2
+        params = { 'site_code' : 'V37'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_no_provname2.current_name() + '_ELP-20141121'
+                    }
+        expected_state = 2
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+        
+    def test_body_does_not_exist(self):
+    
+        new_body = self.body_no_provname2
+        new_body.provisional_name = 'Wibble'
+        params = { 'site_code' : 'V37'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_no_provname1.current_name() + '_ELP-20141121'
+                    }
+        expected_state = 3
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
