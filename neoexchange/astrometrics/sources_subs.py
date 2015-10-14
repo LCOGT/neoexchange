@@ -514,6 +514,11 @@ def parse_mpcorbit(page, dbg=False):
             data.append([elem for elem in cols if elem])
 
     elements = dict(clean_element(elem) for elem in data)
+
+    name_element = page.find('h3')
+    if name_element != None:
+        elements['obj_id'] = name_element.text.strip()
+
     return elements
 
 class PackedError(Exception):

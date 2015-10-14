@@ -23,6 +23,8 @@ from django.forms.models import model_to_dict
 from django.utils.html import escape
 from django.contrib.auth.models import User
 from unittest import skipIf
+from bs4 import BeautifulSoup
+import os
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
@@ -721,6 +723,13 @@ class TestCheck_for_block(TestCase):
 class TestUpdate_MPC_orbit(TestCase):
 
     def setUp(self):
+
+        # Read and make soup from a static version of the HTML table/page for
+        # an object
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_2014UR.html'), 'r')
+        self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         self.nocheck_keys = ['ingest']   # Involves datetime.utcnow(), hard to check
 
         self.expected_elements = {u'id' : 1,
@@ -758,7 +767,7 @@ class TestUpdate_MPC_orbit(TestCase):
 
     def test_2014UR_MPC(self):
     
-        status = update_MPC_orbit('2014 UR', origin='M')
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
         self.assertEqual(True, status)
         
         new_body = Body.objects.last()
@@ -774,7 +783,7 @@ class TestUpdate_MPC_orbit(TestCase):
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'G'
 
-        status = update_MPC_orbit('2014 UR', origin='G')
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
         self.assertEqual(True, status)
         
         new_body = Body.objects.last()

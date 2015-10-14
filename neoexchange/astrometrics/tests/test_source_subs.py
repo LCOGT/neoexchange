@@ -714,6 +714,7 @@ class TestFetchMPCOrbit(TestCase):
                              'mean anomaly': '221.74204',
                              'mean daily motion': '0.99040030',
                              'observations used': '147',
+                             'obj_id' : u'2014 UR',
                              'oppositions': '2',
                              'perihelion JD': '2457540.09806',
                              'perihelion date': '2016-05-31.59806',
