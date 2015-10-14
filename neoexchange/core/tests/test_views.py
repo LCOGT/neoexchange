@@ -587,9 +587,9 @@ class TestCheck_for_block(TestCase):
 
         block_params5 = { 'telclass' : '1m0',
                          'site'     : 'ELP',
-                         'body'     : self.body_no_provname1,
+                         'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname1.current_name() + \
+                         'groupid'  : self.body_no_provname2.current_name() + \
                             '_ELP-20141121_lc',
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
@@ -604,9 +604,9 @@ class TestCheck_for_block(TestCase):
 
         block_params6 = { 'telclass' : '1m0',
                          'site'     : 'ELP',
-                         'body'     : self.body_no_provname1,
+                         'body'     : self.body_no_provname2,
                          'proposal' : self.neo_proposal,
-                         'groupid'  : self.body_no_provname1.current_name() + \
+                         'groupid'  : self.body_no_provname2.current_name() + \
                             '_ELP-20141121',
                          'block_start' : '2014-11-21 03:00:00',
                          'block_end'   : '2014-11-21 13:00:00',
@@ -689,13 +689,13 @@ class TestCheck_for_block(TestCase):
 
         self.assertEqual(expected_state, block_state)
         
-    def test_body_with_no_provname1_two_blocks(self):
+    def test_body_with_no_provname2_two_blocks(self):
     
-        new_body = self.body_no_provname1
+        new_body = self.body_no_provname2
         params = { 'site_code' : 'V37'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_ELP-20141121'
+                      'group_id' : self.body_no_provname2.current_name() + '_ELP-20141121'
                     }
         expected_state = 2
 
