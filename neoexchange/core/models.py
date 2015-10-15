@@ -168,6 +168,16 @@ class Body(models.Model):
         else:
             return None
 
+    def get_block_info(self):
+        try:
+            block = Block.objects.get(body=self.id)
+            observed = block.num_observed
+            reported = block.reported
+        except Block.DoesNotExist:
+            observed = 'Not yet'
+            reported = 'Not yet'
+        return (observed, reported)
+
     class Meta:
         verbose_name = _('Minor Body')
         verbose_name_plural = _('Minor Bodies')
