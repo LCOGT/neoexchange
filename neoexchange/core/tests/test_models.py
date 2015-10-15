@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
+from unittest import skipIf
 
 #Import module to test
 from core.models import Body, Proposal, Block
@@ -50,6 +51,9 @@ class TestBody(TestCase):
 
         params['provisional_name'] = 'Ntheiqo'
         self.body4, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'Q488391r'
+        self.body5, created = Body.objects.get_or_create(**params)
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
@@ -102,6 +106,36 @@ class TestBody(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params3)
 
+        block_params5a = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body5,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'tracking_number' : '00045',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'reported' : True
+                       }
+        self.test_block5a = Block.objects.create(**block_params5a)
+
+        block_params5b = { 'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.body5,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'tracking_number' : '00045',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : False,
+                         'num_observed' : 2,
+                         'reported' : False
+                       }
+        self.test_block5b = Block.objects.create(**block_params5b)
+
     def test_get_block_info_NoBlock(self):
         expected = ('Not yet', 'Not yet')
 
@@ -110,23 +144,30 @@ class TestBody(TestCase):
         self.assertEqual(expected, result)
 
     def test_get_block_info_OneBlock_NoObs_NotReported(self):
-        expected = (None, False)
+        expected = ('0/1', '0/1')
 
         result = self.body.get_block_info()
 
         self.assertEqual(expected, result)
 
     def test_get_block_info_OneBlock_Reported(self):
-        expected = (1, True)
+        expected = ('1/1', '1/1')
 
         result = self.body3.get_block_info()
 
         self.assertEqual(expected, result)
 
     def test_get_block_info_OneBlock_MultiObs_NotReported(self):
-        expected = (2, False)
+        expected = ('1/1', '0/1')
 
         result = self.body4.get_block_info()
+
+        self.assertEqual(expected, result)
+
+    def test_get_block_info_TwoBlocks(self):
+        expected = ('2/2', '1/2')
+
+        result = self.body5.get_block_info()
 
         self.assertEqual(expected, result)
 

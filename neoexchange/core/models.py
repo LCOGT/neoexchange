@@ -169,11 +169,14 @@ class Body(models.Model):
             return None
 
     def get_block_info(self):
-        try:
-            block = Block.objects.get(body=self.id)
-            observed = block.num_observed
-            reported = block.reported
-        except Block.DoesNotExist:
+        blocks = Block.objects.filter(body=self.id)
+        num_blocks = blocks.count()
+        if num_blocks > 0:
+            num_blocks_observed = blocks.filter(num_observed__gte=1).count()
+            num_blocks_reported = blocks.filter(reported=True).count()
+            observed = "%d/%d" % (num_blocks_observed, num_blocks)
+            reported = "%d/%d" % (num_blocks_reported, num_blocks)
+        else:
             observed = 'Not yet'
             reported = 'Not yet'
         return (observed, reported)
