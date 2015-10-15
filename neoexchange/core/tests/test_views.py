@@ -843,4 +843,27 @@ class TestClean_mpcorbit(TestCase):
         params = clean_mpcorbit(self.test_elements)
 
         self.assertEqual(self.expected_params, params)
-        
+
+    def test_bad_not_seen(self):
+
+        new_test_elements = self.test_elements
+        new_test_elements['last observation date used'] = 'Wibble'
+        params = clean_mpcorbit(new_test_elements)
+
+        new_expected_params = self.expected_params
+        new_expected_params['not_seen'] = None
+        new_expected_params['update_time'] = None
+        self.assertEqual(new_expected_params, params)
+
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_bad_discovery_date(self):
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        new_test_elements = self.test_elements
+        new_test_elements['first observation date used'] = 'Wibble'
+        params = clean_mpcorbit(new_test_elements)
+
+        new_expected_params = self.expected_params
+        new_expected_params['discovery_date'] = None
+        self.assertEqual(new_expected_params, params)

@@ -626,6 +626,17 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
 
     params = {}
     if elements != None:
+        
+        try:
+            last_obs = datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d')
+        except ValueError:
+            last_obs = None
+        
+        try:
+            first_obs = datetime.strptime(elements['first observation date used'].replace('.0', ''), '%Y-%m-%d')
+        except ValueError:
+            first_obs = None
+
         params = {
             'epochofel': datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
             'abs_mag': elements['absolute magnitude'],
@@ -643,15 +654,14 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             'updated' : True,
             'num_obs' : elements['observations used'],
             'arc_length' : elements['arc length'],
-            'discovery_date' : datetime.strptime(elements['first observation date used'].replace('.0', ''), '%Y-%m-%d'),
-            'update_time' : datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d'),
+            'discovery_date' : first_obs,
+            'update_time' : last_obs
         }
-        
-        try:
-            time_diff = datetime.utcnow() - datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d')
+
+        not_seen = None
+        if last_obs != None: 
+            time_diff = datetime.utcnow() - last_obs
             not_seen = time_diff.total_seconds() / 86400.0
-        except ValueError:
-            not_seen = None
         params['not_seen'] = not_seen
     return params
 
