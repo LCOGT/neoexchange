@@ -153,13 +153,14 @@ class Body(models.Model):
             # Catch the case where there is no Epoch
             return False
 
+    @property
     def compute_FOM(self):
         d = datetime.utcnow()
         if self.epochofel:
             orbelems = model_to_dict(self)
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
-            if 'U' in orbelems['source_type']:
+            if 'U' in orbelems['source_type'] and orbelems['not_seen']!=None and orbelems['arc_length']!=None and orbelems['score']!=None:
                 FOM = comp_FOM(orbelems, emp_line)
                 return FOM
             else:
