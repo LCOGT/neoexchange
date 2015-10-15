@@ -315,15 +315,26 @@ def ranking(request):
         max_dt = latest.ingest
         min_dt = max_dt - timedelta(days=5)
         newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
+        unranked = []
+        for body in newest:
+            body_dict = model_to_dict(body)
+            body_dict['FOM'] = body.compute_FOM
+            body_dict['current_name'] = body.current_name()
+            emp_line = body.compute_position()
+            body_dict['ra'] = emp_line[0]
+            body_dict['dec'] = emp_line[1]
+            body_dict['v_mag'] = emp_line[2]
+            body_dict['spd'] = emp_line[3]
+            body_dict['observed'], body_dict['reported'] = body.get_block_info()
+            unranked.append(body_dict)
     except:
         latest = None
-        newest = None
+        unranked = None
     params = {
         'targets': Body.objects.filter(active=True).count(),
         'blocks': Block.objects.filter(active=True).count(),
         'latest': latest,
-        'newest': newest,
-        'form': EphemQuery()
+        'newest': unranked
     }
     return render(request, 'core/ranking.html', params)
 
