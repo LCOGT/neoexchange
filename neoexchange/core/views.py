@@ -646,6 +646,13 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             'discovery_date' : datetime.strptime(elements['first observation date used'].replace('.0', ''), '%Y-%m-%d'),
             'update_time' : datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d'),
         }
+        
+        try:
+            time_diff = datetime.utcnow() - datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d')
+            not_seen = time_diff.total_seconds() / 86400.0
+        except ValueError:
+            not_seen = None
+        params['not_seen'] = not_seen
     return params
 
 

@@ -25,6 +25,8 @@ from django.contrib.auth.models import User
 from unittest import skipIf
 from bs4 import BeautifulSoup
 import os
+from mock import patch
+from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
@@ -753,8 +755,8 @@ class TestUpdate_MPC_orbit(TestCase):
                              'active' : True,
                              'arc_length': 357.0,
                              'discovery_date': datetime(2014, 10, 17, 0),
-                             'not_seen' : None,
                              'num_obs' : 147,
+                             'not_seen' : 5.5,
                              'fast_moving' : False,
                              'score' : None,
                              'source_type' : 'N',
@@ -765,8 +767,10 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.maxDiff = None
 
+    @patch('core.views.datetime', MockDateTime)
     def test_2014UR_MPC(self):
     
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
         status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
         self.assertEqual(True, status)
         
@@ -778,11 +782,13 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys:
                 self.assertEqual(self.expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.datetime', MockDateTime)
     def test_2014UR_Goldstone(self):
     
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'G'
 
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
         status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
         self.assertEqual(True, status)
         
@@ -822,7 +828,7 @@ class TestClean_mpcorbit(TestCase):
                              'discovery_date': datetime(2014,10,17,0),
                              'num_obs': '147',
                              'arc_length': '357',
-#                             'not_seen' : None,
+                             'not_seen' : 5.5,
 #                             'score' : None,
                              'update_time' : datetime(2015,10,9,0),
                              'updated' : True
@@ -830,7 +836,10 @@ class TestClean_mpcorbit(TestCase):
 
         self.maxDiff = None
 
+    @patch('core.views.datetime', MockDateTime)
     def test_clean_2014UR(self):
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
         params = clean_mpcorbit(self.test_elements)
 
         self.assertEqual(self.expected_params, params)

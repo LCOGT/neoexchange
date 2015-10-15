@@ -30,5 +30,14 @@ class MockDateTime(datetime):
         cls.day = day
 
     @classmethod
+    def change_datetime(cls, year, month, day, hour, minute, second):
+        cls.year = year
+        cls.month = month
+        cls.day = day
+        cls.hour = hour
+        cls.minute = minute
+        cls.second = second
+
+    @classmethod
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
