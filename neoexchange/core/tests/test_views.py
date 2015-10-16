@@ -492,7 +492,7 @@ class TestCheck_for_block(TestCase):
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
-        # The first body has a provisional name (e.g. a NEO candidate), the 
+        # The first body has a provisional name (e.g. a NEO candidate), the
         # other 2 do not (e.g. Goldstone targets)
         params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
@@ -515,7 +515,7 @@ class TestCheck_for_block(TestCase):
         params['name'] = '2014 UR'
         params['origin'] = 'G'
         self.body_no_provname1, created = Body.objects.get_or_create(**params)
- 
+
         params['name'] = '436724'
         self.body_no_provname2, created = Body.objects.get_or_create(**params)
 
@@ -624,7 +624,7 @@ class TestCheck_for_block(TestCase):
         self.test_block6 = Block.objects.create(**block_params6)
 
     def test_body_with_provname_no_blocks(self):
-    
+
         new_body = self.body_with_provname
         params = { 'site_code' : 'K92'
                  }
@@ -636,9 +636,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_with_provname_one_block(self):
-    
+
         new_body = self.body_with_provname
         params = { 'site_code' : 'W86'
                  }
@@ -650,9 +650,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_with_provname_two_blocks(self):
-    
+
         new_body = self.body_with_provname
         params = { 'site_code' : 'K92'
                  }
@@ -666,7 +666,7 @@ class TestCheck_for_block(TestCase):
         self.assertEqual(expected_state, block_state)
 
     def test_body_with_no_provname1_no_blocks(self):
-    
+
         new_body = self.body_no_provname1
         params = { 'site_code' : 'K92'
                  }
@@ -678,9 +678,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_with_no_provname1_one_block(self):
-    
+
         new_body = self.body_no_provname1
         params = { 'site_code' : 'W86'
                  }
@@ -692,9 +692,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_with_no_provname2_two_blocks(self):
-    
+
         new_body = self.body_no_provname2
         params = { 'site_code' : 'V37'
                  }
@@ -706,9 +706,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_does_not_exist(self):
-    
+
         new_body = self.body_no_provname2
         new_body.provisional_name = 'Wibble'
         params = { 'site_code' : 'V37'
@@ -769,35 +769,35 @@ class TestUpdate_MPC_orbit(TestCase):
 
     @patch('core.views.datetime', MockDateTime)
     def test_2014UR_MPC(self):
-    
+
         MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
         status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
         self.assertEqual(True, status)
-        
+
         new_body = Body.objects.last()
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(self.expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in self.expected_elements:
-            if key not in self.nocheck_keys:
+            if key not in self.nocheck_keys and key !='id':
                 self.assertEqual(self.expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
     def test_2014UR_Goldstone(self):
-    
+
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'G'
 
         MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
         status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
         self.assertEqual(True, status)
-        
+
         new_body = Body.objects.last()
         new_body_elements = model_to_dict(new_body)
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in expected_elements:
-            if key not in self.nocheck_keys:
+            if key not in self.nocheck_keys and key !='id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
 class TestClean_mpcorbit(TestCase):
