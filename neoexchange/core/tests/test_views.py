@@ -23,11 +23,15 @@ from django.forms.models import model_to_dict
 from django.utils.html import escape
 from django.contrib.auth.models import User
 from unittest import skipIf
+from bs4 import BeautifulSoup
+import os
+from mock import patch
+from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block
+    update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit
 from core.models import Body, Proposal, Block
 from core.forms import EphemQuery
 
@@ -488,7 +492,7 @@ class TestCheck_for_block(TestCase):
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
-        # The first body has a provisional name (e.g. a NEO candidate), the 
+        # The first body has a provisional name (e.g. a NEO candidate), the
         # other 2 do not (e.g. Goldstone targets)
         params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
@@ -511,7 +515,7 @@ class TestCheck_for_block(TestCase):
         params['name'] = '2014 UR'
         params['origin'] = 'G'
         self.body_no_provname1, created = Body.objects.get_or_create(**params)
- 
+
         params['name'] = '436724'
         self.body_no_provname2, created = Body.objects.get_or_create(**params)
 
@@ -620,7 +624,7 @@ class TestCheck_for_block(TestCase):
         self.test_block6 = Block.objects.create(**block_params6)
 
     def test_body_with_provname_no_blocks(self):
-    
+
         new_body = self.body_with_provname
         params = { 'site_code' : 'K92'
                  }
@@ -632,9 +636,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_with_provname_one_block(self):
-    
+
         new_body = self.body_with_provname
         params = { 'site_code' : 'W86'
                  }
@@ -646,9 +650,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_with_provname_two_blocks(self):
-    
+
         new_body = self.body_with_provname
         params = { 'site_code' : 'K92'
                  }
@@ -662,7 +666,7 @@ class TestCheck_for_block(TestCase):
         self.assertEqual(expected_state, block_state)
 
     def test_body_with_no_provname1_no_blocks(self):
-    
+
         new_body = self.body_no_provname1
         params = { 'site_code' : 'K92'
                  }
@@ -674,9 +678,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_with_no_provname1_one_block(self):
-    
+
         new_body = self.body_no_provname1
         params = { 'site_code' : 'W86'
                  }
@@ -688,9 +692,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_with_no_provname2_two_blocks(self):
-    
+
         new_body = self.body_no_provname2
         params = { 'site_code' : 'V37'
                  }
@@ -702,9 +706,9 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
-        
+
     def test_body_does_not_exist(self):
-    
+
         new_body = self.body_no_provname2
         new_body.provisional_name = 'Wibble'
         params = { 'site_code' : 'V37'
@@ -717,3 +721,149 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
+
+class TestUpdate_MPC_orbit(TestCase):
+
+    def setUp(self):
+
+        # Read and make soup from a static version of the HTML table/page for
+        # an object
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_2014UR.html'), 'r')
+        self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.nocheck_keys = ['ingest']   # Involves datetime.utcnow(), hard to check
+
+        self.expected_elements = {u'id' : 1,
+                             'name' : u'2014 UR',
+                             'provisional_name': None,
+                             'provisional_packed': None,
+                             'elements_type': u'MPC_MINOR_PLANET',
+                             'abs_mag' : 26.6,
+                             'argofperih': 222.91160,
+                             'longascnode': 24.87559,
+                             'eccentricity': 0.0120915,
+                             'epochofel': datetime(2016,01,13,0),
+                             'meandist': 0.9967710,
+                             'orbinc': 8.25708,
+                             'meananom': 221.74204,
+                             'num_obs': None , # '147',
+                             'epochofperih': None,
+                             'perihdist': None,
+                             'slope': 0.15,
+                             'origin' : u'M',
+                             'active' : True,
+                             'arc_length': 357.0,
+                             'discovery_date': datetime(2014, 10, 17, 0),
+                             'num_obs' : 147,
+                             'not_seen' : 5.5,
+                             'fast_moving' : False,
+                             'score' : None,
+                             'source_type' : 'N',
+                             'update_time' : datetime(2015, 10, 9, 0),
+                             'updated' : True,
+                             'urgency' : None
+                             }
+
+        self.maxDiff = None
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_MPC(self):
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='M')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(self.expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in self.expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(self.expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Goldstone(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'G'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+class TestClean_mpcorbit(TestCase):
+
+    def setUp(self):
+        # Read and make soup from a static version of the HTML table/page for
+        # an object
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_2014UR.html'), 'r')
+        test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.test_elements = parse_mpcorbit(test_mpcdb_page)
+
+        self.expected_params = {
+                             'elements_type': 'MPC_MINOR_PLANET',
+                             'abs_mag' : '26.6',
+                             'argofperih': '222.91160',
+                             'longascnode': '24.87559',
+                             'eccentricity': '0.0120915',
+                             'epochofel': datetime(2016,01,13,0),
+                             'meandist': '0.9967710',
+                             'orbinc': '8.25708',
+                             'meananom': '221.74204',
+                             'slope': '0.15',
+                             'origin' : 'M',
+                             'active' : True,
+                             'source_type' : 'N',
+                             'discovery_date': datetime(2014,10,17,0),
+                             'num_obs': '147',
+                             'arc_length': '357',
+                             'not_seen' : 5.5,
+#                             'score' : None,
+                             'update_time' : datetime(2015,10,9,0),
+                             'updated' : True
+                             }
+
+        self.maxDiff = None
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_2014UR(self):
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        params = clean_mpcorbit(self.test_elements)
+
+        self.assertEqual(self.expected_params, params)
+
+    def test_bad_not_seen(self):
+
+        new_test_elements = self.test_elements
+        new_test_elements['last observation date used'] = 'Wibble'
+        params = clean_mpcorbit(new_test_elements)
+
+        new_expected_params = self.expected_params
+        new_expected_params['not_seen'] = None
+        new_expected_params['update_time'] = None
+        self.assertEqual(new_expected_params, params)
+
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_bad_discovery_date(self):
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        new_test_elements = self.test_elements
+        new_test_elements['first observation date used'] = 'Wibble'
+        params = clean_mpcorbit(new_test_elements)
+
+        new_expected_params = self.expected_params
+        new_expected_params['discovery_date'] = None
+        self.assertEqual(new_expected_params, params)

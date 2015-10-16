@@ -26,13 +26,14 @@ from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404
 from httplib import REQUEST_TIMEOUT, HTTPSConnection
+from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, MagRangeError
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
-    fetch_mpcorbit, submit_block_to_scheduler
+    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
@@ -641,6 +642,17 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
 
     params = {}
     if elements != None:
+        
+        try:
+            last_obs = datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d')
+        except ValueError:
+            last_obs = None
+        
+        try:
+            first_obs = datetime.strptime(elements['first observation date used'].replace('.0', ''), '%Y-%m-%d')
+        except ValueError:
+            first_obs = None
+
         params = {
             'epochofel': datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
             'abs_mag': elements['absolute magnitude'],
@@ -655,16 +667,45 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             'elements_type': 'MPC_MINOR_PLANET',
             'active': True,
             'origin': origin,
+            'updated' : True,
+            'num_obs' : elements['observations used'],
+            'arc_length' : elements['arc length'],
+            'discovery_date' : first_obs,
+            'update_time' : last_obs
         }
+
+        not_seen = None
+        if last_obs != None: 
+            time_diff = datetime.utcnow() - last_obs
+            not_seen = time_diff.total_seconds() / 86400.0
+        params['not_seen'] = not_seen
     return params
 
 
-def update_MPC_orbit(obj_id, dbg=False, origin='M'):
+def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     '''
-    Performs remote look up of orbital elements for object with id obj_id,
-    Gets or creates corresponding Body instance and updates entry
+    Performs remote look up of orbital elements for object with id obj_id_or_page,
+    Gets or creates corresponding Body instance and updates entry.
+    Alternatively obj_id_or_page can be a BeautifulSoup object, in which case
+    the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup 
+    object will parsed.
     '''
-    elements = fetch_mpcorbit(obj_id, dbg)
+
+    if type(obj_id_or_page) != BeautifulSoup:
+        obj_id = obj_id_or_page
+        page = fetch_mpcdb_page(obj_id, dbg)
+        
+        if page == None:
+            logger.warn("Could not find elements for %s" % obj_id)
+            return False
+    else:
+        page = obj_id_or_page
+
+    elements = parse_mpcorbit(page, dbg)
+    if type(obj_id_or_page) == BeautifulSoup:
+        obj_id = elements['obj_id']
+        del elements['obj_id']
+
     try:
         body, created = Body.objects.get_or_create(name=obj_id)
     except Body.MultipleObjectsReturned:

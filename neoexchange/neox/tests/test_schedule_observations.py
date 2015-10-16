@@ -48,7 +48,7 @@ class ScheduleObservations(FunctionalTest):
         logout_link.click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
-        
+
 
 # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
 
@@ -99,8 +99,8 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('20.39', magnitude)
         speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
         self.assertIn("2.52 '/min", speed)
-        slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('22.5 mins', slot_length)
+        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
         self.assertIn('18', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
