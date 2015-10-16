@@ -160,19 +160,34 @@ class TestComputeEphem(TestCase):
         self.assertAlmostEqual(expected_motion, emp_line[4], precision)
         self.assertAlmostEqual(expected_alt, emp_line[5], precision)
         
-    def test_compute_south_polar_distance_with_elements(self):
+    def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_dec = 0.522637696108887
         expected_spd = 119.94694444444444
         emp_line = compute_ephem(d, self.elements, '?', dbg=False, perturb=True, display=False)
         precision = 11
+        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
         self.assertAlmostEqual(expected_spd, emp_line[6], precision)
         
-    def test_compute_south_polar_distance_with_body(self):
+    def test_compute_south_polar_distance_with_body_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_dec = 0.522637696108887
         expected_spd = 119.94694444444444
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
         precision = 11
+        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+
+    def test_compute_south_polar_distance_with_body_in_south(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_dec = -0.06554641803516298
+        expected_spd = 86.242222222222225
+        body_elements = model_to_dict(self.body)
+        body_elements['meananom'] = 25.2636
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        precision = 11
+        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
         self.assertAlmostEqual(expected_spd, emp_line[6], precision)
 
     def test_call_compute_ephem_with_body(self):
