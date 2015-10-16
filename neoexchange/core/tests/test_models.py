@@ -17,9 +17,12 @@ from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from unittest import skipIf
+from mock import patch
+from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from core.models import Body, Proposal, Block
+from astrometrics.ephem_subs import compute_ephem
 
 
 class TestBody(TestCase):
@@ -170,4 +173,125 @@ class TestBody(TestCase):
         result = self.body5.get_block_info()
 
         self.assertEqual(expected, result)
+
+@patch('core.models.datetime', MockDateTime)
+class TestComputeFOM(TestCase):
+
+    def setUp(self):
+        # Initialise with a test body and two test proposals
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params = {  'provisional_name' : '29182875',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body2, created = Body.objects.get_or_create(**params)
+
+        params = {  'provisional_name' : 'C94028',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : None,
+                    'arc_length'    : None,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body3, created = Body.objects.get_or_create(**params)
+
+        params = {  'provisional_name' : 't392019fci',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : None,
+                    'abs_mag'       : 19.8
+                    }
+        self.body4, created = Body.objects.get_or_create(**params)
+
+    def test_FOM_with_body(self):
+        MockDateTime.change_date(2015, 4, 21)
+        expected_FOM = 137.11876450346662
+
+        FOM = self.body.compute_FOM()
+
+        self.assertEqual(expected_FOM, FOM)
+
+    def test_FOM_with_wrong_source_type(self):
+        MockDateTime.change_date(2015, 4, 21)
+        expected_FOM = None
+
+        FOM = self.body2.compute_FOM()
+
+        self.assertEqual(expected_FOM, FOM)
+
+    def test_FOM_with_BadBody(self):
+        MockDateTime.change_date(2015, 4, 21)
+        expected_FOM = None
+
+        FOM = self.body3.compute_FOM()
+
+        self.assertEqual(expected_FOM, FOM)
+
+    def test_FOM_with_NoScore(self):
+        MockDateTime.change_date(2015, 4, 21)
+        expected_FOM = None
+
+        FOM = self.body4.compute_FOM()
+
+        self.assertEqual(expected_FOM, FOM)
 

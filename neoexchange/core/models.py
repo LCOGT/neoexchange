@@ -153,7 +153,7 @@ class Body(models.Model):
             # Catch the case where there is no Epoch
             return False
 
-    @property
+
     def compute_FOM(self):
         d = datetime.utcnow()
         if self.epochofel:

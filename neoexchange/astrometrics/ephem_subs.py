@@ -1163,7 +1163,7 @@ def get_sitecam_params(site):
 def comp_FOM(orbelems, emp_line):
 
     FOM = None
-    if orbelems['not_seen']!=None and orbelems['arc_length']!=None and orbelems['score']!=None:
+    if 'U' in orbelems['source_type'] and orbelems['not_seen']!=None and orbelems['arc_length']!=None and orbelems['score']!=None:
         FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line[3])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line[6]-60.)**2)/180.))
 
     return FOM

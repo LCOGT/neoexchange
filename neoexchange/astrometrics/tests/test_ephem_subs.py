@@ -321,6 +321,17 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+    def test_FOM_with_wrong_source_type(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_FOM = None
+        body_elements = model_to_dict(self.body)
+        body_elements['source_type'] = 'N'
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+
+        FOM = comp_FOM(body_elements, emp_line)
+
+        self.assertEqual(expected_FOM, FOM)
+
 class TestDetermineSlotLength(TestCase):
 
     def test_bad_site_code(self):
