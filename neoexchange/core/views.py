@@ -38,6 +38,7 @@ from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
 import json
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,7 @@ class BlockDetailView(DetailView):
         return context
 
 def fetch_observations(tracking_num, proposal_code):
-    query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num) 
+    query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
     data = framedb_lookup(query)
     if data:
         imgs = [(d["date_obs"],d["origname"][:-5]) for d in data]
@@ -174,8 +175,10 @@ class LookUpBodyMixin(object):
         except Body.DoesNotExist:
             raise Http404("Body does not exist")
 
-
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
+    '''
+    Creates a suggested observation request, including time window and molecules
+    '''
     template_name = 'core/schedule.html'
     form_class = ScheduleForm
     ok_to_schedule = False
@@ -209,51 +212,64 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        return super(ScheduleSubmit, self).post(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        target = self.get_object()
-        tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
-        if tracking_num:
-            messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
-            block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
-            if block_resp:
-                messages.success(self.request,"Block recorded")
-            else:
-                messages.warning(self.request, "Record not created")
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form, request)
         else:
-            messages.warning(self.request,"It was not possible to submit your request to the scheduler")
-        return super(ScheduleSubmit, self).form_valid(form)
+            return self.form_invalid(form)
+
+    def form_valid(self, form, request):
+        if 'edit' in request.POST:
+            # Recalculate the parameters with by amending the block length
+            data = schedule_check(form.cleaned_data, self.object)
+            new_form = ScheduleBlockForm(data)
+            return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
+        elif 'submit' in request.POST:
+            target = self.get_object()
+            tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
+            if tracking_num:
+                messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
+                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                if block_resp:
+                    messages.success(self.request,"Block recorded")
+                else:
+                    messages.warning(self.request, "Record not created")
+            else:
+                messages.warning(self.request,"It was not possible to submit your request to the scheduler")
+            return super(ScheduleSubmit, self).form_valid(form)
 
     def get_success_url(self):
         return reverse('home')
 
-
-def schedule_check(data, body, ok_to_schedule):
+def schedule_check(data, body, ok_to_schedule=True):
     body_elements = model_to_dict(body)
     # Check for valid proposal
     # validate_proposal_time(data['proposal_code'])
-    ok_to_schedule = True
 
     # Determine magnitude
-    dark_start, dark_end = determine_darkness_times(
-        data['site_code'], data['utc_date'])
+    if data.get('start_time') and data.get('end_time'):
+        dark_start = data.get('start_time')
+        dark_end = data.get('end_time')
+        utc_date = dark_start.date()
+    else:
+        dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
+        utc_date = data['utc_date']
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    emp = compute_ephem(
-        dark_midpoint, body_elements, data['site_code'], False, False, False)
+    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], False, False, False)
     magnitude = emp[3]
     speed = emp[4]
 
     # Determine slot length
-    try:
-        slot_length = determine_slot_length(
-            body_elements['provisional_name'], magnitude, data['site_code'])
-    except MagRangeError:
-        slot_length = 0.
-        ok_to_schedule = False
+    if data.get('slot_length'):
+        slot_length = data.get('slot_length')
+    else:
+        try:
+            slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+        except MagRangeError:
+            slot_length = 0.
+            ok_to_schedule = False
     # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(
-        speed, data['site_code'], slot_length)
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
@@ -267,8 +283,8 @@ def schedule_check(data, body, ok_to_schedule):
         'schedule_ok': ok_to_schedule,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
-        'utc_date': data['utc_date'].isoformat(),
+        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+        'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
         'mid_time': dark_midpoint.isoformat(),
@@ -363,7 +379,7 @@ def record_block(tracking_number, params, form_data, body):
         return False
 
 def save_and_make_revision(body, kwargs):
-    ''' 
+    '''
     Make a revision if any of the parameters have changed, but only do it once
     per ingest not for each parameter.
     Converts current model instance into a dict and compares each element with
@@ -390,7 +406,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     it will write the orbit found into the neox database.
     a) If the object does not have a response it will be marked as active = False
     b) If the object's parameters have changed they will be updated and a revision logged
-    c) New objects get marked as active = True automatically 
+    c) New objects get marked as active = True automatically
     '''
     NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
 
@@ -435,7 +451,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
 
 
 def clean_NEOCP_object(page_list):
-    '''Parse response from the MPC NEOCP page making sure we only return 
+    '''Parse response from the MPC NEOCP page making sure we only return
     parameters from the 'NEOCPNomin' (nominal orbit)'''
     current = False
     if page_list[0] == '':

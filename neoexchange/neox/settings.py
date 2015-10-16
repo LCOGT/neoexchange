@@ -20,6 +20,11 @@ if PREFIX != '':
 
 BASE_DIR = os.path.dirname(CURRENT_PATH)
 
+SESSION_COOKIE_NAME='neox.sessionid'
+SESSION_COOKIE_AGE= 24*60*60*7
+SESSION_ENGINE='django.contrib.sessions.backends.db' 
+SESSION_EXPIRE_AT_BROWSER_CLOSE=False
+
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
@@ -244,5 +249,3 @@ if not CURRENT_PATH.startswith('/var/www'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
-
-
