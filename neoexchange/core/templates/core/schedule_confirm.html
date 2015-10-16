@@ -15,6 +15,15 @@
 {% block main-content %}
     <div class="container">
         <div id="main">
+        <form action="{% url  'schedule-confirm' body.id %}" method="POST" >
+        {% csrf_token %}
+          <div class="row">
+                  {% for key, error in form.errors.items %}
+                          <div class="messages error">
+                              {{ error }}
+                          </div>
+                  {% endfor %}
+          </div>
         <div class="row">
 
         {% if data %}
@@ -32,7 +41,7 @@
                 <tr id="id_utc_date">
                     <td class="kv-key">UTC date</td>
                     <td class="kv-value">{{ data.utc_date}}</td>
-                </tr> 
+                </tr>
             </tbody>
         </table>
         <h3 class="section-title">Calculated characteristics at {{ data.mid_time }}</h3>
@@ -56,7 +65,7 @@
                 </tr>
                 <tr id="id_slot_length">
                     <td class="kv-key">Slot length</td>
-                    <td class="kv-value">{{ data.slot_length }} mins</td>
+                    <td class="kv-value">{{ form.slot_length }} mins</td>
                 </tr>
                 <tr id="id_no_of_exps">
                     <td class="kv-key">No. of exposures</td>
@@ -71,26 +80,24 @@
                     <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
                 </tr>
             </tbody>
-        </table> 
+        </table>
     {% endif %}
+        {% if form.errors%}
+        <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
+        {% else %}
+        <input type="submit" class="btn btn-secondary" value="Schedule this Object" id="id_submit_button" name="submit">
+        <input type="submit" class="btn btn-secondary" value="Edit Parameters" id="id_edit_button" name="edit">
+        {% endif%}
+          {{form.start_time}}
+          {{form.end_time}}
+          {{form.exp_count}}
+          {{form.exp_length}}
+          {{form.proposal_code}}
+          {{form.site_code}}
+          {{form.group_id}}
         </div>
-        <div class="row">
-            <form action="{% url  'schedule-confirm' body.id %}" method="POST" >
-                {% csrf_token %}
-                {% for key, error in form.errors.items %}
-                        <div class="messages error">
-                            {{ error }}
-                        </div>
 
-                {% empty %}
-                <input type="submit" class="btn btn-secondary" value="Schedule this Object" id="id_submit_button">
-                {% endfor %}
-                {% if form.errors%}
-                <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
-                {% endif%}
-                {{form}}
-            </form>
-        </div>
+    </form>
     </div>
     </div>
 {% endblock %}
