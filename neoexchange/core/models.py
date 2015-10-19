@@ -28,7 +28,7 @@ OBJECT_TYPES = (
                 ('K','KBO'),
                 ('E','Centaur'),
                 ('T','Trojan'),
-                ('U','Unknown/NEO Candidate'),
+                ('U','Candidate'),
                 ('X','Did not exist'),
                 ('W','Was not interesting'),
                 ('D','Discovery, non NEO'),
