@@ -54,15 +54,13 @@ class NewVisitorTest(FunctionalTest):
         testlines =[u'N999r0q Unknown/NEO Candidate 23 43 12.75 +19 58 55.6 20.7 Minor Planet Center %s' % self.body.ingest.strftime('%-d %b %Y, %H:%M'),]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
-        # He is invited to enter a target to compute an ephemeris
-        inputbox = self.get_item_input_box()
-        self.assertEqual(
-            inputbox.get_attribute('placeholder'), 
-            'Enter target name...'
-        )
+        # he goes to the page from N999r0q and computes the ephemeris
+        link = self.browser.find_element_by_link_text('N999r0q')
+        self.browser.implicitly_wait(3)
+        link.click()
 
-        # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
-        inputbox.send_keys('N999r0q')
+        # He decides to using the the ephemeris formte
+        inputbox = self.get_item_input_box()
 
         datebox = self.get_item_input_box_and_clear('id_utc_date')
         datebox.send_keys('2015-04-21')
@@ -70,7 +68,7 @@ class NewVisitorTest(FunctionalTest):
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        inputbox.send_keys(Keys.ENTER)
+        self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -100,15 +98,9 @@ class NewVisitorTest(FunctionalTest):
         # homepage
         self.browser.get(self.live_server_url)
 
-        # He is invited to enter a target to compute an ephemeris
-        inputbox = self.get_item_input_box()
-        self.assertEqual(
-            inputbox.get_attribute('placeholder'),
-            'Enter target name...'
-        )
-
-        # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
-        inputbox.send_keys('N999r0q')
+        link = self.browser.find_element_by_link_text('N999r0q')
+        self.browser.implicitly_wait(3)
+        link.click()
 
         # He notices a new selection for the site code and chooses FTN (F65)
         # XXX Code smell: Too many static text constants
@@ -125,11 +117,10 @@ class NewVisitorTest(FunctionalTest):
         altlimitbox.clear()
         altlimitbox.send_keys('20')
 
-        # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
+        # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        # The name of the selected site is displayed.
-        inputbox.send_keys(Keys.ENTER)
+        self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -158,14 +149,9 @@ class NewVisitorTest(FunctionalTest):
         self.browser.get(self.live_server_url)
 
         # He is invited to enter a target to compute an ephemeris
-        inputbox = self.get_item_input_box()
-        self.assertEqual(
-            inputbox.get_attribute('placeholder'),
-            'Enter target name...'
-        )
-
-        # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
-        inputbox.send_keys('N999r0q')
+        link = self.browser.find_element_by_link_text('N999r0q')
+        self.browser.implicitly_wait(3)
+        link.click()
 
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
@@ -189,11 +175,10 @@ class NewVisitorTest(FunctionalTest):
         datebox.clear()
         datebox.send_keys('2015-04-28')
 
-        # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
+        # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        # The name of the selected site is displayed.
-        inputbox.send_keys(Keys.ENTER)
+        self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -222,14 +207,9 @@ class NewVisitorTest(FunctionalTest):
         self.browser.get(self.live_server_url)
 
         # He is invited to enter a target to compute an ephemeris
-        inputbox = self.get_item_input_box()
-        self.assertEqual(
-            inputbox.get_attribute('placeholder'),
-            'Enter target name...'
-        )
-
-        # He types N999r0q into the textbox (he is most interested in NEOWISE targets)
-        inputbox.send_keys('N999r0q')
+        link = self.browser.find_element_by_link_text('N999r0q')
+        self.browser.implicitly_wait(3)
+        link.click()
 
         # He notices a new selection for the site code and chooses CPT (K91)
         # XXX Code smell: Too many static text constants
@@ -253,17 +233,16 @@ class NewVisitorTest(FunctionalTest):
         datebox.send_keys('2015-09-04')
 
         # He notices a new textbox for the altitude limit that is wanted, below
-        # which he doesn't want to see ephemeris output. It is filled in with 
+        # which he doesn't want to see ephemeris output. It is filled in with
         # the default value of 30.0 degrees
         datebox = self.get_item_input_box('id_alt_limit')
         self.assertEqual(datebox.get_attribute('value'), str(30.0))
 
 
-        # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
+        # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        # The name of the selected site is displayed.
-        inputbox.send_keys(Keys.ENTER)
+        self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')

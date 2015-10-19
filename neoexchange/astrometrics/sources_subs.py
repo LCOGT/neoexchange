@@ -23,6 +23,9 @@ from reqdb.requests import Request, UserRequest
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 import logging
 import urllib2, os
+from urlparse import urljoin
+from core.models import Block
+
 
 logger = logging.getLogger(__name__)
 
@@ -186,7 +189,7 @@ def parse_NEOCP(neocp_page, dbg=False):
 def parse_NEOCP_extra_params(neocp_page, dbg=False):
 
     '''Takes a BeautifulSoup object of the NEO Confirmation Page and extracts a
-    list of objects along with a dictionary of extra parameters (score, 
+    list of objects along with a dictionary of extra parameters (score,
     discovery date, update date, # obs, arc length (in days) and not seen (in days)
     which are returned.'''
 
@@ -353,7 +356,7 @@ def parse_PCCP(pccp_page, dbg=False):
                 object_list.append(obj_id)
                 new_object = (obj_id, params)
                 new_objects.append(new_object)
-       
+
     return new_objects
 
 def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
@@ -480,7 +483,7 @@ def clean_element(element):
     return (key, value)
 
 def fetch_mpcdb_page(asteroid, dbg=False):
-    '''Performs a search on the MPC Database for <asteroid> and returns a 
+    '''Performs a search on the MPC Database for <asteroid> and returns a
     BeautifulSoup object of the page (for future use by parse_mpcorbit())'''
 
     #Strip off any leading or trailing space and replace internal space with a
@@ -619,7 +622,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
             if dbg: print "In case 2a"
             object_id = str(chunks[3])
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isalnum():
-            # We have something that straddles months 
+            # We have something that straddles months
             if dbg: print "In case 2b"
             object_id = str(chunks[4])
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isalnum():
@@ -700,7 +703,7 @@ def make_location(params):
         'telescope'   : '',
     }
 
-# Check if the 'pondtelescope' is length 4 (1m0a) rather than length 3, and if 
+# Check if the 'pondtelescope' is length 4 (1m0a) rather than length 3, and if
 # so, update the null string set above with a proper telescope
     if len(params['pondtelescope']) == 4:
         location['telescope'] = params['pondtelescope']
@@ -865,3 +868,20 @@ def submit_block_to_scheduler(elements, params):
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))
 
     return tracking_number, params
+
+def block_status(block_id):
+    try:
+        block = Block.objects.get(block_id)
+        tracking_num = block.tracking_number
+    except DoesNotExist:
+        logger.error("Block with id %s does not exist" % block_id)
+        return False
+    client = requests.session()
+    # First have to authenticate
+    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+    # Because we are sending log in details it has to go over SSL
+    data_url = urljoin(settings.REQUEST_API_URL, tracking_num)
+    try:
+        resp = client.post(data_url, data=login_data, timeout=20)
+    except requests.exceptions.Timeout:
+        data = resp.json()

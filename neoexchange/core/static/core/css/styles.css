@@ -408,7 +408,7 @@ li.dropdown-menu:after {
 
 #navigation	.navlist li a.navitem,
 #navigation	.navlist li a.navitem:visited
-	{ display: block; padding: 0px 8px; height: 1.5em; line-height: 1.5em; 
+	{ display: block; padding: 0px 8px; height: 1.5em; line-height: 1.5em;
   color: #888 !important;
   font-size: 17px;
   font-weight: 500;
@@ -484,7 +484,7 @@ li.dropdown-menu:after {
 
 #main-holder { display: inline-block; }
 #main { width:100%; overflow-x: hidden; }
-.container { 
+.container {
   width:1170px;
   overflow-x: hidden;
   padding-right: 15px;
@@ -598,7 +598,7 @@ form input.button { width: auto!important; }
 	z-index:100;
 	background-color: #F9F9F9;
     border-top: 1px solid #CCCCCC;
-    border-bottom: 1px solid #CCCCCC; 
+    border-bottom: 1px solid #CCCCCC;
     box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
 	-moz-box-shadow: 0px 1px 5px rgba(0,0,0,0.1);
 	-webkit-box-shadow: 0px 1px 5px rgba(0,0,0,0.1);
@@ -1092,7 +1092,7 @@ div#show-messages-close {
 div#show-messages-close:hover { color: #444; background-color: #eee; }
 
 .highlight {
- text-shadow: 0 0 5px #00ff00; 
+ text-shadow: 0 0 5px #00ff00;
 }
 
 /* Responsive design styles */
@@ -1289,4 +1289,3 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 	}
 	.yes, .no { margin-top: 4px; }
 }
-
