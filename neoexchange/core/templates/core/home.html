@@ -84,14 +84,14 @@
                 </tr>
             </thead>
             <tbody>
-                {% for body in newest%}
+                {% for body in newest|dictsortreversed:"FOM" %}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td>{{forloop.counter}}</td>
-                    <td class="list_title"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
-                    <td>{{body.get_source_type_display}}</td>
-                    <td>{{body.compute_position.0|radianstohms:" "}}</td>
-                    <td>{{body.compute_position.1|radianstodms:" "}}</td>
-                    <td>{{body.compute_position.2|floatformat:1 }}</td>
+                    <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
+                    <td>{{body.type}}</td>
+                    <td>{{body.ra|radianstohms:" "}}</td>
+                    <td>{{body.dec|radianstodms:" "}}</td>
+                    <td>{{body.v_mag|floatformat:1 }}</td>
                     <td>{{body.num_obs}}</td>
                     <td>{{body.arc_length}}</td>
                     <td>{{body.not_seen}}</td>
