@@ -7,6 +7,7 @@ from neox.tests.mocks import MockDateTime
 #from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
+from django.core.urlresolvers import reverse
 
 class NewVisitorTest(FunctionalTest):
 # The homepage computes the RA, Dec of each body for 'now' so we need to mock
@@ -37,7 +38,7 @@ class NewVisitorTest(FunctionalTest):
                     'not_seen'      : 2.22,
                     'updated'       : False
                     }
-        self.body, created = Body.objects.get_or_create(pk=2, **params)
+        self.body2, created = Body.objects.get_or_create(pk=2, **params)
 
     @patch('core.models.datetime', MockDateTime)
     def test_homepage_has_ranking(self):
@@ -53,11 +54,25 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_header_in_table('id_neo_targets',\
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 N999r0q Unknown/NEO Candidate 23 43 12.75 +19 58 55.6 20.7 17 3.0 0.42 90 True',
+        testlines =[u'1 N999r0q Candidate 23 43 12.75 +19 58 55.6 20.7 17 3.0 0.42 90 True',
                     u'2 1995 YR1 NEO 23 43 12.75 +19 58 55.6 20.7 35 42.0 2.22 None False']
         self.check_for_row_in_table('id_neo_targets', testlines[0])
         self.check_for_row_in_table('id_neo_targets', testlines[1])
 
         #He clicks on the top ranked NEO and is taken to a page that has more information on the object.
-        self.browser.implicitly_wait(30)
-        self.fail('Finish the test!')
+        link = self.browser.find_element_by_link_text('N999r0q')
+        body_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        self.assertEqual(link.get_attribute('href'), body_url)
+
+        # He clicks the link and is taken to a page with the targets' details.
+        link.click()
+        self.browser.implicitly_wait(3)
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), body_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions the current target
+        self.assertIn(self.body.current_name() + ' details | LCOGT NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Object: ' + self.body.current_name(), header_text)
+
