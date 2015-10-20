@@ -43,7 +43,7 @@ class NewVisitorTest(FunctionalTest):
     @patch('core.models.datetime', MockDateTime)
     def test_homepage_has_ranking(self):
 
-        MockDateTime.change_date(2015, 7, 1)
+        MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
         self.insert_extra_test_body()
         
         #Matt has heard about a new website that provides a ranked list of NEOs for follow-up.

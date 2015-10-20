@@ -264,7 +264,7 @@ class TestComputeFOM(TestCase):
         self.body4, created = Body.objects.get_or_create(**params)
 
     def test_FOM_with_body(self):
-        MockDateTime.change_date(2015, 4, 21)
+        MockDateTime.change_datetime(2015, 4, 21, 17, 0, 0)
         expected_FOM = 137.11876450346662
 
         FOM = self.body.compute_FOM()
@@ -272,7 +272,7 @@ class TestComputeFOM(TestCase):
         self.assertEqual(expected_FOM, FOM)
 
     def test_FOM_with_wrong_source_type(self):
-        MockDateTime.change_date(2015, 4, 21)
+        MockDateTime.change_datetime(2015, 4, 21, 17, 0, 0)
         expected_FOM = None
 
         FOM = self.body2.compute_FOM()
@@ -280,7 +280,7 @@ class TestComputeFOM(TestCase):
         self.assertEqual(expected_FOM, FOM)
 
     def test_FOM_with_BadBody(self):
-        MockDateTime.change_date(2015, 4, 21)
+        MockDateTime.change_datetime(2015, 4, 21, 17, 0, 0)
         expected_FOM = None
 
         FOM = self.body3.compute_FOM()
@@ -288,7 +288,7 @@ class TestComputeFOM(TestCase):
         self.assertEqual(expected_FOM, FOM)
 
     def test_FOM_with_NoScore(self):
-        MockDateTime.change_date(2015, 4, 21)
+        MockDateTime.change_datetime(2015, 4, 21, 17, 0, 0)
         expected_FOM = None
 
         FOM = self.body4.compute_FOM()

@@ -65,7 +65,7 @@ class RankingPageTest(FunctionalTest):
     @patch('core.models.datetime', MockDateTime)
     def test_ranking_page(self):
 
-        MockDateTime.change_date(2015, 7, 1)
+        MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
         self.insert_extra_test_body()
         self.insert_another_extra_test_body()
         
