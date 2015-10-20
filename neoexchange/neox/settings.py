@@ -23,7 +23,6 @@ BASE_DIR = os.path.dirname(CURRENT_PATH)
 SESSION_COOKIE_NAME='neox.sessionid'
 SESSION_COOKIE_AGE= 24*60*60*7
 SESSION_ENGINE='django.contrib.sessions.backends.db'
-SESSION_EXPIRE_AT_BROWSER_CLOSE=False
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -205,7 +204,7 @@ DATABASES = {
     "default": {
         # Live DB
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "neoexchange",
+        "NAME": os.environ.get('NEOX_DB_NAME','neoexchange'),
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
