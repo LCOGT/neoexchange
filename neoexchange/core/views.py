@@ -256,7 +256,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], False, False, False)
+    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
+        dbg=False, perturb=True, display=False)
     magnitude = emp[3]
     speed = emp[4]
 
