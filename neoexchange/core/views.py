@@ -643,12 +643,12 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
 
     params = {}
     if elements != None:
-        
+
         try:
             last_obs = datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d')
         except ValueError:
             last_obs = None
-        
+
         try:
             first_obs = datetime.strptime(elements['first observation date used'].replace('.0', ''), '%Y-%m-%d')
         except ValueError:
@@ -676,7 +676,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
         }
 
         not_seen = None
-        if last_obs != None: 
+        if last_obs != None:
             time_diff = datetime.utcnow() - last_obs
             not_seen = time_diff.total_seconds() / 86400.0
         params['not_seen'] = not_seen
@@ -688,14 +688,14 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     Performs remote look up of orbital elements for object with id obj_id_or_page,
     Gets or creates corresponding Body instance and updates entry.
     Alternatively obj_id_or_page can be a BeautifulSoup object, in which case
-    the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup 
+    the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup
     object will parsed.
     '''
 
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
         page = fetch_mpcdb_page(obj_id, dbg)
-        
+
         if page == None:
             logger.warn("Could not find elements for %s" % obj_id)
             return False
