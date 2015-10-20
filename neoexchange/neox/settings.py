@@ -205,7 +205,7 @@ DATABASES = {
     "default": {
         # Live DB
         "ENGINE": "django.db.backends.mysql",
-        "NAME": "neoexchange",
+        "NAME": os.environ.get('NEOX_DB_NAME','neoexchange'),
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
