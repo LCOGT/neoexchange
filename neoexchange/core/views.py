@@ -53,33 +53,8 @@ class LoginRequiredMixin(object):
 
 
 def home(request):
-    try:
-        # If we don't have any Body instances, return None instead of breaking
-        latest = Body.objects.filter(active=True).latest('ingest')
-        max_dt = latest.ingest
-        min_dt = max_dt - timedelta(days=5)
-        newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
-        unranked = []
-        for body in newest:
-            body_dict = model_to_dict(body)
-            body_dict['FOM'] = body.compute_FOM
-            body_dict['current_name'] = body.current_name()
-            emp_line = body.compute_position()
-            body_dict['ra'] = emp_line[0]
-            body_dict['dec'] = emp_line[1]
-            body_dict['v_mag'] = emp_line[2]
-            body_dict['type'] = body.get_source_type_display()
-            unranked.append(body_dict)
-    except:
-        latest = None
-        unranked = None
-    params = {
-        'targets': Body.objects.filter(active=True).count(),
-        'blocks': Block.objects.filter(active=True).count(),
-        'latest': latest,
-        'newest': unranked,
-        'form': EphemQuery()
-    }
+    params = build_unranked_list_params()
+    params['form'] = EphemQuery()
     return render(request, 'core/home.html', params)
 
 
@@ -320,6 +295,14 @@ def schedule_submit(data, body):
     return tracking_number, resp_params
 
 def ranking(request):
+
+    params = build_unranked_list_params()
+
+    return render(request, 'core/ranking.html', params)
+
+
+def build_unranked_list_params():
+    params = {}
     try:
         # If we don't have any Body instances, return None instead of breaking
         latest = Body.objects.filter(active=True).latest('ingest')
@@ -337,6 +320,7 @@ def ranking(request):
             body_dict['v_mag'] = emp_line[2]
             body_dict['spd'] = emp_line[3]
             body_dict['observed'], body_dict['reported'] = body.get_block_info()
+            body_dict['type'] = body.get_source_type_display()
             unranked.append(body_dict)
     except:
         latest = None
@@ -347,7 +331,7 @@ def ranking(request):
         'latest': latest,
         'newest': unranked
     }
-    return render(request, 'core/ranking.html', params)
+    return params
 
 def check_for_block(form_data, params, new_body):
 	'''Checks if a block with the given name exists in the Django DB.
