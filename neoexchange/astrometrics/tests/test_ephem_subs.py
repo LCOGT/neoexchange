@@ -159,6 +159,36 @@ class TestComputeEphem(TestCase):
         self.assertAlmostEqual(expected_mag, emp_line[3], precision)
         self.assertAlmostEqual(expected_motion, emp_line[4], precision)
         self.assertAlmostEqual(expected_alt, emp_line[5], precision)
+        
+    def test_compute_south_polar_distance_with_elements_in_north(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_dec = 0.522637696108887
+        expected_spd = 119.94694444444444
+        emp_line = compute_ephem(d, self.elements, '?', dbg=False, perturb=True, display=False)
+        precision = 11
+        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        
+    def test_compute_south_polar_distance_with_body_in_north(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_dec = 0.522637696108887
+        expected_spd = 119.94694444444444
+        body_elements = model_to_dict(self.body)
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        precision = 11
+        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+
+    def test_compute_south_polar_distance_with_body_in_south(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_dec = -0.06554641803516298
+        expected_spd = 86.242222222222225
+        body_elements = model_to_dict(self.body)
+        body_elements['meananom'] = 25.2636
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        precision = 11
+        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
 
     def test_call_compute_ephem_with_body(self):
         start = datetime(2015, 4, 21, 8, 45, 00)
@@ -241,6 +271,81 @@ class TestComputeEphem(TestCase):
         while line < len(expected_ephem_lines):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
+
+class TestComputeFOM(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+    def test_compute_FOM_with_body(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_FOM = 137.1187602774659
+        expected_not_seen = 2.3942
+        expected_arc_length = 0.4859
+        expected_score = 83
+        expected_abs_mag = 19.8
+        body_elements = model_to_dict(self.body)
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        FOM = comp_FOM(body_elements, emp_line)
+        precision = 11
+        self.assertAlmostEqual(expected_not_seen, body_elements['not_seen'], precision)
+        self.assertAlmostEqual(expected_arc_length, body_elements['arc_length'], precision)
+        self.assertAlmostEqual(expected_score, body_elements['score'], precision)
+        self.assertAlmostEqual(expected_abs_mag, body_elements['abs_mag'], precision)
+        self.assertAlmostEqual(expected_FOM, FOM, precision)
+
+    def test_FOM_with_BadBody(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_FOM = None
+        body_elements = model_to_dict(self.body)
+        body_elements['not_seen'] = None
+        body_elements['arc_length'] = None
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+
+        FOM = comp_FOM(body_elements, emp_line)
+
+        self.assertEqual(expected_FOM, FOM)
+
+    def test_FOM_with_NoScore(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_FOM = None
+        body_elements = model_to_dict(self.body)
+        body_elements['score'] = None
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+
+        FOM = comp_FOM(body_elements, emp_line)
+
+        self.assertEqual(expected_FOM, FOM)
+
+    def test_FOM_with_wrong_source_type(self):
+        d = datetime(2015, 4, 21, 17, 35, 00)
+        expected_FOM = None
+        body_elements = model_to_dict(self.body)
+        body_elements['source_type'] = 'N'
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+
+        FOM = comp_FOM(body_elements, emp_line)
+
+        self.assertEqual(expected_FOM, FOM)
 
 class TestDetermineSlotLength(TestCase):
 

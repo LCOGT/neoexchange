@@ -487,6 +487,18 @@ class BlocksPageTest(TestCase):
         response = self.client.get(reverse('block',kwargs={'pk':1}))
         self.assertTemplateUsed(response, 'core/block_detail.html')
 
+
+class RankingPageTest(TestCase):
+
+    def test_ranking_url_resolves_to_ranking_view(self):
+        found = reverse('ranking')
+        self.assertEqual(found, '/ranking/')
+
+    def test_ranking_page_renders_template(self):
+        response = self.client.get(reverse('ranking'))
+        self.assertTemplateUsed(response, 'core/ranking.html')
+
+
 class TestCheck_for_block(TestCase):
 
 
@@ -867,3 +879,4 @@ class TestClean_mpcorbit(TestCase):
         new_expected_params = self.expected_params
         new_expected_params['discovery_date'] = None
         self.assertEqual(new_expected_params, params)
+

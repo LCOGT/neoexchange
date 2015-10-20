@@ -337,8 +337,19 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         ra_geo_deg[1], ra_geo_deg[2], ra_geo_deg[3],
         dsign, dec_geo_deg[0], dec_geo_deg[1], dec_geo_deg[2], dec_geo_deg[3],
         mag, total_motion, sky_pa, alt_deg, airmass )
+        
+# Compute South Polar Distance from Dec
+    dec_arcsec_decimal = dec_geo_deg[2] + dec_geo_deg[3]
+    dec_arcmin_decimal = dec_geo_deg[1] + (dec_arcsec_decimal/60.)
+    dec_deg_decimal = dec_geo_deg[0] + (dec_arcmin_decimal/60.)
+    if '+' in dsign:
+        spd = 90. + dec_deg_decimal
+    elif '-' in dsign:
+        spd = 90. - dec_deg_decimal
+    else:
+        spd = None
 
-    emp_line = (d, ra, dec, mag, total_motion, alt_deg)
+    emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd)
 
     return emp_line
 
@@ -1148,3 +1159,29 @@ def get_sitecam_params(site):
         setup_overhead = exp_overhead = pixel_scale = fov = max_exp_length = alt_limit = -1
 
     return (site_code, setup_overhead, exp_overhead, pixel_scale, fov, max_exp_length, alt_limit)
+
+def comp_FOM(orbelems, emp_line):
+    '''Computes a Figure of Merit (FOM) priority score that is used as a 
+    metric for ranking targets to follow-up.
+    Currently, this prioritizes targets that have not been seen in a while, 
+    have a short arc, are big and bright, have a high "likely NEO" score,
+    and will go directly overhead of our southern hemisphere sites.
+    The 'not_seen'/'arc_length', 'emp_line[3]' (V_mag), and 'abs_mag' 
+    terms in the FOM computation are exponential (i.e., for brighter, larger, 
+    seen less recently, shorter arc targets, the FOM rises exponentially), 
+    whereas the 'score' and 'emp_line[6]' (south polar distance (SPD)) terms 
+    are gaussian, where the expected values are 100 and 60 deg, respectively. 
+    The 'score' term is weighted lower (multiplied by 0.5) than the others 
+    to avoid it dominating the priority ranking. The 'not_seen' and 
+    'arc_length' parameters are linked together such that targets with high 
+    'not_seen' values and low 'arc_length' values (those that haven't been 
+    seen in a while and have short arcs) are ranked higher than those with 
+    both values high (those that haven't been seen in a while and have longer 
+    arcs) or both values low (those that were seen recently and have short 
+    arcs).
+    '''
+    FOM = None
+    if 'U' in orbelems['source_type'] and orbelems['not_seen']!=None and orbelems['arc_length']!=None and orbelems['score']!=None:
+        FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line[3])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line[6]-60.)**2)/180.))
+
+    return FOM
