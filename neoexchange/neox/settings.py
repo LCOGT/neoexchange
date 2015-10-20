@@ -22,7 +22,7 @@ BASE_DIR = os.path.dirname(CURRENT_PATH)
 
 SESSION_COOKIE_NAME='neox.sessionid'
 SESSION_COOKIE_AGE= 24*60*60*7
-SESSION_ENGINE='django.contrib.sessions.backends.db' 
+SESSION_ENGINE='django.contrib.sessions.backends.db'
 SESSION_EXPIRE_AT_BROWSER_CLOSE=False
 
 ADMINS = (
@@ -85,8 +85,8 @@ STATICFILES_FINDERS = (
 
 MIDDLEWARE_CLASSES = (
     'opbeat.contrib.django.middleware.OpbeatAPMMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -219,6 +219,7 @@ DATABASES = {
 #######################
 
 if 'test' in sys.argv:
+    print "TESTING"
     # If you also want to speed up password hashing in test cases.
     PASSWORD_HASHERS = (
         'django.contrib.auth.hashers.MD5PasswordHasher',
@@ -235,6 +236,7 @@ if 'test' in sys.argv:
         'NAME': 'test_rbauth', # Add the name of your SQLite3 database file here.
         }
     }
+    OPBEAT['APP_ID'] = None
 
 ##################
 # LOCAL SETTINGS #
