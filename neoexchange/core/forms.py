@@ -61,8 +61,9 @@ class ScheduleForm(forms.Form):
 class ScheduleBlockForm(forms.Form):
     start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
-    exp_count = forms.IntegerField(widget=forms.HiddenInput())
-    exp_length = forms.FloatField(widget=forms.HiddenInput())
+    exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    exp_length = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
@@ -84,14 +85,10 @@ class ScheduleBlockForm(forms.Form):
         else:
             return self.cleaned_data['end_time']
 
-    def clean_exp_length(self):
-        if self.cleaned_data['exp_length'] > 0.:
-            return self.cleaned_data['exp_length']
-        else:
-            raise forms.ValidationError("Exposure length is too short")
-
-    def clean_exp_count(self):
-        if self.cleaned_data['exp_count'] > 1:
-            return self.cleaned_data['exp_count']
-        else:
+    def clean(self):
+        if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
+            raise forms.ValidationError("The slot length is too short")
+        elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
+        elif self.cleaned_data['exp_length'] < 0.1:
+            raise forms.ValidationError("Exposure length is too short")

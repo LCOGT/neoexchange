@@ -36,7 +36,7 @@ class NewVisitorTest(FunctionalTest):
     @patch('core.models.datetime', MockDateTime)
     def test_can_compute_ephemeris(self):
 
-        MockDateTime.change_date(2015, 7, 1)
+        MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
         # Eduardo has heard about a new website for NEOs. He goes to the
         # homepage
         self.browser.get(self.live_server_url)

@@ -26,18 +26,20 @@ from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404
 from httplib import REQUEST_TIMEOUT, HTTPSConnection
+from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, MagRangeError
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
-    fetch_mpcorbit, submit_block_to_scheduler
+    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
 import json
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +96,7 @@ class BlockDetailView(DetailView):
         return context
 
 def fetch_observations(tracking_num, proposal_code):
-    query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num) 
+    query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
     data = framedb_lookup(query)
     if data:
         imgs = [(d["date_obs"],d["origname"][:-5]) for d in data]
@@ -160,8 +162,10 @@ class LookUpBodyMixin(object):
         except Body.DoesNotExist:
             raise Http404("Body does not exist")
 
-
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
+    '''
+    Creates a suggested observation request, including time window and molecules
+    '''
     template_name = 'core/schedule.html'
     form_class = ScheduleForm
     ok_to_schedule = False
@@ -195,51 +199,64 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
-        return super(ScheduleSubmit, self).post(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        target = self.get_object()
-        tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
-        if tracking_num:
-            messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
-            block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
-            if block_resp:
-                messages.success(self.request,"Block recorded")
-            else:
-                messages.warning(self.request, "Record not created")
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form, request)
         else:
-            messages.warning(self.request,"It was not possible to submit your request to the scheduler")
-        return super(ScheduleSubmit, self).form_valid(form)
+            return self.form_invalid(form)
+
+    def form_valid(self, form, request):
+        if 'edit' in request.POST:
+            # Recalculate the parameters with by amending the block length
+            data = schedule_check(form.cleaned_data, self.object)
+            new_form = ScheduleBlockForm(data)
+            return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
+        elif 'submit' in request.POST:
+            target = self.get_object()
+            tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
+            if tracking_num:
+                messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
+                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                if block_resp:
+                    messages.success(self.request,"Block recorded")
+                else:
+                    messages.warning(self.request, "Record not created")
+            else:
+                messages.warning(self.request,"It was not possible to submit your request to the scheduler")
+            return super(ScheduleSubmit, self).form_valid(form)
 
     def get_success_url(self):
         return reverse('home')
 
-
-def schedule_check(data, body, ok_to_schedule):
+def schedule_check(data, body, ok_to_schedule=True):
     body_elements = model_to_dict(body)
     # Check for valid proposal
     # validate_proposal_time(data['proposal_code'])
-    ok_to_schedule = True
 
     # Determine magnitude
-    dark_start, dark_end = determine_darkness_times(
-        data['site_code'], data['utc_date'])
+    if data.get('start_time') and data.get('end_time'):
+        dark_start = data.get('start_time')
+        dark_end = data.get('end_time')
+        utc_date = dark_start.date()
+    else:
+        dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
+        utc_date = data['utc_date']
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    emp = compute_ephem(
-        dark_midpoint, body_elements, data['site_code'], False, False, False)
+    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], False, False, False)
     magnitude = emp[3]
     speed = emp[4]
 
     # Determine slot length
-    try:
-        slot_length = determine_slot_length(
-            body_elements['provisional_name'], magnitude, data['site_code'])
-    except MagRangeError:
-        slot_length = 0.
-        ok_to_schedule = False
+    if data.get('slot_length'):
+        slot_length = data.get('slot_length')
+    else:
+        try:
+            slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+        except MagRangeError:
+            slot_length = 0.
+            ok_to_schedule = False
     # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(
-        speed, data['site_code'], slot_length)
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
@@ -253,8 +270,8 @@ def schedule_check(data, body, ok_to_schedule):
         'schedule_ok': ok_to_schedule,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d'),
-        'utc_date': data['utc_date'].isoformat(),
+        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+        'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
         'mid_time': dark_midpoint.isoformat(),
@@ -334,26 +351,34 @@ def build_unranked_list_params():
     return params
 
 def check_for_block(form_data, params, new_body):
-	'''Checks if a block with the given name exists in the Django DB.
-	Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
+        '''Checks if a block with the given name exists in the Django DB.
+        Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
 
         # XXX Code smell, duplicated from sources_subs.configure_defaults()
         site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
 
-	try:
-    	    block_id = Block.objects.get(body=Body.objects.get(provisional_name=new_body.provisional_name),
-	    	    	    	    	 groupid__contains=form_data['group_id'],
+        try:
+            body_id = Body.objects.get(provisional_name=new_body.provisional_name)
+        except Body.MultipleObjectsReturned:
+            body_id = Body.objects.get(name=new_body.name)
+        except Body.DoesNotExist:
+            logger.warn("Body does not exist")
+            return 3
+
+        try:
+            block_id = Block.objects.get(body=body_id,
+                                         groupid__contains=form_data['group_id'],
                                          proposal=Proposal.objects.get(code=form_data['proposal_code']),
-					 site=site_list[params['site_code']])
-	except Block.MultipleObjectsReturned:
-    	    logger.debug("Multiple blocks found")
-	    return 2
-	except Block.DoesNotExist:
-    	    logger.debug("Block not found")
-    	    return 0
-	else:
-    	    logger.debug("Block found")
-    	    return 1
+                                         site=site_list[params['site_code']])
+        except Block.MultipleObjectsReturned:
+            logger.debug("Multiple blocks found")
+            return 2
+        except Block.DoesNotExist:
+            logger.debug("Block not found")
+            return 0
+        else:
+            logger.debug("Block found")
+            return 1
 
 def record_block(tracking_number, params, form_data, body):
     '''Records a just-submitted observation as a Block in the database.
@@ -380,7 +405,7 @@ def record_block(tracking_number, params, form_data, body):
         return False
 
 def save_and_make_revision(body, kwargs):
-    ''' 
+    '''
     Make a revision if any of the parameters have changed, but only do it once
     per ingest not for each parameter.
     Converts current model instance into a dict and compares each element with
@@ -407,7 +432,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     it will write the orbit found into the neox database.
     a) If the object does not have a response it will be marked as active = False
     b) If the object's parameters have changed they will be updated and a revision logged
-    c) New objects get marked as active = True automatically 
+    c) New objects get marked as active = True automatically
     '''
     NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
 
@@ -452,7 +477,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
 
 
 def clean_NEOCP_object(page_list):
-    '''Parse response from the MPC NEOCP page making sure we only return 
+    '''Parse response from the MPC NEOCP page making sure we only return
     parameters from the 'NEOCPNomin' (nominal orbit)'''
     current = False
     if page_list[0] == '':
@@ -642,6 +667,17 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
 
     params = {}
     if elements != None:
+        
+        try:
+            last_obs = datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d')
+        except ValueError:
+            last_obs = None
+        
+        try:
+            first_obs = datetime.strptime(elements['first observation date used'].replace('.0', ''), '%Y-%m-%d')
+        except ValueError:
+            first_obs = None
+
         params = {
             'epochofel': datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
             'abs_mag': elements['absolute magnitude'],
@@ -656,16 +692,45 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             'elements_type': 'MPC_MINOR_PLANET',
             'active': True,
             'origin': origin,
+            'updated' : True,
+            'num_obs' : elements['observations used'],
+            'arc_length' : elements['arc length'],
+            'discovery_date' : first_obs,
+            'update_time' : last_obs
         }
+
+        not_seen = None
+        if last_obs != None: 
+            time_diff = datetime.utcnow() - last_obs
+            not_seen = time_diff.total_seconds() / 86400.0
+        params['not_seen'] = not_seen
     return params
 
 
-def update_MPC_orbit(obj_id, dbg=False, origin='M'):
+def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     '''
-    Performs remote look up of orbital elements for object with id obj_id,
-    Gets or creates corresponding Body instance and updates entry
+    Performs remote look up of orbital elements for object with id obj_id_or_page,
+    Gets or creates corresponding Body instance and updates entry.
+    Alternatively obj_id_or_page can be a BeautifulSoup object, in which case
+    the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup 
+    object will parsed.
     '''
-    elements = fetch_mpcorbit(obj_id, dbg)
+
+    if type(obj_id_or_page) != BeautifulSoup:
+        obj_id = obj_id_or_page
+        page = fetch_mpcdb_page(obj_id, dbg)
+        
+        if page == None:
+            logger.warn("Could not find elements for %s" % obj_id)
+            return False
+    else:
+        page = obj_id_or_page
+
+    elements = parse_mpcorbit(page, dbg)
+    if type(obj_id_or_page) == BeautifulSoup:
+        obj_id = elements['obj_id']
+        del elements['obj_id']
+
     try:
         body, created = Body.objects.get_or_create(name=obj_id)
     except Body.MultipleObjectsReturned:
