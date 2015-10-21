@@ -58,7 +58,7 @@
                             </tr>
                             <tr>
                                 <td class="kv-key">Last observed</td>
-                                <td class="kv-value">{% if object.num_observed == 0 %}{{object.when_observed|date:"Y-m-d H:i"}}{% else %}Not Observed{% endif %}</td>
+                                <td class="kv-value">{% if object.num_observed > 0 %}{{object.when_observed|date:"Y-m-d H:i"}}{% else %}Not Observed{% endif %}</td>
                             </tr>
                             <tr>
                                 <td class="kv-key">Active?</td>

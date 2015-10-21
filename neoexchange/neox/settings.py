@@ -21,8 +21,6 @@ if PREFIX != '':
 BASE_DIR = os.path.dirname(CURRENT_PATH)
 
 SESSION_COOKIE_NAME='neox.sessionid'
-SESSION_COOKIE_AGE= 24*60*60*7
-SESSION_ENGINE='django.contrib.sessions.backends.db'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -119,9 +117,9 @@ LOGIN_REDIRECT_URL = PREFIX + '/'
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
+    'suit',
     'neox',
     'core',
-    'suit',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -218,7 +216,6 @@ DATABASES = {
 #######################
 
 if 'test' in sys.argv:
-    print "TESTING"
     # If you also want to speed up password hashing in test cases.
     PASSWORD_HASHERS = (
         'django.contrib.auth.hashers.MD5PasswordHasher',
