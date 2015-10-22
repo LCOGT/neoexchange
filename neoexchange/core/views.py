@@ -19,6 +19,7 @@ from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -39,6 +40,8 @@ from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
 import json
+import requests
+from urlparse import urljoin
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -726,3 +729,47 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     else:
         logger.info("Added new orbit for %s" % obj_id)
     return True
+
+def block_status(block_id):
+    status = False
+    try:
+        block = Block.objects.get(id=block_id)
+        tracking_num = block.tracking_number
+    except ObjectDoesNotExist:
+        logger.error("Block with id %s does not exist" % block_id)
+        return False
+    client = requests.session()
+    # First have to authenticate
+    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+    # Because we are sending log in details it has to go over SSL
+    data_url = urljoin(settings.REQUEST_API_URL, tracking_num)
+    try:
+        resp = client.post(data_url, data=login_data, timeout=20)
+        data = resp.json()
+    except ValueError:
+        logger.error("Request API did not return JSON")
+        return False
+    except requests.exceptions.Timeout:
+        logger.error("Request API timed out")
+        return False
+    # For each of the times this was observed find out if any data was taken
+    for k,v in data['requests'].items():
+        for event in v['schedule']:
+            data_url = 'https://data.lcogt.net/find?blkid=%s&order_by=-date_obs' % event['id']
+            try:
+                resp = client.post(data_url, data=login_data, timeout=20)
+                images = resp.json()
+            except ValueError:
+                logger.error("Request API did not return JSON %s" % resp.text)
+                return False
+            except requests.exceptions.Timeout:
+                images = None
+            if images:
+                num_images = len(images)
+                last_image = datetime.strptime(images[0]['date_obs'],'%Y-%m-%d %H:%M:%S')
+                if num_images >= block.num_observed and last_image > block.when_observed:
+                    block.num_observed = num_images
+                    block.when_observed = last_image
+                    block.save()
+                    status = True
+    return status

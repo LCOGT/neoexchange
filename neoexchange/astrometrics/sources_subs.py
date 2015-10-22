@@ -868,39 +868,3 @@ def submit_block_to_scheduler(elements, params):
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))
 
     return tracking_number, params
-
-def block_status(block_id):
-    status = False
-    try:
-        block = Block.objects.get(id=block_id)
-        tracking_num = block.tracking_number
-    except DoesNotExist:
-        logger.error("Block with id %s does not exist" % block_id)
-        return False
-    client = requests.session()
-    # First have to authenticate
-    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
-    # Because we are sending log in details it has to go over SSL
-    data_url = urljoin(settings.REQUEST_API_URL, tracking_num)
-    try:
-        resp = client.post(data_url, data=login_data, timeout=20)
-        data = resp.json()
-    except requests.exceptions.Timeout:
-        return False
-    # For each of the times this was observed find out if any data was taken
-    for event in data['schedule']:
-        data_url = 'https://data.lcogt.net/find?blkid=%&order_by=-date_obs' % event['id']
-            try:
-                resp = client.post(data_url, data=login_data, timeout=20)
-                images = resp.json()
-            except requests.exceptions.Timeout:
-                images = None
-            if images:
-                num_images = len(images)
-                last_image = datetime.strptime(images[0]['date_obs'],'%Y-%m-%d %H:%M:%S')
-                if num_images >= block.num_observed and last_image > block.when_observed:
-                    block.num_observed = num_images
-                    block.when_observed = last_image
-                    block.save()
-                    status = True
-    return status
