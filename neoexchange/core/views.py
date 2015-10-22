@@ -730,14 +730,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         logger.info("Added new orbit for %s" % obj_id)
     return True
 
-def block_status(block_id):
-    status = False
-    try:
-        block = Block.objects.get(id=block_id)
-        tracking_num = block.tracking_number
-    except ObjectDoesNotExist:
-        logger.error("Block with id %s does not exist" % block_id)
-        return False
+def check_request_status(tracking_num=None):
+    data = None
     client = requests.session()
     # First have to authenticate
     login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
@@ -748,28 +742,61 @@ def block_status(block_id):
         data = resp.json()
     except ValueError:
         logger.error("Request API did not return JSON")
-        return False
     except requests.exceptions.Timeout:
         logger.error("Request API timed out")
+    return data
+
+def check_for_images(eventid=False):
+    images = None
+    client = requests.session()
+    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+    data_url = 'https://data.lcogt.net/find?blkuid=%s&order_by=-date_obs' % eventid
+    try:
+        resp = client.post(data_url, data=login_data, timeout=20)
+        images = resp.json()
+    except ValueError:
+        logger.error("Request API did not return JSON %s" % resp.text)
+    except requests.exceptions.Timeout:
+        logger.error("Data view timed out")
+    return images
+
+def block_status(block_id):
+    '''
+    Check if a block has been observed. If it has, record when the longest run finished
+    - RequestDB API is used for block status
+    - FrameDB API is used for number and datestamp of images
+    - We do not count scheduler blocks which include < 3 exposures
+    '''
+    status = False
+    try:
+        block = Block.objects.get(id=block_id)
+        tracking_num = block.tracking_number
+    except ObjectDoesNotExist:
+        logger.error("Block with id %s does not exist" % block_id)
         return False
-    # For each of the times this was observed find out if any data was taken
+    data = check_request_status(tracking_num)
+    # data is a full LCOGT request dict for this tracking number.
+    if not data:
+        return False
+    # The request dict has a schedule property which indicates the number so times the schedule has/will attempt it.
+    # For each of these times find out if any data was taken and if it was close to what we wanted
+    num_scheduled = 0 # Number of times the scheduler tried to observe this
     for k,v in data['requests'].items():
+        if not v['schedule']:
+            logger.error('No schedule returned by API')
         for event in v['schedule']:
-            data_url = 'https://data.lcogt.net/find?blkid=%s&order_by=-date_obs' % event['id']
-            try:
-                resp = client.post(data_url, data=login_data, timeout=20)
-                images = resp.json()
-            except ValueError:
-                logger.error("Request API did not return JSON %s" % resp.text)
-                return False
-            except requests.exceptions.Timeout:
-                images = None
+            images = check_for_images(eventid=event['id'])
             if images:
-                num_images = len(images)
+                num_scheduled += 1
                 last_image = datetime.strptime(images[0]['date_obs'],'%Y-%m-%d %H:%M:%S')
-                if num_images >= block.num_observed and last_image > block.when_observed:
-                    block.num_observed = num_images
-                    block.when_observed = last_image
+                if len(images) >= 3:
+                    block.num_observed = num_scheduled
+                    if (not block.when_observed or last_image > block.when_observed):
+                        block.when_observed = last_image
+                    block.active = False
                     block.save()
                     status = True
+                    logger.debug("Block %s updated" % block)
+                else:
+                    logger.debug("No update to block %s" % block)
     return status

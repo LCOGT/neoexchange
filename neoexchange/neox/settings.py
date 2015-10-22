@@ -190,7 +190,7 @@ LOGGING = {
         },
         'astrometrics' : {
             'handlers' : ['file','console'],
-            'level'    : 'ERROR',
+            'level'    : 'DEBUG',
         }
     }
 }
