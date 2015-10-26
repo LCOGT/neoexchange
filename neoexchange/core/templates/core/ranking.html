@@ -3,7 +3,7 @@
 
 {% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
 
-{% block header %}Home{% endblock %}
+{% block header %}Ranking Page{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 {% block extramenucss %}extramenu-home{% endblock %}
@@ -12,31 +12,24 @@
 {% endblock%}
 
 {% block main-content %}
-		<div class="masthead">
-			<div class="container">
-				<a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
-					<div class="bigtext">{{targets}}</div>
-					<div class="smalltext">active targets</div>
-				</a>
-				<a class="btn btn-transparent btn-jumbo" href="{% url 'blocklist' %}">
-					<div class="bigtext">{{blocks}}</div>
-					<div class="smalltext">active blocks</div>
-				</a>
-			</div>
-		</div>
-
-    <div class="container">
-        <table id="id_neo_targets" class="datatable">
+    <div class="fullwidth">
+        <table id="id_ranked_targets" class="datatable">
             <thead>
                 <tr>
                     <th class="list_project">
                         <span class="sortable" id="rank">Rank</span>
                     </th>
+                    <th class="list_project">
+                        <span class="sortable" id="FOM">FOM</span>
+                    </th>
                     <th class="list_title">
                         <span class="sortable" id="name_id">Target Name</span>
                     </th>
-                    <th class="list_project">
-                        <span class="sortable" id="type_id">Type</span>
+                    <th>
+                        <span class="sortable" id="NEOCPscore">NEOCP Score</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="DiscDate">Discovery Date</span>
                     </th>
                     <th>
                         <span class="sortable" id="ra">R.A.</span>
@@ -45,22 +38,31 @@
                         <span class="sortable" id="dec">Dec.</span>
                     </th>
                     <th>
-                        <span class="sortable" id="mag">Mag.</span>
+                        <span class="sortable" id="SPA">South Polar Distance</span>
                     </th>
                     <th>
-                        <span class="sortable" id="numobs">Num.Obs.</span>
+                        <span class="sortable" id="Vmag">V Mag.</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="updated">Updated?</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="numobs">Num. Obs.</span>
                     </th>
                     <th>
                         <span class="sortable" id="arc">Arc</span>
                     </th>
                     <th>
+                        <span class="sortable" id="Hmag">H Mag.</span>
+                    </th>
+                    <th>
                         <span class="sortable" id="notseen">Not Seen (days)</span>
                     </th>
                     <th>
-                        <span class="sortable" id="NEOCPscore">NEOCP Score</span>
+                        <span class="sortable" id="observed">Observed?</span>
                     </th>
                     <th>
-                        <span class="sortable" id="updated">Updated?</span>
+                        <span class="sortable" id="reported">Reported?</span>
                     </th>
                 </tr>
             </thead>
@@ -68,19 +70,24 @@
                 {% for body in newest|dictsortreversed:"FOM" %}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td>{{forloop.counter}}</td>
+                    <td>{{body.FOM|stringformat:".1e" }}</td>
                     <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
-                    <td>{{body.type}}</td>
+                    <td>{{body.score}}</td>
+                    <td>{{body.discovery_date}}</td>
                     <td>{{body.ra|radianstohms:" "}}</td>
                     <td>{{body.dec|radianstodms:" "}}</td>
+                    <td>{{body.spd|floatformat:1 }}</td>
                     <td>{{body.v_mag|floatformat:1 }}</td>
+                    <td>{{body.updated}}</td>
                     <td>{{body.num_obs}}</td>
                     <td>{{body.arc_length}}</td>
+                    <td>{{body.abs_mag}}</td>
                     <td>{{body.not_seen}}</td>
-                    <td>{{body.score}}</td>
-                    <td>{{body.updated}}</td>
+                    <td>{{body.observed}}</td>
+                    <td>{{body.reported}}</td>
                     </tr>
                 {% empty%}
-                    <tr><td colspan=11> No new targets</td></tr>
+                    <tr><td colspan=16> No new targets</td></tr>
                 {% endfor%}
             </tbody>
         </table>

@@ -16,7 +16,7 @@ from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
-from astrometrics.ephem_subs import compute_ephem
+from astrometrics.ephem_subs import compute_ephem, comp_FOM
 from astropy.time import Time
 from datetime import datetime
 import reversion
@@ -28,7 +28,7 @@ OBJECT_TYPES = (
                 ('K','KBO'),
                 ('E','Centaur'),
                 ('T','Trojan'),
-                ('U','Unknown/NEO Candidate'),
+                ('U','Candidate'),
                 ('X','Did not exist'),
                 ('W','Was not interesting'),
                 ('D','Discovery, non NEO'),
@@ -148,10 +148,39 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return (emp_line[1], emp_line[2], emp_line[3])
+            return (emp_line[1], emp_line[2], emp_line[3], emp_line[6])
         else:
             # Catch the case where there is no Epoch
             return False
+
+
+    def compute_FOM(self):
+        d = datetime.utcnow()
+        if self.epochofel:
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+            if 'U' in orbelems['source_type'] and orbelems['not_seen']!=None and orbelems['arc_length']!=None and orbelems['score']!=None:
+                FOM = comp_FOM(orbelems, emp_line)
+                return FOM
+            else:
+                return None
+           # Catch the case where there is no Epoch
+        else:
+            return None
+
+    def get_block_info(self):
+        blocks = Block.objects.filter(body=self.id)
+        num_blocks = blocks.count()
+        if num_blocks > 0:
+            num_blocks_observed = blocks.filter(num_observed__gte=1).count()
+            num_blocks_reported = blocks.filter(reported=True).count()
+            observed = "%d/%d" % (num_blocks_observed, num_blocks)
+            reported = "%d/%d" % (num_blocks_reported, num_blocks)
+        else:
+            observed = 'Not yet'
+            reported = 'Not yet'
+        return (observed, reported)
 
     class Meta:
         verbose_name = _('Minor Body')

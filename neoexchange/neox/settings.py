@@ -82,8 +82,8 @@ STATICFILES_FINDERS = (
 
 MIDDLEWARE_CLASSES = (
     'opbeat.contrib.django.middleware.OpbeatAPMMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -117,9 +117,9 @@ LOGIN_REDIRECT_URL = PREFIX + '/'
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
+    'suit',
     'neox',
     'core',
-    'suit',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -237,6 +237,7 @@ if 'test' in sys.argv:
         'NAME': 'test_rbauth', # Add the name of your SQLite3 database file here.
         }
     }
+    OPBEAT['APP_ID'] = None
 
 ##################
 # LOCAL SETTINGS #

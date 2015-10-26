@@ -1,7 +1,7 @@
 NEO Exchange
 ============
 
-Portal for scheduling observations of NEOs using LCOGT (Version 1.0.8.2)
+Portal for scheduling observations of NEOs using LCOGT (Version 1.0.9)
 
 Local Setup
 -----------
@@ -19,6 +19,40 @@ or:
 then:
 
 `pip install -r neoexchange/requirements.txt`
+
+You will need to create a `neox/local_settings.py` file which has details of your database setup and local filesystem e.g.
+
+```
+import os, sys
+
+CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
+BASE_DIR = os.path.dirname(CURRENT_PATH)
+
+SECRET_KEY = '<50 random characters>'
+
+PREFIX =""
+DEBUG = True
+PRODUCTION = False
+STATIC_ROOT =  '<filesystem path>'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
+
+OPBEAT = {
+    'ORGANIZATION_ID': '',
+    'APP_ID': '',
+    'SECRET_TOKEN': '',
+}
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": "neoexchange.db",
+        "USER": "",
+        "PASSWORD":  "",
+        "HOST": "",
+    }
+}
+```
 
 Deployment
 ----------

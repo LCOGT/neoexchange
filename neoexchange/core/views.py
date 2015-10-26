@@ -58,21 +58,7 @@ class LoginRequiredMixin(object):
 
 
 def home(request):
-    try:
-        # If we don't have any Body instances, return None instead of breaking
-        latest = Body.objects.filter(active=True).latest('ingest')
-        max_dt = latest.ingest
-        min_dt = max_dt - timedelta(days=5)
-        newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
-    except:
-        latest = None
-        newest = None
-    params = {
-        'targets': Body.objects.filter(active=True).count(),
-        'blocks': Block.objects.filter(active=True).count(),
-        'latest': latest,
-        'newest': newest,
-    }
+    params = build_unranked_list_params()
     return render(request, 'core/home.html', params)
 
 
@@ -258,7 +244,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], False, False, False)
+    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
+        dbg=False, perturb=True, display=False)
     magnitude = emp[3]
     speed = emp[4]
 
@@ -326,6 +313,45 @@ def schedule_submit(data, body):
         # Record block and submit to scheduler
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
+
+def ranking(request):
+
+    params = build_unranked_list_params()
+
+    return render(request, 'core/ranking.html', params)
+
+
+def build_unranked_list_params():
+    params = {}
+    try:
+        # If we don't have any Body instances, return None instead of breaking
+        latest = Body.objects.filter(active=True).latest('ingest')
+        max_dt = latest.ingest
+        min_dt = max_dt - timedelta(days=5)
+        newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
+        unranked = []
+        for body in newest:
+            body_dict = model_to_dict(body)
+            body_dict['FOM'] = body.compute_FOM
+            body_dict['current_name'] = body.current_name()
+            emp_line = body.compute_position()
+            body_dict['ra'] = emp_line[0]
+            body_dict['dec'] = emp_line[1]
+            body_dict['v_mag'] = emp_line[2]
+            body_dict['spd'] = emp_line[3]
+            body_dict['observed'], body_dict['reported'] = body.get_block_info()
+            body_dict['type'] = body.get_source_type_display()
+            unranked.append(body_dict)
+    except:
+        latest = None
+        unranked = None
+    params = {
+        'targets': Body.objects.filter(active=True).count(),
+        'blocks': Block.objects.filter(active=True).count(),
+        'latest': latest,
+        'newest': unranked
+    }
+    return params
 
 def check_for_block(form_data, params, new_body):
         '''Checks if a block with the given name exists in the Django DB.
