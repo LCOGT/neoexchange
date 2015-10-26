@@ -32,6 +32,7 @@ OBJECT_TYPES = (
                 ('X','Did not exist'),
                 ('W','Was not interesting'),
                 ('D','Discovery, non NEO'),
+                ('J','Artificial satellite')
             )
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
@@ -59,6 +60,8 @@ SITE_CHOICES = (
                     ('elp','McDonald'),
                     ('cpt','Sutherland'),
                     ('tfn','Tenerife'),
+                    ('sbg','SBIG cameras'),
+                    ('sin','Sinistro cameras')
     )
 
 class Proposal(models.Model):
