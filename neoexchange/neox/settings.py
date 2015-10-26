@@ -211,8 +211,8 @@ DATABASES = {
     }
 }
 
-NEO_ODIN_USER = os.environ.get('NEO_ODIN_USER', '')
-NEO_ODIN_PASSWD = os.environ.get('NEO_ODIN_PASSWD', '')
+NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
+NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
 REQUEST_API_URL = 'https://lcogt.net/observe/service/request/get/userrequeststatus/'
 
