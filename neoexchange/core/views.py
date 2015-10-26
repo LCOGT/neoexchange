@@ -788,7 +788,11 @@ def block_status(block_id):
             images = check_for_images(eventid=event['id'])
             if images:
                 num_scheduled += 1
-                last_image = datetime.strptime(images[0]['date_obs'],'%Y-%m-%d %H:%M:%S')
+                try:
+                    last_image = datetime.strptime(images[0]['date_obs'][:19],'%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    logger.error('Image datetime stamp is badly formatted %s' % images[0]['date_obs'])
+                    return False
                 if len(images) >= 3:
                     block.num_observed = num_scheduled
                     if (not block.when_observed or last_image > block.when_observed):

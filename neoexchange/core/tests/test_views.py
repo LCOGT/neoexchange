@@ -27,7 +27,8 @@ from bs4 import BeautifulSoup
 import os
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
-    mock_check_request_status_null, mock_check_for_2_images
+    mock_check_request_status_null, mock_check_for_2_images, mock_check_for_images_millisecs, \
+    mock_check_for_images_bad_date
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
@@ -753,6 +754,20 @@ class TestCheck_for_block(TestCase):
     @patch('core.views.check_for_images', mock_check_for_images)
     def test_block_update_check_no_obs(self):
         blockid = self.test_block6.id
+        resp = block_status(blockid)
+        self.assertFalse(resp)
+
+    @patch('core.views.check_request_status', mock_check_request_status)
+    @patch('core.views.check_for_images', mock_check_for_images_millisecs)
+    def test_block_update_millisecs(self):
+        blockid = self.test_block5.id
+        resp = block_status(blockid)
+        self.assertTrue(resp)
+
+    @patch('core.views.check_request_status', mock_check_request_status)
+    @patch('core.views.check_for_images', mock_check_for_images_bad_date)
+    def test_block_update_bad_datestamp(self):
+        blockid = self.test_block5.id
         resp = block_status(blockid)
         self.assertFalse(resp)
 

@@ -95,3 +95,33 @@ def mock_check_for_2_images(eventid):
             "origname":"file1.fits",
             "hdrver":"LCOGT-HDR-1.3.0"}]
     return images
+
+def mock_check_for_images_millisecs(eventid):
+    images = [{"propid":"LCO2015B-005",
+                "date_obs":"2015-10-22 07:35:41.789",
+                "origname":"file0.fits",
+                "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:34:41.789",
+            "origname":"file1.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:33:41.789",
+            "origname":"file2.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"}]
+    return images
+
+def mock_check_for_images_bad_date(eventid):
+    images = [{"propid":"LCO2015B-005",
+                "date_obs":"2015-10-22 07:35",
+                "origname":"file0.fits",
+                "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:34",
+            "origname":"file1.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:33",
+            "origname":"file2.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"}]
+    return images
