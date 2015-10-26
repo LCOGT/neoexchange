@@ -14,6 +14,7 @@ SITES = (('V37','ELP (V37)'),
          ('K92','CPT (K91-93)'),
          ('Q63','COJ (Q63-64)'))
 
+
 class EphemQuery(forms.Form):
 
     target = forms.CharField(label="Enter target name...", max_length=10, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})

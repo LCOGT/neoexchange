@@ -40,7 +40,7 @@
 							            <div class="compact-field">
 							            {{ form.alt_limit }}<label for="id_alt_limit">Min Altitude</label>
 							            </div>
-							            <input type="submit" class="btn btn-secondary" value="Calculate Ephemerides">
+							            <input type="submit" class="btn btn-secondary" value="Calculate Ephemerides" id="id_submit">
 						            </div>
 						        {% for key, error in form.errors.items %}
 						            <div class="messages error">
@@ -55,7 +55,7 @@
 								<li>
 								    {% if b.active %}<i class="fa fa-clock-o" style="color: #FF9933;"></i>{% else %}<i class="fa fa-thumbs-o-up" style="color:#339933;"></i>{% endif %}
 
-<a href="{% url 'block' b.id %}">{{b.block_start|date:"c"}}&nbsp;<i class="fa fa-long-arrow-right">&nbsp;</i>{{b.block_end|date:"c"}}</a>
+<a href="{% url 'block' b.id %}">{{b.block_start|date:"c"}}&nbsp;<i class="fa fa-long-arrow-right">&nbsp;</i>{{b.block_end|date:"c"}}@{{b.site|upper}}</a>
 								</li>
 								{% empty %}
 								<li>No blocks have been scheduled</li>
@@ -153,4 +153,3 @@
 				</div>
 			</div>
 {% endblock %}
-

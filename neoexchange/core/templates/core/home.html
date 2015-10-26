@@ -14,25 +14,6 @@
 {% block main-content %}
 		<div class="masthead">
 			<div class="container">
-				<div class="btn btn-transparent btn-jumbo home-form">
-					    <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
-					        <input type="text" name="{{ form.target.name }}" id="id_target" value="" placeholder="{{ form.target.label }}">
-
-				            <div class="inline-fields">
-					            <label for="id_utc_date">UTC date</label>{{ form.utc_date }}
-					            {{ form.site_code }}
-				            </div>
-				            <div class="inline-fields">
-					            <label for="id_alt_limit">Alt Limit (optional)</label>{{ form.alt_limit }}
-					            <input type="submit" class="button keepvisible" value="Compute">
-				            </div>
-				        {% for key, error in form.errors.items %}
-				            <div class="messages error">
-				                {{ error }}
-				            </div>
-				        {% endfor %}
-				        </form>				        
-				</div>
 				<a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
 					<div class="bigtext">{{targets}}</div>
 					<div class="smalltext">active targets</div>

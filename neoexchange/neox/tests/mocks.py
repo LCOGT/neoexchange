@@ -41,3 +41,87 @@ class MockDateTime(datetime):
     @classmethod
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
+
+def mock_check_request_status(tracking_num):
+    status = {  "title": "WT1190F_W86-20151022",
+                "timestamp": "2015-10-22 18:04:25",
+                "tracking_number": str(tracking_num),
+                "state": "COMPLETED",
+                "requests": {
+                    "0000445739": {
+                        "schedule": [
+                            {
+                                "end": "2015-10-22 07:30:37",
+                                "telescope": "1m0a.domb.lsc",
+                                "start": "2015-10-22 07:09:29",
+                                "state": "COMPLETED",
+                                "frames": [],
+                                "id": 70243611,
+                            }
+                        ],
+                        "timestamp": "2015-10-22 18:04:26",
+                        "state": "COMPLETED",
+                        "request_number": "0000445739",
+                    }
+                }
+            }
+    return status
+
+def mock_check_request_status_null(tracking_num):
+    return []
+
+def mock_check_for_images(eventid):
+    images = [{"propid":"LCO2015B-005",
+                "date_obs":"2015-10-22 07:35:41",
+                "origname":"file0.fits",
+                "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:34:41",
+            "origname":"file1.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:33:41",
+            "origname":"file2.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"}]
+    return images
+
+def mock_check_for_2_images(eventid):
+    images = [{"propid":"LCO2015B-005",
+                "date_obs":"2015-10-22 07:35:41",
+                "origname":"file0.fits",
+                "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:34:41",
+            "origname":"file1.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"}]
+    return images
+
+def mock_check_for_images_millisecs(eventid):
+    images = [{"propid":"LCO2015B-005",
+                "date_obs":"2015-10-22 07:35:41.789",
+                "origname":"file0.fits",
+                "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:34:41.789",
+            "origname":"file1.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:33:41.789",
+            "origname":"file2.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"}]
+    return images
+
+def mock_check_for_images_bad_date(eventid):
+    images = [{"propid":"LCO2015B-005",
+                "date_obs":"2015-10-22 07:35",
+                "origname":"file0.fits",
+                "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:34",
+            "origname":"file1.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"},
+            {"propid":"LCO2015B-005",
+            "date_obs":"2015-10-22 07:33",
+            "origname":"file2.fits",
+            "hdrver":"LCOGT-HDR-1.3.0"}]
+    return images

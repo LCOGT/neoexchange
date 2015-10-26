@@ -19,6 +19,7 @@ from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -39,6 +40,8 @@ from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
 import json
+import requests
+from urlparse import urljoin
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -56,7 +59,6 @@ class LoginRequiredMixin(object):
 
 def home(request):
     params = build_unranked_list_params()
-    params['form'] = EphemQuery()
     return render(request, 'core/home.html', params)
 
 
@@ -753,3 +755,78 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     else:
         logger.info("Added new orbit for %s" % obj_id)
     return True
+
+def check_request_status(tracking_num=None):
+    data = None
+    client = requests.session()
+    # First have to authenticate
+    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+    # Because we are sending log in details it has to go over SSL
+    data_url = urljoin(settings.REQUEST_API_URL, tracking_num)
+    try:
+        resp = client.post(data_url, data=login_data, timeout=20)
+        data = resp.json()
+    except ValueError:
+        logger.error("Request API did not return JSON")
+    except requests.exceptions.Timeout:
+        logger.error("Request API timed out")
+    return data
+
+def check_for_images(eventid=False):
+    images = None
+    client = requests.session()
+    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+    data_url = 'https://data.lcogt.net/find?blkuid=%s&order_by=-date_obs' % eventid
+    try:
+        resp = client.post(data_url, data=login_data, timeout=20)
+        images = resp.json()
+    except ValueError:
+        logger.error("Request API did not return JSON %s" % resp.text)
+    except requests.exceptions.Timeout:
+        logger.error("Data view timed out")
+    return images
+
+def block_status(block_id):
+    '''
+    Check if a block has been observed. If it has, record when the longest run finished
+    - RequestDB API is used for block status
+    - FrameDB API is used for number and datestamp of images
+    - We do not count scheduler blocks which include < 3 exposures
+    '''
+    status = False
+    try:
+        block = Block.objects.get(id=block_id)
+        tracking_num = block.tracking_number
+    except ObjectDoesNotExist:
+        logger.error("Block with id %s does not exist" % block_id)
+        return False
+    data = check_request_status(tracking_num)
+    # data is a full LCOGT request dict for this tracking number.
+    if not data:
+        return False
+    # The request dict has a schedule property which indicates the number so times the schedule has/will attempt it.
+    # For each of these times find out if any data was taken and if it was close to what we wanted
+    num_scheduled = 0 # Number of times the scheduler tried to observe this
+    for k,v in data['requests'].items():
+        if not v['schedule']:
+            logger.error('No schedule returned by API')
+        for event in v['schedule']:
+            images = check_for_images(eventid=event['id'])
+            if images:
+                num_scheduled += 1
+                try:
+                    last_image = datetime.strptime(images[0]['date_obs'][:19],'%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    logger.error('Image datetime stamp is badly formatted %s' % images[0]['date_obs'])
+                    return False
+                if len(images) >= 3:
+                    block.num_observed = num_scheduled
+                    if (not block.when_observed or last_image > block.when_observed):
+                        block.when_observed = last_image
+                    block.active = False
+                    block.save()
+                    status = True
+                    logger.debug("Block %s updated" % block)
+                else:
+                    logger.debug("No update to block %s" % block)
+    return status

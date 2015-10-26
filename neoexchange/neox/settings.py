@@ -190,7 +190,7 @@ LOGGING = {
         },
         'astrometrics' : {
             'handlers' : ['file','console'],
-            'level'    : 'ERROR',
+            'level'    : 'DEBUG',
         }
     }
 }
@@ -202,7 +202,7 @@ DATABASES = {
     "default": {
         # Live DB
         "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get('NEOX_DB_NAME','neoexchange'),
+        "NAME": os.environ.get('NEOX_DB_NAME', 'neoexchange'),
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
@@ -210,6 +210,11 @@ DATABASES = {
 
     }
 }
+
+NEO_ODIN_USER = os.environ.get('NEO_ODIN_USER', '')
+NEO_ODIN_PASSWD = os.environ.get('NEO_ODIN_PASSWD', '')
+
+REQUEST_API_URL = 'https://lcogt.net/observe/service/request/get/userrequeststatus/'
 
 #######################
 # Test Database setup #

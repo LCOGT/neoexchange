@@ -26,12 +26,14 @@ from unittest import skipIf
 from bs4 import BeautifulSoup
 import os
 from mock import patch
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
+    mock_check_request_status_null, mock_check_for_2_images, mock_check_for_images_millisecs, \
+    mock_check_for_images_bad_date
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit
+    update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit, block_status
 from core.models import Body, Proposal, Block
 from core.forms import EphemQuery
 
@@ -733,6 +735,53 @@ class TestCheck_for_block(TestCase):
         block_state = check_for_block(form_data, params, new_body)
 
         self.assertEqual(expected_state, block_state)
+
+    @patch('core.views.check_request_status', mock_check_request_status)
+    @patch('core.views.check_for_images', mock_check_for_images)
+    def test_block_update_active(self):
+        resp = block_status(1)
+        self.assertTrue(resp)
+
+    @patch('core.views.check_request_status', mock_check_request_status)
+    @patch('core.views.check_for_images', mock_check_for_2_images)
+    def test_block_update_active(self):
+        resp = block_status(1)
+        self.assertFalse(resp)
+
+    @patch('core.views.check_request_status', mock_check_request_status)
+    @patch('core.views.check_for_images', mock_check_for_images)
+    def test_block_update_not_active(self):
+        resp = block_status(2)
+        self.assertFalse(resp)
+
+    @patch('core.views.check_request_status', mock_check_request_status)
+    @patch('core.views.check_for_images', mock_check_for_images)
+    def test_block_update_check_status_change(self):
+        blockid = self.test_block6.id
+        resp = block_status(blockid)
+        myblock = Block.objects.get(id=blockid)
+        self.assertFalse(myblock.active)
+
+    @patch('core.views.check_request_status', mock_check_request_status_null)
+    @patch('core.views.check_for_images', mock_check_for_images)
+    def test_block_update_check_no_obs(self):
+        blockid = self.test_block6.id
+        resp = block_status(blockid)
+        self.assertFalse(resp)
+
+    @patch('core.views.check_request_status', mock_check_request_status)
+    @patch('core.views.check_for_images', mock_check_for_images_millisecs)
+    def test_block_update_millisecs(self):
+        blockid = self.test_block5.id
+        resp = block_status(blockid)
+        self.assertTrue(resp)
+
+    @patch('core.views.check_request_status', mock_check_request_status)
+    @patch('core.views.check_for_images', mock_check_for_images_bad_date)
+    def test_block_update_bad_datestamp(self):
+        blockid = self.test_block5.id
+        resp = block_status(blockid)
+        self.assertFalse(resp)
 
 class TestUpdate_MPC_orbit(TestCase):
 
