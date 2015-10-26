@@ -808,6 +808,7 @@ def block_status(block_id):
     # For each of these times find out if any data was taken and if it was close to what we wanted
     num_scheduled = 0 # Number of times the scheduler tried to observe this
     for k,v in data['requests'].items():
+        logger.error('Request no. %s' % k)
         if not v['schedule']:
             logger.error('No schedule returned by API')
         for event in v['schedule']:
@@ -821,6 +822,7 @@ def block_status(block_id):
                     return False
                 if len(images) >= 3:
                     block.num_observed = num_scheduled
+                    logger.error('Image %s x %s' % (event['id'], num_scheduled))
                     if (not block.when_observed or last_image > block.when_observed):
                         block.when_observed = last_image
                     block.active = False
