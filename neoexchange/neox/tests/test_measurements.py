@@ -42,7 +42,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # A user, Timo, is interested in seeing what existing measurements
         # exist for a NEOCP candidate that he has heard about
-        
+
         # He goes to the home page and performs a search for that object
         self.browser.get(self.live_server_url)
         self.assertIn('Home | LCOGT NEOx', self.browser.title)
@@ -50,13 +50,13 @@ class MeasurementsPageTests(FunctionalTest):
         inputbox.send_keys('N999r0q')
         searchbutton = self.get_item_input_box("id_search_submit")
         searchbutton.click()
-        
+
         # He is taken to a page with the search results on it.
         search_url = self.live_server_url + '/search/?q=' + \
             self.body.provisional_name
         self.assertEqual(self.browser.current_url, search_url)
         self.assertIn('Targets | LCOGT NEOx', self.browser.title)
-        
+
         # He sees that the target he wants is in the table and clicks on it
         self.check_for_header_in_table('id_targets',
             'Name Type Origin Ingested')
@@ -64,7 +64,7 @@ class MeasurementsPageTests(FunctionalTest):
                      u'V38821zi Candidate Minor Planet Center 11 May 2015, 17:20']
         self.check_for_row_in_table('id_targets', testlines[0])
         self.check_for_row_not_in_table('id_targets', testlines[1])
-        
+
         target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
         link = self.browser.find_element_by_partial_link_text('N999r0q')
         self.assertEqual(link.get_attribute('href'), target_url)
@@ -72,15 +72,14 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He is taken to a page with the object's details on it.
         self.assertEqual(self.browser.current_url, target_url)
-        
-        
-        # He sees a link that says it will show the measurements 
+
+        # He sees a link that says it will show the measurements
         # available for this object.
-        
-        # He clicks on the link and sees that there are the original 
+
+        # He clicks on the link and sees that there are the original
         # discovery observations from WISE (obs. code C51) and from
         # the LCOGT follow-up network.
-        
+
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
         self.fail("Finish the test!")
