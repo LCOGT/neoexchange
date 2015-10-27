@@ -51,7 +51,7 @@ class BlockAdmin(reversion.VersionAdmin):
 
     ordering = ('-block_start',)
 
-class RecordAdmin(reversion.VersionAdmin):
+class FrameAdmin(reversion.VersionAdmin):
     pass
 
 class ProposalAdmin(admin.ModelAdmin):
@@ -59,6 +59,6 @@ class ProposalAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Body,BodyAdmin)
-admin.site.register(Record,RecordAdmin)
+admin.site.register(Frame,FrameAdmin)
 admin.site.register(Block,BlockAdmin)
 admin.site.register(Proposal,ProposalAdmin)

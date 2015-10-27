@@ -246,8 +246,9 @@ class Block(models.Model):
         return u'%s is %sactive' % (self.tracking_number,text)
 
 
-class Record(models.Model):
-    ''' Log of observations successfully made and filename of data which resulted
+class Frame(models.Model):
+    ''' Model to represent (FITS) frames of data from observations successfully 
+    made and filename of data which resulted.
     '''
     site        = models.CharField('3-letter site code', max_length=3)
     instrument  = models.CharField('instrument code', max_length=4)
@@ -258,13 +259,10 @@ class Record(models.Model):
     block       = models.ForeignKey(Block)
 
     class Meta:
-        verbose_name = _('Observation Record')
-        verbose_name_plural = _('Observation Records')
-        db_table = 'ingest_record'
+        verbose_name = _('Observed Frame')
+        verbose_name_plural = _('Observed Frames')
+        db_table = 'ingest_frame'
 
     def __unicode__(self):
-        if self.active:
-                text = ''
-        else:
-                text = 'not '
-        return u'%s is %sactive' % (self.provisional_name,text)
+
+        return self.filename
