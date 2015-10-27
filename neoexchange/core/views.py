@@ -606,6 +606,7 @@ def clean_NEOCP_object(page_list):
                 'elements_type': 'MPC_MINOR_PLANET',
                 'active': True,
                 'origin': 'M',
+                'update_time' : datetime.utcnow()
             }
         elif len(current) == 22 or len(current) == 24:
             params = {
@@ -622,8 +623,28 @@ def clean_NEOCP_object(page_list):
                 'elements_type': 'MPC_MINOR_PLANET',
                 'active': True,
                 'origin': 'L',
-                'provisional_name' : current[0]
+                'provisional_name' : current[0],
+                'num_obs' : int(current[13]),
+                'update_time' : datetime.utcnow()
             }
+            if len(current) == 24:
+                # If this is a find_orb produced orbit, try and fill in the
+                # 'arc length' and 'not seen' values.
+                arc_length = None
+                arc_units = current[16]
+                if arc_units == 'days':
+                    arc_length = float(current[15])
+                elif arc_units == 'hrs':
+                    arc_length = float(current[15]) / 24.0
+                elif arc_units == 'mins':
+                    arc_length = float(current[15]) / 1440.0
+                if arc_length:
+                    params['arc_length'] = arc_length
+                try:
+                    not_seen = datetime.utcnow() - datetime.strptime(current[23], '%Y%m%d')
+                    params['not_seen'] = not_seen.total_seconds() / 86400.0 # Leap seconds can go to hell...
+                except:
+                    pass
         else:
             logger.warn(
                 "Did not get right number of parameters for %s. Values %s", current[0], current)
