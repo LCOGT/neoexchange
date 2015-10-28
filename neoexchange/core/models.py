@@ -263,11 +263,7 @@ class Record(models.Model):
         db_table = 'ingest_record'
 
     def __unicode__(self):
-        if self.active:
-                text = ''
-        else:
-                text = 'not '
-        return u'%s is %sactive' % (self.provisional_name,text)
+        return self.filename
 
 class SourceMeasurement(models.Model):
     '''Class to represent the measurements (RA, Dec, Magnitude and errors) 
