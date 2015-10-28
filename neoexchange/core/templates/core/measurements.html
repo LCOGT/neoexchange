@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load url from future %}
+{% block header %}Source measurements{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+{% block extramenu %}
+					<div class="headingleft">
+						<h1>Source Measurements for: {{measures.first.body.current_name}}</h1>
+					</div>
+{% endblock%}
+{% block main-content %}
+			<div id="main" class="fill-height">
+				<div class="row rowfull">
+					<table class="datatable wider" id="id_measurements">
+						<thead>
+							<tr>
+								<th class="list_title">
+									<span class="sortable" id="name_id">Name</span>
+								</th>
+								<th class="list_project">
+									<span class="sortable" id="datetime">Date/time</span>
+								</th>
+								<th>
+									<span class="sortable" id="ra">RA</span>
+								</th>
+								<th>
+									<span class="sortable" id="dec">Dec</span>
+								</th>
+								<th>
+									<span class="sortable" id="magnitude">Magnitude</span>
+								</th>
+								<th>
+									<span class="sortable" id="filter">Filter</span>
+								</th>
+								<th>
+									<span class="sortable" id="sitecode">Site Code</span>
+								</th>
+							</tr>
+						</thead>
+						<tbody>
+						{% for line in measures %}
+							<tr>
+								<td>{{line.body.current_name}}</a></td>
+								<td>{{line.frame.whentaken}}</td>
+								<td>{{line.obs_ra}}</td>
+								<td>{{line.obs_dec}}</td>
+                                                                <td>{{line.obs_mag}}</td>
+                                                                <td>{{line.frame.filter}}</td>
+                                                                <td>{{line.frame.site}}</td>
+							</tr>
+						{% endfor %}
+						</tbody>
+					</table>
+				</div>
+			</div>
+{% endblock %}

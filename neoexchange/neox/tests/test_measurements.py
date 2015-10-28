@@ -1,7 +1,7 @@
 from .base import FunctionalTest
 from selenium import webdriver
 from django.core.urlresolvers import reverse
-from core.models import Body
+from core.models import Body, Record, SourceMeasurement
 
 class MeasurementsPageTests(FunctionalTest):
 
@@ -32,7 +32,24 @@ class MeasurementsPageTests(FunctionalTest):
         self.body2 = Body.objects.create(**params)
 
     def insert_test_measurements(self):
-        pass
+        frame_params = { 'site' : 'cpt',
+                         'instrument' : 'kb70',
+                         'filter' : 'w',
+                         'filename' : 'cpt1m010-kb70-20150420-0042-e00.fits',
+                         'exp' : 40.0,
+                         'whentaken' : '2015-04-20 18:00:00',
+                         'block' : self.test_block
+                        }
+        self.test_frame = Record.objects.create(pk=1, **frame_params)
+
+        measure_params = { 'body' : self.body,
+                           'frame' : self.test_frame,
+                           'obs_ra' : 42.0,
+                           'obs_dec' : -30.05,
+                           'obs_mag' : 21.0,
+                           'err_obs_mag' : 0.03
+                         }
+        self.test_measure1 = SourceMeasurement.objects.create(pk=1, **measure_params)
 
     def test_measurements_page(self):
 
@@ -78,14 +95,27 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will show the measurements
         # available for this object.
         link = self.browser.find_element_by_partial_link_text('Show Measurements')
-        target_url = self.live_server_url + reverse('measurements',kwargs={'pk':1})
+        target_url = self.live_server_url + reverse('measurement',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
         link.click()
 
-        # He clicks on the link and sees that there are the original
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+
+        self.check_for_header_in_table('id_measurements',
+            'Name Date/time RA Dec Magnitude Filter Site Code')
+
+        # He sees that there is a table in which are the original
         # discovery observations from WISE (obs. code C51) and from
         # the LCOGT follow-up network.
+        testlines = [u'N999r0q 2015 04 20.12345 02 48 00 -30 03 00 21.0 w K91',
+                     u'V38821zi Candidate Minor Planet Center 11 May 2015, 17:20']
+        self.check_for_row_in_table('id_measurements', testlines[0])
+        self.check_for_row_not_in_table('id_measurements', testlines[1])
 
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
-        self.fail("Finish the test!")

@@ -131,13 +131,12 @@ class BlockReport(LoginRequiredMixin, View):
         block.save()
         return redirect(reverse('blocklist'))
 
-class MeasurementView(DetailView):
-    model = SourceMeasurement
+class MeasurementView(View):
 
-    def get_context_data(self, **kwargs):
-        context = super(MeasurementDetailView, self).get_context_data(**kwargs)
-        context['measures'] = SourceMeasurement.objects.filter(body=self.object)
-        return context
+    def get(self, request, *args, **kwargs):
+        measures = SourceMeasurement.objects.filter(body=Body.objects.get(pk=kwargs['pk']))
+        return render(request, 'core/measurements.html', {'measures' : measures})
+
 
 def ephemeris(request):
 
