@@ -49,7 +49,7 @@
 						        {% endfor %}
 						        </form>
 					        </div>
-							<h3  class="section-title">Recent Blocks Scheduled</h2>
+							<h3  class="section-title">Recent Blocks Scheduled</h3>
 							<ul>
 								{% for b in blocks %}
 								<li>
@@ -61,7 +61,13 @@
 								<li>No blocks have been scheduled</li>
 								{% endfor %}
 							</ul>
-						</div>
+                                                        <h3 class="section-title">Measurements</h3>
+                                                        <ul>
+                                                            <li>
+                                                                <a href="{% url 'measurement' body.id %}">Show Measurements</a>
+                                                            </li>
+                                                        </ul>
+    						</div>
 						<div class="twocol lastcol rightsidebar">
 							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
 							<h3 class="section-title">Orbital Elements</h3>

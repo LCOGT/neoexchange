@@ -18,8 +18,9 @@ from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.views.generic import ListView, DetailView
 from django.core.urlresolvers import reverse_lazy
-from core.models import Body, Block
-from core.views import BodySearchView, BodyDetailView, BlockDetailView, ScheduleParameters, ScheduleSubmit, ephemeris, home, BlockReport, ranking
+from core.models import Body, Block, SourceMeasurement
+from core.views import BodySearchView, BodyDetailView, BlockDetailView, ScheduleParameters, \
+    ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementView 
 from django.contrib.auth.views import login, logout
 
 admin.autodiscover()
@@ -34,6 +35,7 @@ urlpatterns = [
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
+    url(r'^measurement/(?P<pk>\d+)/$', MeasurementView.as_view(model=SourceMeasurement), name='measurement'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),

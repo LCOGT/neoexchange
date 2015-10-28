@@ -268,3 +268,24 @@ class Record(models.Model):
         else:
                 text = 'not '
         return u'%s is %sactive' % (self.provisional_name,text)
+
+class SourceMeasurement(models.Model):
+    '''Class to represent the measurements (RA, Dec, Magnitude and errors) 
+    performed on a Frame (having site code, date/time etc.).
+    These will provide the way of storing past measurements of an object and
+    any new measurements performed on data from the LCOGT NEO Follow-up Network
+    '''
+
+    body = models.ForeignKey(Body)
+    frame = models.ForeignKey(Record)
+    obs_ra = models.FloatField('Observed RA')
+    obs_dec = models.FloatField('Observed Dec')
+    obs_mag = models.FloatField('Observed Magnitude')
+    err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
+    err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)
+    err_obs_mag = models.FloatField('Error on Observed Magnitude', blank=True, null=True)
+ 
+    class Meta:
+        verbose_name = _('Source Measurement')
+        verbose_name_plural = _('Source Measurements')
+        db_table = 'source_measurement'

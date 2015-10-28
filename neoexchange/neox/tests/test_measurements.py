@@ -72,9 +72,15 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He is taken to a page with the object's details on it.
         self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Object: ' + self.body.current_name(), header_text)
 
         # He sees a link that says it will show the measurements
         # available for this object.
+        link = self.browser.find_element_by_partial_link_text('Show Measurements')
+        target_url = self.live_server_url + reverse('measurements',kwargs={'pk':1})
+        self.assertEqual(link.get_attribute('href'), target_url)
+        link.click()
 
         # He clicks on the link and sees that there are the original
         # discovery observations from WISE (obs. code C51) and from
