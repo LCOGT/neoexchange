@@ -35,7 +35,7 @@ urlpatterns = [
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
-    url(r'^measurement/(?P<pk>\d+)/$', MeasurementView.as_view(model=SourceMeasurement), name='measurement'),
+    url(r'^measurement/(?P<pk>\d+)/$', MeasurementView.as_view(), name='measurement'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
