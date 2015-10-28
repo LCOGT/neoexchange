@@ -16,7 +16,7 @@ GNU General Public License for more details.
 from django.test import TestCase
 from datetime import datetime, timedelta
 #Import module to test
-from astrometrics.time_subs import jd_utc2datetime, dttodecimalday
+from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, degreestohms
 
 class TestJD2datetime(TestCase):
 
@@ -95,3 +95,13 @@ class TestDT2DecimalDay(TestCase):
         dt_string = dttodecimalday(dt, True)
 
         self.assertEqual(expected_string, dt_string)
+
+class TestDegreesToHMS(TestCase):
+
+    def test_bad_rounding(self):
+        value = 42.0
+        expected_string = "02 48 00.00"
+
+        time_string = degreestohms(value, " ")
+
+        self.assertEqual(expected_string, time_string)
