@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load staticfiles basic_tags %}
 {% load url from future %}
 {% block header %}Source measurements{% endblock %}
 
@@ -10,8 +11,8 @@
 {% endblock%}
 {% block main-content %}
 			<div id="main" class="fill-height">
-				<div class="row rowfull">
-					<table class="datatable wider" id="id_measurements">
+				<div class="fullwidth">
+					<table class="datatable" id="id_measurements">
 						<thead>
 							<tr>
 								<th class="list_title">
@@ -41,10 +42,10 @@
 						{% for line in measures %}
 							<tr>
 								<td>{{line.body.current_name}}</a></td>
-								<td>{{line.frame.whentaken}}</td>
-								<td>{{line.obs_ra}}</td>
-								<td>{{line.obs_dec}}</td>
-                                                                <td>{{line.obs_mag}}</td>
+								<td>{{line.frame.whentaken|dttodecimalday:False}}</td>
+								<td>{{line.obs_ra|degreestohms:" "}}</td>
+								<td>{{line.obs_dec|degreestodms:" "}}</td>
+                                                                <td>{{line.obs_mag|floatformat:1}}</td>
                                                                 <td>{{line.frame.filter}}</td>
                                                                 <td>{{line.frame.site}}</td>
 							</tr>

@@ -32,7 +32,7 @@ class MeasurementsPageTests(FunctionalTest):
         self.body2 = Body.objects.create(**params)
 
     def insert_test_measurements(self):
-        frame_params = { 'site' : 'cpt',
+        frame_params = { 'site' : 'K91',
                          'instrument' : 'kb70',
                          'filter' : 'w',
                          'filename' : 'cpt1m010-kb70-20150420-0042-e00.fits',
@@ -46,7 +46,7 @@ class MeasurementsPageTests(FunctionalTest):
                            'frame' : self.test_frame,
                            'obs_ra' : 42.0,
                            'obs_dec' : -30.05,
-                           'obs_mag' : 21.0,
+                           'obs_mag' : 21.05,
                            'err_obs_mag' : 0.03
                          }
         self.test_measure1 = SourceMeasurement.objects.create(pk=1, **measure_params)
@@ -112,10 +112,10 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees that there is a table in which are the original
         # discovery observations from WISE (obs. code C51) and from
         # the LCOGT follow-up network.
-        testlines = [u'N999r0q 2015 04 20.12345 02 48 00 -30 03 00 21.0 w K91',
-                     u'V38821zi Candidate Minor Planet Center 11 May 2015, 17:20']
+        testlines = [u'N999r0q 2015 04 20.75000 02 48 00.00 -30 03 00.0 21.1 w K91',
+                     u'N999r0q 2015 04 20.75000 02 48 00.00 -30 03 00.0 21.1 w K91']
         self.check_for_row_in_table('id_measurements', testlines[0])
-        self.check_for_row_not_in_table('id_measurements', testlines[1])
+        self.check_for_row_in_table('id_measurements', testlines[1])
 
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.

@@ -320,3 +320,19 @@ def hmstohours(value):
         return value
     el = value.split(":")
     return float(el[0]) + float(el[1])/60. + float(el[2])/3600.
+
+def dttodecimalday(dt, microdays=False):
+    '''Converts a datetime object <dt> into MPC-style Year, Month, Decimal day. An
+    optional argument, microdays, can be given to produce the decimal day to 
+    6 d.p. i.e. ~0.8 second'''
+
+    try:
+        decimal_day = (dt.hour + (dt.minute/60.0)+((dt.second+dt.microsecond/1e6)/3600.0))/24.0
+        if microdays:
+            date_string = "%02d %02d %09.6f" % ( dt.year, dt.month, dt.day + decimal_day )
+        else:
+            date_string = "%02d %02d %08.5f " % ( dt.year, dt.month, dt.day + decimal_day )
+    except:
+        date_string = ""
+
+    return date_string
