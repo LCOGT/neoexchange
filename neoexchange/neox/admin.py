@@ -57,8 +57,11 @@ class RecordAdmin(reversion.VersionAdmin):
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
 
+class SourceMeasurementAdmin(admin.ModelAdmin):
+    pass
 
 admin.site.register(Body,BodyAdmin)
 admin.site.register(Record,RecordAdmin)
 admin.site.register(Block,BlockAdmin)
 admin.site.register(Proposal,ProposalAdmin)
+admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
