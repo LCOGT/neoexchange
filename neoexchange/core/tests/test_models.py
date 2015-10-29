@@ -364,7 +364,7 @@ class TestFrame(TestCase):
 
         self.assertEqual(self.test_block, frame.block)
         self.assertEqual(0, frame.frametype)
-        self.assertEqual(-1, frame.quality)
+        self.assertEqual(' ', frame.quality)
         self.assertEqual('', frame.extrainfo)
 
     def test_create_LCOGT_W86_r_stack(self):
@@ -375,6 +375,7 @@ class TestFrame(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : '2015-07-13 21:09:51',
                     'block'         : self.test_block,
+                    'quality'       : 'K',
                     'frametype'     : 1,
                     'extrainfo'    : 'lsc1m009-fl03-20150713-0130-e10.fits,lsc1m009-fl03-20150713-0131-e10.fits,lsc1m009-fl03-20150713-0132-e10.fits',
                  }
@@ -382,7 +383,27 @@ class TestFrame(TestCase):
 
         self.assertEqual(self.test_block, frame.block)
         self.assertEqual(1, frame.frametype)
-        self.assertEqual(-1, frame.quality)
+        self.assertEqual('K', frame.quality)
+        self.assertEqual(params['extrainfo'], frame.extrainfo)
+        self.assertEqual(params['filename'], str(frame))
+
+    def test_create_LCOGT_W86_w_stack_starhitnrun(self):
+        params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'r',
+                    'filename'      : 'lsc1m009-fl03-20150713-0130-e10+2.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'quality'       : 'K,I',
+                    'frametype'     : 1,
+                    'extrainfo'    : 'lsc1m009-fl03-20150713-0130-e10.fits,lsc1m009-fl03-20150713-0131-e10.fits,lsc1m009-fl03-20150713-0132-e10.fits',
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(1, frame.frametype)
+        self.assertEqual('K,I', frame.quality)
         self.assertEqual(params['extrainfo'], frame.extrainfo)
         self.assertEqual(params['filename'], str(frame))
 
@@ -401,12 +422,13 @@ class TestFrame(TestCase):
 
         self.assertEqual(None, frame.block)
         self.assertEqual(2, frame.frametype)
-        self.assertEqual(-1, frame.quality)
+        self.assertEqual(' ', frame.quality)
         self.assertEqual(params['extrainfo'], frame.extrainfo)
         self.assertEqual('', frame.instrument)
         self.assertEqual('', frame.filename)
         self.assertEqual(None, frame.exptime)
         self.assertEqual(params['midpoint'], frame.midpoint)
+        self.assertEqual(params['midpoint'] + '@F52', str(frame))
 
     def test_create_WISE_C51_V_single(self):
         params = {  'sitecode'      : 'C51',
@@ -423,7 +445,7 @@ class TestFrame(TestCase):
 
         self.assertEqual(None, frame.block)
         self.assertEqual(3, frame.frametype)
-        self.assertEqual(-1, frame.quality)
+        self.assertEqual(' ', frame.quality)
         self.assertEqual(params['extrainfo'], frame.extrainfo)
         self.assertEqual('', frame.instrument)
         self.assertEqual('', frame.filename)
@@ -445,7 +467,7 @@ class TestFrame(TestCase):
 
         self.assertEqual(self.test_block, frame.block)
         self.assertEqual(4, frame.frametype)
-        self.assertEqual(-1, frame.quality)
+        self.assertEqual(' ', frame.quality)
         self.assertEqual('', frame.extrainfo)
         self.assertEqual(params['instrument'], frame.instrument)
         self.assertEqual(params['filename'], frame.filename)
