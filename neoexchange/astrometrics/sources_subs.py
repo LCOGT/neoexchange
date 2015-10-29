@@ -21,6 +21,8 @@ from re import sub
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from math import degrees
+import slalib as S
 import logging
 import urllib2, os
 from urlparse import urljoin
@@ -443,10 +445,11 @@ def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
 
     return orbit_lines_written
 
-def fetch_mpcobs(asteroid, file_to_save, debug=False):
-    '''Performs a search on the MPC Database for <asteroid> and saves the
-    resulting observations into <file_to_save>.'''
+def fetch_mpcobs(asteroid, debug=False):
+    '''Performs a search on the MPC Database for <asteroid> and returns the
+    resulting observation as a list of text observations.'''
 
+    asteroid = asteroid.strip().replace(' ', '+')
     query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
     page = fetchpage_and_make_soup(query_url)
@@ -459,21 +462,126 @@ def fetch_mpcobs(asteroid, file_to_save, debug=False):
     refs = page.findAll('a')
 
 # Use a list comprehension to find the 'tmp/<asteroid>.dat' link in among all
-# the other links
-    link = [x.get('href') for x in refs if 'tmp/'+asteroid in x.get('href')]
+# the other links. Turn any pluses (which were spaces) into underscores.
+    link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_') in x.get('href')]
 
     if len(link) == 1:
 # Replace the '..' part with proper URL
 
         astfile_link = link[0].replace('../', 'http://www.minorplanetcenter.net/')
-        download_file(astfile_link, file_to_save)
+        obs_page = fetchpage_and_make_soup(astfile_link)
 
-        return file_to_save
+        if obs_page != None:
+            obs_page = obs_page.text.split('\n')
+        return obs_page
 
     return None
 
+def translate_catalog_code(code_or_name):
+
+    catalog_codes = {
+                  "a" : "USNO-A1",                                            
+                  "b" : "USNO-SA1",                                           
+                  "c" : "USNO-A2",                                            
+                  "d" : "USNO-SA2",                                           
+                  "e" : "UCAC-1",                                             
+                  "f" : "Tycho-1",                                            
+                  "g" : "Tycho-2",                                            
+                  "h" : "GSC-1.0",                                            
+                  "i" : "GSC-1.1",                                            
+                  "j" : "GSC-1.2",                                            
+                  "k" : "GSC-2.2",                                            
+                  "l" : "ACT",                                                
+                  "L" : "2MASS",
+                  "m" : "GSC-ACT",                                            
+                  "n" : "TRC",                                                
+                  "o" : "USNO-B1",                                            
+                  "p" : "PPM",                                                
+                  "q" : "UCAC2-beta",                                         
+                  "r" : "UCAC-2",                                             
+                  "s" : "USNO-B2",                                            
+                  "t" : "PPMXL",                                              
+                  "u" : "UCAC-3",                                             
+                  "v" : "NOMAD",                                              
+                  "w" : "CMC-14",                                             
+                  "x" : "HIP-2",                                              
+                  "z" : "GSC-1.x",                                            
+                  "N" : "SDSS-DR7",                                           
+                  }
+    catalog_or_code = ''
+    if len(code_or_name) == 1:
+        catalog_or_code = catalog_codes.get(code_or_name, '')
+    else:
+        for code, catalog in catalog_codes.iteritems():
+            if code_or_name == catalog:
+                catalog_or_code = code
+
+    return catalog_or_code
+
+def parse_mpcobs(line):
+    '''Parse a MPC format 80 column observation record line, returning a 
+    dictionary of values or an empty dictionary if it couldn't be parsed'''
+
+    params = {}
+    if len(line.rstrip()) != 80 or len(line.strip()) == 0:
+        msg = "Bad line %d %d" % (len(line.rstrip()), len(line.strip()))
+        logger.debug(msg)
+        return params
+    number = str(line[0:5])
+    prov_or_temp = str(line[5:12])
+
+    if len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
+        # No number but provisional/temp. desigination
+        body = prov_or_temp
+    else:
+        body = number
+        
+    obs_type = str(line[14])
+    flag_char = str(line[13])
+
+    # Try and convert the condition/ program code into a integer. If it succeeds,
+    # then it is a program code and we don't care about it. Otherwise, it's an
+    # observation condition code and we do want its value.
+    try:
+        flag = int(flag_char)
+        flag = ' '
+    except ValueError:
+        flag = flag_char
+    filter = str(line[70])
+    try:
+        obs_mag  = float(line[65:70])
+    except ValueError:
+        obs_mag = filter = None
+
+    if obs_type == 'C':
+        # Regular CCD observations
+#        print "Date=",line[15:32]
+        params = {  'body'     : body,
+                    'flags'    : flag,
+                    'obs_type' : obs_type,
+                    'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
+                    'obs_mag'  : obs_mag,
+                    'filter'   : filter,
+                    'astrometric_catalog' : translate_catalog_code(line[71]),
+                    'site_code' : str(line[-3:])
+                 }
+        ptr = 1
+        ra_dec_string = line[32:56]
+#        print "RA/Dec=", ra_dec_string
+        ptr, ra_radians, status = S.sla_dafin(ra_dec_string, ptr)
+        params['obs_ra'] = degrees(ra_radians) * 15.0
+        ptr, dec_radians, status = S.sla_dafin(ra_dec_string, ptr)
+        params['obs_dec'] = degrees(dec_radians)
+    elif obs_type.upper() == 'R':
+        # Radar observations, skip
+        logger.debug("Found radar observation, skipping")
+    elif obs_type == 'S':
+        # Satellite -based observation, do something with it
+        logger.warn("Found satellite observation, skipping (for now)")
+    return params
+
 def clean_element(element):
-    'Cleans an element (passed) by converting to ascii and removing any units'''
+    '''Cleans an element (passed) by converting to ascii and removing any units'''
     key = element[0].encode('ascii', 'ignore')
     value = element[1].encode('ascii', 'ignore')
     # Match a open parenthesis followed by 0 or more non-whitespace followed by
