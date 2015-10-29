@@ -21,7 +21,7 @@ from mock import patch
 from neox.tests.mocks import MockDateTime
 
 #Import module to test
-from core.models import Body, Proposal, Block
+from core.models import Body, Proposal, Block, Frame
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -295,3 +295,159 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+
+class TestFrame(TestCase):
+
+    def setUp(self):
+        # Initialise with a test body and two test proposals
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'V92818q'
+        self.body2, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'I22871'
+        self.body3, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'Ntheiqo'
+        self.body4, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'Q488391r'
+        self.body5, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 40.0,
+                         'active'   : True,
+                         'num_observed' : 1,
+                         'when_observed' : '2015-07-13 21:20:00',
+                         'reported' : False
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+    def test_create_LCOGT_K93_w_single(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(0, frame.frametype)
+        self.assertEqual(-1, frame.quality)
+        self.assertEqual('', frame.extrainfo)
+
+    def test_create_LCOGT_W86_r_stack(self):
+        params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'r',
+                    'filename'      : 'lsc1m009-fl03-20150713-0130-e10+2.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'frametype'     : 1,
+                    'extrainfo'    : 'lsc1m009-fl03-20150713-0130-e10.fits,lsc1m009-fl03-20150713-0131-e10.fits,lsc1m009-fl03-20150713-0132-e10.fits',
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(1, frame.frametype)
+        self.assertEqual(-1, frame.quality)
+        self.assertEqual(params['extrainfo'], frame.extrainfo)
+        self.assertEqual(params['filename'], str(frame))
+
+    def test_create_PS2_F52_i_single(self):
+        params = {  'sitecode'      : 'F52',
+                    'instrument'    : '',
+                    'filter'        : 'i',
+                    'filename'      : '',
+                    'exptime'       : None,
+                    'midpoint'      : '2015-10-17 02:33:17.28',
+                    'block'         : None,
+                    'frametype'     : 2,
+                    'extrainfo'     : ''
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(None, frame.block)
+        self.assertEqual(2, frame.frametype)
+        self.assertEqual(-1, frame.quality)
+        self.assertEqual(params['extrainfo'], frame.extrainfo)
+        self.assertEqual('', frame.instrument)
+        self.assertEqual('', frame.filename)
+        self.assertEqual(None, frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+
+    def test_create_WISE_C51_V_single(self):
+        params = {  'sitecode'      : 'C51',
+                    'instrument'    : '',
+                    'filter'        : 'V',
+                    'filename'      : '',
+                    'exptime'       : None,
+                    'midpoint'      : '2015-10-17 02:33:17.28',
+                    'block'         : None,
+                    'frametype'     : 3,
+                    'extrainfo'     : '     N008jm9  s2015 10 17.10645 1 + 3347.3755 - 3628.1490 - 4781.4778   NEOCPC51'
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(None, frame.block)
+        self.assertEqual(3, frame.frametype)
+        self.assertEqual(-1, frame.quality)
+        self.assertEqual(params['extrainfo'], frame.extrainfo)
+        self.assertEqual('', frame.instrument)
+        self.assertEqual('', frame.filename)
+        self.assertEqual(None, frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+        self.assertEqual(params['midpoint'] + '@C51', str(frame))
+
+    def test_create_FLOYDS_E10_spectrum(self):
+        params = {  'sitecode'      : 'E10',
+                    'instrument'    : 'en05',
+                    'filter'        : 'SLIT_1.6AS',
+                    'filename'      : 'coj2m002-en05-20151029-0011-e00.fits',
+                    'exptime'       : 1800.0,
+                    'midpoint'      : '2015-10-29T14:03:19.343',
+                    'block'         : self.test_block,
+                    'frametype'     : 4,
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(4, frame.frametype)
+        self.assertEqual(-1, frame.quality)
+        self.assertEqual('', frame.extrainfo)
+        self.assertEqual(params['instrument'], frame.instrument)
+        self.assertEqual(params['filename'], frame.filename)
+        self.assertEqual(params['exptime'], frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
