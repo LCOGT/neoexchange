@@ -265,7 +265,7 @@ class Frame(models.Model):
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
     block       = models.ForeignKey(Block, null=True, blank=True)
-    quality     = models.IntegerField('Frame Quality (-1: unassessed)', default=-1)
+    quality     = models.IntegerField('Frame Quality', help_text='Frame Quality (-1: unassessed)', default=-1)
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
     fwhm        = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
