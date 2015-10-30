@@ -86,6 +86,37 @@ class TestComputeEphem(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+        comet_params = { 'abs_mag': 11.1,
+                         'active': False,
+                         'arc_length': None,
+                         'argofperih': 12.796,
+                         'discovery_date': None,
+                         'eccentricity': 0.640872,
+                         'elements_type': u'MPC_COMET',
+                         'epochofel': datetime(2015, 8, 6, 0, 0),
+                         'epochofperih': datetime(2015, 8, 13, 2, 1, 19),
+                         'fast_moving': False,
+                         'ingest': datetime(2015, 10, 30, 20, 17, 53),
+                         'longascnode': 50.1355,
+                         'meananom': None,
+                         'meandist': 3.461895,
+                         'name': u'67P',
+                         'not_seen': None,
+                         'num_obs': None,
+                         'orbinc': 7.0402,
+                         'origin': u'M',
+                         'perihdist': 1.2432627,
+                         'provisional_name': u'',
+                         'provisional_packed': u'',
+                         'score': None,
+                         'slope': 4.8,
+                         'source_type': u'C',
+                         'update_time': None,
+                         'updated': False,
+                         'urgency': None}
+        self.comet, created = Body.objects.get_or_create(**comet_params)
+
+
         self.elements = {'G': 0.15,
                          'H': 21.0,
                          'MDM': Angle(degrees=0.74394528),
@@ -115,12 +146,12 @@ class TestComputeEphem(TestCase):
 
         body_dict['provisional_name'] = 'N999z0z'
         body_dict['eccentricity'] = 0.42
-        body_dict['id'] += 1
+        body_dict['id'] += 2
         second_body = Body.objects.create(**body_dict)
         second_body.save()
 
         saved_items = Body.objects.all()
-        self.assertEqual(saved_items.count(), 2)
+        self.assertEqual(saved_items.count(), 3)
 
         first_saved_item = saved_items[0]
         second_saved_item = saved_items[1]
@@ -263,6 +294,42 @@ class TestComputeEphem(TestCase):
         alt_limit = 0
         body_elements = model_to_dict(self.body)
         expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'],]
+
+        ephem_lines = call_compute_ephem(body_elements, start, end,
+            site_code, step_size, alt_limit)
+        line = 0
+        self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
+        while line < len(expected_ephem_lines):
+            self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
+            line += 1
+
+    def test_call_compute_ephem_for_comets(self):
+        start = datetime(2015, 10, 30, 12, 20, 00)
+        end = datetime(2015, 10, 30, 12, 29, 59)
+        site_code = 'F65'
+        step_size = 600
+        alt_limit = 0
+        body_elements = model_to_dict(self.comet)
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 55.54', '+14 13 36.2', '14.7', ' 1.44', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+
+        ephem_lines = call_compute_ephem(body_elements, start, end,
+            site_code, step_size, alt_limit)
+        line = 0
+        self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
+        while line < len(expected_ephem_lines):
+            self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
+            line += 1
+
+    def test_call_compute_ephem_for_comets_no_HG(self):
+        start = datetime(2015, 10, 30, 12, 20, 00)
+        end = datetime(2015, 10, 30, 12, 29, 59)
+        site_code = 'F65'
+        step_size = 600
+        alt_limit = 0
+        body_elements = model_to_dict(self.comet)
+        body_elements['abs_mag'] = None
+        body_elements['slope'] = None
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 55.54', '+14 13 36.2', '-99.0', ' 1.44', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
