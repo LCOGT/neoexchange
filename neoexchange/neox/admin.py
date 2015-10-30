@@ -51,8 +51,30 @@ class BlockAdmin(reversion.VersionAdmin):
 
     ordering = ('-block_start',)
 
-class RecordAdmin(reversion.VersionAdmin):
-    pass
+class FrameAdmin(reversion.VersionAdmin):
+    def format_midpoint(self, obj):
+        return obj.midpoint.strftime('%Y-%m-%d %H:%M:%S')
+    format_midpoint.short_description = 'Frame midpoint'
+    format_midpoint.admin_order_field = 'midpoint'
+
+    def block_groupid(self, obj):
+        if obj.block:
+            return obj.block.groupid
+        else:
+            return "No block"
+
+    def filename_or_midpoint(self, obj):
+
+        if obj.filename:
+            name= obj.filename
+        else:
+            name = "%s@%s" % ( obj.midpoint, obj.sitecode.rstrip() )
+        return name
+    
+    list_display = ('id', 'block_groupid', 'quality', 'frametype', 'filename_or_midpoint', 'exptime', 'filter', 'sitecode')
+    list_filter = ('quality', 'frametype', 'midpoint', 'filter', 'sitecode', 'instrument')
+
+    ordering = ('-midpoint',)
 
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
@@ -61,7 +83,7 @@ class SourceMeasurementAdmin(admin.ModelAdmin):
     pass
 
 admin.site.register(Body,BodyAdmin)
-admin.site.register(Record,RecordAdmin)
+admin.site.register(Frame,FrameAdmin)
 admin.site.register(Block,BlockAdmin)
 admin.site.register(Proposal,ProposalAdmin)
 admin.site.register(SourceMeasurement,SourceMeasurementAdmin)

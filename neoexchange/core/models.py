@@ -64,6 +64,14 @@ SITE_CHOICES = (
                     ('sin','Sinistro cameras')
     )
 
+FRAMETYPE_CHOICES = (
+                        (0, 'Single frame'),
+                        (1, 'Stack of frames'),
+                        (2, 'Non-LCOGT data'),
+                        (3, 'Satellite data'),
+                        (4, 'Spectrum')
+                    )
+
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
@@ -246,24 +254,39 @@ class Block(models.Model):
         return u'%s is %sactive' % (self.tracking_number,text)
 
 
-class Record(models.Model):
-    ''' Log of observations successfully made and filename of data which resulted
+class Frame(models.Model):
+    ''' Model to represent (FITS) frames of data from observations successfully 
+    made and filename of data which resulted.
     '''
-    site        = models.CharField('3-letter site code', max_length=3)
-    instrument  = models.CharField('instrument code', max_length=4)
+    sitecode    = models.CharField('MPC site code', max_length=4)
+    instrument  = models.CharField('instrument code', max_length=4, blank=True)
     filter      = models.CharField('filter class', max_length=15)
-    filename    = models.CharField(max_length=31)
-    exp         = models.FloatField('exposure time in seconds')
-    whentaken   = models.DateTimeField()
-    block       = models.ForeignKey(Block)
+    filename    = models.CharField('FITS filename', max_length=40, blank=True)
+    exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
+    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
+    block       = models.ForeignKey(Block, null=True, blank=True)
+    quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
+    zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
+    zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
+    fwhm        = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
+    frametype   = models.SmallIntegerField('Frame Type', null=False, blank=False, default=0, choices=FRAMETYPE_CHOICES)
+    extrainfo   = models.TextField(blank=True)
+    rms_of_fit  = models.FloatField('RMS of astrometric fit (arcsec)', null=True, blank=True)
+    nstars_in_fit  = models.FloatField('No. of stars used in astrometric fit', null=True, blank=True)
+    time_uncertainty = models.FloatField('Time uncertainty (seconds)', null=True, blank=True)
 
     class Meta:
-        verbose_name = _('Observation Record')
-        verbose_name_plural = _('Observation Records')
-        db_table = 'ingest_record'
+        verbose_name = _('Observed Frame')
+        verbose_name_plural = _('Observed Frames')
+        db_table = 'ingest_frame'
 
     def __unicode__(self):
-        return self.filename
+
+        if self.filename:
+            name= self.filename
+        else:
+            name = "%s@%s" % ( self.midpoint, self.sitecode.rstrip() )
+        return name
 
 class SourceMeasurement(models.Model):
     '''Class to represent the measurements (RA, Dec, Magnitude and errors) 
@@ -285,3 +308,4 @@ class SourceMeasurement(models.Model):
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
+
