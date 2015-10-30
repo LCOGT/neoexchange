@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
+from django.db.utils import IntegrityError
 from unittest import skipIf
 from mock import patch
 from neox.tests.mocks import MockDateTime
@@ -473,3 +474,31 @@ class TestFrame(TestCase):
         self.assertEqual(params['filename'], frame.filename)
         self.assertEqual(params['exptime'], frame.exptime)
         self.assertEqual(params['midpoint'], frame.midpoint)
+
+# For transactional reasons, these assertRaises need to be in their own test
+# blocks (see https://code.djangoproject.com/ticket/21540)
+
+    def test_invalid_blank_entry(self):
+        params = {}
+        with self.assertRaises(IntegrityError):
+            frame = Frame.objects.create(**params)
+
+    def test_invalid_blank_entry_no_filter_or_midpoint(self):
+        params = { 'sitecode' : 'V37'}
+        with self.assertRaises(IntegrityError):
+            frame = Frame.objects.create(**params)
+
+    def test_invalid_blank_entry_no_midpoint(self):
+        params = { 'sitecode' : 'V37', 'filter' : 'R' }
+        with self.assertRaises(IntegrityError):
+            frame = Frame.objects.create(**params)
+
+    def test_valid_minimal_entry(self):
+        params = { 'sitecode' : 'V37', 'filter' : 'R', 'midpoint'  : '2015-10-29T14:03:19.343' }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(type(frame), Frame)
+        self.assertEqual(params['sitecode'], frame.sitecode)
+        self.assertEqual(params['filter'], frame.filter)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+
