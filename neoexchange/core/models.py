@@ -296,14 +296,19 @@ class SourceMeasurement(models.Model):
     '''
 
     body = models.ForeignKey(Body)
-    frame = models.ForeignKey(Record)
+    frame = models.ForeignKey(Frame)
     obs_ra = models.FloatField('Observed RA')
     obs_dec = models.FloatField('Observed Dec')
     obs_mag = models.FloatField('Observed Magnitude')
     err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
     err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)
     err_obs_mag = models.FloatField('Error on Observed Magnitude', blank=True, null=True)
- 
+    astrometric_catalog = models.CharField('Astrometric catalog used', max_length=40)
+    photometric_catalog = models.CharField('Photometric catalog used', max_length=40)
+    aperture_size = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
+    snr = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
+    flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')    
+
     class Meta:
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')
