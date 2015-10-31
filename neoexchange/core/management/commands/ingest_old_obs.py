@@ -16,7 +16,7 @@ from sys import argv
 import os
 from glob import glob
 
-from core.models import Body, SourceMeasurement, Record
+from core.models import Body, SourceMeasurement, Frame
 from astrometrics.sources_subs import parse_mpcobs
 import logging
 

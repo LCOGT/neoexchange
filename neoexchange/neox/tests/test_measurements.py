@@ -1,7 +1,7 @@
 from .base import FunctionalTest
 from selenium import webdriver
 from django.core.urlresolvers import reverse
-from core.models import Body, Record, SourceMeasurement
+from core.models import Body, Frame, SourceMeasurement
 
 class MeasurementsPageTests(FunctionalTest):
 
@@ -32,15 +32,15 @@ class MeasurementsPageTests(FunctionalTest):
         self.body2 = Body.objects.create(**params)
 
     def insert_test_measurements(self):
-        frame_params = { 'site' : 'K91',
+        frame_params = { 'sitecode' : 'K91',
                          'instrument' : 'kb70',
                          'filter' : 'w',
                          'filename' : 'cpt1m010-kb70-20150420-0042-e00.fits',
-                         'exp' : 40.0,
-                         'whentaken' : '2015-04-20 18:00:00',
+                         'exptime' : 40.0,
+                         'midpoint' : '2015-04-20 18:00:00',
                          'block' : self.test_block
                         }
-        self.test_frame = Record.objects.create(pk=1, **frame_params)
+        self.test_frame = Frame.objects.create(pk=1, **frame_params)
 
         measure_params = { 'body' : self.body,
                            'frame' : self.test_frame,

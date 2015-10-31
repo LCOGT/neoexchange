@@ -43,9 +43,4 @@ class Migration(migrations.Migration):
             name='body',
             field=models.ForeignKey(to='core.Body'),
         ),
-        migrations.AddField(
-            model_name='sourcemeasurement',
-            name='frame',
-            field=models.ForeignKey(to='core.Record'),
-        ),
     ]
