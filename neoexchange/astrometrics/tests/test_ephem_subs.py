@@ -363,6 +363,26 @@ class TestComputeFOM(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+        params = {  'provisional_name' : 'EUHT950',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-10-25 00:00:00',
+                    'meananom'      : 345.87056,
+                    'argofperih'    : 47.03212,
+                    'longascnode'   : 7.8065,
+                    'orbinc'        : 8.98042,
+                    'eccentricity'  : 0.5367056,
+                    'meandist'      : 1.9442854,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 0.866,
+                    'arc_length'    : 0.0,
+                    'score'         : 100,
+                    'abs_mag'       : 19.5
+                    }
+        self.body2, created = Body.objects.get_or_create(**params)
+
     def test_compute_FOM_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
         expected_FOM = 137.1187602774659
@@ -408,6 +428,16 @@ class TestComputeFOM(TestCase):
         expected_FOM = None
         body_elements = model_to_dict(self.body)
         body_elements['source_type'] = 'N'
+        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+
+        FOM = comp_FOM(body_elements, emp_line)
+
+        self.assertEqual(expected_FOM, FOM)
+
+    def test_FOM_with_zero_arclength(self):
+        d = datetime(2015, 11, 2, 19, 46, 9)
+        expected_FOM = 1.658839108423487e+75
+        body_elements = model_to_dict(self.body2)
         emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
 
         FOM = comp_FOM(body_elements, emp_line)
