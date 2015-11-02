@@ -761,7 +761,8 @@ class TestParseMPCObsFormat(TestCase):
                             'n_ R_l' :  u'01566         R1968 06 14.229167               +    11541710   2388 252 JPLRS253',
                             'n_ r_l' :  u'01566         r1968 06 14.229167S                        1000       252 JPLRS253',
                             'n_tC_l' :  u'01566        tC2002 07 31.54831 20 30 29.56 -47 49 14.5          18.1 Rcg0322474',
-                            'p_ C_n' :  u'     WMAA95B  C2015 06 20.29109 16 40 36.42 -14 23 16.2                qNEOCPG96',
+                            'p_ C_n' :  u'     WMAA95B  C2015 06 20.29109 16 40 36.42 -14 23 16.2                qNEOCPG96\n',
+                            'p_ C_le' : u'     K13R33T  C2013 09 13.18561323 15 20.53 -10 21 52.6          20.4 V      W86\r\n',
                           }
         self.maxDiff = None
 
@@ -772,7 +773,7 @@ class TestParseMPCObsFormat(TestCase):
                 self.assertAlmostEqual(expected_params[i], params[i], tolerance)
             else:
                 self.assertEqual(expected_params[i], params[i])
-            
+
     def test_p_spaceC_l(self):
         expected_params = { 'body'  : 'K15TE5B',
                             'flags' : ' ',
@@ -823,7 +824,7 @@ class TestParseMPCObsFormat(TestCase):
         params = parse_mpcobs(self.test_lines['p_#C_l'])
 
         self.compare_dict(expected_params, params)
-            
+
     def test_p_spaceC_h(self):
         expected_params = { 'body'  : 'K15TE5B',
                             'flags' : ' ',
@@ -885,7 +886,7 @@ class TestParseMPCObsFormat(TestCase):
         params = parse_mpcobs(self.test_lines['n_tC_l'])
 
         self.compare_dict(expected_params, params)
-            
+
     def test_p_spaceC_n(self):
         expected_params = { 'body'  : 'WMAA95B',
                             'flags' : ' ',
@@ -902,18 +903,34 @@ class TestParseMPCObsFormat(TestCase):
         params = parse_mpcobs(self.test_lines['p_ C_n'])
 
         self.compare_dict(expected_params, params)
-            
+
     def test_blankline(self):
         expected_params = {}
 
         params = parse_mpcobs('')
 
         self.compare_dict(expected_params, params)
-      
-            
+
     def test_allspacesline(self):
         expected_params = {}
 
         params = parse_mpcobs(' ' * 80)
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_spaceC_le(self):
+        expected_params = { 'body'  : 'K13R33T',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2013, 9, 13, 4, 27, 16, int(0.9632*1e6)),
+                            'obs_ra'    : 348.8355416666667,
+                            'obs_dec'   : -10.36461111111111,
+                            'obs_mag'   : 20.4,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'W86'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_ C_le'])
 
         self.compare_dict(expected_params, params)

@@ -523,8 +523,9 @@ def parse_mpcobs(line):
     dictionary of values or an empty dictionary if it couldn't be parsed'''
 
     params = {}
-    if len(line.rstrip()) != 80 or len(line.strip()) == 0:
-        msg = "Bad line %d %d" % (len(line.rstrip()), len(line.strip()))
+    line = line.rstrip()
+    if len(line) != 80 or len(line.strip()) == 0:
+        msg = "Bad line %d %d" % (len(line), len(line.strip()))
         logger.debug(msg)
         return params
     number = str(line[0:5])
