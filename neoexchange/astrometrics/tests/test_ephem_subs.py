@@ -436,7 +436,7 @@ class TestComputeFOM(TestCase):
 
     def test_FOM_with_zero_arclength(self):
         d = datetime(2015, 11, 2, 19, 46, 9)
-        expected_FOM = 1.25609164888e376
+        expected_FOM = 1.658839108423487e+75
         body_elements = model_to_dict(self.body2)
         emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
 
