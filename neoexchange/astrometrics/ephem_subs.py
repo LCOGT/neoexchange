@@ -18,6 +18,8 @@ from datetime import datetime, timedelta, time
 import slalib as S
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10
 from numpy import array, concatenate, zeros
+import json
+
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -156,10 +158,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Asteroid position (and velocity)
 
     comet = False
-    jform = 2
-    if 'elements_type' in orbelems and str(orbelems['elements_type']).upper() == 'MPC_COMET':
+    if 'type' in orbelems and orbelems['type'].upper() == 'MPC_COMET':
         comet = True
-        jform = 3
 
 # Perturb elements
     if ericformat == True:
@@ -183,14 +183,14 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         if perturb == True:
             if comet == True:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                  p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(jform, epoch_mjd,
+                  p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(3, epoch_mjd,
                             mjd_tt, epoch_mjd, orbelems['inclination'].in_radians(), orbelems['long_node'].in_radians(),
                             orbelems['arg_perihelion'].in_radians(), orbelems['perihdist'], orbelems['eccentricity'],
                             0.0)
                 p_epoch_mjd = orbelems['epochofperih']
             else:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                  p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(jform, epoch_mjd,
+                  p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(2, epoch_mjd,
                             mjd_tt, epoch_mjd, orbelems['inclination'].in_radians(), orbelems['long_node'].in_radians(),
                             orbelems['arg_perihelion'].in_radians(), orbelems['semi_axis'], orbelems['eccentricity'],
                             orbelems['mean_anomaly'].in_radians())
@@ -208,8 +208,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                           'SemiAxisOrQ' : orbelems['perihdist'],
                           'Ecc' : orbelems['eccentricity'],
                          }
-            orbelems['meananom'] = 0.0
-            epoch_mjd = datetime2mjd_utc(orbelems['epochofperih'])
         else:
             p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
                           'Inc' : radians(orbelems['orbinc']),
@@ -222,7 +220,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         p_orbelems['G'] = orbelems['slope']
         if perturb == True:
             (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                    p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
+              p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( 2, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
                         radians(orbelems['argofperih']), orbelems['meandist'], orbelems['eccentricity'],
                         radians(orbelems['meananom']))
         else:
@@ -230,7 +228,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
             j = 0
 
     if j != 0:
-        logger.error("Perturbing error=%s" % j)
+        print "Perturbing error=%s" % j
 
 
     r3 = -100.
@@ -243,12 +241,12 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     while (fabs(delta - r3) > .01):
         r3 = delta
         if comet == True:
-            (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), jform, p_epoch_mjd,
+            (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), 3, p_epoch_mjd,
                             p_orbelems['Inc'], p_orbelems['LongNode'],
                             p_orbelems['ArgPeri'], p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'],
                             0.0, 0.0)
         else:
-            (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), jform, p_epoch_mjd,
+            (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), 2, p_epoch_mjd,
                             p_orbelems['Inc'], p_orbelems['LongNode'],
                             p_orbelems['ArgPeri'], p_orbelems['SemiAxis'], p_orbelems['Ecc'],
                             p_orbelems['MeanAnom'], 0.0)
@@ -313,13 +311,11 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     total_motion, sky_pa, ra_motion, dec_motion = compute_sky_motion(sky_vel, delta, dbg)
 
-    mag = -99
     if comet == True:
     # Calculate magnitude of comet
     # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
-    # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the elements
-        if p_orbelems['H'] and p_orbelems['G']:
-            mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
+    # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the
+        mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
 
     else:
     # Compute phase angle, beta (Sun-Target-Earth angle)
@@ -331,9 +327,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     #    logger.debug("Phi1, phi2=%s" % phi1,phi2)
 
     # Calculate magnitude of object
-        if p_orbelems['H'] and p_orbelems['G']:
-            mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
-                (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
+        mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
+            (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
 
     az_rad, alt_rad = moon_alt_az(d, ra, dec, site_long, site_lat, site_hgt)
     airmass = S.sla_airmas((pi/2.0)-alt_rad)
@@ -344,7 +339,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         ra_geo_deg[1], ra_geo_deg[2], ra_geo_deg[3],
         dsign, dec_geo_deg[0], dec_geo_deg[1], dec_geo_deg[2], dec_geo_deg[3],
         mag, total_motion, sky_pa, alt_deg, airmass )
-        
+
 # Compute South Polar Distance from Dec
     dec_arcsec_decimal = dec_geo_deg[2] + dec_geo_deg[3]
     dec_arcmin_decimal = dec_geo_deg[1] + (dec_arcsec_decimal/60.)
@@ -371,7 +366,7 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
     obj_vel = obj_vel * 86400.0
     j2000_vel = zeros(3)
     matrix = zeros(9)
-    i = 0 
+    i = 0
     while (i < 3):
         j2000_vel[i] = obj_vel[i] - obs_vel_hel[i]
         matrix[i] = obj_pos[i] / delta
@@ -441,7 +436,7 @@ def format_emp_line(emp_line, site_code):
         blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
 # Compute apparent RA, Dec of the Moon
-        (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt) 
+        (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt)
 # Convert to alt, az (only the alt is actually needed)
         (moon_az, moon_alt) = moon_alt_az(emp_line[0], moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
         moon_alt = degrees(moon_alt)
@@ -797,7 +792,7 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins):
 
 def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
     '''Simple noddy scoring calculation for choosing best slot'''
-    
+
     objalt_wgt = 1.0
     moonalt_wgt = 0.33
     bad_score = -999
@@ -825,7 +820,7 @@ def get_sitepos(site_code, dbg=False):
 
     site_code = site_code.upper()
     if site_code == 'F65' or site_code == 'FTN':
-# MPC code for FTN. Positions from JPL HORIZONS, longitude converted from 203d 44' 32.6" East 
+# MPC code for FTN. Positions from JPL HORIZONS, longitude converted from 203d 44' 32.6" East
 # 156d 15' 27.4" W
         (site_lat, status)  =  S.sla_daf2r(20, 42, 25.5)
         (site_long, status) =  S.sla_daf2r(156, 15, 27.4)
@@ -1067,7 +1062,7 @@ def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec,
     return hour_angle
 
 def radec2strings(ra_radians, dec_radians, seperator=' '):
-    '''Format an (RA, Dec) pair (in radians) into a tuple of strings, with 
+    '''Format an (RA, Dec) pair (in radians) into a tuple of strings, with
     configurable seperator (defaults to <space>).
     There is no sign produced on the RA quantity unless ra_radians and dec_radians
     are equal.'''
@@ -1075,7 +1070,7 @@ def radec2strings(ra_radians, dec_radians, seperator=' '):
     ra_format =  "%s%02.2d%c%02.2d%c%02.2d.%02.2d"
     dec_format = "%s%02.2d%c%02.2d%c%02.2d.%d"
 
-    (rsign, ra ) = S.sla_dr2tf(2, ra_radians) 
+    (rsign, ra ) = S.sla_dr2tf(2, ra_radians)
     (dsign, dec) = S.sla_dr2af(1, dec_radians)
 
     if rsign == '+' and ra_radians != dec_radians: rsign = ''
@@ -1129,7 +1124,7 @@ def get_sitecam_params(site):
     twom_exp_overhead = 22.5
     point4m_exp_overhead = 7.5 # for BPL
 
-    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64' ] 
+    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64' ]
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA' in site or site == 'F65':
@@ -1168,29 +1163,32 @@ def get_sitecam_params(site):
     return (site_code, setup_overhead, exp_overhead, pixel_scale, fov, max_exp_length, alt_limit)
 
 def comp_FOM(orbelems, emp_line):
-    '''Computes a Figure of Merit (FOM) priority score that is used as a 
+    '''Computes a Figure of Merit (FOM) priority score that is used as a
     metric for ranking targets to follow-up.
-    Currently, this prioritizes targets that have not been seen in a while, 
+    Currently, this prioritizes targets that have not been seen in a while,
     have a short arc, are big and bright, have a high "likely NEO" score,
     and will go directly overhead of our southern hemisphere sites.
-    The 'not_seen'/'arc_length', 'emp_line[3]' (V_mag), and 'abs_mag' 
-    terms in the FOM computation are exponential (i.e., for brighter, larger, 
-    seen less recently, shorter arc targets, the FOM rises exponentially), 
-    whereas the 'score' and 'emp_line[6]' (south polar distance (SPD)) terms 
-    are gaussian, where the expected values are 100 and 60 deg, respectively. 
-    The 'score' term is weighted lower (multiplied by 0.5) than the others 
-    to avoid it dominating the priority ranking. The 'not_seen' and 
-    'arc_length' parameters are linked together such that targets with high 
-    'not_seen' values and low 'arc_length' values (those that haven't been 
-    seen in a while and have short arcs) are ranked higher than those with 
-    both values high (those that haven't been seen in a while and have longer 
-    arcs) or both values low (those that were seen recently and have short 
+    The 'not_seen'/'arc_length', 'emp_line[3]' (V_mag), and 'abs_mag'
+    terms in the FOM computation are exponential (i.e., for brighter, larger,
+    seen less recently, shorter arc targets, the FOM rises exponentially),
+    whereas the 'score' and 'emp_line[6]' (south polar distance (SPD)) terms
+    are gaussian, where the expected values are 100 and 60 deg, respectively.
+    The 'score' term is weighted lower (multiplied by 0.5) than the others
+    to avoid it dominating the priority ranking. The 'not_seen' and
+    'arc_length' parameters are linked together such that targets with high
+    'not_seen' values and low 'arc_length' values (those that haven't been
+    seen in a while and have short arcs) are ranked higher than those with
+    both values high (those that haven't been seen in a while and have longer
+    arcs) or both values low (those that were seen recently and have short
     arcs).
     '''
     FOM = None
     if 'U' in orbelems['source_type'] and orbelems['not_seen']!=None and orbelems['arc_length']!=None and orbelems['score']!=None:
-        if orbelems['arc_length'] < 0.01:
-            orbelems['arc_length'] = 0.005
-        FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line[3])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line[6]-60.)**2)/180.))
-
+        try:
+            if orbelems['arc_length'] < 0.01:
+                orbelems['arc_length'] = 0.005
+            FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line[3])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line[6]-60.)**2)/180.))
+        except ZeroDivisionError:
+            logger.error(str(orbelems))
+            logger.error(str(emp_line))
     return FOM
