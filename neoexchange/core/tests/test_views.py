@@ -33,8 +33,9 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit, block_status
-from core.models import Body, Proposal, Block
+    update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit, \
+    create_source_measurement, block_status
+from core.models import Body, Proposal, Block, SourceMeasurement
 from core.forms import EphemQuery
 
 
@@ -929,3 +930,44 @@ class TestClean_mpcorbit(TestCase):
         new_expected_params['discovery_date'] = None
         self.assertEqual(new_expected_params, params)
 
+
+class TestCreate_sourcemeasurement(TestCase):
+
+    def setUp(self):
+        # Read in MPC 80 column format observations lines from a static file
+        # for testing purposes
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        self.test_obslines = test_fh.readlines()
+        test_fh.close()
+
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        self.test_body = Body.objects.create(**WSAE9A6_params)
+
+        self.maxDiff = None
+
+    def compare_dict(self, expected_params, params, tolerance=7):
+        self.assertEqual(len(expected_params), len(params))
+        for i in expected_params:
+            if 'ra' in i or 'dec' in i:
+                self.assertAlmostEqual(expected_params[i], params[i], tolerance)
+            else:
+                self.assertEqual(expected_params[i], params[i])
+
+    def test_create_nonLCO(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 27, 12, int(0.672*1e6)),
+                            'obs_ra'    : 325.2828333333333,
+                            'obs_dec'   : -10.8525,
+                            'obs_mag'   : 21.8,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'G96'
+                          }
+                            
+        source_measure = create_source_measurement(self.test_obslines[0])
+
+        self.assertEqual(SourceMeasurement, type(source_measure))

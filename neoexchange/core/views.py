@@ -30,11 +30,12 @@ from httplib import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
-    determine_darkness_times, determine_slot_length, determine_exp_time_count, MagRangeError
+    determine_darkness_times, determine_slot_length, determine_exp_time_count, \
+    MagRangeError,  LCOGT_site_codes
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
-    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler
+    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
@@ -762,6 +763,47 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     else:
         logger.info("Added new orbit for %s" % obj_id)
     return True
+
+def create_source_measurement(obs_lines):
+
+    if type(obs_lines) != list:
+        obs_lines = [obs_lines,]
+
+    for obs_line in obs_lines:    
+        print obs_line
+        params = parse_mpcobs(obs_line)
+        if params:
+            try:
+                obs_body = Body.objects.get(provisional_name=params['body'])
+                print obs_body
+                our_site_codes = LCOGT_site_codes()
+                if params['site_code'] in our_site_codes:
+                    if params['flags'] != 'K':
+                        frame_type = Frame.SINGLE_FRAMETYPE
+                    else:
+                        frame_type = Frame.STACK_FRAMETYPE
+                else:
+                    frame_type = Frame.NONLCO_FRAMETYPE
+                frame, frame_created = Frame.objects.get_or_create(midpoint=params['obs_date'], sitecode=params['site_code'], frametype=frame_type)
+
+                measure_params = {  'body'    : obs_body, 
+                                    'frame'   : frame,
+                                    'obs_ra'  : params['obs_ra'],
+                                    'obs_dec' : params['obs_dec'],
+                                    'obs_mag' : params['obs_mag'],
+                                    'astrometric_catalog' : params['astrometric_catalog'],
+                                    'photometric_catalog' : params['astrometric_catalog'],
+                                    'flags'   : params['flags']
+                                 }
+                measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
+            except Body.DoesNotExist:
+                print("Body %s does not exist" % params['body'])
+                measure = None
+            except Body.MultipleObjectsReturned:
+                logger.warn("Multiple versions of Body %s exist" % params['body'])
+                measure = None
+                
+    return measure
 
 def check_request_status(tracking_num=None):
     data = None
