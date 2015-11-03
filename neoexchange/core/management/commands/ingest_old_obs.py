@@ -17,7 +17,7 @@ import os
 from glob import glob
 
 from core.models import Body, SourceMeasurement, Frame
-from astrometrics.sources_subs import parse_mpcobs
+from core.views import create_source_measurement
 import logging
 
 from django.core.management.base import BaseCommand, CommandError
@@ -45,11 +45,12 @@ class Command(BaseCommand):
                 obslines = obsfile_fh.readlines()
                 obsfile_fh.close()
 
-                for obs_line in obslines:
-                    params = parse_mpcobs(obs_line)
-                    if len(params) != 10:
-                        msg = "%80s -> %d" % ( obs_line.rstrip(), len(params))
-                        self.stdout.write(msg)
+                measure = create_source_measurement(obslines, True)
+                if measure:
+                    msg = "Created SourceMeasurements for %s" % new_rock
+                else:
+                    msg = "Could not create SourceMeasurements for %s" % new_rock
+                self.stdout.write(msg)
             except IOError:
                 self.stdout.write("File %s not found" % new_rock)
             

@@ -764,18 +764,19 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         logger.info("Added new orbit for %s" % obj_id)
     return True
 
-def create_source_measurement(obs_lines):
+def create_source_measurement(obs_lines, dbg=False):
 
     if type(obs_lines) != list:
         obs_lines = [obs_lines,]
 
     for obs_line in obs_lines:    
-        print obs_line
+        if dbg: print obs_line.rstrip()
+        measure = None
         params = parse_mpcobs(obs_line)
         if params:
             try:
                 obs_body = Body.objects.get(provisional_name=params['body'])
-                print obs_body
+#                print obs_body
                 our_site_codes = LCOGT_site_codes()
                 if params['site_code'] in our_site_codes:
                     if params['flags'] != 'K':
@@ -784,7 +785,12 @@ def create_source_measurement(obs_lines):
                         frame_type = Frame.STACK_FRAMETYPE
                 else:
                     frame_type = Frame.NONLCO_FRAMETYPE
-                frame, frame_created = Frame.objects.get_or_create(midpoint=params['obs_date'], sitecode=params['site_code'], frametype=frame_type)
+                frame_params = { 'midpoint' : params['obs_date'], 
+                                 'sitecode' : params['site_code'], 
+                                 'filter'   : params['filter'],
+                                 'frametype' : frame_type
+                               }
+                frame, frame_created = Frame.objects.get_or_create(**frame_params)
 
                 measure_params = {  'body'    : obs_body, 
                                     'frame'   : frame,
