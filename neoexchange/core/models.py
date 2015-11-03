@@ -64,14 +64,6 @@ SITE_CHOICES = (
                     ('sin','Sinistro cameras')
     )
 
-FRAMETYPE_CHOICES = (
-                        (0, 'Single frame'),
-                        (1, 'Stack of frames'),
-                        (2, 'Non-LCOGT data'),
-                        (3, 'Satellite data'),
-                        (4, 'Spectrum')
-                    )
-
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
@@ -258,6 +250,18 @@ class Frame(models.Model):
     ''' Model to represent (FITS) frames of data from observations successfully 
     made and filename of data which resulted.
     '''
+    SINGLE_FRAMETYPE = 0
+    STACK_FRAMETYPE = 1
+    NONLCO_FRAMETYPE = 2
+    SATELLITE_FRAMETYPE = 3
+    SPECTRUM_FRAMETYPE = 4
+    FRAMETYPE_CHOICES = (
+                        (SINGLE_FRAMETYPE, 'Single frame'),
+                        (STACK_FRAMETYPE, 'Stack of frames'),
+                        (NONLCO_FRAMETYPE, 'Non-LCOGT data'),
+                        (SATELLITE_FRAMETYPE, 'Satellite data'),
+                        (SPECTRUM_FRAMETYPE, 'Spectrum')
+                    )
     sitecode    = models.CharField('MPC site code', max_length=4)
     instrument  = models.CharField('instrument code', max_length=4, blank=True)
     filter      = models.CharField('filter class', max_length=15)
