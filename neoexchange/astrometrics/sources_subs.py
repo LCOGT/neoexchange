@@ -552,7 +552,7 @@ def parse_mpcobs(line):
     try:
         obs_mag  = float(line[65:70])
     except ValueError:
-        obs_mag = filter = None
+        obs_mag = None
 
     if obs_type == 'C':
         # Regular CCD observations

@@ -763,6 +763,8 @@ class TestParseMPCObsFormat(TestCase):
                             'n_tC_l' :  u'01566        tC2002 07 31.54831 20 30 29.56 -47 49 14.5          18.1 Rcg0322474',
                             'p_ C_n' :  u'     WMAA95B  C2015 06 20.29109 16 40 36.42 -14 23 16.2                qNEOCPG96\n',
                             'p_ C_le' : u'     K13R33T  C2013 09 13.18561323 15 20.53 -10 21 52.6          20.4 V      W86\r\n',
+                            'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
+
                           }
         self.maxDiff = None
 
@@ -895,7 +897,7 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_ra'    : 250.15175,
                             'obs_dec'   : -14.387833333333333,
                             'obs_mag'   : None,
-                            'filter'    : None,
+                            'filter'    : ' ',
                             'astrometric_catalog' : 'UCAC2-beta',
                             'site_code' : 'G96'
                           }
@@ -932,5 +934,22 @@ class TestParseMPCObsFormat(TestCase):
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_le'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_spaceC_f(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 41, 6, int(0.432*1e6)),
+                            'obs_ra'    : 325.28599999999994,
+                            'obs_dec'   : -10.861583333333332,
+                            'obs_mag'   : None,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'G96'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_ C_f'])
 
         self.compare_dict(expected_params, params)
