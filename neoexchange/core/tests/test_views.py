@@ -93,7 +93,11 @@ class TestClean_NEOCP_Object(TestCase):
         elements = clean_NEOCP_object(obs_page)
         self.assertEqual(expected_elements, elements)
 
+    @patch('core.views.datetime', MockDateTime)
     def test_findorb(self):
+
+        MockDateTime.change_datetime(2015, 8, 27, 12, 0, 0)
+
         obs_page = [u'LSCTLFr 18.04  0.15 K158Q 359.91024    8.53879  335.41846    3.06258  0.1506159  0.29656016   2.2270374    FO 150826     3   1 10.4 min  0.08         Find_Orb   0000 LSCTLFr                     20150826',
                    ]
         obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
@@ -111,13 +115,19 @@ class TestClean_NEOCP_Object(TestCase):
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'L',
                               'source_type' : 'U',
-                              'active'      : True
+                              'active'      : True,
+                              'arc_length'  : 10.4/1440.0,
+                              'not_seen'    : 1.5
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
+    @patch('core.views.datetime', MockDateTime)
     def test_findorb_with_perturbers(self):
+
+        MockDateTime.change_datetime(2015, 9, 27, 6, 00, 00)
+
         obs_page = [u'CPTTL89 19.03  0.15 K159F 343.17326  209.67924  172.85027   25.18528  0.0920324  0.36954350   1.9232054    FO 150916    30   1    3 days 0.14 M-P 06  Find_Orb   0000 CPTTL89                     20150915',
                    ]
         obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
@@ -135,7 +145,9 @@ class TestClean_NEOCP_Object(TestCase):
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'L',
                               'source_type' : 'U',
-                              'active'      : True
+                              'active'      : True,
+                              'arc_length'  : 3.0,
+                              'not_seen'    : 12.25
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
