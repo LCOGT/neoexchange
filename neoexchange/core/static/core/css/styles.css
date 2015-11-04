@@ -35,6 +35,8 @@ div.compactonly { display: none; }
 #lcogt-bar li:last-child a { padding-left: 8px; }
 #login { margin: 0; padding: 0 0 0 0; display: inline; float: right; text-align: right; }
 #login, #lcogt-name { padding: 3px 8px; }
+#powered-by {float: right; position:relative; padding: 30px 0px 5px 0; }
+
 fieldset { margin: 0px; padding: 0px; }
 table { border-collapse: collapse; }
 
@@ -331,6 +333,7 @@ div p:first-child { margin-top: 0px; }
 #site-name strong { font-family: Century Gothic, sans-serif; font-size: 28px; line-height: 1em; color: #202020; display: block; }
 #site-name h1 { font-size: inherit; }
 #site-name h1 a { color: black; text-decoration: none; }
+#site-name #neox-version {font-size:80%;}
 #navigation { margin: 8px 0px 0px 0px; display: inline-block; }
 #extramenu .title, .title_form { overflow: hidden; line-height: 2em; text-decoration: none; color: #202020; display: block; width: auto; vertical-align: middle; }
 #extramenu .title_form { overflow: hidden; display: none; }
@@ -1099,10 +1102,11 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 
 @media (max-width: 1280px), (max-device-width: 1280px) {
 	#main-holder #sidebar { width: 400px; }
+
 }
 
 @media (max-width: 1024px), (max-device-width: 1024px) {
-
+  .container{width:auto;}
 	ol#observationlist li { width: 15.8%; height: auto; margin-right: 1%; }
 	ol#observationlist li:nth-child(6n) { margin-right: 0%; }
 
@@ -1115,6 +1119,38 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 	#main-holder #sidebar { width: 304px; }
 	ol#thread .datestamp { float: none; display: inline-block; }
 	.without-sidebar ol#thread .datestamp { float: right; display: inline-block; }
+  #powered-by {display:none;}
+  table.datatable {
+     border: 0;
+   }
+
+   table.datatable thead {
+     display: none;
+   }
+
+   table.datatable tr {
+     margin-bottom: 10px;
+     display: block;
+     border-bottom: 2px solid #ddd;
+   }
+
+   table.datatable td {
+     display: block;
+     text-align: right;
+     font-size: 13px;
+     border-bottom: 1px dotted #ccc;
+   }
+
+   table.datatable td:last-child {
+     border-bottom: 0;
+   }
+
+   table.datatable td:before {
+     content: attr(data-label);
+     float: left;
+     text-transform: uppercase;
+     font-weight: bold;
+   }
 }
 
 @media (max-width: 740px), (max-device-width: 740px) {

@@ -49,16 +49,16 @@
                                 <tbody>
                                 {% for block in block_list %}
                                         <tr class="{% cycle 'odd' 'even' %}">
-                                                <td class="list_title"><a href="{% url 'block' block.pk %}">{{block.pk}}</a></td>
-                                                <td class="list_title"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
-                                                <td>{{block.site|upper}}</td>
-                                                <td>{{block.telclass}}</td>
-                                                <td>{{block.proposal.code}}</td>
-                                                <td><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
-                                                <td>{{block.num_exposures}}x{{block.exp_length}} secs</td>
-                                                <td><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
-                                                <td>{{block.num_observed}}</td>
-                                                <td><span class="">{% if block.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
+                                                <td class="list_title"  data-label="Block #"><a href="{% url 'block' block.pk %}">{{block.pk}}</a></td>
+                                                <td class="list_title"  data-label="Target Name"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
+                                                <td data-label="Site">{{block.site|upper}}</td>
+                                                <td data-label="Telescope Type">{{block.telclass}}</td>
+                                                <td data-label="Proposal">{{block.proposal.code}}</td>
+                                                <td data-label="Tracking #"><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
+                                                <td data-label="Obs. details">{{block.num_exposures}}x{{block.exp_length}} secs</td>
+                                                <td data-label="Active?"><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
+                                                <td  data-label="Observed?">{{block.num_observed}}</td>
+                                                <td data-label="Reported?"><span class="">{% if block.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
                         </tr>
                                 {% endfor %}
                                 </tbody>

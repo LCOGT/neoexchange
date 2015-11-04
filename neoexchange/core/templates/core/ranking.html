@@ -69,22 +69,22 @@
             <tbody>
                 {% for body in newest|dictsortreversed:"FOM" %}
                 <tr class="{% cycle 'odd' 'even' %}">
-                    <td>{{forloop.counter}}</td>
-                    <td>{{body.FOM|stringformat:".1e" }}</td>
+                    <td data-label="Rank">{{forloop.counter}}</td>
+                    <td data-label="FOM">{{body.FOM|stringformat:".1e" }}</td>
                     <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
-                    <td>{{body.score}}</td>
-                    <td>{{body.discovery_date}}</td>
-                    <td>{{body.ra|radianstohms:" "}}</td>
-                    <td>{{body.dec|radianstodms:" "}}</td>
-                    <td>{{body.spd|floatformat:1 }}</td>
-                    <td>{{body.v_mag|floatformat:1 }}</td>
-                    <td>{{body.updated}}</td>
-                    <td>{{body.num_obs}}</td>
-                    <td>{{body.arc_length}}</td>
-                    <td>{{body.abs_mag}}</td>
-                    <td>{{body.not_seen}}</td>
-                    <td>{{body.observed}}</td>
-                    <td>{{body.reported}}</td>
+                    <td data-label="NEOCP Score">{{body.score}}</td>
+                    <td data-label="Discovery Date">{{body.discovery_date}}</td>
+                    <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
+                    <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
+                    <td data-label="South Polar Distance">{{body.spd|floatformat:1 }}</td>
+                    <td data-label="V Mag">{{body.v_mag|floatformat:1 }}</td>
+                    <td data-label="Updated?">{{body.updated}}</td>
+                    <td  data-label="Num. Obs.">{{body.num_obs}}</td>
+                    <td data-label="Arc">{{body.arc_length}}</td>
+                    <td data-label="H Mag">{{body.abs_mag}}</td>
+                    <td  data-label="Not seen for (days)">{{body.not_seen}}</td>
+                    <td data-label="Observed?">{{body.observed}}</td>
+                    <td data-label="Reported?">{{body.reported}}</td>
                     </tr>
                 {% empty%}
                     <tr><td colspan=16> No new targets</td></tr>

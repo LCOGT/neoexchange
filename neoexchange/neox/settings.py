@@ -4,6 +4,8 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
+VERSION = '1.0.10.2'
+
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
 DEBUG = False
@@ -101,6 +103,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'neox.neox_context.neox_context_processor',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
