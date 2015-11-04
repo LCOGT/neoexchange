@@ -67,17 +67,17 @@
             <tbody>
                 {% for body in newest|dictsortreversed:"FOM" %}
                 <tr class="{% cycle 'odd' 'even' %}">
-                    <td>{{forloop.counter}}</td>
-                    <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
-                    <td>{{body.type}}</td>
-                    <td>{{body.ra|radianstohms:" "}}</td>
-                    <td>{{body.dec|radianstodms:" "}}</td>
-                    <td>{{body.v_mag|floatformat:1 }}</td>
-                    <td>{{body.num_obs}}</td>
-                    <td>{{body.arc_length}}</td>
-                    <td>{{body.not_seen}}</td>
-                    <td>{{body.score}}</td>
-                    <td>{{body.updated}}</td>
+                    <td data-label="Rank">{{forloop.counter}}</td>
+                    <td class="list_title" data-label="Body Name"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
+                    <td data-label="Type">{{body.type}}</td>
+                    <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
+                    <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
+                    <td data-label="Mag">{{body.v_mag|floatformat:1 }}</td>
+                    <td data-label="Num Obs">{{body.num_obs}}</td>
+                    <td data-label="Arc">{{body.arc_length}}</td>
+                    <td data-label="Not seen">{{body.not_seen}}</td>
+                    <td data-label="NEOCP Score">{{body.score}}</td>
+                    <td data-label="Updated?">{{body.updated}}</td>
                     </tr>
                 {% empty%}
                     <tr><td colspan=11> No new targets</td></tr>
