@@ -8,9 +8,7 @@ class LayoutAndStylingTest(FunctionalTest):
         self.browser.get(self.live_server_url)
         self.browser.set_window_size(1280, 1024)
 
-        # He notices the input box is nicely centered
+        # He notices the targets box is offset from the left edge
         link = self.browser.find_element_by_partial_link_text('active targets')
-        self.assertAlmostEqual(
-            link.location['x'] + link.size['width'] /2 ,
-            640, delta=50
-        )
+        # Magic values from masthead padding in styles.css
+        self.assertGreaterEqual(link.location['x'] , 35)
