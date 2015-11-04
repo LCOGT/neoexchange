@@ -825,7 +825,8 @@ def block_status(block_id):
                     logger.error('Image %s x %s' % (event['id'], num_scheduled))
                     if (not block.when_observed or last_image > block.when_observed):
                         block.when_observed = last_image
-                    block.active = False
+                    if block.block_end < datetime.utcnow():
+                        block.active = False
                     block.save()
                     status = True
                     logger.debug("Block %s updated" % block)
