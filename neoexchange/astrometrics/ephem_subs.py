@@ -18,8 +18,6 @@ from datetime import datetime, timedelta, time
 import slalib as S
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10
 from numpy import array, concatenate, zeros
-import json
-
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -158,8 +156,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 # Asteroid position (and velocity)
 
     comet = False
-    if 'type' in orbelems and orbelems['type'].upper() == 'MPC_COMET':
+    jform = 2
+    if 'elements_type' in orbelems and str(orbelems['elements_type']).upper() == 'MPC_COMET':
         comet = True
+        jform = 3
 
 # Perturb elements
     if ericformat == True:
@@ -183,14 +183,14 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         if perturb == True:
             if comet == True:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                  p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(3, epoch_mjd,
+                  p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(jform, epoch_mjd,
                             mjd_tt, epoch_mjd, orbelems['inclination'].in_radians(), orbelems['long_node'].in_radians(),
                             orbelems['arg_perihelion'].in_radians(), orbelems['perihdist'], orbelems['eccentricity'],
                             0.0)
                 p_epoch_mjd = orbelems['epochofperih']
             else:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                  p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(2, epoch_mjd,
+                  p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(jform, epoch_mjd,
                             mjd_tt, epoch_mjd, orbelems['inclination'].in_radians(), orbelems['long_node'].in_radians(),
                             orbelems['arg_perihelion'].in_radians(), orbelems['semi_axis'], orbelems['eccentricity'],
                             orbelems['mean_anomaly'].in_radians())
@@ -208,6 +208,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                           'SemiAxisOrQ' : orbelems['perihdist'],
                           'Ecc' : orbelems['eccentricity'],
                          }
+            orbelems['meananom'] = 0.0
+            epoch_mjd = datetime2mjd_utc(orbelems['epochofperih'])
         else:
             p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
                           'Inc' : radians(orbelems['orbinc']),
@@ -220,7 +222,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         p_orbelems['G'] = orbelems['slope']
         if perturb == True:
             (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-              p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( 2, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
+                    p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
                         radians(orbelems['argofperih']), orbelems['meandist'], orbelems['eccentricity'],
                         radians(orbelems['meananom']))
         else:
@@ -228,7 +230,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
             j = 0
 
     if j != 0:
-        print "Perturbing error=%s" % j
+        logger.error("Perturbing error=%s" % j)
 
 
     r3 = -100.
@@ -241,12 +243,12 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     while (fabs(delta - r3) > .01):
         r3 = delta
         if comet == True:
-            (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), 3, p_epoch_mjd,
+            (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), jform, p_epoch_mjd,
                             p_orbelems['Inc'], p_orbelems['LongNode'],
                             p_orbelems['ArgPeri'], p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'],
                             0.0, 0.0)
         else:
-            (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), 2, p_epoch_mjd,
+            (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), jform, p_epoch_mjd,
                             p_orbelems['Inc'], p_orbelems['LongNode'],
                             p_orbelems['ArgPeri'], p_orbelems['SemiAxis'], p_orbelems['Ecc'],
                             p_orbelems['MeanAnom'], 0.0)
@@ -311,11 +313,13 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     total_motion, sky_pa, ra_motion, dec_motion = compute_sky_motion(sky_vel, delta, dbg)
 
+    mag = -99
     if comet == True:
     # Calculate magnitude of comet
     # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
-    # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the
-        mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
+    # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the elements
+        if p_orbelems['H'] and p_orbelems['G']:
+            mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
 
     else:
     # Compute phase angle, beta (Sun-Target-Earth angle)
@@ -327,8 +331,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     #    logger.debug("Phi1, phi2=%s" % phi1,phi2)
 
     # Calculate magnitude of object
-        mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
-            (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
+        if p_orbelems['H'] and p_orbelems['G']:
+            mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
+                (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
 
     az_rad, alt_rad = moon_alt_az(d, ra, dec, site_long, site_lat, site_hgt)
     airmass = S.sla_airmas((pi/2.0)-alt_rad)
