@@ -170,7 +170,6 @@ class TestPreviousNEOCPParser(TestCase):
         
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
-    
 
     def test_bad_comet(self):
 
@@ -178,6 +177,16 @@ class TestPreviousNEOCPParser(TestCase):
             BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004136.txt"><i>CBET</i> 4136</a>').a,
              u']\n']
         expected = [u'MAT01', u'C/2015 P3', u'CBET 4136', u'(Aug. 11.23 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_bad_comet2(self):
+
+        items = [u' Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)  [see ', 
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>').a,
+             u']\n']
+        expected = [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
         
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)

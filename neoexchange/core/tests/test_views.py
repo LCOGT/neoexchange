@@ -742,3 +742,36 @@ class TestClean_crossid(TestCase):
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
+
+    def test_comet_iauc_recent(self):
+        crossid =  u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 5.49 UT)'
+        expected_params = { 'active' : True,
+                            'name' : 'C/2015 V2',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_iauc_notrecent(self):
+        crossid =  u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 1.49 UT)'
+        expected_params = { 'active' : False,
+                            'name' : 'C/2015 V2',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_asteroid_number(self):
+        crossid =  u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)'
+        expected_params = { 'active' : False,
+                            'name' : 'C/2015 TQ209',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
