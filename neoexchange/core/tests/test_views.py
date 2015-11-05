@@ -26,7 +26,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
-from core.views import clean_NEOCP_object, save_and_make_revision, \
+from core.views import clean_NEOCP_object, clean_crossid, save_and_make_revision, \
     update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit, block_status
 from core.models import Body, Proposal, Block
 
@@ -649,3 +649,96 @@ class TestClean_mpcorbit(TestCase):
         new_expected_params['discovery_date'] = None
         self.assertEqual(new_expected_params, params)
 
+@patch('core.views.datetime', MockDateTime)
+class TestClean_crossid(TestCase):
+
+    def setUp(self):
+        MockDateTime.change_datetime(2015, 11, 5, 18, 0, 0)
+
+    def test_regular_asteroid(self):
+        crossid = u'P10p9py', u'2015 VV1', '', u'(Nov. 5.30 UT)'
+        expected_params = { 'active' : False,
+                            'name' : '2015 VV1',
+                            'source_type' : 'A'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_NEO_recent_confirm(self):
+        crossid = u'WV82468', u'2015 VB2', u'MPEC 2015-V51', u'(Nov. 5.60 UT)'
+        expected_params = { 'active' : True,
+                            'name' : '2015 VB2',
+                            'source_type' : 'N'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_NEO_older_confirm(self):
+        crossid = u'P10o0Ha', u'2015 SE20', u'MPEC 2015-T29', u'(Oct. 8.59 UT)'
+        expected_params = { 'active' : False,
+                            'name' : '2015 SE20',
+                            'source_type' : 'N'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_did_not_exist(self):
+        crossid =  u'WTB842B', 'doesnotexist', '', u'(Oct. 9.19 UT)'
+        expected_params = { 'active' : False,
+                            'name' : '',
+                            'source_type' : 'X'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_was_not_confirmed(self):
+        crossid =  u'P10oYZI', 'wasnotconfirmed', '', u'(Nov. 4.81 UT)'
+        expected_params = { 'active' : False,
+                            'name' : '',
+                            'source_type' : 'U'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_was_not_interesting(self):
+        crossid =  u'P10oYZI', '', '', u'(Nov. 4.81 UT)'
+        expected_params = { 'active' : False,
+                            'name' : '',
+                            'source_type' : 'W'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_cbet_recent(self):
+        crossid =  u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 5.49 UT)'
+        expected_params = { 'active' : True,
+                            'name' : 'C/2015 V2',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_cbet_notrecent(self):
+        crossid =  u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 1.49 UT)'
+        expected_params = { 'active' : False,
+                            'name' : 'C/2015 V2',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
