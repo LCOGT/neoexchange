@@ -606,10 +606,10 @@ def clean_crossid(astobj, dbg=False):
 
     interesting_cutoff = 3 * 86400  # 3 days in seconds
 
-    confirm_date = parse_neocp_date(astobj[3])
     obj_id = astobj[0].rstrip()
     desig = astobj[1]
     reference = astobj[2]
+    confirm_date = parse_neocp_date(astobj[3])
 
     time_from_confirm = datetime.utcnow() - confirm_date
     time_from_confirm = time_from_confirm.total_seconds()
@@ -634,8 +634,8 @@ def clean_crossid(astobj, dbg=False):
         active = False
     elif obj_id != '' and desig != '':
         # Confirmed
-        if 'CBET' in reference:
-            # There is a reference to an CBET so we assume it's "very
+        if ('CBET' in reference or 'IAUC' in reference) and 'C/' in desig:
+            # There is a reference to an CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
             objtype = 'C'
             if time_from_confirm > interesting_cutoff:
