@@ -1104,13 +1104,14 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 @media (max-width: 1280px), (max-device-width: 1280px) {
 	#main-holder #sidebar { width: 400px; }
   .container{width:auto;}
-  .row{min-width: 100%;}
-  #navigation form {display:none;}
+
 }
 
 @media (max-width: 1024px), (max-device-width: 1024px) {
   .container{width:auto;}
-  .row{min-width: 100%;}
+  .row {min-width: auto;}
+  h1 { font-size: 24px; margin-top: 0px; }
+
 	ol#observationlist li { width: 15.8%; height: auto; margin-right: 1%; }
 	ol#observationlist li:nth-child(6n) { margin-right: 0%; }
 
@@ -1123,44 +1124,11 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 	#main-holder #sidebar { width: 304px; }
 	ol#thread .datestamp { float: none; display: inline-block; }
 	.without-sidebar ol#thread .datestamp { float: right; display: inline-block; }
-  #powered-by {display:none;}
-  table.datatable {
-     border: 0;
-   }
-
-   table.datatable thead {
-     display: none;
-   }
-
-   table.datatable tr {
-     margin-bottom: 10px;
-     display: block;
-     border-bottom: 2px solid #ddd;
-   }
-
-   table.datatable td {
-     display: block;
-     text-align: right;
-     font-size: 13px;
-     border-bottom: 1px dotted #ccc;
-   }
-
-   table.datatable td:last-child {
-     border-bottom: 0;
-   }
-
-   table.datatable td:before {
-     content: attr(data-label);
-     float: left;
-     text-transform: uppercase;
-     font-weight: bold;
-   }
 }
 
 @media (max-width: 740px), (max-device-width: 740px) {
 	body { overflow: auto; }
 	#header { min-height: 64px; }
-	h1 { font-size: 24px; margin-top: 0px; }
 	#logo { margin-left: 16px; }
 	#navigation { margin: 8px 0px 0px 0px; display: block; float: none; }
 	.navlist li { padding-right: 8px; }
@@ -1222,9 +1190,46 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 	.threecol { width: 464px; }
 	.fourcol { width: 624px; }
 
+  #powered-by {display:none;}
+  table.datatable {
+     border: 0;
+   }
+
+   table.datatable thead {
+     display: none;
+   }
+
+   table.datatable tr, table.keyvalue-table tr {
+     margin-bottom: 10px;
+     display: block;
+     border-bottom: 2px solid #ddd;
+   }
+
+   table.datatable td, table.keyvalue-table td {
+     display: block;
+     text-align: right;
+     font-size: 13px;
+     border-bottom: 1px dotted #ccc;
+   }
+
+   table.datatable td:last-child {
+     border-bottom: 0;
+   }
+
+   table.datatable td:before {
+     content: attr(data-label);
+     float: left;
+     text-transform: uppercase;
+     font-weight: bold;
+   }
+
+   .btn { line-height: 1em; padding: 5px; font-size: 13px;}
+
 }
 
 @media (max-width: 600px), (max-device-width: 600px) {
+  #navigation form {display:none;}
+
 	.twocol { width: 304px; }
 	.threecol { width: 464px; }
 	.fourcol { width: 624px; }
@@ -1241,10 +1246,11 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 	#messages .close, .messages .close { right: 16px; top: 4px; }
 
 	h1, h2, h3, h4, p { margin-bottom: 8px; }
+  h1 { font-size: 1.2em;}
 	h2 { font-size: 1.3em; }
 	h3 { font-size: 1.1em; }
 	h4 { font-size: 1em; }
-	form select { width: 100%; margin-left: 0px; }
+	form select { margin-left: 0px; }
 
 	/* When the screen gets narrow we have problems displaying the logo
 	   and menu so we hide the graphic version of the logo and make a

@@ -189,11 +189,11 @@ LOGGING = {
         },
         'core' : {
             'handlers' : ['file','console'],
-            'level'    : 'DEBUG',
+            'level'    : 'ERROR',
         },
         'astrometrics' : {
             'handlers' : ['file','console'],
-            'level'    : 'DEBUG',
+            'level'    : 'ERROR',
         }
     }
 }
