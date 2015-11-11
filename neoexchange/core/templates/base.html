@@ -16,6 +16,8 @@
 		{% block css-content %}{% endblock %}
 		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 		<link rel="stylesheet" href="{% static "core/css/styles.css" %}">
+		<link rel="stylesheet" href="{% static "core/css/forms.css" %}">
+
         {% block last-css-content %}{% endblock %}
         <!--[if lt IE 9]>
         <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
@@ -81,6 +83,14 @@
 						</div>
 						<div id="site-name">
 							<strong>{% block title %}Minor planet follow-up portal{% endblock %}</strong>
+							<div id="neox-version">
+								v. {{neox_version}}
+							</div>
+						</div>
+						<div id="powered-by">
+							<a href="http://lcogt.net" title="LCOGT Home" rel="home">
+								<img src="{% static 'core/images/logo-gray-poweredby.png' %}" alt="Home" id="logo-image2" />
+							</a>
 						</div>
 					</div>
 					</div>
@@ -107,9 +117,10 @@
 									</li>
 								</ul>
 								{% endblock %}
-								<form action="{% url 'search' %}" method="GET" style="display:inline-block;">
-									<input type='text' placeholder="Object name" name="q" id="id_target_search" /> 
-									<input type="submit" class="button keepvisible" role="menuitem" value="Search" id="id_search_submit">
+
+								<form action="{% url 'search' %}" method="GET">
+									<input type='text' placeholder="Object name" name="q" />
+									<input type="submit" class="button keepvisible" role="menuitem" value="Search">
 								</form>
 							</nav>
 						</div>

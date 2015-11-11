@@ -614,10 +614,10 @@ def clean_crossid(astobj, dbg=False):
 
     interesting_cutoff = 3 * 86400  # 3 days in seconds
 
-    confirm_date = parse_neocp_date(astobj[3])
     obj_id = astobj[0].rstrip()
     desig = astobj[1]
     reference = astobj[2]
+    confirm_date = parse_neocp_date(astobj[3])
 
     time_from_confirm = datetime.utcnow() - confirm_date
     time_from_confirm = time_from_confirm.total_seconds()
@@ -642,8 +642,8 @@ def clean_crossid(astobj, dbg=False):
         active = False
     elif obj_id != '' and desig != '':
         # Confirmed
-        if 'CBET' in reference:
-            # There is a reference to an CBET so we assume it's "very
+        if ('CBET' in reference or 'IAUC' in reference) and 'C/' in desig:
+            # There is a reference to an CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
             objtype = 'C'
             if time_from_confirm > interesting_cutoff:
@@ -769,30 +769,15 @@ def create_source_measurement(obs_lines, dbg=False):
     if type(obs_lines) != list:
         obs_lines = [obs_lines,]
 
-    for obs_line in obs_lines:    
+    for obs_line in obs_lines:
         if dbg: print obs_line.rstrip()
         measure = None
         params = parse_mpcobs(obs_line)
         if params:
             try:
                 obs_body = Body.objects.get(provisional_name=params['body'])
-#                print obs_body
-                our_site_codes = LCOGT_site_codes()
-                if params['site_code'] in our_site_codes:
-                    if params['flags'] != 'K':
-                        frame_type = Frame.SINGLE_FRAMETYPE
-                    else:
-                        frame_type = Frame.STACK_FRAMETYPE
-                else:
-                    frame_type = Frame.NONLCO_FRAMETYPE
-                frame_params = { 'midpoint' : params['obs_date'], 
-                                 'sitecode' : params['site_code'], 
-                                 'filter'   : params['filter'],
-                                 'frametype' : frame_type
-                               }
-                frame, frame_created = Frame.objects.get_or_create(**frame_params)
-
-                measure_params = {  'body'    : obs_body, 
+                frame = create_frame(params)
+                measure_params = {  'body'    : obs_body,
                                     'frame'   : frame,
                                     'obs_ra'  : params['obs_ra'],
                                     'obs_dec' : params['obs_dec'],
@@ -808,7 +793,7 @@ def create_source_measurement(obs_lines, dbg=False):
             except Body.MultipleObjectsReturned:
                 logger.warn("Multiple versions of Body %s exist" % params['body'])
                 measure = None
-                
+
     return measure
 
 def check_request_status(tracking_num=None):
@@ -831,7 +816,7 @@ def check_for_images(eventid=False):
     images = None
     client = requests.session()
     login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
-    data_url = 'https://data.lcogt.net/find?blkuid=%s&order_by=-date_obs' % eventid
+    data_url = 'https://data.lcogt.net/find?blkuid=%s&order_by=-date_obs&full_header=1' % eventid
     try:
         resp = client.post(data_url, data=login_data, timeout=20)
         images = resp.json()
@@ -840,6 +825,59 @@ def check_for_images(eventid=False):
     except requests.exceptions.Timeout:
         logger.error("Data view timed out")
     return images
+
+def create_frame(params, block=None):
+    our_site_codes = LCOGT_site_codes()
+    if params.get('groupid', None):
+    # In these cases we are parsing the FITS header
+        frame_params = frame_params_from_block(params, block)
+    else:
+        # We are parsing observation logs
+        frame_params = frame_params_from_log(params)
+    frame, frame_created = Frame.objects.get_or_create(**frame_params)
+    if frame_created:
+        msg = "created"
+    else:
+        msg = "updated"
+    logger.debug("Frame %s %s" % (frame, msg))
+    return frame
+
+def frame_params_from_block(params, block):
+    # In these cases we are parsing the FITS header
+    frame_params = { 'midpoint' : params.get('date_obs', None),
+                     'sitecode' : params.get('siteid', None),
+                     'filter'   : params.get('filter_name', None),
+                     'frametype': Frame.NONLCO_FRAMETYPE,
+                     'block'    : block,
+                     'instrument': params.get('instrume', None),
+                     'filename'  : params.get('origname', None),
+                     'exptime'   : params.get('exptime', None),
+                 }
+    return frame_params
+
+def frame_params_from_log(params):
+    our_site_codes = LCOGT_site_codes()
+    # We are parsing observation logs
+    sitecode = params.get('site_code', None)
+    if sitecode in our_site_codes:
+        if params.get('flags', None) != 'K':
+            frame_type = Frame.SINGLE_FRAMETYPE
+        else:
+            frame_type = Frame.STACK_FRAMETYPE
+    else:
+        frame_type = Frame.NONLCO_FRAMETYPE
+    frame_params = { 'midpoint' : params.get('obs_date', None),
+                     'sitecode' : sitecode,
+                     'filter'   : params.get('filter', None),
+                     'frametype' : frame_type
+                   }
+    return frame_params
+
+def ingest_frames(images, block):
+    for image in images:
+        frame = create_frame(image, block)
+    logger.debug("Ingested %s frames" % len(images))
+    return
 
 def block_status(block_id):
     '''
@@ -880,10 +918,12 @@ def block_status(block_id):
                     logger.error('Image %s x %s' % (event['id'], num_scheduled))
                     if (not block.when_observed or last_image > block.when_observed):
                         block.when_observed = last_image
-                    block.active = False
+                    if block.block_end < datetime.utcnow():
+                        block.active = False
                     block.save()
                     status = True
                     logger.debug("Block %s updated" % block)
+                    resp = ingest_frames(images, block)
                 else:
                     logger.debug("No update to block %s" % block)
     return status

@@ -108,10 +108,18 @@ def parse_previous_NEOCP_id(items, dbg=False):
             mpec = ''
         else:
             if dbg: print "Comet found, parsing"
-#            print "Items=",items
+            if dbg: print "Items=",items
 
             items[0] = sub(r"\s+\(", r"(", items[0])
+            # Occasionally we get things of the form " Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)"
+            # without the leading "C/<year>". The regexp below fixes this by 
+            # looking for any amount of whitespace at the start of the string, 
+            # the word 'Comet',any amount of whitespace, and any amount of 
+            # digits (the '(?=') part looks for but doesn't capture/remove the
+            # regexp that follows 
+            items[0] = sub(r"^\s+Comet\s+(?=\d+)", r"Comet C/", items[0])
             subitems = items[0].lstrip().split()
+            if dbg: print "Subitems=", subitems
             newid = subitems[1] + ' ' + subitems[2]
             provid_date = subitems[4].split('(')
             provid = provid_date[0]

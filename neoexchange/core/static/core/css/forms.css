@@ -16,7 +16,7 @@
 }
 
 .lm20px {
-	margin-left:20px;	
+	margin-left:20px;
 }
 
 .errorField {
@@ -62,7 +62,7 @@
 .ulcol {
 	float: left;
     margin: 10px !important;
-    width: auto !important;	
+    width: auto !important;
 }
 
 div.error input, div.error select, div.error textarea {
@@ -157,7 +157,7 @@ form.proposalsubmit_admin .proposalsubmit_credit label {
 .home-form input[type="url"],
 .home-form input[type="password"],
 .home-form textarea,
-.home-form select 
+.home-form select
 {
     box-sizing: border-box;
     -webkit-box-sizing: border-box;
@@ -176,7 +176,7 @@ form.proposalsubmit_admin .proposalsubmit_credit label {
 }
 
 .compact-field {
-	float:left;
+	display:inline-block;
 	padding-right: 16px;
 }
 .compact-field input, .compact-field label {
@@ -189,4 +189,6 @@ form.proposalsubmit_admin .proposalsubmit_credit label {
 
 @media (max-width: 800px), (max-device-width: 800px) {
 	.pform { padding: 10px; margin:0px 20px 20px 20px; width:auto; }
+	.inline-fields .compact-field {float:none;display:block;}
+
 }

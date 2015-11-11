@@ -15,40 +15,36 @@
     <div class="container">
         <div id="main">
             {% if body.id  and form %}
-            <form action="{% url 'schedule-body' body.id %}" method="POST">
+            <h3 class="section-title">Parameters for: {{body.current_name}}</h3>
+            <div class="section-title">
+            <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
+            {% csrf_token %}
             <div class="row">
-                    {% csrf_token %}
-                    <h3 class="section-title">Parameters for: {{body.current_name}}</h3>
-                    <table class="keyvalue-table" style="width:100%">
-                        <tbody>
-                            <tr>
-                                <td class="kv-key">Proposal</td>
-                                <td class="kv-value">{{ form.proposal_code }}</td>
-                            </tr>
-                            <tr>
-                                <td class="kv-key">Site code</td>
-                                <td class="kv-value">{{ form.site_code }}</td>
-                            </tr>
-                            <tr>
-                                <td class="kv-key">UTC Date</td>
-                                <td class="kv-value">{{ form.utc_date }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    {% for key, error in form.errors.items %}
-                        <div class="messages error">
-                            {{ error }}
-                        </div>
-                   {% endfor %}
+              <div class="inline-fields">
+                <div class="compact-field">
+                {{ form.utc_date }}<label for="id_utc_date">UTC date</label>
+                </div>
+                <div class="compact-field">
+                {{ form.site_code }}<label for="id_site_code">Site</label>
+                </div>
+                <div class="compact-field">
+                  {{ form.proposal_code }}<label for="id_proposal_code">Proposal</label>
+                </div>
+              </div>
+
+            {% for key, error in form.errors.items %}
+                <div class="messages error">
+                    {{ error }}
+                </div>
+           {% endfor %}
             </div>
             <div class="row">
                     <input type="submit" class="btn btn-secondary" value="Verify before Scheduling">
             </div>
-                </div>
-                </form>
+            </form>
+            </div>
             {% endif %}
             </div>
         </div>
-    </div>
 
 {% endblock %}
