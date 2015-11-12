@@ -45,7 +45,7 @@ class Command(BaseCommand):
                 obslines = obsfile_fh.readlines()
                 obsfile_fh.close()
 
-                measure = create_source_measurement(obslines, True)
+                measure = create_source_measurement(obslines)
                 if measure:
                     msg = "Created SourceMeasurements for %s" % new_rock
                 else:
@@ -53,5 +53,3 @@ class Command(BaseCommand):
                 self.stdout.write(msg)
             except IOError:
                 self.stdout.write("File %s not found" % new_rock)
-            
-

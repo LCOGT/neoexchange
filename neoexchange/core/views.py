@@ -32,7 +32,7 @@ import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes
-from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm
+from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs
@@ -131,6 +131,25 @@ class BlockReport(LoginRequiredMixin, View):
         block.when_reported = datetime.utcnow()
         block.save()
         return redirect(reverse('blocklist'))
+
+class UploadReport(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        form = MPCReportForm()
+        return render(request, 'core/uploadreport.html', {'form':form})
+
+    def post(self, request, *args, **kwargs):
+        form = MPCReportForm(request.POST)
+        return redirect(reverse('blocklist'))
+
+
+class ViewMPCReport(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        block = Block.objects.get(pk=kwargs['pk'])
+        frames = Frame.objects.filter(block=block).values_list('id',flat=True)
+        sources = SourceMeasurement.objects.filter(frame__in=frames)
+        return render(request, 'core/mpcreport.html', {'block':block,'sources':sources})
 
 class MeasurementView(View):
 
@@ -767,13 +786,13 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         logger.info("Added new orbit for %s" % obj_id)
     return True
 
-def create_source_measurement(obs_lines, dbg=False):
+def create_source_measurement(obs_lines):
 
     if type(obs_lines) != list:
         obs_lines = [obs_lines,]
 
     for obs_line in obs_lines:
-        if dbg: print obs_line.rstrip()
+        logger.debug(obs_line.rstrip())
         measure = None
         params = parse_mpcobs(obs_line)
         if params:
@@ -791,7 +810,7 @@ def create_source_measurement(obs_lines, dbg=False):
                                  }
                 measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
             except Body.DoesNotExist:
-                print("Body %s does not exist" % params['body'])
+                logger.debug("Body %s does not exist" % params['body'])
                 measure = None
             except Body.MultipleObjectsReturned:
                 logger.warn("Multiple versions of Body %s exist" % params['body'])

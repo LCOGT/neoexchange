@@ -93,3 +93,12 @@ class ScheduleBlockForm(forms.Form):
             raise forms.ValidationError("There must be more than 1 exposure")
         elif self.cleaned_data['exp_length'] < 0.1:
             raise forms.ValidationError("Exposure length is too short")
+
+class MPCReportForm(forms.Form):
+    report = forms.CharField(widget=forms.Textarea)
+
+    def clean(self):
+        obslines = self.cleaned_data['report'].splitlines()
+        measure = create_source_measurement(obslines)
+        if not measure:
+            raise forms.ValidationError('MPC report did not parse correctly')

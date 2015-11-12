@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block header %}Upload MPC format report{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Upload report in MPC format</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div class="container">
+        <div id="main">
+            <form action="" method="POST">
+            {% csrf_token %}
+            <div class="row">
+              {{form}}
+              <input type="Submit" value="Upload MPC report">
+            </div>
+          </form>
+        </div>
+    </div>
+{% endblock %}
