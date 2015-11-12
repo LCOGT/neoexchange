@@ -343,6 +343,8 @@ def build_unranked_list_params():
             body_dict['FOM'] = body.compute_FOM
             body_dict['current_name'] = body.current_name()
             emp_line = body.compute_position()
+            if not emp_line:
+                continue
             body_dict['ra'] = emp_line[0]
             body_dict['dec'] = emp_line[1]
             body_dict['v_mag'] = emp_line[2]
@@ -350,9 +352,10 @@ def build_unranked_list_params():
             body_dict['observed'], body_dict['reported'] = body.get_block_info()
             body_dict['type'] = body.get_source_type_display()
             unranked.append(body_dict)
-    except:
+    except Exception, e:
         latest = None
         unranked = None
+        logger.error('Ranking failed on %s' % e)
     params = {
         'targets': Body.objects.filter(active=True).count(),
         'blocks': Block.objects.filter(active=True).count(),
