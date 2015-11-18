@@ -31,7 +31,7 @@ urlpatterns = [
     url(r'^block/report/(?P<pk>\d+)/$',BlockReport.as_view(), name='report-block'),
     url(r'^block/(?P<pk>\d+)/upload/$',UploadReport.as_view(), name='upload-report'),
     url(r'^block/(?P<pk>\d+)/mpc/$',ViewMPCReport.as_view(), name='view-report'),
-    url(r'^block/(?P<pk>\d+)/$',BlockDetailView.as_view(model=Block), name='block'),
+    url(r'^block/(?P<pk>\d+)/$',BlockDetailView.as_view(model=Block), name='block-view'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/$',BodyDetailView.as_view(model=Body), name='target'),
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),

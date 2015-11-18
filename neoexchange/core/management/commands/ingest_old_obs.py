@@ -47,9 +47,9 @@ class Command(BaseCommand):
 
                 measure = create_source_measurement(obslines)
                 if measure:
-                    msg = "Created SourceMeasurements for %s" % new_rock
+                    msg = "\033[92mCreated SourceMeasurements for %s \033[0m" % new_rock
                 else:
-                    msg = "Could not create SourceMeasurements for %s" % new_rock
+                    msg = "\033[93mCould not create SourceMeasurements for %s \033[0m" % new_rock
                 self.stdout.write(msg)
             except IOError:
                 self.stdout.write("File %s not found" % new_rock)

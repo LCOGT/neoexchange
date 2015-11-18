@@ -15,8 +15,8 @@
     <div class="container">
         <div id="main">
             <div class="row">
+              <h3>Report for <a href="{% url 'target' slot.body.id %}">{{slot.body.name}}</a> in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a></h3>
               {% if sources %}
-              <h3>Report for <a href="{% url 'target' block.body.id %}">{{block.body.name}}</a> in block <a href="{% url 'block' block.id %}">&hash; {{block.id}}</a></h3>
               <pre>
                 {% for source in sources %}
      {{source.body.provisional_packed}}  {{source.obs_ra}} {{source.obs_dec}}

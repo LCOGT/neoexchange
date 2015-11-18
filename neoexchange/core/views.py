@@ -20,7 +20,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
@@ -132,15 +132,28 @@ class BlockReport(LoginRequiredMixin, View):
         block.save()
         return redirect(reverse('blocklist'))
 
-class UploadReport(LoginRequiredMixin, View):
+class UploadReport(LoginRequiredMixin, FormView):
+    template_name = 'core/uploadreport.html'
+    success_url = reverse_lazy('blocklist')
+    form_class = MPCReportForm
 
     def get(self, request, *args, **kwargs):
-        form = MPCReportForm()
-        return render(request, 'core/uploadreport.html', {'form':form})
+        block = Block.objects.get(pk=kwargs['pk'])
+        form = MPCReportForm(initial={'block_id':block.id})
+        return render(request, 'core/uploadreport.html', {'form':form,'slot':block})
 
-    def post(self, request, *args, **kwargs):
-        form = MPCReportForm(request.POST)
-        return redirect(reverse('blocklist'))
+    def form_invalid(self, form, **kwargs):
+        context = self.get_context_data(**kwargs)
+        print context['view'].request
+        slot = Block.objects.get(pk=form['block_id'].value())
+        return render(context['view'].request, 'core/uploadreport.html', {'form':form,'slot':slot})
+
+    def form_valid(self, form):
+        obslines = form.cleaned_data['report'].splitlines()
+        measure = create_source_measurement(obslines, form.cleaned_data['block'])
+        messages.success(self.request, 'Added source measurements for %s' % form.cleaned_data['block'])
+        return super(UploadReport, self).form_valid(form)
+
 
 
 class ViewMPCReport(LoginRequiredMixin, View):
@@ -149,7 +162,7 @@ class ViewMPCReport(LoginRequiredMixin, View):
         block = Block.objects.get(pk=kwargs['pk'])
         frames = Frame.objects.filter(block=block).values_list('id',flat=True)
         sources = SourceMeasurement.objects.filter(frame__in=frames)
-        return render(request, 'core/mpcreport.html', {'block':block,'sources':sources})
+        return render(request, 'core/mpcreport.html', {'slot':block,'sources':sources})
 
 class MeasurementView(View):
 
@@ -786,8 +799,8 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         logger.info("Added new orbit for %s" % obj_id)
     return True
 
-def create_source_measurement(obs_lines):
-
+def create_source_measurement(obs_lines, block=None):
+    measure = None
     if type(obs_lines) != list:
         obs_lines = [obs_lines,]
 
@@ -798,7 +811,13 @@ def create_source_measurement(obs_lines):
         if params:
             try:
                 obs_body = Body.objects.get(provisional_name=params['body'])
-                frame = create_frame(params)
+                # Identify block
+                if not block:
+                    blocks = Block.objects.filter(block_start__lte=params['obs_date'], block_end__gte=params['obs_date'], body=obs_body)
+                    if blocks:
+                        logger.debug("Found %s blocks for %s" % (blocks.count(), obs_body))
+                        block = blocks[0]
+                frame = create_frame(params, block)
                 measure_params = {  'body'    : obs_body,
                                     'frame'   : frame,
                                     'obs_ra'  : params['obs_ra'],

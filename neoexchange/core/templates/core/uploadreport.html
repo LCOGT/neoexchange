@@ -14,13 +14,15 @@
 {% block main-content %}
     <div class="container">
         <div id="main">
+            <div class="row">
+            <p>Upload the MPC format report for block <a href="{% url 'block-view' slot.id %}">#{{slot.id}}</a>, {{slot.block_start|date:"c"}} &rarr; {{slot.block_end|date:"c"}} @ {{slot.get_site_display}}.</p>
             <form action="" method="POST">
             {% csrf_token %}
-            <div class="row">
               {{form}}
-              <input type="Submit" value="Upload MPC report">
-            </div>
+              <br/><br/>
+              <input type="Submit" value="Upload MPC report" class="btn btn-secondary">
           </form>
+          </div>
         </div>
     </div>
 {% endblock %}
