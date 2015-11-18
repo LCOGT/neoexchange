@@ -377,7 +377,7 @@ def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
       (a) the object was no longer on the NEOCP or
       (b) the file already exists and [delete] is not True'''
 
-    NEOCP_obs_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
+    NEOCP_obs_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
 
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
 
@@ -419,7 +419,7 @@ def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
       (a) the object was no longer on the NEOCP or
       (b) the file already exists and [delete] is not True'''
 
-    NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&orb=y'
+    NEOCP_orb_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&orb=y'
 
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
 
