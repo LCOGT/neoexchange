@@ -25,7 +25,8 @@ from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, \
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
-    parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs
+    parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
+    fetch_NEOCP_observations
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -962,3 +963,37 @@ class TestParseMPCObsFormat(TestCase):
         params = parse_mpcobs(self.test_lines['p_ C_f'])
 
         self.compare_dict(expected_params, params)
+
+class TestFetchNEOCPObservations(TestCase):
+
+    def setUp(self):
+
+        self.maxDiff = None
+
+    def test_removed_object(self):
+        page = BeautifulSoup('<html><body><pre>\nNone available at this time.\n</pre></body></html>')
+        expected = None
+
+        observations = fetch_NEOCP_observations(page)
+        self.assertEqual(expected, observations)
+
+    def test_readlines(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'), 'r')
+        obs_data = test_fh.read()
+        test_fh.close()
+        page = BeautifulSoup(obs_data)
+
+        expected = [u'     P10pqB2  C2015 11 17.40000 03 44 26.153-07 26 22.40         20.8 wLNEOCPF51',
+                    u'     P10pqB2  C2015 11 17.41166 03 44 24.591-07 26 51.93         20.9 wLNEOCPF51',
+                    u'     P10pqB2  C2015 11 17.43505 03 44 21.461-07 27 51.02         20.9 wLNEOCPF51',
+                    u'     P10pqB2 KC2015 11 18.24829 03 42 40.57 -08 02 06.0          20.6 RoNEOCP291',
+                    u'     P10pqB2 KC2015 11 18.24999 03 42 40.36 -08 02 10.2          20.6 RoNEOCP291',
+                    u'     P10pqB2 KC2015 11 18.25170 03 42 40.13 -08 02 14.4          20.6 RoNEOCP291',
+                    u'     P10pqB2 KC2015 11 18.33020 03 42 29.28 -08 05 31.8                oNEOCP711',
+                    u'     P10pqB2 KC2015 11 18.33314 03 42 28.87 -08 05 39.2                oNEOCP711',
+                    u'     P10pqB2 KC2015 11 18.33622 03 42 28.44 -08 05 46.7                oNEOCP711',
+        ]
+
+        observations = fetch_NEOCP_observations(page)
+        self.assertEqual(expected, observations)
+      

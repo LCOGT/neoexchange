@@ -812,6 +812,26 @@ def fetch_goldstone_targets(dbg=False):
                 last_year_seen = year
     return  radar_objects
 
+def fetch_NEOCP_observations(obj_id_or_page):
+
+    if type(obj_id_or_page) != BeautifulSoup:
+        obj_id = obj_id_or_page
+        NEOCP_obs_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
+        neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
+    else:
+        neocp_obs_page = obj_id_or_page
+
+
+# If the object has left the NEOCP, the HTML will say 'None available at this time.'
+# and the length of the list will be 1 (but clean of blank lines first using 
+# list comprehension)
+    obs_page_list = [line for line in neocp_obs_page.text.split('\n') if line.strip() != '']
+    obs_lines = None
+    if len(obs_page_list) > 1:
+        obs_lines = obs_page_list
+
+    return obs_lines
+
 def make_location(params):
     location = {
         'telescope_class' : params['pondtelescope'][0:3],
