@@ -369,89 +369,31 @@ def parse_PCCP(pccp_page, dbg=False):
 
     return new_objects
 
-def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
-    '''Query the MPC's showobs service with the specified <obj_id> and
-    it will write the observations found into <savedir>/<obj_id>.dat
-    The file will not be overwritten if it exists unless 'delete=True'
-    Returns the number of lines written or None if:
-      (a) the object was no longer on the NEOCP or
-      (b) the file already exists and [delete] is not True'''
+def fetch_NEOCP_observations(obj_id_or_page):
+    '''Query the MPC's showobs service with the specified <obj_id_or_page>. If
+    the type of <obj_id_or_page> is not a BeautifulSoup object, it will do a 
+    fetch of the page of the page from the MPC first. Then the passed or 
+    downloaded page is turned into a list of unicode strings with blank lines
+    removed, which is returned. In the case of the object not existing or having
+    being removed from the NEOCP,  None is returned.'''
 
-    NEOCP_obs_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
+    if type(obj_id_or_page) != BeautifulSoup:
+        obj_id = obj_id_or_page
+        NEOCP_obs_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
+        neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
+    else:
+        neocp_obs_page = obj_id_or_page
 
-    neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
-
-    obs_page_list = neocp_obs_page.text.split('\n')
 
 # If the object has left the NEOCP, the HTML will say 'None available at this time.'
-# and the length of the list will be 1
-    lines_written = None
+# and the length of the list will be 1 (but clean of blank lines first using 
+# list comprehension)
+    obs_page_list = [line for line in neocp_obs_page.text.split('\n') if line.strip() != '']
+    obs_lines = None
     if len(obs_page_list) > 1:
-    # Create save directory if it doesn't exist
-        if not os.path.isdir(savedir): os.mkdir(savedir)
+        obs_lines = obs_page_list
 
-        print "Will save files in", savedir
-        neocand_filename = os.path.join(savedir, obj_id + '.dat')
-        if delete: os.remove(neocand_filename)
-        if os.path.isfile(neocand_filename) == False:
-            neo_cand_fh = open(neocand_filename, 'w')
-            for line in obs_page_list:
-                obs_page_line = "%80s" % (line)
-                print >> neo_cand_fh, obs_page_line
-            neo_cand_fh.close()
-            lines_written = len(obs_page_list)
-            print "Wrote", lines_written, "MPC lines to", neocand_filename
-        else:
-            print "File", neocand_filename, "already exists, not overwriting."
-
-    else:
-        print "Object", obj_id, "no longer exists on the NEOCP."
-
-    return lines_written
-
-def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
-    '''Query the MPC's showobs service with the specified <obj_id> and
-    it will write the orbit found into <savedir>/<obj_id>.neocp
-    Only the first of the potential orbits (the 'NEOCPNomin' nominal orbit) is
-    returned if there are multiple orbits found.
-    The file will not be overwritten if it exists unless 'delete=True'
-    Returns the number of lines written or None if:
-      (a) the object was no longer on the NEOCP or
-      (b) the file already exists and [delete] is not True'''
-
-    NEOCP_orb_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&orb=y'
-
-    neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
-
-    obs_page_list = neocp_obs_page.text.split('\n')
-
-# If the object has left the NEOCP, the HTML will say 'None available at this time.'
-# and the length of the list will be 1
-    orbit_lines_written = None
-    if len(obs_page_list) > 1:
-    # Create save directory if it doesn't exist
-        if not os.path.isdir(savedir): os.mkdir(savedir)
-
-        if dbg: print "Will save files in", savedir
-        neocand_filename = os.path.join(savedir, obj_id + '.neocp')
-        if delete and os.path.isfile(neocand_filename): os.remove(neocand_filename)
-        orbit_lines_written = 0
-        if os.path.isfile(neocand_filename) == False:
-            for line in obs_page_list:
-                if 'NEOCPNomin' in line:
-                    neo_orbit_fh = open(neocand_filename, 'w')
-#                obs_page_line = "%80s" % ( line )
-                    print >> neo_orbit_fh, line
-                    neo_orbit_fh.close()
-                    orbit_lines_written = orbit_lines_written + 1
-            if dbg: print "Wrote", orbit_lines_written, "orbit lines to", neocand_filename
-        else:
-            if dbg: print "File", neocand_filename, "already exists, not overwriting."
-
-    else:
-        if dbg: print "Object", obj_id, "no longer exists on the NEOCP."
-
-    return orbit_lines_written
+    return obs_lines
 
 def fetch_mpcobs(asteroid, debug=False):
     '''Performs a search on the MPC Database for <asteroid> and returns the
@@ -811,26 +753,6 @@ def fetch_goldstone_targets(dbg=False):
                         radar_objects.append(obj_id)
                 last_year_seen = year
     return  radar_objects
-
-def fetch_NEOCP_observations(obj_id_or_page):
-
-    if type(obj_id_or_page) != BeautifulSoup:
-        obj_id = obj_id_or_page
-        NEOCP_obs_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
-        neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
-    else:
-        neocp_obs_page = obj_id_or_page
-
-
-# If the object has left the NEOCP, the HTML will say 'None available at this time.'
-# and the length of the list will be 1 (but clean of blank lines first using 
-# list comprehension)
-    obs_page_list = [line for line in neocp_obs_page.text.split('\n') if line.strip() != '']
-    obs_lines = None
-    if len(obs_page_list) > 1:
-        obs_lines = obs_page_list
-
-    return obs_lines
 
 def make_location(params):
     location = {
