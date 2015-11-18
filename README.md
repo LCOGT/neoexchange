@@ -1,7 +1,7 @@
 NEO Exchange
 ============
 
-Portal for scheduling observations of NEOs using LCOGT (Version 1.0.10.2)
+Portal for scheduling observations of NEOs using LCOGT
 
 Local Setup
 -----------
@@ -62,7 +62,7 @@ You will need to set up 3 environment variables before deploying (if you are jus
 If you are using BASH or ZSH add the following to your .profile or .zshrc files:
 ```bash
 export NEOX_DB_USER='<insert your DB username>'
-export NEOX_DB_PASSWORD='<insert your DB password>'
+export NEOX_DB_PASSWD='<insert your DB password>'
 export NEOX_DB_HOST='<insert the name of your DB server>'
 ```
 

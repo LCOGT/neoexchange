@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block header %}MPC format report{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Report in MPC format</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div class="container">
+        <div id="main">
+            <div class="row">
+              <h3>Report for <a href="{% url 'target' slot.body.id %}">{{slot.body.name}}</a> in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a></h3>
+              {% if sources %}
+              <pre>
+                {% for source in sources %}
+     {{source.body.provisional_packed}}  {{source.obs_ra}} {{source.obs_dec}}
+                {% endfor %}
+              </pre>
+              {% else %}
+              <h3>No report has been made for this block.</h3>
+              {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}

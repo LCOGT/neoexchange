@@ -24,17 +24,17 @@
 									<span class="sortable" id="origin">Origin</span>
 								</th>
 								<th>
-									<span class="sortable" id="timestamp">Ingested</span>
+									<span class="sortable" id="timestamp">Ingest date</span>
 								</th>
 							</tr>
 						</thead>
 						<tbody>
 						{% for body in target_list %}
 							<tr class="{% cycle 'odd' 'even' %}">
-								<td class="list_title"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
-								<td>{{body.get_source_type_display}}</td>
-								<td>{{body.get_origin_display}}</td>
-								<td>
+								<td class="list_title" data-label="Name"><a href="{% url 'target' body.pk %}">{{body.current_name}}</a></td>
+								<td data-label="Type">{{body.get_source_type_display}}</td>
+								<td data-label="Origin">{{body.get_origin_display}}</td>
+								<td  data-label="Ingest date">
 									<time class="datestamp nicedate" datetime="{{ body.ingest|date:'c' }}">
 										{{ body.ingest|date:'j M Y, H:i' }}
 									</time>

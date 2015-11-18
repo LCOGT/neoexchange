@@ -16,26 +16,26 @@ def banner():
 
     # The raw banner split into lines.
     lines = ("""
-        
-.__   __.  _______   ______   ___   ___ 
-|  \ |  | |   ____| /  __  \  \  \ /  / 
-|   \|  | |  |__   |  |  |  |  \  V  /  
-|  . `  | |   __|  |  |  |  |   >   <   
-|  |\   | |  |____ |  `--'  |  /  .  \  
-|__| \__| |_______| \______/  /__/ \__\ 
+.__   __.  _______   ______   ___   ___
+|  \ |  | |   ____| /  __  \  \  \ /  /
+|   \|  | |  |__   |  |  |  |  \  V  /
+|  . `  | |   __|  |  |  |  |   >   <
+|  |\   | |  |____ |  `--'  |  /  .  \\
+|__| \__| |_______| \______/  /__/ \__\\
+
 
 * Django %(django_version)s
 * Python %(python_version)s
 * %(os_name)s %(os_version)s
+* NEOx %(neox_version)s
 
 """ % {
         "django_version": django.get_version(),
         "python_version": sys.version.split(" ", 1)[0],
         "os_name": platform.system(),
         "os_version": platform.release(),
+        "neox_version" : settings.VERSION,
     }).splitlines()
-    if django.VERSION >= (1, 7):
-        lines = lines[2:]
 
     return "\n".join(lines)
 

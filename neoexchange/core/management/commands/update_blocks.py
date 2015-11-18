@@ -8,7 +8,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__lte=datetime.now())
-        self.stdout.write("==== %s Active Blocks in current horizon %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
+        self.stdout.write("==== %s Completed Blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
+        for block in blocks:
+            block_status(block.id)
+        blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__gte=datetime.now())
+        self.stdout.write("==== %s Currently Executing Blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
         for block in blocks:
             block_status(block.id)
         inconsistent_blocks = Block.objects.filter(active=True, block_end__lt=datetime.utcnow())

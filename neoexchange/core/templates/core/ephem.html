@@ -64,17 +64,17 @@
                 <tbody>
                     {% for line in ephem_lines %}
                     <tr  class="{% cycle 'odd' 'even' %}">
-                        <td>{{ line.0 }}</td>
-                        <td>{{ line.1 }}</td>
-                        <td>{{ line.2 }}</td>
-                        <td>{{ line.3 }}</td>
-                        <td>{{ line.4 }}</td>
-                        <td>{{ line.5 }}</td>
-                        <td>{{ line.6 }}</td>
-                        <td>{{ line.7 }}</td>
-                        <td>{{ line.8 }}</td>
-                        <td>{{ line.9 }}</td>
-                        <td>{{ line.10 }}</td>
+                        <td data-label="Date/time UTC">{{ line.0 }}</td>
+                        <td data-label="RA">{{ line.1 }}</td>
+                        <td data-label="Dec">{{ line.2 }}</td>
+                        <td data-label="Mag">{{ line.3 }}</td>
+                        <td data-label='"/min'>{{ line.4 }}</td>
+                        <td data-label="Alt">{{ line.5 }}</td>
+                        <td data-label="Moon phase">{{ line.6 }}</td>
+                        <td data-label="Moon Dist.">{{ line.7 }}</td>
+                        <td data-label="Moon Alt.">{{ line.8 }}</td>
+                        <td data-label="Score">{{ line.9 }}</td>
+                        <td data-label="Hour Angle">{{ line.10 }}</td>
                     </tr>
                     {% empty %}
                         <div class="row">

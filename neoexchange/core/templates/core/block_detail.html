@@ -79,7 +79,14 @@
                     <h3 class="section-title">Actions</h3>
                     <div class="row">
                         {% if request.user.is_authenticated %}
-                        {% if object.active and not object.reported and object.num_observed > 0 %}<a class="btn btn-secondary" href="{% url 'report-block' object.id %}">Report</a>{%else%}No actions available{% endif %}
+                          {% if not object.reported and object.num_observed > 0 %}
+                        <a class="btn btn-secondary" href="{% url 'report-block' object.id %}">Report</a><br/>
+                          {% elif object.reported %}
+                        <a class="btn btn-secondary" href="{% url 'view-report' object.id %}">View report in MPC format</a><br/>
+                        <a class="btn btn-secondary" href="{% url 'upload-report' object.id %}">Upload MPC format</a>
+                          {%else%}
+                          No actions available
+                          {% endif %}
                         {% else %}
                         <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
                         {% endif %}

@@ -1198,7 +1198,7 @@ def comp_FOM(orbelems, emp_line):
             if orbelems['arc_length'] < 0.01:
                 orbelems['arc_length'] = 0.005
             FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line[3])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line[6]-60.)**2)/180.))
-        except ZeroDivisionError:
+        except:
             logger.error(str(orbelems))
             logger.error(str(emp_line))
     return FOM
