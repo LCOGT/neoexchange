@@ -1,5 +1,5 @@
 from astrometrics.sources_subs import fetch_NEOCP, parse_NEOCP_extra_params
-from core.views import update_NEOCP_orbit
+from core.views import update_NEOCP_orbit, update_NEOCP_observations
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
@@ -20,4 +20,6 @@ class Command(BaseCommand):
             resp = update_NEOCP_orbit(str(obj_name), obj_extra_params)
             if resp:
                 self.stdout.write(resp)
-            
+            resp = update_NEOCP_observations(str(obj_name), obj_extra_params)
+            if resp:
+                self.stdout.write(resp)

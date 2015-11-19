@@ -35,7 +35,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
-    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs
+    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
+    fetch_NEOCP_observations
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
@@ -489,13 +490,13 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     else:
         return False
 
-# If the object has left the NEOCP, the HTML will say 'None available at this time.'
-# and the length of the list will be 1
     try:
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
     except:
         logger.debug("Multiple objects found called %s" % obj_id)
         return False
+# If the object has left the NEOCP, the HTML will say 'None available at this time.'
+# and the length of the list will be 1
     if len(obs_page_list) > 1:
         # Clean up the header and top line of input
         first_kwargs = clean_NEOCP_object(obs_page_list)
@@ -521,6 +522,37 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     logger.info(msg)
     return msg
 
+def update_NEOCP_observations(obj_id, extra_params={}):
+    '''Query the NEOCP for <obj_id> and download the observation lines.
+    These are used to create Source Measurements for the body if the
+    update time in the passed extra_params dictionary is later than the 
+    Body's update_time'''
+
+    update_time = extra_params.get('update_time', None)
+    updated = extra_params.get('updated', None)
+    if update_time and updated != None:
+        try:
+            body = Body.objects.get(provisional_name=obj_id)
+# Check if the NEOCP updated after the last time we updated the Body
+            if (update_time > body.update_time and body.update_time) or updated == False:
+                obs_lines = fetch_NEOCP_observations(obj_id)
+                if obs_lines:
+                    measure = create_source_measurement(obs_lines)
+                    if measure == True:
+                        msg = "Created source measurements for object %s" % obj_id
+                    elif measure == False:
+                        msg = "Source measurements already exist for object %s" % obj_id
+                    else:
+                        msg = "Cound not create source measurements already exist for object %s" % obj_id
+                else:
+                    msg = "No observations exist for object %s" % obj_id
+            else:
+                msg = "Object %s has not been updated since %s" % (obj_id, body.update_time)
+        except Body.DoesNotExist:
+            msg = "Object %s does not exist" % obj_id
+    else:
+        msg = "No update time available"
+    return msg
 
 def clean_NEOCP_object(page_list):
     '''Parse response from the MPC NEOCP page making sure we only return
@@ -828,6 +860,8 @@ def create_source_measurement(obs_lines, block=None):
                                     'flags'   : params['flags']
                                  }
                 measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
+                if measure_created == False:
+                    measure = False
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % params['body'])
                 measure = None
