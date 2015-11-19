@@ -26,9 +26,10 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
+from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit, \
-    create_source_measurement, block_status, clean_crossid, parse_mpcobs, create_frame
+    update_MPC_orbit, check_for_block, clean_mpcorbit, \
+    create_source_measurement, block_status, clean_crossid, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
@@ -873,7 +874,7 @@ class TestFrames(TestCase):
     def setUp(self):
         # Read in MPC 80 column format observations lines from a static file
         # for testing purposes
-        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_multiframe.dat'), 'r')
         self.test_obslines = test_fh.readlines()
         test_fh.close()
 
@@ -881,6 +882,10 @@ class TestFrames(TestCase):
                          }
 
         self.test_body = Body.objects.create(**WSAE9A6_params)
+
+        WV2997A_params = { 'provisional_name' : 'WV2997A',
+                         }
+        self.test_body2 = Body.objects.create(**WV2997A_params)
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
@@ -913,10 +918,33 @@ class TestFrames(TestCase):
             params = parse_mpcobs(line)
             resp = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K93')
-        self.assertEqual(2,frames.count())
+        self.assertEqual(3,frames.count())
         # Did the block get Added
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
-        self.assertEqual(2, frames.count())
+        # Although there are 4 sources in the file 2 are in the same frame
+        self.assertEqual(3, frames.count())
+
+    def test_add_source_measurements(self):
+        # Test we don't get duplicate frames when adding new source measurements
+        # if the sources are in the same frame
+        for line in self.test_obslines:
+            resp = create_source_measurement(line, self.test_block)
+        frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
+        self.assertEqual(3, frames.count())
+
+    def test_add_source_measurements_twice(self):
+        # Test we don't get duplicate frames when adding new source measurements
+        # if the sources are in the same frame
+        for line in self.test_obslines:
+            resp = create_source_measurement(line, self.test_block)
+        # And we forgot that we've already done this, so we do it again
+        for line in self.test_obslines:
+            resp = create_source_measurement(line, self.test_block)
+        frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
+        # We should get the same number in the previous test,
+        # i.e. on the second run the frames are not created
+        self.assertEqual(3, frames.count())
+
 
 
 @patch('core.views.datetime', MockDateTime)

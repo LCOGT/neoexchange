@@ -112,11 +112,11 @@ def parse_previous_NEOCP_id(items, dbg=False):
 
             items[0] = sub(r"\s+\(", r"(", items[0])
             # Occasionally we get things of the form " Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)"
-            # without the leading "C/<year>". The regexp below fixes this by 
-            # looking for any amount of whitespace at the start of the string, 
-            # the word 'Comet',any amount of whitespace, and any amount of 
+            # without the leading "C/<year>". The regexp below fixes this by
+            # looking for any amount of whitespace at the start of the string,
+            # the word 'Comet',any amount of whitespace, and any amount of
             # digits (the '(?=') part looks for but doesn't capture/remove the
-            # regexp that follows 
+            # regexp that follows
             items[0] = sub(r"^\s+Comet\s+(?=\d+)", r"Comet C/", items[0])
             subitems = items[0].lstrip().split()
             if dbg: print "Subitems=", subitems
@@ -371,8 +371,8 @@ def parse_PCCP(pccp_page, dbg=False):
 
 def fetch_NEOCP_observations(obj_id_or_page):
     '''Query the MPC's showobs service with the specified <obj_id_or_page>. If
-    the type of <obj_id_or_page> is not a BeautifulSoup object, it will do a 
-    fetch of the page of the page from the MPC first. Then the passed or 
+    the type of <obj_id_or_page> is not a BeautifulSoup object, it will do a
+    fetch of the page of the page from the MPC first. Then the passed or
     downloaded page is turned into a list of unicode strings with blank lines
     removed, which is returned. In the case of the object not existing or having
     being removed from the NEOCP,  None is returned.'''
@@ -386,7 +386,7 @@ def fetch_NEOCP_observations(obj_id_or_page):
 
 
 # If the object has left the NEOCP, the HTML will say 'None available at this time.'
-# and the length of the list will be 1 (but clean of blank lines first using 
+# and the length of the list will be 1 (but clean of blank lines first using
 # list comprehension)
     obs_page_list = [line for line in neocp_obs_page.text.split('\n') if line.strip() != '']
     obs_lines = None
@@ -430,33 +430,33 @@ def fetch_mpcobs(asteroid, debug=False):
 def translate_catalog_code(code_or_name):
 
     catalog_codes = {
-                  "a" : "USNO-A1",                                            
-                  "b" : "USNO-SA1",                                           
-                  "c" : "USNO-A2",                                            
-                  "d" : "USNO-SA2",                                           
-                  "e" : "UCAC-1",                                             
-                  "f" : "Tycho-1",                                            
-                  "g" : "Tycho-2",                                            
-                  "h" : "GSC-1.0",                                            
-                  "i" : "GSC-1.1",                                            
-                  "j" : "GSC-1.2",                                            
-                  "k" : "GSC-2.2",                                            
-                  "l" : "ACT",                                                
+                  "a" : "USNO-A1",
+                  "b" : "USNO-SA1",
+                  "c" : "USNO-A2",
+                  "d" : "USNO-SA2",
+                  "e" : "UCAC-1",
+                  "f" : "Tycho-1",
+                  "g" : "Tycho-2",
+                  "h" : "GSC-1.0",
+                  "i" : "GSC-1.1",
+                  "j" : "GSC-1.2",
+                  "k" : "GSC-2.2",
+                  "l" : "ACT",
                   "L" : "2MASS",
-                  "m" : "GSC-ACT",                                            
-                  "n" : "TRC",                                                
-                  "o" : "USNO-B1",                                            
-                  "p" : "PPM",                                                
-                  "q" : "UCAC2-beta",                                         
-                  "r" : "UCAC-2",                                             
-                  "s" : "USNO-B2",                                            
-                  "t" : "PPMXL",                                              
-                  "u" : "UCAC-3",                                             
-                  "v" : "NOMAD",                                              
-                  "w" : "CMC-14",                                             
-                  "x" : "HIP-2",                                              
-                  "z" : "GSC-1.x",                                            
-                  "N" : "SDSS-DR7",                                           
+                  "m" : "GSC-ACT",
+                  "n" : "TRC",
+                  "o" : "USNO-B1",
+                  "p" : "PPM",
+                  "q" : "UCAC2-beta",
+                  "r" : "UCAC-2",
+                  "s" : "USNO-B2",
+                  "t" : "PPMXL",
+                  "u" : "UCAC-3",
+                  "v" : "NOMAD",
+                  "w" : "CMC-14",
+                  "x" : "HIP-2",
+                  "z" : "GSC-1.x",
+                  "N" : "SDSS-DR7",
                   }
     catalog_or_code = ''
     if len(code_or_name) == 1:
@@ -469,7 +469,7 @@ def translate_catalog_code(code_or_name):
     return catalog_or_code
 
 def parse_mpcobs(line):
-    '''Parse a MPC format 80 column observation record line, returning a 
+    '''Parse a MPC format 80 column observation record line, returning a
     dictionary of values or an empty dictionary if it couldn't be parsed'''
 
     params = {}
@@ -486,7 +486,7 @@ def parse_mpcobs(line):
         body = prov_or_temp
     else:
         body = number
-        
+
     obs_type = str(line[14])
     flag_char = str(line[13])
 

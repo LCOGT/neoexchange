@@ -262,7 +262,7 @@ class Frame(models.Model):
                         (SATELLITE_FRAMETYPE, 'Satellite data'),
                         (SPECTRUM_FRAMETYPE, 'Spectrum')
                     )
-    sitecode    = models.CharField('MPC site code', max_length=4, blank=False, default='none')
+    sitecode    = models.CharField('MPC site code', max_length=4, blank=False)
     instrument  = models.CharField('instrument code', max_length=4, blank=True, null=True)
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
     filename    = models.CharField('FITS filename', max_length=40, blank=True, null=True)
