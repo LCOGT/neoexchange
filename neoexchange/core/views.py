@@ -543,7 +543,7 @@ def update_NEOCP_observations(obj_id, extra_params={}):
                     elif measure == False:
                         msg = "Source measurements already exist for object %s" % obj_id
                     else:
-                        msg = "Cound not create source measurements already exist for object %s" % obj_id
+                        msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
                 else:
                     msg = "No observations exist for object %s" % obj_id
             else:
@@ -847,10 +847,10 @@ def create_source_measurement(obs_lines, block=None):
                 if not block:
                     blocks = Block.objects.filter(block_start__lte=params['obs_date'], block_end__gte=params['obs_date'], body=obs_body)
                     if blocks:
-                        logger.error("Found %s blocks for %s" % (blocks.count(), obs_body))
+                        logger.info("Found %s blocks for %s" % (blocks.count(), obs_body))
                         block = blocks[0]
                     else:
-                        logger.error("No blocks for %s" % (obs_body))
+                        logger.warn("No blocks for %s" % (obs_body))
                 frame = create_frame(params, block)
                 measure_params = {  'body'    : obs_body,
                                     'frame'   : frame,
