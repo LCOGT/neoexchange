@@ -172,7 +172,7 @@ LOGGING = {
             'filters': ['require_debug_false']
         },
         'console': {
-            'level': 'DEBUG',
+            'level': 'ERROR',
             'class': 'logging.StreamHandler',
         }
     },
@@ -189,7 +189,7 @@ LOGGING = {
         },
         'core' : {
             'handlers' : ['file','console'],
-            'level'    : 'DEBUG',
+            'level'    : 'ERROR',
         },
         'astrometrics' : {
             'handlers' : ['file','console'],

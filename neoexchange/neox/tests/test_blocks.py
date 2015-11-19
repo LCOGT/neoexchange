@@ -53,7 +53,7 @@ class BlockDetailValidationTest(FunctionalTest):
         # He sees links that will go to a more detailed block view and goes
         # to the first Block.
         link = self.browser.find_element_by_link_text('1')
-        block_url = self.live_server_url + reverse('block',kwargs={'pk':1})
+        block_url = self.live_server_url + reverse('block-view',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), block_url)
 
         # He clicks the link to go to the block details page
