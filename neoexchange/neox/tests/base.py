@@ -1,10 +1,14 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from core.models import Body, Proposal, Block
 
 class FunctionalTest(StaticLiveServerTestCase):
-
+    def __init__(self, *args, **kwargs):
+        super(FunctionalTest, self).__init__(*args, **kwargs)
+        if settings.DEBUG == False:
+            settings.DEBUG = True
 
     def insert_test_body(self):
         params = {  'provisional_name' : 'N999r0q',
@@ -90,6 +94,12 @@ class FunctionalTest(StaticLiveServerTestCase):
         table_body = table.find_element_by_tag_name('tbody')
         rows = table_body.find_elements_by_tag_name('tr')
         self.assertIn(row_text, [row.text.replace('\n', ' ') for row in rows])
+
+    def check_for_row_not_in_table(self, table_id, row_text):
+        table = self.browser.find_element_by_id(table_id)
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = table_body.find_elements_by_tag_name('tr')
+        self.assertNotIn(row_text, [row.text.replace('\n', ' ') for row in rows])
 
     def check_for_header_in_table(self, table_id, header_text):
         table = self.browser.find_element_by_id(table_id)

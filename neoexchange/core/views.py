@@ -20,7 +20,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
@@ -30,11 +30,13 @@ from httplib import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
-    determine_darkness_times, determine_slot_length, determine_exp_time_count, MagRangeError
-from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm
+    determine_darkness_times, determine_slot_length, determine_exp_time_count, \
+    MagRangeError,  LCOGT_site_codes
+from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
-    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler
+    fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
+    fetch_NEOCP_observations
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
@@ -83,13 +85,13 @@ class BodySearchView(ListView):
         except:
             name = ''
         if (name != ''):
-            object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(
-                provisional_packed__icontains=name) | Q(name__icontains=name))
+            object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
         return object_list
 
 class BlockDetailView(DetailView):
+    template_name = 'core/block_detail.html'
     model = Block
 
     def get_context_data(self, **kwargs):
@@ -130,6 +132,45 @@ class BlockReport(LoginRequiredMixin, View):
         block.when_reported = datetime.utcnow()
         block.save()
         return redirect(reverse('blocklist'))
+
+class UploadReport(LoginRequiredMixin, FormView):
+    template_name = 'core/uploadreport.html'
+    success_url = reverse_lazy('blocklist')
+    form_class = MPCReportForm
+
+    def get(self, request, *args, **kwargs):
+        block = Block.objects.get(pk=kwargs['pk'])
+        form = MPCReportForm(initial={'block_id':block.id})
+        return render(request, 'core/uploadreport.html', {'form':form,'slot':block})
+
+    def form_invalid(self, form, **kwargs):
+        context = self.get_context_data(**kwargs)
+        print context['view'].request
+        slot = Block.objects.get(pk=form['block_id'].value())
+        return render(context['view'].request, 'core/uploadreport.html', {'form':form,'slot':slot})
+
+    def form_valid(self, form):
+        obslines = form.cleaned_data['report'].splitlines()
+        measure = create_source_measurement(obslines, form.cleaned_data['block'])
+        messages.success(self.request, 'Added source measurements for %s' % form.cleaned_data['block'])
+        return super(UploadReport, self).form_valid(form)
+
+
+
+class ViewMPCReport(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        block = Block.objects.get(pk=kwargs['pk'])
+        frames = Frame.objects.filter(block=block).values_list('id',flat=True)
+        sources = SourceMeasurement.objects.filter(frame__in=frames)
+        return render(request, 'core/mpcreport.html', {'slot':block,'sources':sources})
+
+class MeasurementView(View):
+
+    def get(self, request, *args, **kwargs):
+        measures = SourceMeasurement.objects.filter(body=Body.objects.get(pk=kwargs['pk']))
+        return render(request, 'core/measurements.html', {'measures' : measures})
+
 
 def ephemeris(request):
 
@@ -440,7 +481,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     b) If the object's parameters have changed they will be updated and a revision logged
     c) New objects get marked as active = True automatically
     '''
-    NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
+    NEOCP_orb_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
 
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
 
@@ -449,13 +490,13 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     else:
         return False
 
-# If the object has left the NEOCP, the HTML will say 'None available at this time.'
-# and the length of the list will be 1
     try:
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
     except:
         logger.debug("Multiple objects found called %s" % obj_id)
         return False
+# If the object has left the NEOCP, the HTML will say 'None available at this time.'
+# and the length of the list will be 1
     if len(obs_page_list) > 1:
         # Clean up the header and top line of input
         first_kwargs = clean_NEOCP_object(obs_page_list)
@@ -481,6 +522,37 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     logger.info(msg)
     return msg
 
+def update_NEOCP_observations(obj_id, extra_params={}):
+    '''Query the NEOCP for <obj_id> and download the observation lines.
+    These are used to create Source Measurements for the body if the
+    update time in the passed extra_params dictionary is later than the
+    Body's update_time'''
+
+    update_time = extra_params.get('update_time', None)
+    updated = extra_params.get('updated', None)
+    if update_time and updated != None:
+        try:
+            body = Body.objects.get(provisional_name=obj_id)
+# Check if the NEOCP updated after the last time we updated the Body
+            if (update_time > body.update_time and body.update_time) or updated == False:
+                obs_lines = fetch_NEOCP_observations(obj_id)
+                if obs_lines:
+                    measure = create_source_measurement(obs_lines)
+                    if measure == True:
+                        msg = "Created source measurements for object %s" % obj_id
+                    elif measure == False:
+                        msg = "Source measurements already exist for object %s" % obj_id
+                    else:
+                        msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
+                else:
+                    msg = "No observations exist for object %s" % obj_id
+            else:
+                msg = "Object %s has not been updated since %s" % (obj_id, body.update_time)
+        except Body.DoesNotExist:
+            msg = "Object %s does not exist" % obj_id
+    else:
+        msg = "No update time available"
+    return msg
 
 def clean_NEOCP_object(page_list):
     '''Parse response from the MPC NEOCP page making sure we only return
@@ -759,6 +831,48 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         logger.info("Added new orbit for %s" % obj_id)
     return True
 
+def create_source_measurement(obs_lines, block=None):
+    measure = None
+    if type(obs_lines) != list:
+        obs_lines = [obs_lines,]
+
+    for obs_line in obs_lines:
+        logger.debug(obs_line.rstrip())
+        measure = None
+        params = parse_mpcobs(obs_line)
+        if params:
+            try:
+                obs_body = Body.objects.get(provisional_name=params['body'])
+                # Identify block
+                if not block:
+                    blocks = Block.objects.filter(block_start__lte=params['obs_date'], block_end__gte=params['obs_date'], body=obs_body)
+                    if blocks:
+                        logger.info("Found %s blocks for %s" % (blocks.count(), obs_body))
+                        block = blocks[0]
+                    else:
+                        logger.warn("No blocks for %s" % (obs_body))
+                frame = create_frame(params, block)
+                measure_params = {  'body'    : obs_body,
+                                    'frame'   : frame,
+                                    'obs_ra'  : params['obs_ra'],
+                                    'obs_dec' : params['obs_dec'],
+                                    'obs_mag' : params['obs_mag'],
+                                    'astrometric_catalog' : params['astrometric_catalog'],
+                                    'photometric_catalog' : params['astrometric_catalog'],
+                                    'flags'   : params['flags']
+                                 }
+                measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
+                if measure_created == False:
+                    measure = False
+            except Body.DoesNotExist:
+                logger.debug("Body %s does not exist" % params['body'])
+                measure = None
+            except Body.MultipleObjectsReturned:
+                logger.warn("Multiple versions of Body %s exist" % params['body'])
+                measure = None
+
+    return measure
+
 def check_request_status(tracking_num=None):
     data = None
     client = requests.session()
@@ -779,7 +893,7 @@ def check_for_images(eventid=False):
     images = None
     client = requests.session()
     login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
-    data_url = 'https://data.lcogt.net/find?blkuid=%s&order_by=-date_obs' % eventid
+    data_url = 'https://data.lcogt.net/find?blkuid=%s&order_by=-date_obs&full_header=1' % eventid
     try:
         resp = client.post(data_url, data=login_data, timeout=20)
         images = resp.json()
@@ -788,6 +902,63 @@ def check_for_images(eventid=False):
     except requests.exceptions.Timeout:
         logger.error("Data view timed out")
     return images
+
+def create_frame(params, block=None):
+    # Return None if params is just whitespace
+    if not params:
+        return None
+    our_site_codes = LCOGT_site_codes()
+    if params.get('groupid', None):
+    # In these cases we are parsing the FITS header
+        frame_params = frame_params_from_block(params, block)
+    else:
+        # We are parsing observation logs
+        frame_params = frame_params_from_log(params, block)
+    frame, frame_created = Frame.objects.get_or_create(**frame_params)
+    if frame_created:
+        msg = "created"
+    else:
+        msg = "updated"
+    logger.debug("Frame %s %s" % (frame, msg))
+    return frame
+
+def frame_params_from_block(params, block):
+    # In these cases we are parsing the FITS header
+    frame_params = { 'midpoint' : params.get('date_obs', None),
+                     'sitecode' : params.get('siteid', None),
+                     'filter'   : params.get('filter_name', None),
+                     'frametype': Frame.NONLCO_FRAMETYPE,
+                     'block'    : block,
+                     'instrument': params.get('instrume', None),
+                     'filename'  : params.get('origname', None),
+                     'exptime'   : params.get('exptime', None),
+                 }
+    return frame_params
+
+def frame_params_from_log(params, block):
+    our_site_codes = LCOGT_site_codes()
+    # We are parsing observation logs
+    sitecode = params.get('site_code', None)
+    if sitecode in our_site_codes:
+        if params.get('flags', None) != 'K':
+            frame_type = Frame.SINGLE_FRAMETYPE
+        else:
+            frame_type = Frame.STACK_FRAMETYPE
+    else:
+        frame_type = Frame.NONLCO_FRAMETYPE
+    frame_params = { 'midpoint' : params.get('obs_date', None),
+                     'sitecode' : sitecode,
+                     'block'    : block,
+                     'filter'   : params.get('filter', None),
+                     'frametype' : frame_type
+                   }
+    return frame_params
+
+def ingest_frames(images, block):
+    for image in images:
+        frame = create_frame(image, block)
+    logger.debug("Ingested %s frames" % len(images))
+    return
 
 def block_status(block_id):
     '''
@@ -833,6 +1004,8 @@ def block_status(block_id):
                     block.save()
                     status = True
                     logger.debug("Block %s updated" % block)
+                    # Add frames
+                    resp = ingest_frames(images, block)
                 else:
                     logger.debug("No update to block %s" % block)
     return status

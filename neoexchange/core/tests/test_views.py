@@ -22,13 +22,17 @@ import os
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
     mock_check_request_status_null, mock_check_for_2_images, mock_check_for_images_millisecs, \
-    mock_check_for_images_bad_date
+    mock_check_for_images_bad_date, mock_ingest_frames
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
-from core.views import clean_NEOCP_object, clean_crossid, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit, block_status
-from core.models import Body, Proposal, Block
+from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
+from core.views import home, clean_NEOCP_object, save_and_make_revision, \
+    update_MPC_orbit, check_for_block, clean_mpcorbit, \
+    create_source_measurement, block_status, clean_crossid, create_frame
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame
+from core.forms import EphemQuery
+
 
 
 class TestClean_NEOCP_Object(TestCase):
@@ -476,6 +480,7 @@ class TestCheck_for_block(TestCase):
 
     @patch('core.views.check_request_status', mock_check_request_status)
     @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.views.ingest_frames', mock_ingest_frames)
     def test_block_update_check_status_change(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
@@ -491,6 +496,7 @@ class TestCheck_for_block(TestCase):
 
     @patch('core.views.check_request_status', mock_check_request_status)
     @patch('core.views.check_for_images', mock_check_for_images_millisecs)
+    @patch('core.views.ingest_frames', mock_ingest_frames)
     def test_block_update_millisecs(self):
         blockid = self.test_block5.id
         resp = block_status(blockid)
@@ -648,6 +654,298 @@ class TestClean_mpcorbit(TestCase):
         new_expected_params = self.expected_params
         new_expected_params['discovery_date'] = None
         self.assertEqual(new_expected_params, params)
+
+class TestCreate_sourcemeasurement(TestCase):
+
+    def setUp(self):
+        # Read in MPC 80 column format observations lines from a static file
+        # for testing purposes
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        self.test_obslines = test_fh.readlines()
+        test_fh.close()
+
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        self.test_body = Body.objects.create(**WSAE9A6_params)
+
+        self.maxDiff = None
+
+    def test_create_nonLCO(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 27, 12, int(0.672*1e6)),
+                            'obs_ra'    : 325.2828333333333,
+                            'obs_dec'   : -10.8525,
+                            'obs_mag'   : 21.8,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'G96'
+                          }
+
+        source_measure = create_source_measurement(self.test_obslines[0])
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+
+    def test_create_nonLCO_nocat(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 34,  8, int(0.256*1e6)),
+                            'obs_ra'    : 325.28441666666663,
+                            'obs_dec'   : -10.857111111111111,
+                            'obs_mag'   : 20.9,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'G96'
+                          }
+
+        source_measure = create_source_measurement(self.test_obslines[1])
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+
+    def test_create_nonLCO_nomag(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 41,  6, int(0.432*1e6)),
+                            'obs_ra'    : 325.28599999999994,
+                            'obs_dec'   : -10.861583333333332,
+                            'obs_mag'   : None,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'G96'
+                          }
+
+        source_measure = create_source_measurement(self.test_obslines[2])
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+
+    def test_create_nonLCO_flags(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 9, 54, 16, int(0.416*1e6)),
+                            'obs_ra'    : 325.34804166666663,
+                            'obs_dec'   : -11.01686111111111,
+                            'obs_mag'   : 20.9,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'PPMXL',
+                            'site_code' : '474'
+                          }
+
+        source_measure = create_source_measurement(self.test_obslines[3])
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+
+    def test_create_blankline(self):
+
+        source_measure = create_source_measurement(self.test_obslines[4])
+
+        self.assertEqual(None, source_measure)
+
+    def test_create_LCO_stack(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 24, 46, int(0.4832*1e6)),
+                            'obs_ra'    : 325.540625,
+                            'obs_dec'   : -11.536666666666667,
+                            'obs_mag'   : 21.4,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        source_measure = create_source_measurement(self.test_obslines[5])
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.STACK_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+
+    def test_create_LCO_flagI(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : 'I',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 31, 40, int(0.08*1e6)),
+                            'obs_ra'    : 325.54225,
+                            'obs_dec'   : -11.541111111111112,
+                            'obs_mag'   : 21.6,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        source_measure = create_source_measurement(self.test_obslines[6])
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+
+    def test_create_non_existant_body(self):
+
+        source_measure = create_source_measurement(self.test_obslines[3].replace('WSAE9A6', 'FOOBAR'))
+
+        self.assertEqual(None, source_measure)
+
+    def test_create_whole_file(self):
+
+        source_measure = create_source_measurement(self.test_obslines)
+
+        sources = SourceMeasurement.objects.filter(body=self.test_body)
+        nonLCO_frames = Frame.objects.filter(frametype=Frame.NONLCO_FRAMETYPE)
+        LCO_frames = Frame.objects.filter(frametype__in=[Frame.SINGLE_FRAMETYPE, Frame.STACK_FRAMETYPE])
+
+        self.assertEqual(6, len(sources))
+        self.assertEqual(4, len(nonLCO_frames))
+        self.assertEqual(2, len(LCO_frames))
+
+    def test_create_duplicates(self):
+
+        source_measure = create_source_measurement(self.test_obslines)
+        source_measure2 = create_source_measurement(self.test_obslines)
+
+        sources = SourceMeasurement.objects.filter(body=self.test_body)
+        nonLCO_frames = Frame.objects.filter(frametype=Frame.NONLCO_FRAMETYPE)
+        LCO_frames = Frame.objects.filter(frametype__in=[Frame.SINGLE_FRAMETYPE, Frame.STACK_FRAMETYPE])
+
+        self.assertEqual(6, len(sources))
+        self.assertEqual(4, len(nonLCO_frames))
+        self.assertEqual(2, len(LCO_frames))
+
+class TestFrames(TestCase):
+    def setUp(self):
+        # Read in MPC 80 column format observations lines from a static file
+        # for testing purposes
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_multiframe.dat'), 'r')
+        self.test_obslines = test_fh.readlines()
+        test_fh.close()
+
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        self.test_body = Body.objects.create(**WSAE9A6_params)
+
+        WV2997A_params = { 'provisional_name' : 'WV2997A',
+                         }
+        self.test_body2 = Body.objects.create(**WV2997A_params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : 'TEMP_GROUP',
+                         'block_start' : '2015-09-20 13:00:00',
+                         'block_end'   : '2015-09-21 03:00:00',
+                         'tracking_number' : '00001',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+
+    def test_add_frame(self):
+        params = parse_mpcobs(self.test_obslines[-1])
+        resp = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K93')
+        self.assertEqual(1,frames.count())
+
+    def test_add_frames(self):
+        for line in self.test_obslines:
+            params = parse_mpcobs(line)
+            resp = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K93')
+        self.assertEqual(3,frames.count())
+        # Did the block get Added
+        frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
+        # Although there are 4 sources in the file 2 are in the same frame
+        self.assertEqual(3, frames.count())
+
+    def test_add_source_measurements(self):
+        # Test we don't get duplicate frames when adding new source measurements
+        # if the sources are in the same frame
+        for line in self.test_obslines:
+            resp = create_source_measurement(line, self.test_block)
+        frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
+        self.assertEqual(3, frames.count())
+
+    def test_add_source_measurements_twice(self):
+        # Test we don't get duplicate frames when adding new source measurements
+        # if the sources are in the same frame
+        for line in self.test_obslines:
+            resp = create_source_measurement(line, self.test_block)
+        # And we forgot that we've already done this, so we do it again
+        for line in self.test_obslines:
+            resp = create_source_measurement(line, self.test_block)
+        frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
+        # We should get the same number in the previous test,
+        # i.e. on the second run the frames are not created
+        self.assertEqual(3, frames.count())
+
+
 
 @patch('core.views.datetime', MockDateTime)
 class TestClean_crossid(TestCase):

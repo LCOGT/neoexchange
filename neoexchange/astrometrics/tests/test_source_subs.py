@@ -25,7 +25,8 @@ from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, \
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
-    parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit
+    parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
+    fetch_NEOCP_observations
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -740,3 +741,259 @@ class TestFetchMPCOrbit(TestCase):
         elements = parse_mpcorbit(self.test_mpcdb_page)
         self.assertEqual(expected_elements, elements)
         
+class TestParseMPCObsFormat(TestCase):
+
+    def setUp(self):
+        '''The "code" for the dictionary keys for the test lines is as follows:
+        <char1>_<char2><char3>_<char4> where:
+        <char1> is the type of desigination:
+            p: provisional designation (e.g. 'K15TE5B'),
+            t: temporary desigination (e.g. 'N00809b')
+            n: numbered asteroid,
+            c: comet
+            s: (natural) satellite
+        <char2> is the observation code or program code,
+        <char3> is the observation type:
+            C: CCD observations,
+            R/r: radar observation,
+            S/s: satellite observation
+        <char4> is the precision of the obs:
+            l: low precision
+            h: high precision
+            n: no magnitude
+        '''
+        self.test_lines = { 'p_ C_l' :  u'     K15TE5B  C2015 10 19.36445 04 16 45.66 -02 06 29.9          18.7 RqEU023H45',
+                            'p_KC_l' :  u'     K15TE5B KC2015 10 18.42125 04 16 20.07 -02 07 27.5          19.2 VqEU023H21',
+                            'p_#C_l' :  u'     K15TE5B 5C2015 10 17.34423 04 15 51.57 -02 07 27.4          18.6 VqEU017W88',
+                            'p_ C_h' :  u'     K15TE5B  C2015 10 13.08015704 13 52.281-02 06 45.33         19.51Rt~1YjBY28',
+                            'p_ S_l' :  u'     N00809b  S2015 06 22.29960 21 02 46.72 +57 58 39.3          20   RLNEOCPC51',
+                            'p_ s_l' :  u'     N00809b  s2015 06 22.29960 1 + 1978.7516 + 1150.7393 + 6468.8442   NEOCPC51',
+                            'n_ R_l' :  u'01566         R1968 06 14.229167               +    11541710   2388 252 JPLRS253',
+                            'n_ r_l' :  u'01566         r1968 06 14.229167S                        1000       252 JPLRS253',
+                            'n_tC_l' :  u'01566        tC2002 07 31.54831 20 30 29.56 -47 49 14.5          18.1 Rcg0322474',
+                            'p_ C_n' :  u'     WMAA95B  C2015 06 20.29109 16 40 36.42 -14 23 16.2                qNEOCPG96\n',
+                            'p_ C_le' : u'     K13R33T  C2013 09 13.18561323 15 20.53 -10 21 52.6          20.4 V      W86\r\n',
+                            'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
+
+                          }
+        self.maxDiff = None
+
+    def compare_dict(self, expected_params, params, tolerance=7):
+        self.assertEqual(len(expected_params), len(params))
+        for i in expected_params:
+            if 'ra' in i or 'dec' in i:
+                self.assertAlmostEqual(expected_params[i], params[i], tolerance)
+            else:
+                self.assertEqual(expected_params[i], params[i])
+
+    def test_p_spaceC_l(self):
+        expected_params = { 'body'  : 'K15TE5B',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 10, 19, 8, 44, 48, int(0.48*1e6)),
+                            'obs_ra'    : 64.19025,
+                            'obs_dec'   : -2.1083055555555554,
+                            'obs_mag'   : 18.7,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'H45'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_ C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_KC_l(self):
+        expected_params = { 'body'  : 'K15TE5B',
+                            'flags' : 'K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 10, 18, 10, 6, 36, 0),
+                            'obs_ra'    : 64.083625,
+                            'obs_dec'   : -2.1243055555555554,
+                            'obs_mag'   : 19.2,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'H21'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_KC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_numC_l(self):
+        expected_params = { 'body'  : 'K15TE5B',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 10, 17, 8, 15, 41, int(0.472*1e6)),
+                            'obs_ra'    : 63.96487499999999,
+                            'obs_dec'   : -2.1242777777777775,
+                            'obs_mag'   : 18.6,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'W88'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_#C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_spaceC_h(self):
+        expected_params = { 'body'  : 'K15TE5B',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 10, 13, 1, 55, 25, int(0.5648*1e6)),
+                            'obs_ra'    : 63.4678375,
+                            'obs_dec'   : -2.112591666666667,
+                            'obs_mag'   : 19.51,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'PPMXL',
+                            'site_code' : 'Y28'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_ C_h'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_spaceS_l(self):
+        expected_params = {}
+
+        params = parse_mpcobs(self.test_lines['p_ S_l'])
+
+        self.compare_dict(expected_params, params)
+        
+    def test_p_spaces_l(self):
+        expected_params = {}
+
+        params = parse_mpcobs(self.test_lines['p_ s_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_spaceR_l(self):
+        expected_params = {}
+
+        params = parse_mpcobs(self.test_lines['n_ R_l'])
+
+        self.compare_dict(expected_params, params)
+        
+    def test_p_spacer_l(self):
+        expected_params = {}
+
+        params = parse_mpcobs(self.test_lines['n_ r_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_n_tC_l(self):
+        expected_params = { 'body'  : '01566',
+                            'flags' : 't',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2002, 07, 31, 13, 9, 33, int(0.984*1e6)),
+                            'obs_ra'    : 307.6231666666667,
+                            'obs_dec'   : -47.82069444444445,
+                            'obs_mag'   : 18.1,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'USNO-A2',
+                            'site_code' : '474'
+                          }
+
+        params = parse_mpcobs(self.test_lines['n_tC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_spaceC_n(self):
+        expected_params = { 'body'  : 'WMAA95B',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 6, 20, 6, 59, 10, int(0.176*1e6)),
+                            'obs_ra'    : 250.15175,
+                            'obs_dec'   : -14.387833333333333,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'G96'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_ C_n'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_blankline(self):
+        expected_params = {}
+
+        params = parse_mpcobs('')
+
+        self.compare_dict(expected_params, params)
+
+    def test_allspacesline(self):
+        expected_params = {}
+
+        params = parse_mpcobs(' ' * 80)
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_spaceC_le(self):
+        expected_params = { 'body'  : 'K13R33T',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2013, 9, 13, 4, 27, 16, int(0.9632*1e6)),
+                            'obs_ra'    : 348.8355416666667,
+                            'obs_dec'   : -10.36461111111111,
+                            'obs_mag'   : 20.4,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'W86'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_ C_le'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_spaceC_f(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 41, 6, int(0.432*1e6)),
+                            'obs_ra'    : 325.28599999999994,
+                            'obs_dec'   : -10.861583333333332,
+                            'obs_mag'   : None,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC2-beta',
+                            'site_code' : 'G96'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_ C_f'])
+
+        self.compare_dict(expected_params, params)
+
+class TestFetchNEOCPObservations(TestCase):
+
+    def setUp(self):
+
+        self.maxDiff = None
+
+    def test_removed_object(self):
+        page = BeautifulSoup('<html><body><pre>\nNone available at this time.\n</pre></body></html>')
+        expected = None
+
+        observations = fetch_NEOCP_observations(page)
+        self.assertEqual(expected, observations)
+
+    def test_readlines(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'), 'r')
+        obs_data = test_fh.read()
+        test_fh.close()
+        page = BeautifulSoup(obs_data)
+
+        expected = [u'     P10pqB2  C2015 11 17.40000 03 44 26.153-07 26 22.40         20.8 wLNEOCPF51',
+                    u'     P10pqB2  C2015 11 17.41166 03 44 24.591-07 26 51.93         20.9 wLNEOCPF51',
+                    u'     P10pqB2  C2015 11 17.43505 03 44 21.461-07 27 51.02         20.9 wLNEOCPF51',
+                    u'     P10pqB2 KC2015 11 18.24829 03 42 40.57 -08 02 06.0          20.6 RoNEOCP291',
+                    u'     P10pqB2 KC2015 11 18.24999 03 42 40.36 -08 02 10.2          20.6 RoNEOCP291',
+                    u'     P10pqB2 KC2015 11 18.25170 03 42 40.13 -08 02 14.4          20.6 RoNEOCP291',
+                    u'     P10pqB2 KC2015 11 18.33020 03 42 29.28 -08 05 31.8                oNEOCP711',
+                    u'     P10pqB2 KC2015 11 18.33314 03 42 28.87 -08 05 39.2                oNEOCP711',
+                    u'     P10pqB2 KC2015 11 18.33622 03 42 28.44 -08 05 46.7                oNEOCP711',
+        ]
+
+        observations = fetch_NEOCP_observations(page)
+        self.assertEqual(expected, observations)
+      

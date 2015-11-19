@@ -1,6 +1,8 @@
 from .base import FunctionalTest
+from django.test import TestCase
 from django.core.urlresolvers import reverse
 from selenium import webdriver
+from core.models import Body
 
 class BodyDetailsTest(FunctionalTest):
 

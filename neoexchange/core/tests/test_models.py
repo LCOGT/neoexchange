@@ -366,7 +366,7 @@ class TestFrame(TestCase):
         self.assertEqual(self.test_block, frame.block)
         self.assertEqual(0, frame.frametype)
         self.assertEqual(' ', frame.quality)
-        self.assertEqual('', frame.extrainfo)
+        self.assertEqual(None, frame.extrainfo)
 
     def test_create_LCOGT_W86_r_stack(self):
         params = {  'sitecode'      : 'W86',
@@ -469,7 +469,7 @@ class TestFrame(TestCase):
         self.assertEqual(self.test_block, frame.block)
         self.assertEqual(4, frame.frametype)
         self.assertEqual(' ', frame.quality)
-        self.assertEqual('', frame.extrainfo)
+        self.assertEqual(None, frame.extrainfo)
         self.assertEqual(params['instrument'], frame.instrument)
         self.assertEqual(params['filename'], frame.filename)
         self.assertEqual(params['exptime'], frame.exptime)
@@ -501,4 +501,3 @@ class TestFrame(TestCase):
         self.assertEqual(params['sitecode'], frame.sitecode)
         self.assertEqual(params['filter'], frame.filter)
         self.assertEqual(params['midpoint'], frame.midpoint)
-

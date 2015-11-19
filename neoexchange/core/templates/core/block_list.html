@@ -49,7 +49,7 @@
                                 <tbody>
                                 {% for block in block_list %}
                                         <tr class="{% cycle 'odd' 'even' %}">
-                                                <td class="list_title"  data-label="Block #"><a href="{% url 'block' block.pk %}">{{block.pk}}</a></td>
+                                                <td class="list_title"  data-label="Block #"><a href="{% url 'block-view' block.pk %}">{{block.pk}}</a></td>
                                                 <td class="list_title"  data-label="Target Name"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
                                                 <td data-label="Site">{{block.site|upper}}</td>
                                                 <td data-label="Telescope Type">{{block.telclass}}</td>

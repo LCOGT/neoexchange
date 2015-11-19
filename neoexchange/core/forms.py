@@ -1,7 +1,7 @@
 from datetime import datetime, date, timedelta
 from django import forms
 from django.db.models import Q
-from .models import Body, Proposal
+from .models import Body, Proposal, Block
 from django.utils.translation import ugettext_lazy as _
 import logging
 logger = logging.getLogger(__name__)
@@ -93,3 +93,14 @@ class ScheduleBlockForm(forms.Form):
             raise forms.ValidationError("There must be more than 1 exposure")
         elif self.cleaned_data['exp_length'] < 0.1:
             raise forms.ValidationError("Exposure length is too short")
+
+class MPCReportForm(forms.Form):
+    block_id = forms.IntegerField(widget=forms.HiddenInput())
+    report = forms.CharField(widget=forms.Textarea)
+
+    def clean(self):
+        try:
+            block = Block.objects.get(id=self.cleaned_data['block_id'])
+            self.cleaned_data['block'] = block
+        except:
+            raise forms.ValidationError('Block ID %s is not valid' % self.cleaned_data['block_id'])

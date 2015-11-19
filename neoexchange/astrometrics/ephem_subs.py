@@ -1106,6 +1106,11 @@ def get_mountlimits(site_code_or_name):
 
     return (ha_neg_limit, ha_pos_limit, alt_limit)
 
+def LCOGT_site_codes():
+    '''Return a list of LCOGT site codes'''
+    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'F65', 'E10' ] 
+
+    return valid_site_codes
 
 def get_sitecam_params(site):
     '''Translates <site> (e.g. 'FTN') to MPC site code, pixel scale, maximum
@@ -1129,7 +1134,7 @@ def get_sitecam_params(site):
     twom_exp_overhead = 22.5
     point4m_exp_overhead = 7.5 # for BPL
 
-    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64' ]
+    valid_site_codes = LCOGT_site_codes()
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA' in site or site == 'F65':

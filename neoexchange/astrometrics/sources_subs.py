@@ -21,6 +21,8 @@ from re import sub
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from math import degrees
+import slalib as S
 import logging
 import urllib2, os
 from urlparse import urljoin
@@ -110,11 +112,11 @@ def parse_previous_NEOCP_id(items, dbg=False):
 
             items[0] = sub(r"\s+\(", r"(", items[0])
             # Occasionally we get things of the form " Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)"
-            # without the leading "C/<year>". The regexp below fixes this by 
-            # looking for any amount of whitespace at the start of the string, 
-            # the word 'Comet',any amount of whitespace, and any amount of 
+            # without the leading "C/<year>". The regexp below fixes this by
+            # looking for any amount of whitespace at the start of the string,
+            # the word 'Comet',any amount of whitespace, and any amount of
             # digits (the '(?=') part looks for but doesn't capture/remove the
-            # regexp that follows 
+            # regexp that follows
             items[0] = sub(r"^\s+Comet\s+(?=\d+)", r"Comet C/", items[0])
             subitems = items[0].lstrip().split()
             if dbg: print "Subitems=", subitems
@@ -367,94 +369,37 @@ def parse_PCCP(pccp_page, dbg=False):
 
     return new_objects
 
-def fetch_NEOCP_observations(obj_id, savedir, delete=False, dbg=False):
-    '''Query the MPC's showobs service with the specified <obj_id> and
-    it will write the observations found into <savedir>/<obj_id>.dat
-    The file will not be overwritten if it exists unless 'delete=True'
-    Returns the number of lines written or None if:
-      (a) the object was no longer on the NEOCP or
-      (b) the file already exists and [delete] is not True'''
+def fetch_NEOCP_observations(obj_id_or_page):
+    '''Query the MPC's showobs service with the specified <obj_id_or_page>. If
+    the type of <obj_id_or_page> is not a BeautifulSoup object, it will do a
+    fetch of the page of the page from the MPC first. Then the passed or
+    downloaded page is turned into a list of unicode strings with blank lines
+    removed, which is returned. In the case of the object not existing or having
+    being removed from the NEOCP,  None is returned.'''
 
-    NEOCP_obs_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
+    if type(obj_id_or_page) != BeautifulSoup:
+        obj_id = obj_id_or_page
+        NEOCP_obs_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
+        neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
+    else:
+        neocp_obs_page = obj_id_or_page
 
-    neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
-
-    obs_page_list = neocp_obs_page.text.split('\n')
 
 # If the object has left the NEOCP, the HTML will say 'None available at this time.'
-# and the length of the list will be 1
-    lines_written = None
+# and the length of the list will be 1 (but clean of blank lines first using
+# list comprehension)
+    obs_page_list = [line for line in neocp_obs_page.text.split('\n') if line.strip() != '']
+    obs_lines = None
     if len(obs_page_list) > 1:
-    # Create save directory if it doesn't exist
-        if not os.path.isdir(savedir): os.mkdir(savedir)
+        obs_lines = obs_page_list
 
-        print "Will save files in", savedir
-        neocand_filename = os.path.join(savedir, obj_id + '.dat')
-        if delete: os.remove(neocand_filename)
-        if os.path.isfile(neocand_filename) == False:
-            neo_cand_fh = open(neocand_filename, 'w')
-            for line in obs_page_list:
-                obs_page_line = "%80s" % (line)
-                print >> neo_cand_fh, obs_page_line
-            neo_cand_fh.close()
-            lines_written = len(obs_page_list)
-            print "Wrote", lines_written, "MPC lines to", neocand_filename
-        else:
-            print "File", neocand_filename, "already exists, not overwriting."
+    return obs_lines
 
-    else:
-        print "Object", obj_id, "no longer exists on the NEOCP."
+def fetch_mpcobs(asteroid, debug=False):
+    '''Performs a search on the MPC Database for <asteroid> and returns the
+    resulting observation as a list of text observations.'''
 
-    return lines_written
-
-def fetch_NEOCP_orbit(obj_id, savedir, delete=False, dbg=False):
-    '''Query the MPC's showobs service with the specified <obj_id> and
-    it will write the orbit found into <savedir>/<obj_id>.neocp
-    Only the first of the potential orbits (the 'NEOCPNomin' nominal orbit) is
-    returned if there are multiple orbits found.
-    The file will not be overwritten if it exists unless 'delete=True'
-    Returns the number of lines written or None if:
-      (a) the object was no longer on the NEOCP or
-      (b) the file already exists and [delete] is not True'''
-
-    NEOCP_orb_url = 'http://scully.cfa.harvard.edu/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&orb=y'
-
-    neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
-
-    obs_page_list = neocp_obs_page.text.split('\n')
-
-# If the object has left the NEOCP, the HTML will say 'None available at this time.'
-# and the length of the list will be 1
-    orbit_lines_written = None
-    if len(obs_page_list) > 1:
-    # Create save directory if it doesn't exist
-        if not os.path.isdir(savedir): os.mkdir(savedir)
-
-        if dbg: print "Will save files in", savedir
-        neocand_filename = os.path.join(savedir, obj_id + '.neocp')
-        if delete and os.path.isfile(neocand_filename): os.remove(neocand_filename)
-        orbit_lines_written = 0
-        if os.path.isfile(neocand_filename) == False:
-            for line in obs_page_list:
-                if 'NEOCPNomin' in line:
-                    neo_orbit_fh = open(neocand_filename, 'w')
-#                obs_page_line = "%80s" % ( line )
-                    print >> neo_orbit_fh, line
-                    neo_orbit_fh.close()
-                    orbit_lines_written = orbit_lines_written + 1
-            if dbg: print "Wrote", orbit_lines_written, "orbit lines to", neocand_filename
-        else:
-            if dbg: print "File", neocand_filename, "already exists, not overwriting."
-
-    else:
-        if dbg: print "Object", obj_id, "no longer exists on the NEOCP."
-
-    return orbit_lines_written
-
-def fetch_mpcobs(asteroid, file_to_save, debug=False):
-    '''Performs a search on the MPC Database for <asteroid> and saves the
-    resulting observations into <file_to_save>.'''
-
+    asteroid = asteroid.strip().replace(' ', '+')
     query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
     page = fetchpage_and_make_soup(query_url)
@@ -467,21 +412,127 @@ def fetch_mpcobs(asteroid, file_to_save, debug=False):
     refs = page.findAll('a')
 
 # Use a list comprehension to find the 'tmp/<asteroid>.dat' link in among all
-# the other links
-    link = [x.get('href') for x in refs if 'tmp/'+asteroid in x.get('href')]
+# the other links. Turn any pluses (which were spaces) into underscores.
+    link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_') in x.get('href')]
 
     if len(link) == 1:
 # Replace the '..' part with proper URL
 
         astfile_link = link[0].replace('../', 'http://www.minorplanetcenter.net/')
-        download_file(astfile_link, file_to_save)
+        obs_page = fetchpage_and_make_soup(astfile_link)
 
-        return file_to_save
+        if obs_page != None:
+            obs_page = obs_page.text.split('\n')
+        return obs_page
 
     return None
 
+def translate_catalog_code(code_or_name):
+
+    catalog_codes = {
+                  "a" : "USNO-A1",
+                  "b" : "USNO-SA1",
+                  "c" : "USNO-A2",
+                  "d" : "USNO-SA2",
+                  "e" : "UCAC-1",
+                  "f" : "Tycho-1",
+                  "g" : "Tycho-2",
+                  "h" : "GSC-1.0",
+                  "i" : "GSC-1.1",
+                  "j" : "GSC-1.2",
+                  "k" : "GSC-2.2",
+                  "l" : "ACT",
+                  "L" : "2MASS",
+                  "m" : "GSC-ACT",
+                  "n" : "TRC",
+                  "o" : "USNO-B1",
+                  "p" : "PPM",
+                  "q" : "UCAC2-beta",
+                  "r" : "UCAC-2",
+                  "s" : "USNO-B2",
+                  "t" : "PPMXL",
+                  "u" : "UCAC-3",
+                  "v" : "NOMAD",
+                  "w" : "CMC-14",
+                  "x" : "HIP-2",
+                  "z" : "GSC-1.x",
+                  "N" : "SDSS-DR7",
+                  }
+    catalog_or_code = ''
+    if len(code_or_name) == 1:
+        catalog_or_code = catalog_codes.get(code_or_name, '')
+    else:
+        for code, catalog in catalog_codes.iteritems():
+            if code_or_name == catalog:
+                catalog_or_code = code
+
+    return catalog_or_code
+
+def parse_mpcobs(line):
+    '''Parse a MPC format 80 column observation record line, returning a
+    dictionary of values or an empty dictionary if it couldn't be parsed'''
+
+    params = {}
+    line = line.rstrip()
+    if len(line) != 80 or len(line.strip()) == 0:
+        msg = "Bad line %d %d" % (len(line), len(line.strip()))
+        logger.debug(msg)
+        return params
+    number = str(line[0:5])
+    prov_or_temp = str(line[5:12])
+
+    if len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
+        # No number but provisional/temp. desigination
+        body = prov_or_temp
+    else:
+        body = number
+
+    obs_type = str(line[14])
+    flag_char = str(line[13])
+
+    # Try and convert the condition/ program code into a integer. If it succeeds,
+    # then it is a program code and we don't care about it. Otherwise, it's an
+    # observation condition code and we do want its value.
+    try:
+        flag = int(flag_char)
+        flag = ' '
+    except ValueError:
+        flag = flag_char
+    filter = str(line[70])
+    try:
+        obs_mag  = float(line[65:70])
+    except ValueError:
+        obs_mag = None
+
+    if obs_type == 'C':
+        # Regular CCD observations
+#        print "Date=",line[15:32]
+        params = {  'body'     : body,
+                    'flags'    : flag,
+                    'obs_type' : obs_type,
+                    'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
+                    'obs_mag'  : obs_mag,
+                    'filter'   : filter,
+                    'astrometric_catalog' : translate_catalog_code(line[71]),
+                    'site_code' : str(line[-3:])
+                 }
+        ptr = 1
+        ra_dec_string = line[32:56]
+#        print "RA/Dec=", ra_dec_string
+        ptr, ra_radians, status = S.sla_dafin(ra_dec_string, ptr)
+        params['obs_ra'] = degrees(ra_radians) * 15.0
+        ptr, dec_radians, status = S.sla_dafin(ra_dec_string, ptr)
+        params['obs_dec'] = degrees(dec_radians)
+    elif obs_type.upper() == 'R':
+        # Radar observations, skip
+        logger.debug("Found radar observation, skipping")
+    elif obs_type == 'S':
+        # Satellite -based observation, do something with it
+        logger.warn("Found satellite observation, skipping (for now)")
+    return params
+
 def clean_element(element):
-    'Cleans an element (passed) by converting to ascii and removing any units'''
+    '''Cleans an element (passed) by converting to ascii and removing any units'''
     key = element[0].encode('ascii', 'ignore')
     value = element[1].encode('ascii', 'ignore')
     # Match a open parenthesis followed by 0 or more non-whitespace followed by

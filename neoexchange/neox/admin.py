@@ -14,6 +14,7 @@ GNU General Public License for more details.
 '''
 from core.models import *
 from django.contrib import admin
+from astrometrics.time_subs import degreestohms, degreestodms
 
 import reversion
 
@@ -79,8 +80,34 @@ class FrameAdmin(reversion.VersionAdmin):
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
 
+class SourceMeasurementAdmin(admin.ModelAdmin):
+
+    def body_name(self, obj):
+        provisional_name = ''
+        if obj.body.provisional_name:
+            provisional_name = obj.body.provisional_name
+        joiner = ''
+        if obj.body.provisional_name and obj.body.name:
+            joiner = '->'
+        final_name = ''
+        if obj.body.name:
+            final_name = obj.body.name
+
+        return provisional_name + joiner + final_name
+
+    def site_code(self, obj):
+        return obj.frame.sitecode
+
+    def obs_ra_hms(self, obj):
+        return degreestohms(obj.obs_ra,' ')
+
+    def obs_dec_dms(self, obj):
+        return degreestodms(obj.obs_dec,' ')
+
+    list_display = ('body_name', 'frame', 'flags', 'obs_ra_hms', 'obs_dec_dms', 'site_code')
 
 admin.site.register(Body,BodyAdmin)
 admin.site.register(Frame,FrameAdmin)
 admin.site.register(Block,BlockAdmin)
 admin.site.register(Proposal,ProposalAdmin)
+admin.site.register(SourceMeasurement,SourceMeasurementAdmin)

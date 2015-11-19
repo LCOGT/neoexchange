@@ -125,3 +125,6 @@ def mock_check_for_images_bad_date(eventid):
             "origname":"file2.fits",
             "hdrver":"LCOGT-HDR-1.3.0"}]
     return images
+
+def mock_ingest_frames(images, block):
+    return None
