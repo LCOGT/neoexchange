@@ -119,8 +119,8 @@
 								{% endblock %}
 
 								<form action="{% url 'search' %}" method="GET">
-									<input type='text' placeholder="Object name" name="q" />
-									<input type="submit" class="button keepvisible" role="menuitem" value="Search">
+									<input type='text' placeholder="Object name" name="q" id="id_target_search"/>
+									<input type="submit" class="button keepvisible" role="menuitem" value="Search" id="id_search_submit">
 								</form>
 							</nav>
 						</div>

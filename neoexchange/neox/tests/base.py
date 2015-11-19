@@ -1,10 +1,14 @@
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from core.models import Body, Proposal, Block
 
 class FunctionalTest(StaticLiveServerTestCase):
-
+    def __init__(self, *args, **kwargs):
+        super(FunctionalTest, self).__init__(*args, **kwargs)
+        if settings.DEBUG == False:
+            settings.DEBUG = True
 
     def insert_test_body(self):
         params = {  'provisional_name' : 'N999r0q',

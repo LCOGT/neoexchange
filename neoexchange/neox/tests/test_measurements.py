@@ -76,7 +76,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He sees that the target he wants is in the table and clicks on it
         self.check_for_header_in_table('id_targets',
-            'Name Type Origin Ingested')
+            'Name Type Origin Ingest date')
         testlines = [u'N999r0q Candidate Minor Planet Center 11 May 2015, 17:20',
                      u'V38821zi Candidate Minor Planet Center 11 May 2015, 17:20']
         self.check_for_row_in_table('id_targets', testlines[0])

@@ -53,7 +53,7 @@
 								<li>
 								    {% if b.active %}<i class="fa fa-clock-o" style="color: #FF9933;"></i>{% else %}<i class="fa fa-thumbs-o-up" style="color:#339933;"></i>{% endif %}
 
-	<a href="{% url 'block-view}' b.id %}">{{b.block_start|date:"c"}}&nbsp;<i class="fa fa-long-arrow-right">&nbsp;</i>{{b.block_end|date:"c"}}@{{b.site|upper}}</a>
+	<a href="{% url 'block-view' b.id %}">{{b.block_start|date:"c"}}&nbsp;<i class="fa fa-long-arrow-right">&nbsp;</i>{{b.block_end|date:"c"}}@{{b.site|upper}}</a>
 								</li>
 								{% empty %}
 								<li>No blocks have been scheduled</li>
