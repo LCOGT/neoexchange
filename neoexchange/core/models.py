@@ -247,7 +247,7 @@ class Block(models.Model):
 
 
 class Frame(models.Model):
-    ''' Model to represent (FITS) frames of data from observations successfully 
+    ''' Model to represent (FITS) frames of data from observations successfully
     made and filename of data which resulted.
     '''
     SINGLE_FRAMETYPE = 0
@@ -262,10 +262,10 @@ class Frame(models.Model):
                         (SATELLITE_FRAMETYPE, 'Satellite data'),
                         (SPECTRUM_FRAMETYPE, 'Spectrum')
                     )
-    sitecode    = models.CharField('MPC site code', max_length=4, blank=False, default=None)
-    instrument  = models.CharField('instrument code', max_length=4, blank=True)
+    sitecode    = models.CharField('MPC site code', max_length=4, blank=False, default='none')
+    instrument  = models.CharField('instrument code', max_length=4, blank=True, null=True)
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
-    filename    = models.CharField('FITS filename', max_length=40, blank=True)
+    filename    = models.CharField('FITS filename', max_length=40, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
     block       = models.ForeignKey(Block, null=True, blank=True)
@@ -274,7 +274,7 @@ class Frame(models.Model):
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
     fwhm        = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     frametype   = models.SmallIntegerField('Frame Type', null=False, blank=False, default=0, choices=FRAMETYPE_CHOICES)
-    extrainfo   = models.TextField(blank=True)
+    extrainfo   = models.TextField(blank=True, null=True)
     rms_of_fit  = models.FloatField('RMS of astrometric fit (arcsec)', null=True, blank=True)
     nstars_in_fit  = models.FloatField('No. of stars used in astrometric fit', null=True, blank=True)
     time_uncertainty = models.FloatField('Time uncertainty (seconds)', null=True, blank=True)
@@ -293,7 +293,7 @@ class Frame(models.Model):
         return name
 
 class SourceMeasurement(models.Model):
-    '''Class to represent the measurements (RA, Dec, Magnitude and errors) 
+    '''Class to represent the measurements (RA, Dec, Magnitude and errors)
     performed on a Frame (having site code, date/time etc.).
     These will provide the way of storing past measurements of an object and
     any new measurements performed on data from the LCOGT NEO Follow-up Network
@@ -311,10 +311,9 @@ class SourceMeasurement(models.Model):
     photometric_catalog = models.CharField('Photometric catalog used', max_length=40, default=' ')
     aperture_size = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
     snr = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
-    flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')    
+    flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
 
     class Meta:
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
-

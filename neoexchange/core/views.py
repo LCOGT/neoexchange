@@ -85,13 +85,13 @@ class BodySearchView(ListView):
         except:
             name = ''
         if (name != ''):
-            object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(
-                provisional_packed__icontains=name) | Q(name__icontains=name))
+            object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
         return object_list
 
 class BlockDetailView(DetailView):
+    template_name = 'core/block_detail.html'
     model = Block
 
     def get_context_data(self, **kwargs):
@@ -525,7 +525,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
 def update_NEOCP_observations(obj_id, extra_params={}):
     '''Query the NEOCP for <obj_id> and download the observation lines.
     These are used to create Source Measurements for the body if the
-    update time in the passed extra_params dictionary is later than the 
+    update time in the passed extra_params dictionary is later than the
     Body's update_time'''
 
     update_time = extra_params.get('update_time', None)
@@ -847,8 +847,10 @@ def create_source_measurement(obs_lines, block=None):
                 if not block:
                     blocks = Block.objects.filter(block_start__lte=params['obs_date'], block_end__gte=params['obs_date'], body=obs_body)
                     if blocks:
-                        logger.debug("Found %s blocks for %s" % (blocks.count(), obs_body))
+                        logger.error("Found %s blocks for %s" % (blocks.count(), obs_body))
                         block = blocks[0]
+                    else:
+                        logger.error("No blocks for %s" % (obs_body))
                 frame = create_frame(params, block)
                 measure_params = {  'body'    : obs_body,
                                     'frame'   : frame,
@@ -902,13 +904,16 @@ def check_for_images(eventid=False):
     return images
 
 def create_frame(params, block=None):
+    # Return None if params is just whitespace
+    if not params:
+        return None
     our_site_codes = LCOGT_site_codes()
     if params.get('groupid', None):
     # In these cases we are parsing the FITS header
         frame_params = frame_params_from_block(params, block)
     else:
         # We are parsing observation logs
-        frame_params = frame_params_from_log(params)
+        frame_params = frame_params_from_log(params, block)
     frame, frame_created = Frame.objects.get_or_create(**frame_params)
     if frame_created:
         msg = "created"
@@ -930,7 +935,7 @@ def frame_params_from_block(params, block):
                  }
     return frame_params
 
-def frame_params_from_log(params):
+def frame_params_from_log(params, block):
     our_site_codes = LCOGT_site_codes()
     # We are parsing observation logs
     sitecode = params.get('site_code', None)
@@ -943,6 +948,7 @@ def frame_params_from_log(params):
         frame_type = Frame.NONLCO_FRAMETYPE
     frame_params = { 'midpoint' : params.get('obs_date', None),
                      'sitecode' : sitecode,
+                     'block'    : block,
                      'filter'   : params.get('filter', None),
                      'frametype' : frame_type
                    }
@@ -998,6 +1004,7 @@ def block_status(block_id):
                     block.save()
                     status = True
                     logger.debug("Block %s updated" % block)
+                    # Add frames
                     resp = ingest_frames(images, block)
                 else:
                     logger.debug("No update to block %s" % block)

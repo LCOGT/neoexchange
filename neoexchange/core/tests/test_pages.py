@@ -277,11 +277,12 @@ class BlocksPageTest(TestCase):
         self.assertTemplateUsed(response, 'core/block_list.html')
 
     def test_block_detail_url_resolves_to_block_detail_view(self):
-        found = reverse('block',kwargs={'pk':1})
+        found = reverse('block-view',kwargs={'pk':1})
         self.assertEqual(found, '/block/1/')
 
     def test_block_detail_page_renders_template(self):
-        response = self.client.get(reverse('block',kwargs={'pk':1}))
+        self.setUp()
+        response = self.client.get(reverse('block-view',kwargs={'pk':1}))
         self.assertTemplateUsed(response, 'core/block_detail.html')
 
 

@@ -22,13 +22,13 @@ import os
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
     mock_check_request_status_null, mock_check_for_2_images, mock_check_for_images_millisecs, \
-    mock_check_for_images_bad_date
+    mock_check_for_images_bad_date, mock_ingest_frames
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, parse_mpcorbit, clean_mpcorbit, \
-    create_source_measurement, block_status, clean_crossid
+    create_source_measurement, block_status, clean_crossid, parse_mpcobs, create_frame
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
@@ -479,6 +479,7 @@ class TestCheck_for_block(TestCase):
 
     @patch('core.views.check_request_status', mock_check_request_status)
     @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.views.ingest_frames', mock_ingest_frames)
     def test_block_update_check_status_change(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
@@ -494,6 +495,7 @@ class TestCheck_for_block(TestCase):
 
     @patch('core.views.check_request_status', mock_check_request_status)
     @patch('core.views.check_for_images', mock_check_for_images_millisecs)
+    @patch('core.views.ingest_frames', mock_ingest_frames)
     def test_block_update_millisecs(self):
         blockid = self.test_block5.id
         resp = block_status(blockid)
@@ -866,6 +868,56 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(6, len(sources))
         self.assertEqual(4, len(nonLCO_frames))
         self.assertEqual(2, len(LCO_frames))
+
+class TestFrames(TestCase):
+    def setUp(self):
+        # Read in MPC 80 column format observations lines from a static file
+        # for testing purposes
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        self.test_obslines = test_fh.readlines()
+        test_fh.close()
+
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        self.test_body = Body.objects.create(**WSAE9A6_params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : 'TEMP_GROUP',
+                         'block_start' : '2015-09-20 13:00:00',
+                         'block_end'   : '2015-09-21 03:00:00',
+                         'tracking_number' : '00001',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+
+    def test_add_frame(self):
+        params = parse_mpcobs(self.test_obslines[-1])
+        resp = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K93')
+        self.assertEqual(1,frames.count())
+
+    def test_add_frames(self):
+        for line in self.test_obslines:
+            params = parse_mpcobs(line)
+            resp = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K93')
+        self.assertEqual(2,frames.count())
+        # Did the block get Added
+        frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
+        self.assertEqual(2, frames.count())
+
 
 @patch('core.views.datetime', MockDateTime)
 class TestClean_crossid(TestCase):
