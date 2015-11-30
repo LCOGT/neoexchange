@@ -38,14 +38,14 @@ def parse_neocp_date(neocp_datestr, dbg=False):
     if dbg: print chunks
     if len(chunks) != 3: return None
     month_str = chunks[0].replace('(', '').replace('.', '')
-    day_chunks = chunks[1].split('.') 
+    day_chunks = chunks[1].split('.')
     if dbg: print day_chunks
     neocp_datetime = datetime(year=datetime.utcnow().year, month=month_map[month_str[0:3]],
         day=int(day_chunks[0]))
 
     decimal_day = float('0.' + day_chunks[1].split()[0])
     neocp_datetime = neocp_datetime + timedelta(days=decimal_day)
-    
+
     return neocp_datetime
 
 def parse_neocp_decimal_date(neocp_datestr, dbg=False):
@@ -117,7 +117,7 @@ def extract_packed_date(value):
             'U'     : 30,
             'V'     : 31}
     try:
-        return int(value) 
+        return int(value)
     except ValueError:
         return lookup[value]
 
@@ -221,7 +221,7 @@ def compute_ut1(mjd_utc, dbg=False):
     return ut1
 
 def round_datetime(date_to_round, round_mins=10, round_up=False):
-    '''Rounds the passed datetime object, <date_to_round>, to the 
+    '''Rounds the passed datetime object, <date_to_round>, to the
     'floor' (default) or the 'ceiling' (if [roundup=True]) of
     the nearest passed amount (which defaults to 10min)'''
 
@@ -256,10 +256,9 @@ def degreestodms(value, sep):
         else:
             sign = "+"
         value = abs(value)
-        d = int(value)
-        m = int((value - d)*60)
-        s = ((value - d)*3600 - m*60)
-        return "%s%02d%c%02d%c%04.1f" % (sign,d,sep,m,sep,s)
+        mnt,sec = divmod(value*3600,60)
+        deg,mnt = divmod(mnt,60)
+        return "%s%02d%c%02d%c%04.1f" % (sign,deg,sep,mnt,sep,sec)
     except:
         return ""
 
@@ -279,11 +278,10 @@ def degreestohms(value, sep):
     if ":" in str(value):
         return value
     try:
-        value = float(value)/15
-        d = int(value)
-        m = int((value - d)*60)
-        s = ((value - d)*3600 - m*60)
-        return "%02d%c%02d%c%05.2f" % (d,sep,m,sep,s)
+        value = float(value)/15.
+        mnt,sec = divmod(value*3600,60)
+        deg,mnt = divmod(mnt,60)
+        return "%02d%c%02d%c%05.2f" % (deg,sep,mnt,sep,sec)
     except:
         return ""
 
@@ -323,7 +321,7 @@ def hmstohours(value):
 
 def dttodecimalday(dt, microdays=False):
     '''Converts a datetime object <dt> into MPC-style Year, Month, Decimal day. An
-    optional argument, microdays, can be given to produce the decimal day to 
+    optional argument, microdays, can be given to produce the decimal day to
     6 d.p. i.e. ~0.8 second'''
 
     try:
