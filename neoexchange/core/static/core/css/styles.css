@@ -780,8 +780,7 @@ body.view #main-holder #sidebar { box-shadow: none; }
 #main-holder.without-sidebar #main { display: block; }
 #main-holder.without-sidebar #sidebar { display: none; }
 
-#pagination { margin: 8px; text-align: center; }
-#pagination span.current { margin: 0 10px;}
+.pagination {text-align: center; }
 
 body.inbox #main table { margin: 0px; padding: 0px; background-color: white; width: 100%!important; border-collapse: collapse; table-layout: fixed; }
 body.inbox #main th, body.inbox #main td { text-align: left; padding: 8px; border: 0px; font-weight: normal; }
