@@ -105,6 +105,8 @@ class SourceMeasurementAdmin(admin.ModelAdmin):
         return degreestodms(obj.obs_dec,' ')
 
     list_display = ('body_name', 'frame', 'flags', 'obs_ra_hms', 'obs_dec_dms', 'site_code')
+    search_fields = ('body__name', 'body__provisional_name')
+
 
 admin.site.register(Body,BodyAdmin)
 admin.site.register(Frame,FrameAdmin)
