@@ -613,7 +613,7 @@ def validate_packcode(packcode):
 
 def packed_to_normal(packcode):
     '''Converts MPC packed provisional designations e.g. K10V01F to unpacked
-    normal desigination i.e. 2010VF1'''
+    normal desigination i.e. 2010 VF1'''
 
 # Convert initial letter to century
     cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
@@ -643,7 +643,7 @@ def packed_to_normal(packcode):
         count = ''
 
 # Assemble unpacked code
-    normal_code = str(mpc_cent) + mpc_year + no_in_halfmonth + str(count)
+    normal_code = str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count)
 
     return normal_code
 
