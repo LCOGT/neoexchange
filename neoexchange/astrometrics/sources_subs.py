@@ -26,7 +26,6 @@ import slalib as S
 import logging
 import urllib2, os
 from urlparse import urljoin
-from core.models import Block
 
 
 logger = logging.getLogger(__name__)
@@ -447,7 +446,7 @@ def translate_catalog_code(code_or_name):
                   "n" : "TRC",
                   "o" : "USNO-B1",
                   "p" : "PPM",
-                  "q" : "UCAC2-beta",
+                  "q" : "UCAC-4",
                   "r" : "UCAC-2",
                   "s" : "USNO-B2",
                   "t" : "PPMXL",
