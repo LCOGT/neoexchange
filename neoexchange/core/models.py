@@ -17,6 +17,8 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from astrometrics.ephem_subs import compute_ephem, comp_FOM
+from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
+from astrometrics.sources_subs import translate_catalog_code
 from astropy.time import Time
 from datetime import datetime
 import reversion
@@ -312,6 +314,19 @@ class SourceMeasurement(models.Model):
     aperture_size = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
     snr = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
     flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
+
+    def format_mpc_line(self):
+
+        if self.body.name:
+            name = "%5s       " % self.body.name
+        else:
+            name = "     %7s" % self.body.provisional_name
+
+        mpc_line = "%12s %1sC%16s%11s %11s          %.1f %1s%1s     %3s" % (name,
+            self.flags, dttodecimalday(self.frame.midpoint, True),
+            degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
+            self.obs_mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+        return mpc_line
 
     class Meta:
         verbose_name = _('Source Measurement')

@@ -22,7 +22,7 @@ from mock import patch
 from neox.tests.mocks import MockDateTime
 
 #Import module to test
-from core.models import Body, Proposal, Block, Frame
+from core.models import Body, Proposal, Block, Frame, SourceMeasurement
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -501,3 +501,82 @@ class TestFrame(TestCase):
         self.assertEqual(params['sitecode'], frame.sitecode)
         self.assertEqual(params['filter'], frame.filter)
         self.assertEqual(params['midpoint'], frame.midpoint)
+
+class TestSourceMeasurement(TestCase):
+
+    def setUp(self):
+        # Initialise with a test body and two test proposals
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'V92818q'
+        self.body2, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'I22871'
+        self.body3, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'Ntheiqo'
+        self.body4, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'Q488391r'
+        self.body5, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 40.0,
+                         'active'   : True,
+                         'num_observed' : 1,
+                         'when_observed' : '2015-07-13 21:20:00',
+                         'reported' : False
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : datetime(2015,07,13,21,9,51),
+                    'block'         : self.test_block,
+                 }
+        self.test_frame = Frame.objects.create(**frame_params)
+
+    def test_mpc_1(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+                                 
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 wq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
