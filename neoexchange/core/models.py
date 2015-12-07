@@ -19,6 +19,7 @@ from django.forms.models import model_to_dict
 from astrometrics.ephem_subs import compute_ephem, comp_FOM
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.sources_subs import translate_catalog_code
+from astrometrics.ast_subs import normal_to_packed
 from astropy.time import Time
 from datetime import datetime
 import reversion
@@ -318,7 +319,9 @@ class SourceMeasurement(models.Model):
     def format_mpc_line(self):
 
         if self.body.name:
-            name = "%5s       " % self.body.name
+            name, status = normal_to_packed(self.body.name)
+            if status != 0:
+                name = "%5s       " % self.body.name
         else:
             name = "     %7s" % self.body.provisional_name
 

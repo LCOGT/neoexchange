@@ -523,7 +523,8 @@ class TestSourceMeasurement(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
-        params['provisional_name'] = 'V92818q'
+        params['provisional_name'] = 'P10pyQA'
+        params['name'] = '2015 XS54'
         self.body2, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = 'I22871'
@@ -557,6 +558,22 @@ class TestSourceMeasurement(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'lsc',
+                         'body'     : self.body2,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-12-04 00:40:00',
+                         'block_end'   : '2015-12-04 08:10:00',
+                         'tracking_number' : '0000117781',
+                         'num_exposures' : 15,
+                         'exp_length' : 95.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'when_observed' : '2015-12-04 02:03:00',
+                         'reported' : False
+                       }
+        self.test_block2 = Block.objects.create(**block_params)
+
         frame_params = {  'sitecode'      : 'K93',
                     'instrument'    : 'kb75',
                     'filter'        : 'w',
@@ -566,6 +583,15 @@ class TestSourceMeasurement(TestCase):
                     'block'         : self.test_block,
                  }
         self.test_frame = Frame.objects.create(**frame_params)
+
+        frame_params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'R',
+                    'frametype'     : Frame.STACK_FRAMETYPE,
+                    'midpoint'      : datetime(2015,12,05,01,10,49,int(0.9*1e6)),
+                    'block'         : self.test_block,
+                 }
+        self.test_frame_stack = Frame.objects.create(**frame_params)
 
     def test_mpc_1(self):
         measure_params = {  'body' : self.body,
@@ -578,5 +604,48 @@ class TestSourceMeasurement(TestCase):
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 wq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_2(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+                                 
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 wq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_Kflag(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 20.7,
+                            'astrometric_catalog' : "PPMXL",
+                            'flags' : 'K'
+                         }
+                                 
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 wt     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_packed_Kflag(self):
+        measure_params = {  'body' : self.body2,
+                            'frame' : self.test_frame_stack,
+                            'obs_ra' : 346.01716666666667,
+                            'obs_dec' : -3.8430833333333333,
+                            'obs_mag' : 21.6,
+                            'flags' : 'K'
+                         }
+                                 
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     K15X54S KC2015 12 05.04918923 04 04.12 -03 50 35.1          21.6 R      W86'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
