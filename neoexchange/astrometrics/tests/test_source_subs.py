@@ -795,7 +795,7 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_dec'   : -2.1083055555555554,
                             'obs_mag'   : 18.7,
                             'filter'    : 'R',
-                            'astrometric_catalog' : 'UCAC2-beta',
+                            'astrometric_catalog' : 'UCAC-4',
                             'site_code' : 'H45'
                           }
 
@@ -812,7 +812,7 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_dec'   : -2.1243055555555554,
                             'obs_mag'   : 19.2,
                             'filter'    : 'V',
-                            'astrometric_catalog' : 'UCAC2-beta',
+                            'astrometric_catalog' : 'UCAC-4',
                             'site_code' : 'H21'
                           }
 
@@ -829,7 +829,7 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_dec'   : -2.1242777777777775,
                             'obs_mag'   : 18.6,
                             'filter'    : 'V',
-                            'astrometric_catalog' : 'UCAC2-beta',
+                            'astrometric_catalog' : 'UCAC-4',
                             'site_code' : 'W88'
                           }
 
@@ -908,7 +908,7 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_dec'   : -14.387833333333333,
                             'obs_mag'   : None,
                             'filter'    : ' ',
-                            'astrometric_catalog' : 'UCAC2-beta',
+                            'astrometric_catalog' : 'UCAC-4',
                             'site_code' : 'G96'
                           }
 
@@ -956,7 +956,7 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_dec'   : -10.861583333333332,
                             'obs_mag'   : None,
                             'filter'    : 'V',
-                            'astrometric_catalog' : 'UCAC2-beta',
+                            'astrometric_catalog' : 'UCAC-4',
                             'site_code' : 'G96'
                           }
 
