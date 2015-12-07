@@ -19,7 +19,7 @@
               {% if sources %}
               <pre>
                 {% for source in sources %}
-     {{source.body.provisional_packed}}  {{source.obs_ra}} {{source.obs_dec}}
+                    {{source.format_mpc_line}}
                 {% endfor %}
               </pre>
               {% else %}

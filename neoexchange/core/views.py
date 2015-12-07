@@ -36,7 +36,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations
+    fetch_NEOCP_observations, PackedError
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
@@ -152,7 +152,10 @@ class UploadReport(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         obslines = form.cleaned_data['report'].splitlines()
         measure = create_source_measurement(obslines, form.cleaned_data['block'])
-        messages.success(self.request, 'Added source measurements for %s' % form.cleaned_data['block'])
+        if measure != None:
+            messages.success(self.request, 'Added source measurements for %s' % form.cleaned_data['block'])
+        else:
+            messages.warning(self.request, 'Unable to add source measurements for %s' % form.cleaned_data['block'])
         return super(UploadReport, self).form_valid(form)
 
 
@@ -170,7 +173,6 @@ class MeasurementView(View):
     def get(self, request, *args, **kwargs):
         measures = SourceMeasurement.objects.filter(body=Body.objects.get(pk=kwargs['pk']))
         return render(request, 'core/measurements.html', {'measures' : measures})
-
 
 def ephemeris(request):
 
@@ -864,7 +866,15 @@ def create_source_measurement(obs_lines, block=None):
         params = parse_mpcobs(obs_line)
         if params:
             try:
-                obs_body = Body.objects.get(provisional_name=params['body'])
+                # Try to unpack the name first
+                try:
+                    unpacked_name = packed_to_normal(params['body'])
+                except PackedError:
+                    unpacked_name = 'ZZZZZZ'
+                obs_body = Body.objects.get(Q(provisional_name=params['body']) |
+                                            Q(name=params['body']) |
+                                            Q(name=unpacked_name)
+                                           )
                 # Identify block
                 if not block:
                     blocks = Block.objects.filter(block_start__lte=params['obs_date'], block_end__gte=params['obs_date'], body=obs_body)
