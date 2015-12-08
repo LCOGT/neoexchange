@@ -12,18 +12,18 @@
 {% endblock%}
 
 {% block main-content %}
-		<div class="masthead">
-			<div class="container">
-				<a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
-					<div class="bigtext">{{targets}}</div>
-					<div class="smalltext">active targets</div>
-				</a>
-				<a class="btn btn-transparent btn-jumbo" href="{% url 'blocklist' %}">
-					<div class="bigtext">{{blocks}}</div>
-					<div class="smalltext">active blocks</div>
-				</a>
-			</div>
-		</div>
+    <div class="masthead">
+        <div class="container">
+            <a class="btn btn-transparent btn-jumbo" href="{% url 'targetlist' %}">
+                <div class="bigtext">{{targets}}</div>
+                <div class="smalltext">active targets</div>
+            </a>
+            <a class="btn btn-transparent btn-jumbo" href="{% url 'blocklist' %}">
+                <div class="bigtext">{{blocks}}</div>
+                <div class="smalltext">active blocks</div>
+            </a>
+        </div>
+    </div>
 
     <div class="container">
         <table id="id_neo_targets" class="datatable">
@@ -78,13 +78,13 @@
                     <td data-label="Not seen">{{body.not_seen}}</td>
                     <td data-label="NEOCP Score">{{body.score}}</td>
                     <td data-label="Updated?">
-											{% if body.updated %}
-											<i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
-											{% else %}
-											<i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
-											{% endif %}
-										</td>
-                    </tr>
+                    {% if body.updated %}
+                        <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
+                    {% else %}
+                        <i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
+                    {% endif %}
+                    </td>
+                </tr>
                 {% empty%}
                     <tr><td colspan=11> No new targets</td></tr>
                 {% endfor%}
