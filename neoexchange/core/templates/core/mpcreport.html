@@ -20,7 +20,7 @@
               <p><a href="{% url 'measurement' body.id %}">[View in HTML format]</a></p>
               <pre>
             {% for line in measures %}
-          {{line.body.current_name}}{{line.frame.midpoint|dttodecimalday:False}}{{line.obs_ra|degreestohms:" "}}{{line.obs_dec|degreestodms:" "}}{{line.obs_mag|floatformat:1}}{{line.frame.filter}}{{line.frame.sitecode}}{% endfor %}
+     {{line.body.current_name|subsblank:7}}{{line.frame.midpoint|dttodecimalday:False}}{{line.obs_ra|degreestohms:" "}}{{line.obs_dec|degreestodms:" "}}{{line.obs_mag|floatformat:1}}{{line.frame.filter}}{{line.frame.sitecode}}{% endfor %}
               </pre>
               {% else %}
               <h3>No report has been made for this block.</h3>
