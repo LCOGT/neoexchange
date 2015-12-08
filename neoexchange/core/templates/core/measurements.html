@@ -6,11 +6,14 @@
 {% block bodyclass %}page{% endblock %}
 {% block extramenu %}
 					<div class="headingleft">
-						<h1>Source Measurements for: {{measures.first.body.current_name}}</h1>
+						<h1>Source Measurements for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
 					</div>
 {% endblock%}
 {% block main-content %}
 			<div id="main" class="fill-height">
+				<div class="row">
+					<p><a href="{% url 'measurement-mpc' body.id %}">[View in MPC format]</a></p>
+				</div>
 				<div class="fullwidth">
 					<table class="datatable" id="id_measurements">
 						<thead>
@@ -41,13 +44,13 @@
 						<tbody>
 						{% for line in measures %}
 							<tr>
-								<td>{{line.body.current_name}}</a></td>
+								<td>{{line.body.current_name}}</td>
 								<td>{{line.frame.midpoint|dttodecimalday:False}}</td>
 								<td>{{line.obs_ra|degreestohms:" "}}</td>
 								<td>{{line.obs_dec|degreestodms:" "}}</td>
-                                                                <td>{{line.obs_mag|floatformat:1}}</td>
-                                                                <td>{{line.frame.filter}}</td>
-                                                                <td>{{line.frame.sitecode}}</td>
+                <td>{{line.obs_mag|floatformat:1}}</td>
+                <td>{{line.frame.filter}}</td>
+                <td>{{line.frame.sitecode}}</td>
 							</tr>
 						{% endfor %}
 						</tbody>

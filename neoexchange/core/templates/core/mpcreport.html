@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load staticfiles basic_tags %}
 
 {% block header %}MPC format report{% endblock %}
 
@@ -6,21 +7,20 @@
 
 
 {% block extramenu %}
-    <div class="headingleft">
-        <h1>Report in MPC format</h1>
-    </div>
+<div class="headingleft">
+  <h1>Source Measurements for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+</div>
 {% endblock%}
 
 {% block main-content %}
     <div class="container">
         <div id="main">
             <div class="row">
-              <h3>Report for <a href="{% url 'target' slot.body.id %}">{{slot.body.name}}</a> in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a></h3>
-              {% if sources %}
+              {% if measures %}
+              <p><a href="{% url 'measurement' body.id %}">[View in HTML format]</a></p>
               <pre>
-                {% for source in sources %}
-                    {{source.format_mpc_line}}
-                {% endfor %}
+            {% for line in measures %}
+          {{line.body.current_name}}{{line.frame.midpoint|dttodecimalday:False}}{{line.obs_ra|degreestohms:" "}}{{line.obs_dec|degreestodms:" "}}{{line.obs_mag|floatformat:1}}{{line.frame.filter}}{{line.frame.sitecode}}{% endfor %}
               </pre>
               {% else %}
               <h3>No report has been made for this block.</h3>

@@ -160,19 +160,20 @@ class UploadReport(LoginRequiredMixin, FormView):
 
 
 
-class ViewMPCReport(LoginRequiredMixin, View):
-
+class MeasurementViewBlock(LoginRequiredMixin, View):
+    template = 'core/measurements.html'
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
         frames = Frame.objects.filter(block=block).values_list('id',flat=True)
-        sources = SourceMeasurement.objects.filter(frame__in=frames)
-        return render(request, 'core/mpcreport.html', {'slot':block,'sources':sources})
+        measures = SourceMeasurement.objects.filter(frame__in=frames)
+        return render(request, self.template, {'body':block.body,'measures':measures,'slot':block})
 
-class MeasurementView(View):
-
+class MeasurementViewBody(View):
+    template = 'core/measurements.html'
     def get(self, request, *args, **kwargs):
-        measures = SourceMeasurement.objects.filter(body=Body.objects.get(pk=kwargs['pk']))
-        return render(request, 'core/measurements.html', {'measures' : measures})
+        body = Body.objects.get(pk=kwargs['pk'])
+        measures = SourceMeasurement.objects.filter(body=body)
+        return render(request, self.template, {'body':body, 'measures' : measures})
 
 def ephemeris(request):
 
