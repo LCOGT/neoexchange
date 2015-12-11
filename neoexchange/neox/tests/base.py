@@ -2,6 +2,7 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.by import By
 from core.models import Body, Proposal, Block
 
 class FunctionalTest(StaticLiveServerTestCase):
@@ -94,6 +95,24 @@ class FunctionalTest(StaticLiveServerTestCase):
         table_body = table.find_element_by_tag_name('tbody')
         rows = table_body.find_elements_by_tag_name('tr')
         self.assertIn(row_text, [row.text.replace('\n', ' ') for row in rows])
+
+    def check_for_row_in_table_array(self, table_id, row_text):
+        table = self.browser.find_element_by_id(table_id)
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = table_body.find_elements_by_tag_name('tr')
+        input_row = row_text.split()
+        table_rows = []
+        for row in rows:
+            rowline = row.text.replace('\n', ' ')
+            table_rows.append(row.text.split())
+        self.assertIn(input_row, table_rows)
+
+    def check_icon_status_elements(self, table_id, data_label, statuses):
+        table = self.browser.find_element_by_id(table_id)
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = self.browser.find_elements(By.XPATH,"//td[@data-label='%s']//i" % data_label )
+        row_vals = [r.get_attribute("title") for r in rows]
+        self.assertEqual(row_vals, statuses)
 
     def check_for_row_not_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)

@@ -51,7 +51,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 N999r0q Candidate 23 43 12.75 +19 58 55.6 20.7 None None None None False',]
+        testlines =[u'1 N999r0q Candidate 23 43 12.75 +19 58 55.6 20.7 None None None None None',]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # he goes to the page from N999r0q and computes the ephemeris
