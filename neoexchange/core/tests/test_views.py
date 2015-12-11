@@ -692,7 +692,7 @@ class TestCreate_sourcemeasurement(TestCase):
                             'obs_dec'   : -10.8525,
                             'obs_mag'   : 21.8,
                             'filter'    : 'V',
-                            'astrometric_catalog' : 'UCAC2-beta',
+                            'astrometric_catalog' : 'UCAC-4',
                             'site_code' : 'G96'
                           }
 
@@ -746,7 +746,7 @@ class TestCreate_sourcemeasurement(TestCase):
                             'obs_dec'   : -10.861583333333332,
                             'obs_mag'   : None,
                             'filter'    : 'V',
-                            'astrometric_catalog' : 'UCAC2-beta',
+                            'astrometric_catalog' : 'UCAC-4',
                             'site_code' : 'G96'
                           }
 

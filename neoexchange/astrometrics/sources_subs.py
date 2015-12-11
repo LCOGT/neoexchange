@@ -26,7 +26,6 @@ import slalib as S
 import logging
 import urllib2, os
 from urlparse import urljoin
-from core.models import Block
 
 
 logger = logging.getLogger(__name__)
@@ -447,7 +446,7 @@ def translate_catalog_code(code_or_name):
                   "n" : "TRC",
                   "o" : "USNO-B1",
                   "p" : "PPM",
-                  "q" : "UCAC2-beta",
+                  "q" : "UCAC-4",
                   "r" : "UCAC-2",
                   "s" : "USNO-B2",
                   "t" : "PPMXL",
@@ -614,7 +613,7 @@ def validate_packcode(packcode):
 
 def packed_to_normal(packcode):
     '''Converts MPC packed provisional designations e.g. K10V01F to unpacked
-    normal desigination i.e. 2010VF1'''
+    normal desigination i.e. 2010 VF1'''
 
 # Convert initial letter to century
     cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
@@ -644,7 +643,7 @@ def packed_to_normal(packcode):
         count = ''
 
 # Assemble unpacked code
-    normal_code = str(mpc_cent) + mpc_year + no_in_halfmonth + str(count)
+    normal_code = str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count)
 
     return normal_code
 
