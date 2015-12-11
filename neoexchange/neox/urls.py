@@ -19,8 +19,10 @@ from django.contrib import admin
 from django.views.generic import ListView, DetailView
 from django.core.urlresolvers import reverse_lazy
 from core.models import Body, Block, SourceMeasurement
-from core.views import BodySearchView, BodyDetailView, BlockDetailView, ScheduleParameters, \
-    ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, UploadReport
+from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
+    ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
+    UploadReport
+
 from django.contrib.auth.views import login, logout
 
 admin.autodiscover()

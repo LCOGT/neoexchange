@@ -47,10 +47,10 @@ table.datatable td { border-bottom: 1px solid #e6e6e6; color: #202020; white-spa
 table.datatable td a { display: block; }
 table.datatable .wider { width: 12%; }
 
-table.datatable  tr.odd {
+table.datatable  tr.odd, .odd {
     background-color: #eee;
 }
-table.datatable  tr.even {
+table.datatable  tr.even, .even {
     background-color: #f9f9f9;
 }
 
@@ -780,8 +780,7 @@ body.view #main-holder #sidebar { box-shadow: none; }
 #main-holder.without-sidebar #main { display: block; }
 #main-holder.without-sidebar #sidebar { display: none; }
 
-#pagination { margin: 8px; text-align: center; }
-#pagination span.current { margin: 0 10px;}
+.pagination {text-align: center; }
 
 body.inbox #main table { margin: 0px; padding: 0px; background-color: white; width: 100%!important; border-collapse: collapse; table-layout: fixed; }
 body.inbox #main th, body.inbox #main td { text-align: left; padding: 8px; border: 0px; font-weight: normal; }
@@ -1098,6 +1097,11 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 .highlight {
  text-shadow: 0 0 5px #00ff00;
 }
+
+ul.block-status { margin: 0; padding: 0; list-style: none; }
+ul.block-status li { padding: 8px 0; border-top: 1px solid white; list-style: none;}
+.block-status-line {display:block;}
+.block-status-item { display:table-cell; padding: 0 10px;}
 
 /* Responsive design styles */
 

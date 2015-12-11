@@ -99,6 +99,14 @@ class BlockDetailView(DetailView):
         context['images'] = fetch_observations(context['block'].tracking_number, context['block'].proposal.code)
         return context
 
+
+class BlockListView(ListView):
+    model = Block
+    template_name = 'core/block_list.html'
+    queryset=Block.objects.order_by('-block_start')
+    context_object_name="block_list"
+    paginate_by = 20 
+
 def fetch_observations(tracking_num, proposal_code):
     query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
     data = framedb_lookup(query)
