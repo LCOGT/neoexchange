@@ -6,6 +6,15 @@ from astrometrics.time_subs import degreestohours, hourstodegrees, degreestodms,
 
 register = Library()
 
+def subsblank(value, arg):
+    arg = int(arg)
+    if not value:
+        return arg*" "
+    else:
+        return value
+
+
+register.filter('subsblank', subsblank)
 register.filter('degreestohours', degreestohours)
 register.filter('hourstodegrees', hourstodegrees)
 register.filter('degreestodms', degreestodms)

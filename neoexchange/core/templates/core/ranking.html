@@ -78,7 +78,13 @@
                     <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
                     <td data-label="South Polar Distance">{{body.spd|floatformat:1 }}</td>
                     <td data-label="V Mag">{{body.v_mag|floatformat:1 }}</td>
-                    <td data-label="Updated?">{{body.updated}}</td>
+                    <td data-label="Updated?">
+                        {% if body.updated %}
+                        <i class="fa fa-check-circle-o fa-lg" style="color:#339933;" title="True"></i>
+                        {% else %}
+                        <i class="fa fa-minus-circle fa-lg" style="color:#df0000;" title="False"></i>
+                        {% endif %}
+                    </td>
                     <td  data-label="Num. Obs.">{{body.num_obs}}</td>
                     <td data-label="Arc">{{body.arc_length}}</td>
                     <td data-label="H Mag">{{body.abs_mag}}</td>

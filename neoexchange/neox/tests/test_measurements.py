@@ -119,3 +119,50 @@ class MeasurementsPageTests(FunctionalTest):
 
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
+
+    def test_measurements_mpc_format(self):
+
+        # Setup
+        self.insert_test_extra_test_body()
+        self.insert_test_measurements()
+
+        # A user, Timo, is interested in seeing what existing measurements
+        # exist for a NEOCP candidate that he has heard about
+        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        self.browser.get(target_url)
+
+        # He sees a link that says it will export the measurements
+        # available for this object in MPC 80.
+        link = self.browser.find_element_by_partial_link_text('Show Measurements')
+        target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
+        self.assertEqual(link.get_attribute('href'), target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
+        link.click()
+
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+
+        # He sees a link that says it will display the measurements in MPC format
+        mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
+        mpc_target_url = "%s/target/%d/measurements/mpc/" % (self.live_server_url, 1)
+        self.assertEqual(mpc_link.get_attribute('href'), mpc_target_url)
+ 
+        # He clicks on the link and sees that he is taken to a page with the 
+        # source measurements for this object in MPC 80 char format
+        mpc_link.click()
+
+        # He sees that there is a table in which are the original
+        # discovery observations from WISE (obs. code C51) and from
+        # the LCOGT follow-up network.
+        testlines = [u'     N999r0q  C2015 04 20.75000002 48 24.00 -30 03 00.0          21.1 w      K91',
+                    ]
+        pre_block = self.browser.find_element_by_tag_name('pre')
+        rows = pre_block.text.splitlines()
+        for test_text in testlines:
+            self.assertIn(test_text, [row.replace('\n', ' ') for row in rows])
+
+        # Satisfied that the planet is safe from this asteroid, he
+        # leaves.
