@@ -105,7 +105,7 @@ class BlockListView(ListView):
     template_name = 'core/block_list.html'
     queryset=Block.objects.order_by('-block_start')
     context_object_name="block_list"
-    paginate_by = 20 
+    paginate_by = 20
 
 def fetch_observations(tracking_num, proposal_code):
     query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
@@ -160,7 +160,7 @@ class UploadReport(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         obslines = form.cleaned_data['report'].splitlines()
         measure = create_source_measurement(obslines, form.cleaned_data['block'])
-        if measure != None:
+        if measure:
             messages.success(self.request, 'Added source measurements for %s' % form.cleaned_data['block'])
         else:
             messages.warning(self.request, 'Unable to add source measurements for %s' % form.cleaned_data['block'])
@@ -542,18 +542,19 @@ def update_NEOCP_observations(obj_id, extra_params={}):
     try:
         body = Body.objects.get(provisional_name=obj_id)
         num_measures = SourceMeasurement.objects.filter(body=body).count()
-        
+
 # Check if the NEOCP has more measurements than we do
         if body.num_obs > num_measures:
             obs_lines = fetch_NEOCP_observations(obj_id)
             if obs_lines:
                 measure = create_source_measurement(obs_lines)
-                if measure >0:
-                    msg = "Created source measurements for object %s" % obj_id
-                elif measure == 0:
-                    msg = "Source measurements already exist for object %s" % obj_id
-                else:
+                if measure == False:
                     msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
+                else:
+                    if len(measure) >0:
+                        msg = "Created source measurements for object %s" % obj_id
+                    elif len(measure) == 0:
+                        msg = "Source measurements already exist for object %s" % obj_id
             else:
                 msg = "No observations exist for object %s" % obj_id
         else:
@@ -862,7 +863,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     return True
 
 def create_source_measurement(obs_lines, block=None):
-    num_measures = 0
+    measures = []
     if type(obs_lines) != list:
         obs_lines = [obs_lines,]
 
@@ -900,15 +901,15 @@ def create_source_measurement(obs_lines, block=None):
                                  }
                 measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
                 if measure_created:
-                    num_measures = num_measures + 1
+                    measures.append(measure)
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % params['body'])
-                num_measures = None
+                measures = False
             except Body.MultipleObjectsReturned:
                 logger.warn("Multiple versions of Body %s exist" % params['body'])
-                num_measures = None
+                measures = False
 
-    return num_measures
+    return measures
 
 def check_request_status(tracking_num=None):
     data = None
