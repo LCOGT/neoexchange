@@ -68,7 +68,7 @@ class RankingPageTest(FunctionalTest):
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
         self.insert_extra_test_body()
         self.insert_another_extra_test_body()
-
+        
         #Sarah goes to the ranking page and expects to see the ranked list of NEOs with the FOM.
         ranking_page_url = self.live_server_url + '/ranking/'
         self.browser.get(ranking_page_url)
@@ -77,16 +77,12 @@ class RankingPageTest(FunctionalTest):
         self.check_for_header_in_table('id_ranked_targets',\
             'Rank FOM Target Name NEOCP Score Discovery Date R.A. Dec. South Polar Distance V Mag. Updated? Num. Obs. Arc H Mag. Not Seen (days) Observed? Reported?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 1.8e+76 V38821zi 100 May 10, 2015, noon 23 43 12.75 +19 58 55.6 110.0 20.7 2 0.07 21.0 12.29 Not yet Not yet',
-                    u'2 2.5e-01 N999r0q 90 May 10, 2015, noon 23 43 12.75 +19 58 55.6 110.0 20.7 17 3.0 21.0 0.42 1/2 1/2',
-                    u'3 1.5e-01 q382918r 85 May 10, 2015, noon 23 43 12.75 +19 58 55.6 110.0 20.7 35 42.0 21.0 2.22 Not yet Not yet']
+        testlines =[u'1 1.8e+76 V38821zi 100 May 10, 2015, noon 23 43 12.75 +19 58 55.6 110.0 20.7 False 2 0.07 21.0 12.29 Not yet Not yet',
+                    u'2 2.5e-01 N999r0q 90 May 10, 2015, noon 23 43 12.75 +19 58 55.6 110.0 20.7 True 17 3.0 21.0 0.42 1/2 1/2',
+                    u'3 1.5e-01 q382918r 85 May 10, 2015, noon 23 43 12.75 +19 58 55.6 110.0 20.7 False 35 42.0 21.0 2.22 Not yet Not yet']
         self.check_for_row_in_table('id_ranked_targets', testlines[0])
         self.check_for_row_in_table('id_ranked_targets', testlines[1])
         self.check_for_row_in_table('id_ranked_targets', testlines[2])
-        # Because we can't find the Updated icon with a simple text search
-        # we look for the data-label for 'Updated?'
-        updated_statuses = ['false','true','false']
-        data_label = 'Updated?'
-        self.check_icon_status_elements('id_ranked_targets', data_label, updated_statuses)
-
+            
         #Satisfied, she leaves for the day.
+
