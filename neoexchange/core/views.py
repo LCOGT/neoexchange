@@ -413,7 +413,7 @@ def check_for_block(form_data, params, new_body):
         Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
 
         # XXX Code smell, duplicated from sources_subs.configure_defaults()
-        site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
+        site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ', 'Z21' : 'TFN' }
 
         try:
             body_id = Body.objects.get(provisional_name=new_body.provisional_name)

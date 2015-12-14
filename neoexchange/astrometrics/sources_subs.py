@@ -856,7 +856,7 @@ def make_constraints(params):
 
 def configure_defaults(params):
 
-    site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
+    site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ', 'Z21' : 'TFN'}
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
@@ -872,6 +872,11 @@ def configure_defaults(params):
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
+    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89':
+        params['instrument'] =  '0M4-SCICAM-SBIG'
+        params['pondtelescope'] = '0m4'
+        params['filter'] = 'w'
+        params['binning'] = 1
 
     return params
 

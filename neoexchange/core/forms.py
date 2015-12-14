@@ -12,7 +12,8 @@ SITES = (('V37','ELP (V37)'),
          ('W85','LSC (W85; SBIG)'),
          ('W86','LSC (W86-87)'),
          ('K92','CPT (K91-93)'),
-         ('Q63','COJ (Q63-64)'))
+         ('Q63','COJ (Q63-64)'),
+         ('Z21','TFN (Z21; 0.4m)'))
 
 
 class EphemQuery(forms.Form):
