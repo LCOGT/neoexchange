@@ -105,7 +105,7 @@ class BlockListView(ListView):
     template_name = 'core/block_list.html'
     queryset=Block.objects.order_by('-block_start')
     context_object_name="block_list"
-    paginate_by = 20 
+    paginate_by = 20
 
 def fetch_observations(tracking_num, proposal_code):
     query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
@@ -160,7 +160,7 @@ class UploadReport(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         obslines = form.cleaned_data['report'].splitlines()
         measure = create_source_measurement(obslines, form.cleaned_data['block'])
-        if measure != None:
+        if measure:
             messages.success(self.request, 'Added source measurements for %s' % form.cleaned_data['block'])
         else:
             messages.warning(self.request, 'Unable to add source measurements for %s' % form.cleaned_data['block'])
@@ -536,33 +536,31 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
 def update_NEOCP_observations(obj_id, extra_params={}):
     '''Query the NEOCP for <obj_id> and download the observation lines.
     These are used to create Source Measurements for the body if the
-    update time in the passed extra_params dictionary is later than the
-    Body's update_time'''
+    number of observations in the passed extra_params dictionary is greater than
+    the number of Source Measurements for that Body'''
 
-    update_time = extra_params.get('update_time', None)
-    updated = extra_params.get('updated', None)
-    if update_time and updated != None:
-        try:
-            body = Body.objects.get(provisional_name=obj_id)
-# Check if the NEOCP updated after the last time we updated the Body
-            if (update_time > body.update_time and body.update_time) or updated == False:
-                obs_lines = fetch_NEOCP_observations(obj_id)
-                if obs_lines:
-                    measure = create_source_measurement(obs_lines)
-                    if measure == True:
-                        msg = "Created source measurements for object %s" % obj_id
-                    elif measure == False:
-                        msg = "Source measurements already exist for object %s" % obj_id
-                    else:
-                        msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
+    try:
+        body = Body.objects.get(provisional_name=obj_id)
+        num_measures = SourceMeasurement.objects.filter(body=body).count()
+
+# Check if the NEOCP has more measurements than we do
+        if body.num_obs > num_measures:
+            obs_lines = fetch_NEOCP_observations(obj_id)
+            if obs_lines:
+                measure = create_source_measurement(obs_lines)
+                if measure == False:
+                    msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
                 else:
-                    msg = "No observations exist for object %s" % obj_id
+                    if len(measure) >0:
+                        msg = "Created source measurements for object %s" % obj_id
+                    elif len(measure) == 0:
+                        msg = "Source measurements already exist for object %s" % obj_id
             else:
-                msg = "Object %s has not been updated since %s" % (obj_id, body.update_time)
-        except Body.DoesNotExist:
-            msg = "Object %s does not exist" % obj_id
-    else:
-        msg = "No update time available"
+                msg = "No observations exist for object %s" % obj_id
+        else:
+            msg = "Object %s has not been updated since %s" % (obj_id, body.update_time)
+    except Body.DoesNotExist:
+        msg = "Object %s does not exist" % obj_id
     return msg
 
 def clean_NEOCP_object(page_list):
@@ -865,13 +863,12 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     return True
 
 def create_source_measurement(obs_lines, block=None):
-    measure = None
+    measures = []
     if type(obs_lines) != list:
         obs_lines = [obs_lines,]
 
     for obs_line in obs_lines:
         logger.debug(obs_line.rstrip())
-        measure = None
         params = parse_mpcobs(obs_line)
         if params:
             try:
@@ -903,16 +900,16 @@ def create_source_measurement(obs_lines, block=None):
                                     'flags'   : params['flags']
                                  }
                 measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
-                if measure_created == False:
-                    measure = False
+                if measure_created:
+                    measures.append(measure)
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % params['body'])
-                measure = None
+                measures = False
             except Body.MultipleObjectsReturned:
                 logger.warn("Multiple versions of Body %s exist" % params['body'])
-                measure = None
+                measures = False
 
-    return measure
+    return measures
 
 def check_request_status(tracking_num=None):
     data = None

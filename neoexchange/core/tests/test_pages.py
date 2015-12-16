@@ -282,7 +282,8 @@ class BlocksPageTest(TestCase):
 
     def test_block_detail_page_renders_template(self):
         self.setUp()
-        response = self.client.get(reverse('block-view',kwargs={'pk':1}))
+        blocks = Block.objects.all()
+        response = self.client.get(reverse('block-view',kwargs={'pk':blocks[0].id}))
         self.assertTemplateUsed(response, 'core/block_detail.html')
 
 

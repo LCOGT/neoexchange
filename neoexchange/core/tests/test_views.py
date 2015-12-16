@@ -696,7 +696,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'G96'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[0])
+        source_measures = create_source_measurement(self.test_obslines[0])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -723,7 +724,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'G96'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[1])
+        source_measures = create_source_measurement(self.test_obslines[1])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -750,7 +752,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'G96'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[2])
+        source_measures = create_source_measurement(self.test_obslines[2])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -777,7 +780,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : '474'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[3])
+        source_measures = create_source_measurement(self.test_obslines[3])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -793,9 +797,9 @@ class TestCreate_sourcemeasurement(TestCase):
 
     def test_create_blankline(self):
 
-        source_measure = create_source_measurement(self.test_obslines[4])
+        source_measures = create_source_measurement(self.test_obslines[4])
 
-        self.assertEqual(None, source_measure)
+        self.assertEqual([], source_measures)
 
     def test_create_LCO_stack(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -810,7 +814,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'K93'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[5])
+        source_measures = create_source_measurement(self.test_obslines[5])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -837,7 +842,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'K93'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[6])
+        source_measures = create_source_measurement(self.test_obslines[6])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -853,13 +859,14 @@ class TestCreate_sourcemeasurement(TestCase):
 
     def test_create_non_existant_body(self):
 
-        source_measure = create_source_measurement(self.test_obslines[3].replace('WSAE9A6', 'FOOBAR'))
+        source_measures = create_source_measurement(self.test_obslines[3].replace('WSAE9A6', 'FOOBAR'))
 
-        self.assertEqual(None, source_measure)
+        self.assertEqual([], source_measures)
 
     def test_create_whole_file(self):
 
-        source_measure = create_source_measurement(self.test_obslines)
+        source_measures = create_source_measurement(self.test_obslines)
+        source_measure = source_measures[0]
 
         sources = SourceMeasurement.objects.filter(body=self.test_body)
         nonLCO_frames = Frame.objects.filter(frametype=Frame.NONLCO_FRAMETYPE)
@@ -871,7 +878,8 @@ class TestCreate_sourcemeasurement(TestCase):
 
     def test_create_duplicates(self):
 
-        source_measure = create_source_measurement(self.test_obslines)
+        source_measures = create_source_measurement(self.test_obslines)
+        source_measure = source_measures[0]
         source_measure2 = create_source_measurement(self.test_obslines)
 
         sources = SourceMeasurement.objects.filter(body=self.test_body)
