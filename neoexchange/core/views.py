@@ -964,7 +964,7 @@ def frame_params_from_block(params, block):
     # In these cases we are parsing the FITS header
     frame_params = { 'midpoint' : params.get('date_obs', None),
                      'sitecode' : params.get('siteid', None),
-                     'filter'   : params.get('filter_name', None),
+                     'filter'   : params.get('filter_name', "B"),
                      'frametype': Frame.NONLCO_FRAMETYPE,
                      'block'    : block,
                      'instrument': params.get('instrume', None),
@@ -987,7 +987,7 @@ def frame_params_from_log(params, block):
     frame_params = { 'midpoint' : params.get('obs_date', None),
                      'sitecode' : sitecode,
                      'block'    : block,
-                     'filter'   : params.get('filter', None),
+                     'filter'   : params.get('filter', "B"),
                      'frametype' : frame_type
                    }
     return frame_params
