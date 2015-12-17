@@ -325,10 +325,15 @@ class SourceMeasurement(models.Model):
         else:
             name = "     %7s" % self.body.provisional_name
 
-        mpc_line = "%12s %1sC%16s%11s %11s          %.1f %1s%1s     %3s" % (name,
+        try:
+            mag = "%4.1f" % self.obs_mag
+        except TypeError:
+            mag = "    "
+
+        mpc_line = "%12s %1sC%16s%11s %11s          %4s %1s%1s     %3s" % (name,
             self.flags, dttodecimalday(self.frame.midpoint, True),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
-            self.obs_mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+            mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
         return mpc_line
 
     class Meta:

@@ -649,3 +649,23 @@ class TestSourceMeasurement(TestCase):
         expected_mpcline = '     K15X54S KC2015 12 05.04918923 04 04.12 -03 50 35.1          21.6 R      W86'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_nomag(self):
+        measure_params = {  'body': self.body2,
+                            'aperture_size': None,
+                            'astrometric_catalog': u'UCAC4',
+                            'err_obs_dec': None,
+                            'err_obs_mag': None,
+                            'err_obs_ra': None,
+                            'flags': u'K',
+                            'frame': self.test_frame_stack,
+                            'obs_dec': -29.5003055555556,
+                            'obs_mag': None,
+                            'obs_ra': 106.933,
+                            'photometric_catalog': u'UCAC4',
+                            'snr': None}
+                                 
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     K15X54S KC2015 12 05.04918907 07 43.92 -29 30 01.1               R      W86'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
