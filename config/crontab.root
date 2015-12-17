@@ -1,4 +1,4 @@
 10 5 * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py fetch_goldstone_targets >> /cron_debug.log
 20 * * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py update_neocp_data >> /cron_debug.log
-30 0,4,8,20 * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py update_crossids >> /cron_debug.log
+30 0,4,8,12,16,20 * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py update_crossids >> /cron_debug.log
 */30 * * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py update_blocks >> /cron_debug.log
