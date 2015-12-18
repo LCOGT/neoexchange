@@ -740,7 +740,7 @@ def clean_crossid(astobj, dbg=False):
         active = False
     elif obj_id != '' and desig != '':
         # Confirmed
-        if ('CBET' in reference or 'IAUC' in reference) and 'C/' in desig:
+        if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
             # There is a reference to an CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
             objtype = 'C'

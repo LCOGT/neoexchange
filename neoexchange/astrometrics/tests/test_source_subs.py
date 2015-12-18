@@ -192,6 +192,17 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_bad_comet3(self):
+
+        items = [u' Comet C/2015 X8 = NM0015a (Dec. 18.63 UT)  [see ', 
+            BeautifulSoup(' <a href="/mpec/K15/K15Y20.html"><i>MPEC</i> 2015-Y20</a>').a,
+             u']\n']
+        expected = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Dec. 18.63 UT)']
+        
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+
 class TestParseNEOCP(TestCase):
 
     def setUp(self):

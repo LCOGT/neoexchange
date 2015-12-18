@@ -1093,3 +1093,25 @@ class TestClean_crossid(TestCase):
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
+
+    def test_comet_mpec_recent(self):
+        crossid =  u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Nov. 18.63 UT)'
+        expected_params = { 'active' : True,
+                            'name' : 'C/2015 X8',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_mpec_notrecent(self):
+        crossid =  u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)'
+        expected_params = { 'active' : False,
+                            'name' : 'C/2015 X8',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
