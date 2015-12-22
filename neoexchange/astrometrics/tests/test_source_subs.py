@@ -866,7 +866,17 @@ class TestParseMPCObsFormat(TestCase):
         self.compare_dict(expected_params, params)
 
     def test_p_spaceS_l(self):
-        expected_params = {}
+        expected_params = { 'body'  : 'N00809b',
+                            'flags' : ' ',
+                            'obs_type'  : 'S',
+                            'obs_date'  : datetime(2015, 6, 22, 7, 11, 25, int(0.44*1e6)),
+                            'obs_ra'    : 315.69466666666667,
+                            'obs_dec'   : 57.977583333333333,
+                            'obs_mag'   : 20.0,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '2MASS',
+                            'site_code' : 'C51'
+                            }
 
         params = parse_mpcobs(self.test_lines['p_ S_l'])
 

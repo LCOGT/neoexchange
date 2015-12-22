@@ -503,7 +503,7 @@ def parse_mpcobs(line):
     except ValueError:
         obs_mag = None
 
-    if obs_type == 'C':
+    if obs_type == 'C' or obs_type == 'S':
         # Regular CCD observations
 #        print "Date=",line[15:32]
         params = {  'body'     : body,
@@ -525,9 +525,9 @@ def parse_mpcobs(line):
     elif obs_type.upper() == 'R':
         # Radar observations, skip
         logger.debug("Found radar observation, skipping")
-    elif obs_type == 'S':
+    elif obs_type == 's':
         # Satellite -based observation, do something with it
-        logger.warn("Found satellite observation, skipping (for now)")
+        logger.debug("Found satellite observation, skipping unneeded line")
     return params
 
 def clean_element(element):
