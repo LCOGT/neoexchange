@@ -756,6 +756,10 @@ def clean_crossid(astobj, dbg=False):
             objtype = 'A'
             active = False
 
+    if time_from_confirm < 0:
+        # if this is negative a date in the future has erroneously be assumed
+        active = False
+
     if objtype != '':
         params = {'source_type': objtype,
                   'name': desig,
