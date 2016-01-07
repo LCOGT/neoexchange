@@ -1115,3 +1115,15 @@ class TestClean_crossid(TestCase):
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
+
+    def test_new_year_switchover(self):
+        MockDateTime.change_datetime(2016, 1, 1, 0, 30, 0)
+        crossid =  u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)'
+        expected_params = { 'active' : False,
+                            'name' : 'C/2015 X8',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
