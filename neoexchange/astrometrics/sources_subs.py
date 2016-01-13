@@ -504,7 +504,7 @@ def parse_mpcobs(line):
         obs_mag = None
 
     if obs_type == 'C' or obs_type == 'S':
-        # Regular CCD observations
+        # Regular CCD observations or first line of satellite observations
 #        print "Date=",line[15:32]
         params = {  'body'     : body,
                     'flags'    : flag,
