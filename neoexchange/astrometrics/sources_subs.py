@@ -764,12 +764,18 @@ def fetch_arecibo_page():
     return page
 
 def fetch_arecibo_targets(page=None):
+    '''Parses the Arecibo webpage for upcoming radar targets and returns a list
+    of these targets back.
+    Takes either a BeautifulSoup page version of the Arecibo target page (from
+    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls 
+    this routine and then parses the resulting page.
+    '''
 
     if type(page) != BeautifulSoup:
         page = fetch_arecibo_page()
 
     targets = []
-    
+
     if type(page) == BeautifulSoup:
         # Find the tables, we want the second one
         tables = page.find_all('table')
