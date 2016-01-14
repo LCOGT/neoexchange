@@ -753,6 +753,44 @@ def fetch_goldstone_targets(dbg=False):
                 last_year_seen = year
     return  radar_objects
 
+def fetch_arecibo_page():
+    '''Fetches the Arecibo list of radar targets, returning a list
+    of object id's for the current year'''
+
+    arecibo_url = 'http://www.naic.edu/~pradar/'
+
+    page = fetchpage_and_make_soup(arecibo_url)
+
+    return page
+
+def fetch_arecibo_targets(page=None):
+
+    if type(page) != BeautifulSoup:
+        page = fetch_arecibo_page()
+
+    targets = []
+    
+    if type(page) == BeautifulSoup:
+        # Find the tables, we want the second one
+        tables = page.find_all('table')
+        if len(tables) != 2:
+            logger.warn("Unexpected number of tables found in Arecibo page")
+        else:
+            targets_table = tables[1]
+            rows = targets_table.find_all('tr')
+            if len(rows) > 1:
+                for row in rows[1:]:
+                    items = row.find_all('td')
+                    target_object = items[0].text
+                    # See if it is the form "(12345) 2008 FOO". If so, extract
+                    # just the asteroid number
+                    if '(' in target_object and ')' in target_object:
+                        target_object = target_object.split(')')[0].replace('(','')
+                    targets.append(target_object)
+            else:
+                logger.warn("No targets found in Arecibo page")
+    return targets
+
 def make_location(params):
     location = {
         'telescope_class' : params['pondtelescope'][0:3],
