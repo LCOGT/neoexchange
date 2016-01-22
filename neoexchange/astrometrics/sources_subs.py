@@ -868,6 +868,9 @@ def configure_defaults(params):
         params['binning'] = 1
         params['observatory'] = 'domb'
         params['instrument'] = '1M0-SCICAM-SINISTRO'
+    elif params['site_code'] == 'V37':
+        params['binning'] = 1
+        params['instrument'] = '1M0-SCICAM-SINISTRO'
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['pondtelescope'] = '2m0'
