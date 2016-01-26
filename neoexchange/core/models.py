@@ -47,6 +47,7 @@ ORIGINS = (
             ('D','NEODSYS'),
             ('G','Goldstone'),
             ('A','Arecibo'),
+            ('R','Goldstone & Arecibo'),
             ('L','LCOGT')
             )
 
