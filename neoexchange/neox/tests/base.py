@@ -79,7 +79,13 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
     def setUp(self):
-        self.browser = webdriver.Firefox()
+
+        fp = webdriver.FirefoxProfile()
+        fp.set_preference("browser.startup.homepage", "about:blank");
+        fp.set_preference("startup.homepage_welcome_url", "about:blank");
+        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank");
+
+        self.browser = webdriver.Firefox(firefox_profile=fp)
         self.browser.implicitly_wait(5)
         self.insert_test_body()
         self.insert_test_proposals()
