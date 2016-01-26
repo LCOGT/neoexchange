@@ -854,6 +854,11 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         if not bodies:
             bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
         body = bodies[0]
+    # If this object is a radar target and the requested origin is for the
+    # "other" site (Goldstone ('G') when we have Arecibo ('A') or vice versa),
+    # then set the origin to 'R' for joint Radar target.
+    if (body.origin == 'G' and origin == 'A') or (body.origin == 'A' and origin == 'G'):
+        origin = 'R'
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
     # Save, make revision, or do not update depending on the what has happened
