@@ -267,7 +267,10 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
         elif 'submit' in request.POST:
             target = self.get_object()
-            tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
+            username = ''
+            if request.user.is_authenticated():
+                username = request.user.get_username()
+            tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
                 block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
@@ -336,7 +339,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     return resp
 
 
-def schedule_submit(data, body):
+def schedule_submit(data, body, username):
 
     # Assemble request
     # Send to scheduler
@@ -346,10 +349,10 @@ def schedule_submit(data, body):
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
     params = {'proposal_id': proposal.code,
-              # XXX should be logged-in user, how to get this?
               'user_id': proposal.pi,
               'tag_id': proposal.tag,
               'priority': data.get('priority', 15),
+              'submitter_id': username,
 
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],

@@ -946,7 +946,11 @@ def submit_block_to_scheduler(elements, params):
 # Create Molecule and add to Request
     molecule = make_molecule(params)
     request.add_molecule(molecule) # add exposure to the request
-    request.set_note('Submitted by NEOexchange')
+    submitter = ''
+    submitter_id = params.get('submitter_id', '')
+    if submitter_id != '':
+        submitter = ' (by %s)' % submitter_id
+    request.set_note('Submitted by NEOexchange' + submitter)
     logger.debug("Request=%s" % request)
 
     constraints = make_constraints(params)
