@@ -6,13 +6,13 @@ from django.utils.translation import ugettext_lazy as _
 import logging
 logger = logging.getLogger(__name__)
 
-SITES = (('V37','ELP (V37)'),
-         ('F65','FTN (F65)'),
-         ('E10', 'FTS (E10)'),
-         ('W85','LSC (W85; SBIG)'),
-         ('W86','LSC (W86-87)'),
-         ('K92','CPT (K91-93)'),
-         ('Q63','COJ (Q63-64)'))
+SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
+         ('F65','Maui, Hawaii (FTN - F65)'),
+         ('E10','Siding Spring, Aust. (FTS - E10)'),
+         ('W85','CTIO, Chile (LSC - W85; SBIG)'),
+         ('W86','CTIO, Chile (LSC - W86; Sinsitro)'),
+         ('K92','Sutherland, S. Africa (CPT - K91-93)'),
+         ('Q63','Siding Spring, Aust. (COJ - Q63-64)'))
 
 
 class EphemQuery(forms.Form):

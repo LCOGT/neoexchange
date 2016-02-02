@@ -83,9 +83,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP (V37)')
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -157,9 +157,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP (V37)')
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -224,9 +224,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP (V37)')
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
