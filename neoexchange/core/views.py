@@ -298,11 +298,27 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
-    dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
-        dbg=False, perturb=True, display=False)
-    magnitude = emp[3]
-    speed = emp[4]
+
+    visible_emp = call_compute_ephem(body_elements, dark_start, dark_end, \
+        data['site_code'], 600, 30.0, format=False)
+    
+    if len(visible_emp) == 0:
+        slot_length = 0.
+        ok_to_schedule = False
+        magnitude = -99.0
+        speed = -99.0
+        window_start = dark_start
+        window_end = dark_end
+        window_midpoint = dark_start + (dark_end - dark_start) / 2
+
+    else:
+        midpoint_index = len(visible_emp) / 2
+        emp = visible_emp[midpoint_index]
+        magnitude = emp[3]
+        speed = emp[4]
+        window_start = visible_emp[0][0]
+        window_end = visible_emp[-1][0]
+        window_midpoint = emp[0]
 
     # Determine slot length
     if data.get('slot_length'):
@@ -330,9 +346,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'proposal_code': data['proposal_code'],
         'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d'),
         'utc_date': utc_date.isoformat(),
-        'start_time': dark_start.isoformat(),
-        'end_time': dark_end.isoformat(),
-        'mid_time': dark_midpoint.isoformat(),
+        'start_time': window_start.isoformat(),
+        'end_time': window_end.isoformat(),
+        'mid_time': window_midpoint.isoformat(),
         'ra_midpoint': emp[1],
         'dec_midpoint': emp[2]
     }
