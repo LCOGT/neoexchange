@@ -236,6 +236,9 @@ class Block(models.Model):
                 url = url + self.tracking_number.lstrip('0') + '/'
         return url
 
+    def coarse_block_length(self):
+        return (self.num_exposures * (self.exp_length + 30.0)) + 120.0
+
     class Meta:
         verbose_name = _('Observation Block')
         verbose_name_plural = _('Observation Blocks')
