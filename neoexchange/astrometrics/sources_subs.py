@@ -526,8 +526,15 @@ def parse_mpcobs(line):
         # Radar observations, skip
         logger.debug("Found radar observation, skipping")
     elif obs_type == 's':
-        # Satellite -based observation, do something with it
-        logger.debug("Found satellite observation, skipping unneeded line")
+        # Second line of satellite-based observation, stuff whole line into
+        # 'extrainfo' and parse what we can (so we can identify the corresponding
+        # 'S' line/frame)
+        params = {  'body'     : body,
+                    'obs_type' : obs_type,
+                    'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
+                    'extrainfo' : line,
+                    'site_code' : str(line[-3:])
+                 }
     return params
 
 def clean_element(element):

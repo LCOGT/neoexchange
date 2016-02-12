@@ -883,7 +883,11 @@ class TestParseMPCObsFormat(TestCase):
         self.compare_dict(expected_params, params)
         
     def test_p_spaces_l(self):
-        expected_params = {}
+        expected_params = { 'body'  : 'N00809b',
+                            'extrainfo' : self.test_lines['p_ s_l'],
+                            'obs_type'  : 's',
+                            'obs_date'  : datetime(2015, 6, 22, 7, 11, 25, int(0.44*1e6)),
+                            'site_code' : 'C51'}
 
         params = parse_mpcobs(self.test_lines['p_ s_l'])
 

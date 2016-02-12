@@ -681,6 +681,15 @@ class TestCreate_sourcemeasurement(TestCase):
 
         self.test_body = Body.objects.create(**WSAE9A6_params)
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_N009ags.dat'), 'r')
+        self.sat_test_obslines = test_fh.readlines()
+        test_fh.close()
+
+        N009ags_params = { 'provisional_name' : 'N009ags',
+                         }
+
+        self.sat_test_body = Body.objects.create(**N009ags_params)
+
         self.maxDiff = None
 
     def test_create_nonLCO(self):
@@ -856,6 +865,37 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
         self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
         self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+
+    def test_create_satellite(self):
+        expected_params = { 'body'  : 'N009ags',
+                            'flags' : '',
+                            'obs_type'  : 'S',
+                            'obs_date'  : datetime(2016, 2, 8, 18, 15, 30, int(0.528*1e6)),
+                            'obs_ra'    : 228.56833333333333,
+                            'obs_dec'   : -9.775,
+                            'obs_mag'   : '19',
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '2MASS',
+                            'site_code' : 'C51',
+                          }
+
+        expected_extrainfo = '     N009ags  s2016 02 08.76077 1 - 3484.5127 - 5749.6261 - 1405.6769   NEOCPC51'
+
+        source_measures = create_source_measurement(self.sat_test_obslines[0:2])
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SATELLITE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
 
     def test_create_non_existant_body(self):
 
