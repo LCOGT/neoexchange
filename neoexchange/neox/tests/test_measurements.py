@@ -56,7 +56,7 @@ class MeasurementsPageTests(FunctionalTest):
                          'filter' : 'R',
                          'midpoint' : '2016-02-10 06:26:57',
                          'frametype' : Frame.SATELLITE_FRAMETYPE,
-                         'extrainfo' : '     N009ags  s2016 02 10.26872 1 - 3333.4505 - 5792.1311 - 1586.1945   NEOCPC51'
+                         'extrainfo' : '     N999r0q  s2016 02 10.26872 1 - 3333.4505 - 5792.1311 - 1586.1945        C51'
                         }
         self.sat_test_frame = Frame.objects.create(pk=1, **sat_frame_params)
 
@@ -64,6 +64,7 @@ class MeasurementsPageTests(FunctionalTest):
                            'frame' : self.sat_test_frame,
                            'obs_ra' : 229.21470833333336,
                            'obs_dec' : -10.464194444444443,
+                           'astrometric_catalog' : '2MASS'
                          }
         self.test_measure1 = SourceMeasurement.objects.create(pk=1, **measure_params)
         frame_params = { 'sitecode' : 'W86',
@@ -81,7 +82,8 @@ class MeasurementsPageTests(FunctionalTest):
                            'obs_ra' : 229.66829166666668,
                            'obs_dec' : -10.953888888888889,
                            'obs_mag' : 20.1,
-                           'err_obs_mag' : 0.1
+                           'err_obs_mag' : 0.1,
+                           'astrometric_catalog' : 'PPMXL'
                          }
         self.test_measure1 = SourceMeasurement.objects.create(pk=2, **measure_params)
 
@@ -237,9 +239,9 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees that there is a table in which are the original
         # discovery observations from WISE (obs. code C51) and from
         # the LCOGT follow-up network.
-        testlines = [u'     N999r0q  S2016 02 10.26872 15 16 51.53 -10 27 51.1                LNEOCPC51',
-                     u'     N999r0q  s2016 02 10.26872 1 - 3333.4505 - 5792.1311 - 1586.1945   NEOCPC51',
-                     u'     N999r0q  C2016 02 11.32064915 18 40.39 -10 57 14.0          20.1 RtNEOCPW86',
+        testlines = [u'     N999r0q  S2016 02 10.26872 15 16 51.53 -10 27 51.1               RL     C51',
+                     u'     N999r0q  s2016 02 10.26872 1 - 3333.4505 - 5792.1311 - 1586.1945        C51',
+                     u'     N999r0q  C2016 02 11.32064815 18 40.39 -10 57 14.0          20.1 Rt     W86',
                     ]
         pre_block = self.browser.find_element_by_tag_name('pre')
         rows = pre_block.text.splitlines()

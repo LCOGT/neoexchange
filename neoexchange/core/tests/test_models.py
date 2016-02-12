@@ -593,6 +593,15 @@ class TestSourceMeasurement(TestCase):
                  }
         self.test_frame_stack = Frame.objects.create(**frame_params)
 
+        frame_params = {  'sitecode'      : 'C51',
+                    'filter'        : 'R',
+                    'frametype'     : Frame.SATELLITE_FRAMETYPE,
+                    'midpoint'      : datetime(2016,2,8,21,24,22,int(0.752*1e6)),
+                    'block'         : None,
+                    'extrainfo'     : '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
+                 }
+        self.test_frame_satellite = Frame.objects.create(**frame_params)
+
     def test_mpc_1(self):
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame,
@@ -669,3 +678,24 @@ class TestSourceMeasurement(TestCase):
         expected_mpcline = '     K15X54S KC2015 12 05.04918907 07 43.92 -29 30 01.1               R      W86'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_satellite(self):
+        measure_params = {  'body': self.body,
+                            'aperture_size': None,
+                            'astrometric_catalog': u'2MASS',
+                            'err_obs_dec': None,
+                            'err_obs_mag': None,
+                            'err_obs_ra': None,
+                            'flags': '',
+                            'frame': self.test_frame_satellite,
+                            'obs_dec': -9.834166666666667,
+                            'obs_mag': 19,
+                            'obs_ra': 228.6245,
+                            'photometric_catalog': u'2MASS',
+                            'snr': None}
+                                 
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +
+                          '\n' + '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
+        mpc_lines = measure.format_mpc_line()
+        self.assertEqual(expected_mpclines, mpc_lines)
