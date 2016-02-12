@@ -23,7 +23,7 @@ import os
 
 from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
-from astrometrics.sources_subs import parse_goldstone_chunks, \
+from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations
@@ -74,6 +74,44 @@ class TestGoldstoneChunkParser(TestCase):
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
+class TestFetchAreciboTargets(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored version of the Arecibo radar page
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page.html'), 'r')
+        self.test_arecibo_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+    def test_basics(self):
+        expected_length = 17
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_targets(self):
+        expected_targets =  [u'294739',
+                             u'162385',
+                             u'337866',
+                             u'85990',
+                             u'438661',
+                             u'2007 BB',
+                             u'2015 BN509',
+                             u'2014 EK24',
+                             u'137805',
+                             u'2010 FX9',
+                             u'1994 UG',
+                             u'406952',
+                             u'363599',
+                             u'2003 KO2',
+                             u'388945',
+                             u'2014 US115',
+                             u'2009 DL46']
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page)
+
+        self.assertEqual(expected_targets, targets)
+   
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):

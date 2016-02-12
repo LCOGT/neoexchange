@@ -599,6 +599,90 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key !='id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Arecibo(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'A'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_goldstone_then_arecibo(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'R'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
+        self.assertEqual(True, status)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_arecibo_then_goldstone(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'R'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_arecibo_then_ARM(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'N'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='N')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
 class TestClean_mpcorbit(TestCase):
 
     def setUp(self):
@@ -1146,6 +1230,18 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_comet_mpec_notrecent(self):
+        crossid =  u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)'
+        expected_params = { 'active' : False,
+                            'name' : 'C/2015 X8',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_new_year_switchover(self):
+        MockDateTime.change_datetime(2016, 1, 1, 0, 30, 0)
         crossid =  u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)'
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',

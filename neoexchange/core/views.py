@@ -267,7 +267,10 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
         elif 'submit' in request.POST:
             target = self.get_object()
-            tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
+            username = ''
+            if request.user.is_authenticated():
+                username = request.user.get_username()
+            tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
                 block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
@@ -336,7 +339,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     return resp
 
 
-def schedule_submit(data, body):
+def schedule_submit(data, body, username):
 
     # Assemble request
     # Send to scheduler
@@ -346,10 +349,10 @@ def schedule_submit(data, body):
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
     params = {'proposal_id': proposal.code,
-              # XXX should be logged-in user, how to get this?
               'user_id': proposal.pi,
               'tag_id': proposal.tag,
               'priority': data.get('priority', 15),
+              'submitter_id': username,
 
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],
@@ -718,6 +721,9 @@ def clean_crossid(astobj, dbg=False):
     confirm_date = parse_neocp_date(astobj[3])
 
     time_from_confirm = datetime.utcnow() - confirm_date
+    if time_from_confirm < timedelta(0):
+        # if this is negative a date in the future has erroneously be assumed
+        time_from_confirm = datetime.now() - confirm_date.replace(year=confirm_date.year-1)
     time_from_confirm = time_from_confirm.total_seconds()
 
     active = True
@@ -851,6 +857,11 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         if not bodies:
             bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
         body = bodies[0]
+    # If this object is a radar target and the requested origin is for the
+    # "other" site (Goldstone ('G') when we have Arecibo ('A') or vice versa),
+    # then set the origin to 'R' for joint Radar target.
+    if (body.origin == 'G' and origin == 'A') or (body.origin == 'A' and origin == 'G'):
+        origin = 'R'
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
     # Save, make revision, or do not update depending on the what has happened

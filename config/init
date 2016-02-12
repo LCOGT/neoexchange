@@ -4,8 +4,6 @@
 echo "Running with PREFIX=${PREFIX}"
 sed -i -e "s:@PREFIX@:${PREFIX}:g" /etc/nginx/nginx.conf
 
-# If any schema changed have happened but not been applied
-python /var/www/apps/neoexchange/manage.py migrate --noinput
 # Generate cron wrapper to set correct environment variables
 cat > /var/www/apps/neoexchange/cronwrapper << EOF
 export PYTHONPATH="${PYTHONPATH}"
