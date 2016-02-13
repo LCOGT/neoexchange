@@ -695,7 +695,7 @@ class TestSourceMeasurement(TestCase):
                             'snr': None}
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_mpcline = '     N999r0q  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +
+        expected_mpcline = '     N999r0q  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
         mpc_lines = measure.format_mpc_line()
-        self.assertEqual(expected_mpclines, mpc_lines)
+        self.assertEqual(expected_mpcline, mpc_lines)
