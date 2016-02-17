@@ -25,6 +25,8 @@ from math import degrees
 import slalib as S
 import logging
 import urllib2, os
+import imaplib
+import email
 from urlparse import urljoin
 
 
@@ -796,6 +798,69 @@ def fetch_arecibo_targets(page=None):
             else:
                 logger.warn("No targets found in Arecibo page")
     return targets
+
+def imap_login(username, password, server='imap.gmail.com'):
+    '''Logs into the specified IMAP [server] (Google's gmail is assumed if not
+    specified) with the provide username and password.
+    
+    An imaplib.IMAP4_SSL connection instance is returned or None if the
+    login failed'''
+
+    try:
+        mailbox = imaplib.IMAP4_SSL(server)
+    except:
+        return None
+
+    try:
+        mailbox.login(username, password)
+    except imaplib.IMAP4.error:
+        logger.error("Login to %s with username=%s failed" % (server, username))
+        mailbox = None
+
+    return mailbox
+
+def fetch_NASA_targets(mailbox, folder="NASA-ARM"):
+    '''Search through the specified folder/label (defaults to "NASA-ARM" if not
+    specified) within the passed IMAP mailbox <mailbox> for emails to the
+    small bodies list and returns a list of targets'''
+
+    list_address = '"small-bodies-observations@lists.nasa.gov"'
+    list_author = '"paul.a.abell@nasa.gov"'
+    list_prefix = '[' + list_address.replace('"','').split('@')[0] +']'
+
+    NASA_targets = []
+
+    status, data = mailbox.select(folder)
+    if status == "OK":
+        # Look for messages to the mailing list but without specifying a charset
+        status, msgnums = mailbox.search(None, 'TO', list_address,\
+                                               'FROM', list_author)
+        if status == "OK" and len(data) >0:
+
+            for num in msgnums[0].split():     
+                status, data = mailbox.fetch(num, '(RFC822)')
+                if status != 'OK':
+                    print "ERROR getting message", num
+                    return
+
+                # Convert message and see if it has the right things
+                msg = email.message_from_string(data[0][1])
+                date_tuple = email.utils.parsedate_tz(msg['Date'])
+                msg_utc_date = datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
+                time_diff = datetime.utcnow() - msg_utc_date
+                # See if the subject has the right prefix and suffix and is 
+                # within a day of 'now'
+                if list_prefix in msg['Subject'] and \
+                    'Observations Requested' in msg['Subject'] and \
+                    abs(time_diff.days) <= 1:
+                    fields = msg['Subject'].split()
+                    target = fields[1] + ' ' + fields[2]
+                    NASA_targets.append(target)
+        else:
+            logger.warn("No mailing list messages found")
+    else:
+        logger.error("Could not open folder/label %s on %s" % (folder, mailbox.host))
+    return NASA_targets
 
 def make_location(params):
     location = {

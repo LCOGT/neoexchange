@@ -20,13 +20,15 @@ from datetime import datetime, timedelta
 from unittest import skipIf
 from bs4 import BeautifulSoup
 import os
+import mock
+from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
-    fetch_NEOCP_observations
+    fetch_NEOCP_observations, imap_login
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1046,3 +1048,19 @@ class TestFetchNEOCPObservations(TestCase):
         observations = fetch_NEOCP_observations(page)
         self.assertEqual(expected, observations)
       
+class TestIMAPLogin(TestCase):
+
+    def setUp(self):
+        pass
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_server_connection(self, mockimaplib):
+        mailbox = imap_login('foo@bar.net', 'Wibble', 'localhost')
+        mockimaplib.IMAP4_SSL.assert_called_with('localhost')
+        self.assertNotEqual(None, mailbox)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_badserver(self, mockimaplib):
+        mockimaplib.IMAP4_SSL.side_effect = error(111, 'Connection refused')
+        mailbox = imap_login('foo@bar.net', 'Wibble', 'localhost')
+        self.assertEqual(None, mailbox)
