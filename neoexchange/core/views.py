@@ -620,7 +620,7 @@ def clean_NEOCP_object(page_list):
                 'origin': 'M',
                 'update_time' : datetime.utcnow()
             }
-        elif len(current) == 22 or len(current) == 24:
+        elif len(current) == 22 or len(current) == 23 or len(current) == 24:
             params = {
                 'abs_mag': float(current[1]),
                 'slope': float(current[2]),
@@ -900,19 +900,39 @@ def create_source_measurement(obs_lines, block=None):
                         block = blocks[0]
                     else:
                         logger.warn("No blocks for %s" % (obs_body))
-                frame = create_frame(params, block)
-                measure_params = {  'body'    : obs_body,
-                                    'frame'   : frame,
-                                    'obs_ra'  : params['obs_ra'],
-                                    'obs_dec' : params['obs_dec'],
-                                    'obs_mag' : params['obs_mag'],
-                                    'astrometric_catalog' : params['astrometric_catalog'],
-                                    'photometric_catalog' : params['astrometric_catalog'],
-                                    'flags'   : params['flags']
-                                 }
-                measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
-                if measure_created:
-                    measures.append(measure)
+                if params['obs_type'] == 's':
+                    # If we have an obs_type of 's', then we have the second line
+                    # of a satellite measurement and we need to find the matching
+                    # Frame we created on the previous line read and update its
+                    # extrainfo field.
+                    try:
+                        prior_frame = Frame.objects.get(frametype = Frame.SATELLITE_FRAMETYPE,
+                                                        midpoint = params['obs_date'],
+                                                        sitecode = params['site_code'])
+                        prior_frame.extrainfo = params['extrainfo']
+                        prior_frame.save()
+                        # Replace SourceMeasurement in list to be returned with 
+                        # updated version
+                        measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
+                    except Frame.DoesNotExist:
+                        logger.warn("Matching satellite frame for %s from %s on %s does not exist" % params['body'], params['obs_date'],params['site_code'])
+                    except Frame.MultipleObjectsReturned:
+                        logger.warn("Multiple matching satellite frames for %s from %s on %s found" % params['body'], params['obs_date'],params['site_code'])
+                else:
+                    # Otherwise, make a new Frame and SourceMeasurement
+                    frame = create_frame(params, block)
+                    measure_params = {  'body'    : obs_body,
+                                        'frame'   : frame,
+                                        'obs_ra'  : params['obs_ra'],
+                                        'obs_dec' : params['obs_dec'],
+                                        'obs_mag' : params['obs_mag'],
+                                        'astrometric_catalog' : params['astrometric_catalog'],
+                                        'photometric_catalog' : params['astrometric_catalog'],
+                                        'flags'   : params['flags']
+                                     }
+                    measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
+                    if measure_created:
+                        measures.append(measure)
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % params['body'])
                 measures = False
@@ -994,7 +1014,10 @@ def frame_params_from_log(params, block):
         else:
             frame_type = Frame.STACK_FRAMETYPE
     else:
-        frame_type = Frame.NONLCO_FRAMETYPE
+        if params.get('obs_type', None) == 'S':
+            frame_type = Frame.SATELLITE_FRAMETYPE
+        else:
+            frame_type = Frame.NONLCO_FRAMETYPE
     frame_params = { 'midpoint' : params.get('obs_date', None),
                      'sitecode' : sitecode,
                      'block'    : block,

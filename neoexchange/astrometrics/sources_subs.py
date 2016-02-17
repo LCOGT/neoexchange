@@ -469,7 +469,12 @@ def translate_catalog_code(code_or_name):
 
 def parse_mpcobs(line):
     '''Parse a MPC format 80 column observation record line, returning a
-    dictionary of values or an empty dictionary if it couldn't be parsed'''
+    dictionary of values or an empty dictionary if it couldn't be parsed
+
+    Be ware of potential confusion between obs_type of 'S' and 's'. This
+    enforced by MPC, see
+    http://www.minorplanetcenter.net/iau/info/SatelliteObs.html
+    '''
 
     params = {}
     line = line.rstrip()
@@ -503,8 +508,8 @@ def parse_mpcobs(line):
     except ValueError:
         obs_mag = None
 
-    if obs_type == 'C':
-        # Regular CCD observations
+    if obs_type == 'C' or obs_type == 'S':
+        # Regular CCD observations or first line of satellite observations
 #        print "Date=",line[15:32]
         params = {  'body'     : body,
                     'flags'    : flag,
@@ -525,9 +530,16 @@ def parse_mpcobs(line):
     elif obs_type.upper() == 'R':
         # Radar observations, skip
         logger.debug("Found radar observation, skipping")
-    elif obs_type == 'S':
-        # Satellite -based observation, do something with it
-        logger.warn("Found satellite observation, skipping (for now)")
+    elif obs_type == 's':
+        # Second line of satellite-based observation, stuff whole line into
+        # 'extrainfo' and parse what we can (so we can identify the corresponding
+        # 'S' line/frame)
+        params = {  'body'     : body,
+                    'obs_type' : obs_type,
+                    'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
+                    'extrainfo' : line,
+                    'site_code' : str(line[-3:])
+                 }
     return params
 
 def clean_element(element):
@@ -767,7 +779,7 @@ def fetch_arecibo_targets(page=None):
     '''Parses the Arecibo webpage for upcoming radar targets and returns a list
     of these targets back.
     Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls 
+    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     '''
 
