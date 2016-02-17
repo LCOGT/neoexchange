@@ -469,7 +469,12 @@ def translate_catalog_code(code_or_name):
 
 def parse_mpcobs(line):
     '''Parse a MPC format 80 column observation record line, returning a
-    dictionary of values or an empty dictionary if it couldn't be parsed'''
+    dictionary of values or an empty dictionary if it couldn't be parsed
+
+    Be ware of potential confusion between obs_type of 'S' and 's'. This
+    enforced by MPC, see
+    http://www.minorplanetcenter.net/iau/info/SatelliteObs.html
+    '''
 
     params = {}
     line = line.rstrip()
@@ -774,7 +779,7 @@ def fetch_arecibo_targets(page=None):
     '''Parses the Arecibo webpage for upcoming radar targets and returns a list
     of these targets back.
     Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls 
+    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     '''
 
