@@ -806,6 +806,7 @@ class TestParseMPCObsFormat(TestCase):
             C: CCD observations,
             R/r: radar observation,
             S/s: satellite observation
+            x: replaced discovery observation
         <char4> is the precision of the obs:
             l: low precision
             h: high precision
@@ -823,6 +824,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_ C_n' :  u'     WMAA95B  C2015 06 20.29109 16 40 36.42 -14 23 16.2                qNEOCPG96\n',
                             'p_ C_le' : u'     K13R33T  C2013 09 13.18561323 15 20.53 -10 21 52.6          20.4 V      W86\r\n',
                             'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
+                            'p_ x_l' :  u'g0232K10F41B* x2010 03 19.91359 06 26 37.29 +35 47 01.3                L~0FUhC51',
 
                           }
         self.maxDiff = None
@@ -976,6 +978,24 @@ class TestParseMPCObsFormat(TestCase):
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_n'])
+
+        self.compare_dict(expected_params, params)
+
+
+    def test_p_spacex_l(self):
+        # This tests the case of an 'x' observation for a replaced discovery
+        # observation. From the MPC page 
+        # (http://www.minorplanetcenter.net/iau/info/OpticalObs.html, Note 2):
+        # "In addition, there are 'X' and 'x' which are used only for already-
+        # filed observations. 'X' was given originally only to discovery 
+        # observations that were approximate or semi-accurate and that had accurate 
+        # measures corresponding to the time of discovery: this has been extended to 
+        # other replaced discovery observations. Observations marked 'X'/'x' are to be
+        # suppressed in residual blocks. They are retained so that there exists
+        # an original record of a discovery. "
+        expected_params = { }
+
+        params = parse_mpcobs(self.test_lines['p_ x_l'])
 
         self.compare_dict(expected_params, params)
 
