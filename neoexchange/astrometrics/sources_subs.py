@@ -835,31 +835,36 @@ def fetch_NASA_targets(mailbox, folder="NASA-ARM"):
         # Look for messages to the mailing list but without specifying a charset
         status, msgnums = mailbox.search(None, 'TO', list_address,\
                                                'FROM', list_author)
-        if status == "OK" and len(data) >0:
+        if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
 
-            for num in msgnums[0].split():     
-                status, data = mailbox.fetch(num, '(RFC822)')
-                if status != 'OK':
-                    logger.error("ERROR getting message %d", num)
-                    return
-
-                # Convert message and see if it has the right things
-                msg = email.message_from_string(data[0][1])
-                date_tuple = email.utils.parsedate_tz(msg['Date'])
-                msg_utc_date = datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
-                time_diff = datetime.utcnow() - msg_utc_date
-                # See if the subject has the right prefix and suffix and is 
-                # within a day of 'now'
-                if list_prefix in msg['Subject'] and \
-                    'Observations Requested' in msg['Subject'] and \
-                    abs(time_diff.days) <= 1:
-                    fields = msg['Subject'].split()
-                    target = fields[1] + ' ' + fields[2]
-                    NASA_targets.append(target)
+            for num in msgnums[0].split():
+                try:
+                    status, data = mailbox.fetch(num, '(RFC822)')
+                    if status != 'OK' or len(data) == 0 and msgnums[0] != None:
+                        logger.error("ERROR getting message %s", num)
+                    else:
+                        # Convert message and see if it has the right things
+                        msg = email.message_from_string(data[0][1])
+                        date_tuple = email.utils.parsedate_tz(msg['Date'])
+                        msg_utc_date = datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
+                        time_diff = datetime.utcnow() - msg_utc_date
+                        # See if the subject has the right prefix and suffix and is 
+                        # within a day of 'now'
+                        if list_prefix in msg['Subject'] and \
+                            'Observations Requested' in msg['Subject'] and \
+                            abs(time_diff.days) <= 1:
+                            fields = msg['Subject'].split()
+                            target = fields[1] + ' ' + fields[2]
+                            NASA_targets.append(target)
+                except:
+                    logger.error("ERROR getting message %s", num)
+                    return None
         else:
             logger.warn("No mailing list messages found")
+            return None
     else:
         logger.error("Could not open folder/label %s on %s" % (folder, mailbox.host))
+        return None
     return NASA_targets
 
 def make_location(params):
