@@ -840,7 +840,7 @@ def fetch_NASA_targets(mailbox, folder="NASA-ARM"):
             for num in msgnums[0].split():     
                 status, data = mailbox.fetch(num, '(RFC822)')
                 if status != 'OK':
-                    print "ERROR getting message", num
+                    logger.error("ERROR getting message %d", num)
                     return
 
                 # Convert message and see if it has the right things
