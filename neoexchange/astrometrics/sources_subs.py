@@ -827,6 +827,7 @@ def fetch_NASA_targets(mailbox, folder="NASA-ARM"):
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_author = '"paul.a.abell@nasa.gov"'
     list_prefix = '[' + list_address.replace('"','').split('@')[0] +']'
+    list_suffix = 'Observations Requested'
 
     NASA_targets = []
 
@@ -850,9 +851,8 @@ def fetch_NASA_targets(mailbox, folder="NASA-ARM"):
                         time_diff = datetime.utcnow() - msg_utc_date
                         # See if the subject has the right prefix and suffix and is 
                         # within a day of 'now'
-                        if list_prefix in msg['Subject'] and \
-                            'Observations Requested' in msg['Subject'] and \
-                            abs(time_diff.days) <= 1:
+                        if list_prefix in msg['Subject'] and list_suffix in msg['Subject'] and \
+                            time_diff <= timedelta(days=1):
                             fields = msg['Subject'].split()
                             target = fields[1] + ' ' + fields[2]
                             NASA_targets.append(target)
