@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 time_subs.py -- Various routines to handle times.
 
@@ -16,6 +16,7 @@ GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta
 from math import degrees
+
 import slalib as S
 
 def parse_neocp_date(neocp_datestr, dbg=False):

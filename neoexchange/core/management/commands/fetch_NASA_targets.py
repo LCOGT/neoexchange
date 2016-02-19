@@ -1,10 +1,11 @@
-from astrometrics.sources_subs import imap_login, fetch_NASA_targets
-from core.views import update_MPC_orbit
+from datetime import datetime
+import os
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
-from datetime import datetime
-import os
+
+from astrometrics.sources_subs import imap_login, fetch_NASA_targets
+from core.views import update_MPC_orbit
 
 class Command(BaseCommand):
     help = 'Fetch NASA-ARM targets from an email folder'

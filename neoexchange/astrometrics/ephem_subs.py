@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 ephem_subs.py -- Asteroid ephemeris related routines.
 
@@ -14,16 +14,17 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
+
+import logging
 from datetime import datetime, timedelta, time
-import slalib as S
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10
+
+import slalib as S
 from numpy import array, concatenate, zeros
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
 #from astsubs import mpc_8lineformat
-
-import logging
 
 logger = logging.getLogger(__name__)
 

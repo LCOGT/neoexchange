@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -15,20 +15,21 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-from re import sub
-from reqdb.client import SchedulerClient
-from reqdb.requests import Request, UserRequest
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
-from math import degrees
-import slalib as S
 import logging
 import urllib2, os
 import imaplib
 import email
 from urlparse import urljoin
+from re import sub
+from math import degrees
+from datetime import datetime, timedelta
 
+from reqdb.client import SchedulerClient
+from reqdb.requests import Request, UserRequest
+from bs4 import BeautifulSoup
+import slalib as S
+
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 
 logger = logging.getLogger(__name__)
 
