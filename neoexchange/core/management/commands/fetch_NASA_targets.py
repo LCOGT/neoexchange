@@ -20,3 +20,5 @@ class Command(BaseCommand):
                 for obj_id in NASA_targets:
                     self.stdout.write("Reading NASA/ARM target %s" % obj_id)
                     update_MPC_orbit(obj_id, origin='N')
+                mailbox.close()
+                mailbox.logout()
