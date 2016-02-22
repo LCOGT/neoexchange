@@ -18,3 +18,4 @@ reqdbclient==0.6.17
 pytest-django
 mock==1.0.1
 opbeat
+django-oauth-toolkit

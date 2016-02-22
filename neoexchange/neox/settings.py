@@ -91,6 +91,11 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
+AUTHENTICATION_BACKENDS = (
+    'neox.auth_backend.LCOAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+    )
+
 ROOT_URLCONF = 'neox.urls'
 
 # Python dotted path to the WSGI application used by Django's runserver.
@@ -241,6 +246,17 @@ if 'test' in sys.argv:
         }
     }
     OPBEAT['APP_ID'] = None
+
+
+###################
+# OAuth provider  #
+###################
+
+CLIENT_ID = os.environ.get('NEOX_RBAUTH_ID','')
+CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
+RBAUTH_TOKEN_URL = 'https://lcogt.net/observe/o/token/'
+RBAUTH_PROFILE_API = 'https://lcogt.net/observe/api/profile/'
+RBAUTH_PROPOSAL_API = 'https://lcogt.net/observe/api/proposals/'
 
 ##################
 # LOCAL SETTINGS #

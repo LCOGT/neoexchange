@@ -12,6 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
