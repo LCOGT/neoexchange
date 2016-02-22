@@ -53,6 +53,10 @@ docs/_build/
 # PyBuilder
 target/
 
+# Spyder IDE stuff
+.spyderproject
+.spyderworkspace
+
 neox/local_settings.py
 Diffs
 
