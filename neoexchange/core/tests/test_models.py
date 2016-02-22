@@ -536,6 +536,10 @@ class TestSourceMeasurement(TestCase):
         params['provisional_name'] = 'Q488391r'
         self.body5, created = Body.objects.get_or_create(**params)
 
+        params['name'] = 'C/2016 C2'
+        params['source_type'] = 'MPC_COMET'
+        self.body_confirmed, created = Body.objects.get_or_create(**params)
+
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
@@ -697,5 +701,26 @@ class TestSourceMeasurement(TestCase):
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
+        mpc_lines = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_lines)
+
+    def test_mpc_satellite_confirmed(self):
+        measure_params = {  'body': self.body_confirmed,
+                            'aperture_size': None,
+                            'astrometric_catalog': u'2MASS',
+                            'err_obs_dec': None,
+                            'err_obs_mag': None,
+                            'err_obs_ra': None,
+                            'flags': '',
+                            'frame': self.test_frame_satellite,
+                            'obs_dec': -9.834166666666667,
+                            'obs_mag': 19,
+                            'obs_ra': 228.6245,
+                            'photometric_catalog': u'2MASS',
+                            'snr': None}
+                                 
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '    CK16C020  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
+                          '\n' + '    CK16C020  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
         mpc_lines = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_lines)

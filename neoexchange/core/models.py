@@ -341,7 +341,12 @@ class SourceMeasurement(models.Model):
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
             mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
-            mpc_line = mpc_line + '\n' + self.frame.extrainfo
+            extrainfo = self.frame.extrainfo
+            if self.body.name:
+                name, status = normal_to_packed(self.body.name)
+                if status == 0:
+                    extrainfo = name + extrainfo[12:]
+            mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
     class Meta:
