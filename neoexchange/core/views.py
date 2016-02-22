@@ -723,7 +723,7 @@ def clean_crossid(astobj, dbg=False):
     time_from_confirm = datetime.utcnow() - confirm_date
     if time_from_confirm < timedelta(0):
         # if this is negative a date in the future has erroneously be assumed
-        time_from_confirm = datetime.now() - confirm_date.replace(year=confirm_date.year-1)
+        time_from_confirm = datetime.utcnow() - confirm_date.replace(year=confirm_date.year-1)
     time_from_confirm = time_from_confirm.total_seconds()
 
     active = True
