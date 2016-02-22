@@ -58,6 +58,14 @@ class LoginRequiredMixin(object):
         view = super(LoginRequiredMixin, cls).as_view(**initkwargs)
         return login_required(view)
 
+class MyProposalsMixin(object):
+
+    def get_context_data(self, **kwargs):
+        context = super(MyProposalsMixin, self).get_context_data(**kwargs)
+        context['proposals'] = Proposal.objects.filter(proposalpermissions__user=self.request.user)
+
+        return context
+
 
 def home(request):
     params = build_unranked_list_params()
@@ -911,7 +919,7 @@ def create_source_measurement(obs_lines, block=None):
                                                         sitecode = params['site_code'])
                         prior_frame.extrainfo = params['extrainfo']
                         prior_frame.save()
-                        # Replace SourceMeasurement in list to be returned with 
+                        # Replace SourceMeasurement in list to be returned with
                         # updated version
                         measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:

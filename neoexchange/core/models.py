@@ -349,3 +349,16 @@ class SourceMeasurement(models.Model):
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
+
+class ProposalPermission(models.Model):
+    '''
+    Linking a user to proposals in NEOx to control their access
+    '''
+    proposal = models.ForeignKey(Proposal)
+    user = models.ForeignKey(User)
+
+    class Meta:
+        verbose_name = _('Proposal Permission')
+
+    def __unicode__(self):
+        return "%s is a member of %s" % (self.user, self.proposal)
