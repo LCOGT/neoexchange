@@ -180,7 +180,7 @@ class MeasurementViewBody(View):
     template = 'core/measurements.html'
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
-        measures = SourceMeasurement.objects.filter(body=body)
+        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         return render(request, self.template, {'body':body, 'measures' : measures})
 
 def ephemeris(request):
