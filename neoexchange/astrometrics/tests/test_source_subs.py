@@ -1104,7 +1104,7 @@ class TestIMAPLogin(TestCase):
     def test_badfolder(self, mockimaplib):
         mailbox = mock.MagicMock()
         mailbox.select.return_value = ("NO", ['[NONEXISTENT] Unknown Mailbox: Wibble (Failure)'])
-        expected_targets = None
+        expected_targets = []
         targets = fetch_NASA_targets(mailbox, folder="Wibble")
         self.assertEqual(expected_targets, targets)
 
@@ -1113,7 +1113,7 @@ class TestIMAPLogin(TestCase):
         mailbox = mock.MagicMock()
         mailbox.select.return_value = ("OK", ['0'])
         mailbox.search.return_value = ("OK", [''])
-        expected_targets = None
+        expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
@@ -1122,7 +1122,7 @@ class TestIMAPLogin(TestCase):
         mailbox = mock.MagicMock()
         mailbox.select.return_value = ("OK", ['0'])
         mailbox.search.return_value = ("NO", [''])
-        expected_targets = None
+        expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
@@ -1132,7 +1132,7 @@ class TestIMAPLogin(TestCase):
         mailbox.select.return_value = ("OK", ['1'])
         mailbox.search.return_value = ("OK", ['1'])
         mailbox.fetch.return_value = ("OK", [None,])
-        expected_targets = None
+        expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
@@ -1142,7 +1142,7 @@ class TestIMAPLogin(TestCase):
         mailbox.select.return_value = ("OK", ['1'])
         mailbox.search.return_value = ("OK", ['1'])
         mailbox.fetch.side_effect = error("FETCH command error: BAD ['Could not parse command']")
-        expected_targets = None
+        expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 

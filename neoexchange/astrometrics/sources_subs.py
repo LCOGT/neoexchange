@@ -23,6 +23,7 @@ from urlparse import urljoin
 from re import sub
 from math import degrees
 from datetime import datetime, timedelta
+from socket import error
 
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
@@ -821,18 +822,18 @@ def imap_login(username, password, server='imap.gmail.com'):
 
     try:
         mailbox = imaplib.IMAP4_SSL(server)
-    except:
+    except error:
         return None
 
     try:
         mailbox.login(username, password)
-    except imaplib.IMAP4.error:
+    except imaplib.IMAP4_SSL.error:
         logger.error("Login to %s with username=%s failed" % (server, username))
         mailbox = None
 
     return mailbox
 
-def fetch_NASA_targets(mailbox, folder="NASA-ARM"):
+def fetch_NASA_targets(mailbox, folder='NASA-ARM'):
     '''Search through the specified folder/label (defaults to "NASA-ARM" if not
     specified) within the passed IMAP mailbox <mailbox> for emails to the
     small bodies list and returns a list of targets'''
@@ -844,11 +845,16 @@ def fetch_NASA_targets(mailbox, folder="NASA-ARM"):
 
     NASA_targets = []
 
+    # Define a slice for the fields of the message we will want for the target.
+    TARGET_DESIGNATION = slice(1, 3)
+
     status, data = mailbox.select(folder)
     if status == "OK":
         # Look for messages to the mailing list but without specifying a charset
         status, msgnums = mailbox.search(None, 'TO', list_address,\
                                                'FROM', list_author)
+        # Messages numbers come back in a space-separated string inside a 
+        # 1-element list in msgnums
         if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
 
             for num in msgnums[0].split():
@@ -866,18 +872,17 @@ def fetch_NASA_targets(mailbox, folder="NASA-ARM"):
                         # within a day of 'now'
                         if list_prefix in msg['Subject'] and list_suffix in msg['Subject'] and \
                             time_diff <= timedelta(days=1):
-                            fields = msg['Subject'].split()
-                            target = fields[1] + ' ' + fields[2]
+                            target = ' '.join(msg['Subject'].split()[TARGET_DESIGNATION])
                             NASA_targets.append(target)
                 except:
                     logger.error("ERROR getting message %s", num)
-                    return None
+                    return NASA_targets
         else:
             logger.warn("No mailing list messages found")
-            return None
+            return []
     else:
         logger.error("Could not open folder/label %s on %s" % (folder, mailbox.host))
-        return None
+        return []
     return NASA_targets
 
 def make_location(params):
