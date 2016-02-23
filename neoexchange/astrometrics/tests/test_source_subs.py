@@ -1243,3 +1243,16 @@ class TestIMAPLogin(TestCase):
         expected_targets = ['2016 CV123']
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_find_fwd_msg_(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 23, 19, 51, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
+
+        expected_targets = ['2016 DJ']
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)

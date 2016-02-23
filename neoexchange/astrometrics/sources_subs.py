@@ -865,14 +865,16 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM'):
                     else:
                         # Convert message and see if it has the right things
                         msg = email.message_from_string(data[0][1])
+                        # Strip off any "Fwd: " parts
+                        msg_subject = msg['Subject'].replace('Fwd: ', '')
                         date_tuple = email.utils.parsedate_tz(msg['Date'])
                         msg_utc_date = datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
                         time_diff = datetime.utcnow() - msg_utc_date
                         # See if the subject has the right prefix and suffix and is 
                         # within a day of 'now'
-                        if list_prefix in msg['Subject'] and list_suffix in msg['Subject'] and \
+                        if list_prefix in msg_subject and list_suffix in msg_subject and \
                             time_diff <= timedelta(days=1):
-                            target = ' '.join(msg['Subject'].split()[TARGET_DESIGNATION])
+                            target = ' '.join(msg_subject.split()[TARGET_DESIGNATION])
                             NASA_targets.append(target)
                 except:
                     logger.error("ERROR getting message %s", num)
