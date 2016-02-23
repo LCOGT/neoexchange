@@ -179,6 +179,7 @@ LOGGING = {
         'console': {
             'level': 'ERROR',
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         }
     },
     'loggers': {
@@ -199,6 +200,10 @@ LOGGING = {
         'astrometrics' : {
             'handlers' : ['file','console'],
             'level'    : 'ERROR',
+        },
+        'neox': {
+            'handlers':['file','console'],
+            'level' : 'ERROR'
         }
     }
 }

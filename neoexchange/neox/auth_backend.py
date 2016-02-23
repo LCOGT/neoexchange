@@ -8,7 +8,7 @@ from oauthlib.oauth2 import LegacyApplicationClient
 from requests_oauthlib import OAuth2Session
 import json
 import logging
-from core.models import Proposal
+from core.models import Proposal, ProposalPermission
 
 logger = logging.getLogger(__name__)
 
@@ -60,11 +60,11 @@ def checkUserObject(profile, proposals, password):
             user.first_name = profile['first_name']
             user.last_name = profile['last_name']
             user.set_password(password)
-            user.is_staff = True
             user.save()
         else:
             logger.info("Permission Denied to %s" % profile['email'])
-            raise PermissionDenied
+            raise PermissionDenied("You are not a member of a NEO exchange proposal")
+    update_proposal_permissions(user, proposals)
     return user
 
 
@@ -96,3 +96,13 @@ def parse_proposals(proposals):
         return True
     else:
         return False
+
+def update_proposal_permissions(user,proposals):
+    proposal_list = [p['code'] for p in proposals]
+    inactive = ProposalPermission.objects.filter(user=user).exclude(proposal__code__in=proposal_list)
+    inactive.delete()
+    my_proposals = Proposal.objects.filter(proposalpermission__user=user, active=True).values_list('code', flat=True)
+    for p in Proposal.objects.filter(code__in=proposal_list).exclude(code__in=my_proposals):
+        pp = ProposalPermission(user=user,proposal=p)
+        pp.save()
+    return

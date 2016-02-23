@@ -19,7 +19,7 @@ from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -58,11 +58,23 @@ class LoginRequiredMixin(object):
         view = super(LoginRequiredMixin, cls).as_view(**initkwargs)
         return login_required(view)
 
+def user_proposals(user):
+    if type(user) != User:
+        try:
+            user = User.objects.get(username=user)
+        except ObjectDoesNotExist:
+            raise ValidationError
+
+    proposals = Proposal.objects.filter(proposalpermission__user=user)
+
+    return proposals
+
 class MyProposalsMixin(object):
 
     def get_context_data(self, **kwargs):
         context = super(MyProposalsMixin, self).get_context_data(**kwargs)
-        context['proposals'] = Proposal.objects.filter(proposalpermissions__user=self.request.user)
+        proposals = user_proposals(self.request.user)
+        context['proposals'] = [(proposal.code, proposal.title) for proposal in proposals]
 
         return context
 
@@ -248,6 +260,16 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
             return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def get_context_data(self, **kwargs):
+        '''
+        Only show proposals the current user is a member of
+        '''
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
+
 
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):

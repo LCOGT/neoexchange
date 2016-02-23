@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta
 from django import forms
 from django.db.models import Q
 from .models import Body, Proposal, Block
+from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 import logging
 logger = logging.getLogger(__name__)
@@ -36,27 +37,12 @@ class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
-    # body_id = forms.IntegerField(widget=forms.HiddenInput())
-    # ok_to_schedule = forms.BooleanField(initial=False, required=False, widget=forms.HiddenInput())
 
-    # def clean_body_id(self):
-    #     body = Body.objects.filter(pk=self.cleaned_data['body_id'])
-    #     if body.count() == 1 :
-    #         return body[0]
-    #     elif body.count() == 0:
-    #         raise forms.ValidationError("Object not found.")
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
         if start < datetime.utcnow().date():
             raise forms.ValidationError("Window cannot start in the past")
         return start
-
-    def __init__(self, *args, **kwargs):
-        self.proposal_code = kwargs.pop('proposal_code', None)
-        super(ScheduleForm, self).__init__(*args, **kwargs)
-        proposals = Proposal.objects.filter(active=True)
-        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
-        self.fields['proposal_code'].choices = proposal_choices
 
 
 class ScheduleBlockForm(forms.Form):

@@ -19,3 +19,4 @@ pytest-django
 mock==1.0.1
 opbeat
 django-oauth-toolkit
+requests_oauthlib
