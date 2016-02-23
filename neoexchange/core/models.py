@@ -331,10 +331,22 @@ class SourceMeasurement(models.Model):
         except TypeError:
             mag = "    "
 
-        mpc_line = "%12s %1sC%16s%11s %11s          %4s %1s%1s     %3s" % (name,
-            self.flags, dttodecimalday(self.frame.midpoint, True),
+        obs_type = 'C'
+        microday = True
+        if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
+            obs_type = 'S'
+            microday = False
+        mpc_line = "%12s %1s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
+            self.flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
             mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+        if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
+            extrainfo = self.frame.extrainfo
+            if self.body.name:
+                name, status = normal_to_packed(self.body.name)
+                if status == 0:
+                    extrainfo = name + extrainfo[12:]
+            mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
     class Meta:
