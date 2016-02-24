@@ -176,7 +176,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                           'Inc' : orbelems['inclination'].in_radians(),
                           'ArgPeri' : orbelems['arg_perihelion'].in_radians(),
                           'MeanAnom' : orbelems['mean_anomaly'].in_radians(),
-                          'SemiAxis' : orbelems['semi_axis'],
+                          'SemiAxisOrQ' : orbelems['semi_axis'],
                           'Ecc' : orbelems['eccentricity']
                          }
         p_orbelems['H'] = orbelems['H']
@@ -191,7 +191,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 p_epoch_mjd = orbelems['epochofperih']
             else:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                  p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(jform, epoch_mjd,
+                  p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(jform, epoch_mjd,
                             mjd_tt, epoch_mjd, orbelems['inclination'].in_radians(), orbelems['long_node'].in_radians(),
                             orbelems['arg_perihelion'].in_radians(), orbelems['semi_axis'], orbelems['eccentricity'],
                             orbelems['mean_anomaly'].in_radians())
@@ -210,21 +210,30 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                           'Ecc' : orbelems['eccentricity'],
                          }
             orbelems['meananom'] = 0.0
+            aorq = orbelems['perihdist']
             epoch_mjd = datetime2mjd_utc(orbelems['epochofperih'])
         else:
             p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
                           'Inc' : radians(orbelems['orbinc']),
                           'ArgPeri' : radians(orbelems['argofperih']),
-                          'MeanAnom' : radians(orbelems['meananom']),
-                          'SemiAxis' : orbelems['meandist'],
+                          'SemiAxisOrQ' : orbelems['meandist'],
                           'Ecc' : orbelems['eccentricity']
                          }
+            try:
+                p_orbelems['MeanAnom'] = radians(orbelems['meananom'])
+            except TypeError:
+                 p_orbelems['MeanAnom'] = 0.0
+                 orbelems['meananom'] = 0.0
+            try:
+                aorq = float(orbelems['meandist'])
+            except TypeError:
+                aorq = 0.0
         p_orbelems['H'] = orbelems['abs_mag']
         p_orbelems['G'] = orbelems['slope']
         if perturb == True:
             (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                    p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
-                        radians(orbelems['argofperih']), orbelems['meandist'], orbelems['eccentricity'],
+                    p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
+                        radians(orbelems['argofperih']), aorq, orbelems['eccentricity'],
                         radians(orbelems['meananom']))
         else:
             p_epoch_mjd = epoch_mjd
@@ -232,6 +241,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     if j != 0:
         logger.error("Perturbing error=%s" % j)
+        return []
 
 
     r3 = -100.
@@ -251,7 +261,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         else:
             (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), jform, p_epoch_mjd,
                             p_orbelems['Inc'], p_orbelems['LongNode'],
-                            p_orbelems['ArgPeri'], p_orbelems['SemiAxis'], p_orbelems['Ecc'],
+                            p_orbelems['ArgPeri'], p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'],
                             p_orbelems['MeanAnom'], 0.0)
 
 

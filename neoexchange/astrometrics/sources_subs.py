@@ -549,7 +549,9 @@ def parse_mpcobs(line):
 def clean_element(element):
     '''Cleans an element (passed) by converting to ascii and removing any units'''
     key = element[0].encode('ascii', 'ignore')
-    value = element[1].encode('ascii', 'ignore')
+    value = None
+    if len(element) == 2:
+        value = element[1].encode('ascii', 'ignore')
     # Match a open parenthesis followed by 0 or more non-whitespace followed by
     # a close parenthesis and replace it with a blank string
     key = sub(r' \(\S*\)','', key)
@@ -933,7 +935,7 @@ def make_moving_target(elements):
             }
 
     if elements['elements_type'].upper() == 'MPC_COMET':
-        target['epochofperih'] = elements['epochofperih']
+        target['epochofperih'] = elements['epochofperih_mjd']
         target['perihdist'] = elements['perihdist']
     else:
         target['meandist']  = elements['meandist']

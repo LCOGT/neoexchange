@@ -37,7 +37,7 @@ from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
-from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
+from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, parse_neocp_decimal_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
@@ -287,6 +287,12 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
 def schedule_check(data, body, ok_to_schedule=True):
     body_elements = model_to_dict(body)
+
+    # Check if we have a high eccentricity object and it's not of comet type
+    if body_elements['eccentricity'] >= 0.9 and body_elements['elements_type'] != 'MPC_COMET':
+        logger.warn("Preventing attempt to schedule high eccentricity non-Comet")
+        ok_to_schedule = False
+
     # Check for valid proposal
     # validate_proposal_time(data['proposal_code'])
 
@@ -301,6 +307,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
         dbg=False, perturb=True, display=False)
+    if emp == []:
+        emp = [-99 for x in range(5)]
     magnitude = emp[3]
     speed = emp[4]
 
@@ -345,6 +353,7 @@ def schedule_submit(data, body, username):
     # Send to scheduler
     body_elements = model_to_dict(body)
     body_elements['epochofel_mjd'] = body.epochofel_mjd()
+    body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
     body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
@@ -793,10 +802,17 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
         except ValueError:
             first_obs = None
 
+        if 'arc length' in elements:
+            arc_length = elements['arc length']
+        else:
+            arc_length = last_obs-first_obs
+            arc_length = str(arc_length.days)
+
+        # Common parameters
         params = {
             'epochofel': datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
-            'abs_mag': elements['absolute magnitude'],
-            'slope': elements['phase slope'],
+            'abs_mag': elements.get('absolute magnitude', None),
+            'slope': elements.get('phase slope', 0.15),
             'meananom': elements['mean anomaly'],
             'argofperih': elements['argument of perihelion'],
             'longascnode': elements['ascending node'],
@@ -809,11 +825,20 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             'origin': origin,
             'updated' : True,
             'num_obs' : elements['observations used'],
-            'arc_length' : elements['arc length'],
+            'arc_length' : arc_length,
             'discovery_date' : first_obs,
             'update_time' : last_obs
         }
 
+        if 'radial non-grav. param.' in elements:
+            # Comet, update/overwrite a bunch of things
+            params['elements_type'] = 'MPC_COMET'
+            params['source_type'] = 'C'
+            params['slope'] = elements.get('phase slope', '4.0')
+            params['perihdist'] = elements['perihelion distance']
+            perihelion_date = elements['perihelion date'].replace('-', ' ')
+            params['epochofperih'] = parse_neocp_decimal_date(perihelion_date)
+            
         not_seen = None
         if last_obs != None:
             time_diff = datetime.utcnow() - last_obs
