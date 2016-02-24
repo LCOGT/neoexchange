@@ -933,7 +933,7 @@ def make_moving_target(elements):
             }
 
     if elements['elements_type'].upper() == 'MPC_COMET':
-        target['epochofperih'] = elements['epochofperih']
+        target['epochofperih'] = elements['epochofperih_mjd']
         target['perihdist'] = elements['perihdist']
     else:
         target['meandist']  = elements['meandist']

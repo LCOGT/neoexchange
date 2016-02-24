@@ -287,6 +287,12 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
 def schedule_check(data, body, ok_to_schedule=True):
     body_elements = model_to_dict(body)
+
+    # Check if we have a high eccentricity object and it's not of comet type
+    if body_elements['eccentricity'] >= 0.9 and body_elements['elements_type'] != 'MPC_COMET':
+        logger.warn("Preventing attempt to schedule high eccentricity non-Comet")
+        ok_to_schedule = False
+
     # Check for valid proposal
     # validate_proposal_time(data['proposal_code'])
 
@@ -301,6 +307,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
         dbg=False, perturb=True, display=False)
+    if emp == []:
+        emp = [-99 for x in range(5)]
     magnitude = emp[3]
     speed = emp[4]
 
@@ -317,6 +325,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
+
 
     resp = {
         'target_name': body.current_name(),
@@ -345,6 +354,7 @@ def schedule_submit(data, body, username):
     # Send to scheduler
     body_elements = model_to_dict(body)
     body_elements['epochofel_mjd'] = body.epochofel_mjd()
+    body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
     body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
