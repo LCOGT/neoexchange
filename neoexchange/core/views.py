@@ -37,7 +37,7 @@ from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
-from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
+from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, parse_neocp_decimal_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
@@ -802,10 +802,17 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
         except ValueError:
             first_obs = None
 
+        if 'arc length' in elements:
+            arc_length = elements['arc length']
+        else:
+            arc_length = last_obs-first_obs
+            arc_length = str(arc_length.days)
+
+        # Common parameters
         params = {
             'epochofel': datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
-            'abs_mag': elements['absolute magnitude'],
-            'slope': elements['phase slope'],
+            'abs_mag': elements.get('absolute magnitude', None),
+            'slope': elements.get('phase slope', 0.15),
             'meananom': elements['mean anomaly'],
             'argofperih': elements['argument of perihelion'],
             'longascnode': elements['ascending node'],
@@ -818,11 +825,20 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             'origin': origin,
             'updated' : True,
             'num_obs' : elements['observations used'],
-            'arc_length' : elements['arc length'],
+            'arc_length' : arc_length,
             'discovery_date' : first_obs,
             'update_time' : last_obs
         }
 
+        if 'radial non-grav. param.' in elements:
+            # Comet, update/overwrite a bunch of things
+            params['elements_type'] = 'MPC_COMET'
+            params['source_type'] = 'C'
+            params['slope'] = elements.get('phase slope', '4.0')
+            params['perihdist'] = elements['perihelion distance']
+            perihelion_date = elements['perihelion date'].replace('-', ' ')
+            params['epochofperih'] = parse_neocp_decimal_date(perihelion_date)
+            
         not_seen = None
         if last_obs != None:
             time_diff = datetime.utcnow() - last_obs
