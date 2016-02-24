@@ -326,7 +326,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
-
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
