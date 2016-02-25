@@ -724,7 +724,6 @@ class TestClean_mpcorbit(TestCase):
                              }
         self.expected_comet_params = {
                                         'elements_type': 'MPC_COMET',
-                                        'abs_mag' : None,
                                         'argofperih': '214.01052',
                                         'longascnode' : '24.55858',
                                         'eccentricity' : '1.0000000',

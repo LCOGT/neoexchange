@@ -486,7 +486,7 @@ def save_and_make_revision(body, kwargs):
     body_dict = model_to_dict(body)
     for k, v in kwargs.items():
         param = body_dict[k]
-        if type(body_dict[k]) == type(float()):
+        if type(body_dict[k]) == type(float()) and v is not None:
             v = float(v)
         if v != param:
             setattr(body, k, v)
@@ -834,6 +834,10 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             # Comet, update/overwrite a bunch of things
             params['elements_type'] = 'MPC_COMET'
             params['source_type'] = 'C'
+            # The MPC never seems to have H values for comets so we remove it 
+            # from the dictionary to avoid replacing what was there before.
+            if params['abs_mag'] == None:
+                del params['abs_mag']
             params['slope'] = elements.get('phase slope', '4.0')
             params['perihdist'] = elements['perihelion distance']
             perihelion_date = elements['perihelion date'].replace('-', ' ')
