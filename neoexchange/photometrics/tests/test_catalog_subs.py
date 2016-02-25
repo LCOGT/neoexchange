@@ -27,7 +27,9 @@ from core.models import Body
 #Import module to test
 from photometrics.catalog_subs import *
 
-class FITSCatalogReader(TestCase):
+class FITSUnitTest(TestCase):
+    def __init__(self, *args, **kwargs):
+        super(FITSUnitTest, self).__init__(*args, **kwargs)
 
     def setUp(self):
         # Read in example FITS source catalog
@@ -36,6 +38,11 @@ class FITSCatalogReader(TestCase):
         self.test_header = hdulist[0].header
         self.test_table = hdulist[1].data
         hdulist.close()
+        self.table_firstitem = self.test_table[0]
+        self.table_lastitem = self.test_table[-1]
+
+class OpenFITSCatalog(FITSUnitTest):
+
 
     def test_catalog_does_not_exist(self):
         expected_hdr = {}
@@ -89,3 +96,44 @@ class FITSCatalogReader(TestCase):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['X_IMAGE'], 4)
         self.assertAlmostEqual(expected_y, tbl[-1]['Y_IMAGE'], 4)
+
+class FITSReadHeader(FITSUnitTest):
+
+    def test_header(self):
+
+        expected_params = { 'instrument' : self.test_header['INSTRUME'],
+                            'filter'     : self.test_header['FILTER'],
+                            'framename'  : self.test_header['ORIGNAME'],
+                            'exptime'    : self.test_header['EXPTIME'],
+                            'obs_date'   : self.test_header['DATE-OBS'],
+                            'zeropoint'  : self.test_header['L1ZP'],
+                            'zeropoint_err' : self.test_header['L1ZPERR'],
+                            'zeropoint_src' : self.test_header['L1ZPSRC'],
+                            'fwhm'          : self.test_header['L1FWHM'],
+                            'astrometric_fit_rms'    : self.test_header['WCSRDRES'],
+                            'astrometric_fit_status' : self.test_header['WCSERR'],
+                            'astrometric_fit_nstars' : self.test_header['WCSMATCH'],
+                            'astrometric_catalog'    : self.test_header['WCCATTYP'],
+
+                          }
+
+        header, table = open_fits_catalog(self.test_filename)
+        frame_header = get_catalog_header(header)
+
+        self.assertEqual(expected_params, frame_header)
+
+@skipIf(True, "Foo")
+class FITSReadCatalog(FITSUnitTest):
+
+
+    def test_first_item(self):
+
+        expected_params = { 'ccd_x' : 106.11764,
+                            'ccd_y' :  18.611328,
+                            'obs_ra'  :  86.86805182983244,
+                            'obs_dec' : -27.575127242664802,
+                          }
+                          
+        items = get_catalog_items(self.test_header, self.table_firstitem)
+
+        self.assertEqual(expected_params, items)
