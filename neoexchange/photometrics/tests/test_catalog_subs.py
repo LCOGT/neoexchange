@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from datetime import datetime, timedelta
 from unittest import skipIf
-from math import sqrt, log10
+from math import sqrt, log10, log
 import os
 
 import mock
@@ -45,6 +45,8 @@ class FITSUnitTest(TestCase):
 
         self.max_diff = None
         self.precision = 5
+
+        self.flux2mag = 2.5/log(10)
 
     def compare_list_of_dicts(self, expected_catalog, catalog_items):
         self.assertEqual(len(expected_catalog), len(catalog_items))
@@ -164,6 +166,30 @@ class Test_Convert_Values(FITSUnitTest):
 
         self.assertEqual(expected_value, value)
 
+    def test_flux_to_mag(self):
+
+        expected_value = -7.5
+
+        value = convert_value('obs_mag' , 1000.0)
+
+        self.assertEqual(expected_value, value)
+
+    def test_negflux_to_mag(self):
+
+        expected_value = -1.5
+
+        value = convert_value('obs_mag' , -1.5)
+
+        self.assertEqual(expected_value, value)
+
+    def test_flux_to_magerr(self):
+
+        expected_value = self.flux2mag * (10.0/360.0)
+
+        value = convert_value('obs_mag_err' , (10.0, 360.0))
+
+        self.assertEqual(expected_value, value)
+
 class FITSReadHeader(FITSUnitTest):
 
     def test_header(self):
@@ -202,7 +228,8 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_dec' : -27.575127242664802,
                               'obs_ra_err'  : 7.464116913258858e-06,
                               'obs_dec_err' : 7.516842315248245e-06,
-                              'obs_mag' : 2.5*log10(11228.246),
+                              'obs_mag'      : -2.5*log10(11228.246),
+                              'obs_mag_err'  : 0.037939535221954708,
                               'obs_sky_bkgd' : 746.41577,
                               'flags' : 0,
                             },
@@ -220,7 +247,8 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_dec' : -27.82876912480173,
                               'obs_ra_err'  : 1.5709768391021522e-06,
                               'obs_dec_err' : 1.733559011455713e-06,
-                              'obs_mag' : 2.5*log10(215428.83),
+                              'obs_mag' : -2.5*log10(215428.83),
+                              'obs_mag_err'  : self.flux2mag * self.table_lastitem['FLUXERR_AUTO']/self.table_lastitem['FLUX_AUTO'],
                               'obs_sky_bkgd' : 744.85382,
                               'flags' : 0,
                             },
@@ -246,12 +274,70 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_dec' : -27.57377512,
                               'obs_ra_err'  : 3.192540788457258e-06,
                               'obs_dec_err' : 2.9221911507086037e-06,
-                              'obs_mag' : 2.5*log10(67883.703125),
+                              'obs_mag' : -2.5*log10(67883.703125),
+                              'obs_mag_err'  : self.flux2mag * self.table_item_flags24['FLUXERR_AUTO']/self.table_item_flags24['FLUX_AUTO'],
                               'obs_sky_bkgd' :741.20977783,
                               'flags' : 24,
                             },
                             ]
 
         catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
+
+        self.compare_list_of_dicts(expected_catalog, catalog_items)
+
+    def test_first_item_with_bad_zeropoint(self):
+
+        expected_catalog = [{ 'ccd_x' : 106.11764,
+                              'ccd_y' :  18.611328,
+                              'obs_ra'  :  86.868051829832439,
+                              'obs_dec' : -27.575127242664802,
+                              'obs_ra_err'  : 7.464116913258858e-06,
+                              'obs_dec_err' : 7.516842315248245e-06,
+                              'obs_mag'      : -2.5*log10(11228.246),
+                              'obs_mag_err'  : 0.037939535221954708,
+                              'obs_sky_bkgd' : 746.41577,
+                              'flags' : 0,
+                            },
+                            ]
+        header_items = {'zeropoint' : -99}
+        catalog_items = get_catalog_items(header_items, self.table_firstitem)
+
+        self.compare_list_of_dicts(expected_catalog, catalog_items)
+
+    def test_first_item_with_good_zeropoint(self):
+
+        header_items = {'zeropoint' : 23.0}
+        expected_catalog = [{ 'ccd_x' : 106.11764,
+                              'ccd_y' :  18.611328,
+                              'obs_ra'  :  86.868051829832439,
+                              'obs_dec' : -27.575127242664802,
+                              'obs_ra_err'  : 7.464116913258858e-06,
+                              'obs_dec_err' : 7.516842315248245e-06,
+                              'obs_mag'      : -2.5*log10(11228.246) + header_items['zeropoint'],
+                              'obs_mag_err'  : 0.037939535221954708,
+                              'obs_sky_bkgd' : 746.41577,
+                              'flags' : 0,
+                            },
+                            ]
+        catalog_items = get_catalog_items(header_items, self.table_firstitem)
+
+        self.compare_list_of_dicts(expected_catalog, catalog_items)
+
+    def test_first_item_with_no_zeropoint(self):
+
+        header_items = {'zerowibble' : -99}
+        expected_catalog = [{ 'ccd_x' : 106.11764,
+                              'ccd_y' :  18.611328,
+                              'obs_ra'  :  86.868051829832439,
+                              'obs_dec' : -27.575127242664802,
+                              'obs_ra_err'  : 7.464116913258858e-06,
+                              'obs_dec_err' : 7.516842315248245e-06,
+                              'obs_mag'      : -2.5*log10(11228.246),
+                              'obs_mag_err'  : 0.037939535221954708,
+                              'obs_sky_bkgd' : 746.41577,
+                              'flags' : 0,
+                            },
+                            ]
+        catalog_items = get_catalog_items(header_items, self.table_firstitem)
 
         self.compare_list_of_dicts(expected_catalog, catalog_items)

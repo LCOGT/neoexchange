@@ -17,7 +17,7 @@ GNU General Public License for more details.
 
 import logging
 from datetime import datetime, timedelta
-from math import sqrt, log10
+from math import sqrt, log10, log
 
 from astropy.io import fits
 
@@ -106,6 +106,9 @@ def convert_value(keyword, value):
     FITS catalog.
     '''
 
+    # Conversion factor for fluxes->magnitude
+    FLUX2MAG = 2.5/log(10)
+
     newvalue = value
 
     if keyword == 'obs_date':
@@ -132,11 +135,16 @@ def convert_value(keyword, value):
     elif keyword == 'obs_ra_err' or keyword == 'obs_dec_err':
         # Turn variance into an error
         newvalue = sqrt(value)
-    elif keyword == 'obs_mag' or keyword == 'obs_mag_err':
+    elif keyword == 'obs_mag':
         try:
-            newvalue = 2.5 * log10(value)
+            newvalue = -2.5 * log10(value)
         except ValueError:
             logger.warn("Trying to convert a -ve flux to a magnitude")
+    elif keyword == 'obs_mag_err':
+        try:
+            newvalue = FLUX2MAG * (value[0]/value[1])
+        except IndexError:
+            logger.warn("Need to pass a tuple of (flux error, flux) to compute a magnitude error")
 
     return newvalue
 
@@ -176,7 +184,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         header_items['obs_midpoint'] = header_items['obs_date']  + timedelta(seconds=header_items['exptime'] / 2.0)
     return header_items
 
-def get_catalog_items(header, table, catalog_type='LCOGT', flag_filter=0):
+def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
     '''Extract the needed columns specified in the mapping from the FITS
     binary table. Sources with a FLAGS value greater than [flag_filter]
     will not be returned.
@@ -202,9 +210,21 @@ def get_catalog_items(header, table, catalog_type='LCOGT', flag_filter=0):
         
             for item in tbl_mapping.keys():
                 column = tbl_mapping[item]
-                value = convert_value(item, source[column])
-                new_column = { item : value }
+                value = source[column]
+                # Don't convert magnitude or magnitude error yet
+                if 'obs_mag' not in item:
+                    new_value = convert_value(item, source[column])
+                else:
+                    new_value = value
+                new_column = { item : new_value }
                 source_items.update(new_column)
+            # Convert flux error and flux to magnitude error and magnitude (needs to be this order as
+            # the flux is needed for the magnitude error.
+            # If a good zerpoint is available from the header, add that too.
+            source_items['obs_mag_err'] = convert_value('obs_mag_err', (source_items['obs_mag_err'], source_items['obs_mag']))
+            source_items['obs_mag'] = convert_value('obs_mag', source_items['obs_mag'])
+            if header_items.get('zeropoint', -99) != -99:
+                source_items['obs_mag'] += header_items['zeropoint']
             catalog_items.append(source_items)
 
     return catalog_items
