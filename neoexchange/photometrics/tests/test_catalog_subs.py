@@ -55,6 +55,7 @@ class FITSUnitTest(TestCase):
         while number < len(expected_catalog):
             expected_params = expected_catalog[number]
             items = catalog_items[number]
+            self.assertEqual(len(expected_params), len(items))
 
             for key in expected_params:
                 self.assertAlmostEqual(expected_params[key], items[key], self.precision)
@@ -224,6 +225,9 @@ class FITSReadCatalog(FITSUnitTest):
 
         expected_catalog = [{ 'ccd_x' : 106.11764,
                               'ccd_y' :  18.611328,
+                              'major_axis'  : 1.87925231,
+                              'minor_axis'  : 1.74675643,
+                              'ccd_pa'      : -79.38792419,
                               'obs_ra'  :  86.868051829832439,
                               'obs_dec' : -27.575127242664802,
                               'obs_ra_err'  : 7.464116913258858e-06,
@@ -243,6 +247,9 @@ class FITSReadCatalog(FITSUnitTest):
 
         expected_catalog = [{ 'ccd_x' : 1067.94714355,
                               'ccd_y' :  1973.74450684,
+                              'major_axis'  : 2.7380364,
+                              'minor_axis'  : 2.454973,
+                              'ccd_pa'      : 85.39699,
                               'obs_ra'  :  86.727294383019555,
                               'obs_dec' : -27.82876912480173,
                               'obs_ra_err'  : 1.5709768391021522e-06,
@@ -270,6 +277,9 @@ class FITSReadCatalog(FITSUnitTest):
 
         expected_catalog = [{ 'ccd_x' :  234.52952576,
                               'ccd_y' :    8.05962372,
+                              'major_axis'  : 2.38448,
+                              'minor_axis'  : 2.3142395,
+                              'ccd_pa'      : 54.71178436,
                               'obs_ra'  :  86.84926113,
                               'obs_dec' : -27.57377512,
                               'obs_ra_err'  : 3.192540788457258e-06,
@@ -289,6 +299,9 @@ class FITSReadCatalog(FITSUnitTest):
 
         expected_catalog = [{ 'ccd_x' : 106.11764,
                               'ccd_y' :  18.611328,
+                              'major_axis'  : 1.87925231,
+                              'minor_axis'  : 1.74675643,
+                              'ccd_pa'      : -79.38792419,
                               'obs_ra'  :  86.868051829832439,
                               'obs_dec' : -27.575127242664802,
                               'obs_ra_err'  : 7.464116913258858e-06,
@@ -309,6 +322,9 @@ class FITSReadCatalog(FITSUnitTest):
         header_items = {'zeropoint' : 23.0}
         expected_catalog = [{ 'ccd_x' : 106.11764,
                               'ccd_y' :  18.611328,
+                              'major_axis'  : 1.87925231,
+                              'minor_axis'  : 1.74675643,
+                              'ccd_pa'      : -79.38792419,
                               'obs_ra'  :  86.868051829832439,
                               'obs_dec' : -27.575127242664802,
                               'obs_ra_err'  : 7.464116913258858e-06,
@@ -328,6 +344,9 @@ class FITSReadCatalog(FITSUnitTest):
         header_items = {'zerowibble' : -99}
         expected_catalog = [{ 'ccd_x' : 106.11764,
                               'ccd_y' :  18.611328,
+                              'major_axis'  : 1.87925231,
+                              'minor_axis'  : 1.74675643,
+                              'ccd_pa'      : -79.38792419,
                               'obs_ra'  :  86.868051829832439,
                               'obs_dec' : -27.575127242664802,
                               'obs_ra_err'  : 7.464116913258858e-06,

@@ -64,6 +64,9 @@ def oracdr_catalog_mapping():
 
     table_dict = {  'ccd_x'         : 'X_IMAGE',
                     'ccd_y'         : 'Y_IMAGE',
+                    'major_axis'    : 'A_IMAGE',
+                    'minor_axis'    : 'B_IMAGE',
+                    'ccd_pa'        : 'THETA_IMAGE',
                     'obs_ra'        : 'ALPHA_J2000',
                     'obs_dec'       : 'DELTA_J2000',
                     'obs_ra_err'    : 'ERRX2_WORLD',
@@ -72,7 +75,6 @@ def oracdr_catalog_mapping():
                     'obs_mag_err'   : 'FLUXERR_AUTO',
                     'obs_sky_bkgd'  : 'BACKGROUND',
                     'flags'         : 'FLAGS',
-                    
                  }
 
     return header_dict, table_dict
