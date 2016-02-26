@@ -378,6 +378,11 @@ def schedule_submit(data, body, username):
     body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
+    my_proposals = user_proposals(user)
+    if proposal not in my_proposals:
+        resp_params = {'msg' : 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
+
+        return None, resp_params
     params = {'proposal_id': proposal.code,
               'user_id': proposal.pi,
               'tag_id': proposal.tag,

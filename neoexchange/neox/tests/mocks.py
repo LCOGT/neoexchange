@@ -153,8 +153,8 @@ def mock_rbauth_login(email, password, request=None):
             'too_allocation': 0.0,
             'too_time_used': 0.0,
             'std_time_used': 1.57055555555556}],
-        'code': 'LCOTEST1',
+        'code': 'LCO2015A-009',
         'id': 4,
-        'name': 'Test Proposal #1'}
+        'name': 'LCOGT NEO Follow-up Network'}
         ]
     return profile, proposals

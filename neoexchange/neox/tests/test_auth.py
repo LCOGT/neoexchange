@@ -34,8 +34,8 @@ class Test_Auth(TestCase):
 
     def setUp(self):
         proposal_params1 = {
-                'code': 'LCOTEST1',
-                'title' : 'Test Proposal #1',
+                'code': 'LCO2015A-009',
+                'title' : 'LCOGT NEO Follow-up Network',
                 'pi' : 'test.user',
                 'tag' : 'LCOGT',
                 'active': True
