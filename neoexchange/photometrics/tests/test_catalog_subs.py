@@ -44,7 +44,7 @@ class FITSUnitTest(TestCase):
         self.table_item_flags24 = self.test_table[2:3]
 
         self.max_diff = None
-        self.precision = 5
+        self.precision = 7
 
         self.flux2mag = 2.5/log(10)
 
@@ -58,7 +58,7 @@ class FITSUnitTest(TestCase):
             self.assertEqual(len(expected_params), len(items))
 
             for key in expected_params:
-                self.assertAlmostEqual(expected_params[key], items[key], self.precision)
+                self.assertAlmostEqual(expected_params[key], items[key], places=self.precision, msg="Failure verifying " + key)
             number += 1
     
 class OpenFITSCatalog(FITSUnitTest):
@@ -223,8 +223,8 @@ class FITSReadCatalog(FITSUnitTest):
 
     def test_first_item(self):
 
-        expected_catalog = [{ 'ccd_x' : 106.11764,
-                              'ccd_y' :  18.611328,
+        expected_catalog = [{ 'ccd_x' : 106.11763763,
+                              'ccd_y' :  18.61132812,
                               'major_axis'  : 1.87925231,
                               'minor_axis'  : 1.74675643,
                               'ccd_pa'      : -79.38792419,
@@ -234,7 +234,7 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_dec_err' : 7.516842315248245e-06,
                               'obs_mag'      : -2.5*log10(11228.246),
                               'obs_mag_err'  : 0.037939535221954708,
-                              'obs_sky_bkgd' : 746.41577,
+                              'obs_sky_bkgd' : 746.41577148,
                               'flags' : 0,
                             },
                             ]
@@ -249,14 +249,14 @@ class FITSReadCatalog(FITSUnitTest):
                               'ccd_y' :  1973.74450684,
                               'major_axis'  : 2.7380364,
                               'minor_axis'  : 2.454973,
-                              'ccd_pa'      : 85.39699,
+                              'ccd_pa'      : 85.39698792,
                               'obs_ra'  :  86.727294383019555,
                               'obs_dec' : -27.82876912480173,
                               'obs_ra_err'  : 1.5709768391021522e-06,
                               'obs_dec_err' : 1.733559011455713e-06,
                               'obs_mag' : -2.5*log10(215428.83),
                               'obs_mag_err'  : self.flux2mag * self.table_lastitem['FLUXERR_AUTO']/self.table_lastitem['FLUX_AUTO'],
-                              'obs_sky_bkgd' : 744.85382,
+                              'obs_sky_bkgd' : 744.8538208,
                               'flags' : 0,
                             },
                             ]
@@ -297,8 +297,8 @@ class FITSReadCatalog(FITSUnitTest):
 
     def test_first_item_with_bad_zeropoint(self):
 
-        expected_catalog = [{ 'ccd_x' : 106.11764,
-                              'ccd_y' :  18.611328,
+        expected_catalog = [{ 'ccd_x' : 106.11763763,
+                              'ccd_y' :  18.61132812,
                               'major_axis'  : 1.87925231,
                               'minor_axis'  : 1.74675643,
                               'ccd_pa'      : -79.38792419,
@@ -308,7 +308,7 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_dec_err' : 7.516842315248245e-06,
                               'obs_mag'      : -2.5*log10(11228.246),
                               'obs_mag_err'  : 0.037939535221954708,
-                              'obs_sky_bkgd' : 746.41577,
+                              'obs_sky_bkgd' : 746.41577148,
                               'flags' : 0,
                             },
                             ]
@@ -320,8 +320,8 @@ class FITSReadCatalog(FITSUnitTest):
     def test_first_item_with_good_zeropoint(self):
 
         header_items = {'zeropoint' : 23.0}
-        expected_catalog = [{ 'ccd_x' : 106.11764,
-                              'ccd_y' :  18.611328,
+        expected_catalog = [{ 'ccd_x' : 106.11763763,
+                              'ccd_y' :  18.61132812,
                               'major_axis'  : 1.87925231,
                               'minor_axis'  : 1.74675643,
                               'ccd_pa'      : -79.38792419,
@@ -331,7 +331,7 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_dec_err' : 7.516842315248245e-06,
                               'obs_mag'      : -2.5*log10(11228.246) + header_items['zeropoint'],
                               'obs_mag_err'  : 0.037939535221954708,
-                              'obs_sky_bkgd' : 746.41577,
+                              'obs_sky_bkgd' : 746.41577148,
                               'flags' : 0,
                             },
                             ]
@@ -342,8 +342,8 @@ class FITSReadCatalog(FITSUnitTest):
     def test_first_item_with_no_zeropoint(self):
 
         header_items = {'zerowibble' : -99}
-        expected_catalog = [{ 'ccd_x' : 106.11764,
-                              'ccd_y' :  18.611328,
+        expected_catalog = [{ 'ccd_x' : 106.11763763,
+                              'ccd_y' :  18.61132812,
                               'major_axis'  : 1.87925231,
                               'minor_axis'  : 1.74675643,
                               'ccd_pa'      : -79.38792419,
@@ -353,7 +353,7 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_dec_err' : 7.516842315248245e-06,
                               'obs_mag'      : -2.5*log10(11228.246),
                               'obs_mag_err'  : 0.037939535221954708,
-                              'obs_sky_bkgd' : 746.41577,
+                              'obs_sky_bkgd' : 746.41577148,
                               'flags' : 0,
                             },
                             ]
