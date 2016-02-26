@@ -102,7 +102,7 @@ def update_proposal_permissions(user,proposals):
     inactive = ProposalPermission.objects.filter(user=user).exclude(proposal__code__in=proposal_list)
     inactive.delete()
     my_proposals = Proposal.objects.filter(proposalpermission__user=user, active=True).values_list('code', flat=True)
-    for p in Proposal.objects.filter(code__in=proposal_list).exclude(code__in=my_proposals):
+    for p in Proposal.objects.filter(code__in=proposal_list, active=True).exclude(code__in=my_proposals):
         pp = ProposalPermission(user=user,proposal=p)
         pp.save()
     return

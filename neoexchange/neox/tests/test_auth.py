@@ -47,14 +47,25 @@ class Test_Auth(TestCase):
                 'tag' : 'LCOGT',
                 'active': True
                         }
+        proposal_params3 = {
+                'code': 'LCOTEST3',
+                'title' : 'Test Proposal - inactive',
+                'pi' : 'test.user',
+                'tag' : 'LCOGT',
+                'active': False
+                        }
         p1 = Proposal(**proposal_params1)
         p1.save()
 
         p2 = Proposal(**proposal_params2)
         p2.save()
 
+        p3 = Proposal(**proposal_params3)
+        p3.save()
+
         self.proposal1 = p1
         self.proposal2 = p2
+        self.proposal_inactive = p3
 
     @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
     def test_user_login(self):
@@ -92,3 +103,15 @@ class Test_Auth(TestCase):
         saved_proposals = user_proposals(bart)
         # Check the same proposals go in as come out
         self.assertEqual(set([self.proposal1, self.proposal2]), set(saved_proposals))
+
+    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    def test_adding_user_two_proposal_inactive(self):
+        # Add Bart to 2 proposals, he's already a member of 1, the other is inactive
+        self.client.login(username='bsimpson', password='simpson')
+        bart = User.objects.get(username='bsimpson')
+        # Proposals have to be Dicts not objects
+        new_proposals = [self.proposal1.__dict__, self.proposal_inactive.__dict__]
+        update_proposal_permissions(bart, new_proposals)
+        saved_proposals = user_proposals(bart)
+        # The inactive proposal should not have been added
+        self.assertEqual(set([self.proposal1]), set(saved_proposals))
