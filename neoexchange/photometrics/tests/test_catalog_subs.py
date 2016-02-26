@@ -41,6 +41,7 @@ class FITSUnitTest(TestCase):
         hdulist.close()
         self.table_firstitem = self.test_table[0:1]
         self.table_lastitem = self.test_table[-1:]
+        self.table_item_flags24 = self.test_table[2:3]
 
         self.max_diff = None
         self.precision = 5
@@ -226,5 +227,31 @@ class FITSReadCatalog(FITSUnitTest):
                             ]
                           
         catalog_items = get_catalog_items(self.test_header, self.table_lastitem)
+
+        self.compare_list_of_dicts(expected_catalog, catalog_items)
+
+    def test_reject_item_flags24(self):
+
+        expected_catalog = []
+
+        catalog_items = get_catalog_items(self.test_header, self.table_item_flags24)
+
+        self.assertEqual(expected_catalog, catalog_items)
+
+    def test_accept_item_flags24(self):
+
+        expected_catalog = [{ 'ccd_x' :  234.52952576,
+                              'ccd_y' :    8.05962372,
+                              'obs_ra'  :  86.84926113,
+                              'obs_dec' : -27.57377512,
+                              'obs_ra_err'  : 3.192540788457258e-06,
+                              'obs_dec_err' : 2.9221911507086037e-06,
+                              'obs_mag' : 2.5*log10(67883.703125),
+                              'obs_sky_bkgd' :741.20977783,
+                              'flags' : 24,
+                            },
+                            ]
+
+        catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
 
         self.compare_list_of_dicts(expected_catalog, catalog_items)

@@ -176,9 +176,10 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         header_items['obs_midpoint'] = header_items['obs_date']  + timedelta(seconds=header_items['exptime'] / 2.0)
     return header_items
 
-def get_catalog_items(header, table, catalog_type='LCOGT'):
+def get_catalog_items(header, table, catalog_type='LCOGT', flag_filter=0):
     '''Extract the needed columns specified in the mapping from the FITS
-    binary table. 
+    binary table. Sources with a FLAGS value greater than [flag_filter]
+    will not be returned.
     The sources in the catalog are returned in a list of dictionaries containing
     the keys specified in the table mapping.'''
 
@@ -197,11 +198,13 @@ def get_catalog_items(header, table, catalog_type='LCOGT'):
 
     for source in table:
         source_items = {}
-        for item in tbl_mapping.keys():
-            column = tbl_mapping[item]
-            value = convert_value(item, source[column])
-            new_column = { item : value }
-            source_items.update(new_column)
-        catalog_items.append(source_items)
+        if 'flags' in tbl_mapping and source[tbl_mapping['flags']] <= flag_filter:
+        
+            for item in tbl_mapping.keys():
+                column = tbl_mapping[item]
+                value = convert_value(item, source[column])
+                new_column = { item : value }
+                source_items.update(new_column)
+            catalog_items.append(source_items)
 
     return catalog_items
