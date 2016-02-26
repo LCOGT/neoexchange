@@ -16,6 +16,7 @@ GNU General Public License for more details.
 '''
 
 import logging
+from datetime import datetime, timedelta
 
 from astropy.io import fits
 
@@ -90,6 +91,34 @@ def open_fits_catalog(catfile):
 
     return header, table
 
+def convert_value(keyword, value):
+
+    newvalue = value
+
+    if keyword == 'obs_date':
+        try:
+            newvalue = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%f')
+        except ValueError:
+            try:
+                newvalue = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
+            except ValueError:
+                pass
+    elif keyword == 'astrometric_fit_rms':
+        # Check for bad cases of '-99/-99' and replace with None
+        if value.strip() == '-99/-99':
+            newvalue = None
+        else:
+            try:
+                (ra_rms, dec_rms) = value.strip().split('/')
+                newvalue = (float(ra_rms) + float(dec_rms)) / 2.0
+            except TypeError:
+                pass
+    elif keyword == 'astrometric_catalog':
+        if '@' in value:
+            newvalue = value.split('@')[0]
+
+    return newvalue
+
 def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     '''Look through the FITS catalog header for the concepts we want for which
     the keyword is given in the mapping specified for the [catalog_type] 
@@ -115,10 +144,15 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
 	    if value == 'UNKNOWN':
 	        if debug: logger.debug('UNKNOWN value found for %s' % fits_keyword)
     	        raise FITSHdrException(fits_keyword)
-            header_item = { item: value }
+            # Convert if necessary
+            new_value = convert_value(item, value)
+            header_item = { item: new_value }
             header_items.update(header_item)
         else:
             raise FITSHdrException(fits_keyword)
+
+    if 'obs_date' in header_items and 'exptime' in header_items:
+        header_items['obs_midpoint'] = header_items['obs_date']  + timedelta(seconds=header_items['exptime'] / 2.0)
     return header_items
 
 def get_catalog_items(header, table, catalog_type='LCOGT'):

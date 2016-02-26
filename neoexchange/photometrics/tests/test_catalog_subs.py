@@ -97,23 +97,75 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertAlmostEqual(expected_x, tbl[-1]['X_IMAGE'], 4)
         self.assertAlmostEqual(expected_y, tbl[-1]['Y_IMAGE'], 4)
 
+class Test_Convert_Values(FITSUnitTest):
+
+    def test_dateobs_conversion(self):
+
+        expected_value = datetime(2016, 2, 22, 19, 16, 42, 664000)
+
+        value = convert_value('obs_date' , self.test_header['DATE-OBS'])
+
+        self.assertEqual(expected_value, value)
+
+    def test_dateobs_no_frac_seconds(self):
+
+        expected_value = datetime(2016, 2, 22, 19, 16, 42)
+
+        value = convert_value('obs_date' , '2016-02-22T19:16:42')
+
+        self.assertEqual(expected_value, value)
+
+    def test_bad_astrometric_rms(self):
+
+        expected_value = None
+
+        value = convert_value('astrometric_fit_rms' , '-99/-99 ')
+
+        self.assertEqual(expected_value, value)
+
+    def test_avg_astrometric_rms(self):
+
+        expected_value = 0.15
+
+        value = convert_value('astrometric_fit_rms' , '0.16/0.14 ')
+
+        self.assertAlmostEqual(expected_value, value, 4)
+
+    def test_astrometric_catalog(self):
+
+        expected_value = 'UCAC3'
+
+        value = convert_value('astrometric_catalog' , 'UCAC3@CDS ')
+
+        self.assertEqual(expected_value, value)
+
+    def test_no_conversion(self):
+
+        expected_value = 100.0
+
+        value = convert_value('exptime' , self.test_header['EXPTIME'])
+
+        self.assertEqual(expected_value, value)
+
 class FITSReadHeader(FITSUnitTest):
 
     def test_header(self):
 
+        obs_date = datetime.strptime(self.test_header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
         expected_params = { 'instrument' : self.test_header['INSTRUME'],
                             'filter'     : self.test_header['FILTER'],
                             'framename'  : self.test_header['ORIGNAME'],
                             'exptime'    : self.test_header['EXPTIME'],
-                            'obs_date'   : self.test_header['DATE-OBS'],
-                            'zeropoint'  : self.test_header['L1ZP'],
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=self.test_header['EXPTIME'] / 2.0),
+                            'zeropoint'     : self.test_header['L1ZP'],
                             'zeropoint_err' : self.test_header['L1ZPERR'],
                             'zeropoint_src' : self.test_header['L1ZPSRC'],
                             'fwhm'          : self.test_header['L1FWHM'],
-                            'astrometric_fit_rms'    : self.test_header['WCSRDRES'],
+                            'astrometric_fit_rms'    : None,
                             'astrometric_fit_status' : self.test_header['WCSERR'],
                             'astrometric_fit_nstars' : self.test_header['WCSMATCH'],
-                            'astrometric_catalog'    : self.test_header['WCCATTYP'],
+                            'astrometric_catalog'    : 'UCAC3',
 
                           }
 
