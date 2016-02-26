@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 from datetime import datetime, timedelta
 from unittest import skipIf
+from math import sqrt, log10
 import os
 
 import mock
@@ -38,9 +39,24 @@ class FITSUnitTest(TestCase):
         self.test_header = hdulist[0].header
         self.test_table = hdulist[1].data
         hdulist.close()
-        self.table_firstitem = self.test_table[0]
-        self.table_lastitem = self.test_table[-1]
+        self.table_firstitem = self.test_table[0:1]
+        self.table_lastitem = self.test_table[-1:]
 
+        self.max_diff = None
+        self.precision = 5
+
+    def compare_list_of_dicts(self, expected_catalog, catalog_items):
+        self.assertEqual(len(expected_catalog), len(catalog_items))
+
+        number = 0 
+        while number < len(expected_catalog):
+            expected_params = expected_catalog[number]
+            items = catalog_items[number]
+
+            for key in expected_params:
+                self.assertAlmostEqual(expected_params[key], items[key], self.precision)
+            number += 1
+    
 class OpenFITSCatalog(FITSUnitTest):
 
 
@@ -174,18 +190,41 @@ class FITSReadHeader(FITSUnitTest):
 
         self.assertEqual(expected_params, frame_header)
 
-@skipIf(True, "Foo")
 class FITSReadCatalog(FITSUnitTest):
 
 
     def test_first_item(self):
 
-        expected_params = { 'ccd_x' : 106.11764,
-                            'ccd_y' :  18.611328,
-                            'obs_ra'  :  86.86805182983244,
-                            'obs_dec' : -27.575127242664802,
-                          }
+        expected_catalog = [{ 'ccd_x' : 106.11764,
+                              'ccd_y' :  18.611328,
+                              'obs_ra'  :  86.868051829832439,
+                              'obs_dec' : -27.575127242664802,
+                              'obs_ra_err'  : 7.464116913258858e-06,
+                              'obs_dec_err' : 7.516842315248245e-06,
+                              'obs_mag' : 2.5*log10(11228.246),
+                              'obs_sky_bkgd' : 746.41577,
+                              'flags' : 0,
+                            },
+                            ]
                           
-        items = get_catalog_items(self.test_header, self.table_firstitem)
+        catalog_items = get_catalog_items(self.test_header, self.table_firstitem)
 
-        self.assertEqual(expected_params, items)
+        self.compare_list_of_dicts(expected_catalog, catalog_items)
+
+    def test_last_item(self):
+
+        expected_catalog = [{ 'ccd_x' : 1067.94714355,
+                              'ccd_y' :  1973.74450684,
+                              'obs_ra'  :  86.727294383019555,
+                              'obs_dec' : -27.82876912480173,
+                              'obs_ra_err'  : 1.5709768391021522e-06,
+                              'obs_dec_err' : 1.733559011455713e-06,
+                              'obs_mag' : 2.5*log10(215428.83),
+                              'obs_sky_bkgd' : 744.85382,
+                              'flags' : 0,
+                            },
+                            ]
+                          
+        catalog_items = get_catalog_items(self.test_header, self.table_lastitem)
+
+        self.compare_list_of_dicts(expected_catalog, catalog_items)

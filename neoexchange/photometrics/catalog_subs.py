@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 import logging
 from datetime import datetime, timedelta
+from math import sqrt, log10
 
 from astropy.io import fits
 
@@ -27,10 +28,19 @@ class FITSHdrException(Exception):
     '''Raised when a required FITS header keyword is missing'''
     
     def __init__(self, keyword):
-    	self.keyword = keyword
+        self.keyword = keyword
     
     def __str__(self):
-    	return "Required keyword '" + self.keyword + "' missing"
+        return "Required keyword '" + self.keyword + "' missing"
+
+class FITSTblException(Exception):
+    '''Raised when a required FITS table column is missing'''
+    
+    def __init__(self, column):
+        self.column = column
+    
+    def __str__(self):
+        return "Required column '" + self.column + "' missing"
 
 def oracdr_catalog_mapping():
     '''Returns two dictionaries of the mapping between the FITS header and table
@@ -92,6 +102,9 @@ def open_fits_catalog(catfile):
     return header, table
 
 def convert_value(keyword, value):
+    '''Routine to perform domain-specific transformation of values read from the
+    FITS catalog.
+    '''
 
     newvalue = value
 
@@ -116,6 +129,14 @@ def convert_value(keyword, value):
     elif keyword == 'astrometric_catalog':
         if '@' in value:
             newvalue = value.split('@')[0]
+    elif keyword == 'obs_ra_err' or keyword == 'obs_dec_err':
+        # Turn variance into an error
+        newvalue = sqrt(value)
+    elif keyword == 'obs_mag' or keyword == 'obs_mag_err':
+        try:
+            newvalue = 2.5 * log10(value)
+        except ValueError:
+            logger.warn("Trying to convert a -ve flux to a magnitude")
 
     return newvalue
 
@@ -133,17 +154,17 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
     else:
-        logger.error("Unsupported catalog mapping: %s" % catalog_type)
+        logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
 
     for item in hdr_mapping.keys():
         fits_keyword = hdr_mapping[item]
         if fits_keyword in catalog_header:
             # Found, extract value
-    	    value = catalog_header[fits_keyword]
-	    if value == 'UNKNOWN':
-	        if debug: logger.debug('UNKNOWN value found for %s' % fits_keyword)
-    	        raise FITSHdrException(fits_keyword)
+            value = catalog_header[fits_keyword]
+            if value == 'UNKNOWN':
+                if debug: logger.debug('UNKNOWN value found for %s', fits_keyword)
+                raise FITSHdrException(fits_keyword)
             # Convert if necessary
             new_value = convert_value(item, value)
             header_item = { item: new_value }
@@ -156,5 +177,31 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     return header_items
 
 def get_catalog_items(header, table, catalog_type='LCOGT'):
+    '''Extract the needed columns specified in the mapping from the FITS
+    binary table. 
+    The sources in the catalog are returned in a list of dictionaries containing
+    the keys specified in the table mapping.'''
 
-    return {}
+    catalog_items = []
+    if catalog_type == 'LCOGT':
+        hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
+    else:
+        logger.error("Unsupported catalog mapping: %s", catalog_type)
+        return catalog_items
+
+   # Check if all columns exist first
+    for column in tbl_mapping.values():
+        if column not in table.names:
+            raise FITSTblException(column)
+            return catalog_items
+
+    for source in table:
+        source_items = {}
+        for item in tbl_mapping.keys():
+            column = tbl_mapping[item]
+            value = convert_value(item, source[column])
+            new_column = { item : value }
+            source_items.update(new_column)
+        catalog_items.append(source_items)
+
+    return catalog_items
