@@ -196,7 +196,8 @@ class FITSReadHeader(FITSUnitTest):
     def test_header(self):
 
         obs_date = datetime.strptime(self.test_header['DATE-OBS'], '%Y-%m-%dT%H:%M:%S.%f')
-        expected_params = { 'instrument' : self.test_header['INSTRUME'],
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : self.test_header['INSTRUME'],
                             'filter'     : self.test_header['FILTER'],
                             'framename'  : self.test_header['ORIGNAME'],
                             'exptime'    : self.test_header['EXPTIME'],

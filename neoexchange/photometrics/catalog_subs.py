@@ -21,6 +21,8 @@ from math import sqrt, log10, log
 
 from astropy.io import fits
 
+from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +49,10 @@ def oracdr_catalog_mapping():
     items and CatalogItem quantities for LCOGT ORAC-DR pipeline format catalog
     files.'''
 
-    header_dict = { 'instrument' : 'INSTRUME',
+    header_dict = { 'site_id'    : 'SITEID',
+                    'enc_id'     : 'ENCID',
+                    'tel_id'     : 'TELID',
+                    'instrument' : 'INSTRUME',
                     'filter'     : 'FILTER',
                     'framename'  : 'ORIGNAME',
                     'exptime'    : 'EXPTIME',
@@ -184,6 +189,16 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
 
     if 'obs_date' in header_items and 'exptime' in header_items:
         header_items['obs_midpoint'] = header_items['obs_date']  + timedelta(seconds=header_items['exptime'] / 2.0)
+    # Determine site code
+    if 'site_id' in header_items and 'enc_id' in header_items and 'tel_id' in header_items:
+        site_code = LCOGT_domes_to_site_codes(header_items['site_id'], header_items['enc_id'], header_items['tel_id'])
+        if site_code != 'XXX':
+            header_items['site_code'] = site_code
+            del header_items['site_id']
+            del header_items['enc_id']
+            del header_items['tel_id']
+        else:
+            logger.error("Could not determine site code from %s-%s-%s", header_items['site_id'], header_items['enc_id'], header_items['tel_id'])
     return header_items
 
 def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
