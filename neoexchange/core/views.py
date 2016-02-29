@@ -249,8 +249,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
-        data = schedule_check(
-            form.cleaned_data, self.body, self.ok_to_schedule)
+        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 

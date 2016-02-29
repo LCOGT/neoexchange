@@ -44,6 +44,13 @@ class ScheduleForm(forms.Form):
             raise forms.ValidationError("Window cannot start in the past")
         return start
 
+    def __init__(self, *args, **kwargs):
+        self.proposal_code = kwargs.pop('proposal_code', None)
+        super(ScheduleForm, self).__init__(*args, **kwargs)
+        proposals = Proposal.objects.filter(active=True)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        self.fields['proposal_code'].choices = proposal_choices
+
 
 class ScheduleBlockForm(forms.Form):
     start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
