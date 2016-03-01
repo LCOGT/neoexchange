@@ -15,8 +15,11 @@
 		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
 		{% block css-content %}{% endblock %}
 		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="{% static "core/css/skeleton.css" %}">
+		<link rel="stylesheet" href="{% static "core/css/normalize.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/styles.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/forms.css" %}">
+
 
         {% block last-css-content %}{% endblock %}
         <!--[if lt IE 9]>
@@ -76,7 +79,7 @@
 							<a target="_parent" href="http://lcogt.net/" title="LCOGT Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory </span><span class="g">G</span><span class="wide">lobal </span><span class="t">T</span><span class="wide">elescope Network</span></a>
 						</div>
 					</div>
-					<div class="container">
+					<div class="container-lg">
 					<div id="header" role="banner">
 						<div id="logo">
 							<a href="{% url 'home' %}" title="NEO exchange homepage" rel="home"><img src="{% static "core/images/NEO-logo_sm.jpg" %}" alt="NEO exchange" /></a>
@@ -97,7 +100,7 @@
 				</div>
 							<!-- Header region -->
 				<div id="{% block extramenucss %}extramenu{% endblock %}">
-					<div class="container">
+					<div class="container-lg">
 						<div class="extramenu_padder" role="menubar">
 							{% block extramenu %}
 							{% endblock %}

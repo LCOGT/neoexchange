@@ -1,0 +1,578 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block bodyclass %}page lightmonitor{%endblock%}
+
+{%block header %}Light Monitor for block {{object.id}}{%endblock%}
+
+{% block script-content %}{% ifnotequal complete 1 %}
+	<script type="text/javascript" src="{% static 'js/agentex.js' %}"></script>
+	<script type="text/javascript" src="{% static 'js/raphael.js' %}"></script>
+	<script type="text/javascript" src="{% static 'js/g.raphael.' %}js"></script>
+	<script type="text/javascript" src="{% static 'js/g.line.js' %}"></script>
+	<script type="text/javascript" src="{% static 'js/raphael.sizer.js' %}"></script>
+	<script type="text/javascript" src="{% static 'js/raphael.rangelimiter.js' %}"></script>
+	<script type="text/javascript" src="{% static 'js/photometry.js' %}"></script>
+	<script type="text/javascript" src="{% static 'js/jquery-ui.min.js' %}"></script>
+	<script type="text/javascript" charset="utf-8">
+	<!--
+	var gotcss = (typeof document.styleSheets[0]=="undefined") ? false : true;
+	var source = {x:{{data.event.xpos}},y:{{data.event.ypos}}}
+	var cur = {x:0,y:0};
+	var changed = true;
+	var sources = [];//{{sources|safe}};
+	var suggested = {{least_data|safe}}
+	var helper = true;		// For the '?' tab
+
+	function changeZoom() {
+		var region = photo.getView()
+		limit.resize(region)
+		if(region[0] == 0 && region[1] == 0 && region[2] == 1 && region[3] == 1 && limit.visible) limit.hide();
+		else{
+			if(!limit.visible) limit.show();
+		}
+		$('#helptooltip').remove();
+		$('.openpin').remove();
+	}
+
+	function moveSizer(ev) {
+		var moving = true;
+		if(limit.visible) limit.r[0].crosshair.update(limit.r[0],ev.x,ev.y)
+	}
+
+	function addPlotPin(type,x,ys,labels) {
+		var l = $('#photometric').offset().left + photo.getX(type)/photo.scale;
+		var t = $('#photometric').offset().top + photo.getY(type,true)/photo.scale;
+		var r = photo.getR(type)/photo.scale;
+		var w = 150;
+		var h = 100;
+
+		bubblePopup({id:type+'pin',el:{x:l,y:t,w:(r*2),h:(r*2)},html:'',w:w,h:h,animate:true,z:10})
+		$('#'+type+'pin').bind('mouseover',function(e){
+			$('.openpin').css('z-index',10);
+			$(this).css('z-index',11);
+		});
+
+		$('#'+type+'pin').bind('click',function(){
+			$(this).remove();
+			changed = true;
+			$('a#getdata').removeClass('fancybtndisable');
+			$('form .fancybtn').addClass('fancybtndisable');
+			$('input.fancybtn').attr("disabled", "true");
+			$('#helptooltip').remove();
+
+		});
+		addHelpHint($('#'+type+'pin'),'This is a graph showing the brightness of the image in <span style="color:blue;">horizontal<\/span> and <span style="color:green;">vertical<\/span> slices through the centre of the '+type+' circle. The <span style="color:red;">flat<\/span> line is the average sky value from your sky circle. If your circle is well centered, the peaks of the two slices will be aligned.',"auto","center");
+		// Add the plot
+		var rplot = Raphael(type+'pin')
+		rplot.clear();
+		var linec = rplot.g.linechart(0, 0, w, h, x, ys);
+		// Add the labels to the plot
+		if(typeof labels=="object"){
+			for(i = 0; i < labels.length ; i++) rplot.g.text(0, 8+i*12, labels[i]).attr({fill:rplot.g.colors[i],"text-anchor": "start"});
+		}
+
+	}
+
+	// Bind resize event
+	$(window).resize(function(){
+		// Size progress bar
+		sizeProgressBar();
+
+		// Resize finder
+
+		// Resize main image
+		//$('#photometric').css()
+	});
+
+	function sizeProgressBar(){
+		var w = $('.progress').outerWidth();
+		$('.progressbar').css({width:Math.round({{ progress.percent }}*w/100)+"px",'height':'1.5em','background-color':'#009d00','z-index':0,'position':'absolute'});
+	}
+
+	function makeProgressBar(){
+		sizeProgressBar();
+		$('.progress .label').css({'z-index':10,'position':'absolute','color':'white'});
+	}
+
+	function setup(){
+
+		makeProgressBar();
+
+		{% if points %}
+		var s_x = {{points.source.x|safe}};
+		var s_y = {{points.source.y|safe}};
+		var c_x = new Array();
+		var c_y = new Array();
+		{% for point in points.cal %}
+		c_x[{{forloop.counter0}}] = {{point.x}};
+		c_y[{{forloop.counter0}}] = {{point.y}};
+		{% endfor %}
+		var b_x = {{points.bg.x}};
+		var b_y = {{points.bg.y}};
+		var start_r = {{points.radius}};
+		{% else %}
+		var s_x = source.x-50;
+		var s_y = source.y+50;
+		var b_x = source.x-50;
+		var b_y = source.y+50;
+		var c_x = [source.x+50,source.x+50,source.x+50];
+		var c_y = [source.y+50,source.y+0,source.y-50];
+		var start_r = 10;
+		{% endif %}
+		var dataid;
+
+		// Add the interactive buttons that only make sense if there is CSS and Javascript
+		$('#toolbar').append('<div class="fbtn"><a class="fancybtngrey btns" id="btn-add"><img src="{% static 'images/round_plus_icon&16.png' %}" style="width:16px;height:16px;" alt="Add" title="Add a calibration ring" /> Add calibrator<\/a><\/div><div class="fbtn"><a class="fancybtngrey btns" id="btn-remove" style="display:none;"><img src="{% static 'images/round_minus_icon&16.png' %}" style="width:16px;height:16px;" alt="Remove" title="Remove a calibration ring" /> Zap calibrator<\/a><\/div><div class="fbtn"><a class="fancybtngrey btns" id="btn-finetune"><img src="{% static 'images/round_plus_icon&16.png' %}" style="width:16px;height:16px;" alt="Add" title="Fine tune positions" /> Fine Tune<\/a><\/div>');
+		$('#btn-add').bind('click',function(e){
+			photo.addCalibrator();
+			dataQualityFlag();
+			if(photo.sizer.length>5) $('#btn-remove').show();
+		});
+		$('#btn-remove').bind('click',function(e){
+			photo.removeCalibrator();
+			dataQualityFlag();
+			if(photo.sizer.length==5) $(this).hide();
+		});
+		$('#btn-finetune').bind('click',function(e){
+			photo.fineTune();
+		});
+
+		function enableAnalyze(){
+			if(photo.sizer[4].visible){
+				$('a#getdata').removeClass('fancybtndisable');
+				$('form .fancybtn').addClass('fancybtndisable');
+				$('input.fancybtn').attr("disabled", "true");
+				limit.resize(photo.getView())
+
+				// If the calibrator suggestion button doesn't exist, we create it.
+				if(tutorial){
+					helpstep++;
+					bubblePopup({id:'helptooltip',el:$('#getdata'),align:"bottom",animate:true,html:'Once you\'re happy with where you\'ve placed the circles you can calculate the amount of light in each and save your measurements.<br /><br />If you want to make even better measurements you could add a few more <strong class="calibrator">calibration<\/strong> stars first.'});
+				}
+
+				tutorial = false;
+				changed = true;
+			}
+		}
+
+		$('#toolbar').append('<div class="fbtn"><a class="fancybtn fancybtndisable btns" href="#photometric" id="getdata" dataid="{{data.id}}" style="display:none;font-size:1.3em;">Analyze image<\/a><\/div><div class="fbtn"><a class="fancybtn fancybtndisable btns" href="{% if next %}?dataid={{next.id}}&next=cal{%else%}?next{% endif %}" id="nextimg">Next image <span class="arrow">&nbsp;<\/span><\/a><\/div>');
+		$('#inputtype').html('<div id="groupmove" style="float:right;"><form><input type="checkbox" name="group" value="groupmove">Move all tags<\/form><\/div><span id="manualdata" style="display:none;margin-top:5px;"><span class="manualdata"><a href="?input=manual">Add data manually<\/a><\/span> (e.g. <a href="http://lcogt.net/book/photometry-exoplanet-transit-salsaj">using SalsaJ<\/a>)<\/span><span id="dataexplorer" style="display:none;margin-top:5px;"><a href="?input=dataexplorer">Add data using the web interface<\/a><\/span>');
+		// For links we need to disable them but allow for them to be re-enabled later
+		$('.fancybtndisable').bind('click',function(e){ if($(this).is('.fancybtndisable')) e.preventDefault(); });
+
+		limit = new RangeLimiter({id:'finderthumb','stroke':'#ffffff','strokewidth':1.5,limits:[{x:0.0,y:0.0,w:1.0,h:1.0,opacity:0.0}],imageclick:toggleFinderChart})
+
+		function photoReady(){
+			// Now add the extra sources
+			if(c_x.length > 3) for(var i = 3 ; i < c_x.length ; i++){
+				photo.addCalibrator(c_x[i],c_y[i],true);
+			}
+
+			photo.bind("sky","onzoom",changeZoom).bind("sky","onmove",moveSizer).bind("source","onzoom",changeZoom).bind("source","onmove",moveSizer).bind("calibrator","onzoom",changeZoom).bind("calibrator","onmove",moveSizer)
+
+{% if progress.done < 1 %}
+			// No points have been set already so we now hide the sky and
+			// calibrator and hand-hold people through each step
+			photo.sizer[0].hide();
+			for(var i = 2; i < photo.sizer.length ; i++) photo.sizer[i].hide();
+
+			photo.bind("sky","ondrop", function() {
+				// If the calibrator wasn't visible, make it.
+				if(!photo.sizer[2].visible){
+					helpstep++;
+					photo.sizer[2].show();
+					var txt = 'We are looking for tiny changes in the brightness of the <strong class="source">target<\/strong> star due to a planet blocking the light. However, the brightness will also fluctuate due to changes in our camera. We can account for this by comparing the <strong class="source">target<\/strong> to <strong class="calibrator">calibration<\/strong> stars.<br /><br />Move this circle onto a star that you would like to use as a <strong class="calibrator">calibration<\/strong> star. Try not to use very faint or very bright stars. It also helps to avoid stars that have another star very close by.';
+					var w = 240;
+					var l = $('#photometric').offset().left + photo.getX('calibrator')/photo.scale;
+					var t = $('#photometric').offset().top + photo.getY('calibrator',true)/photo.scale;
+					var r = photo.getR('source')/photo.scale;
+					bubblePopup({id:'helptooltip',el:{x:l,y:t,w:(r*2),h:(r*2)},html:txt,animate:true,align:"top",w:w})
+				}
+				enableAnalyze();
+				limit.resize(photo.getView())
+			}).bind("sky","onclick",changeSource);
+
+			photo.bind("source","ondrop", function() {
+
+				var r = Math.pow(photo.getX("source")-{{data.event.xpos}},2)+Math.pow(photo.getY("source")-{{data.event.ypos}},2)
+				if(Math.sqrt(r) > 10) return;
+
+				if(!photo.sizer[0].visible){
+
+					helpstep++;
+					// If the sky background wasn't visible, we make it so now
+					photo.sizer[0].show();
+					var txt = 'The sky is never totally black. That extra light, although faint, is all over the image and will be included in our measurement of the <strong class="source">target<\/strong> star. We need to remove it.<br /><br />Move this circle onto a star-less patch of sky near to the <strong class="source">target<\/strong> circle that you\'ve just placed. Try to make sure it is just a blank patch of sky with no stars in it.';
+					var w = 240;
+					var l = $('#photometric').offset().left + photo.getX('sky')/photo.scale;
+					var t = $('#photometric').offset().top + photo.getY('sky',true)/photo.scale;
+					var r = photo.getR('source')/photo.scale;
+
+					bubblePopup({id:'helptooltip',el:{x:l,y:t,w:(r*2),h:(r*2)},html:txt,animate:true,align:"top",w:w})
+				}
+				enableAnalyze();
+				limit.resize(photo.getView())
+			}).bind("source","onclick",changeSource).bind("source","onzoom",function(){
+				changeZoom();
+				if(!photo.sizer[0].visible && helpstep == 0){
+					helpstep++;
+					bubblePopup({id:'helptooltip',el:$('#finderthumb'),html:'You can re-display the large finder chart at any time by clicking on this small finder chart.',align:"bottom",animate:true})
+				}
+			}).bind("source","onmove",moveSizer);
+
+			photo.bind("calibrator","ondrop",function () {
+				if(photo.sizer[2].visible && !photo.sizer[3].visible){
+					helpstep++;
+					var txt = 'It could be that the <strong class="calibrator">calibration<\/strong> star you chose isn\'t constant in brightness. It could be a variable star and that would make it useless to use as a comparison. To be safe, we\'ll add a couple more <strong class="calibrator">calibration<\/strong> stars so that we are more likely to find a stable star.<br /><br />Remember to pick stars that are not very faint or very bright. It also helps to avoid stars that have another star very close by.';
+					var w = 250;
+					var l = $('#photometric').offset().left + photo.getX('calibrator2')/photo.scale;
+					var t = $('#photometric').offset().top + photo.getY('calibrator2',true)/photo.scale;
+					var r = photo.getR('source')/photo.scale;
+					bubblePopup({id:'helptooltip',el:{x:l,y:t,w:(r*2),h:(r*2)},html:txt,animate:true,align:"top",w:w})
+				}
+				if(photo.sizer[3].visible && !photo.sizer[4].visible){
+					helpstep++;
+					var txt = 'OK, third calibrator. You should know the drill.';
+					var w = 250;
+					var l = $('#photometric').offset().left + photo.getX('calibrator3')/photo.scale;
+					var t = $('#photometric').offset().top + photo.getY('calibrator3',true)/photo.scale;
+					var r = photo.getR('source')/photo.scale;
+					bubblePopup({id:'helptooltip',el:{x:l,y:t,w:(r*2),h:(r*2)},html:txt,animate:true,align:"top",w:w})
+				}
+
+				if(photo.sizer[4].visible) enableAnalyze();
+				if(photo.sizer[3].visible) photo.sizer[4].show();
+				if(photo.sizer[2].visible) photo.sizer[3].show();
+
+			}).bind("calibrator","onclick",changeSource);
+
+
+			// If this is the first time the user has looked at
+			// data, we will hand-hold them through it.
+			toggleFinderChart({callback:getStarted});
+			var l = $('#photometric').offset().left + {{data.event.xpos}}/photo.scale;
+			var t = $('#photometric').offset().top + (photo.im.height-{{data.event.ypos}})/photo.scale;
+			var d = 2*photo.getR('source')/photo.scale;
+			bubblePopup({id:'helptooltip',el:{x:l,y:t,w:d,h:d},align:"top",w:240,animate:true,html:'Welcome to the Light Monitor!<br /><br />The cross-hairs show the <strong class="source">target<\/strong> star for this set of observations. To identify the planet we need to monitor how the brightness of this star varies over time.<br /><br />Click anywhere on the large image to hide these cross-hairs and start analysing the observations.'})
+
+			// The calibrator isn't visible yet so we'll disable it
+			if(!photo.sizer[2].visible) $('a#getdata').addClass('fancybtndisable');
+{% else %}
+			if($('#message').length == 0) $('body').append('<div id="message"><ul class="messages"><\/ul><\/div>');
+			html_msg = $('#message').html();
+			{% if progress.done = 1 %}
+			$('#message ul.messages').prepend('<li>This second image will probably be a little offset from the first one you saw. You will need to re-position the markers for the <strong class="source">target<\/strong> and <strong class="calibrator">calibration<\/strong> stars. Check that the <strong class="sky">sky<\/strong> circle is still empty of stars too.<\/li>');
+			bubblePopup({id:'message',el:$('#photometric'),align:"center",w:300,animate:true,dismiss:true,onpop: function(){ bubblePopup({id:'message',el:$('#groupmove'),align:"top",w:200,animate:true,dismiss:true,html:"<strong>Tip:<\/strong> If all your markers seem to be offset in the same way, you can choose to move them all together rather than one-by-one. You can also do this by keeping the shift key pressed."}); } });
+			{% else %}{% if progress.done = 2 %}
+			$('#message ul.messages').prepend('<li>This is your third image. Remember to make sure all your markers are lined up properly. Hopefully you are getting the hang of this now.<\/li>');
+			bubblePopup({id:'message',el:$('#photometric'),align:"center",w:200,animate:true,dismiss:true})
+			{% else %}
+			bubblePopup({id:'message',el:$('#photometric'),align:"center",fade:2000,w:200,animate:true,dismiss:true})
+			{% if messages %}{% else %}$('#message').hide();{% endif %}
+			{% endif %}{% endif %}
+			$('a#getdata').removeClass('fancybtndisable');
+			photo.bind("sky","ondrop", enableAnalyze).bind("source","ondrop", enableAnalyze).bind("calibrator","ondrop",enableAnalyze);
+
+{% endif %}
+			dataQualityFlag();
+			if(photo.sizer.length>5) $('#btn-remove').show()
+			enableAnalyze();
+		}
+
+		helpstep = 0;
+		photo = new Photometry({id:'photometric',src:"{{data_url}}{{data.image}}",form:'entryform',width:$('#middle').outerWidth(),source:{x:s_x,y:s_y,r:start_r},sky:{x:b_x,y:b_y,r:start_r,label:'Sky'},calibrator:{x:[c_x[0],c_x[1],c_x[2]],y:[c_y[0],c_y[1],c_y[2]],r:start_r},zoom:2,callback:photoReady,sources:sources,suggested:suggested});
+		$('input.fancybtn').addClass('fancybtndisable');
+		$('input.fancybtn').attr("disabled", "true");
+		$('#entryform').css('display', 'none');
+		$('#manualdata').css('display', 'block');
+		$('a#getdata').css('display','block');
+		$('#entryform input').bind('change',function(){ changed = true; })
+		$('#finderthumb a').bind('click', toggleFinderChart);
+		if($('#message').length > 0){
+			$('#message').delay(5000).fadeOut(500);
+		}
+
+		// if the user prefers to use the web dataexplorer set the field in the data entry form.
+		// zemogle {{ webinput }}
+{% if webinput %}
+		$("input[name='entrytype']").val('dataexplorer');
+		$('#btn-download').hide();
+		$('#btn-update').hide();
+{% else %}
+		$('a#getdata').hide();
+		$('#manualdata').hide();
+		$('#dataexplorer').show();
+		$('#entryform').show();
+		$('#btn-update').show();
+{% endif %}
+
+		$('.manualdata a').bind('click', function(e){
+			$("input[name='entrytype']").val('manual');
+			$('#btn-download').show();
+			$('#helptooltip').hide();
+			$('a#getdata').hide();
+			$('#manualdata').hide();
+			$('#dataexplorer').show();
+			$('#entryform').show();
+			$("input.fancybtn").removeClass('fancybtndisable');
+			$('input.fancybtn').removeAttr('disabled');
+			//$('#'+photo.holder.svg).hide();
+			$('#photometric').hide();
+			$('.openpin').hide();
+			$('#btn-update').show();
+			e.preventDefault();
+		});
+		$('#dataexplorer a').bind('click', function(e){
+			$("input[name='entrytype']").val('dataexplorer');
+			$('#btn-download').hide();
+			$('#helptooltip').show();
+			$('a#getdata').show();
+			$('#manualdata').show();
+			$('#dataexplorer').hide();
+			$('#entryform').hide();
+			if(changed){
+				$('input.fancybtn').addClass('fancybtndisable');
+				$('input.fancybtn').attr("disabled", "true");
+				$('a#getdata').removeClass('fancybtndisable');
+			}
+			$('.openpin').show();
+			//$('#'+photo.holder.svg).show()
+			$('#photometric').show();
+			$('#btn-update').hide();
+			e.preventDefault();
+		});
+
+		// Add help hints
+		addHelpHint($('h1 a'),'This is the name of the exoplanet you are investigating.');
+		addHelpHint($('.progress'),'This shows how far you have got in in analyzing the images for this object. {% if user.is_authenticated %}{% ifequal complete 1 %}It looks as though you\'ve already completed measurements for this planet.{% else %}It looks as though you\'ve completed {{progress.percent}}% of the measurements{% endifequal %}{% else %}{% endif %}');
+		addHelpHint($('#obsdate'),'The date that this observation was taken.');
+		addHelpHint($('#photometric'),'This is the image from the telescope. Move the <strong class="source">target<\/strong> circle to the target star, the <strong class="sky">sky<\/strong> circle to a star-free area near the target, the <strong class="calibrator">calibrator<\/strong> circles to comparison stars, then click <strong>Analyze image<\/strong> on the left to save your results.');
+		addHelpHint($('#finderthumb'),'This is a finder chart. It shows you a similar patch of sky to the main image. When you click on it, it displays the finder chart image on top of the main image. The cross-hairs indicate where the target star is.',"right");
+		addHelpHint($('#getdata'),"When you click this button your <strong class=\"source\">target<\/strong>, <strong class=\"sky\">sky<\/strong> and <strong class=\"calibrator\">calibrator<\/strong> circles are analyzed. Our computer will calculate the total amount of light detected in each of the circles you selected and small graphs will appear.","right");
+		addHelpHint($('.manualdata'),"If you prefer to use SalsaJ rather than our website interface, click here to switch to a form that will let you add your measurements by hand.");
+		addHelpHint($('#btn-add'),"Add an extra calibrator circle to the image so that you can provide more measurements.","right");
+		addHelpHint($('#btn-remove'),"Removes one of the calibrator circles. You can't have fewer than three sources.","right");
+		addHelpHint($('#btn-download'),"Download the data files in Flexible Image Transport (FITS) format","right");
+		addHelpHint($('#btn-update'),"Once you've finished analyzing the image, submit your measurements using this button.","top");
+		addHelpHint($('#nextimg'),"Once you've finished analysing the image, this button will take you to the next image.","right");
+		addHelpHint($('#id_bgradius'),"The radius of the circle identifying a blank patch of sky.","left");
+		addHelpHint($('#id_bgxpos'),"The horizontal pixel position for the location which is a blank patch of sky.","left");
+		addHelpHint($('#id_bgypos'),"The vertical pixel position for the location which is a blank patch of sky.","left");
+		addHelpHint($('#id_bgcounts'),"The total counts for the blank patch of sky.","left");
+		addHelpHint($('#id_sourceradius'),"The radius of the circle containing the target star. Make sure all of the star is within this circle.","left");
+		addHelpHint($('#id_sourcexpos'),"The horizontal pixel position for the target star.","left");
+		addHelpHint($('#id_sourceypos'),"The vertical pixel position for the target star.","left");
+		addHelpHint($('#id_sourcecounts'),"The total counts for the star you've identified as the target.","left");
+
+		$('a#getdata').bind('click', function(e){
+			dataid = $(this).attr('dataid');
+			var btnmsg = $(this).html();
+			var btn = this;
+			var entry = $("input[name='entrytype']").val();
+			e.preventDefault();
+			if(changed && !$(this).is('.fancybtndisable')){
+				$('#helptooltip').hide();
+				$("#message").remove();
+				$(this).addClass('fancybtndisable');
+				bubblePopup({id:'helptooltip',el:$('#photometric'),align:"center",w:200,animate:true,dismiss:false,color:'white',html:'<div style="margin:1em;"><img src="{% static 'images/ajax-loader.gif' %}" alt="Loading" style="width:31px;height:31px;" /><br />Calculating the total amount of light in each of your circles...<\/div>',bg:'rgba(0,0,0,0.8)'});
+
+				// Build comma separated list of x, y and r with bg as first element
+				$.post("{% url 'fitsanalyse' %}", {x:photo.getXs(),y:photo.getYs(),r:photo.getRs(),dataid:dataid,entrymode:entry,csrfmiddlewaretoken: '{{ csrf_token }}'},
+					function(data){
+						$('#helptooltip').hide();
+
+						if (data.error){
+							bubblePopup({id:'message',el:$('#photometric'),style:'error',align:"center",w:250,animate:true,html:'Oh no! Something went wrong.<br />'+data.error});
+							$("#message").css({'z-index':20})
+							$('#message').bind('click',function(e){ $(this).removeClass("error").fadeOut(500); } );
+							$(btn).html(btnmsg).removeClass('fancybtndisable');
+						}else{
+							$("#nextimg").removeClass('fancybtndisable');
+							$(btn).html(btnmsg);
+							changed = false;
+							photo.sizer[0].appendLabel(" ("+parseInt(data.data.sum.bg)+")")
+							photo.sizer[1].appendLabel(" ("+parseInt(data.data.sum.sc)+")")
+							var x = [], bg = [];
+							for (var j = 0; j < data.data.points.sc.horiz.length; j++){
+								x[j] = j;
+								bg[j] = data.data.sum.bg/data.data.pixelcount;
+							}
+							addPlotPin('source',x,[data.data.points.sc.horiz,data.data.points.sc.vert,bg])
+{% if progress.done < 1 %}
+							bubblePopup({id:'helptooltip',el:$('#sourcepin'),align:"left",w:200,animate:true,html:'Your measurement was saved and added to the combined lightcurve.<br /><br />These graphs show the brightness of the image in <span style="color:green;">horizontal<\/span> and <span style="color:blue;">vertical<\/span> slices through the centre of the circles. The <span style="color:red;">flat<\/span> line is the average sky value from your <strong class="sky">sky<\/strong> circle. You can reposition the circles or you can go to the next image.'});
+							$('#helptooltip').css({'z-index':20});
+{% endif %}
+							$("input.fancybtn").removeClass('fancybtndisable');
+							$('input.fancybtn').removeAttr('disabled');
+							// Send Source to form
+							$("input[name='sourcecounts']").val(data.data.sum.sc);
+							$("input[name='sourcexpos']").val(data.data.coords.xy[1][0]);
+							$("input[name='sourceypos']").val(data.data.coords.xy[1][1]);
+							$("input[name='sourceradius']").val(data.data.coords.r);
+							// Send Calibration to form
+							for (var k = 0; k < data.data.sum.cal.length; k++){
+								var k2 = k+2;
+								$("input[name='cal"+(k+1)+"counts']").val(data.data.sum.cal[k]);
+								$("input[name='cal"+(k+1)+"xpos']").val(data.data.coords.xy[k2][0]);
+								$("input[name='cal"+(k+1)+"ypos']").val(data.data.coords.xy[k2][1]);
+								$("input[name='cal"+(k+1)+"radius']").val(data.data.coords.r);
+								photo.sizer[k2].appendLabel(" ("+parseInt(data.data.sum.cal[k])+")")
+								addPlotPin('calibrator'+(k+1),x,[data.data.points.cal.horiz[k],data.data.points.cal.vert[k],bg])
+							}
+							// Send Background to form
+							$("input[name='bgcounts']").val(data.data.sum.bg);
+							$("input[name='bgxpos']").val(data.data.coords.xy[0][0]);
+							$("input[name='bgypos']").val(data.data.coords.xy[0][1]);
+							$("input[name='bgradius']").val(data.data.coords.r);
+						}
+				},"json").error(function(){ bubblePopup({id:'message',el:$('#photometric'),fade:2000,dismiss:true,align:"center",w:200,animate:true,html:'We could not analyze the data. Your measurements could not be saved.'}); });
+
+				$("input[name='sourceid']").val(dataid);
+			}
+		});
+		$("#groupmove input").bind("click",function(e,nosubmit){
+			photo.groupmove = !photo.groupmove;
+		});
+		$(document).bind('keydown',function(e){
+			if(e.shiftKey) photo.shiftkey = true;
+		}).bind('keyup',function(e){
+			photo.shiftkey = false;
+		});
+
+	};
+	$(document).ready(function(){
+		if(gotcss) setup();
+{% if messages %}		bubblePopup({id:'message',el:$('#photometric'),fade:3000,dismiss:true,align:"center",w:200});
+		$('#message').css({'z-index':30}){% endif %}
+	});
+	// -->
+	</script>
+{% else %}
+
+	<script type="text/javascript" charset="utf-8">
+	<!--
+	$(document).ready(function(){
+		bubblePopup({id:'message',el:$('#main'),align:"center",fade:2000,w:200,animate:true,dismiss:true});
+	});
+	// -->
+	</script>
+
+{% endifnotequal %}
+
+{% endblock %}
+
+{% block upper-menu%}
+
+{%endblock%}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Light Monitor for block: <a href="{% url 'block-view' object.id  %}" class="objectspecific">#{{object.id}}</a></h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+<!-- Main body -->
+<div class="container" id="main">
+        <div class="row">
+            <div class="eight columns">
+                <h3 class="section-title">Find the moving object!</h3>
+{% if messages %}					<div id="message">
+						<ul class="messages">
+{% for message in messages %}{%ifchanged%}		<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message|safe }}</li>{%endifchanged%}{% endfor %}
+						</ul>
+					</div>{% endif %}
+					<div id="help">
+						This is a view of the images from the telescope. Move the <strong class="source">target</strong> circle to the target star, the <strong class="sky">sky</strong> circle to a star-free area near the target, the <strong class="calibrator">calibrator</strong> circles to comparison stars, then click <strong>Analyze image</strong> to save your results. Move your mouse over parts of the screen to find out more about them.
+					</div>
+
+					<div class="progress" style="width:100%;height:1.5em;background-color:#b3b3b3;margin-bottom:8px;"><div class="progressbar"></div><div class="label" style="padding:0.25em;text-align:center;width:100%;">You've completed {{progress.done}} of {{progress.total}} frames ({{progress.percent}}%)</div></div>
+					<div id="middle">
+						<div id="photometric">
+							<div id="photometric_imageholder_small"><img src="http://data.lcogt.net/thumbnail/{{images.1.1}}/?width=500&height=500&gamma=2.5&label=0" style="width:100%" alt="Image from telescope" /></div>
+						</div>
+					</div>
+					<div id="lower" style="text-align:right;">
+						<form method=POST action="">
+							{% csrf_token %}
+							<div id="entryform" style="margin-top:5px;" class="accessible">
+								<input type="hidden" name="sources" id="sources" value="1">
+								<input type="hidden" name="dataid" value="{{data.id}}">
+								<input type="hidden" name="entrytype" value="manual">
+								{% if points %}<input type="hidden" name="update" value="1">{% endif %}
+								<div class="fieldWrapper">
+									{{form.sourceradius.errors}}
+									<label for="id_sourceradius">{{form.sourceradius.label}}</label>{{form.sourceradius}}
+								</div>
+								<div class="fieldWrapper">
+									{{form.sourcexpos.errors}}
+									<label for="id_sourcexpos">{{form.sourcexpos.label}}</label>{{form.sourcexpos}}
+								</div>
+								<div class="fieldWrapper">
+									{{form.sourceypos.errors}}
+									<label for="id_sourceypos">{{form.sourceypos.label}}</label>{{form.sourceypos}}
+								</div>
+								<div class="fieldWrapper">
+									{{form.sourcecounts.errors}}
+									<label for="id_sourcecounts">{{form.sourcecounts.label}}</label>{{form.sourcecounts}}
+								</div>
+								{% if points %}
+								{% for cal in points.cal %}
+								<div class="fieldWrapper">
+										<label for="id_cal{{forloop.counter}}radius">Aperture Radius (calibrator {{forloop.counter}})</label>
+										<input type="text" id="id_cal{{forloop.counter}}radius"  name="cal{{forloop.counter}}radius">
+								</div>
+								<div class="fieldWrapper">
+										<label for="id_cal{{forloop.counter}}xpos">Calibrator {{forloop.counter}} x position</label>
+										<input type="text" id="id_cal{{forloop.counter}}xpos"  name="cal{{forloop.counter}}xpos">
+								</div>
+								<div class="fieldWrapper">
+										<label for="id_cal{{forloop.counter}}ypos">Calibrator {{forloop.counter}} y position</label>
+										<input type="text" id="id_cal{{forloop.counter}}ypos"  name="cal{{forloop.counter}}ypos">
+								</div>
+								<div class="fieldWrapper">
+										<label for="id_cal{{forloop.counter}}counts">Calibrator {{forloop.counter}} counts</label>
+										<input type="text" id="id_cal{{forloop.counter}}counts"  name="cal{{forloop.counter}}counts">
+								</div>
+								{% endfor %}
+								{% else %}
+								{% for cal in 123|make_list %}
+								<div class="fieldWrapper">
+										<label for="id_cal{{cal}}radius">Aperture Radius (calibrator {{cal}})</label>
+										<input type="text" id="id_cal{{cal}}radius"  name="cal{{cal}}radius">
+								</div>
+								<div class="fieldWrapper">
+										<label for="id_cal{{cal}}xpos">Calibrator {{cal}} x position</label>
+										<input type="text" id="id_cal{{cal}}xpos"  name="cal{{cal}}xpos">
+								</div>
+								<div class="fieldWrapper">
+										<label for="id_cal{{cal}}ypos">Calibrator {{cal}} y position</label>
+										<input type="text" id="id_cal{{cal}}ypos"  name="cal{{cal}}ypos">
+								</div>
+								<div class="fieldWrapper">
+										<label for="id_cal{{cal}}counts">Calibrator {{cal}} counts</label>
+										<input type="text" id="id_cal{{cal}}counts"  name="cal{{cal}}counts">
+								</div>
+								{% endfor %}
+								{% endif %}
+
+							</div>
+							{% if update %}<input type="submit" value="Update my measurement" class="fancybtn" id="btn-update">{% else %}<input type="submit" value="Save my measurement" class="fancybtn" id="btn-update">{% endif%}
+						</form>
+				</div>
+      </div>
+
+        <div class="four columns">
+          {% if images %}
+          <h3 class="section-title">Image Sequence</h3>
+              <ul class="observations">
+              {% for img in images %}
+              <li class="thumb"><a href="{% url 'block-ast' object.id %}?frameid={{img.1}}"><img src="http://data.lcogt.net/thumbnail/{{img.1}}/?width=150&height=150&gamma=2.5&label=0"></a></li>
+              {% endfor %}
+              </ul>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+{% endblock %}

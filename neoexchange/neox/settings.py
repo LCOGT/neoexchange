@@ -127,6 +127,7 @@ LOGIN_REDIRECT_URL = PREFIX + '/'
 INSTALLED_APPS = (
     'suit',
     'neox',
+    'astrometer',
     'core',
     'django.contrib.auth',
     'django.contrib.contenttypes',
