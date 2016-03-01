@@ -87,6 +87,48 @@ class MeasurementsPageTests(FunctionalTest):
                          }
         self.test_measure1 = SourceMeasurement.objects.create(pk=2, **measure_params)
 
+    def insert_extra_measurements(self):
+
+        frame_params = { 'sitecode' : 'K91',
+                         'instrument' : 'kb70',
+                         'filter' : 'w',
+                         'filename' : 'cpt1m010-kb70-20150421-0042-e00.fits',
+                         'exptime' : 40.0,
+                         'midpoint' : '2015-04-21 18:00:00',
+                         'block' : self.test_block
+                        }
+        self.test_frame = Frame.objects.create(pk=2, **frame_params)
+
+        measure_params = { 'body' : self.body,
+                           'frame' : self.test_frame,
+                           'obs_ra' : 42.2,
+                           'obs_dec' : -31.05,
+                           'obs_mag' : 20.95,
+                           'err_obs_mag' : 0.03
+                         }
+        self.test_measure2 = SourceMeasurement.objects.create(pk=2, **measure_params)
+
+        # These measurements are precoverys, earlier in time but discovered later
+        # i.e. larger value of the primary keys
+                
+        frame_params = { 'sitecode' : 'F51',
+                         'instrument' : '',
+                         'filter' : 'r',
+                         'filename' : '',
+                         'midpoint' : '2015-03-21 06:00:00',
+                         'block' : None
+                        }
+        self.test_precovery_frame = Frame.objects.create(pk=3, **frame_params)
+
+        measure_params = { 'body' : self.body,
+                           'frame' : self.test_precovery_frame,
+                           'obs_ra' : 62.2,
+                           'obs_dec' : -11.05,
+                           'obs_mag' : 21.5,
+                           'err_obs_mag' : 0.03
+                         }
+        self.test_measure3 = SourceMeasurement.objects.create(pk=3, **measure_params)
+
     def test_measurements_page(self):
 
         # Setup
@@ -231,7 +273,7 @@ class MeasurementsPageTests(FunctionalTest):
         mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
         mpc_target_url = "%s/target/%d/measurements/mpc/" % (self.live_server_url, 1)
         self.assertEqual(mpc_link.get_attribute('href'), mpc_target_url)
- 
+
         # He clicks on the link and sees that he is taken to a page with the 
         # source measurements for this object in MPC 80 char format
         mpc_link.click()
@@ -250,3 +292,46 @@ class MeasurementsPageTests(FunctionalTest):
 
         # Satisfied that the planet is safe from this asteroid, he
         # leaves.
+
+    def test_precovery_measurements(self):
+
+        self.insert_test_measurements()
+        self.insert_extra_measurements()
+
+        # A user, Marco, is interested in seeing what existing measurements
+        # exist for a NEOCP candidate that he has heard about
+        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        self.browser.get(target_url)
+
+        # He sees a link that says it will show the source measurements
+        # available for this object.
+        link = self.browser.find_element_by_partial_link_text('Show Measurements')
+        target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
+        self.assertEqual(link.get_attribute('href'), target_url)
+
+        # He clicks on the link and sees that he is taken to a page with details
+        # on the source measurements for this object
+        link.click()
+
+        self.assertEqual(self.browser.current_url, target_url)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+
+        # He has just found some precovery observations from a month earlier
+        # from PanSTARRS (site code F51) and wants to see if they appear in the
+        # correct time order
+        testlines = [u'N999r0q 2015 03 21.25000 04 08 48.00 -11 03 00.0 21.5 r F51',
+                     u'N999r0q 2015 04 20.75000 02 48 24.00 -30 03 00.0 21.1 w K91',
+                     u'N999r0q 2015 04 21.75000 02 48 48.00 -31 03 00.0 21.0 w K91']
+
+        # Can't use check_for_row_in_table as we want to check ordering
+        table = self.browser.find_element_by_id('id_measurements')
+        table_body = table.find_element_by_tag_name('tbody')
+        rows = table_body.find_elements_by_tag_name('tr')
+        rownum = 0
+        while rownum < len(testlines):
+            self.assertIn(testlines[rownum], rows[rownum].text.replace('\n', ' '))
+            rownum+=1
+        
+        # Satisfied that his newly reported precovery for this asteroid has
+        # been recorded, he leaves.

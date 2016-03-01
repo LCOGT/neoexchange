@@ -20,13 +20,16 @@ from datetime import datetime, timedelta
 from unittest import skipIf
 from bs4 import BeautifulSoup
 import os
+import mock
+from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
+from neox.tests.mocks import MockDateTime
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
-    fetch_NEOCP_observations
+    fetch_NEOCP_observations, imap_login, fetch_NASA_targets
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -806,6 +809,7 @@ class TestParseMPCObsFormat(TestCase):
             C: CCD observations,
             R/r: radar observation,
             S/s: satellite observation
+            x: replaced discovery observation
         <char4> is the precision of the obs:
             l: low precision
             h: high precision
@@ -823,6 +827,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_ C_n' :  u'     WMAA95B  C2015 06 20.29109 16 40 36.42 -14 23 16.2                qNEOCPG96\n',
                             'p_ C_le' : u'     K13R33T  C2013 09 13.18561323 15 20.53 -10 21 52.6          20.4 V      W86\r\n',
                             'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
+                            'p_ x_l' :  u'g0232K10F41B* x2010 03 19.91359 06 26 37.29 +35 47 01.3                L~0FUhC51',
 
                           }
         self.maxDiff = None
@@ -979,6 +984,24 @@ class TestParseMPCObsFormat(TestCase):
 
         self.compare_dict(expected_params, params)
 
+
+    def test_p_spacex_l(self):
+        # This tests the case of an 'x' observation for a replaced discovery
+        # observation. From the MPC page 
+        # (http://www.minorplanetcenter.net/iau/info/OpticalObs.html, Note 2):
+        # "In addition, there are 'X' and 'x' which are used only for already-
+        # filed observations. 'X' was given originally only to discovery 
+        # observations that were approximate or semi-accurate and that had accurate 
+        # measures corresponding to the time of discovery: this has been extended to 
+        # other replaced discovery observations. Observations marked 'X'/'x' are to be
+        # suppressed in residual blocks. They are retained so that there exists
+        # an original record of a discovery. "
+        expected_params = { }
+
+        params = parse_mpcobs(self.test_lines['p_ x_l'])
+
+        self.compare_dict(expected_params, params)
+
     def test_blankline(self):
         expected_params = {}
 
@@ -1060,3 +1083,176 @@ class TestFetchNEOCPObservations(TestCase):
         observations = fetch_NEOCP_observations(page)
         self.assertEqual(expected, observations)
       
+class TestIMAPLogin(TestCase):
+
+    def setUp(self):
+        pass
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_server_connection(self, mockimaplib):
+        mailbox = imap_login('foo@bar.net', 'Wibble', 'localhost')
+        mockimaplib.IMAP4_SSL.assert_called_with('localhost')
+        self.assertNotEqual(None, mailbox)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_badserver(self, mockimaplib):
+        mockimaplib.IMAP4_SSL.side_effect = error(111, 'Connection refused')
+        mailbox = imap_login('foo@bar.net', 'Wibble', 'localhost')
+        self.assertEqual(None, mailbox)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_badfolder(self, mockimaplib):
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("NO", ['[NONEXISTENT] Unknown Mailbox: Wibble (Failure)'])
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox, folder="Wibble")
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_emptyfolder(self, mockimaplib):
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['0'])
+        mailbox.search.return_value = ("OK", [''])
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_foldersearchfailure(self, mockimaplib):
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['0'])
+        mailbox.search.return_value = ("NO", [''])
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_cannot_retrieve_msg_high(self, mockimaplib):
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value = ("OK", [None,])
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    def test_cannot_retrieve_msg_low(self, mockimaplib):
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.side_effect = error("FETCH command error: BAD ['Could not parse command']")
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_find_msg_correct_match(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
+
+        expected_targets = ['2016 CV246']
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_msg_has_bad_prefix(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-birds-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 16 Feb 2018 21:27:04 +000\r\n')])
+
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_find_msg_has_bad_suffix(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 CV246 - Radar Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
+
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_find_msg_good_with_tz(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')])
+
+        expected_targets = ['2016 BA14']
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_reject_msg_old_with_tz(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 15,  4, 27, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_find_multiple_msgs(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['2'])
+        mailbox.search.return_value = ("OK", ['1 2'])
+        results =  [ ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')]),
+                     ('OK', [('2 (RFC822 {12324}', 'Subject: [small-bodies-observations] 2016 CV123 - Observations Requested\r\nDate: Tue, 22 Feb 2016 22:47:42 -0500\r\n')])
+                   ]
+        mailbox.fetch.side_effect =  results
+
+        expected_targets = ['2016 BA14', '2016 CV123']
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_one_msg_multiple_old_msgs(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['3'])
+        mailbox.search.return_value = ("OK", ['1 2 4'])
+        results =  [ ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 20516 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2015 20:27:04 -0500\r\n')]),
+                     ('OK', [('2 (RFC822 {12324}', 'Subject: [small-bodies-observations] 2015 CV123 - Observations Requested\r\nDate: Tue, 22 Dec 2015 22:47:42 -0500\r\n')]),
+                     ('OK', [('4 (RFC822 {12324}', 'Subject: [small-bodies-observations] 2016 CV123 - Observations Requested\r\nDate: Tue, 22 Feb 2016 22:47:42 -0500\r\n')])
+                   ]
+        mailbox.fetch.side_effect =  results
+
+        expected_targets = ['2016 CV123']
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_find_fwd_msg_(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 23, 19, 51, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
+
+        expected_targets = ['2016 DJ']
+        targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)

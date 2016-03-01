@@ -694,6 +694,12 @@ class TestClean_mpcorbit(TestCase):
 
         self.test_elements = parse_mpcorbit(test_mpcdb_page)
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2016C2.html'), 'r')
+        test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
+
         self.expected_params = {
                              'elements_type': 'MPC_MINOR_PLANET',
                              'abs_mag' : '26.6',
@@ -716,6 +722,28 @@ class TestClean_mpcorbit(TestCase):
                              'update_time' : datetime(2015,10,9,0),
                              'updated' : True
                              }
+        self.expected_comet_params = {
+                                        'elements_type': 'MPC_COMET',
+                                        'argofperih': '214.01052',
+                                        'longascnode' : '24.55858',
+                                        'eccentricity' : '1.0000000',
+                                        'epochofel': datetime(2016, 04, 19, 0),
+                                        'meandist' : None,
+                                        'orbinc' : '38.19233',
+                                        'meananom': None,
+                                        'perihdist' : '1.5671127',
+                                        'epochofperih': datetime(2016, 4, 19, 0, 41, 44, int(0.736*1e6)),
+                                        'slope': '4.0',
+                                        'origin' : 'M',
+                                        'active' : True,
+                                        'source_type' : 'C',
+                                        'discovery_date': datetime(2016, 2, 8, 0),
+                                        'num_obs': '89',
+                                        'arc_length': '10',
+                                        'not_seen' : 6.75,
+                                        'update_time' : datetime(2016, 2, 18, 0),
+                                        'updated' : True
+                                     }
 
         self.maxDiff = None
 
@@ -724,6 +752,17 @@ class TestClean_mpcorbit(TestCase):
 
         MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
         params = clean_mpcorbit(self.test_elements)
+
+        self.assertEqual(self.expected_params, params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_2014UR_no_arclength(self):
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        new_test_elements = self.test_elements
+        del new_test_elements['arc length']
+
+        params = clean_mpcorbit(new_test_elements)
 
         self.assertEqual(self.expected_params, params)
 
@@ -738,7 +777,6 @@ class TestClean_mpcorbit(TestCase):
         new_expected_params['update_time'] = None
         self.assertEqual(new_expected_params, params)
 
-
     @patch('core.views.datetime', MockDateTime)
     def test_bad_discovery_date(self):
 
@@ -750,6 +788,14 @@ class TestClean_mpcorbit(TestCase):
         new_expected_params = self.expected_params
         new_expected_params['discovery_date'] = None
         self.assertEqual(new_expected_params, params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_C_2016C2(self):
+
+        MockDateTime.change_datetime(2016, 2, 24, 18, 0, 0)
+        params = clean_mpcorbit(self.test_comet_elements)
+
+        self.assertEqual(self.expected_comet_params, params)
 
 class TestCreate_sourcemeasurement(TestCase):
 
