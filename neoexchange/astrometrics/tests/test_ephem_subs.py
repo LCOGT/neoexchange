@@ -310,7 +310,7 @@ class TestComputeEphem(TestCase):
         step_size = 600
         alt_limit = 0
         body_elements = model_to_dict(self.comet)
-        expected_ephem_lines = [['2015 10 30 12:20', '10 44 55.54', '+14 13 36.2', '14.7', ' 1.44', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '14.7', ' 1.44', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -329,7 +329,7 @@ class TestComputeEphem(TestCase):
         body_elements = model_to_dict(self.comet)
         body_elements['abs_mag'] = None
         body_elements['slope'] = None
-        expected_ephem_lines = [['2015 10 30 12:20', '10 44 55.54', '+14 13 36.2', '-99.0', ' 1.44', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '-99.0', ' 1.44', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
