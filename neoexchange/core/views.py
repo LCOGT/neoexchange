@@ -140,7 +140,7 @@ def framedb_lookup(query):
     try:
         conn = HTTPSConnection("data.lcogt.net", timeout=20)
         params = urllib.urlencode(
-            {'username': 'egomez@lcogt.net', 'password': 'ncc1701'})
+            {'username': settings.NEO_ODIN_USER, 'password': settings.NEO_ODIN_PASSWD})
         #query = "/find?%s" % params
         conn.request("POST", query, params)
         response = conn.getresponse()
@@ -868,7 +868,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             # Comet, update/overwrite a bunch of things
             params['elements_type'] = 'MPC_COMET'
             params['source_type'] = 'C'
-            # The MPC never seems to have H values for comets so we remove it 
+            # The MPC never seems to have H values for comets so we remove it
             # from the dictionary to avoid replacing what was there before.
             if params['abs_mag'] == None:
                 del params['abs_mag']
@@ -876,7 +876,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             params['perihdist'] = elements['perihelion distance']
             perihelion_date = elements['perihelion date'].replace('-', ' ')
             params['epochofperih'] = parse_neocp_decimal_date(perihelion_date)
-            
+
         not_seen = None
         if last_obs != None:
             time_diff = datetime.utcnow() - last_obs
