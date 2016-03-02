@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -15,18 +15,22 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-from re import sub
-from reqdb.client import SchedulerClient
-from reqdb.requests import Request, UserRequest
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
-from math import degrees
-import slalib as S
 import logging
 import urllib2, os
+import imaplib
+import email
 from urlparse import urljoin
+from re import sub
+from math import degrees
+from datetime import datetime, timedelta
+from socket import error
 
+from reqdb.client import SchedulerClient
+from reqdb.requests import Request, UserRequest
+from bs4 import BeautifulSoup
+import slalib as S
+
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 
 logger = logging.getLogger(__name__)
 
@@ -545,7 +549,9 @@ def parse_mpcobs(line):
 def clean_element(element):
     '''Cleans an element (passed) by converting to ascii and removing any units'''
     key = element[0].encode('ascii', 'ignore')
-    value = element[1].encode('ascii', 'ignore')
+    value = None
+    if len(element) == 2:
+        value = element[1].encode('ascii', 'ignore')
     # Match a open parenthesis followed by 0 or more non-whitespace followed by
     # a close parenthesis and replace it with a blank string
     key = sub(r' \(\S*\)','', key)
@@ -809,6 +815,80 @@ def fetch_arecibo_targets(page=None):
                 logger.warn("No targets found in Arecibo page")
     return targets
 
+def imap_login(username, password, server='imap.gmail.com'):
+    '''Logs into the specified IMAP [server] (Google's gmail is assumed if not
+    specified) with the provide username and password.
+    
+    An imaplib.IMAP4_SSL connection instance is returned or None if the
+    login failed'''
+
+    try:
+        mailbox = imaplib.IMAP4_SSL(server)
+    except error:
+        return None
+
+    try:
+        mailbox.login(username, password)
+    except imaplib.IMAP4_SSL.error:
+        logger.error("Login to %s with username=%s failed" % (server, username))
+        mailbox = None
+
+    return mailbox
+
+def fetch_NASA_targets(mailbox, folder='NASA-ARM'):
+    '''Search through the specified folder/label (defaults to "NASA-ARM" if not
+    specified) within the passed IMAP mailbox <mailbox> for emails to the
+    small bodies list and returns a list of targets'''
+
+    list_address = '"small-bodies-observations@lists.nasa.gov"'
+    list_author = '"paul.a.abell@nasa.gov"'
+    list_prefix = '[' + list_address.replace('"','').split('@')[0] +']'
+    list_suffix = 'Observations Requested'
+
+    NASA_targets = []
+
+    # Define a slice for the fields of the message we will want for the target.
+    TARGET_DESIGNATION = slice(1, 3)
+
+    status, data = mailbox.select(folder)
+    if status == "OK":
+        # Look for messages to the mailing list but without specifying a charset
+        status, msgnums = mailbox.search(None, 'TO', list_address,\
+                                               'FROM', list_author)
+        # Messages numbers come back in a space-separated string inside a 
+        # 1-element list in msgnums
+        if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
+
+            for num in msgnums[0].split():
+                try:
+                    status, data = mailbox.fetch(num, '(RFC822)')
+                    if status != 'OK' or len(data) == 0 and msgnums[0] != None:
+                        logger.error("ERROR getting message %s", num)
+                    else:
+                        # Convert message and see if it has the right things
+                        msg = email.message_from_string(data[0][1])
+                        # Strip off any "Fwd: " parts
+                        msg_subject = msg['Subject'].replace('Fwd: ', '')
+                        date_tuple = email.utils.parsedate_tz(msg['Date'])
+                        msg_utc_date = datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
+                        time_diff = datetime.utcnow() - msg_utc_date
+                        # See if the subject has the right prefix and suffix and is 
+                        # within a day of 'now'
+                        if list_prefix in msg_subject and list_suffix in msg_subject and \
+                            time_diff <= timedelta(days=1):
+                            target = ' '.join(msg_subject.split()[TARGET_DESIGNATION])
+                            NASA_targets.append(target)
+                except:
+                    logger.error("ERROR getting message %s", num)
+                    return NASA_targets
+        else:
+            logger.warn("No mailing list messages found")
+            return []
+    else:
+        logger.error("Could not open folder/label %s on %s" % (folder, mailbox.host))
+        return []
+    return NASA_targets
+
 def make_location(params):
     location = {
         'telescope_class' : params['pondtelescope'][0:3],
@@ -855,7 +935,7 @@ def make_moving_target(elements):
             }
 
     if elements['elements_type'].upper() == 'MPC_COMET':
-        target['epochofperih'] = elements['epochofperih']
+        target['epochofperih'] = elements['epochofperih_mjd']
         target['perihdist'] = elements['perihdist']
     else:
         target['meandist']  = elements['meandist']
