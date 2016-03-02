@@ -12,6 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
@@ -353,3 +354,16 @@ class SourceMeasurement(models.Model):
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
+
+class ProposalPermission(models.Model):
+    '''
+    Linking a user to proposals in NEOx to control their access
+    '''
+    proposal = models.ForeignKey(Proposal)
+    user = models.ForeignKey(User)
+
+    class Meta:
+        verbose_name = _('Proposal Permission')
+
+    def __unicode__(self):
+        return "%s is a member of %s" % (self.user, self.proposal)

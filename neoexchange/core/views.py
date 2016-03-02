@@ -19,7 +19,7 @@ from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -57,6 +57,26 @@ class LoginRequiredMixin(object):
     def as_view(cls, **initkwargs):
         view = super(LoginRequiredMixin, cls).as_view(**initkwargs)
         return login_required(view)
+
+def user_proposals(user):
+    if type(user) != User:
+        try:
+            user = User.objects.get(username=user)
+        except ObjectDoesNotExist:
+            raise ValidationError
+
+    proposals = Proposal.objects.filter(proposalpermission__user=user)
+
+    return proposals
+
+class MyProposalsMixin(object):
+
+    def get_context_data(self, **kwargs):
+        context = super(MyProposalsMixin, self).get_context_data(**kwargs)
+        proposals = user_proposals(self.request.user)
+        context['proposals'] = [(proposal.code, proposal.title) for proposal in proposals]
+
+        return context
 
 
 def home(request):
@@ -120,7 +140,7 @@ def framedb_lookup(query):
     try:
         conn = HTTPSConnection("data.lcogt.net", timeout=20)
         params = urllib.urlencode(
-            {'username': 'egomez@lcogt.net', 'password': 'ncc1701'})
+            {'username': settings.NEO_ODIN_USER, 'password': settings.NEO_ODIN_PASSWD})
         #query = "/find?%s" % params
         conn.request("POST", query, params)
         response = conn.getresponse()
@@ -229,8 +249,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
-        data = schedule_check(
-            form.cleaned_data, self.body, self.ok_to_schedule)
+        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
@@ -240,6 +259,16 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
             return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def get_context_data(self, **kwargs):
+        '''
+        Only show proposals the current user is a member of
+        '''
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
+
 
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
@@ -357,6 +386,11 @@ def schedule_submit(data, body, username):
     body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
+    my_proposals = user_proposals(user)
+    if proposal not in my_proposals:
+        resp_params = {'msg' : 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
+
+        return None, resp_params
     params = {'proposal_id': proposal.code,
               'user_id': proposal.pi,
               'tag_id': proposal.tag,
@@ -834,7 +868,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             # Comet, update/overwrite a bunch of things
             params['elements_type'] = 'MPC_COMET'
             params['source_type'] = 'C'
-            # The MPC never seems to have H values for comets so we remove it 
+            # The MPC never seems to have H values for comets so we remove it
             # from the dictionary to avoid replacing what was there before.
             if params['abs_mag'] == None:
                 del params['abs_mag']
@@ -842,7 +876,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             params['perihdist'] = elements['perihelion distance']
             perihelion_date = elements['perihelion date'].replace('-', ' ')
             params['epochofperih'] = parse_neocp_decimal_date(perihelion_date)
-            
+
         not_seen = None
         if last_obs != None:
             time_diff = datetime.utcnow() - last_obs
@@ -940,7 +974,7 @@ def create_source_measurement(obs_lines, block=None):
                                                         sitecode = params['site_code'])
                         prior_frame.extrainfo = params['extrainfo']
                         prior_frame.save()
-                        # Replace SourceMeasurement in list to be returned with 
+                        # Replace SourceMeasurement in list to be returned with
                         # updated version
                         measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:
