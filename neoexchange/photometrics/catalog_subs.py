@@ -31,23 +31,5 @@ def get_catalog(catalog, ra, dec, default):
     #resulting catalog table
     cat_table = result[0]
 
-    #pull out the table column with ra
-    ra_column = cat_table.columns[0]
-
-    #convert the data in the ra column to a list
-    ra_cat_list = ra_column.data.data.tolist()
-
-    #pull out the table column with dec
-    dec_column = cat_table.columns[1]
-
-    #convert the data in the dec column to a list
-    dec_cat_list = dec_column.data.data.tolist()
-
-    #pull out the table column with rmag
-    rmag_column = cat_table.columns[48]
-
-    #convert the data in the rmag column to a list
-    rmag_cat_list = rmag_column.data.data.tolist()
-
-    return ra_cat_list, dec_cat_list, rmag_cat_list
+    return cat_table
 

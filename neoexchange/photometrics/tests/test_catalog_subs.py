@@ -22,13 +22,15 @@ class ZeropointUnitTest(TestCase):
         ra = 299.590
         dec = 35.201
         
-        ra_cat_list, dec_cat_list, rmag_cat_list = get_catalog(catalog, ra, dec, default = 'false')
+        result = get_catalog(catalog, ra, dec, default = 'false')
 
-        ra_first_source = ra_cat_list[0]
+        cat_table = result[0]
 
-        dec_first_source = dec_cat_list[0]
+        ra_first_source = cat_table.columns.get('_RAJ2000')[0]
 
-        rmag_third_source = rmag_cat_list[2]
+        dec_first_source = cat_table.columns.get('_DEJ2000')[0]
+
+        rmag_third_source = cat_table.columns.get('rmag')[2]
 
         expected_ra_first_source = 299.29474599999998
 
@@ -47,13 +49,15 @@ class ZeropointUnitTest(TestCase):
         ra = 299.590
         dec = 35.201
 
-        ra_cat_list, dec_cat_list, rmag_cat_list = get_catalog(catalog, ra, dec, default = 'false')
+        result = get_catalog(catalog, ra, dec, default = 'false')
 
-        ra_first_source = ra_cat_list[0]
+        cat_table = result[0]
 
-        dec_first_source = dec_cat_list[0]
+        ra_first_source = cat_table.columns.get('_RAJ2000')[0]
 
-        rmag_first_source = rmag_cat_list[2]
+        dec_first_source = cat_table.columns.get('_DEJ2000')[0]
+
+        rmag_first_source = cat_table.columns.get('rmag')[2]
 
         expected_ra_first_source = 299.29474599999998
 
@@ -72,13 +76,15 @@ class ZeropointUnitTest(TestCase):
         ra = 299.590
         dec = 35.201
         
-        ra_cat_list, dec_cat_list, rmag_cat_list = get_catalog(catalog, ra, dec, default = 'true')
+        result = get_catalog(catalog, ra, dec, default = 'true')
 
-        ra_first_source = ra_cat_list[0]
+        cat_table = result[0]
 
-        dec_first_source = dec_cat_list[0]
+        ra_first_source = cat_table.columns.get('_RAJ2000')[0]
 
-        rmag_first_source = rmag_cat_list[2]
+        dec_first_source = cat_table.columns.get('_DEJ2000')[0]
+
+        rmag_first_source = cat_table.columns.get('rmag')[2]
 
         expected_ra_first_source = 299.29474599999998
 
