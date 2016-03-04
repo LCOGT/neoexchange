@@ -22,6 +22,7 @@ import mock
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from astropy.io import fits
+from astropy.table import Table
 
 from core.models import Body
 
@@ -43,24 +44,27 @@ class FITSUnitTest(TestCase):
         self.table_lastitem = self.test_table[-1:]
         self.table_item_flags24 = self.test_table[2:3]
 
+        column_types = [('ccd_x', '>f4'), 
+                        ('ccd_y', '>f4'), 
+                        ('obs_ra', '>f8'), 
+                        ('obs_dec', '>f8'), 
+                        ('obs_ra_err', '>f8'), 
+                        ('obs_dec_err', '>f8'), 
+                        ('major_axis', '>f4'), 
+                        ('minor_axis', '>f4'), 
+                        ('ccd_pa', '>f4'), 
+                        ('obs_mag', '>f4'), 
+                        ('obs_mag_err', '>f4'), 
+                        ('obs_sky_bkgd', '>f4'), 
+                        ('flags', '>i2')
+                       ]
+        self.basic_table = Table(dtype = column_types)
+        
         self.max_diff = None
         self.precision = 7
 
         self.flux2mag = 2.5/log(10)
 
-    def compare_list_of_dicts(self, expected_catalog, catalog_items):
-        self.assertEqual(len(expected_catalog), len(catalog_items))
-
-        number = 0 
-        while number < len(expected_catalog):
-            expected_params = expected_catalog[number]
-            items = catalog_items[number]
-            self.assertEqual(len(expected_params), len(items))
-
-            for key in expected_params:
-                self.assertAlmostEqual(expected_params[key], items[key], places=self.precision, msg="Failure verifying " + key)
-            number += 1
-    
 class OpenFITSCatalog(FITSUnitTest):
 
 
@@ -236,7 +240,9 @@ class FITSReadCatalog(FITSUnitTest):
 
     def test_first_item(self):
 
-        expected_catalog = [{ 'ccd_x' : 106.11763763,
+        expected_catalog = self.basic_table
+        expected_catalog.add_row({
+                              'ccd_x' : 106.11763763,
                               'ccd_y' :  18.61132812,
                               'major_axis'  : 1.87925231,
                               'minor_axis'  : 1.74675643,
@@ -249,16 +255,17 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_mag_err'  : 0.037939535221954708,
                               'obs_sky_bkgd' : 746.41577148,
                               'flags' : 0,
-                            },
-                            ]
-                          
+                            })
+        
         catalog_items = get_catalog_items(self.test_header, self.table_firstitem)
 
-        self.compare_list_of_dicts(expected_catalog, catalog_items)
+        self.assertEqual(expected_catalog, catalog_items)
+        
 
     def test_last_item(self):
 
-        expected_catalog = [{ 'ccd_x' : 1067.94714355,
+        expected_catalog = self.basic_table
+        expected_catalog.add_row({ 'ccd_x' : 1067.94714355,
                               'ccd_y' :  1973.74450684,
                               'major_axis'  : 2.7380364,
                               'minor_axis'  : 2.454973,
@@ -271,46 +278,47 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_mag_err'  : self.flux2mag * self.table_lastitem['FLUXERR_AUTO']/self.table_lastitem['FLUX_AUTO'],
                               'obs_sky_bkgd' : 744.8538208,
                               'flags' : 0,
-                            },
-                            ]
+                            })
                           
         catalog_items = get_catalog_items(self.test_header, self.table_lastitem)
 
-        self.compare_list_of_dicts(expected_catalog, catalog_items)
+        self.assertEqual(expected_catalog, catalog_items)
 
     def test_reject_item_flags24(self):
 
-        expected_catalog = []
+        expected_catalog = self.basic_table
 
         catalog_items = get_catalog_items(self.test_header, self.table_item_flags24)
 
-        self.assertEqual(expected_catalog, catalog_items)
+        self.assertEqual(len(expected_catalog), len(catalog_items))
 
     def test_accept_item_flags24(self):
 
-        expected_catalog = [{ 'ccd_x' :  234.52952576,
+        expected_catalog = self.basic_table
+        expected_catalog.add_row({ 'ccd_x' :  234.52952576,
                               'ccd_y' :    8.05962372,
                               'major_axis'  : 2.38448,
                               'minor_axis'  : 2.3142395,
                               'ccd_pa'      : 54.71178436,
-                              'obs_ra'  :  86.84926113,
-                              'obs_dec' : -27.57377512,
-                              'obs_ra_err'  : 3.192540788457258e-06,
+                              'obs_ra'  :  86.849261129458455,
+                              'obs_dec' : -27.573775115523741,
+                              'obs_ra_err'  : 3.1925407884572581e-06,
                               'obs_dec_err' : 2.9221911507086037e-06,
                               'obs_mag' : -2.5*log10(67883.703125),
                               'obs_mag_err'  : self.flux2mag * self.table_item_flags24['FLUXERR_AUTO']/self.table_item_flags24['FLUX_AUTO'],
                               'obs_sky_bkgd' :741.20977783,
                               'flags' : 24,
-                            },
-                            ]
+                            })
 
         catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
 
-        self.compare_list_of_dicts(expected_catalog, catalog_items)
-
+        for column in expected_catalog.colnames:
+            self.assertAlmostEqual(expected_catalog[column], catalog_items[column], 9, msg="Failure on %s (%s != %s)" % (column, expected_catalog[column], catalog_items[column]))
+  
     def test_first_item_with_bad_zeropoint(self):
 
-        expected_catalog = [{ 'ccd_x' : 106.11763763,
+        expected_catalog = self.basic_table
+        expected_catalog.add_row({ 'ccd_x' : 106.11763763,
                               'ccd_y' :  18.61132812,
                               'major_axis'  : 1.87925231,
                               'minor_axis'  : 1.74675643,
@@ -323,17 +331,18 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_mag_err'  : 0.037939535221954708,
                               'obs_sky_bkgd' : 746.41577148,
                               'flags' : 0,
-                            },
-                            ]
+                            })
+
         header_items = {'zeropoint' : -99}
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
 
-        self.compare_list_of_dicts(expected_catalog, catalog_items)
+        self.assertEqual(expected_catalog, catalog_items)
 
     def test_first_item_with_good_zeropoint(self):
 
         header_items = {'zeropoint' : 23.0}
-        expected_catalog = [{ 'ccd_x' : 106.11763763,
+        expected_catalog = self.basic_table
+        expected_catalog.add_row({ 'ccd_x' : 106.11763763,
                               'ccd_y' :  18.61132812,
                               'major_axis'  : 1.87925231,
                               'minor_axis'  : 1.74675643,
@@ -346,16 +355,17 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_mag_err'  : 0.037939535221954708,
                               'obs_sky_bkgd' : 746.41577148,
                               'flags' : 0,
-                            },
-                            ]
+                            })
+
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
 
-        self.compare_list_of_dicts(expected_catalog, catalog_items)
+        self.assertEqual(expected_catalog, catalog_items)
 
     def test_first_item_with_no_zeropoint(self):
 
         header_items = {'zerowibble' : -99}
-        expected_catalog = [{ 'ccd_x' : 106.11763763,
+        expected_catalog = self.basic_table
+        expected_catalog.add_row({ 'ccd_x' : 106.11763763,
                               'ccd_y' :  18.61132812,
                               'major_axis'  : 1.87925231,
                               'minor_axis'  : 1.74675643,
@@ -368,8 +378,8 @@ class FITSReadCatalog(FITSUnitTest):
                               'obs_mag_err'  : 0.037939535221954708,
                               'obs_sky_bkgd' : 746.41577148,
                               'flags' : 0,
-                            },
-                            ]
+                            })
+
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
 
-        self.compare_list_of_dicts(expected_catalog, catalog_items)
+        self.assertEqual(expected_catalog, catalog_items)

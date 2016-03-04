@@ -216,8 +216,6 @@ def subset_catalog_table(fits_table, column_mapping):
     # it
     new_table = Table(table.columns[tuple(new_columns)])
 
-    for new_name in column_mapping:
-        new_table.rename_column(column_mapping[new_name], new_name)
     return new_table
 
 def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
@@ -227,20 +225,27 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
     The sources in the catalog are returned in a list of dictionaries containing
     the keys specified in the table mapping.'''
 
-    catalog_items = []
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
-        return catalog_items
+        return None
 
    # Check if all columns exist first
     for column in tbl_mapping.values():
         if column not in table.names:
             raise FITSTblException(column)
-            return catalog_items
+            return None
 
     new_table = subset_catalog_table(table, tbl_mapping)
+    # Rename columns
+    for new_name in tbl_mapping:
+        new_table.rename_column(tbl_mapping[new_name], new_name)
+
+    # Create a new output table (it will likely be shorter due to filtering
+    # on flags value)
+    out_table = Table(dtype=new_table.dtype)
+    
     for source in new_table:
         source_items = {}
         if 'flags' in tbl_mapping and source['flags'] <= flag_filter:
@@ -249,18 +254,17 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
                 value = source[item]
                 # Don't convert magnitude or magnitude error yet
                 if 'obs_mag' not in item:
-                    new_value = convert_value(item, source[item])
+                    new_value = convert_value(item, value)
                 else:
                     new_value = value
                 new_column = { item : new_value }
                 source_items.update(new_column)
             # Convert flux error and flux to magnitude error and magnitude (needs to be this order as
             # the flux is needed for the magnitude error.
-            # If a good zerpoint is available from the header, add that too.
+            # If a good zeropoint is available from the header, add that too.
             source_items['obs_mag_err'] = convert_value('obs_mag_err', (source_items['obs_mag_err'], source_items['obs_mag']))
             source_items['obs_mag'] = convert_value('obs_mag', source_items['obs_mag'])
             if header_items.get('zeropoint', -99) != -99:
                 source_items['obs_mag'] += header_items['zeropoint']
-            catalog_items.append(source_items)
-
-    return catalog_items
+            out_table.add_row(source_items)
+    return out_table
