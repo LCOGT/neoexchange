@@ -215,7 +215,9 @@ def subset_catalog_table(fits_table, column_mapping):
     # Make a new table containing only the subset of columns we want and return
     # it
     new_table = Table(table.columns[tuple(new_columns)])
-    
+
+    for new_name in column_mapping:
+        new_table.rename_column(column_mapping[new_name], new_name)
     return new_table
 
 def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
@@ -238,16 +240,16 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
             raise FITSTblException(column)
             return catalog_items
 
-    for source in table:
+    new_table = subset_catalog_table(table, tbl_mapping)
+    for source in new_table:
         source_items = {}
-        if 'flags' in tbl_mapping and source[tbl_mapping['flags']] <= flag_filter:
+        if 'flags' in tbl_mapping and source['flags'] <= flag_filter:
         
             for item in tbl_mapping.keys():
-                column = tbl_mapping[item]
-                value = source[column]
+                value = source[item]
                 # Don't convert magnitude or magnitude error yet
                 if 'obs_mag' not in item:
-                    new_value = convert_value(item, source[column])
+                    new_value = convert_value(item, source[item])
                 else:
                     new_value = value
                 new_column = { item : new_value }
