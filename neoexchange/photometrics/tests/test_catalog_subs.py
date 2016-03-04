@@ -16,21 +16,57 @@ from photometrics.catalog_subs import *
 class ZeropointUnitTest(TestCase):
 
     def test_get_cat_ra_dec(self):
-        #test getting a single ra, dec, and rmag out of the catalog
-
-        catalog = "UCAC4"
-        ra = 299.590
-        dec = 35.201
+        #test getting a single ra, dec, and rmag out of the default PPMXL catalog
         
-        result = get_catalog(catalog, ra, dec, default = 'false')
+        cat_table = get_catalog_table(299.590, 35.201, "PPMXL")
 
-        cat_table = result[0]
+        ra_first_source = cat_table['_RAJ2000'][0]
 
-        ra_first_source = cat_table.columns.get('_RAJ2000')[0]
+        dec_first_source = cat_table['_DEJ2000'][0]
 
-        dec_first_source = cat_table.columns.get('_DEJ2000')[0]
+        rmag_first_source = cat_table['r2mag'][0]
 
-        rmag_third_source = cat_table.columns.get('rmag')[2]
+        expected_ra_first_source = 299.29136599999998
+
+        expected_dec_first_source = 35.242404000000001
+
+        expected_rmag_first_source = 14.32
+
+        self.assertEqual(expected_ra_first_source, ra_first_source)
+        self.assertEqual(expected_dec_first_source, dec_first_source)
+        self.assertEqual(expected_rmag_first_source, rmag_first_source)
+
+    def test_no_cat(self):
+        #test if no catalog input, use default catalog
+
+        cat_table = get_catalog_table(299.590, 35.201)
+
+        ra_first_source = cat_table['_RAJ2000'][0]
+
+        dec_first_source = cat_table['_DEJ2000'][0]
+
+        rmag_first_source = cat_table['r2mag'][0]
+
+        expected_ra_first_source = 299.29136599999998
+
+        expected_dec_first_source = 35.242404000000001
+
+        expected_rmag_first_source = 14.32
+
+        self.assertEqual(expected_ra_first_source, ra_first_source)
+        self.assertEqual(expected_dec_first_source, dec_first_source)
+        self.assertEqual(expected_rmag_first_source, rmag_first_source)
+
+    def test_get_cat_ra_dec_not_default(self):
+        #test a catalog other than the default
+        
+        cat_table = get_catalog_table(299.590, 35.201, "UCAC4")
+
+        ra_first_source = cat_table['_RAJ2000'][0]
+
+        dec_first_source = cat_table['_DEJ2000'][0]
+
+        rmag_third_source = cat_table['rmag'][2]
 
         expected_ra_first_source = 299.29474599999998
 
@@ -42,60 +78,68 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_dec_first_source, dec_first_source)
         self.assertEqual(expected_rmag_third_source, rmag_third_source)
 
-    def test_no_cat(self):
-        #test if no catalog input (makes query hang indefinitely) force to ask for the default catalog
+    def test_get_cat_diff_rmag_limit(self):
+        #test a catalog other than the default
+        
+        cat_table = get_catalog_table(299.590, 35.201, rmag_limit = "<=14.5")
 
-        catalog = ""
-        ra = 299.590
-        dec = 35.201
+        ra_last_source = cat_table['_RAJ2000'][-1]
 
-        result = get_catalog(catalog, ra, dec, default = 'false')
+        dec_last_source = cat_table['_DEJ2000'][-1]
 
-        cat_table = result[0]
+        rmag_last_source = cat_table['r2mag'][-1]
 
-        ra_first_source = cat_table.columns.get('_RAJ2000')[0]
+        expected_ra_last_source = 299.82885099999999
 
-        dec_first_source = cat_table.columns.get('_DEJ2000')[0]
+        expected_dec_last_source = 34.998407
 
-        rmag_first_source = cat_table.columns.get('rmag')[2]
+        expected_rmag_last_source = 14.5
 
-        expected_ra_first_source = 299.29474599999998
+        self.assertEqual(expected_ra_last_source, ra_last_source)
+        self.assertEqual(expected_dec_last_source, dec_last_source)
+        self.assertEqual(expected_rmag_last_source, rmag_last_source)
 
-        expected_dec_first_source = 34.973799999999997
+    def test_get_cat_diff_row_limit(self):
+        #test a catalog other than the default
+        
+        cat_table = get_catalog_table(299.590, 35.201, set_row_limit = 40)
 
-        expected_rmag_first_source = 12.642000198364258
+        ra_first_source = cat_table['_RAJ2000'][0]
+
+        dec_first_source = cat_table['_DEJ2000'][0]
+
+        rmag_first_source = cat_table['r2mag'][0]
+
+        expected_ra_first_source = 299.29136599999998
+
+        expected_dec_first_source = 35.242404000000001
+
+        expected_rmag_first_source = 14.32
 
         self.assertEqual(expected_ra_first_source, ra_first_source)
         self.assertEqual(expected_dec_first_source, dec_first_source)
         self.assertEqual(expected_rmag_first_source, rmag_first_source)
 
-    def test_get_cat_ra_dec_default_equal_true(self):
-        #test the default catalog
-
-        catalog = "PPMXL"
-        ra = 299.590
-        dec = 35.201
+    def test_get_cat_diff_width(self):
+        #test a catalog other than the default
         
-        result = get_catalog(catalog, ra, dec, default = 'true')
+        cat_table = get_catalog_table(299.590, 35.201, set_width = "30m")
 
-        cat_table = result[0]
+        ra_last_source = cat_table['_RAJ2000'][-1]
 
-        ra_first_source = cat_table.columns.get('_RAJ2000')[0]
+        dec_last_source = cat_table['_DEJ2000'][-1]
 
-        dec_first_source = cat_table.columns.get('_DEJ2000')[0]
+        rmag_last_source = cat_table['r2mag'][-1]
 
-        rmag_first_source = cat_table.columns.get('rmag')[2]
+        expected_ra_last_source = 299.88443899999999
 
-        expected_ra_first_source = 299.29474599999998
+        expected_dec_last_source = 34.978456999999999
 
-        expected_dec_first_source = 34.973799999999997
+        expected_rmag_last_source = 14.79
 
-        expected_rmag_first_source = 12.642000198364258
-
-        self.assertEqual(expected_ra_first_source, ra_first_source)
-        self.assertEqual(expected_dec_first_source, dec_first_source)
-        self.assertEqual(expected_rmag_first_source, rmag_first_source)
-        
+        self.assertEqual(expected_ra_last_source, ra_last_source)
+        self.assertEqual(expected_dec_last_source, dec_last_source)
+        self.assertEqual(expected_rmag_last_source, rmag_last_source)
 
     def test_more(self):
         self.fail("write more tests")

@@ -12,21 +12,12 @@ import astropy.coordinates as coord
 
 logger = logging.getLogger(__name__)
 
-def get_catalog(catalog, ra, dec, default):
+def get_catalog_table(ra, dec, cat = "PPMXL", set_row_limit = 10000, rmag_limit = "<=15.0", set_width = "30m"):
     '''Pulls a catalog from Vizier'''
 
-    #set the default catalog
-    if default == 'true':
-        cat = "UCAC4"
-    else:
-        #if catalog is an empty string, force the query to ask for the default catalog to ensure the query doesn't hang indefinitely
-        if len(catalog) > 0:
-            cat = catalog
-        else:
-            cat = "UCAC4"
-
     #query Vizier on a region of the sky with ra and dec coordinates a specified catalog
-    result = Vizier.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width="30m", catalog=[cat])
+    query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
+    result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=[cat])
 
     #resulting catalog table
     cat_table = result[0]
