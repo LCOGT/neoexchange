@@ -18,8 +18,10 @@ GNU General Public License for more details.
 import logging
 from datetime import datetime, timedelta
 from math import sqrt, log10, log
+from collections import OrderedDict
 
 from astropy.io import fits
+from astropy.table import Table
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
@@ -67,20 +69,21 @@ def oracdr_catalog_mapping():
                     'astrometric_catalog'    : 'WCCATTYP',
                   }
 
-    table_dict = {  'ccd_x'         : 'X_IMAGE',
-                    'ccd_y'         : 'Y_IMAGE',
-                    'major_axis'    : 'A_IMAGE',
-                    'minor_axis'    : 'B_IMAGE',
-                    'ccd_pa'        : 'THETA_IMAGE',
-                    'obs_ra'        : 'ALPHA_J2000',
-                    'obs_dec'       : 'DELTA_J2000',
-                    'obs_ra_err'    : 'ERRX2_WORLD',
-                    'obs_dec_err'   : 'ERRY2_WORLD',
-                    'obs_mag'       : 'FLUX_AUTO',
-                    'obs_mag_err'   : 'FLUXERR_AUTO',
-                    'obs_sky_bkgd'  : 'BACKGROUND',
-                    'flags'         : 'FLAGS',
-                 }
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'X_IMAGE'),
+                    ('ccd_y'         , 'Y_IMAGE'),
+                    ('obs_ra'        , 'ALPHA_J2000'),
+                    ('obs_dec'       , 'DELTA_J2000'),
+                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'A_IMAGE'),
+                    ('minor_axis'    , 'B_IMAGE'),
+                    ('ccd_pa'        , 'THETA_IMAGE'),
+                    ('obs_mag'       , 'FLUX_AUTO'),
+                    ('obs_mag_err'   , 'FLUXERR_AUTO'),
+                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAGS'),
+                 ])
 
     return header_dict, table_dict
 
@@ -200,6 +203,20 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         else:
             logger.error("Could not determine site code from %s-%s-%s", header_items['site_id'], header_items['enc_id'], header_items['tel_id'])
     return header_items
+
+def subset_catalog_table(fits_table, column_mapping):
+
+    # Turn the fitrec fits_table into an Astropy Table object (Needed before 
+    # subsetting the columns)
+    table = Table(fits_table)
+
+    # Get the list of new columns we want
+    new_columns = column_mapping.values()
+    # Make a new table containing only the subset of columns we want and return
+    # it
+    new_table = Table(table.columns[tuple(new_columns)])
+    
+    return new_table
 
 def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
     '''Extract the needed columns specified in the mapping from the FITS

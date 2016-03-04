@@ -219,6 +219,18 @@ class FITSReadHeader(FITSUnitTest):
 
         self.assertEqual(expected_params, frame_header)
 
+class FITSSubsetCatalogTable(FITSUnitTest):
+
+    def test_dimensions(self):
+        expected_rows = 360
+        expected_columns = 13
+
+        hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
+        new_table = subset_catalog_table(self.test_table, tbl_mapping)
+
+        self.assertEqual(expected_rows, len(new_table))
+        self.assertEqual(expected_columns, len(new_table.colnames))
+
 class FITSReadCatalog(FITSUnitTest):
 
 
