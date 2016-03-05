@@ -876,7 +876,7 @@ def configure_defaults(params):
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['filter'] = 'w'
-        params['binning'] = 1
+        params['binning'] = 2 # 1 is the Right Answer...
 
     return params
 

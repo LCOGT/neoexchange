@@ -14,7 +14,7 @@ six==1.9.0
 wsgiref
 requests
 selenium
-reqdbclient==0.6.20
+reqdbclient==0.6.21
 pytest-django
 mock==1.0.1
 opbeat
