@@ -222,8 +222,8 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
     '''Extract the needed columns specified in the mapping from the FITS
     binary table. Sources with a FLAGS value greater than [flag_filter]
     will not be returned.
-    The sources in the catalog are returned in a list of dictionaries containing
-    the keys specified in the table mapping.'''
+    The sources in the catalog are returned as an AstroPy Table containing
+    the subset of columns specified in the table mapping.'''
 
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
@@ -245,7 +245,7 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
     # Create a new output table (it will likely be shorter due to filtering
     # on flags value)
     out_table = Table(dtype=new_table.dtype)
-    
+
     for source in new_table:
         source_items = {}
         if 'flags' in tbl_mapping and source['flags'] <= flag_filter:

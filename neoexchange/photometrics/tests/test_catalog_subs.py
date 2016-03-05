@@ -59,7 +59,7 @@ class FITSUnitTest(TestCase):
                         ('flags', '>i2')
                        ]
         self.basic_table = Table(dtype = column_types)
-        
+
         self.max_diff = None
         self.precision = 7
 
@@ -215,7 +215,6 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_status' : self.test_header['WCSERR'],
                             'astrometric_fit_nstars' : self.test_header['WCSMATCH'],
                             'astrometric_catalog'    : 'UCAC3',
-
                           }
 
         header, table = open_fits_catalog(self.test_filename)
@@ -241,45 +240,44 @@ class FITSReadCatalog(FITSUnitTest):
     def test_first_item(self):
 
         expected_catalog = self.basic_table
-        expected_catalog.add_row({
-                              'ccd_x' : 106.11763763,
-                              'ccd_y' :  18.61132812,
-                              'major_axis'  : 1.87925231,
-                              'minor_axis'  : 1.74675643,
-                              'ccd_pa'      : -79.38792419,
-                              'obs_ra'  :  86.868051829832439,
-                              'obs_dec' : -27.575127242664802,
-                              'obs_ra_err'  : 7.464116913258858e-06,
-                              'obs_dec_err' : 7.516842315248245e-06,
-                              'obs_mag'      : -2.5*log10(11228.246),
-                              'obs_mag_err'  : 0.037939535221954708,
-                              'obs_sky_bkgd' : 746.41577148,
-                              'flags' : 0,
-                            })
-        
+        expected_catalog.add_row({ 'ccd_x' : 106.11763763,
+                                   'ccd_y' :  18.61132812,
+                                   'major_axis'  : 1.87925231,
+                                   'minor_axis'  : 1.74675643,
+                                   'ccd_pa'      : -79.38792419,
+                                   'obs_ra'  :  86.868051829832439,
+                                   'obs_dec' : -27.575127242664802,
+                                   'obs_ra_err'  : 7.464116913258858e-06,
+                                   'obs_dec_err' : 7.516842315248245e-06,
+                                   'obs_mag'      : -2.5*log10(11228.246),
+                                   'obs_mag_err'  : 0.037939535221954708,
+                                   'obs_sky_bkgd' : 746.41577148,
+                                   'flags' : 0,
+                                 })
+
         catalog_items = get_catalog_items(self.test_header, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
-        
+
 
     def test_last_item(self):
 
         expected_catalog = self.basic_table
         expected_catalog.add_row({ 'ccd_x' : 1067.94714355,
-                              'ccd_y' :  1973.74450684,
-                              'major_axis'  : 2.7380364,
-                              'minor_axis'  : 2.454973,
-                              'ccd_pa'      : 85.39698792,
-                              'obs_ra'  :  86.727294383019555,
-                              'obs_dec' : -27.82876912480173,
-                              'obs_ra_err'  : 1.5709768391021522e-06,
-                              'obs_dec_err' : 1.733559011455713e-06,
-                              'obs_mag' : -2.5*log10(215428.83),
-                              'obs_mag_err'  : self.flux2mag * self.table_lastitem['FLUXERR_AUTO']/self.table_lastitem['FLUX_AUTO'],
-                              'obs_sky_bkgd' : 744.8538208,
-                              'flags' : 0,
-                            })
-                          
+                                   'ccd_y' :  1973.74450684,
+                                   'major_axis'  : 2.7380364,
+                                   'minor_axis'  : 2.454973,
+                                   'ccd_pa'      : 85.39698792,
+                                   'obs_ra'  :  86.727294383019555,
+                                   'obs_dec' : -27.82876912480173,
+                                   'obs_ra_err'  : 1.5709768391021522e-06,
+                                   'obs_dec_err' : 1.733559011455713e-06,
+                                   'obs_mag' : -2.5*log10(215428.83),
+                                   'obs_mag_err'  : self.flux2mag * self.table_lastitem['FLUXERR_AUTO']/self.table_lastitem['FLUX_AUTO'],
+                                   'obs_sky_bkgd' : 744.8538208,
+                                   'flags' : 0,
+                                 })
+
         catalog_items = get_catalog_items(self.test_header, self.table_lastitem)
 
         self.assertEqual(expected_catalog, catalog_items)
@@ -296,42 +294,43 @@ class FITSReadCatalog(FITSUnitTest):
 
         expected_catalog = self.basic_table
         expected_catalog.add_row({ 'ccd_x' :  234.52952576,
-                              'ccd_y' :    8.05962372,
-                              'major_axis'  : 2.38448,
-                              'minor_axis'  : 2.3142395,
-                              'ccd_pa'      : 54.71178436,
-                              'obs_ra'  :  86.849261129458455,
-                              'obs_dec' : -27.573775115523741,
-                              'obs_ra_err'  : 3.1925407884572581e-06,
-                              'obs_dec_err' : 2.9221911507086037e-06,
-                              'obs_mag' : -2.5*log10(67883.703125),
-                              'obs_mag_err'  : self.flux2mag * self.table_item_flags24['FLUXERR_AUTO']/self.table_item_flags24['FLUX_AUTO'],
-                              'obs_sky_bkgd' :741.20977783,
-                              'flags' : 24,
-                            })
+                                   'ccd_y' :    8.05962372,
+                                   'major_axis'  : 2.38448,
+                                   'minor_axis'  : 2.3142395,
+                                   'ccd_pa'      : 54.71178436,
+                                   'obs_ra'  :  86.849261129458455,
+                                   'obs_dec' : -27.573775115523741,
+                                   'obs_ra_err'  : 3.1925407884572581e-06,
+                                   'obs_dec_err' : 2.9221911507086037e-06,
+                                   'obs_mag' : -2.5*log10(67883.703125),
+                                   'obs_mag_err'  : self.flux2mag * self.table_item_flags24['FLUXERR_AUTO']/self.table_item_flags24['FLUX_AUTO'],
+                                   'obs_sky_bkgd' :741.20977783,
+                                   'flags' : 24,
+                                 })
 
         catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
 
         for column in expected_catalog.colnames:
-            self.assertAlmostEqual(expected_catalog[column], catalog_items[column], 9, msg="Failure on %s (%s != %s)" % (column, expected_catalog[column], catalog_items[column]))
-  
+            self.assertAlmostEqual(expected_catalog[column], catalog_items[column], 9, \
+                msg="Failure on %s (%s != %s)" % (column, expected_catalog[column], catalog_items[column]))
+
     def test_first_item_with_bad_zeropoint(self):
 
         expected_catalog = self.basic_table
         expected_catalog.add_row({ 'ccd_x' : 106.11763763,
-                              'ccd_y' :  18.61132812,
-                              'major_axis'  : 1.87925231,
-                              'minor_axis'  : 1.74675643,
-                              'ccd_pa'      : -79.38792419,
-                              'obs_ra'  :  86.868051829832439,
-                              'obs_dec' : -27.575127242664802,
-                              'obs_ra_err'  : 7.464116913258858e-06,
-                              'obs_dec_err' : 7.516842315248245e-06,
-                              'obs_mag'      : -2.5*log10(11228.246),
-                              'obs_mag_err'  : 0.037939535221954708,
-                              'obs_sky_bkgd' : 746.41577148,
-                              'flags' : 0,
-                            })
+                                   'ccd_y' :  18.61132812,
+                                   'major_axis'  : 1.87925231,
+                                   'minor_axis'  : 1.74675643,
+                                   'ccd_pa'      : -79.38792419,
+                                   'obs_ra'  :  86.868051829832439,
+                                   'obs_dec' : -27.575127242664802,
+                                   'obs_ra_err'  : 7.464116913258858e-06,
+                                   'obs_dec_err' : 7.516842315248245e-06,
+                                   'obs_mag'      : -2.5*log10(11228.246),
+                                   'obs_mag_err'  : 0.037939535221954708,
+                                   'obs_sky_bkgd' : 746.41577148,
+                                   'flags' : 0,
+                                 })
 
         header_items = {'zeropoint' : -99}
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
@@ -343,19 +342,19 @@ class FITSReadCatalog(FITSUnitTest):
         header_items = {'zeropoint' : 23.0}
         expected_catalog = self.basic_table
         expected_catalog.add_row({ 'ccd_x' : 106.11763763,
-                              'ccd_y' :  18.61132812,
-                              'major_axis'  : 1.87925231,
-                              'minor_axis'  : 1.74675643,
-                              'ccd_pa'      : -79.38792419,
-                              'obs_ra'  :  86.868051829832439,
-                              'obs_dec' : -27.575127242664802,
-                              'obs_ra_err'  : 7.464116913258858e-06,
-                              'obs_dec_err' : 7.516842315248245e-06,
-                              'obs_mag'      : -2.5*log10(11228.246) + header_items['zeropoint'],
-                              'obs_mag_err'  : 0.037939535221954708,
-                              'obs_sky_bkgd' : 746.41577148,
-                              'flags' : 0,
-                            })
+                                   'ccd_y' :  18.61132812,
+                                   'major_axis'  : 1.87925231,
+                                   'minor_axis'  : 1.74675643,
+                                   'ccd_pa'      : -79.38792419,
+                                   'obs_ra'  :  86.868051829832439,
+                                   'obs_dec' : -27.575127242664802,
+                                   'obs_ra_err'  : 7.464116913258858e-06,
+                                   'obs_dec_err' : 7.516842315248245e-06,
+                                   'obs_mag'      : -2.5*log10(11228.246) + header_items['zeropoint'],
+                                   'obs_mag_err'  : 0.037939535221954708,
+                                   'obs_sky_bkgd' : 746.41577148,
+                                   'flags' : 0,
+                                 })
 
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
 
@@ -366,19 +365,19 @@ class FITSReadCatalog(FITSUnitTest):
         header_items = {'zerowibble' : -99}
         expected_catalog = self.basic_table
         expected_catalog.add_row({ 'ccd_x' : 106.11763763,
-                              'ccd_y' :  18.61132812,
-                              'major_axis'  : 1.87925231,
-                              'minor_axis'  : 1.74675643,
-                              'ccd_pa'      : -79.38792419,
-                              'obs_ra'  :  86.868051829832439,
-                              'obs_dec' : -27.575127242664802,
-                              'obs_ra_err'  : 7.464116913258858e-06,
-                              'obs_dec_err' : 7.516842315248245e-06,
-                              'obs_mag'      : -2.5*log10(11228.246),
-                              'obs_mag_err'  : 0.037939535221954708,
-                              'obs_sky_bkgd' : 746.41577148,
-                              'flags' : 0,
-                            })
+                                   'ccd_y' :  18.61132812,
+                                   'major_axis'  : 1.87925231,
+                                   'minor_axis'  : 1.74675643,
+                                   'ccd_pa'      : -79.38792419,
+                                   'obs_ra'  :  86.868051829832439,
+                                   'obs_dec' : -27.575127242664802,
+                                   'obs_ra_err'  : 7.464116913258858e-06,
+                                   'obs_dec_err' : 7.516842315248245e-06,
+                                   'obs_mag'      : -2.5*log10(11228.246),
+                                   'obs_mag_err'  : 0.037939535221954708,
+                                   'obs_sky_bkgd' : 746.41577148,
+                                   'flags' : 0,
+                                 })
 
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
 
