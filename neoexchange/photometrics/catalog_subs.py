@@ -268,3 +268,18 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
                 source_items['obs_mag'] += header_items['zeropoint']
             out_table.add_row(source_items)
     return out_table
+
+def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
+    '''High-level routine to read LCOGT FITS catalogs from <catfile>.
+    This returns a dictionary of needed header items and an AstroPy table of
+    the sources that pass the [flag_filter] cut-off or None if the file could
+    not be opened.'''
+
+    header = table = None
+    fits_header, fits_table = open_fits_catalog(catfile)
+
+    if fits_header != {} and fits_table != {}:
+        header = get_catalog_header(fits_header, catalog_type)
+        table = get_catalog_items(header, fits_table, catalog_type, flag_filter)
+
+    return header, table
