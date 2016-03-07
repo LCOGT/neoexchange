@@ -355,6 +355,37 @@ class SourceMeasurement(models.Model):
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
 
+class CatalogSources(models.Model):
+    '''Class to represent the measurements (X, Y, RA, Dec, Magnitude, shape and 
+    errors) extracted from a catalog extraction performed on a Frame (having 
+    site code, date/time etc.). These will allow the storage of information for 
+    reference stars and candidate objects, allowing the display and measurement
+    of objects.
+    '''
+
+#    body = models.ForeignKey(Body)
+    frame = models.ForeignKey(Frame)
+    obs_x = models.FloatField('CCD X co-ordinate')
+    obs_y = models.FloatField('CCD Y co-ordinate')
+    obs_ra = models.FloatField('Observed RA')
+    obs_dec = models.FloatField('Observed Dec')
+    obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
+    err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
+    err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)
+    err_obs_mag = models.FloatField('Error on Observed Magnitude', blank=True, null=True)
+    background = models.FloatField('Background')
+    major_axis = models.FloatField('Ellipse major axis')
+    minor_axis = models.FloatField('Ellipse minor axis')
+    position_angle = models.FloatField('Ellipse position angle')
+    ellipticity = models.FloatField('Ellipticity')
+    aperture_size = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
+    flags = models.IntegerField('Source flags', help_text='Bitmask of flags', default=0)
+
+    class Meta:
+        verbose_name = _('Catalog Source')
+        verbose_name_plural = _('Catalog Sources')
+        db_table = 'catalog_source'
+
 class ProposalPermission(models.Model):
     '''
     Linking a user to proposals in NEOx to control their access
