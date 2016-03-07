@@ -1,3 +1,18 @@
+'''
+NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
+Copyright (C) 2014-2016 LCOGT
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+'''
+
 from datetime import datetime, date, timedelta
 from django import forms
 from django.db.models import Q
@@ -11,7 +26,7 @@ SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('F65','Maui, Hawaii (FTN - F65)'),
          ('E10','Siding Spring, Aust. (FTS - E10)'),
          ('W85','CTIO, Chile (LSC - W85; SBIG)'),
-         ('W86','CTIO, Chile (LSC - W86; Sinsitro)'),
+         ('W86','CTIO, Chile (LSC - W86; Sinistro)'),
          ('K92','Sutherland, S. Africa (CPT - K91-93)'),
          ('Q63','Siding Spring, Aust. (COJ - Q63-64)'))
 
