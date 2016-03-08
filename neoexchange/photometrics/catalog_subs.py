@@ -63,6 +63,9 @@ def oracdr_catalog_mapping():
                     'obs_date'   : 'DATE-OBS',
                     'field_center_ra' : 'RA',
                     'field_center_dec' : 'DEC',
+                    'field_width' : 'SEXIMASX',
+                    'field_height' : 'SEXIMASY',
+                    'pixel_scale' : 'SECPIX',
                     'zeropoint'  : 'L1ZP',
                     'zeropoint_err' : 'L1ZPERR',
                     'zeropoint_src' : 'L1ZPSRC',
@@ -165,6 +168,13 @@ def convert_value(keyword, value):
     elif keyword == 'field_center_dec':
         dec = Angle(value, unit=u.deg)
         newvalue = dec.deg
+    elif keyword == 'field_width' or keyword == 'field_height':
+        try:
+            #Calculate width/height by multiplying number of pixels by pixel scale and converting to arcmin
+            dimension = (value[0]*value[1])/60.0
+            newvalue = "%.4fm" % dimension
+        except IndexError:
+            logger.warn("Need to pass a tuple of (number of x/y pixels, pixel scale) to compute a width/height")
 
     return newvalue
 
@@ -194,7 +204,10 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 if debug: logger.debug('UNKNOWN value found for %s', fits_keyword)
                 raise FITSHdrException(fits_keyword)
             # Convert if necessary
-            new_value = convert_value(item, value)
+            if item != 'field_width' and item != 'field_height':
+                new_value = convert_value(item, value)
+            else:
+                new_value = value
             header_item = { item: new_value }
             header_items.update(header_item)
         else:
@@ -212,6 +225,9 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
             del header_items['tel_id']
         else:
             logger.error("Could not determine site code from %s-%s-%s", header_items['site_id'], header_items['enc_id'], header_items['tel_id'])
+    if 'field_width' in header_items and 'field_height' in header_items and 'pixel_scale' in header_items:
+        header_items['field_width'] = convert_value('field_width', (header_items['field_width'], header_items['pixel_scale']))
+        header_items['field_height'] = convert_value('field_height', (header_items['field_height'], header_items['pixel_scale']))
     return header_items
 
 def subset_catalog_table(fits_table, column_mapping):

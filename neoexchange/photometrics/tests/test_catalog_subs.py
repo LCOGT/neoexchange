@@ -62,7 +62,7 @@ class FITSUnitTest(TestCase):
                        ]
         self.basic_table = Table(dtype = column_types)
 
-        self.max_diff = None
+        self.maxDiff = None
         self.precision = 7
 
         self.flux2mag = 2.5/log(10)
@@ -213,6 +213,22 @@ class Test_Convert_Values(FITSUnitTest):
 
         self.assertAlmostEqual(expected_value, value, 7)
 
+    def test_field_width(self):
+
+        expected_value = '15.7846m' #2028 pixels x 0.467"/pixel converted to arcmin
+
+        value = convert_value('field_width', (2028, 0.467))
+
+        self.assertEqual(expected_value, value)
+
+    def test_field_height(self):
+
+        expected_value = '15.8624m' #2038 pixels x 0.467"/pixel converted to arcmin
+
+        value = convert_value('field_height', (2038, 0.467))
+
+        self.assertEqual(expected_value, value)
+
 class FITSReadHeader(FITSUnitTest):
 
     def test_header(self):
@@ -227,6 +243,9 @@ class FITSReadHeader(FITSUnitTest):
                             'obs_midpoint'  : obs_date + timedelta(seconds=self.test_header['EXPTIME'] / 2.0),
                             'field_center_ra' : Angle(self.test_header['RA'], unit=u.hour).deg,
                             'field_center_dec' : Angle(self.test_header['DEC'], unit=u.deg).deg,
+                            'field_width'   : '15.7846m',
+                            'field_height'  : '15.8624m',
+                            'pixel_scale'   : self.test_header['SECPIX'],
                             'zeropoint'     : self.test_header['L1ZP'],
                             'zeropoint_err' : self.test_header['L1ZPERR'],
                             'zeropoint_src' : self.test_header['L1ZPSRC'],
