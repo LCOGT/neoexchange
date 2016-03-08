@@ -22,6 +22,8 @@ from collections import OrderedDict
 
 from astropy.io import fits
 from astropy.table import Table
+from astropy.coordinates import Angle
+import astropy.units as u
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
@@ -59,6 +61,8 @@ def oracdr_catalog_mapping():
                     'framename'  : 'ORIGNAME',
                     'exptime'    : 'EXPTIME',
                     'obs_date'   : 'DATE-OBS',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
                     'zeropoint'  : 'L1ZP',
                     'zeropoint_err' : 'L1ZPERR',
                     'zeropoint_src' : 'L1ZPSRC',
@@ -155,6 +159,12 @@ def convert_value(keyword, value):
             newvalue = FLUX2MAG * (value[0]/value[1])
         except IndexError:
             logger.warn("Need to pass a tuple of (flux error, flux) to compute a magnitude error")
+    elif keyword == 'field_center_ra':
+        ra = Angle(value, unit=u.hour)
+        newvalue = ra.deg
+    elif keyword == 'field_center_dec':
+        dec = Angle(value, unit=u.deg)
+        newvalue = dec.deg
 
     return newvalue
 

@@ -23,6 +23,8 @@ from django.test import TestCase
 from django.forms.models import model_to_dict
 from astropy.io import fits
 from astropy.table import Table
+from astropy.coordinates import Angle
+import astropy.units as u
 
 from core.models import Body
 
@@ -195,6 +197,22 @@ class Test_Convert_Values(FITSUnitTest):
 
         self.assertEqual(expected_value, value)
 
+    def test_ra_to_decimal_degrees(self):
+
+        expected_value = 86.7366375 #conversion of 05:46:56.793 to decimal degrees
+
+        value = convert_value('field_center_ra', '05:46:56.793')
+
+        self.assertAlmostEqual(expected_value, value, 7)
+
+    def test_dec_to_decimal_degrees(self):
+
+        expected_value = -27.7043417 #conversion of -27:42:15.63 to decimal degrees
+
+        value = convert_value('field_center_dec', '-27:42:15.63')
+
+        self.assertAlmostEqual(expected_value, value, 7)
+
 class FITSReadHeader(FITSUnitTest):
 
     def test_header(self):
@@ -207,6 +225,8 @@ class FITSReadHeader(FITSUnitTest):
                             'exptime'    : self.test_header['EXPTIME'],
                             'obs_date'      : obs_date,
                             'obs_midpoint'  : obs_date + timedelta(seconds=self.test_header['EXPTIME'] / 2.0),
+                            'field_center_ra' : Angle(self.test_header['RA'], unit=u.hour).deg,
+                            'field_center_dec' : Angle(self.test_header['DEC'], unit=u.deg).deg,
                             'zeropoint'     : self.test_header['L1ZP'],
                             'zeropoint_err' : self.test_header['L1ZPERR'],
                             'zeropoint_src' : self.test_header['L1ZPSRC'],
