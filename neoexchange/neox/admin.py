@@ -31,9 +31,9 @@ class BodyAdmin(reversion.VersionAdmin):
         })
     )
     search_fields = ('provisional_name','name')
-    list_display = ('id', 'provisional_name', 'name', 'origin', 'source_type', 
+    list_display = ('id', 'provisional_name', 'name', 'origin', 'source_type',
       'active', 'num_obs', 'not_seen', 'ingest')
-    list_filter = ('origin', 'source_type', 'elements_type', 'active', 
+    list_filter = ('origin', 'source_type', 'elements_type', 'active',
       'fast_moving', 'updated')
     ordering = ('-ingest',)
 
@@ -71,7 +71,7 @@ class FrameAdmin(reversion.VersionAdmin):
         else:
             name = "%s@%s" % ( obj.midpoint, obj.sitecode.rstrip() )
         return name
-    
+
     list_display = ('id', 'block_groupid', 'quality', 'frametype', 'filename_or_midpoint', 'exptime', 'filter', 'sitecode')
     list_filter = ('quality', 'frametype', 'midpoint', 'filter', 'sitecode', 'instrument')
 
@@ -113,3 +113,4 @@ admin.site.register(Frame,FrameAdmin)
 admin.site.register(Block,BlockAdmin)
 admin.site.register(Proposal,ProposalAdmin)
 admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
+admin.site.register(ProposalPermission)

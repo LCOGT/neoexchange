@@ -15,8 +15,12 @@ GNU General Public License for more details.
 
 from django.test import TestCase
 from datetime import datetime, timedelta
+from mock import patch
+
+from neox.tests.mocks import MockDateTime
+
 #Import module to test
-from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, degreestohms
+from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, degreestohms, parse_neocp_date
 
 class TestJD2datetime(TestCase):
 
@@ -105,3 +109,43 @@ class TestDegreesToHMS(TestCase):
         time_string = degreestohms(value, " ")
 
         self.assertEqual(expected_string, time_string)
+
+@patch('astrometrics.time_subs.datetime', MockDateTime)
+class TestParseNeocpDate(TestCase):
+
+    def setUp(self):
+        MockDateTime.change_datetime(2015, 12, 31, 22, 0, 0)
+
+    def test_good_date(self):
+        date_string = '(Nov. 16.81 UT)'
+        expected_dt =  datetime(2015, 11, 16, 19, 26, 24)
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_bad_string(self):
+        date_string = '(Nov. 16.81UT)'
+        expected_dt =  None
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_bad_string2(self):
+        date_string = '(Nov.16.81UT)'
+        expected_dt =  None
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_bad_date(self):
+        MockDateTime.change_datetime(2016, 3, 1, 22, 0, 0)
+        date_string = '(Feb. 30.00 UT)'
+        expected_dt =  datetime(2016, 3, 1, 00, 00, 00)
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+

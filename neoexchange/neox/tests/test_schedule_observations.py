@@ -3,7 +3,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_rbauth_login
+
 from datetime import datetime
 from django.test.client import Client
 from django.core.urlresolvers import reverse
@@ -28,10 +29,12 @@ class ScheduleObservations(FunctionalTest):
         self.bart.delete()
         super(ScheduleObservations,self).tearDown()
 
+    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
     def login(self):
         test_login = self.client.login(username=self.username, password=self.password)
         self.assertEqual(test_login, True)
 
+    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
     def test_login(self):
         self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
         username_input = self.browser.find_element_by_id("username")
