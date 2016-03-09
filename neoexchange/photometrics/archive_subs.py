@@ -15,8 +15,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-import requests
 from datetime import datetime, timedelta
+import os
+
+import requests
 
 def get_base_url():
     '''Return the base URL of the archive service'''
@@ -44,13 +46,66 @@ def archive_login(username, password):
 
     return headers
 
-def get_proposal_data(start_date, end_date, auth_header='', proposal='LCO2015B-005'):
+def get_proposal_data(start_date, end_date, auth_header='', proposal='LCO2015B-005', red_lvls=['90', '10']):
+    '''Obtain the list of frames between <start_date> and <end_date>. An authorization token (from e.g.
+    archive_login()) will likely be needed to get a proprietary data. By default we download data from
+    [proposal]=LCO2015B-005 and for reduction levels 90 (final processed) and 10 (quicklook).
+    Each reduction level is queried in turn and results are added to a dictionary with the reduction level
+    as the key(which is returned)'''
 
     base_url = get_base_url()
     archive_url = '%s/frames/?start=%s&end=%s&PROPID=%s' % (base_url, start_date, end_date, proposal)
 
-    response = requests.get(archive_url, headers=auth_header).json()
-
-    frames = response['results']
+    frames = {}
+    for reduction_lvl in red_lvls:
+        search_url = archive_url + '&RLEVEL='+ reduction_lvl
+        response = requests.get(search_url, headers=auth_header).json()
+        frames_for_red_lvl = { reduction_lvl : response['results'] }
+        frames.update(frames_for_red_lvl)
 
     return frames
+
+def check_for_existing_file(filename, dbg=False):
+    '''Tries to determine whether a higher reduction level of the file exists. If it does, True is
+    returned otherwise False is returned'''
+
+    path = os.path.dirname(filename)
+    output_file = os.path.splitext(os.path.basename(filename))[0]
+    extension = os.path.splitext(os.path.basename(filename))[1]
+    if output_file.count('-') == 4:
+        # LCOGT format files will have 4 hyphens
+        chunks = output_file.split('-')
+        red_lvl = chunks[4][1:3]
+        if dbg: print "red_lvl=", red_lvl, red_lvl.isdigit()
+        if red_lvl.isdigit():
+            if int(red_lvl) < 90:
+                new_lvl = "%s90%s" % (chunks[4][0], chunks[4][3:])
+                new_filename = "%s-%s-%s-%s-%s%s" % (chunks[0], chunks[1], chunks[2], chunks[3], new_lvl, extension)
+                if dbg: print "new_filename=",new_filename
+                new_path = os.path.join(path, new_filename)
+                if os.path.exists(new_path):
+                    print "Higher level reduction file exists"
+                    return True
+            else:
+                if os.path.exists(filename):
+                    print "-90 level reduction file already exists."
+                    return True
+    return False
+
+def download_frames(frames, output_path, dbg=False):
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    for reduction_lvl in frames.keys():
+        if dbg: print reduction_lvl
+        frames_to_download = frames[reduction_lvl]
+        for frame in frames_to_download:
+            if dbg: print frame['filename']
+            filename = os.path.join(output_path, frame['filename'])
+            if check_for_existing_file(filename, dbg):
+                print "Skipping existing file"
+            else:
+                if dbg: print "Writing file to",filename
+                with open(filename, 'wb') as f:
+                    f.write(requests.get(frame['url']).content)
+    return
