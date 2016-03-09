@@ -1297,3 +1297,15 @@ class TestClean_crossid(TestCase):
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
+
+    def test_bad_date(self):
+        MockDateTime.change_datetime(2016, 3, 1, 0, 30, 0)
+        crossid = u'P10sKEk', u'2016 CP264', '', u'(Feb. 30.00 UT)'
+        expected_params = { 'active' : False,
+                            'name' : '2016 CP264',
+                            'source_type' : 'A'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)

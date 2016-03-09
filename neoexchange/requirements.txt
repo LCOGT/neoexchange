@@ -1,5 +1,5 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
-Django==1.8.7
+Django==1.8.10
 MySQL-python
 astropy>=1.1.1
 beautifulsoup4
@@ -18,3 +18,5 @@ reqdbclient==0.6.17
 pytest-django
 mock==1.0.1
 opbeat
+django-oauth-toolkit
+requests_oauthlib

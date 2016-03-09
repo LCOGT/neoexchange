@@ -21,7 +21,9 @@ import slalib as S
 
 def parse_neocp_date(neocp_datestr, dbg=False):
     '''Parse dates from the NEOCP (e.g. '(Nov. 16.81 UT)' ) into a datetime
-    object and return this. No sanity checking of the input is done'''
+    object and return this. Checking for the wrong number of days in the month
+    is done (in which case we set it to the first day of the next month) but 
+    otherwise, no sanity checking of the input is done'''
     month_map = { 'Jan' : 1,
                   'Feb' : 2,
                   'Mar' : 3,
@@ -41,9 +43,14 @@ def parse_neocp_date(neocp_datestr, dbg=False):
     month_str = chunks[0].replace('(', '').replace('.', '')
     day_chunks = chunks[1].split('.')
     if dbg: print day_chunks
-    neocp_datetime = datetime(year=datetime.utcnow().year, month=month_map[month_str[0:3]],
-        day=int(day_chunks[0]))
-
+    month_num = month_map[month_str[0:3]]
+    day_num = int(day_chunks[0])
+    try:
+        neocp_datetime = datetime(year = datetime.utcnow().year, month = month_num, day = day_num)
+    except ValueError:
+        month_num += 1
+        day_num = 1
+        neocp_datetime = datetime(year = datetime.utcnow().year, month = month_num, day = day_num)
     decimal_day = float('0.' + day_chunks[1].split()[0])
     neocp_datetime = neocp_datetime + timedelta(days=decimal_day)
 
