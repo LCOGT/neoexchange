@@ -46,7 +46,7 @@ def archive_login(username, password):
 
     return headers
 
-def get_proposal_data(start_date, end_date, auth_header='', proposal='LCO2015B-005', red_lvls=['90', '10']):
+def get_frame_data(start_date, end_date, auth_header='', proposal='LCO2015B-005', red_lvls=['90', '10']):
     '''Obtain the list of frames between <start_date> and <end_date>. An authorization token (from e.g.
     archive_login()) will likely be needed to get a proprietary data. By default we download data from
     [proposal]=LCO2015B-005 and for reduction levels 90 (final processed) and 10 (quicklook).
@@ -65,6 +65,28 @@ def get_proposal_data(start_date, end_date, auth_header='', proposal='LCO2015B-0
 
     return frames
 
+def get_catalog_data(frames, auth_header='', dbg=False):
+    '''Get associated catalog files for the passed <frames>'''
+
+    base_url = get_base_url()
+
+    catalogs = {}
+    for reduction_lvl in frames.keys():
+        if dbg: print reduction_lvl
+        frames_to_search = frames[reduction_lvl]
+        catalogs_for_red_lvl = []
+        for frame in frames_to_search:
+            if dbg: print frame['filename'], frame['id']
+            catquery_url = "%s/frames/%d/related/" % ( base_url, frame['id'] )
+            response = requests.get(catquery_url, headers=auth_header).json()
+            if len(response) >= 1:
+                for catalog in response:
+                    if catalog['OBSTYPE'] == 'CATALOG':
+                        catalogs_for_red_lvl.append(catalog)
+        catalogs.update({ reduction_lvl : catalogs_for_red_lvl })
+
+    return catalogs
+
 def check_for_existing_file(filename, dbg=False):
     '''Tries to determine whether a higher reduction level of the file exists. If it does, True is
     returned otherwise False is returned'''
@@ -76,7 +98,7 @@ def check_for_existing_file(filename, dbg=False):
         # LCOGT format files will have 4 hyphens
         chunks = output_file.split('-')
         red_lvl = chunks[4][1:3]
-        if dbg: print "red_lvl=", red_lvl, red_lvl.isdigit()
+        if dbg: print "red_lvl, digit?=", red_lvl, red_lvl.isdigit()
         if red_lvl.isdigit():
             if int(red_lvl) < 90:
                 new_lvl = "%s90%s" % (chunks[4][0], chunks[4][3:])
@@ -92,7 +114,15 @@ def check_for_existing_file(filename, dbg=False):
                     return True
     return False
 
-def download_frames(frames, output_path, dbg=False):
+def download_files(frames, output_path, dbg=False):
+    '''Downloads and saves to disk, the specified files from the new Science
+    Archive.
+    Takes a dictionary <frames> (keyed by reduction levels and produced by 
+    get_frame_data() or get_catalog_data()) of lists of JSON responses from the
+    archive API and downloads the files to <output_path>. Lower reduction level
+    files (e.g. -e10 quicklook files) will not be downloaded if a higher 
+    reduction level already exists and frames will not be downloaded if they
+    already exist.'''
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
