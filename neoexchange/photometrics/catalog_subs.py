@@ -94,6 +94,47 @@ def oracdr_catalog_mapping():
 
     return header_dict, table_dict
 
+def convert_to_string_value(value):
+    left_end = value.find("'")
+    right_end = value.rfind("'")
+    value = value[left_end+1:right_end]
+    string = value.strip()
+    return string
+
+def fits_ldac_to_header(header_array):
+    header = fits.Header()
+    i = 0
+    # Ignore END
+    while i < len(header_array)-1:
+        card = header_array[i]
+        keyword = card[0:7]
+        if keyword != "HISTORY" and len(card.strip()) != 0:
+            comment_loc = card.rfind('/ ')
+            value = card[10:comment_loc]
+            if '.' in value:
+                try:
+                    value = float(value)
+                except ValueError:
+                    # String with periods in it
+                    value = convert_to_string_value(value)
+            elif "'" in value:
+                value = convert_to_string_value(value)
+            else:
+                try:
+                    value = int(value)
+                except ValueError:
+                    if value.strip() == 'T':
+                        value =True
+                    elif value.strip() == 'F':
+                        value = False
+            comment = ''
+            if comment_loc > 8 and comment_loc <= len(card):
+                comment = card[comment_loc+2:]
+            header.append((keyword, value, comment))
+        i += 1
+
+    return header
+
 def open_fits_catalog(catfile):
     '''Opens a FITS source catalog specified by <catfile> and returns the header
     and table data'''
@@ -111,28 +152,10 @@ def open_fits_catalog(catfile):
         header = hdulist[0].header
         table = hdulist[1].data
     elif len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) == 'LDAC_IMHEAD':
-        
+        # This is a FITS_LDAC catalog produced by SExtractor for SCAMP
         table = hdulist[2].data
         header_array = hdulist[1].data[0][0]
-        header = fits.Header()
-        i = 0
-        # Ignore END
-        while i < len(header_array)-1:
-            card = header_array[i]
-            keyword = card[0:7]
-            comment_loc = card.rfind('/')
-            value = card[10:comment_loc]
-            try:
-                value = float(value)
-            except ValueError:
-                left_end = value.find("'")
-                right_end = value.rfind("'")
-                value = value[left_end:right_end+1]
-            comment = ''
-            if comment_loc > 8 and comment_loc <= len(card):
-                comment = card[comment_loc+2:]
-            header.append((keyword, value, comment))
-            i += 1
+        header = fits_ldac_to_header(header_array)
     else:
         logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
 
