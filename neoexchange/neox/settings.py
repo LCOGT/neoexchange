@@ -201,6 +201,10 @@ LOGGING = {
             'handlers' : ['file','console'],
             'level'    : 'ERROR',
         },
+        'photometrics' : {
+            'handlers' : ['file','console'],
+            'level'    : 'ERROR',
+        },
         'neox': {
             'handlers':['file','console'],
             'level' : 'ERROR'
