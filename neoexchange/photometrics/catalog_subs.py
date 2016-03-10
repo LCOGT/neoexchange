@@ -107,14 +107,36 @@ def open_fits_catalog(catfile):
         logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
         return header, table
 
-    if len(hdulist) != 2:
+    if len(hdulist) == 2:
+        header = hdulist[0].header
+        table = hdulist[1].data
+    elif len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) == 'LDAC_IMHEAD':
+        
+        table = hdulist[2].data
+        header_array = hdulist[1].data[0][0]
+        header = fits.Header()
+        i = 0
+        while i < len(header_array):
+            card = header_array[i]
+            keyword = card[0:7]
+            comment_loc = card.rfind('/')
+            value = card[10:comment_loc]
+            try:
+                value = float(value)
+            except ValueError:
+                left_end = value.find("'")
+                right_end = value.rfind("'")
+                value = value[left_end:right_end+1]
+            comment = ''
+            if comment_loc > 8 and comment_loc <= len(card):
+                comment = card[comment_loc+2:]
+            header.insert(keyword, (value, comment))
+            i += 1
+    else:
         logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
-        return header, table
-
-    header = hdulist[0].header
-    table = hdulist[1].data
 
     hdulist.close()
+
 
     return header, table
 

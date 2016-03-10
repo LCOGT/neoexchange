@@ -46,6 +46,8 @@ class FITSUnitTest(TestCase):
         self.table_lastitem = self.test_table[-1:]
         self.table_item_flags24 = self.test_table[2:3]
 
+        self.test_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits')
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -122,6 +124,13 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['X_IMAGE'], 4)
         self.assertAlmostEqual(expected_y, tbl[-1]['Y_IMAGE'], 4)
+
+    def test_read_ldac_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
 
 class Test_Convert_Values(FITSUnitTest):
 
