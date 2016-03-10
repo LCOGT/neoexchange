@@ -40,7 +40,12 @@ def call_cross_match_and_zeropoint(cat_name = "PPMXL", catfile = os.path.join('p
 
     cross_match_table = cross_match(table, cat_table, cat_name)
 
-    avg_zeropoint, std_zeropoint, count = get_zeropoint(cross_match_table)
+    if header['zeropoint'] < 0.0:
+        avg_zeropoint, std_zeropoint, count = get_zeropoint(cross_match_table)
+    else:
+        avg_zeropoint = header['zeropoint']
+        std_zeropoint = 0.0
+        count = 0
 
     return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count
 
