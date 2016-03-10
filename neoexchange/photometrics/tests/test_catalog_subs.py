@@ -161,6 +161,25 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
+    def test_catalog_read_tbl_column(self):
+        expected_tbl_value = 'XWIN_IMAGE'
+        expected_tbl_units = 'pixel'
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        self.assertEqual(expected_tbl_value, tbl.columns[1].name)
+        self.assertEqual(expected_tbl_units, tbl.columns[1].unit)
+
+    def test_ldac_catalog_read_xy(self):
+        # X,Y CCD Co-ordinates of the last detection
+        expected_x = 1134.2564770504712
+        expected_y = 2992.2858194541695
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        self.assertAlmostEqual(expected_x, tbl[-1]['XWIN_IMAGE'], self.precision)
+        self.assertAlmostEqual(expected_y, tbl[-1]['YWIN_IMAGE'], self.precision)
+
 class Test_Convert_Values(FITSUnitTest):
 
     def test_dateobs_conversion(self):
