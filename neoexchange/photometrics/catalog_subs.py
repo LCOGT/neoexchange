@@ -32,14 +32,14 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 logger = logging.getLogger(__name__)
 
 
-def get_catalog_table(ra, dec, cat_name = "PPMXL", set_row_limit = 10000, rmag_limit = "<=15.0", set_width = "30m"):
+def get_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL", set_row_limit = 10000, rmag_limit = "<=15.0"):
     '''Pulls a catalog from Vizier'''
 
     #query Vizier on a region of the sky with ra and dec coordinates of a specified catalog
     while set_row_limit < 100000:
 
         query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
-        result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=[cat_name])
+        result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
 
         #resulting catalog table
         cat_table = result[0]

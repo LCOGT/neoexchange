@@ -42,7 +42,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_first_source = 14.32
 
-        cat_table = get_catalog_table(299.590, 35.201, "PPMXL")
+        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -63,7 +63,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_first_source = 14.32
 
-        cat_table = get_catalog_table(299.590, 35.201)
+        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -78,7 +78,7 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_ra_dec_not_default(self):
         #test a catalog other than the default
 
-        cat_table = get_catalog_table(299.590, 35.201, "UCAC4")
+        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
 
         expected_ra_first_source = 299.29474599999998
 
@@ -99,7 +99,7 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_diff_rmag_limit(self):
         #test a catalog with an r mag limit
 
-        cat_table = get_catalog_table(299.590, 35.201, rmag_limit = "<=14.5")
+        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5")
 
         expected_ra_last_source = 299.82885099999999
 
@@ -120,7 +120,7 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_diff_row_limit(self):
         #test a catalog with a different row limit
 
-        cat_table = get_catalog_table(299.590, 35.201, set_row_limit = 40)
+        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40)
 
         expected_ra_first_source = 299.29136599999998
 
@@ -139,9 +139,9 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 2)
 
     def test_get_cat_diff_width(self):
-        #test a catalog with a different width
+        #test a catalog with a different width and height
 
-        cat_table = get_catalog_table(299.590, 35.201, set_width = "15m")
+        cat_table = get_catalog_table(299.590, 35.201, "15m", "15m")
 
         expected_ra_last_source = 299.73928699999999
 
