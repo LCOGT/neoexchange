@@ -16,6 +16,7 @@ GNU General Public License for more details.
 '''
 
 import logging
+import os
 from datetime import datetime, timedelta
 from math import sqrt, log10, log
 from collections import OrderedDict
@@ -31,6 +32,17 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
 logger = logging.getLogger(__name__)
 
+def call_cross_match():
+
+    catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
+
+    header, table = extract_catalog(catfile)
+
+    cat_table = get_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'])
+
+    cross_match_table = cross_match(table, cat_table)
+
+    return header, table, cat_table, cross_match_table
 
 def get_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL", set_row_limit = 10000, rmag_limit = "<=15.0"):
     '''Pulls a catalog from Vizier'''
@@ -57,8 +69,8 @@ def get_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL", set_ro
 
     return cat_table
 
-def cross_match(cat_table_1, cat_table_2, cross_match_diff_threshold = 0.001):
-    '''Cross matches RA and Dec for sources in two catalog tables. Every source in the shorter length catalog is cross matched with a source in the longer length catalog. Outputs a table of RA, Dec, and r-mag for each cross-matched source. NOTE: This is currently set up to cross match RAs and Decs in the UCAC4 and PPMXL catalogs, not one of these with the catalog produced by SExtractor for a FITS image.'''
+def cross_match(FITS_table, cat_table, cat_name = "PPMXL", cross_match_diff_threshold = 0.001):
+    '''Cross matches RA and Dec for sources in two catalog tables. Every source in the shorter length catalog is cross matched with a source in the longer length catalog. Cross matches with RA or Dec differences < 0.001 are not included in the final output table. Outputs a table of RA, Dec, and r-mag for each cross-matched source.'''
 
     ra_min_diff_threshold = 1.0
     dec_min_diff_threshold = 1.0
@@ -70,52 +82,66 @@ def cross_match(cat_table_1, cat_table_2, cross_match_diff_threshold = 0.001):
     rmag_cat_2 = 0.0
     cross_match_list = []
 
-    if len(cat_table_1) > len(cat_table_2):
-        cat_table_temp = cat_table_1
-        cat_table_1 = cat_table_2
-        cat_table_2 = cat_table_temp
-
-    RA_cat_table_1 = cat_table_1['_RAJ2000']
-    Dec_cat_table_1 = cat_table_1['_DEJ2000']
-    try:
-        rmag_cat_table_1 = cat_table_1['rmag']
-    except:
-        rmag_cat_table_1 = cat_table_1['r2mag']
-
-    RA_cat_table_2 = cat_table_2['_RAJ2000']
-    Dec_cat_table_2 = cat_table_2['_DEJ2000']
-    try:
-        rmag_cat_table_2 = cat_table_2['rmag']
-    except:
-        rmag_cat_table_2 = cat_table_2['r2mag']
+    if len(FITS_table) >= len(cat_table):
+        table_1 = cat_table
+        table_2 = FITS_table
+        if "PPMXL" in cat_name:
+            RA_table_1 = table_1['_RAJ2000']
+            Dec_table_1 = table_1['_DEJ2000']
+            rmag_table_1 = table_1['r2mag']
+            RA_table_2 = table_2['obs_ra']
+            Dec_table_2 = table_2['obs_dec']
+            rmag_table_2 = table_2['obs_mag']
+        else:
+            RA_table_1 = table_1['_RAJ2000']
+            Dec_table_1 = table_1['_DEJ2000']
+            rmag_table_1 = table_1['rmag']
+            RA_table_2 = table_2['obs_ra']
+            Dec_table_2 = table_2['obs_dec']
+            rmag_table_2 = table_2['obs_mag']
+    else:
+        table_1 = FITS_table
+        table_2 = cat_table
+        if "PPMXL" in cat_name:
+            RA_table_1 = table_1['obs_ra']
+            Dec_table_1 = table_1['obs_dec']
+            rmag_table_1 = table_1['obs_mag']
+            RA_table_2 = table_2['_RAJ2000']
+            Dec_table_2 = table_2['_DEJ2000']
+            rmag_table_2 = table_2['r2mag']
+        else:
+            RA_table_1 = table_1['obs_ra']
+            Dec_table_1 = table_1['obs_dec']
+            rmag_table_1 = table_1['obs_mag']
+            RA_table_2 = table_2['_RAJ2000']
+            Dec_table_2 = table_2['_DEJ2000']
+            rmag_table_2 = table_2['rmag']
 
     y = 0
-    for value in Dec_cat_table_1:
-        rmag_cat_1_test = rmag_cat_table_1[y]
-        if rmag_cat_1_test > 0.0:
-            ra_min_diff = ra_min_diff_threshold
-            dec_min_diff = dec_min_diff_threshold
-            z = 0
-            for source in Dec_cat_table_2:
-                rmag_cat_2_test = rmag_cat_table_2[z]
-                if rmag_cat_2_test > 0.0:
-                    if abs(source - value) < dec_min_diff:
-                        dec_min_diff = abs(source - value)
-                        ra_cat_1_test = RA_cat_table_1[y]
-                        ra_cat_2_test = RA_cat_table_2[z]
-                        if abs(ra_cat_1_test - ra_cat_2_test) < ra_min_diff:
-                            ra_min_diff = abs(ra_cat_1_test - ra_cat_2_test)
-                            dec_cat_1 = value
-                            dec_cat_2 = source
-                            ra_cat_1 = ra_cat_1_test
-                            ra_cat_2 = ra_cat_2_test
-                            rmag_cat_1 = rmag_cat_1_test
-                            rmag_cat_2 = rmag_cat_2_test
-                            rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
-                z += 1
-            y += 1
-            if ra_min_diff < cross_match_diff_threshold and dec_min_diff < cross_match_diff_threshold:
-                cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_diff))
+    for value in Dec_table_1:
+        rmag_table_1_temp = rmag_table_1[y]
+        ra_min_diff = ra_min_diff_threshold
+        dec_min_diff = dec_min_diff_threshold
+        z = 0
+        for source in Dec_table_2:
+            rmag_table_2_temp = rmag_table_2[z]
+            if abs(source - value) < dec_min_diff:
+                dec_min_diff = abs(source - value)
+                ra_table_1_temp = RA_table_1[y]
+                ra_table_2_temp = RA_table_2[z]
+                if abs(ra_table_1_temp - ra_table_2_temp) < ra_min_diff:
+                    ra_min_diff = abs(ra_table_1_temp - ra_table_2_temp)
+                    dec_cat_1 = value
+                    dec_cat_2 = source
+                    ra_cat_1 = ra_table_1_temp
+                    ra_cat_2 = ra_table_2_temp
+                    rmag_cat_1 = rmag_table_1_temp
+                    rmag_cat_2 = rmag_table_2_temp
+                    rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
+            z += 1
+        if ra_min_diff < cross_match_diff_threshold and dec_min_diff < cross_match_diff_threshold:
+            cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_diff))
+        y += 1
 
     cross_match_table = Table(rows=cross_match_list, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
