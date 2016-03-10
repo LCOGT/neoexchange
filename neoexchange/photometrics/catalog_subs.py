@@ -107,30 +107,35 @@ def fits_ldac_to_header(header_array):
     # Ignore END
     while i < len(header_array)-1:
         card = header_array[i]
-        keyword = card[0:7]
-        if keyword != "HISTORY" and len(card.strip()) != 0:
-            comment_loc = card.rfind('/ ')
-            value = card[10:comment_loc]
-            if '.' in value:
-                try:
-                    value = float(value)
-                except ValueError:
-                    # String with periods in it
+        keyword = card[0:8]
+        if len(card.strip()) != 0:
+            if keyword.rstrip() == "COMMENT":
+                comment_text = card[8:]
+                header.add_comment(comment_text)
+            elif keyword.rstrip() != "HISTORY":
+                comment_loc = card.rfind('/ ')
+                value = card[10:comment_loc]
+                if '.' in value:
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        # String with periods in it
+                        value = convert_to_string_value(value)
+                elif "'" in value:
                     value = convert_to_string_value(value)
-            elif "'" in value:
-                value = convert_to_string_value(value)
-            else:
-                try:
-                    value = int(value)
-                except ValueError:
-                    if value.strip() == 'T':
-                        value =True
-                    elif value.strip() == 'F':
-                        value = False
-            comment = ''
-            if comment_loc > 8 and comment_loc <= len(card):
-                comment = card[comment_loc+2:]
-            header.append((keyword, value, comment))
+                else:
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        if value.strip() == 'T':
+                            value =True
+                        elif value.strip() == 'F':
+                            value = False
+                comment = ''
+                if comment_loc > 8 and comment_loc <= len(card):
+                    comment = card[comment_loc+2:]
+                header.append((keyword, value, comment), bottom=True)
+
         i += 1
 
     return header

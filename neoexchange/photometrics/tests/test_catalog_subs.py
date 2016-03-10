@@ -47,6 +47,9 @@ class FITSUnitTest(TestCase):
         self.table_item_flags24 = self.test_table[2:3]
 
         self.test_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits')
+        hdulist = fits.open(self.test_ldacfilename)
+        self.test_ldactable = hdulist[2].data
+        hdulist.close()
 
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
@@ -125,12 +128,38 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertAlmostEqual(expected_x, tbl[-1]['X_IMAGE'], 4)
         self.assertAlmostEqual(expected_y, tbl[-1]['Y_IMAGE'], 4)
 
-    def test_read_ldac_catalog(self):
+    def test_ldac_read_catalog(self):
         unexpected_value = {}
 
         hdr, tbl = open_fits_catalog(self.test_ldacfilename)
         self.assertNotEqual(unexpected_value, hdr)
         self.assertNotEqual(unexpected_value, tbl)
+
+    def test_ldac_catalog_read_length(self):
+        expected_hdr_len = 293 + 46
+        expected_tbl_len = len(self.test_ldactable)
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+
+    def test_ldac_catalog_header(self):
+        outpath = os.path.join("photometrics", "tests")
+        expected_header = fits.Header.fromfile(os.path.join(outpath,"test_header"), sep='\n', endcard=False, padding=False)
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        for key in expected_header:
+            self.assertEqual(expected_header[key], hdr[key], \
+                msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
+
+    def test_ldac_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'fl03'
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
 class Test_Convert_Values(FITSUnitTest):
 
