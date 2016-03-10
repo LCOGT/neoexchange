@@ -318,6 +318,35 @@ class FITSReadHeader(FITSUnitTest):
 
         self.assertEqual(expected_params, frame_header)
 
+    def test_ldac_header(self):
+        obs_date = datetime.strptime('2016-03-04T05:30:56.261', '%Y-%m-%dT%H:%M:%S.%f')
+        expected_params = { 'site_code'  : 'W86',
+                            'instrument' : 'fl03',
+                            'filter'     : 'rp',
+                            'framename'  : 'lsc1m009-fl03-20160303-0170-e00.fits',
+                            'exptime'    : 120.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=120.0 / 2.0),
+                            'field_center_ra'  : Angle('11:53:17.856', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+11:41:59.53', unit=u.deg).deg,
+                            'field_width'   : '26.0969m',
+                            'field_height'  : '25.8111m',
+                            'pixel_scale'   : 0.3897,
+                            'zeropoint'     : 28.55,
+                            'zeropoint_err' : 0.0,
+                            'zeropoint_src' : 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
+                            'fwhm'          : 2.42,
+                            'astrometric_fit_rms'    : (0.21994+0.19797)/2.0,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_fit_nstars' : 64,
+                            'astrometric_catalog'    : 'UCAC4',
+                          }
+
+        header, table = open_fits_catalog(self.test_ldacfilename)
+        frame_header = get_catalog_header(header, "FITS_LDAC")
+
+        self.assertEqual(expected_params, frame_header)
+
 class FITSSubsetCatalogTable(FITSUnitTest):
 
     def test_dimensions(self):

@@ -94,6 +94,52 @@ def oracdr_catalog_mapping():
 
     return header_dict, table_dict
 
+def fitsldac_catalog_mapping():
+    '''Returns two dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for FITS_LDAC format catalog files (as used
+    by SCAMP).'''
+
+    header_dict = { 'site_id'    : 'SITEID',
+                    'enc_id'     : 'ENCID',
+                    'tel_id'     : 'TELID',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'ORIGNAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : 'SECPIX',
+                    'zeropoint'  : 'L1ZP',
+                    'zeropoint_err' : 'L1ZPERR',
+                    'zeropoint_src' : 'L1ZPSRC',
+                    'fwhm'          : 'L1FWHM',
+                    'astrometric_fit_rms'    : 'WCSRDRES',
+                    'astrometric_fit_status' : 'WCSERR',
+                    'astrometric_fit_nstars' : 'WCSMATCH',
+                    'astrometric_catalog'    : 'WCCATTYP',
+                  }
+
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'XWIN_IMAGE'),
+                    ('ccd_y'         , 'YWIN_IMAGE'),
+                    ('obs_ra'        , 'ALPHA_J2000'),
+                    ('obs_dec'       , 'DELTA_J2000'),
+                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'AWIN_IMAGE'),
+                    ('minor_axis'    , 'BWIN_IMAGE'),
+                    ('ccd_pa'        , 'THETAWIN_IMAGE'),
+                    ('obs_mag'       , 'FLUX_AUTO'),
+                    ('obs_mag_err'   , 'FLUXERR_AUTO'),
+                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAGS'),
+                 ])
+
+    return header_dict, table_dict
+
 def convert_to_string_value(value):
     left_end = value.find("'")
     right_end = value.rfind("'")
@@ -165,7 +211,6 @@ def open_fits_catalog(catfile):
         logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
 
     hdulist.close()
-
 
     return header, table
 
@@ -242,6 +287,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     header_items = {}
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
+    elif catalog_type == 'FITS_LDAC':
+        hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
