@@ -42,7 +42,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_first_source = 14.32
 
-        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
+        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -63,7 +63,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_first_source = 14.32
 
-        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m")
+        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -78,13 +78,13 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_ra_dec_not_default(self):
         #test a catalog other than the default
 
-        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
-
         expected_ra_first_source = 299.29474599999998
 
         expected_dec_first_source = 34.973799999999997
 
         expected_rmag_third_source = 12.642
+
+        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -99,13 +99,13 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_diff_rmag_limit(self):
         #test a catalog with an r mag limit
 
-        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5")
-
         expected_ra_last_source = 299.82885099999999
 
         expected_dec_last_source = 34.998407
 
         expected_rmag_last_source = 14.5
+
+        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5")
 
         ra_last_source = cat_table['_RAJ2000'][-1]
 
@@ -120,13 +120,13 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_diff_row_limit(self):
         #test a catalog with a different row limit
 
-        cat_table = get_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40)
-
         expected_ra_first_source = 299.29136599999998
 
         expected_dec_first_source = 35.242404000000001
 
         expected_rmag_first_source = 14.32
+
+        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40)
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -141,13 +141,13 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_diff_width(self):
         #test a catalog with a different width and height
 
-        cat_table = get_catalog_table(299.590, 35.201, "15m", "15m")
-
         expected_ra_last_source = 299.73928699999999
 
         expected_dec_last_source = 35.302531999999999
 
         expected_rmag_last_source = 14.61
+
+        cat_table = get_vizier_catalog_table(299.590, 35.201, "15m", "15m")
 
         ra_last_source = cat_table['_RAJ2000'][-1]
 
@@ -603,7 +603,8 @@ class ZeropointUnitTest(TestCase):
                                   (299.497849, 299.497893, 4.4000e-05, 35.414674, 35.4147, 2.6000e-05, 13.5900001526, 13.6560001373, 0.066000),
                                   (299.786581, 299.786549, 3.2000e-05, 35.349776, 35.349781, 5.0000e-06, 14.1000003815, 14.1780004501, 0.078000),
                                   (299.759237, 299.75918, 5.7000e-05, 35.256782, 35.256786, 4.0000e-06, 13.0900001526, 14.3479995728, 1.258000),
-                                  (299.789005, 299.788977, 2.8000e-05, 34.983303, 34.98333, 2.7000e-05, 14.5200004578, 13.795999527, 0.724000)]
+                                  (299.789005, 299.788977, 2.8000e-05, 34.983303, 34.98333, 2.7000e-05, 14.5200004578, 13.795999527, 0.724000),
+                                  (299.999005, 299.998977, 2.8000e-05, 34.223303, 34.22333, 2.7000e-05, 14.5200004578, 0.0, 14.5200004578)]
 
         cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
@@ -612,6 +613,40 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_avg_zeropoint, avg_zeropoint)
         self.assertEqual(expected_std_zeropoint, std_zeropoint)
         self.assertEqual(expected_count, count)
+
+    def test_call_cross_match_and_zeropoint_with_PPMXL(self):
+
+        expected_avg_zeropoint = 27.389040152231853
+
+        expected_std_zeropoint = 0.08149262068456571
+
+        expected_count = 12
+
+        expected_len_cross_match_table = 21
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint()
+
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
+        self.assertAlmostEqual(expected_count, count)
+        self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
+
+    def test_call_cross_match_and_zeropoint_with_UCAC4(self):
+
+        expected_avg_zeropoint = 27.294915305243599
+
+        expected_std_zeropoint = 0.0971156278114225
+
+        expected_count = 27
+
+        expected_len_cross_match_table = 56
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint("UCAC4")
+
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
+        self.assertAlmostEqual(expected_count, count)
+        self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_more(self):
         self.fail("write more tests")

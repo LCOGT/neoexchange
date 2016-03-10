@@ -32,19 +32,19 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
 logger = logging.getLogger(__name__)
 
-def call_cross_match():
-
-    catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
+def call_cross_match_and_zeropoint(cat_name = "PPMXL", catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')):
 
     header, table = extract_catalog(catfile)
 
-    cat_table = get_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'])
+    cat_table = get_vizier_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], cat_name)
 
-    cross_match_table = cross_match(table, cat_table)
+    cross_match_table = cross_match(table, cat_table, cat_name)
 
-    return header, table, cat_table, cross_match_table
+    avg_zeropoint, std_zeropoint, count = get_zeropoint(cross_match_table)
 
-def get_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL", set_row_limit = 10000, rmag_limit = "<=15.0"):
+    return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count
+
+def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL", set_row_limit = 10000, rmag_limit = "<=15.0"):
     '''Pulls a catalog from Vizier'''
 
     #query Vizier on a region of the sky with ra and dec coordinates of a specified catalog
@@ -150,29 +150,35 @@ def cross_match(FITS_table, cat_table, cat_name = "PPMXL", cross_match_diff_thre
 def get_zeropoint(cross_match_table):
     '''Computes a zeropoint from the two catalogues in 'cross_match_table' and iterates until all outliers are thrown out.'''
 
+    avg_zeropoint = 40.0
     std_zeropoint = 10.0
     num_iter = 0
-    r_mag_diff_threshold = 2.0
+    r_mag_diff_threshold = 40.0
 
-    while num_iter < 40:
+    while num_iter < 800:
 
         if std_zeropoint > 0.1:
             count = 0
             sum_r_mag_diff = 0.0
-            avg_zeropoint = 0.0
             sum_diff = 0.0
             diff_from_avg_sq = []
 
+            y = 0
             for value in cross_match_table['r mag diff']:
-                if value < r_mag_diff_threshold:
-                    sum_r_mag_diff += value
-                    count += 1
+                if cross_match_table['r mag Cat 1'][y] != 'nan' and cross_match_table['r mag Cat 2'][y] != 'nan':
+                    if abs(value - avg_zeropoint) < r_mag_diff_threshold:
+                        sum_r_mag_diff += value
+                        count += 1
+                y += 1
 
             avg_zeropoint = sum_r_mag_diff / count
 
+            y = 0
             for value in cross_match_table['r mag diff']:
-                if value < r_mag_diff_threshold:
-                    diff_from_avg_sq.append((value - avg_zeropoint)**2)
+                if cross_match_table['r mag Cat 1'][y] != 'nan' and cross_match_table['r mag Cat 2'][y] != 'nan':
+                    if abs(value - avg_zeropoint) < r_mag_diff_threshold:
+                        diff_from_avg_sq.append((value - avg_zeropoint)**2)
+                y += 1
 
             for value in diff_from_avg_sq:
                 sum_diff += value
