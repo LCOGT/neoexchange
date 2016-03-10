@@ -116,7 +116,8 @@ def open_fits_catalog(catfile):
         header_array = hdulist[1].data[0][0]
         header = fits.Header()
         i = 0
-        while i < len(header_array):
+        # Ignore END
+        while i < len(header_array)-1:
             card = header_array[i]
             keyword = card[0:7]
             comment_loc = card.rfind('/')
@@ -130,7 +131,7 @@ def open_fits_catalog(catfile):
             comment = ''
             if comment_loc > 8 and comment_loc <= len(card):
                 comment = card[comment_loc+2:]
-            header.insert(keyword, (value, comment))
+            header.append((keyword, value, comment))
             i += 1
     else:
         logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
