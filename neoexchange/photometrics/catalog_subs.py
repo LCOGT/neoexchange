@@ -37,7 +37,7 @@ def get_catalog_table(ra, dec, cat_name = "PPMXL", set_row_limit = 10000, rmag_l
 
     #query Vizier on a region of the sky with ra and dec coordinates of a specified catalog
     while set_row_limit < 100000:
-        
+
         query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=[cat_name])
 
@@ -161,19 +161,19 @@ def get_zeropoint(cross_match_table):
 
 class FITSHdrException(Exception):
     '''Raised when a required FITS header keyword is missing'''
-    
+
     def __init__(self, keyword):
         self.keyword = keyword
-    
+
     def __str__(self):
         return "Required keyword '" + self.keyword + "' missing"
 
 class FITSTblException(Exception):
     '''Raised when a required FITS table column is missing'''
-    
+
     def __init__(self, column):
         self.column = column
-    
+
     def __str__(self):
         return "Required column '" + self.column + "' missing"
 
@@ -309,7 +309,7 @@ def convert_value(keyword, value):
 
 def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     '''Look through the FITS catalog header for the concepts we want for which
-    the keyword is given in the mapping specified for the [catalog_type] 
+    the keyword is given in the mapping specified for the [catalog_type]
     (Currently the LCOGT ORAC-DR FITS Catalog is the only supported mapping
     type)
     The required header items are returned in a dictionary. A FITSHdrException
@@ -361,7 +361,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
 
 def subset_catalog_table(fits_table, column_mapping):
 
-    # Turn the fitrec fits_table into an Astropy Table object (Needed before 
+    # Turn the fitrec fits_table into an Astropy Table object (Needed before
     # subsetting the columns)
     table = Table(fits_table)
 
@@ -404,7 +404,7 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
     for source in new_table:
         source_items = {}
         if 'flags' in tbl_mapping and source['flags'] <= flag_filter:
-        
+
             for item in tbl_mapping.keys():
                 value = source[item]
                 # Don't convert magnitude or magnitude error yet

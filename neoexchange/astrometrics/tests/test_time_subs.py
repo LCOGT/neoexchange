@@ -148,4 +148,3 @@ class TestParseNeocpDate(TestCase):
         dt = parse_neocp_date(date_string)
 
         self.assertEqual(expected_dt, dt)
-
