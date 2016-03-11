@@ -46,6 +46,12 @@ class FITSUnitTest(TestCase):
         self.table_lastitem = self.test_table[-1:]
         self.table_item_flags24 = self.test_table[2:3]
 
+        self.test_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits')
+        hdulist = fits.open(self.test_ldacfilename)
+        self.test_ldactable = hdulist[2].data
+        hdulist.close()
+        self.ldac_table_firstitem = self.test_ldactable[0:1]
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -66,6 +72,12 @@ class FITSUnitTest(TestCase):
         self.precision = 7
 
         self.flux2mag = 2.5/log(10)
+
+    def compare_tables(self, expected_catalog, catalog, precision = 4):
+        for column in expected_catalog.colnames:
+            self.assertAlmostEqual(expected_catalog[column], catalog[column], precision, \
+                msg="Failure on %s (%.*f != %.*f)" % (column, precision, expected_catalog[column], \
+                    precision, catalog[column]))
 
 class OpenFITSCatalog(FITSUnitTest):
 
@@ -122,6 +134,58 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['X_IMAGE'], 4)
         self.assertAlmostEqual(expected_y, tbl[-1]['Y_IMAGE'], 4)
+
+    def test_ldac_read_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
+
+    def test_ldac_catalog_read_length(self):
+        expected_hdr_len = 293 + 46
+        expected_tbl_len = len(self.test_ldactable)
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+
+    def test_ldac_catalog_header(self):
+        outpath = os.path.join("photometrics", "tests")
+        expected_header = fits.Header.fromfile(os.path.join(outpath,"test_header"), sep='\n', endcard=False, padding=False)
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        for key in expected_header:
+            self.assertEqual(expected_header[key], hdr[key], \
+                msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
+
+    def test_ldac_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'fl03'
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+
+    def test_catalog_read_tbl_column(self):
+        expected_tbl_value = 'XWIN_IMAGE'
+        expected_tbl_units = 'pixel'
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        self.assertEqual(expected_tbl_value, tbl.columns[1].name)
+        self.assertEqual(expected_tbl_units, tbl.columns[1].unit)
+
+    def test_ldac_catalog_read_xy(self):
+        # X,Y CCD Co-ordinates of the last detection
+        expected_x = 1134.2564770504712
+        expected_y = 2992.2858194541695
+
+        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+
+        self.assertAlmostEqual(expected_x, tbl[-1]['XWIN_IMAGE'], self.precision)
+        self.assertAlmostEqual(expected_y, tbl[-1]['YWIN_IMAGE'], self.precision)
 
 class Test_Convert_Values(FITSUnitTest):
 
@@ -261,6 +325,35 @@ class FITSReadHeader(FITSUnitTest):
 
         self.assertEqual(expected_params, frame_header)
 
+    def test_ldac_header(self):
+        obs_date = datetime.strptime('2016-03-04T05:30:56.261', '%Y-%m-%dT%H:%M:%S.%f')
+        expected_params = { 'site_code'  : 'W86',
+                            'instrument' : 'fl03',
+                            'filter'     : 'rp',
+                            'framename'  : 'lsc1m009-fl03-20160303-0170-e00.fits',
+                            'exptime'    : 120.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=120.0 / 2.0),
+                            'field_center_ra'  : Angle('11:53:17.856', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+11:41:59.53', unit=u.deg).deg,
+                            'field_width'   : '26.0969m',
+                            'field_height'  : '25.8111m',
+                            'pixel_scale'   : 0.3897,
+                            'zeropoint'     : 28.55,
+                            'zeropoint_err' : 0.0,
+                            'zeropoint_src' : 'NOT_FIT(LCOGTCAL-V0.0.2-r8174)',
+                            'fwhm'          : 2.42,
+                            'astrometric_fit_rms'    : (0.21994+0.19797)/2.0,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_fit_nstars' : 64,
+                            'astrometric_catalog'    : 'UCAC4',
+                          }
+
+        header, table = open_fits_catalog(self.test_ldacfilename)
+        frame_header = get_catalog_header(header, "FITS_LDAC")
+
+        self.assertEqual(expected_params, frame_header)
+
 class FITSSubsetCatalogTable(FITSUnitTest):
 
     def test_dimensions(self):
@@ -269,6 +362,16 @@ class FITSSubsetCatalogTable(FITSUnitTest):
 
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
         new_table = subset_catalog_table(self.test_table, tbl_mapping)
+
+        self.assertEqual(expected_rows, len(new_table))
+        self.assertEqual(expected_columns, len(new_table.colnames))
+
+    def test_ldac_dimensions(self):
+        expected_rows = 860
+        expected_columns = 13
+
+        hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+        new_table = subset_catalog_table(self.test_ldactable, tbl_mapping)
 
         self.assertEqual(expected_rows, len(new_table))
         self.assertEqual(expected_columns, len(new_table.colnames))
@@ -421,3 +524,29 @@ class FITSReadCatalog(FITSUnitTest):
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
+
+    def test_ldac_first_item(self):
+
+        expected_catalog = self.basic_table
+        expected_catalog.add_row({ 'ccd_x' : 2189.4019002323894,
+                                   'ccd_y' :  35.979511838066465,
+                                   'major_axis'  : 2.806724,
+                                   'minor_axis'  : 2.686966,
+                                   'ccd_pa'      : 33.54286,
+                                   'obs_ra'  :  178.3429720052357,
+                                   'obs_dec' :  11.91179225051301,
+                                   'obs_ra_err'  : 8.92232262319e-06,
+                                   'obs_dec_err' : 8.12455029148e-06,
+                                   'obs_mag'      : -2.5*log10(15599.6777344) +28.55,
+                                   'obs_mag_err'  : 0.037677686175571018,
+                                   'obs_sky_bkgd' : 175.43216,
+                                   'flags' : 0,
+                                 })
+
+
+        header, table = open_fits_catalog(self.test_ldacfilename)
+        header_items = get_catalog_header(header, "FITS_LDAC")
+        catalog_items = get_catalog_items(header_items, self.ldac_table_firstitem, "FITS_LDAC")
+
+
+        self.compare_tables(expected_catalog, catalog_items, 4)
