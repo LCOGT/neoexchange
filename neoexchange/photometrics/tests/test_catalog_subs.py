@@ -50,6 +50,7 @@ class FITSUnitTest(TestCase):
         hdulist = fits.open(self.test_ldacfilename)
         self.test_ldactable = hdulist[2].data
         hdulist.close()
+        self.ldac_table_firstitem = self.test_ldactable[0:1]
 
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
@@ -71,6 +72,12 @@ class FITSUnitTest(TestCase):
         self.precision = 7
 
         self.flux2mag = 2.5/log(10)
+
+    def compare_tables(self, expected_catalog, catalog, precision = 4):
+        for column in expected_catalog.colnames:
+            self.assertAlmostEqual(expected_catalog[column], catalog[column], precision, \
+                msg="Failure on %s (%.*f != %.*f)" % (column, precision, expected_catalog[column], \
+                    precision, catalog[column]))
 
 class OpenFITSCatalog(FITSUnitTest):
 
@@ -359,6 +366,16 @@ class FITSSubsetCatalogTable(FITSUnitTest):
         self.assertEqual(expected_rows, len(new_table))
         self.assertEqual(expected_columns, len(new_table.colnames))
 
+    def test_ldac_dimensions(self):
+        expected_rows = 860
+        expected_columns = 13
+
+        hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+        new_table = subset_catalog_table(self.test_ldactable, tbl_mapping)
+
+        self.assertEqual(expected_rows, len(new_table))
+        self.assertEqual(expected_columns, len(new_table.colnames))
+
 class FITSReadCatalog(FITSUnitTest):
 
 
@@ -507,3 +524,29 @@ class FITSReadCatalog(FITSUnitTest):
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
+
+    def test_ldac_first_item(self):
+
+        expected_catalog = self.basic_table
+        expected_catalog.add_row({ 'ccd_x' : 2189.4019002323894,
+                                   'ccd_y' :  35.979511838066465,
+                                   'major_axis'  : 2.806724,
+                                   'minor_axis'  : 2.686966,
+                                   'ccd_pa'      : 33.54286,
+                                   'obs_ra'  :  178.3429720052357,
+                                   'obs_dec' :  11.91179225051301,
+                                   'obs_ra_err'  : 8.92232262319e-06,
+                                   'obs_dec_err' : 8.12455029148e-06,
+                                   'obs_mag'      : -2.5*log10(15599.6777344) +28.55,
+                                   'obs_mag_err'  : 0.037677686175571018,
+                                   'obs_sky_bkgd' : 175.43216,
+                                   'flags' : 0,
+                                 })
+
+
+        header, table = open_fits_catalog(self.test_ldacfilename)
+        header_items = get_catalog_header(header, "FITS_LDAC")
+        catalog_items = get_catalog_items(header_items, self.ldac_table_firstitem, "FITS_LDAC")
+
+
+        self.compare_tables(expected_catalog, catalog_items, 4)

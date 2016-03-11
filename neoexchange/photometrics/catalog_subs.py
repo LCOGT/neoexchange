@@ -351,6 +351,8 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
 
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
+    elif catalog_type == 'FITS_LDAC':
+        hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None
