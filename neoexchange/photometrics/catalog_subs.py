@@ -32,20 +32,20 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
 logger = logging.getLogger(__name__)
 
-def call_cross_match_and_zeropoint(cat_name = "PPMXL", catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')):
+def call_cross_match_and_zeropoint(catfile, cat_name = "PPMXL"):
 
     header, table = extract_catalog(catfile)
 
-    cat_table = get_vizier_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], cat_name)
+    cat_table, cat_name = get_vizier_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], cat_name)
 
     cross_match_table = cross_match(table, cat_table, cat_name)
 
-    if header['zeropoint'] < 0.0:
-        avg_zeropoint, std_zeropoint, count = get_zeropoint(cross_match_table)
-    else:
-        avg_zeropoint = header['zeropoint']
-        std_zeropoint = 0.0
-        count = 0
+#    if header['zeropoint'] < 0.0:
+    avg_zeropoint, std_zeropoint, count = get_zeropoint(cross_match_table)
+#    else:
+#        avg_zeropoint = header['zeropoint']
+#        std_zeropoint = 0.0
+#        count = 0
 
     return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count
 
@@ -59,7 +59,17 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL",
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
 
         #resulting catalog table
-        cat_table = result[0]
+        if len(result) < 1:
+            if "PPMXL" in cat_name:
+                cat_name = "UCAC4"
+                result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
+                cat_table = result[0]
+            else:
+                cat_name = "PPMXL"
+                result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
+                cat_table = result[0]
+        else:
+            cat_table = result[0]
 
         #if didn't get all of the table, try again with a larger row limit
         if len(cat_table) == set_row_limit:
@@ -72,7 +82,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL",
         else:
             break
 
-    return cat_table
+    return cat_table, cat_name
 
 def cross_match(FITS_table, cat_table, cat_name = "PPMXL", cross_match_diff_threshold = 0.001):
     '''Cross matches RA and Dec for sources in two catalog tables. Every source in the shorter length catalog is cross matched with a source in the longer length catalog. Cross matches with RA or Dec differences < 0.001 are not included in the final output table. Outputs a table of RA, Dec, and r-mag for each cross-matched source.'''
@@ -176,7 +186,8 @@ def get_zeropoint(cross_match_table):
                         count += 1
                 y += 1
 
-            avg_zeropoint = sum_r_mag_diff / count
+            if count > 0:
+                avg_zeropoint = sum_r_mag_diff / count
 
             y = 0
             for value in cross_match_table['r mag diff']:
@@ -188,7 +199,8 @@ def get_zeropoint(cross_match_table):
             for value in diff_from_avg_sq:
                 sum_diff += value
 
-            std_zeropoint = sqrt(sum_diff / len(diff_from_avg_sq))
+            if len(diff_from_avg_sq) > 0:
+                std_zeropoint = sqrt(sum_diff / len(diff_from_avg_sq))
 
         r_mag_diff_threshold -= 0.05
         num_iter += 1

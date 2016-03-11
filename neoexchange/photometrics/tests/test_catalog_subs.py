@@ -42,7 +42,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_first_source = 14.32
 
-        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -63,7 +63,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_first_source = 14.32
 
-        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m")
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -84,7 +84,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_third_source = 12.642
 
-        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -105,7 +105,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_last_source = 14.5
 
-        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5")
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5")
 
         ra_last_source = cat_table['_RAJ2000'][-1]
 
@@ -126,7 +126,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_first_source = 14.32
 
-        cat_table = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40)
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40)
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -147,7 +147,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_last_source = 14.61
 
-        cat_table = get_vizier_catalog_table(299.590, 35.201, "15m", "15m")
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "15m", "15m")
 
         ra_last_source = cat_table['_RAJ2000'][-1]
 
@@ -610,9 +610,30 @@ class ZeropointUnitTest(TestCase):
 
         avg_zeropoint, std_zeropoint, count = get_zeropoint(cross_match_table)
 
-        self.assertEqual(expected_avg_zeropoint, avg_zeropoint)
-        self.assertEqual(expected_std_zeropoint, std_zeropoint)
-        self.assertEqual(expected_count, count)
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
+        self.assertAlmostEqual(expected_count, count, 1)
+
+    def test_get_zeropoint_inconclusive_value(self):
+        #test zeropoint calculation
+
+        expected_avg_zeropoint = 4.4795536994934082
+
+        expected_std_zeropoint = 0.5068650245666504
+
+        expected_count = 0
+
+        cross_match_table_data = [(209.146558, 209.146514825, 4.3175e-05, -17.450514, -17.4505721629, 5.8163e-05, 13.9300003052, 12.8761520386, 1.0538),
+                                  (209.107363, 209.107484127, 0.0001, -17.524826, -17.5249530573, 0.0001, 12.8000001907, 17.7864189148, 4.9864),
+                                  (209.319028, 209.319387053, 0.0004, -17.577961, -17.5778475751, 0.0001, 13.4300003052, 17.4026889801, 3.9727)]
+
+        cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+
+        avg_zeropoint, std_zeropoint, count = get_zeropoint(cross_match_table)
+
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
+        self.assertAlmostEqual(expected_count, count, 1)
 
     def test_call_cross_match_and_zeropoint_with_PPMXL(self):
 
@@ -624,7 +645,9 @@ class ZeropointUnitTest(TestCase):
 
         expected_len_cross_match_table = 21
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint()
+        catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
@@ -641,7 +664,29 @@ class ZeropointUnitTest(TestCase):
 
         expected_len_cross_match_table = 56
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint("UCAC4")
+        catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile, "UCAC4")
+
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
+        self.assertAlmostEqual(expected_count, count)
+        self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
+
+    def test_call_with_diff_test_catalog(self):
+        #test the call with a different FITS catalog file that will return an empty vizier query table for the default PPMXL catalog
+
+        expected_avg_zeropoint = 0.35394573211669922
+
+        expected_std_zeropoint = 0.09837959234543915
+
+        expected_count = 9
+
+        expected_len_cross_match_table = 19
+
+        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
