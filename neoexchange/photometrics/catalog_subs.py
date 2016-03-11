@@ -32,11 +32,11 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
 logger = logging.getLogger(__name__)
 
-def call_cross_match_and_zeropoint(catfile, cat_name = "PPMXL"):
+def call_cross_match_and_zeropoint(catfile, cat_name = "PPMXL",  set_row_limit = 10000, rmag_limit = "<=15.0"):
 
     header, table = extract_catalog(catfile)
 
-    cat_table, cat_name = get_vizier_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], cat_name)
+    cat_table, cat_name = get_vizier_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], cat_name, set_row_limit, rmag_limit)
 
     cross_match_table = cross_match(table, cat_table, cat_name)
 
