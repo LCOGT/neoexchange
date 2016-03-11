@@ -128,3 +128,33 @@ def mock_check_for_images_bad_date(eventid):
 
 def mock_ingest_frames(images, block):
     return None
+
+def mock_rbauth_login(email, password, request=None):
+    profile = {'username': 'bsimpson',
+    'first_name': 'Bart',
+    'last_name': 'Simpson',
+    'email': 'bsimpson@lcogt.net',
+    'id': 24,
+    'userprofile': {'user_title': 'Mx',
+        'onsky': False,
+        'institution_name': 'LCOGT',
+        'timezone': 'UTC'}
+    }
+    proposals = [{'allocation': [
+            {'semester_code': '2015B',
+            'std_allocation': 100.0,
+            'telescope_class': '1m0',
+            'too_allocation': 0.0,
+            'too_time_used': 0.0,
+            'std_time_used': 0.02},
+            {'semester_code': '2015B',
+            'std_allocation': 100.0,
+            'telescope_class': '2m0',
+            'too_allocation': 0.0,
+            'too_time_used': 0.0,
+            'std_time_used': 1.57055555555556}],
+        'code': 'LCO2015A-009',
+        'id': 4,
+        'name': 'LCOGT NEO Follow-up Network'}
+        ]
+    return profile, proposals

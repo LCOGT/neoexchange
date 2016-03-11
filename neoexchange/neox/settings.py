@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.1.4'
+VERSION = '1.2.0'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -91,6 +91,11 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
+AUTHENTICATION_BACKENDS = (
+    'neox.auth_backend.LCOAuthBackend',
+    'django.contrib.auth.backends.ModelBackend',
+    )
+
 ROOT_URLCONF = 'neox.urls'
 
 # Python dotted path to the WSGI application used by Django's runserver.
@@ -174,6 +179,7 @@ LOGGING = {
         'console': {
             'level': 'ERROR',
             'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
         }
     },
     'loggers': {
@@ -194,6 +200,14 @@ LOGGING = {
         'astrometrics' : {
             'handlers' : ['file','console'],
             'level'    : 'ERROR',
+        },
+        'photometrics' : {
+            'handlers' : ['file','console'],
+            'level'    : 'ERROR',
+        },
+        'neox': {
+            'handlers':['file','console'],
+            'level' : 'ERROR'
         }
     }
 }
@@ -241,6 +255,17 @@ if 'test' in sys.argv:
         }
     }
     OPBEAT['APP_ID'] = None
+
+
+###################
+# OAuth provider  #
+###################
+
+CLIENT_ID = os.environ.get('NEOX_RBAUTH_ID','')
+CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
+RBAUTH_TOKEN_URL = 'https://lcogt.net/observe/o/token/'
+RBAUTH_PROFILE_API = 'https://lcogt.net/observe/api/profile/'
+RBAUTH_PROPOSAL_API = 'https://lcogt.net/observe/api/proposals/'
 
 ##################
 # LOCAL SETTINGS #

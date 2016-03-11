@@ -103,7 +103,7 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="E10"', form.as_p())
         self.assertIn('CTIO, Chile (LSC - W85; SBIG)', form.as_p())
         self.assertIn('value="W85"', form.as_p())
-        self.assertIn('CTIO, Chile (LSC - W86; Sinsitro)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
         self.assertIn('Sutherland, S. Africa (CPT - K91-93)', form.as_p())
         self.assertIn('value="K92"', form.as_p())
@@ -165,7 +165,7 @@ class TestScheduleForm(TestCase):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
         self.assertIn('CTIO, Chile (LSC - W85; SBIG)', form.as_p())
-        self.assertIn('CTIO, Chile (LSC - W86; Sinsitro)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
 
     def test_sched_form_has_all_sites(self):
         form = ScheduleForm()
@@ -178,7 +178,7 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="E10"', form.as_p())
         self.assertIn('CTIO, Chile (LSC - W85; SBIG)', form.as_p())
         self.assertIn('value="W85"', form.as_p())
-        self.assertIn('CTIO, Chile (LSC - W86; Sinsitro)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
         self.assertIn('Sutherland, S. Africa (CPT - K91-93)', form.as_p())
         self.assertIn('value="K92"', form.as_p())
