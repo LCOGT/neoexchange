@@ -84,6 +84,8 @@ def cross_match(FITS_table, cat_table, cat_name = "PPMXL", cross_match_diff_thre
 
     ra_min_diff_threshold = 1.0
     dec_min_diff_threshold = 1.0
+    ra_min_diff = ra_min_diff_threshold
+    dec_min_diff = dec_min_diff_threshold
     dec_cat_1 = 0.0
     dec_cat_2 = 0.0
     ra_cat_1 = 0.0
@@ -99,16 +101,20 @@ def cross_match(FITS_table, cat_table, cat_name = "PPMXL", cross_match_diff_thre
             RA_table_1 = table_1['_RAJ2000']
             Dec_table_1 = table_1['_DEJ2000']
             rmag_table_1 = table_1['r2mag']
+            flags_table_1 = table_1['fl']
             RA_table_2 = table_2['obs_ra']
             Dec_table_2 = table_2['obs_dec']
             rmag_table_2 = table_2['obs_mag']
+            flags_table_2 = table_2['flags']
         else:
             RA_table_1 = table_1['_RAJ2000']
             Dec_table_1 = table_1['_DEJ2000']
             rmag_table_1 = table_1['rmag']
+            flags_table_1 = table_1['_RAJ2000'] * 0 #UCAC4 does not have flags, so get copy RA table column and turn values all to zeros
             RA_table_2 = table_2['obs_ra']
             Dec_table_2 = table_2['obs_dec']
             rmag_table_2 = table_2['obs_mag']
+            flags_table_2 = table_2['flags']
     else:
         table_1 = FITS_table
         table_2 = cat_table
@@ -116,42 +122,48 @@ def cross_match(FITS_table, cat_table, cat_name = "PPMXL", cross_match_diff_thre
             RA_table_1 = table_1['obs_ra']
             Dec_table_1 = table_1['obs_dec']
             rmag_table_1 = table_1['obs_mag']
+            flags_table_1 = table_1['flags']
             RA_table_2 = table_2['_RAJ2000']
             Dec_table_2 = table_2['_DEJ2000']
             rmag_table_2 = table_2['r2mag']
+            flags_table_2 = table_2['fl']
         else:
             RA_table_1 = table_1['obs_ra']
             Dec_table_1 = table_1['obs_dec']
             rmag_table_1 = table_1['obs_mag']
+            flags_table_1 = table_1['flags']
             RA_table_2 = table_2['_RAJ2000']
             Dec_table_2 = table_2['_DEJ2000']
             rmag_table_2 = table_2['rmag']
+            flags_table_2 = table_2['_RAJ2000'] * 0 #UCAC4 does not have flags, so get copy RA table column and turn values all to zeros
 
     y = 0
     for value in Dec_table_1:
-        rmag_table_1_temp = rmag_table_1[y]
-        ra_min_diff = ra_min_diff_threshold
-        dec_min_diff = dec_min_diff_threshold
-        z = 0
-        for source in Dec_table_2:
-            rmag_table_2_temp = rmag_table_2[z]
-            if abs(source - value) < dec_min_diff:
-                dec_min_diff = abs(source - value)
-                ra_table_1_temp = RA_table_1[y]
-                ra_table_2_temp = RA_table_2[z]
-                if abs(ra_table_1_temp - ra_table_2_temp) < ra_min_diff:
-                    ra_min_diff = abs(ra_table_1_temp - ra_table_2_temp)
-                    dec_cat_1 = value
-                    dec_cat_2 = source
-                    ra_cat_1 = ra_table_1_temp
-                    ra_cat_2 = ra_table_2_temp
-                    rmag_cat_1 = rmag_table_1_temp
-                    rmag_cat_2 = rmag_table_2_temp
-                    rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
-            z += 1
+        if flags_table_1[y] < 1:
+            rmag_table_1_temp = rmag_table_1[y]
+            z = 0
+            for source in Dec_table_2:
+                if flags_table_2[z] < 1:
+                    rmag_table_2_temp = rmag_table_2[z]
+                    if abs(source - value) < dec_min_diff:
+                        dec_min_diff = abs(source - value)
+                        ra_table_1_temp = RA_table_1[y]
+                        ra_table_2_temp = RA_table_2[z]
+                        if abs(ra_table_1_temp - ra_table_2_temp) < ra_min_diff:
+                            ra_min_diff = abs(ra_table_1_temp - ra_table_2_temp)
+                            dec_cat_1 = value
+                            dec_cat_2 = source
+                            ra_cat_1 = ra_table_1_temp
+                            ra_cat_2 = ra_table_2_temp
+                            rmag_cat_1 = rmag_table_1_temp
+                            rmag_cat_2 = rmag_table_2_temp
+                            rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
+                z += 1
         if ra_min_diff < cross_match_diff_threshold and dec_min_diff < cross_match_diff_threshold:
             cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_diff))
         y += 1
+        ra_min_diff = ra_min_diff_threshold
+        dec_min_diff = dec_min_diff_threshold
 
     cross_match_table = Table(rows=cross_match_list, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
