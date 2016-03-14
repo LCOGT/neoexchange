@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -356,9 +356,9 @@ class SourceMeasurement(models.Model):
         db_table = 'source_measurement'
 
 class CatalogSources(models.Model):
-    '''Class to represent the measurements (X, Y, RA, Dec, Magnitude, shape and 
-    errors) extracted from a catalog extraction performed on a Frame (having 
-    site code, date/time etc.). These will allow the storage of information for 
+    '''Class to represent the measurements (X, Y, RA, Dec, Magnitude, shape and
+    errors) extracted from a catalog extraction performed on a Frame (having
+    site code, date/time etc.). These will allow the storage of information for
     reference stars and candidate objects, allowing the display and measurement
     of objects.
     '''
