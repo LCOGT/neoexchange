@@ -32,7 +32,7 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
 logger = logging.getLogger(__name__)
 
-def call_cross_match_and_zeropoint(catfile, cat_name = "PPMXL",  set_row_limit = 10000, rmag_limit = "<=15.0"):
+def call_cross_match_and_zeropoint(catfile, cat_name = "UCAC4",  set_row_limit = 10000, rmag_limit = "<=15.0"):
 
     header, table = extract_catalog(catfile)
 
@@ -44,7 +44,7 @@ def call_cross_match_and_zeropoint(catfile, cat_name = "PPMXL",  set_row_limit =
 
     return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count
 
-def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL", set_row_limit = 10000, rmag_limit = "<=15.0"):
+def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4", set_row_limit = 10000, rmag_limit = "<=15.0"):
     '''Pulls a catalog from Vizier'''
 
     #query Vizier on a region of the sky with ra and dec coordinates of a specified catalog
@@ -79,7 +79,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "PPMXL",
 
     return cat_table, cat_name
 
-def cross_match(FITS_table, cat_table, cat_name = "PPMXL", cross_match_diff_threshold = 0.001):
+def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_threshold = 0.001):
     '''Cross matches RA and Dec for sources in two catalog tables. Every source in the shorter length catalog is cross matched with a source in the longer length catalog. Cross matches with RA or Dec differences < 0.001 are not included in the final output table. Outputs a table of RA, Dec, and r-mag for each cross-matched source.'''
 
     ra_min_diff_threshold = 1.0

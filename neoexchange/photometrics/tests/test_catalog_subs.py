@@ -34,49 +34,7 @@ from photometrics.catalog_subs import *
 class ZeropointUnitTest(TestCase):
 
     def test_get_cat_ra_dec(self):
-        #test getting a single ra, dec, and rmag out of the default PPMXL catalog
-
-        expected_ra_first_source = 299.29136599999998
-
-        expected_dec_first_source = 35.242404000000001
-
-        expected_rmag_first_source = 14.32
-
-        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
-
-        ra_first_source = cat_table['_RAJ2000'][0]
-
-        dec_first_source = cat_table['_DEJ2000'][0]
-
-        rmag_first_source = cat_table['r2mag'][0]
-
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
-        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 2)
-
-    def test_no_cat(self):
-        #test if no catalog input, use default catalog
-
-        expected_ra_first_source = 299.29136599999998
-
-        expected_dec_first_source = 35.242404000000001
-
-        expected_rmag_first_source = 14.32
-
-        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m")
-
-        ra_first_source = cat_table['_RAJ2000'][0]
-
-        dec_first_source = cat_table['_DEJ2000'][0]
-
-        rmag_first_source = cat_table['r2mag'][0]
-
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
-        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 2)
-
-    def test_get_cat_ra_dec_not_default(self):
-        #test a catalog other than the default
+        #test getting a single ra, dec, and rmag out of the default UCAC4 catalog
 
         expected_ra_first_source = 299.29474599999998
 
@@ -94,7 +52,49 @@ class ZeropointUnitTest(TestCase):
 
         self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
         self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
-        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 3)
+        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
+
+    def test_no_cat(self):
+        #test if no catalog input, use default catalog
+
+        expected_ra_first_source = 299.29474599999998
+
+        expected_dec_first_source = 34.973799999999997
+
+        expected_rmag_third_source = 12.642
+
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
+
+        ra_first_source = cat_table['_RAJ2000'][0]
+
+        dec_first_source = cat_table['_DEJ2000'][0]
+
+        rmag_third_source = cat_table['rmag'][2]
+
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
+
+    def test_get_cat_ra_dec_not_default(self):
+        #test a catalog other than the default
+
+        expected_ra_first_source = 299.29136599999998
+
+        expected_dec_first_source = 35.242404000000001
+
+        expected_rmag_first_source = 14.32
+
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
+
+        ra_first_source = cat_table['_RAJ2000'][0]
+
+        dec_first_source = cat_table['_DEJ2000'][0]
+
+        rmag_first_source = cat_table['r2mag'][0]
+
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 3)
 
     def test_get_cat_diff_rmag_limit(self):
         #test a catalog with an r mag limit
@@ -105,7 +105,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_last_source = 14.5
 
-        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5")
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5", cat_name = "PPMXL")
 
         ra_last_source = cat_table['_RAJ2000'][-1]
 
@@ -126,7 +126,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_first_source = 14.32
 
-        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40)
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40, cat_name = "PPMXL")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -141,11 +141,11 @@ class ZeropointUnitTest(TestCase):
     def test_get_cat_diff_width(self):
         #test a catalog with a different width and height
 
-        expected_ra_last_source = 299.73928699999999
+        expected_ra_last_source = 299.74110200000001
 
-        expected_dec_last_source = 35.302531999999999
+        expected_dec_last_source = 35.313324999999999
 
-        expected_rmag_last_source = 14.61
+        expected_rmag_3rdlast_source = 14.81
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "15m", "15m")
 
@@ -153,11 +153,11 @@ class ZeropointUnitTest(TestCase):
 
         dec_last_source = cat_table['_DEJ2000'][-1]
 
-        rmag_last_source = cat_table['r2mag'][-1]
+        rmag_3rdlast_source = cat_table['rmag'][-3]
 
         self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
         self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
-        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertAlmostEqual(expected_rmag_3rdlast_source, rmag_3rdlast_source, 2)
 
     def test_cross_match_PPMXL_longerThan_testFITS(self):
         #test with cat 1 as longer PPMXL table values and cat 2 as shorter test FITS table values
@@ -191,7 +191,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0),
                             (299.860871, 35.381474, 14.0799999237, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
@@ -276,7 +276,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0),
                             (299.860871, 35.381474, 14.0799999237, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
@@ -361,9 +361,9 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0),
                             (299.860871, 35.381474, 14.0799999237, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
 
-        cross_match_table = cross_match(table_cat_1, table_cat_2, "UCAC4")
+        cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
         self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
         self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
@@ -534,7 +534,7 @@ class ZeropointUnitTest(TestCase):
 
         table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
 
-        cross_match_table = cross_match(table_cat_1, table_cat_2)
+        cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
         self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
         self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
@@ -642,7 +642,7 @@ class ZeropointUnitTest(TestCase):
 
         catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile)
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
@@ -661,15 +661,15 @@ class ZeropointUnitTest(TestCase):
 
         catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile, "UCAC4")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
         self.assertAlmostEqual(expected_count, count)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
-    def test_call_with_diff_test_catalog(self):
-        #test the call with a different FITS catalog file that will return an empty vizier query table for the default PPMXL catalog
+    def test_call_with_diff_test_cat_force_to_UCAC4(self):
+        #test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL catalog
 
         expected_avg_zeropoint = 0.35394573211669922
 
@@ -681,7 +681,47 @@ class ZeropointUnitTest(TestCase):
 
         catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
 
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile, "PPMXL")
+
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
+        self.assertAlmostEqual(expected_count, count)
+        self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
+
+    def test_call_with_diff_test_cat_UCAC4(self):
+        #test the call with a different FITS catalog file and the default UCAC4 catalog
+
+        expected_avg_zeropoint = 0.095744942719081669
+
+        expected_std_zeropoint = 0.04350756275118769
+
+        expected_count = 53
+
+        expected_len_cross_match_table = 78
+
+        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0248-e90_cat.fits')
+
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile)
+
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
+        self.assertAlmostEqual(expected_count, count)
+        self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
+
+    def test_call_with_diff_test_cat_PPMXL(self):
+        #test the call with a different FITS catalog file and the default UCAC4 catalog
+
+        expected_avg_zeropoint = 0.1376490099676724
+
+        expected_std_zeropoint = 0.06719921674190917
+
+        expected_count = 29
+
+        expected_len_cross_match_table = 32
+
+        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0248-e90_cat.fits')
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile, "PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint)
