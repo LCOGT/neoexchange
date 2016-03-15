@@ -669,7 +669,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_force_to_UCAC4(self):
-        #test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL catalog
+        #test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL catalog and a zeropoint already in the header, so that the computed avg_zeropoint is the difference between the FITS catalog ZP (in the header) and the Vizier catalog computed ZP
 
         expected_avg_zeropoint = 0.35394573211669922
 
@@ -691,15 +691,15 @@ class ZeropointUnitTest(TestCase):
     def test_call_with_diff_test_cat_UCAC4(self):
         #test the call with a different FITS catalog file and the default UCAC4 catalog
 
-        expected_avg_zeropoint = 0.095744942719081669
+        expected_avg_zeropoint = 27.313087224960327
 
-        expected_std_zeropoint = 0.04350756275118769
+        expected_std_zeropoint = 0.04412677904180432
 
-        expected_count = 53
+        expected_count = 8
 
-        expected_len_cross_match_table = 78
+        expected_len_cross_match_table = 16
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0248-e90_cat.fits')
+        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile)
 
@@ -711,15 +711,15 @@ class ZeropointUnitTest(TestCase):
     def test_call_with_diff_test_cat_PPMXL(self):
         #test the call with a different FITS catalog file and the default UCAC4 catalog
 
-        expected_avg_zeropoint = 0.1376490099676724
+        expected_avg_zeropoint = 27.094660949707031
 
-        expected_std_zeropoint = 0.06719921674190917
+        expected_std_zeropoint = 0.0575666178996215
 
-        expected_count = 29
+        expected_count = 5
 
-        expected_len_cross_match_table = 32
+        expected_len_cross_match_table = 8
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0248-e90_cat.fits')
+        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count = call_cross_match_and_zeropoint(catfile, "PPMXL")
 
