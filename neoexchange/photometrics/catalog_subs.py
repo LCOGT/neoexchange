@@ -102,19 +102,23 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
             Dec_table_1 = table_1['_DEJ2000']
             rmag_table_1 = table_1['r2mag']
             flags_table_1 = table_1['fl']
+            rmag_err_table_1 = table_1['_RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
             RA_table_2 = table_2['obs_ra']
             Dec_table_2 = table_2['obs_dec']
             rmag_table_2 = table_2['obs_mag']
             flags_table_2 = table_2['flags']
+            rmag_err_table_2 = 'nan'
         else:
             RA_table_1 = table_1['_RAJ2000']
             Dec_table_1 = table_1['_DEJ2000']
             rmag_table_1 = table_1['rmag']
-            flags_table_1 = table_1['_RAJ2000'] * 0 #UCAC4 does not have flags, so get copy RA table column and turn values all to zeros
+            flags_table_1 = table_1['_RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
+            rmag_err_table_1 = table_1['e_rmag']
             RA_table_2 = table_2['obs_ra']
             Dec_table_2 = table_2['obs_dec']
             rmag_table_2 = table_2['obs_mag']
             flags_table_2 = table_2['flags']
+            rmag_err_table_2 = 'nan'
     else:
         table_1 = FITS_table
         table_2 = cat_table
@@ -123,19 +127,23 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
             Dec_table_1 = table_1['obs_dec']
             rmag_table_1 = table_1['obs_mag']
             flags_table_1 = table_1['flags']
+            rmag_err_table_1 = 'nan'
             RA_table_2 = table_2['_RAJ2000']
             Dec_table_2 = table_2['_DEJ2000']
             rmag_table_2 = table_2['r2mag']
             flags_table_2 = table_2['fl']
+            rmag_err_table_2 = table_2['_RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
         else:
             RA_table_1 = table_1['obs_ra']
             Dec_table_1 = table_1['obs_dec']
             rmag_table_1 = table_1['obs_mag']
             flags_table_1 = table_1['flags']
+            rmag_err_table_1 = 'nan'
             RA_table_2 = table_2['_RAJ2000']
             Dec_table_2 = table_2['_DEJ2000']
             rmag_table_2 = table_2['rmag']
-            flags_table_2 = table_2['_RAJ2000'] * 0 #UCAC4 does not have flags, so get copy RA table column and turn values all to zeros
+            flags_table_2 = table_2['_RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
+            rmag_err_table_2 = table_2['e_rmag']
 
     y = 0
     for value in Dec_table_1:
@@ -158,14 +166,18 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
                             rmag_cat_1 = rmag_table_1_temp
                             rmag_cat_2 = rmag_table_2_temp
                             rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
+                            if rmag_err_table_1 != 'nan':
+                                rmag_error = rmag_err_table_1[y] / 100.0
+                            else:
+                                rmag_error = rmag_err_table_2[z] / 100.0
                 z += 1
         if ra_min_diff < cross_match_diff_threshold and dec_min_diff < cross_match_diff_threshold:
-            cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_diff))
+            cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_error, rmag_diff))
         y += 1
         ra_min_diff = ra_min_diff_threshold
         dec_min_diff = dec_min_diff_threshold
 
-    cross_match_table = Table(rows=cross_match_list, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+    cross_match_table = Table(rows=cross_match_list, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
     return cross_match_table
 
@@ -189,7 +201,7 @@ def get_zeropoint(cross_match_table):
             for value in cross_match_table['r mag diff']:
                 if cross_match_table['r mag Cat 1'][y] != 'nan' and cross_match_table['r mag Cat 2'][y] != 'nan':
                     if abs(value - avg_zeropoint) < r_mag_diff_threshold:
-                        sum_r_mag_diff += value
+                        sum_r_mag_diff += (value * (1.0-(cross_match_table['r mag err'][y]/10.0)))
                         count += 1
                 y += 1
 
@@ -200,7 +212,7 @@ def get_zeropoint(cross_match_table):
             for value in cross_match_table['r mag diff']:
                 if cross_match_table['r mag Cat 1'][y] != 'nan' and cross_match_table['r mag Cat 2'][y] != 'nan':
                     if abs(value - avg_zeropoint) < r_mag_diff_threshold:
-                        diff_from_avg_sq.append((value - avg_zeropoint)**2)
+                        diff_from_avg_sq.append(((value * (1.0-(cross_match_table['r mag err'][y]/10.0))) - avg_zeropoint)**2)
                 y += 1
 
             for value in diff_from_avg_sq:
