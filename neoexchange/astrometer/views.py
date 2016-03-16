@@ -45,9 +45,17 @@ class BlockFramesView(DetailView):
     model = Block
 
     def get_context_data(self, **kwargs):
+        img_list = []
         context = super(BlockFramesView, self).get_context_data(**kwargs)
-        context['images'] = fetch_observations(context['block'].tracking_number, context['block'].proposal.code)
-        print(context['images'])
+        images = fetch_observations(context['block'].tracking_number, context['block'].proposal.code)
+        if images:
+            for img in images:
+                img_dict = {'img'     :str(img[1]),
+                            'sources' : [{'x':100,'y':100},{'x':200,'y':200},{'x':300,'y':300}],
+                            'targets' :  [{'x':150,'y':150}]
+                            }
+                img_list.append(img_dict)
+        context['images'] = img_list
         return context
 
 def fitsanalyse(request):

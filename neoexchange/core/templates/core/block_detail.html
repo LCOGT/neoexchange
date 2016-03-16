@@ -78,6 +78,7 @@
                     <h5 class="section-title">Actions</h5>
                         {% if request.user.is_authenticated %}
                           {% if not object.reported and object.num_observed > 0 %}
+                          <a class="button button-primary" href="{% url 'block-ast' object.id %}">Astrometer</a><br/>
                         <a class="button button-primary" href="{% url 'report-block' object.id %}">Report</a><br/>
                           {% elif object.reported %}
                         <a class="button button-primary" href="{% url 'view-report' object.id %}">View report in MPC format</a><br/>

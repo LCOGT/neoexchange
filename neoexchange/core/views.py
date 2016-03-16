@@ -138,15 +138,16 @@ def fetch_observations(tracking_num, proposal_code):
 
 def framedb_lookup(query):
     try:
-        conn = HTTPSConnection("data.lcogt.net", timeout=20)
-        params = urllib.urlencode(
-            {'username': settings.NEO_ODIN_USER, 'password': settings.NEO_ODIN_PASSWD})
-        #query = "/find?%s" % params
-        conn.request("POST", query, params)
-        response = conn.getresponse()
-        r = response.read()
-        data = json.loads(r)
-    except:
+        client = requests.session()
+        # First have to authenticate
+        login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+        # Because we are sending log in details it has to go over SSL
+        data_url = 'https://data.lcogt.net%s' % query
+        resp = client.post(data_url, data=login_data, timeout=20)
+        data = resp.json()
+
+    except Exception, e:
+        print(e)
         return False
     return data
 
