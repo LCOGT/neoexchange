@@ -40,9 +40,9 @@ def call_cross_match_and_zeropoint(catfile, cat_name = "UCAC4",  set_row_limit =
 
     cross_match_table = cross_match(table, cat_table, cat_name)
 
-    avg_zeropoint, std_zeropoint, count = get_zeropoint(cross_match_table)
+    avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
 
-    return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count
+    return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc
 
 def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4", set_row_limit = 10000, rmag_limit = "<=15.0"):
     '''Pulls a catalog from Vizier'''
@@ -193,38 +193,41 @@ def get_zeropoint(cross_match_table):
 
         if std_zeropoint > 0.1:
             count = 0
-            sum_r_mag_diff = 0.0
-            sum_diff = 0.0
-            diff_from_avg_sq = []
+            sum_r_mag_mean_numerator = 0.0
+            sum_r_mag_mean_denominator = 0.0
+            std_zeropoint_numerator = 0.0
+            std_zeropoint_denominator = 0.0
 
             y = 0
             for value in cross_match_table['r mag diff']:
                 if cross_match_table['r mag Cat 1'][y] != 'nan' and cross_match_table['r mag Cat 2'][y] != 'nan':
                     if abs(value - avg_zeropoint) < r_mag_diff_threshold:
-                        sum_r_mag_diff += (value * (1.0-(cross_match_table['r mag err'][y]/10.0)))
+                        if cross_match_table['r mag err'][y] < 0.01:
+                            cross_match_table['r mag err'][y] += 0.001
+                        sum_r_mag_mean_numerator += (value / cross_match_table['r mag err'][y])
+                        sum_r_mag_mean_denominator += (1.0 / cross_match_table['r mag err'][y])
                         count += 1
+                        num_in_calc = count
                 y += 1
 
             if count > 0:
-                avg_zeropoint = sum_r_mag_diff / count
+                avg_zeropoint = sum_r_mag_mean_numerator / sum_r_mag_mean_denominator #weighted mean zeropoint
 
             y = 0
             for value in cross_match_table['r mag diff']:
                 if cross_match_table['r mag Cat 1'][y] != 'nan' and cross_match_table['r mag Cat 2'][y] != 'nan':
                     if abs(value - avg_zeropoint) < r_mag_diff_threshold:
-                        diff_from_avg_sq.append(((value * (1.0-(cross_match_table['r mag err'][y]/10.0))) - avg_zeropoint)**2)
+                        std_zeropoint_numerator += ((1.0 / cross_match_table['r mag err'][y]) * (cross_match_table['r mag diff'][y] - avg_zeropoint)**2)
+                        std_zeropoint_denominator += (1.0 / cross_match_table['r mag err'][y])
                 y += 1
 
-            for value in diff_from_avg_sq:
-                sum_diff += value
-
-            if len(diff_from_avg_sq) > 0:
-                std_zeropoint = sqrt(sum_diff / len(diff_from_avg_sq))
+            if count > 0:
+                std_zeropoint = sqrt(std_zeropoint_numerator / (((float(count) - 1)/float(count)) * std_zeropoint_denominator))
 
         r_mag_diff_threshold -= 0.05
         num_iter += 1
 
-    return avg_zeropoint, std_zeropoint, count
+    return avg_zeropoint, std_zeropoint, count, num_in_calc
 
 
 class FITSHdrException(Exception):
