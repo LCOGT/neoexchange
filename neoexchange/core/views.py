@@ -1056,8 +1056,9 @@ def create_frame(params, block=None):
 
 def frame_params_from_block(params, block):
     # In these cases we are parsing the FITS header
+    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
     frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None)),
+                     'sitecode' : sitecode,
                      'filter'   : params.get('filter_name', "B"),
                      'frametype': Frame.SINGLE_FRAMETYPE,
                      'block'    : block,

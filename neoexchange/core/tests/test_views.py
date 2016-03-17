@@ -29,7 +29,8 @@ from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
-    create_source_measurement, block_status, clean_crossid, create_frame
+    create_source_measurement, block_status, clean_crossid, create_frame, \
+    frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
@@ -1113,6 +1114,40 @@ class TestFrames(TestCase):
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         # Although there are 4 sources in the file 2 are in the same frame
         self.assertEqual(3, frames.count())
+
+    def test_add_frames_block(self):
+        params = {
+                    'date_obs': "2015-04-20 21:41:05",
+                    'siteid': 'cpt',
+                    'encid': 'doma',
+                    'telid': '1m0a',
+                    'filter_name': 'R',
+                    'instrume': "kb70",
+                    'origname': "cpt1m010-kb70-20150420-0001-e00.fits",
+                    'exptime': '30'
+                 }
+        frame_params = frame_params_from_block(params, self.test_block)
+        frame, frame_created = Frame.objects.get_or_create(**frame_params)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
+
+    def test_ingest_frames_block(self):
+        params = {
+                    'date_obs': "2015-04-20 21:41:05",
+                    'siteid': 'cpt',
+                    'encid': 'doma',
+                    'telid': '1m0a',
+                    'filter_name': 'R',
+                    'instrume': "kb70",
+                    'origname': "cpt1m010-kb70-20150420-0001-e00.fits",
+                    'exptime': '30',
+                    'groupid': 'tmp'
+                 }
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
 
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
