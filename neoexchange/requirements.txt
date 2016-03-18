@@ -1,6 +1,6 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
 Django==1.8.10
-MySQL-pytho
+MySQL-python
 astropy>=1.1.1
 astroquery
 beautifulsoup4

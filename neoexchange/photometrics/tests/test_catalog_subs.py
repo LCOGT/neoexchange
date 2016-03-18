@@ -33,8 +33,11 @@ from photometrics.catalog_subs import *
 
 class ZeropointUnitTest(TestCase):
 
-    def test_get_cat_ra_dec(self):
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_get_cat_ra_dec(self, mock_vizier):
         #test getting a single ra, dec, and rmag out of the default UCAC4 catalog
+        test_data = __file__.replace('.py', '.dat')
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29474599999998
 
