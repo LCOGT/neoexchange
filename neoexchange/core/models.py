@@ -12,6 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
@@ -47,6 +48,7 @@ ORIGINS = (
             ('D','NEODSYS'),
             ('G','Goldstone'),
             ('A','Arecibo'),
+            ('R','Goldstone & Arecibo'),
             ('L','LCOGT')
             )
 
@@ -325,13 +327,43 @@ class SourceMeasurement(models.Model):
         else:
             name = "     %7s" % self.body.provisional_name
 
-        mpc_line = "%12s %1sC%16s%11s %11s          %.1f %1s%1s     %3s" % (name,
-            self.flags, dttodecimalday(self.frame.midpoint, True),
+        try:
+            mag = "%4.1f" % self.obs_mag
+        except TypeError:
+            mag = "    "
+
+        obs_type = 'C'
+        microday = True
+        if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
+            obs_type = 'S'
+            microday = False
+        mpc_line = "%12s %1s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
+            self.flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
-            self.obs_mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+            mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+        if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
+            extrainfo = self.frame.extrainfo
+            if self.body.name:
+                name, status = normal_to_packed(self.body.name)
+                if status == 0:
+                    extrainfo = name + extrainfo[12:]
+            mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
     class Meta:
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
+
+class ProposalPermission(models.Model):
+    '''
+    Linking a user to proposals in NEOx to control their access
+    '''
+    proposal = models.ForeignKey(Proposal)
+    user = models.ForeignKey(User)
+
+    class Meta:
+        verbose_name = _('Proposal Permission')
+
+    def __unicode__(self):
+        return "%s is a member of %s" % (self.user, self.proposal)

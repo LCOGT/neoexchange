@@ -3,7 +3,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_rbauth_login
+
 from datetime import datetime
 from django.test.client import Client
 from django.core.urlresolvers import reverse
@@ -28,10 +29,12 @@ class ScheduleObservations(FunctionalTest):
         self.bart.delete()
         super(ScheduleObservations,self).tearDown()
 
+    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
     def login(self):
         test_login = self.client.login(username=self.username, password=self.password)
         self.assertEqual(test_login, True)
 
+    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
     def test_login(self):
         self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
         username_input = self.browser.find_element_by_id("username")
@@ -83,9 +86,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP (V37)')
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -102,9 +105,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('18', num_exp)
+        self.assertIn('11', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('50.0 secs', exp_length)
+        self.assertIn('60.0 secs', exp_length)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -157,9 +160,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP (V37)')
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -176,9 +179,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('18', num_exp)
+        self.assertIn('11', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('50.0 secs', exp_length)
+        self.assertIn('60.0 secs', exp_length)
 
         # Bart wants to change the slot length and recalculate the number of exposures
         slot_length_box = self.browser.find_element_by_name('slot_length')
@@ -224,9 +227,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP (V37)')
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -243,9 +246,9 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('18', num_exp)
+        self.assertIn('11', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('50.0 secs', exp_length)
+        self.assertIn('60.0 secs', exp_length)
 
         # Bart wants to change the slot length so it is very short and recalculate the number of exposures
         slot_length_box = self.browser.find_element_by_name('slot_length')

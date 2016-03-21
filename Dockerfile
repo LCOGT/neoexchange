@@ -21,8 +21,8 @@
 ### On docknode06.lco.gtn
 # docker pull docker.lcogt.net/neoexchange:latest
 ### Stop and remove the running container
-# docker stop neoexchange_web_1
-# docker rm neoexchange_web_1
+# docker stop neox_web_1
+# docker rm neox_web_1
 ### Change to the right place
 # cd bin/compose/neox
 ### Start the new container
@@ -58,10 +58,10 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 
 # Install the LCOGT NEO exchange Python required packages
 # Then the LCOGT packages which have to be installed after the normal pip install
-RUN pip install pip==1.3 && pip install uwsgi==2.0.8 \
-		&& pip install -r /var/www/apps/neoexchange/requirements.txt \
-		&& pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
-		&& pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
+RUN pip install uwsgi==2.0.8 \
+		&& pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
+		&& pip install pyslalib --trusted-host buildsba.lco.gtn --extra-index-url=http://buildsba.lco.gtn/python/ \
+		&& pip install rise_set --trusted-host buildsba.lco.gtn --extra-index-url=http://buildsba.lco.gtn/python/
 
 # Ensure crond will run on all host operating systems
 RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
@@ -75,5 +75,5 @@ COPY config/crontab.root /var/spool/cron/root
 # Copy configuration files
 COPY config/init /init
 
-# Copy the LCOGT Mezzanine webapp files
+# Copy the LCOGT NEOexchange webapp files
 COPY neoexchange /var/www/apps/neoexchange

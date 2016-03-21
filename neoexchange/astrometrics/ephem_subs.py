@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 ephem_subs.py -- Asteroid ephemeris related routines.
 
@@ -14,16 +14,17 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
+
+import logging
 from datetime import datetime, timedelta, time
-import slalib as S
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10
+
+import slalib as S
 from numpy import array, concatenate, zeros
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
 #from astsubs import mpc_8lineformat
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +176,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                           'Inc' : orbelems['inclination'].in_radians(),
                           'ArgPeri' : orbelems['arg_perihelion'].in_radians(),
                           'MeanAnom' : orbelems['mean_anomaly'].in_radians(),
-                          'SemiAxis' : orbelems['semi_axis'],
+                          'SemiAxisOrQ' : orbelems['semi_axis'],
                           'Ecc' : orbelems['eccentricity']
                          }
         p_orbelems['H'] = orbelems['H']
@@ -190,7 +191,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 p_epoch_mjd = orbelems['epochofperih']
             else:
                 (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                  p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(jform, epoch_mjd,
+                  p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel(jform, epoch_mjd,
                             mjd_tt, epoch_mjd, orbelems['inclination'].in_radians(), orbelems['long_node'].in_radians(),
                             orbelems['arg_perihelion'].in_radians(), orbelems['semi_axis'], orbelems['eccentricity'],
                             orbelems['mean_anomaly'].in_radians())
@@ -209,21 +210,30 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                           'Ecc' : orbelems['eccentricity'],
                          }
             orbelems['meananom'] = 0.0
+            aorq = orbelems['perihdist']
             epoch_mjd = datetime2mjd_utc(orbelems['epochofperih'])
         else:
             p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
                           'Inc' : radians(orbelems['orbinc']),
                           'ArgPeri' : radians(orbelems['argofperih']),
-                          'MeanAnom' : radians(orbelems['meananom']),
-                          'SemiAxis' : orbelems['meandist'],
+                          'SemiAxisOrQ' : orbelems['meandist'],
                           'Ecc' : orbelems['eccentricity']
                          }
+            try:
+                p_orbelems['MeanAnom'] = radians(orbelems['meananom'])
+            except TypeError:
+                 p_orbelems['MeanAnom'] = 0.0
+                 orbelems['meananom'] = 0.0
+            try:
+                aorq = float(orbelems['meandist'])
+            except TypeError:
+                aorq = 0.0
         p_orbelems['H'] = orbelems['abs_mag']
         p_orbelems['G'] = orbelems['slope']
         if perturb == True:
             (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                    p_orbelems['SemiAxis'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
-                        radians(orbelems['argofperih']), orbelems['meandist'], orbelems['eccentricity'],
+                    p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
+                        radians(orbelems['argofperih']), aorq, orbelems['eccentricity'],
                         radians(orbelems['meananom']))
         else:
             p_epoch_mjd = epoch_mjd
@@ -231,6 +241,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     if j != 0:
         logger.error("Perturbing error=%s" % j)
+        return []
 
 
     r3 = -100.
@@ -250,7 +261,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         else:
             (pv, status) = S.sla_planel(mjd_tt - (ltt/86400.0), jform, p_epoch_mjd,
                             p_orbelems['Inc'], p_orbelems['LongNode'],
-                            p_orbelems['ArgPeri'], p_orbelems['SemiAxis'], p_orbelems['Ecc'],
+                            p_orbelems['ArgPeri'], p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'],
                             p_orbelems['MeanAnom'], 0.0)
 
 
@@ -1131,6 +1142,23 @@ def LCOGT_site_codes():
 
     return valid_site_codes
 
+def LCOGT_domes_to_site_codes(siteid, encid, telid):
+    '''Return a mapping of LCOGT Site-Enclosure-Telescope to site codes'''
+    valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37', 
+                         'LSC-DOMA-1M0A' : 'W85', 
+                         'LSC-DOMB-1M0A' : 'W86', 
+                         'LSC-DOMC-1M0A' : 'W87', 
+                         'CPT-DOMA-1M0A' : 'K91', 
+                         'CPT-DOMB-1M0A' : 'K92', 
+                         'CPT-DOMC-1M0A' : 'K93', 
+                         'COJ-DOMA-1M0A' : 'Q63', 
+                         'COJ-DOMB-1M0A' : 'Q64', 
+                         'OGG-CLMA-2M0A' : 'F65', 
+                         'COJ-CLMA-2M0A' : 'E10' } 
+
+    instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
+    return valid_site_codes.get(instance, 'XXX')
+
 def get_sitecam_params(site):
     '''Translates <site> (e.g. 'FTN') to MPC site code, pixel scale, maximum
     exposure time, setup and exposure overheads.
@@ -1185,7 +1213,7 @@ def get_sitecam_params(site):
         exp_overhead = onem_exp_overhead
         pixel_scale = onem_pixscale
         fov = arcmins_to_radians(onem_fov)
-        if 'W86' in site or 'W87' in site:
+        if 'W86' in site or 'W87' in site or 'V37' in site:
             pixel_scale = onem_sinistro_pixscale
             fov = arcmins_to_radians(onem_sinistro_fov)
             exp_overhead = sinistro_exp_overhead

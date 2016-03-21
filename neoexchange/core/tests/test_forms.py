@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -40,6 +40,31 @@ class EphemQueryFormTest(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+        comet_params = { 'abs_mag': 20.5,
+                         'active': True,
+                         'arc_length': 77.0,
+                         'argofperih': 351.88796,
+                         'eccentricity': 0.6652004,
+                         'elements_type': u'MPC_COMET',
+                         'fast_moving': False,
+                         'longascnode': 180.52654,
+                         'meananom': 3.32334,
+                         'meandist': 3.0251663,
+                         'name': 'P/2016 BA141',
+                         'not_seen': 24.8857164222,
+                         'num_obs': 151L,
+                         'orbinc': 18.89365,
+                         'origin': u'G',
+                         'perihdist': 1.0128244,
+                         'provisional_name': u'P10rI5K',
+                         'provisional_packed': u'',
+                         'score': 100L,
+                         'slope': 6.4,
+                         'source_type': u'C',
+                         'updated': True,
+                         'urgency': None}
+        self.comet, created = Body.objects.get_or_create(**comet_params)
+
     def test_form_has_label(self):
         form = EphemQuery()
         self.assertIn('Enter target name...', form.as_p())
@@ -70,20 +95,28 @@ class EphemQueryFormTest(TestCase):
     def test_ephem_form_has_all_sites(self):
         form = EphemQuery()
         self.assertIsInstance(form, EphemQuery)
-        self.assertIn('ELP (V37)', form.as_p())
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
-        self.assertIn('FTN (F65)', form.as_p())
+        self.assertIn('Maui, Hawaii (FTN - F65)', form.as_p())
         self.assertIn('value="F65"', form.as_p())
-        self.assertIn('FTS (E10)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (FTS - E10)', form.as_p())
         self.assertIn('value="E10"', form.as_p())
-        self.assertIn('LSC (W85; SBIG)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W85; SBIG)', form.as_p())
         self.assertIn('value="W85"', form.as_p())
-        self.assertIn('LSC (W86-87)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
-        self.assertIn('CPT (K91-93)', form.as_p())
+        self.assertIn('Sutherland, S. Africa (CPT - K91-93)', form.as_p())
         self.assertIn('value="K92"', form.as_p())
-        self.assertIn('COJ (Q63-64)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (COJ - Q63-64)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
+
+    def test_form_handles_save_with_long_name(self):
+        form = EphemQuery(data = {'target' : 'P/2016 BA141',
+                                  'utc_date' : '2016-03-11',
+                                  'site_code' : 'K92',
+                                  'alt_limit' : 30.0
+                                  })
+        self.assertTrue(form.is_valid())
 
 
 class TestScheduleForm(TestCase):
@@ -131,25 +164,25 @@ class TestScheduleForm(TestCase):
     def test_form_has_lsc_field(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('LSC (W85; SBIG)', form.as_p())
-        self.assertIn('LSC (W86-87)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W85; SBIG)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
 
     def test_sched_form_has_all_sites(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('ELP (V37)', form.as_p())
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', form.as_p())
         self.assertIn('value="V37"', form.as_p())
-        self.assertIn('FTN (F65)', form.as_p())
+        self.assertIn('Maui, Hawaii (FTN - F65)', form.as_p())
         self.assertIn('value="F65"', form.as_p())
-        self.assertIn('FTS (E10)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (FTS - E10)', form.as_p())
         self.assertIn('value="E10"', form.as_p())
-        self.assertIn('LSC (W85; SBIG)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W85; SBIG)', form.as_p())
         self.assertIn('value="W85"', form.as_p())
-        self.assertIn('LSC (W86-87)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
-        self.assertIn('CPT (K91-93)', form.as_p())
+        self.assertIn('Sutherland, S. Africa (CPT - K91-93)', form.as_p())
         self.assertIn('value="K92"', form.as_p())
-        self.assertIn('COJ (Q63-64)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (COJ - Q63-64)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):

@@ -51,7 +51,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 N999r0q Candidate 23 43 12.75 +19 58 55.6 20.7 None None None None None',]
+        testlines =[u'1 N999r0q Candidate 23 43 12.75 +19 58 55.6 20.7 None None None None',]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # he goes to the page from N999r0q and computes the ephemeris
@@ -105,9 +105,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses FTN (F65)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('FTN (F65)', [option.text for option in site_choices.options])
+        self.assertIn('Maui, Hawaii (FTN - F65)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('FTN (F65)')
+        site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
 
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
@@ -156,9 +156,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('ELP (V37)', [option.text for option in site_choices.options])
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('ELP (V37)')
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
@@ -214,9 +214,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses CPT (K91)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('CPT (K91-93)', [option.text for option in site_choices.options])
+        self.assertIn('Sutherland, S. Africa (CPT - K91-93)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('CPT (K91-93)')
+        site_choices.select_by_visible_text('Sutherland, S. Africa (CPT - K91-93)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date

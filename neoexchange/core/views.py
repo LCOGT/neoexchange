@@ -19,7 +19,7 @@ from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
@@ -31,13 +31,13 @@ from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes
+    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
-from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date
+from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, parse_neocp_decimal_date
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
@@ -57,6 +57,26 @@ class LoginRequiredMixin(object):
     def as_view(cls, **initkwargs):
         view = super(LoginRequiredMixin, cls).as_view(**initkwargs)
         return login_required(view)
+
+def user_proposals(user):
+    if type(user) != User:
+        try:
+            user = User.objects.get(username=user)
+        except ObjectDoesNotExist:
+            raise ValidationError
+
+    proposals = Proposal.objects.filter(proposalpermission__user=user)
+
+    return proposals
+
+class MyProposalsMixin(object):
+
+    def get_context_data(self, **kwargs):
+        context = super(MyProposalsMixin, self).get_context_data(**kwargs)
+        proposals = user_proposals(self.request.user)
+        context['proposals'] = [(proposal.code, proposal.title) for proposal in proposals]
+
+        return context
 
 
 def home(request):
@@ -105,7 +125,7 @@ class BlockListView(ListView):
     template_name = 'core/block_list.html'
     queryset=Block.objects.order_by('-block_start')
     context_object_name="block_list"
-    paginate_by = 20 
+    paginate_by = 20
 
 def fetch_observations(tracking_num, proposal_code):
     query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
@@ -120,7 +140,7 @@ def framedb_lookup(query):
     try:
         conn = HTTPSConnection("data.lcogt.net", timeout=20)
         params = urllib.urlencode(
-            {'username': 'egomez@lcogt.net', 'password': 'ncc1701'})
+            {'username': settings.NEO_ODIN_USER, 'password': settings.NEO_ODIN_PASSWD})
         #query = "/find?%s" % params
         conn.request("POST", query, params)
         response = conn.getresponse()
@@ -160,7 +180,7 @@ class UploadReport(LoginRequiredMixin, FormView):
     def form_valid(self, form):
         obslines = form.cleaned_data['report'].splitlines()
         measure = create_source_measurement(obslines, form.cleaned_data['block'])
-        if measure != None:
+        if measure:
             messages.success(self.request, 'Added source measurements for %s' % form.cleaned_data['block'])
         else:
             messages.warning(self.request, 'Unable to add source measurements for %s' % form.cleaned_data['block'])
@@ -180,7 +200,7 @@ class MeasurementViewBody(View):
     template = 'core/measurements.html'
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
-        measures = SourceMeasurement.objects.filter(body=body)
+        measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         return render(request, self.template, {'body':body, 'measures' : measures})
 
 def ephemeris(request):
@@ -229,8 +249,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
-        data = schedule_check(
-            form.cleaned_data, self.body, self.ok_to_schedule)
+        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
@@ -240,6 +259,16 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
             return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def get_context_data(self, **kwargs):
+        '''
+        Only show proposals the current user is a member of
+        '''
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
+
 
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
@@ -267,7 +296,10 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
         elif 'submit' in request.POST:
             target = self.get_object()
-            tracking_num, sched_params = schedule_submit(form.cleaned_data, target)
+            username = ''
+            if request.user.is_authenticated():
+                username = request.user.get_username()
+            tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
                 block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
@@ -284,6 +316,12 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
 def schedule_check(data, body, ok_to_schedule=True):
     body_elements = model_to_dict(body)
+
+    # Check if we have a high eccentricity object and it's not of comet type
+    if body_elements['eccentricity'] >= 0.9 and body_elements['elements_type'] != 'MPC_COMET':
+        logger.warn("Preventing attempt to schedule high eccentricity non-Comet")
+        ok_to_schedule = False
+
     # Check for valid proposal
     # validate_proposal_time(data['proposal_code'])
 
@@ -298,6 +336,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
         dbg=False, perturb=True, display=False)
+    if emp == []:
+        emp = [-99 for x in range(5)]
     magnitude = emp[3]
     speed = emp[4]
 
@@ -336,20 +376,26 @@ def schedule_check(data, body, ok_to_schedule=True):
     return resp
 
 
-def schedule_submit(data, body):
+def schedule_submit(data, body, username):
 
     # Assemble request
     # Send to scheduler
     body_elements = model_to_dict(body)
     body_elements['epochofel_mjd'] = body.epochofel_mjd()
+    body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
     body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
+    my_proposals = user_proposals(username)
+    if proposal not in my_proposals:
+        resp_params = {'msg' : 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
+
+        return None, resp_params
     params = {'proposal_id': proposal.code,
-              # XXX should be logged-in user, how to get this?
               'user_id': proposal.pi,
               'tag_id': proposal.tag,
               'priority': data.get('priority', 15),
+              'submitter_id': username,
 
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],
@@ -474,7 +520,7 @@ def save_and_make_revision(body, kwargs):
     body_dict = model_to_dict(body)
     for k, v in kwargs.items():
         param = body_dict[k]
-        if type(body_dict[k]) == type(float()):
+        if type(body_dict[k]) == type(float()) and v is not None:
             v = float(v)
         if v != param:
             setattr(body, k, v)
@@ -536,33 +582,31 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
 def update_NEOCP_observations(obj_id, extra_params={}):
     '''Query the NEOCP for <obj_id> and download the observation lines.
     These are used to create Source Measurements for the body if the
-    update time in the passed extra_params dictionary is later than the
-    Body's update_time'''
+    number of observations in the passed extra_params dictionary is greater than
+    the number of Source Measurements for that Body'''
 
-    update_time = extra_params.get('update_time', None)
-    updated = extra_params.get('updated', None)
-    if update_time and updated != None:
-        try:
-            body = Body.objects.get(provisional_name=obj_id)
-# Check if the NEOCP updated after the last time we updated the Body
-            if (update_time > body.update_time and body.update_time) or updated == False:
-                obs_lines = fetch_NEOCP_observations(obj_id)
-                if obs_lines:
-                    measure = create_source_measurement(obs_lines)
-                    if measure == True:
-                        msg = "Created source measurements for object %s" % obj_id
-                    elif measure == False:
-                        msg = "Source measurements already exist for object %s" % obj_id
-                    else:
-                        msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
+    try:
+        body = Body.objects.get(provisional_name=obj_id)
+        num_measures = SourceMeasurement.objects.filter(body=body).count()
+
+# Check if the NEOCP has more measurements than we do
+        if body.num_obs > num_measures:
+            obs_lines = fetch_NEOCP_observations(obj_id)
+            if obs_lines:
+                measure = create_source_measurement(obs_lines)
+                if measure == False:
+                    msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
                 else:
-                    msg = "No observations exist for object %s" % obj_id
+                    if len(measure) >0:
+                        msg = "Created source measurements for object %s" % obj_id
+                    elif len(measure) == 0:
+                        msg = "Source measurements already exist for object %s" % obj_id
             else:
-                msg = "Object %s has not been updated since %s" % (obj_id, body.update_time)
-        except Body.DoesNotExist:
-            msg = "Object %s does not exist" % obj_id
-    else:
-        msg = "No update time available"
+                msg = "No observations exist for object %s" % obj_id
+        else:
+            msg = "Object %s has not been updated since %s" % (obj_id, body.update_time)
+    except Body.DoesNotExist:
+        msg = "Object %s does not exist" % obj_id
     return msg
 
 def clean_NEOCP_object(page_list):
@@ -619,7 +663,7 @@ def clean_NEOCP_object(page_list):
                 'origin': 'M',
                 'update_time' : datetime.utcnow()
             }
-        elif len(current) == 22 or len(current) == 24:
+        elif len(current) == 22 or len(current) == 23 or len(current) == 24:
             params = {
                 'abs_mag': float(current[1]),
                 'slope': float(current[2]),
@@ -720,6 +764,9 @@ def clean_crossid(astobj, dbg=False):
     confirm_date = parse_neocp_date(astobj[3])
 
     time_from_confirm = datetime.utcnow() - confirm_date
+    if time_from_confirm < timedelta(0):
+        # if this is negative a date in the future has erroneously be assumed
+        time_from_confirm = datetime.utcnow() - confirm_date.replace(year=confirm_date.year-1)
     time_from_confirm = time_from_confirm.total_seconds()
 
     active = True
@@ -742,7 +789,7 @@ def clean_crossid(astobj, dbg=False):
         active = False
     elif obj_id != '' and desig != '':
         # Confirmed
-        if ('CBET' in reference or 'IAUC' in reference) and 'C/' in desig:
+        if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
             # There is a reference to an CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
             objtype = 'C'
@@ -789,10 +836,17 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
         except ValueError:
             first_obs = None
 
+        if 'arc length' in elements:
+            arc_length = elements['arc length']
+        else:
+            arc_length = last_obs-first_obs
+            arc_length = str(arc_length.days)
+
+        # Common parameters
         params = {
             'epochofel': datetime.strptime(elements['epoch'].replace('.0', ''), '%Y-%m-%d'),
-            'abs_mag': elements['absolute magnitude'],
-            'slope': elements['phase slope'],
+            'abs_mag': elements.get('absolute magnitude', None),
+            'slope': elements.get('phase slope', 0.15),
             'meananom': elements['mean anomaly'],
             'argofperih': elements['argument of perihelion'],
             'longascnode': elements['ascending node'],
@@ -805,10 +859,23 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             'origin': origin,
             'updated' : True,
             'num_obs' : elements['observations used'],
-            'arc_length' : elements['arc length'],
+            'arc_length' : arc_length,
             'discovery_date' : first_obs,
             'update_time' : last_obs
         }
+
+        if 'radial non-grav. param.' in elements:
+            # Comet, update/overwrite a bunch of things
+            params['elements_type'] = 'MPC_COMET'
+            params['source_type'] = 'C'
+            # The MPC never seems to have H values for comets so we remove it
+            # from the dictionary to avoid replacing what was there before.
+            if params['abs_mag'] == None:
+                del params['abs_mag']
+            params['slope'] = elements.get('phase slope', '4.0')
+            params['perihdist'] = elements['perihelion distance']
+            perihelion_date = elements['perihelion date'].replace('-', ' ')
+            params['epochofperih'] = parse_neocp_decimal_date(perihelion_date)
 
         not_seen = None
         if last_obs != None:
@@ -853,6 +920,11 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         if not bodies:
             bodies = Body.objects.filter(name=obj_id).order_by('-ingest')
         body = bodies[0]
+    # If this object is a radar target and the requested origin is for the
+    # "other" site (Goldstone ('G') when we have Arecibo ('A') or vice versa),
+    # then set the origin to 'R' for joint Radar target.
+    if (body.origin == 'G' and origin == 'A') or (body.origin == 'A' and origin == 'G'):
+        origin = 'R'
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
     # Save, make revision, or do not update depending on the what has happened
@@ -865,13 +937,12 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     return True
 
 def create_source_measurement(obs_lines, block=None):
-    measure = None
+    measures = []
     if type(obs_lines) != list:
         obs_lines = [obs_lines,]
 
     for obs_line in obs_lines:
         logger.debug(obs_line.rstrip())
-        measure = None
         params = parse_mpcobs(obs_line)
         if params:
             try:
@@ -892,27 +963,47 @@ def create_source_measurement(obs_lines, block=None):
                         block = blocks[0]
                     else:
                         logger.warn("No blocks for %s" % (obs_body))
-                frame = create_frame(params, block)
-                measure_params = {  'body'    : obs_body,
-                                    'frame'   : frame,
-                                    'obs_ra'  : params['obs_ra'],
-                                    'obs_dec' : params['obs_dec'],
-                                    'obs_mag' : params['obs_mag'],
-                                    'astrometric_catalog' : params['astrometric_catalog'],
-                                    'photometric_catalog' : params['astrometric_catalog'],
-                                    'flags'   : params['flags']
-                                 }
-                measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
-                if measure_created == False:
-                    measure = False
+                if params['obs_type'] == 's':
+                    # If we have an obs_type of 's', then we have the second line
+                    # of a satellite measurement and we need to find the matching
+                    # Frame we created on the previous line read and update its
+                    # extrainfo field.
+                    try:
+                        prior_frame = Frame.objects.get(frametype = Frame.SATELLITE_FRAMETYPE,
+                                                        midpoint = params['obs_date'],
+                                                        sitecode = params['site_code'])
+                        prior_frame.extrainfo = params['extrainfo']
+                        prior_frame.save()
+                        # Replace SourceMeasurement in list to be returned with
+                        # updated version
+                        measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
+                    except Frame.DoesNotExist:
+                        logger.warn("Matching satellite frame for %s from %s on %s does not exist" % params['body'], params['obs_date'],params['site_code'])
+                    except Frame.MultipleObjectsReturned:
+                        logger.warn("Multiple matching satellite frames for %s from %s on %s found" % params['body'], params['obs_date'],params['site_code'])
+                else:
+                    # Otherwise, make a new Frame and SourceMeasurement
+                    frame = create_frame(params, block)
+                    measure_params = {  'body'    : obs_body,
+                                        'frame'   : frame,
+                                        'obs_ra'  : params['obs_ra'],
+                                        'obs_dec' : params['obs_dec'],
+                                        'obs_mag' : params['obs_mag'],
+                                        'astrometric_catalog' : params['astrometric_catalog'],
+                                        'photometric_catalog' : params['astrometric_catalog'],
+                                        'flags'   : params['flags']
+                                     }
+                    measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
+                    if measure_created:
+                        measures.append(measure)
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % params['body'])
-                measure = None
+                measures = False
             except Body.MultipleObjectsReturned:
                 logger.warn("Multiple versions of Body %s exist" % params['body'])
-                measure = None
+                measures = False
 
-    return measure
+    return measures
 
 def check_request_status(tracking_num=None):
     data = None
@@ -965,10 +1056,11 @@ def create_frame(params, block=None):
 
 def frame_params_from_block(params, block):
     # In these cases we are parsing the FITS header
+    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
     frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : params.get('siteid', None),
-                     'filter'   : params.get('filter_name', None),
-                     'frametype': Frame.NONLCO_FRAMETYPE,
+                     'sitecode' : sitecode,
+                     'filter'   : params.get('filter_name', "B"),
+                     'frametype': Frame.SINGLE_FRAMETYPE,
                      'block'    : block,
                      'instrument': params.get('instrume', None),
                      'filename'  : params.get('origname', None),
@@ -986,11 +1078,14 @@ def frame_params_from_log(params, block):
         else:
             frame_type = Frame.STACK_FRAMETYPE
     else:
-        frame_type = Frame.NONLCO_FRAMETYPE
+        if params.get('obs_type', None) == 'S':
+            frame_type = Frame.SATELLITE_FRAMETYPE
+        else:
+            frame_type = Frame.NONLCO_FRAMETYPE
     frame_params = { 'midpoint' : params.get('obs_date', None),
                      'sitecode' : sitecode,
                      'block'    : block,
-                     'filter'   : params.get('filter', None),
+                     'filter'   : params.get('filter', "B"),
                      'frametype' : frame_type
                    }
     return frame_params

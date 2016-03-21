@@ -1,24 +1,41 @@
+'''
+NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
+Copyright (C) 2014-2016 LCOGT
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+'''
+
 from datetime import datetime, date, timedelta
 from django import forms
 from django.db.models import Q
 from .models import Body, Proposal, Block
+from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 import logging
 logger = logging.getLogger(__name__)
 
-SITES = (('V37','ELP (V37)'),
-         ('F65','FTN (F65)'),
-         ('E10', 'FTS (E10)'),
-         ('W85','LSC (W85; SBIG)'),
-         ('W86','LSC (W86-87)'),
-         ('K92','CPT (K91-93)'),
-         ('Q63','COJ (Q63-64)'),
-         ('Z21','TFN (Z21; 0.4m)'))
+
+SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
+         ('F65','Maui, Hawaii (FTN - F65)'),
+         ('E10','Siding Spring, Aust. (FTS - E10)'),
+         ('W85','CTIO, Chile (LSC - W85; SBIG)'),
+         ('W86','CTIO, Chile (LSC - W86; Sinistro)'),
+         ('K92','Sutherland, S. Africa (CPT - K91-93)'),
+         ('Q63','Siding Spring, Aust. (COJ - Q63-64)'))
+         ('Z21','Tenerife, Spain (TFN - Z21; 0.4m)'))
 
 
 class EphemQuery(forms.Form):
 
-    target = forms.CharField(label="Enter target name...", max_length=10, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
+    target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
     alt_limit = forms.FloatField(initial=30.0, required=True, widget=forms.TextInput(attrs={'size':'4'}))
@@ -37,15 +54,7 @@ class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
-    # body_id = forms.IntegerField(widget=forms.HiddenInput())
-    # ok_to_schedule = forms.BooleanField(initial=False, required=False, widget=forms.HiddenInput())
 
-    # def clean_body_id(self):
-    #     body = Body.objects.filter(pk=self.cleaned_data['body_id'])
-    #     if body.count() == 1 :
-    #         return body[0]
-    #     elif body.count() == 0:
-    #         raise forms.ValidationError("Object not found.")
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
         if start < datetime.utcnow().date():

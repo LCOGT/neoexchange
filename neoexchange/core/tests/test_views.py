@@ -29,7 +29,8 @@ from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
-    create_source_measurement, block_status, clean_crossid, create_frame
+    create_source_measurement, block_status, clean_crossid, create_frame, \
+    frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
@@ -599,6 +600,90 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key !='id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Arecibo(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'A'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_goldstone_then_arecibo(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'R'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
+        self.assertEqual(True, status)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_arecibo_then_goldstone(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'R'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='G')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_arecibo_then_ARM(self):
+
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'N'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='N')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key !='id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
 class TestClean_mpcorbit(TestCase):
 
     def setUp(self):
@@ -609,6 +694,12 @@ class TestClean_mpcorbit(TestCase):
         test_fh.close()
 
         self.test_elements = parse_mpcorbit(test_mpcdb_page)
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2016C2.html'), 'r')
+        test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
 
         self.expected_params = {
                              'elements_type': 'MPC_MINOR_PLANET',
@@ -632,6 +723,28 @@ class TestClean_mpcorbit(TestCase):
                              'update_time' : datetime(2015,10,9,0),
                              'updated' : True
                              }
+        self.expected_comet_params = {
+                                        'elements_type': 'MPC_COMET',
+                                        'argofperih': '214.01052',
+                                        'longascnode' : '24.55858',
+                                        'eccentricity' : '1.0000000',
+                                        'epochofel': datetime(2016, 04, 19, 0),
+                                        'meandist' : None,
+                                        'orbinc' : '38.19233',
+                                        'meananom': None,
+                                        'perihdist' : '1.5671127',
+                                        'epochofperih': datetime(2016, 4, 19, 0, 41, 44, int(0.736*1e6)),
+                                        'slope': '4.0',
+                                        'origin' : 'M',
+                                        'active' : True,
+                                        'source_type' : 'C',
+                                        'discovery_date': datetime(2016, 2, 8, 0),
+                                        'num_obs': '89',
+                                        'arc_length': '10',
+                                        'not_seen' : 6.75,
+                                        'update_time' : datetime(2016, 2, 18, 0),
+                                        'updated' : True
+                                     }
 
         self.maxDiff = None
 
@@ -640,6 +753,17 @@ class TestClean_mpcorbit(TestCase):
 
         MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
         params = clean_mpcorbit(self.test_elements)
+
+        self.assertEqual(self.expected_params, params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_2014UR_no_arclength(self):
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        new_test_elements = self.test_elements
+        del new_test_elements['arc length']
+
+        params = clean_mpcorbit(new_test_elements)
 
         self.assertEqual(self.expected_params, params)
 
@@ -654,7 +778,6 @@ class TestClean_mpcorbit(TestCase):
         new_expected_params['update_time'] = None
         self.assertEqual(new_expected_params, params)
 
-
     @patch('core.views.datetime', MockDateTime)
     def test_bad_discovery_date(self):
 
@@ -666,6 +789,14 @@ class TestClean_mpcorbit(TestCase):
         new_expected_params = self.expected_params
         new_expected_params['discovery_date'] = None
         self.assertEqual(new_expected_params, params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_C_2016C2(self):
+
+        MockDateTime.change_datetime(2016, 2, 24, 18, 0, 0)
+        params = clean_mpcorbit(self.test_comet_elements)
+
+        self.assertEqual(self.expected_comet_params, params)
 
 class TestCreate_sourcemeasurement(TestCase):
 
@@ -680,6 +811,15 @@ class TestCreate_sourcemeasurement(TestCase):
                          }
 
         self.test_body = Body.objects.create(**WSAE9A6_params)
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_N009ags.dat'), 'r')
+        self.sat_test_obslines = test_fh.readlines()
+        test_fh.close()
+
+        N009ags_params = { 'provisional_name' : 'N009ags',
+                         }
+
+        self.sat_test_body = Body.objects.create(**N009ags_params)
 
         self.maxDiff = None
 
@@ -696,7 +836,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'G96'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[0])
+        source_measures = create_source_measurement(self.test_obslines[0])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -723,7 +864,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'G96'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[1])
+        source_measures = create_source_measurement(self.test_obslines[1])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -750,7 +892,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'G96'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[2])
+        source_measures = create_source_measurement(self.test_obslines[2])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -777,7 +920,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : '474'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[3])
+        source_measures = create_source_measurement(self.test_obslines[3])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -793,9 +937,9 @@ class TestCreate_sourcemeasurement(TestCase):
 
     def test_create_blankline(self):
 
-        source_measure = create_source_measurement(self.test_obslines[4])
+        source_measures = create_source_measurement(self.test_obslines[4])
 
-        self.assertEqual(None, source_measure)
+        self.assertEqual([], source_measures)
 
     def test_create_LCO_stack(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -810,7 +954,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'K93'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[5])
+        source_measures = create_source_measurement(self.test_obslines[5])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -837,7 +982,8 @@ class TestCreate_sourcemeasurement(TestCase):
                             'site_code' : 'K93'
                           }
 
-        source_measure = create_source_measurement(self.test_obslines[6])
+        source_measures = create_source_measurement(self.test_obslines[6])
+        source_measure = source_measures[0]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -851,15 +997,47 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
         self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
 
+    def test_create_satellite(self):
+        expected_params = { 'body'  : 'N009ags',
+                            'flags' : '',
+                            'obs_type'  : 'S',
+                            'obs_date'  : datetime(2016, 2, 8, 18, 15, 30, int(0.528*1e6)),
+                            'obs_ra'    : 228.56833333333333,
+                            'obs_dec'   : -9.775,
+                            'obs_mag'   : '19',
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '2MASS',
+                            'site_code' : 'C51',
+                          }
+
+        expected_extrainfo = '     N009ags  s2016 02 08.76077 1 - 3484.5127 - 5749.6261 - 1405.6769   NEOCPC51'
+
+        source_measures = create_source_measurement(self.sat_test_obslines[0:2])
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SATELLITE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
+
     def test_create_non_existant_body(self):
 
-        source_measure = create_source_measurement(self.test_obslines[3].replace('WSAE9A6', 'FOOBAR'))
+        source_measures = create_source_measurement(self.test_obslines[3].replace('WSAE9A6', 'FOOBAR'))
 
-        self.assertEqual(None, source_measure)
+        self.assertEqual([], source_measures)
 
     def test_create_whole_file(self):
 
-        source_measure = create_source_measurement(self.test_obslines)
+        source_measures = create_source_measurement(self.test_obslines)
+        source_measure = source_measures[0]
 
         sources = SourceMeasurement.objects.filter(body=self.test_body)
         nonLCO_frames = Frame.objects.filter(frametype=Frame.NONLCO_FRAMETYPE)
@@ -871,7 +1049,8 @@ class TestCreate_sourcemeasurement(TestCase):
 
     def test_create_duplicates(self):
 
-        source_measure = create_source_measurement(self.test_obslines)
+        source_measures = create_source_measurement(self.test_obslines)
+        source_measure = source_measures[0]
         source_measure2 = create_source_measurement(self.test_obslines)
 
         sources = SourceMeasurement.objects.filter(body=self.test_body)
@@ -935,6 +1114,40 @@ class TestFrames(TestCase):
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         # Although there are 4 sources in the file 2 are in the same frame
         self.assertEqual(3, frames.count())
+
+    def test_add_frames_block(self):
+        params = {
+                    'date_obs': "2015-04-20 21:41:05",
+                    'siteid': 'cpt',
+                    'encid': 'doma',
+                    'telid': '1m0a',
+                    'filter_name': 'R',
+                    'instrume': "kb70",
+                    'origname': "cpt1m010-kb70-20150420-0001-e00.fits",
+                    'exptime': '30'
+                 }
+        frame_params = frame_params_from_block(params, self.test_block)
+        frame, frame_created = Frame.objects.get_or_create(**frame_params)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
+
+    def test_ingest_frames_block(self):
+        params = {
+                    'date_obs': "2015-04-20 21:41:05",
+                    'siteid': 'cpt',
+                    'encid': 'doma',
+                    'telid': '1m0a',
+                    'filter_name': 'R',
+                    'instrume': "kb70",
+                    'origname': "cpt1m010-kb70-20150420-0001-e00.fits",
+                    'exptime': '30',
+                    'groupid': 'tmp'
+                 }
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
 
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
@@ -1080,6 +1293,52 @@ class TestClean_crossid(TestCase):
         expected_params = { 'active' : False,
                             'name' : 'C/2015 TQ209',
                             'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_mpec_recent(self):
+        crossid =  u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Nov. 18.63 UT)'
+        expected_params = { 'active' : True,
+                            'name' : 'C/2015 X8',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_mpec_notrecent(self):
+        crossid =  u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)'
+        expected_params = { 'active' : False,
+                            'name' : 'C/2015 X8',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_new_year_switchover(self):
+        MockDateTime.change_datetime(2016, 1, 1, 0, 30, 0)
+        crossid =  u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)'
+        expected_params = { 'active' : False,
+                            'name' : 'C/2015 X8',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_bad_date(self):
+        MockDateTime.change_datetime(2016, 3, 1, 0, 30, 0)
+        crossid = u'P10sKEk', u'2016 CP264', '', u'(Feb. 30.00 UT)'
+        expected_params = { 'active' : False,
+                            'name' : '2016 CP264',
+                            'source_type' : 'A'
                           }
 
         params = clean_crossid(crossid)
