@@ -29,7 +29,7 @@ SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('W85','CTIO, Chile (LSC - W85; SBIG)'),
          ('W86','CTIO, Chile (LSC - W86; Sinistro)'),
          ('K92','Sutherland, S. Africa (CPT - K91-93)'),
-         ('Q63','Siding Spring, Aust. (COJ - Q63-64)'))
+         ('Q63','Siding Spring, Aust. (COJ - Q63-64)'),
          ('Z21','Tenerife, Spain (TFN - Z21; 0.4m)'))
 
 
