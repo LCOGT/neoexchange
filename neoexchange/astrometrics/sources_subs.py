@@ -701,7 +701,9 @@ def parse_goldstone_chunks(chunks, dbg=False):
             # We have something that straddles months
             if dbg: print "In case 2b"
             object_id = str(chunks[4])
-        elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isalnum():
+        elif astnum <= 31 and (chunks[3].isdigit() or chunks[3][0:2] == 'P/' \
+        or chunks[3][0:2] == 'C/') and chunks[4].isalnum():
+            # We have a date range e.g. '2016 Mar 17-23'
             # Test if the first 2 characters of chunks[4] are uppercase
             # If yes then we have a desigination e.g. [2014] 'UR' or [2015] 'FW117'
             # If no, then we have a name e.g. [1566] 'Icarus'
