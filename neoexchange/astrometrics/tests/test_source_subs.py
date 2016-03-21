@@ -77,6 +77,20 @@ class TestGoldstoneChunkParser(TestCase):
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
+    def test_periodic_comet(self):
+        expected_objid = 'P/2016 BA14'
+        chunks = [u'2016', u'Mar', u'17-23', u'P/2016', u'BA14', u'Pan-STARRS', u'No', u'Yes', u'Comet', u'DSS-13', u'and', u'Green', u'Bank.', u'Tests', u'at', u'DSS-14.', u'Target-of-opportunity.']
+        obj_id = parse_goldstone_chunks(chunks)
+        self.assertEqual(expected_objid, obj_id)
+
+    def test_comma_separated_obsdates(self):
+        expected_objid = '2016 BC14'
+        line = u'2016 Mar 22, 23          2016 BC14       No         Yes          PHA               NHATS  Tests at DSS-14.  Target-of-opportunity.'
+        line = line.replace(', ', '-', 1)
+        chunks = line.lstrip().split()
+        obj_id = parse_goldstone_chunks(chunks)
+        self.assertEqual(expected_objid, obj_id)
+
 class TestFetchAreciboTargets(TestCase):
 
     def setUp(self):
