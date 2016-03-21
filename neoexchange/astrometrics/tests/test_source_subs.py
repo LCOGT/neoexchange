@@ -85,7 +85,9 @@ class TestGoldstoneChunkParser(TestCase):
 
     def test_comma_separated_obsdates(self):
         expected_objid = '2016 BC14'
-        chunks = [u'2016', u'Mar', u'22,', u'23', u'2016', u'BC14', u'No', u'Yes', u'PHA', u'NHATS', u'Tests', u'at', u'DSS-14.', u'Target-of-opportunity.']
+        line = u'2016 Mar 22, 23          2016 BC14       No         Yes          PHA               NHATS  Tests at DSS-14.  Target-of-opportunity.'
+        line = line.replace(', ', '-', 1)
+        chunks = line.lstrip().split()
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 

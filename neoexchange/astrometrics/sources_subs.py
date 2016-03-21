@@ -748,6 +748,11 @@ def fetch_goldstone_targets(dbg=False):
             in_objects = True
         else:
             if in_objects == True:
+                # Look for malformed comma-separated dates in the first part of
+                # the line and convert the first occurence to hyphens before
+                # splitting.
+                if ', ' in line[0:40]:
+                    line = line.replace(', ', '-', 1)
                 chunks = line.lstrip().split()
                 #if dbg: print line
                 # Check if the start of the stripped line is no longer the
