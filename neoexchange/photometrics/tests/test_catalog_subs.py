@@ -35,8 +35,49 @@ class ZeropointUnitTest(TestCase):
 
     @mock.patch('photometrics.catalog_subs.Vizier')
     def test_get_cat_ra_dec(self, mock_vizier):
+#    def test_get_cat_ra_dec(self):
         #test getting a single ra, dec, and rmag out of the default UCAC4 catalog
-        test_data = __file__.replace('.py', '.dat')
+#        test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+#        test_query_result = []
+#        test_query_result.append(Table.read(test_data, format='csv'))
+#        mock_vizier().query_region().return_value=test_query_result
+#        print mock_vizier().query_region().return_value#[0]['_RAJ2000'][0]
+#        print len(mock_vizier().query_region().return_value)
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+#        print mock_vizier().query_region().__getitem__.return_value['_RAJ2000'][0]
+#        print len(mock_vizier().query_region().__getitem__.return_value)
+
+        expected_ra_first_source = 299.29474599999998
+
+        expected_dec_first_source = 34.973799999999997
+
+        expected_rmag_third_source = 12.642
+
+        expected_len_cat_table = 1607
+
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
+#        print cat_table['_RAJ2000'][0], cat_table['_DEJ2000'][0]#, cat_table['rmag'][2]
+#        print cat_name
+#        print cat_table
+
+        ra_first_source = cat_table['_RAJ2000'][0]
+
+        dec_first_source = cat_table['_DEJ2000'][0]
+
+        rmag_third_source = cat_table['rmag'][2]
+
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_no_cat(self, mock_vizier):
+#    def test_no_cat(self):
+        #test if no catalog input, use default catalog
+#        test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
         mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29474599999998
@@ -45,7 +86,9 @@ class ZeropointUnitTest(TestCase):
 
         expected_rmag_third_source = 12.642
 
-        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
+        expected_len_cat_table = 1607
+
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m")
 
         ra_first_source = cat_table['_RAJ2000'][0]
 
@@ -56,36 +99,23 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
         self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
 
-    def test_no_cat(self):
-        #test if no catalog input, use default catalog
-
-        expected_ra_first_source = 299.29474599999998
-
-        expected_dec_first_source = 34.973799999999997
-
-        expected_rmag_third_source = 12.642
-
-        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "UCAC4")
-
-        ra_first_source = cat_table['_RAJ2000'][0]
-
-        dec_first_source = cat_table['_DEJ2000'][0]
-
-        rmag_third_source = cat_table['rmag'][2]
-
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
-        self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
-
-    def test_get_cat_ra_dec_not_default(self):
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_get_cat_ra_dec_not_default(self, mock_vizier):
+#    def test_get_cat_ra_dec_not_default(self):
         #test a catalog other than the default
+#        test_data = __file__.replace('.py', '_PPMXL.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29136599999998
 
         expected_dec_first_source = 35.242404000000001
 
         expected_rmag_first_source = 14.32
+
+        expected_len_cat_table = 737
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
 
@@ -98,15 +128,23 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
         self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
         self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 3)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
 
-    def test_get_cat_diff_rmag_limit(self):
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_get_cat_diff_rmag_limit(self, mock_vizier):
+#    def test_get_cat_diff_rmag_limit(self):
         #test a catalog with an r mag limit
+#        test_data = __file__.replace('.py', '_PPMXL_diff_rmag_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_rmag_limit.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 299.82885099999999
 
         expected_dec_last_source = 34.998407
 
         expected_rmag_last_source = 14.5
+
+        expected_len_cat_table = 443
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5", cat_name = "PPMXL")
 
@@ -119,15 +157,23 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
         self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 6)
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 1)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
 
-    def test_get_cat_diff_row_limit(self):
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_get_cat_diff_row_limit(self, mock_vizier):
+#    def test_get_cat_diff_row_limit(self):
         #test a catalog with a different row limit
+#        test_data = __file__.replace('.py', '_PPMXL_diff_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_row_limit.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29136599999998
 
         expected_dec_first_source = 35.242404000000001
 
         expected_rmag_first_source = 14.32
+
+        expected_len_cat_table = 737
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40, cat_name = "PPMXL")
 
@@ -140,15 +186,23 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
         self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
         self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
 
-    def test_get_cat_diff_width(self):
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_get_cat_diff_width(self, mock_vizier):
+#    def test_get_cat_diff_width(self):
         #test a catalog with a different width and height
+#        test_data = __file__.replace('.py', '_UCAC4_diff_width_height.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_diff_width_height.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 299.74110200000001
 
         expected_dec_last_source = 35.313324999999999
 
         expected_rmag_3rdlast_source = 14.81
+
+        expected_len_cat_table = 408
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "15m", "15m")
 
@@ -161,6 +215,94 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
         self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
         self.assertAlmostEqual(expected_rmag_3rdlast_source, rmag_3rdlast_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_get_cat_ra_dec_above_row_limit(self, mock_vizier):
+#    def test_get_cat_ra_dec_above_row_limit(self):
+        #test a catalog with a different width and height
+#        test_data = __file__.replace('.py', '_PPMXL_above_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_above_row_limit.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+
+        expected_ra_last_source = 267.35990700000002
+
+        expected_dec_last_source = -28.212005999999999
+
+        expected_rmag_last_source = 14.54
+
+        expected_len_cat_table = 11838
+
+        cat_table, cat_name = get_vizier_catalog_table(266.4168, -29.0078, "100m", "100m", "PPMXL")
+
+        ra_last_source = cat_table['_RAJ2000'][-1]
+
+        dec_last_source = cat_table['_DEJ2000'][-1]
+
+        rmag_last_source = cat_table['r2mag'][-1]
+
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_get_cat_ra_dec_empty_list_PPMXL(self, mock_vizier):
+#    def test_get_cat_ra_dec_empty_list_PPMXL(self):
+        #test a catalog with a different width and height
+#        test_data = __file__.replace('.py', '_UCAC4_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_empty.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+
+        expected_ra_last_source = 0.0
+
+        expected_dec_last_source = 0.0
+
+        expected_rmag_last_source = 0.0
+
+        expected_len_cat_table = 100000
+
+        cat_table, cat_name = get_vizier_catalog_table(298.590, 35.201, "0.5m", "0.5m", "PPMXL")
+
+        ra_last_source = cat_table['_RAJ2000'][-1]
+
+        dec_last_source = cat_table['_DEJ2000'][-1]
+
+        rmag_last_source = cat_table['rmag'][-1] #will replace cat_name with UCAC4 after failing with PPMXL
+
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
+    @mock.patch('photometrics.catalog_subs.Vizier')
+    def test_get_cat_ra_dec_empty_list_UCAC4(self, mock_vizier):
+#    def test_get_cat_ra_dec_empty_list_UCAC4(self):
+        #test a catalog with a different width and height
+#        test_data = __file__.replace('.py', '_PPMXL_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_empty.dat', format='csv')
+        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+
+        expected_ra_last_source = 0.0
+
+        expected_dec_last_source = 0.0
+
+        expected_rmag_last_source = 0.0
+
+        expected_len_cat_table = 100000
+
+        cat_table, cat_name = get_vizier_catalog_table(298.590, 35.201, "0.5m", "0.5m")
+
+        ra_last_source = cat_table['_RAJ2000'][-1]
+
+        dec_last_source = cat_table['_DEJ2000'][-1]
+
+        rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
+
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
 
     def test_cross_match_UCAC4_longerThan_testFITS(self):
         #test with cat 1 as longer UCAC4 table values and cat 2 as shorter test FITS table values
