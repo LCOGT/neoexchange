@@ -1130,7 +1130,7 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site or site in ['Z21',]:
+    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z21', 'E99', 'F66', 'W89']:
         ha_pos_limit = 4.46 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 15.0
@@ -1186,9 +1186,10 @@ def get_sitecam_params(site):
     point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()
+    valid_point4m_codes = ['Z21', 'W89', 'F66', 'E99']
 
     site = site.upper()
-    if site == 'FTN' or 'OGG-CLMA' in site or site == 'F65':
+    if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
         site_code = 'F65'
         setup_overhead = twom_setup_overhead
         exp_overhead = twom_exp_overhead
@@ -1196,7 +1197,7 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(10.0)
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
-    elif site == 'FTS' or 'COJ-CLMA' in site or site == 'E10':
+    elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':
         site_code = 'E10'
         setup_overhead = twom_setup_overhead
         exp_overhead = twom_exp_overhead
@@ -1204,8 +1205,8 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(10.0)
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
-    elif site == 'TFN' or '-AQWA' in site or site == 'Z21':
-        site_code = 'Z21'
+    elif site in valid_point4m_codes:
+        site_code = site
         setup_overhead = onem_setup_overhead
         exp_overhead = point4m_exp_overhead
         pixel_scale = point4m_pixscale

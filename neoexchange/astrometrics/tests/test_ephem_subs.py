@@ -73,14 +73,37 @@ class TestGetMountLimits(TestCase):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('TFN-AQWA-0m4B')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
+    def test_point4m_by_site2(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('OGG-CLMA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site3(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('OGG-CLMA-0M4B')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site4(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('COJ-CLMA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site5(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('COJ-CLMA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
     def test_point4m_by_site_code(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z21')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code2(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('E99')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code3(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('F66')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
     def test_point4m_by_site_code_lowercase(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('z21')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
-
 
 class TestComputeEphem(TestCase):
 
@@ -729,6 +752,18 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.twom_setup_overhead, setup_overhead)
         self.assertEqual(self.twom_exp_overhead, exp_overhead)
 
+    def test_2m_sitename(self):
+        site_code = 'F65'
+
+        site_string = 'OGG-CLMA-2M0A'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_string)
+        self.assertEqual(site_code, chk_site_code)
+        self.assertEqual(0.304, pixel_scale)
+        self.assertEqual(self.twom_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.twom_setup_overhead, setup_overhead)
+        self.assertEqual(self.twom_exp_overhead, exp_overhead)
+
     def test_1m_site_sbig(self):
         site_code = 'Q63'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
@@ -751,6 +786,26 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site(self):
         site_code = 'Z21'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site2(self):
+        site_code = 'F66'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site3(self):
+        site_code = 'E99'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(1.139, pixel_scale)
