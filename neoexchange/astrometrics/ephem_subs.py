@@ -956,12 +956,26 @@ def get_sitepos(site_code, dbg=False):
         site_hgt = 1168.0
         site_name = 'LCOGT COJ Node 1m0 Dome B at Siding Spring'
     elif site_code == 'TFN-AQWA-0M4A' or site_code == 'Z21':
-# Latitude, longitude from somewhere
+# Latitude, longitude from Todd B./Google Earth
         (site_lat, status)  =  S.sla_daf2r(28, 18, 1.11)
         (site_long, status) =  S.sla_daf2r(16, 30, 42.13)
         site_long = -site_long # West of Greenwich !
         site_hgt = 2390.0
         site_name = 'LCOGT TFN Node 0m4a Aqawan A at Tenerife'
+    elif site_code == 'OGG-CLMA-0M4B' or site_code == 'F66':
+# Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
+        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
+        (site_long, status) =  S.sla_daf2r(156, 15, 27.11)
+        site_long = -site_long # West of Greenwich !
+        site_hgt = 3037.0
+        site_name = 'LCOGT OGG Node 0m4b at Maui'
+    elif site_code == 'COJ-CLMA-0M4B' or site_code == 'E99':
+# Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
+        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.48)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) =  S.sla_daf2r(149, 04, 14.91)
+        site_hgt = 1191.0
+        site_name = 'LCOGT COJ Node 0m4b at Siding Spring'
     else:
 # Obtain latitude, longitude of the observing site.
 # Reverse longitude to get the more normal East-positive convention
