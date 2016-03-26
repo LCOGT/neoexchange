@@ -29,7 +29,7 @@ from neox.tests.mocks import MockDateTime
 from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
-    fetch_NEOCP_observations, imap_login, fetch_NASA_targets
+    fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1270,3 +1270,176 @@ class TestIMAPLogin(TestCase):
         expected_targets = ['2016 DJ']
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
+
+class TestConfigureDefaults(TestCase):
+
+    def test_tfn_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'Z21',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'site' : 'TFN',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_ogg_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'F66',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'site' : 'OGG',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_coj_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'E99',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'site' : 'COJ',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_lsc_sbig(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'W85',
+              }
+
+        expected_params = { 'instrument' :  '1M0-SCICAM-SBIG',
+                            'pondtelescope' :'1m0',
+                            'observatory' : '',
+                            'site' : 'LSC',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_lsc_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'W86',
+              }
+
+        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope' :'1m0',
+                            'observatory' : 'domb',
+                            'site' : 'LSC',
+                            'filter' : 'w',
+                            'binning' : 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_lsc_bad_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'W87',
+              }
+
+        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope' :'1m0',
+                            'observatory' : 'domb',
+                            'site' : 'LSC',
+                            'filter' : 'w',
+                            'binning' : 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_ftn(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'F65',
+              }
+
+        expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
+                            'pondtelescope' :'2m0',
+                            'observatory' : '',
+                            'site' : 'OGG',
+                            'filter' : 'solar',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_fts(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'E10',
+              }
+
+        expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
+                            'pondtelescope' :'2m0',
+                            'observatory' : '',
+                            'site' : 'COJ',
+                            'filter' : 'solar',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_elp_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'V37',
+              }
+
+        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope' :'1m0',
+                            'observatory' : '',
+                            'site' : 'ELP',
+                            'filter' : 'w',
+                            'binning' : 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
