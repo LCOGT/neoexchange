@@ -1130,9 +1130,10 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site:
-        ha_pos_limit = 4.25 * 15.0
-        ha_neg_limit = -4.25 * 15.0
+    elif '-AQWA' in site or site in ['Z21',]:
+        ha_pos_limit = 4.46 * 15.0
+        ha_neg_limit = -4.5 * 15.0
+        alt_limit = 15.0
 
     return (ha_neg_limit, ha_pos_limit, alt_limit)
 
@@ -1165,21 +1166,24 @@ def get_sitecam_params(site):
     site_code is set to 'XXX' and the others are set to -1 in the event of an
     unrecognized site.'''
 
+    # Field of view is in arcmin, pixel scale is in arcsec, overheads are in
+    # seconds.
     onem_fov = 15.5
     onem_pixscale = 0.464
     onem_sinistro_fov = 26.4
     onem_sinistro_pixscale = 0.389
-    point4m_fov = 24.35
-    point4m_pixscale = 0.571
+    point4m_pixscale = 1.139 # bin 2, from average kb29 values
+    point4m_fov = 29.1
     normal_alt_limit = 30.0
     twom_alt_limit = 20.0
+    point4m_alt_limit = 15.0
 
     onem_exp_overhead = 15.5
     sinistro_exp_overhead = 48.0
     onem_setup_overhead = 120.0
     twom_setup_overhead = 180.0
     twom_exp_overhead = 22.5
-    point4m_exp_overhead = 7.5 # for BPL
+    point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()
 
@@ -1201,13 +1205,13 @@ def get_sitecam_params(site):
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
     elif site == 'TFN' or '-AQWA' in site or site == 'Z21':
-        site_code = 'TFN'
+        site_code = 'Z21'
         setup_overhead = onem_setup_overhead
         exp_overhead = point4m_exp_overhead
-        pixel_scale = 0.571
-        fov = arcmins_to_radians(30.0)
+        pixel_scale = point4m_pixscale
+        fov = arcmins_to_radians(point4m_fov)
         max_exp_length = 300.0
-        alt_limit = twom_alt_limit
+        alt_limit = point4m_alt_limit
     elif site in valid_site_codes:
         setup_overhead = onem_setup_overhead
         exp_overhead = onem_exp_overhead

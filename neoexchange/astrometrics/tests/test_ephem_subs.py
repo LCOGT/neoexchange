@@ -35,6 +35,10 @@ class TestGetMountLimits(TestCase):
             ha_pos_limit = 4.5 * 15.0
             ha_neg_limit = -4.5 * 15.0
             altitude_limit = 30.0
+        elif tel_class.lower() == '0.4m':
+            ha_pos_limit = 4.46 * 15.0
+            ha_neg_limit = -4.5 * 15.0
+            altitude_limit = 15.0
         else:
             self.Fail("Unknown telescope class:", tel_class)
         self.assertEqual(ha_pos_limit, pos_limit)
@@ -64,6 +68,18 @@ class TestGetMountLimits(TestCase):
     def test_1m_by_site_code_lowercase(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('q63')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
+
+    def test_point4m_by_site(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('TFN-AQWA-0m4B')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z21')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code_lowercase(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('z21')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
 
 class TestComputeEphem(TestCase):
@@ -689,6 +705,9 @@ class TestGetSiteCamParams(TestCase):
     onem_exp_overhead = 15.5
     sinistro_exp_overhead = 48.0
     onem_sinistro_fov = radians(26.4/60.0)
+    point4m_fov = radians(29.1/60.0)
+    point4m_exp_overhead = 13.0
+    point4m_setup_overhead = 120.0
     max_exp = 300.0
 
     def test_bad_site(self):
@@ -729,6 +748,16 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+
+    def test_point4m_site(self):
+        site_code = 'Z21'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
 
 class TestDetermineExpTimeCount(TestCase):
 
@@ -791,6 +820,32 @@ class TestDetermineExpTimeCount(TestCase):
 
         expected_exptime = None
         expected_expcount = None
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_slow_point4m(self):
+        speed = 2.52
+        site_code = 'Z21'
+        slot_len = 22.5
+
+        expected_exptime = 20.0
+        expected_expcount = 37
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_fast_point4m(self):
+        speed = 23.5
+        site_code = 'Z21'
+        slot_len = 20
+
+        expected_exptime = 2.0
+        expected_expcount = 72
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
 
