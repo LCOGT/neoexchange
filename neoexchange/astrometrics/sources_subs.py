@@ -842,10 +842,11 @@ def imap_login(username, password, server='imap.gmail.com'):
 
     return mailbox
 
-def fetch_NASA_targets(mailbox, folder='NASA-ARM'):
+def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     '''Search through the specified folder/label (defaults to "NASA-ARM" if not
     specified) within the passed IMAP mailbox <mailbox> for emails to the
-    small bodies list and returns a list of targets'''
+    small bodies list and returns a list of targets. Emails that are more than
+    [date_cutoff] days old (default is 1 day) will not be looked at.'''
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_author = '"paul.a.abell@nasa.gov"'
@@ -882,7 +883,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM'):
                         # See if the subject has the right prefix and suffix and is 
                         # within a day of 'now'
                         if list_prefix in msg_subject and list_suffix in msg_subject and \
-                            time_diff <= timedelta(days=1):
+                            time_diff <= timedelta(days=date_cutoff):
                             target = ' '.join(msg_subject.split()[TARGET_DESIGNATION])
                             NASA_targets.append(target)
                 except:
