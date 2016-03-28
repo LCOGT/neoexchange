@@ -700,7 +700,7 @@ def get_mag_mapping(site_code):
     good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
     # COJ normally has bad seeing, allow more time
     bad_onem_site_codes = ['Q63', 'Q64']
-    point4m_site_codes = ['Z21',]
+    point4m_site_codes = ['Z21', 'W89', 'F66', 'E99']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
