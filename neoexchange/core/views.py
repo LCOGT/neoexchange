@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes
+    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
@@ -408,7 +408,7 @@ def schedule_submit(data, body, username):
     body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
-    my_proposals = user_proposals(user)
+    my_proposals = user_proposals(username)
     if proposal not in my_proposals:
         resp_params = {'msg' : 'You do not have permission to schedule using proposal %s' % data['proposal_code']}
 
@@ -1078,10 +1078,11 @@ def create_frame(params, block=None):
 
 def frame_params_from_block(params, block):
     # In these cases we are parsing the FITS header
+    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
     frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : params.get('siteid', None),
+                     'sitecode' : sitecode,
                      'filter'   : params.get('filter_name', "B"),
-                     'frametype': Frame.NONLCO_FRAMETYPE,
+                     'frametype': Frame.SINGLE_FRAMETYPE,
                      'block'    : block,
                      'instrument': params.get('instrume', None),
                      'filename'  : params.get('origname', None),
