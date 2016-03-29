@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -1269,4 +1269,30 @@ class TestIMAPLogin(TestCase):
 
         expected_targets = ['2016 DJ']
         targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_reject_msg_old_with_tz_and_cutoff(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 16,  4, 27, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox, date_cutoff=2)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_accept_msg_old_with_tz_and_cutoff(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 16,  3, 26, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+
+        expected_targets = ['2016 BA14']
+        targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
