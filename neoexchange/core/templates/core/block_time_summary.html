@@ -26,37 +26,37 @@
 
 var data = {{summary|safe}};
 
-	var margin = {
-				top: 20,
-				right: 20,
-				bottom: 40,
-				left: 60
-			},
-				width = 900 - margin.left - margin.right,
-				height = 315 - margin.top - margin.bottom,
-				that = this;
+        var margin = {
+                                top: 20,
+                                right: 20,
+                                bottom: 40,
+                                left: 60
+                        },
+                                width = 900 - margin.left - margin.right,
+                                height = 315 - margin.top - margin.bottom,
+                                that = this;
 
 
-			var x = d3.scale.ordinal().rangeRoundBands([0, width], .3);
+                        var x = d3.scale.ordinal().rangeRoundBands([0, width], .3);
 
-			var y = d3.scale.linear().rangeRound([height, 0]);
+                        var y = d3.scale.linear().rangeRound([height, 0]);
 
-			var color = d3.scale.category20();
+                        var color = d3.scale.category20();
 
-			var xAxis = d3.svg.axis().scale(x).orient("bottom");
+                        var xAxis = d3.svg.axis().scale(x).orient("bottom");
 
-			var yAxis = d3.svg.axis().scale(y).orient("left");
+                        var yAxis = d3.svg.axis().scale(y).orient("left");
 
-			var svg = d3.select("#block-graph")
+                        var svg = d3.select("#block-graph")
                 .append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .append("g")
                 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-			color.domain(d3.keys(data[0]).filter(function (key) {
-				return key !== "proposal";
-			}));
+                        color.domain(d3.keys(data[0]).filter(function (key) {
+                                return key !== "proposal";
+                        }));
 
 
       data.forEach(function(d) {
@@ -67,33 +67,33 @@ var data = {{summary|safe}};
 
       data.sort(function(a, b) { return b.total - a.total; });
       y.domain([0, d3.max(data, function(d) { return d.total; })]);
-			x.domain(data.map(function (d) {return d.proposal;}));
+                        x.domain(data.map(function (d) {return d.proposal;}));
 
-			svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
+                        svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
 
-			svg.append("g").attr("class", "y axis").call(yAxis);
+                        svg.append("g").attr("class", "y axis").call(yAxis);
 
-			var proposal = svg.selectAll(".block-values")
+                        var proposal = svg.selectAll(".block-values")
         .data(data)
         .enter()
         .append("g")
         .attr("class", "block-values")
         .attr("transform", function (d) {
-  				return "translate(" + x(d.proposal) + ",0)";
-  			 });
+                                return "translate(" + x(d.proposal) + ",0)";
+                         });
 
-  			proposal.selectAll("rect").data(function (d) {
-  				return d.blocks;
-  			}).enter()
+                        proposal.selectAll("rect").data(function (d) {
+                                return d.blocks;
+                        }).enter()
         .append("rect")
         .attr("width", x.rangeBand())
         .attr("y", function (d) {
-  				return y(d.y1);
-  			}).attr("height", function (d) {
-  				return y(d.y0) - y(d.y1);
-  			}).style("fill", function (d) {
-  				return color(d.name);
-  			})
+                                return y(d.y1);
+                        }).attr("height", function (d) {
+                                return y(d.y0) - y(d.y1);
+                        }).style("fill", function (d) {
+                                return color(d.name);
+                        })
 
         proposal.append("text")
           .attr("y", function(d) { return y(d.blocks[0].y1+10); })
