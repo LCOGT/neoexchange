@@ -8,7 +8,7 @@
 
 {% block extramenu %}
 <div class="headingleft">
-  <h1>Source Measurements for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+  <h1>Measurements of {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
 </div>
 {% endblock%}
 
