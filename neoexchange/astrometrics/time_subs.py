@@ -39,6 +39,13 @@ def get_semester_end(date):
     return datetime(year, month, day, hour, minute, second)
 
 def get_semester_dates(date):
+    '''Returns the semester start and end datetimes for the LCOGT semesters.
+    LCOGT has two semesters, A & B, which run as follows:
+    A semester: <year>-04-01 00:00:00 UTC until <year>-09-30 23:59:59 UTC
+    B semester: <year>-10-01 00:00:00 UTC until <year+1>-03-31 23:59:59 UTC
+    e.g. 2015B runs from 2015-10-01 00:00:00->2016-03-31 23:59:59 and 2016A
+    runs from 2016-04-01 00:00:00 until 2016-09-30 23:59:59'''
+
     start = get_semester_start(date)
     end = get_semester_end(date)
 
