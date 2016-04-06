@@ -60,13 +60,16 @@ class LoginRequiredMixin(object):
         return login_required(view)
 
 def user_proposals(user):
+    '''
+    Returns active proposals the given user has permissions for
+    '''
     if type(user) != User:
         try:
             user = User.objects.get(username=user)
         except ObjectDoesNotExist:
             raise ValidationError
 
-    proposals = Proposal.objects.filter(proposalpermission__user=user)
+    proposals = Proposal.objects.filter(proposalpermission__user=user, active=True)
 
     return proposals
 
