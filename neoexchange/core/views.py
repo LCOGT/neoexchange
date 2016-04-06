@@ -60,7 +60,7 @@ class LoginRequiredMixin(object):
 
 def user_proposals(user):
     '''
-    Returns active proposals the given user has persmissions for
+    Returns active proposals the given user has permissions for
     '''
     if type(user) != User:
         try:
