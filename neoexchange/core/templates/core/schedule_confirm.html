@@ -85,8 +85,8 @@
         {% if form.errors%}
         <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
         {% else %}
-        <input type="submit" class="btn btn-secondary" value="Schedule this Object" id="id_submit_button" name="submit">
-        <input type="submit" class="btn btn-secondary" value="Edit Parameters" id="id_edit_button" name="edit">
+        <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
+        <input type="submit" class="button button-primary" value="Edit Parameters" id="id_edit_button" name="edit">
         {% endif%}
           {{form.start_time}}
           {{form.end_time}}
