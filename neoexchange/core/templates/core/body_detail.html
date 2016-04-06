@@ -14,7 +14,7 @@
 			<!-- Main body -->
 			<div class="container" id="main">
 					<div class="row">
-						<a class="button button-primary" href="{% url 'schedule-body' body.id %}">Schedule Observations</a>
+						<a class="button button-primary" href="{% url 'schedule-body' body.id %}" id="schedule-obs">Schedule Observations</a>
 					</div>
 					<div class="row">
 						<div class="eight columns">
@@ -75,7 +75,7 @@
 								{% endfor %}
 							</ul>
                     <h5 class="section-title">Measurements</h5>
-	                    <a href="{% url 'measurement' body.id %}" class="button button-primary">Show Measurements</a>
+	                    <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
     						</div>
 						<div class="four columns rightsidebar">
 							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>

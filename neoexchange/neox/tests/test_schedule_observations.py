@@ -67,7 +67,7 @@ class ScheduleObservations(FunctionalTest):
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
-        link = self.browser.find_element_by_link_text('Schedule Observations')
+        link = self.browser.find_element_by_id('schedule-obs')
         target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), target_url)
 
@@ -122,7 +122,7 @@ class ScheduleObservations(FunctionalTest):
         start_url = reverse('target',kwargs={'pk':1})
         self.browser.get(self.live_server_url + start_url)
         self.wait_for_element_with_id('main')
-        link = self.browser.find_element_by_partial_link_text('Schedule Observations')
+        link = self.browser.find_element_by_id('schedule-obs')
         link.click()
         self.wait_for_element_with_id('username')
         new_url = self.browser.current_url
@@ -141,7 +141,7 @@ class ScheduleObservations(FunctionalTest):
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
-        link = self.browser.find_element_by_link_text('Schedule Observations')
+        link = self.browser.find_element_by_id('schedule-obs')
         target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), target_url)
 
@@ -208,7 +208,7 @@ class ScheduleObservations(FunctionalTest):
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
-        link = self.browser.find_element_by_link_text('Schedule Observations')
+        link = self.browser.find_element_by_id('schedule-obs')
         target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), target_url)
 
