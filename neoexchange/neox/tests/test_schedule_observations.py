@@ -54,8 +54,10 @@ class ScheduleObservations(FunctionalTest):
 
 
 # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
-
+# TAL: Need to patch the datetime in views also otherwise we will get the wrong
+# semester and window bounds.
     @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
     def test_can_schedule_observations(self):
         self.test_login()
 
@@ -129,6 +131,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('login/', str(new_url))
 
     @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
     def test_schedule_page_edit_block(self):
         MockDateTime.change_date(2015, 4, 20)
         self.test_login()
@@ -196,6 +199,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Schedule this Object',submit)
 
     @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
     def test_schedule_page_short_block(self):
         MockDateTime.change_date(2015, 4, 20)
         self.test_login()

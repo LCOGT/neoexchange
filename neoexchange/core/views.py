@@ -37,7 +37,8 @@ from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
-from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, parse_neocp_decimal_date
+from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
+    parse_neocp_decimal_date, get_semester_dates
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
@@ -358,6 +359,12 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
+    # Determine the semester boundaries for the current time and truncate the dark time and
+    # therefore the windows appropriately.
+    semester_start, semester_end = get_semester_dates(datetime.utcnow())
+    dark_start = max(dark_start, semester_start)
+    dark_end = min(dark_end, semester_end)
+
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
         dbg=False, perturb=True, display=False)
