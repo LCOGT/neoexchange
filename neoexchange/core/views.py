@@ -407,6 +407,8 @@ def schedule_submit(data, body, username):
     # Check for pre-existing block
     tracking_number = None
     resp_params = None
+    if check_for_block(data, params, body) == 1:
+        data['group_id'] = data['group_id'] + '_2'
     if check_for_block(data, params, body) == 0:
         # Record block and submit to scheduler
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
