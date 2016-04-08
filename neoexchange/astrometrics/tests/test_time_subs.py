@@ -150,6 +150,36 @@ class TestParseNeocpDate(TestCase):
 
         self.assertEqual(expected_dt, dt)
 
+    def test_extra_spaces(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+
+        date_string = u'(Mar.  9.97 UT)'
+        expected_dt =  datetime(2016, 3, 9, 23, 16, 48)
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_extra_spaces2(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+
+        date_string = u'(Mar.    9.97    UT)'
+        expected_dt =  datetime(2016, 3, 9, 23, 16, 48)
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_extra_spaces3(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+
+        date_string = u'(Mar.  19.97 UT)'
+        expected_dt =  datetime(2016, 3, 19, 23, 16, 48)
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
 class TestGetSemesterDates(TestCase):
 
     def test_start_of_B_semester(self):
