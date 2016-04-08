@@ -70,7 +70,7 @@ def parse_neocp_date(neocp_datestr, dbg=False):
                   'Nov' : 11,
                   'Dec' : 12 }
 
-    chunks = neocp_datestr.split(' ')
+    chunks = neocp_datestr.split()
     if dbg: print chunks
     if len(chunks) != 3: return None
     month_str = chunks[0].replace('(', '').replace('.', '')

@@ -1570,3 +1570,15 @@ class TestClean_crossid(TestCase):
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
+
+    def test_extra_spaces(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+        crossid = [u'P10tmAL ', u'2013 AM76', '', u'(Mar.  9.97 UT)']
+        expected_params = { 'active' : False,
+                            'name' : '2013 AM76',
+                            'source_type' : 'A'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
