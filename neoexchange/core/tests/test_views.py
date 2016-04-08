@@ -1579,6 +1579,6 @@ class TestClean_crossid(TestCase):
                             'source_type' : 'A'
                           }
 
-        params = clean_crossid(crossid[0])
+        params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
