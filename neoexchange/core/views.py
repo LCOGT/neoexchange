@@ -100,12 +100,13 @@ def summarise_block_efficiency():
     for proposal in proposals:
         blocks = Block.objects.filter(proposal=proposal)
         observed = blocks.filter(num_observed__isnull=False)
-        proposal_summary = {
-                        'proposal':proposal.code,
-                        'Observed' : observed.count(),
-                        'Not Observed' : blocks.count() - observed.count()
-                            }
-        summary.append(proposal_summary)
+        if len(blocks) > 0:
+            proposal_summary = {
+                                 'proposal':proposal.code,
+                                 'Observed' : observed.count(),
+                                 'Not Observed' : blocks.count() - observed.count()
+                               }
+            summary.append(proposal_summary)
     return summary
 
 
