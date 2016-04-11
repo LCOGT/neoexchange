@@ -30,7 +30,7 @@ from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement, block_status, clean_crossid, create_frame, \
-    frame_params_from_block, schedule_check
+    frame_params_from_block, schedule_check, summarise_block_efficiency
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
@@ -1582,3 +1582,191 @@ class TestClean_crossid(TestCase):
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
+
+class TestSummarise_Block_Efficiency(TestCase):
+
+    def setUp(self):
+        # Initialise with a test body, three test proposals and several blocks.
+        # The first proposal has two blocks (one observed, one not), the 2nd one
+        # has a block scheduled but not observed and the third has no blocks
+        # scheduled.
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+    def test_proposal_with_scheduled_and_obs_blocks(self):
+        proposal_params = { 'code'  : 'LCO2015A-009',
+                            'title' : 'LCOGT NEO Follow-up Network'
+                          }
+        proposal = Proposal.objects.create(**proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'proposal' : proposal,
+                         'groupid'  : self.body.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        test_block = Block.objects.create(**block_params)
+
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'proposal' : proposal,
+                         'groupid'  : self.body.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'tracking_number' : '00043',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'reported' : True
+                       }
+        test_block2 = Block.objects.create(**block_params2)
+
+        expected_summary = [{ 'Not Observed': 1,
+                              'Observed': 1,
+                              'proposal': u'LCO2015A-009'}
+                           ]
+
+        summary = summarise_block_efficiency()
+
+        self.assertEqual(expected_summary, summary)
+
+    def test_proposal_with_scheduled_blocks(self):
+        proposal_params = { 'code'  : 'LCO2015B-005',
+                            'title' : 'LCOGT NEO Follow-up Network'
+                          }
+        proposal = Proposal.objects.create(**proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'proposal' : proposal,
+                         'groupid'  : self.body.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        test_block = Block.objects.create(**block_params)
+
+        expected_summary = [{ 'Not Observed': 1,
+                              'Observed': 0,
+                              'proposal': u'LCO2015B-005'}
+                           ]
+
+        summary = summarise_block_efficiency()
+
+        self.assertEqual(expected_summary, summary)
+
+    def test_multiple_proposals_with_scheduled_and_obs_blocks(self):
+        proposal_params = { 'code'  : 'LCO2015A-009',
+                            'title' : 'LCOGT NEO Follow-up Network'
+                          }
+        proposal1 = Proposal.objects.create(**proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'proposal' : proposal1,
+                         'groupid'  : self.body.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        test_block = Block.objects.create(**block_params)
+
+        block_params2 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'proposal' : proposal1,
+                         'groupid'  : self.body.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'tracking_number' : '00043',
+                         'num_exposures' : 7,
+                         'exp_length' : 30.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'reported' : True
+                       }
+        test_block2 = Block.objects.create(**block_params2)
+
+        proposal_params = { 'code'  : 'LCO2015B-005',
+                            'title' : 'LCOGT NEO Follow-up Network'
+                          }
+        proposal2 = Proposal.objects.create(**proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body,
+                         'proposal' : proposal2,
+                         'groupid'  : self.body.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        test_block = Block.objects.create(**block_params)
+
+        expected_summary = [ { 'Not Observed': 1,
+                               'Observed': 1,
+                               'proposal': u'LCO2015A-009'},
+                             { 'Not Observed': 1,
+                               'Observed': 0,
+                               'proposal': u'LCO2015B-005'}
+                           ]
+
+        summary = summarise_block_efficiency()
+
+        self.assertEqual(expected_summary, summary)
+
+    def test_proposal_with_no_blocks(self):
+        proposal_params = { 'code'  : 'LCO2016A-021',
+                            'title' : 'LCOGT NEO Follow-up Network (16A)'
+                          }
+        proposal = Proposal.objects.create(**proposal_params)
+
+        expected_summary = []
+
+        summary = summarise_block_efficiency()
+
+        self.assertEqual(expected_summary, summary)
+
+    def test_no_proposals(self):
+        expected_summary = []
+
+        summary = summarise_block_efficiency()
+
+        self.assertEqual(expected_summary, summary)
