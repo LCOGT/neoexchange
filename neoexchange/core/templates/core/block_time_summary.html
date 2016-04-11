@@ -96,13 +96,14 @@ var data = {{summary|safe}};
                         })
 
         proposal.append("text")
-          .attr("y", function(d) { return y(d.blocks[0].y1+10); })
+          .attr("y", function(d) { return y(d.blocks[0].y1+25); })
           .attr("dy", ".35em")
           .text(function(d) {
             if (d.total == 0){
               return
             }else {
-              return d.total-d.blocks[0].y1+" / "+d.total;
+              var percent = ((d.total-d.blocks[0].y1)/d.total)*100;
+              return d.total-d.blocks[0].y1+" / "+d.total+" ("+percent.toFixed(1)+"%)";
             }
           });
 
@@ -138,7 +139,7 @@ var data = {{summary|safe}};
         <div class="container" id="main">
                 <div class="row">
                   <div id="block-graph"></div>
-                  <p>Numbers quoted are "Not Observed / Total requested" for each proposal.</p>
+                  <p>Numbers quoted are "Not Observed / Total requested" and percentage unobserved for each proposal.</p>
                 </div>
         </div>
 {% endblock %}
