@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -74,6 +74,20 @@ class TestGoldstoneChunkParser(TestCase):
     def test_multimonth_split(self):
         expected_objid = '410777' # '(410777) 2009 FD'
         chunks = [u'2015', u'Oct', u'25-Nov', u'1', u'410777', u'2009', u'FD', u'No', u'Yes', u'R']
+        obj_id = parse_goldstone_chunks(chunks)
+        self.assertEqual(expected_objid, obj_id)
+
+    def test_periodic_comet(self):
+        expected_objid = 'P/2016 BA14'
+        chunks = [u'2016', u'Mar', u'17-23', u'P/2016', u'BA14', u'Pan-STARRS', u'No', u'Yes', u'Comet', u'DSS-13', u'and', u'Green', u'Bank.', u'Tests', u'at', u'DSS-14.', u'Target-of-opportunity.']
+        obj_id = parse_goldstone_chunks(chunks)
+        self.assertEqual(expected_objid, obj_id)
+
+    def test_comma_separated_obsdates(self):
+        expected_objid = '2016 BC14'
+        line = u'2016 Mar 22, 23          2016 BC14       No         Yes          PHA               NHATS  Tests at DSS-14.  Target-of-opportunity.'
+        line = line.replace(', ', '-', 1)
+        chunks = line.lstrip().split()
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
@@ -1255,4 +1269,30 @@ class TestIMAPLogin(TestCase):
 
         expected_targets = ['2016 DJ']
         targets = fetch_NASA_targets(mailbox)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_reject_msg_old_with_tz_and_cutoff(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 16,  4, 27, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+
+        expected_targets = []
+        targets = fetch_NASA_targets(mailbox, date_cutoff=2)
+        self.assertEqual(expected_targets, targets)
+
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_accept_msg_old_with_tz_and_cutoff(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 2, 16,  3, 26, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+
+        expected_targets = ['2016 BA14']
+        targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)

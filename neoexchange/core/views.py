@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes
+    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
@@ -82,6 +82,27 @@ class MyProposalsMixin(object):
 def home(request):
     params = build_unranked_list_params()
     return render(request, 'core/home.html', params)
+
+
+class BlockTimeSummary(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        block_summary = summarise_block_efficiency()
+        return render(request, 'core/block_time_summary.html', {'summary':json.dumps(block_summary)})
+
+def summarise_block_efficiency():
+    summary = []
+    proposals = Proposal.objects.all()
+    for proposal in proposals:
+        blocks = Block.objects.filter(proposal=proposal)
+        observed = blocks.filter(num_observed__isnull=False)
+        proposal_summary = {
+                        'proposal':proposal.code,
+                        'Observed' : observed.count(),
+                        'Not Observed' : blocks.count() - observed.count()
+                            }
+        summary.append(proposal_summary)
+    return summary
 
 
 class BodyDetailView(DetailView):
@@ -138,15 +159,16 @@ def fetch_observations(tracking_num, proposal_code):
 
 def framedb_lookup(query):
     try:
-        conn = HTTPSConnection("data.lcogt.net", timeout=20)
-        params = urllib.urlencode(
-            {'username': settings.NEO_ODIN_USER, 'password': settings.NEO_ODIN_PASSWD})
-        #query = "/find?%s" % params
-        conn.request("POST", query, params)
-        response = conn.getresponse()
-        r = response.read()
-        data = json.loads(r)
-    except:
+        client = requests.session()
+        # First have to authenticate
+        login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+        # Because we are sending log in details it has to go over SSL
+        data_url = 'https://data.lcogt.net%s' % query
+        resp = client.post(data_url, data=login_data, timeout=20)
+        data = resp.json()
+
+    except Exception, e:
+        print(e)
         return False
     return data
 
@@ -1056,10 +1078,11 @@ def create_frame(params, block=None):
 
 def frame_params_from_block(params, block):
     # In these cases we are parsing the FITS header
+    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
     frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : params.get('siteid', None),
+                     'sitecode' : sitecode,
                      'filter'   : params.get('filter_name', "B"),
-                     'frametype': Frame.NONLCO_FRAMETYPE,
+                     'frametype': Frame.SINGLE_FRAMETYPE,
                      'block'    : block,
                      'instrument': params.get('instrume', None),
                      'filename'  : params.get('origname', None),

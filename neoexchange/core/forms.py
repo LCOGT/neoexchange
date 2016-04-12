@@ -33,7 +33,7 @@ SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
 
 class EphemQuery(forms.Form):
 
-    target = forms.CharField(label="Enter target name...", max_length=10, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
+    target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
     alt_limit = forms.FloatField(initial=30.0, required=True, widget=forms.TextInput(attrs={'size':'4'}))
