@@ -117,10 +117,10 @@ def check_for_existing_file(filename, dbg=False):
 def download_files(frames, output_path, dbg=False):
     '''Downloads and saves to disk, the specified files from the new Science
     Archive.
-    Takes a dictionary <frames> (keyed by reduction levels and produced by 
+    Takes a dictionary <frames> (keyed by reduction levels and produced by
     get_frame_data() or get_catalog_data()) of lists of JSON responses from the
     archive API and downloads the files to <output_path>. Lower reduction level
-    files (e.g. -e10 quicklook files) will not be downloaded if a higher 
+    files (e.g. -e10 quicklook files) will not be downloaded if a higher
     reduction level already exists and frames will not be downloaded if they
     already exist.'''
 
