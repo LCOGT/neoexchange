@@ -1005,11 +1005,13 @@ def create_source_measurement(obs_lines, block=None):
                         prior_frame = Frame.objects.get(frametype = Frame.SATELLITE_FRAMETYPE,
                                                         midpoint = params['obs_date'],
                                                         sitecode = params['site_code'])
-                        prior_frame.extrainfo = params['extrainfo']
-                        prior_frame.save()
-                        # Replace SourceMeasurement in list to be returned with
-                        # updated version
-                        measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
+                        if prior_frame.extrainfo != params['extrainfo']:
+                            prior_frame.extrainfo = params['extrainfo']
+                            prior_frame.save()
+                        if len(measures) > 0:
+                            # Replace SourceMeasurement in list to be returned with
+                            # updated version
+                            measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:
                         logger.warn("Matching satellite frame for %s from %s on %s does not exist" % params['body'], params['obs_date'],params['site_code'])
                     except Frame.MultipleObjectsReturned:
