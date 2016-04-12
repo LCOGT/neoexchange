@@ -19,6 +19,39 @@ from math import degrees
 
 import slalib as S
 
+def get_semester_start(date):
+
+    year, month, day, hour, minute, second = date.year, 4, 1, 0, 0, 0
+    if date.month >= 10 or date.month < 4:
+        month = 10
+        if date.month < 10:
+            year -= 1
+    return datetime(year, month, day, hour, minute, second)
+
+def get_semester_end(date):
+
+    year, month, day, hour, minute, second = date.year, 9, 30, 23, 59, 59
+    if date.month >= 10 or date.month < 4:
+        month = 3
+        day = 31
+        if date.month >= 10:
+            year += 1
+    return datetime(year, month, day, hour, minute, second)
+
+def get_semester_dates(date):
+    '''Returns the semester start and end datetimes for the LCOGT semesters.
+    LCOGT has two semesters, A & B, which run as follows:
+    A semester: <year>-04-01 00:00:00 UTC until <year>-09-30 23:59:59 UTC
+    B semester: <year>-10-01 00:00:00 UTC until <year+1>-03-31 23:59:59 UTC
+    e.g. 2015B runs from 2015-10-01 00:00:00->2016-03-31 23:59:59 and 2016A
+    runs from 2016-04-01 00:00:00 until 2016-09-30 23:59:59'''
+
+    start = get_semester_start(date)
+    end = get_semester_end(date)
+
+    return start, end
+
+
 def parse_neocp_date(neocp_datestr, dbg=False):
     '''Parse dates from the NEOCP (e.g. '(Nov. 16.81 UT)' ) into a datetime
     object and return this. Checking for the wrong number of days in the month
@@ -37,7 +70,7 @@ def parse_neocp_date(neocp_datestr, dbg=False):
                   'Nov' : 11,
                   'Dec' : 12 }
 
-    chunks = neocp_datestr.split(' ')
+    chunks = neocp_datestr.split()
     if dbg: print chunks
     if len(chunks) != 3: return None
     month_str = chunks[0].replace('(', '').replace('.', '')

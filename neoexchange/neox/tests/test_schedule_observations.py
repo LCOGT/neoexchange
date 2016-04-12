@@ -54,8 +54,10 @@ class ScheduleObservations(FunctionalTest):
 
 
 # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
-
+# TAL: Need to patch the datetime in views also otherwise we will get the wrong
+# semester and window bounds.
     @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
     def test_can_schedule_observations(self):
         self.test_login()
 
@@ -67,7 +69,7 @@ class ScheduleObservations(FunctionalTest):
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
-        link = self.browser.find_element_by_link_text('Schedule Observations')
+        link = self.browser.find_element_by_id('schedule-obs')
         target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), target_url)
 
@@ -122,13 +124,14 @@ class ScheduleObservations(FunctionalTest):
         start_url = reverse('target',kwargs={'pk':1})
         self.browser.get(self.live_server_url + start_url)
         self.wait_for_element_with_id('main')
-        link = self.browser.find_element_by_partial_link_text('Schedule Observations')
+        link = self.browser.find_element_by_id('schedule-obs')
         link.click()
         self.wait_for_element_with_id('username')
         new_url = self.browser.current_url
         self.assertIn('login/', str(new_url))
 
     @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
     def test_schedule_page_edit_block(self):
         MockDateTime.change_date(2015, 4, 20)
         self.test_login()
@@ -141,7 +144,7 @@ class ScheduleObservations(FunctionalTest):
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
-        link = self.browser.find_element_by_link_text('Schedule Observations')
+        link = self.browser.find_element_by_id('schedule-obs')
         target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), target_url)
 
@@ -196,6 +199,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Schedule this Object',submit)
 
     @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
     def test_schedule_page_short_block(self):
         MockDateTime.change_date(2015, 4, 20)
         self.test_login()
@@ -208,7 +212,7 @@ class ScheduleObservations(FunctionalTest):
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
-        link = self.browser.find_element_by_link_text('Schedule Observations')
+        link = self.browser.find_element_by_id('schedule-obs')
         target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), target_url)
 

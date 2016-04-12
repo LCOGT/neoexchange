@@ -12,19 +12,18 @@
 
 {% block main-content %}
 			<!-- Main body -->
-			<div class="container">
-				<div id="main">
+			<div class="container" id="main">
 					<div class="row">
-						<a class="btn btn-secondary" href="{% url 'schedule-body' body.id %}">Schedule Observations</a>
+						<a class="button button-primary" href="{% url 'schedule-body' body.id %}" id="schedule-obs">Schedule Observations</a>
 					</div>
 					<div class="row">
-						<div class="fourcol">
+						<div class="eight columns">
 							{% if body.old_name %}
-							<h3  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h3>
+							<h5  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h5>
 							{% endif %}
-							<h3  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h3>
-							<h3  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span></h3>
-							<h3  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h3>
+							<h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h5>
+							<h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span></h5>
+							<h5  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h5>
 							<div class="section-title">
 							<form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
 						        <input type="hidden" name="{{ form.target.name }}" id="id_target" value="{{body.current_name}}" />
@@ -38,7 +37,7 @@
 							            <div class="compact-field">
 							            {{ form.alt_limit }}<label for="id_alt_limit">Min Altitude</label>
 							            </div>
-							            <input type="submit" class="btn btn-secondary" value="Calculate Ephemerides" id="id_submit">
+							            <input type="submit" class="button button-primary" value="Calculate Ephemerides" id="id_submit">
 						            </div>
 						        {% for key, error in form.errors.items %}
 						            <div class="messages error">
@@ -47,7 +46,7 @@
 						        {% endfor %}
 						        </form>
 					        </div>
-							<h3  class="section-title">Recent Blocks Scheduled</h3>
+							<h5  class="section-title">Recent Blocks Scheduled</h5>
 							<ul class="block-status">
 								{% for b in blocks %}
 								<li class="{% cycle 'odd' 'even' %}">
@@ -75,16 +74,12 @@
 								<li>No blocks have been scheduled</li>
 								{% endfor %}
 							</ul>
-                                                        <h3 class="section-title">Measurements</h3>
-                                                        <ul>
-                                                            <li>
-                                                                <a href="{% url 'measurement' body.id %}">Show Measurements</a>
-                                                            </li>
-                                                        </ul>
+                    <h5 class="section-title">Measurements</h5>
+	                    <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
     						</div>
-						<div class="twocol lastcol rightsidebar">
+						<div class="four columns rightsidebar">
 							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
-							<h3 class="section-title">Orbital Elements</h3>
+							<h5 class="section-title">Orbital Elements</h5>
 							<table class="keyvalue-table" id="id_orbelements">
 								<tbody>
 									<tr>
@@ -130,8 +125,8 @@
 									</tr>
 									<tr>
 										<td class="kv-key">Epoch of perihelion (MJD)</td>
-										<td class="kv-value">{{body.epochofperih_mjd}}</td>
-									</tr>
+-										<td class="kv-value">{{body.epochofperih_mjd}}</td>
+-									</tr>
 									{% endif %}
 									<tr>
 										<td class="kv-key">Absolute Magnitude (H)</td>
@@ -143,7 +138,7 @@
 									</tr>
 								</tbody>
 							</table>
-							<h3 class="section-title">Follow-up Details</h3>
+							<h5 class="section-title">Follow-up Details</h5>
 							<table class="keyvalue-table" id="id_followup">
 								<tbody>
                                                                         {% if body.score %}
@@ -175,5 +170,4 @@
 						</div>
 					</div>
 				</div>
-			</div>
 {% endblock %}
