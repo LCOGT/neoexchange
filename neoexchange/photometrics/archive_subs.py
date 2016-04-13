@@ -46,6 +46,18 @@ def archive_login(username, password):
 
     return headers
 
+def determine_archive_start_end(dt=None):
+
+    dt = dt or datetime.utcnow()
+    start = datetime(dt.year, dt.month, dt.day, 17, 0, 0)
+    end = datetime(dt.year, dt.month, dt.day, 16, 0, 0)
+    if dt.hour > 0 and dt.hour <= 15:
+        start = start - timedelta(days=1)
+    elif dt.hour >= 16 and dt.hour <= 23:
+        end = end + timedelta(days=1)
+
+    return start, end
+
 def get_frame_data(start_date, end_date, auth_header='', proposal='LCO2015B-005', red_lvls=['90', '10']):
     '''Obtain the list of frames between <start_date> and <end_date>. An authorization token (from e.g.
     archive_login()) will likely be needed to get a proprietary data. By default we download data from
