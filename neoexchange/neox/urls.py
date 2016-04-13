@@ -21,7 +21,7 @@ from django.core.urlresolvers import reverse_lazy
 from core.models import Body, Block, SourceMeasurement
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
-    UploadReport
+    UploadReport, BlockTimeSummary
 
 from astrometer.views import BlockFramesView, fitsanalyse
 
@@ -31,6 +31,7 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
+    url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', BlockListView.as_view(model=Block, queryset=Block.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/report/$',BlockReport.as_view(), name='report-block'),
     url(r'^block/(?P<pk>\d+)/upload/$',UploadReport.as_view(), name='upload-report'),

@@ -110,7 +110,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # These measurements are precoverys, earlier in time but discovered later
         # i.e. larger value of the primary keys
-                
+
         frame_params = { 'sitecode' : 'F51',
                          'instrument' : '',
                          'filter' : 'r',
@@ -172,7 +172,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He sees a link that says it will show the measurements
         # available for this object.
-        link = self.browser.find_element_by_partial_link_text('Show Measurements')
+        link = self.browser.find_element_by_id('show-measurements')
         target_url = self.live_server_url + reverse('measurement',kwargs={'pk':1})
         self.assertEqual(link.get_attribute('href'), target_url)
 
@@ -211,7 +211,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He sees a link that says it will export the measurements
         # available for this object in MPC 80 char format.
-        link = self.browser.find_element_by_partial_link_text('Show Measurements')
+        link = self.browser.find_element_by_id('show-measurements')
         target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
         self.assertEqual(link.get_attribute('href'), target_url)
 
@@ -227,8 +227,8 @@ class MeasurementsPageTests(FunctionalTest):
         mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
         mpc_target_url = "%s/target/%d/measurements/mpc/" % (self.live_server_url, 1)
         self.assertEqual(mpc_link.get_attribute('href'), mpc_target_url)
- 
-        # He clicks on the link and sees that he is taken to a page with the 
+
+        # He clicks on the link and sees that he is taken to a page with the
         # source measurements for this object in MPC 80 char format
         mpc_link.click()
 
@@ -257,7 +257,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He sees a link that says it will show the source measurements
         # available for this object.
-        link = self.browser.find_element_by_partial_link_text('Show Measurements')
+        link = self.browser.find_element_by_id('show-measurements')
         target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
         self.assertEqual(link.get_attribute('href'), target_url)
 
@@ -274,7 +274,7 @@ class MeasurementsPageTests(FunctionalTest):
         mpc_target_url = "%s/target/%d/measurements/mpc/" % (self.live_server_url, 1)
         self.assertEqual(mpc_link.get_attribute('href'), mpc_target_url)
 
-        # He clicks on the link and sees that he is taken to a page with the 
+        # He clicks on the link and sees that he is taken to a page with the
         # source measurements for this object in MPC 80 char format
         mpc_link.click()
 
@@ -305,7 +305,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He sees a link that says it will show the source measurements
         # available for this object.
-        link = self.browser.find_element_by_partial_link_text('Show Measurements')
+        link = self.browser.find_element_by_id('show-measurements')
         target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
         self.assertEqual(link.get_attribute('href'), target_url)
 
@@ -332,6 +332,6 @@ class MeasurementsPageTests(FunctionalTest):
         while rownum < len(testlines):
             self.assertIn(testlines[rownum], rows[rownum].text.replace('\n', ' '))
             rownum+=1
-        
+
         # Satisfied that his newly reported precovery for this asteroid has
         # been recorded, he leaves.

@@ -83,6 +83,7 @@
                           {% elif object.reported %}
                         <a class="button button-primary" href="{% url 'view-report' object.id %}">View report in MPC format</a><br/>
                         <a class="button button-primary" href="{% url 'upload-report' object.id %}">Upload MPC format</a>
+
                           {%else%}
                           No actions available
                           {% endif %}

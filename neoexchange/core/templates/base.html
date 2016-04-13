@@ -118,6 +118,10 @@
 									<li>
 										<a href="{% url 'blocklist' %}" title="Blocks scheduled for NEO follow-up" class="navitem">Blocks</a>
 									</li>
+									<li>
+										<a href="{% url 'block-summary' %}" title="Block Summary for NEO follow-up" class="navitem">Efficiency</a>
+									</li>
+
 								</ul>
 								{% endblock %}
 
@@ -143,6 +147,8 @@
 			{% endfor %}
 			</div>
 		</div>
+		{% block end-scripts %}
+		{% endblock %}
 		<script>
 		  var _gaq = _gaq || [];
 		  _gaq.push(['_setAccount', 'UA-2087713-1']);
