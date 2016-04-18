@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.2.0'
+VERSION = '1.2.3'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -198,6 +198,10 @@ LOGGING = {
             'level'    : 'ERROR',
         },
         'astrometrics' : {
+            'handlers' : ['file','console'],
+            'level'    : 'ERROR',
+        },
+        'photometrics' : {
             'handlers' : ['file','console'],
             'level'    : 'ERROR',
         },

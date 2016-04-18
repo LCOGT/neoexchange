@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2015-2015 LCOGT
+Copyright (C) 2015-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,7 +22,8 @@ from mock import patch
 from neox.tests.mocks import MockDateTime
 
 #Import module to test
-from core.models import Body, Proposal, Block, Frame, SourceMeasurement
+from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
+    CatalogSources
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -724,3 +725,82 @@ class TestSourceMeasurement(TestCase):
                           '\n' + '    CK16C020  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
         mpc_lines = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_lines)
+
+class TestCatalogSources(TestCase):
+
+    def setUp(self):
+        # Initialise with a test body, a test proposal and a test frame
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 40.0,
+                         'active'   : True,
+                         'num_observed' : 1,
+                         'when_observed' : '2015-07-13 21:20:00',
+                         'reported' : False
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : datetime(2015,07,13,21,9,51),
+                    'block'         : self.test_block,
+                 }
+        self.test_frame = Frame.objects.create(**frame_params)
+
+    def test_create_catsrc(self):
+        catsrc_params = {   'frame'     : self.test_frame,
+                            'obs_x'     : 42.0,
+                            'obs_y'     : 1042.0,
+                            'obs_ra'    : 123.0,
+                            'obs_dec'   : -42.1,
+                            'obs_mag'   : 20.1,
+                            'err_obs_ra': 1.8/3600.0,
+                            'err_obs_dec': 0.9/3600.0,
+                            'err_obs_mag': 0.1,
+                            'background' : 4.2,
+                            'major_axis' : 5.2,
+                            'minor_axis' : 2.6,
+                            'position_angle' : -30.0,
+                            'ellipticity' : 0.5,
+                            'aperture_size' : 4.0,
+                        }
+
+        CatalogSources.objects.create(**catsrc_params)
+
+        self.assertEqual(CatalogSources.objects.count(), 1)
+        new_catsrc = CatalogSources.objects.first()
+        self.assertEqual(new_catsrc.obs_x, 42.0)
+        self.assertEqual(new_catsrc.frame.filter, 'w')
+        self.assertEqual(new_catsrc.frame.exptime, 40.0)
