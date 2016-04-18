@@ -29,12 +29,19 @@ import astropy.units as u
 import astropy.coordinates as coord
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
+from core.models import CatalogSources, Frame
 
 logger = logging.getLogger(__name__)
 
 def call_cross_match_and_zeropoint(catfile, cat_name = "UCAC4",  set_row_limit = 10000, rmag_limit = "<=15.0"):
 
-    header, table = extract_catalog(catfile)
+    if type(catfile) == 'str':
+
+        header, table = extract_catalog(catfile)
+
+    else:
+
+        header, table = (catfile[0], catfile[1])
 
     cat_table, cat_name = get_vizier_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], cat_name, set_row_limit, rmag_limit)
 
@@ -622,3 +629,60 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
         table = get_catalog_items(header, fits_table, catalog_type, flag_filter)
 
     return header, table
+
+def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
+
+    return header, table
+
+def store_catalog_sources(catfile):
+
+    #read the catalog file
+    header, table = extract_catalog(catfile)
+
+    #check for good zeropoints
+    if header['zeropoint'] == -99 or header['zeropoint_err'] == -99:
+        #if bad, determine new zeropoint
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table))
+
+        #if crossmatch is good, update new zeropoint
+        header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
+
+    #store sources in neoexchange(CatalogSources table)
+    frame_params = {    'sitecode':header['site_code'],
+                        'instrument':header['instrument'],
+                        'filter':header['filter'],
+                        'filename':header['framename'],
+                        'exptime':header['exptime'],
+                        'midpoint':header['obs_midpoint'],
+                        'block':None,
+                        'zeropoint':header['zeropoint'],
+                        'zeropoint_err':header['zeropoint_err'],
+                        'fwhm':header['fwhm'],
+                        'frametype':Frame.SINGLE_FRAMETYPE,
+                        'rms_of_fit':header['astrometric_fit_rms'],
+                        'nstars_in_fit':header['astrometric_fit_nstars'],
+                    }
+
+    frame, created = Frame.objects.get_or_create(**frame_params)
+
+    for source in table:
+        source_params = {   'frame':frame,
+                            'obs_x': source['ccd_x'],
+                            'obs_y': source['ccd_y'],
+                            'obs_ra': source['obs_ra'],
+                            'obs_dec': source['obs_dec'],
+                            'obs_mag': source['obs_mag'],
+                            'err_obs_ra': source['obs_ra_err'],
+                            'err_obs_dec': source['obs_dec_err'],
+                            'err_obs_mag': source['obs_mag_err'],
+                            'background': source['obs_sky_bkgd'],
+                            'major_axis': source['major_axis'],
+                            'minor_axis': source['minor_axis'],
+                            'position_angle': source['ccd_pa'],
+                            'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
+                            'aperture_size': 3.0,
+                            'flags': source['flags']
+                        }
+        CatalogSources.objects.create(**source_params)
+
+    return
