@@ -701,7 +701,9 @@ def parse_goldstone_chunks(chunks, dbg=False):
             # We have something that straddles months
             if dbg: print "In case 2b"
             object_id = str(chunks[4])
-        elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isalnum():
+        elif astnum <= 31 and (chunks[3].isdigit() or chunks[3][0:2] == 'P/' \
+        or chunks[3][0:2] == 'C/') and chunks[4].isalnum():
+            # We have a date range e.g. '2016 Mar 17-23'
             # Test if the first 2 characters of chunks[4] are uppercase
             # If yes then we have a desigination e.g. [2014] 'UR' or [2015] 'FW117'
             # If no, then we have a name e.g. [1566] 'Icarus'
@@ -746,6 +748,11 @@ def fetch_goldstone_targets(dbg=False):
             in_objects = True
         else:
             if in_objects == True:
+                # Look for malformed comma-separated dates in the first part of
+                # the line and convert the first occurence to hyphens before
+                # splitting.
+                if ', ' in line[0:40]:
+                    line = line.replace(', ', '-', 1)
                 chunks = line.lstrip().split()
                 #if dbg: print line
                 # Check if the start of the stripped line is no longer the
@@ -835,10 +842,11 @@ def imap_login(username, password, server='imap.gmail.com'):
 
     return mailbox
 
-def fetch_NASA_targets(mailbox, folder='NASA-ARM'):
+def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     '''Search through the specified folder/label (defaults to "NASA-ARM" if not
     specified) within the passed IMAP mailbox <mailbox> for emails to the
-    small bodies list and returns a list of targets'''
+    small bodies list and returns a list of targets. Emails that are more than
+    [date_cutoff] days old (default is 1 day) will not be looked at.'''
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
     list_author = '"paul.a.abell@nasa.gov"'
@@ -875,7 +883,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM'):
                         # See if the subject has the right prefix and suffix and is 
                         # within a day of 'now'
                         if list_prefix in msg_subject and list_suffix in msg_subject and \
-                            time_diff <= timedelta(days=1):
+                            time_diff <= timedelta(days=date_cutoff):
                             target = ' '.join(msg_subject.split()[TARGET_DESIGNATION])
                             NASA_targets.append(target)
                 except:

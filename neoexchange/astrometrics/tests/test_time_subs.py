@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2015-2015 LCOGT
+Copyright (C) 2015-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,7 +20,8 @@ from mock import patch
 from neox.tests.mocks import MockDateTime
 
 #Import module to test
-from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, degreestohms, parse_neocp_date
+from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, \
+    degreestohms, parse_neocp_date, get_semester_dates
 
 class TestJD2datetime(TestCase):
 
@@ -149,3 +150,114 @@ class TestParseNeocpDate(TestCase):
 
         self.assertEqual(expected_dt, dt)
 
+    def test_extra_spaces(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+
+        date_string = u'(Mar.  9.97 UT)'
+        expected_dt =  datetime(2016, 3, 9, 23, 16, 48)
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_extra_spaces2(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+
+        date_string = u'(Mar.    9.97    UT)'
+        expected_dt =  datetime(2016, 3, 9, 23, 16, 48)
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+    def test_extra_spaces3(self):
+        MockDateTime.change_datetime(2016, 4, 8, 0, 30, 0)
+
+        date_string = u'(Mar.  19.97 UT)'
+        expected_dt =  datetime(2016, 3, 19, 23, 16, 48)
+
+        dt = parse_neocp_date(date_string)
+
+        self.assertEqual(expected_dt, dt)
+
+class TestGetSemesterDates(TestCase):
+
+    def test_start_of_B_semester(self):
+        date = datetime(2015, 10, 1, 0, 0, 1)
+        expected_start = datetime(2015, 10, 1, 0, 0, 0)
+        expected_end = datetime(2016, 3, 31, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_end_of_B_semester(self):
+        date = datetime(2016, 3, 31, 22, 0, 0)
+        expected_start = datetime(2015, 10, 1, 0, 0, 0)
+        expected_end = datetime(2016, 3, 31, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_start_of_A_semester(self):
+        date = datetime(2016, 4, 1,  0, 0, 1)
+        expected_start = datetime(2016, 4, 1, 0, 0, 0)
+        expected_end = datetime(2016, 9, 30, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_end_of_A_semester(self):
+        date = datetime(2016, 9, 30,  23, 0, 1)
+        expected_start = datetime(2016, 4, 1, 0, 0, 0)
+        expected_end = datetime(2016, 9, 30, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_start_of_17B_semester(self):
+        date = datetime(2017, 10, 1, 0, 1, 0)
+        expected_start = datetime(2017, 10, 1, 0, 0, 0)
+        expected_end = datetime(2018, 3, 31, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_end_of_17B_semester(self):
+        date = datetime(2018, 3, 31, 22, 0, 0)
+        expected_start = datetime(2017, 10, 1, 0, 0, 0)
+        expected_end = datetime(2018, 3, 31, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_start_of_17A_semester(self):
+        date = datetime(2017, 4, 1,  0, 0, 1)
+        expected_start = datetime(2017, 4, 1, 0, 0, 0)
+        expected_end = datetime(2017, 9, 30, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_end_of_17A_semester(self):
+        date = datetime(2017, 9, 30,  23, 0, 1)
+        expected_start = datetime(2017, 4, 1, 0, 0, 0)
+        expected_end = datetime(2017, 9, 30, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
