@@ -28,6 +28,7 @@ password = os.environ.get('NEOX_ODIN_PASSWD',None)
 if username and password:
     auth_headers = archive_login(username, password)
     start_date, end_date = determine_archive_start_end()
+    print "Looking for frames between %s->%s" % ( start_date, end_date )
     frames = get_frame_data(start_date, end_date, auth_headers, proposal, red_lvls=['90', '10'])
     daydir = start_date.strftime('%Y%m%d')
     out_path = os.path.join(os.environ.get('HOME'), 'Asteroids', daydir)
@@ -37,4 +38,5 @@ if username and password:
         except:
             print "Error creating output path", out_path
             os.sys.exit(-1)
-    download_files(frames, out_path)
+    dl_frames = download_files(frames, out_path)
+    print "Downloaded %d frames" % ( len(dl_frames) )

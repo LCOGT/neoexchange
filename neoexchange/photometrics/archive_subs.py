@@ -16,9 +16,12 @@ GNU General Public License for more details.
 '''
 
 from datetime import datetime, timedelta
-import os
+import os, sys
 
 import requests
+# Check if Python version is less than 2.7.9. If so, disable SSL warnings
+if sys.version_info < (2,7,9):
+    requests.packages.urllib3.disable_warnings()
 
 def get_base_url():
     '''Return the base URL of the archive service'''
@@ -128,7 +131,7 @@ def check_for_existing_file(filename, dbg=False):
 
 def download_files(frames, output_path, dbg=False):
     '''Downloads and saves to disk, the specified files from the new Science
-    Archive.
+    Archive. Returns a list of the frames that were downloaded.
     Takes a dictionary <frames> (keyed by reduction levels and produced by
     get_frame_data() or get_catalog_data()) of lists of JSON responses from the
     archive API and downloads the files to <output_path>. Lower reduction level
@@ -138,6 +141,7 @@ def download_files(frames, output_path, dbg=False):
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
+    downloaded_frames = []
     for reduction_lvl in frames.keys():
         if dbg: print reduction_lvl
         frames_to_download = frames[reduction_lvl]
@@ -148,6 +152,7 @@ def download_files(frames, output_path, dbg=False):
                 print "Skipping existing file"
             else:
                 if dbg: print "Writing file to",filename
+                downloaded_frames.append(filename)
                 with open(filename, 'wb') as f:
                     f.write(requests.get(frame['url']).content)
-    return
+    return downloaded_frames
