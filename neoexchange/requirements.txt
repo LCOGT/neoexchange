@@ -12,7 +12,7 @@ numpy
 pytz
 six==1.9.0
 wsgiref
-requests
+requests[security]
 selenium
 reqdbclient==0.6.17
 pytest-django
