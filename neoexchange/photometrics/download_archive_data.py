@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
 Copyright (C) 2016-2016 LCOGT
@@ -18,21 +19,22 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 import os
 
-from photometrics.archive_subs import *
+from archive_subs import *
 
 proposal='LCO2016A-021'
 
 username = os.environ.get('NEOX_ODIN_USER', None) 
-password = os.environ.get('NEOX_ODIN_PASSWD',None):
+password = os.environ.get('NEOX_ODIN_PASSWD',None)
 if username and password:
     auth_headers = archive_login(username, password)
     start_date, end_date = determine_archive_start_end()
     frames = get_frame_data(start_date, end_date, auth_headers, proposal, red_lvls=['90', '10'])
     daydir = start_date.strftime('%Y%m%d')
     out_path = os.path.join(os.environ.get('HOME'), 'Asteroids', daydir)
-    try:
-        os.makedirs(out_path)
-    except:
-        print "Error creating output path", out_path
-        os.sys.exit(-1)
+    if not os.path.exists(out_path):
+        try:
+            os.makedirs(out_path)
+        except:
+            print "Error creating output path", out_path
+            os.sys.exit(-1)
     download_files(frames, out_path)
