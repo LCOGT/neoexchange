@@ -37,11 +37,61 @@ class StoreCatalogSourcesTest(FITSUnitTest):
     def test1(self):
 
         ###
-        store_catalog_sources(self.test_filename)
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
 
         self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
+        self.assertEqual(num_sources_created, self.table_num_flags0)
+        self.assertEqual(num_in_table, self.table_num_flags0)
 
         last_catsrc=CatalogSources.objects.last()
 
         self.assertAlmostEqual(last_catsrc.obs_x, 1067.9471, 4)
         self.assertAlmostEqual(last_catsrc.obs_y, 1973.7445, 4)
+
+    def test_zeropoint_update(self):
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
+
+        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
+
+        header, table = extract_catalog(self.test_filename)
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table))
+
+        self.assertLess(header['zeropoint'], 0.0)
+        self.assertLess(header['zeropoint_err'], 0.0)
+
+        header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
+
+        self.assertGreater(header['zeropoint'], 0.0)
+        self.assertGreater(header['zeropoint_err'], 0.0)
+
+        first_catsrc=CatalogSources.objects.first()
+
+        self.assertGreater(first_catsrc.obs_mag, 0.0)
+        self.assertAlmostEqual(first_catsrc.err_obs_mag, 0.0037, 4)
+
+    def test_duplicate_entries(self):
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
+
+        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
+        self.assertEqual(num_sources_created, self.table_num_flags0)
+        self.assertEqual(num_in_table, self.table_num_flags0)
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
+
+        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
+        self.assertEqual(num_sources_created, 0)
+        self.assertEqual(num_in_table, self.table_num_flags0)
+
+    def test_bad_catalog(self):
+
+        bad_filename = os.path.join('photometrics','tests','__init__.py')
+
+        num_sources_created, num_in_table = store_catalog_sources(bad_filename)
+
+        self.assertEqual(CatalogSources.objects.count(), 0)
+        self.assertEqual(num_sources_created, 0)
+        self.assertEqual(num_in_table, 0)
+
