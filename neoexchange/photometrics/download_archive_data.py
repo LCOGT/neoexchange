@@ -18,17 +18,43 @@ GNU General Public License for more details.
 
 from datetime import datetime, timedelta
 import os
+from sys import argv
 
 from archive_subs import *
 
+usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[0] )
+
+# Defaults
 proposal='LCO2016A-021'
+obs_date = datetime.utcnow()
+
+# Parse command line arguments
+if len(argv) == 2:
+    proposal_or_date = argv[1]
+    if proposal_or_date[0:3].isdigit():
+        try:
+            obs_date = datetime.strptime(proposal_or_date, '%Y%m%d')
+            obs_date += timedelta(seconds=17*3600)
+        except ValueError:
+            print usage
+    else:
+        proposal = proposal_or_date
+elif len(argv) == 3:
+    try:
+        obs_date = datetime.strptime(argv[1], '%Y%m%d')
+        obs_date += timedelta(seconds=17*3600)
+    except ValueError:
+        print usage
+    proposal = argv[3]
+elif len(argv) > 3:
+    print usage
 
 username = os.environ.get('NEOX_ODIN_USER', None) 
 password = os.environ.get('NEOX_ODIN_PASSWD',None)
 if username and password:
     auth_headers = archive_login(username, password)
-    start_date, end_date = determine_archive_start_end()
-    print "Looking for frames between %s->%s" % ( start_date, end_date )
+    start_date, end_date = determine_archive_start_end(obs_date)
+    print "Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal )
     frames = get_frame_data(start_date, end_date, auth_headers, proposal, red_lvls=['90', '10'])
     for red_lvl in frames.keys():
         print "Found %d frames for reduction level: %s" % ( len(frames[red_lvl]), red_lvl )

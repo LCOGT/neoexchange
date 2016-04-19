@@ -79,3 +79,14 @@ class Test_Determine_Archive_Start_End(TestCase):
 
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
+
+    def test_supplied_date_midnight(self):
+        dt = datetime(2016, 4, 18, 00, 00, 00)
+
+        expected_start = datetime(2016, 4, 17, 17, 0, 0)
+        expected_end = datetime(2016, 4, 18, 16, 0, 0)
+
+        start, end = determine_archive_start_end(dt)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
