@@ -25,6 +25,7 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import Angle
 import astropy.units as u
+from numpy import where
 
 from core.models import Body
 
@@ -1117,6 +1118,7 @@ class FITSUnitTest(TestCase):
         self.table_firstitem = self.test_table[0:1]
         self.table_lastitem = self.test_table[-1:]
         self.table_item_flags24 = self.test_table[2:3]
+        self.table_num_flags0 = len(where(self.test_table['flags']==0)[0])
 
         self.test_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits')
         hdulist = fits.open(self.test_ldacfilename)

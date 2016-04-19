@@ -39,9 +39,9 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         ###
         store_catalog_sources(self.test_filename)
 
-        self.assertEqual(CatalogSources.objects.count(), len(self.test_table))
+        self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
 
         last_catsrc=CatalogSources.objects.last()
 
-        self.assertEqual(last_catsrc.ccd_x, 1067.9471)
-        self.assertEqual(last_catsrc.ccd_y, 1973.7445)
+        self.assertAlmostEqual(last_catsrc.obs_x, 1067.9471, 4)
+        self.assertAlmostEqual(last_catsrc.obs_y, 1973.7445, 4)
