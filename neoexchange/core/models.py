@@ -23,6 +23,7 @@ from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.ast_subs import normal_to_packed
 from astropy.time import Time
 from datetime import datetime
+from math import pi
 import reversion
 
 OBJECT_TYPES = (
@@ -385,6 +386,22 @@ class CatalogSources(models.Model):
         verbose_name = _('Catalog Source')
         verbose_name_plural = _('Catalog Sources')
         db_table = 'catalog_source'
+
+    def make_elongation(self):
+        elongation = self.major_axis/self.minor_axis
+        return elongation
+
+    def make_fwhm(self):
+        fwhm = ((self.major_axis+self.minor_axis)/2)*2
+        return fwhm
+
+    def make_flux(self):
+        flux = 10.0**((self.obs_mag)/2.5)
+        return flux
+
+    def make_area(self):
+        area = pi*self.major_axis*self.minor_axis
+        return area
 
 class ProposalPermission(models.Model):
     '''

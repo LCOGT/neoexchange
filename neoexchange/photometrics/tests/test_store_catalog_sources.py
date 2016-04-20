@@ -99,7 +99,7 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_line_creation(self):
 
-        test_line = '         1    106.118     18.611  17.1818 -79.4    2.000     2.17   0  3.00      4.0    5  86.86805 -27.57513'
+        test_line = '         1    106.118     18.611  17.1818 -79.4    1.076     3.63   0  3.00   7459839.6   10  86.86805 -27.57513'
 
         num_iter = 1
 

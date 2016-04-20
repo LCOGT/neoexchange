@@ -713,12 +713,12 @@ def make_sext_file_line(catsrc, num_iter):
                     'obs_y':catsrc.obs_y,
                     'obs_mag':catsrc.obs_mag,
                     'theta':catsrc.position_angle,
-                    'elongation':2,
-                    'fwhm':catsrc.frame.fwhm,
+                    'elongation':catsrc.make_elongation(),
+                    'fwhm':catsrc.make_fwhm(),
                     'flags':catsrc.flags,
-                    'deltamu':3,
-                    'flux':4,
-                    'area':5,
+                    'deltamu':3.0,
+                    'flux':catsrc.make_flux(),
+                    'area':catsrc.make_area(),
                     'ra':catsrc.obs_ra,
                     'dec':catsrc.obs_dec
                   }
