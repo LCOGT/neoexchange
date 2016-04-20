@@ -732,3 +732,29 @@ def make_sext_file_line(sext_params):
     sext_line = print_format % (sext_params['number'], sext_params['obs_x'], sext_params['obs_y'], sext_params['obs_mag'], sext_params['theta'], sext_params['elongation'], sext_params['fwhm'], sext_params['flags'], sext_params['deltamu'], sext_params['flux'], sext_params['area'], sext_params['ra'], sext_params['dec'])
 
     return sext_line
+
+def make_sext_dict_list(catfile):
+
+    sext_dict_list = []
+
+    num_sources_created, num_in_table = store_catalog_sources(catfile)
+
+    num_iter = 1
+    while num_iter <= CatalogSources.objects.count():
+        source = CatalogSources.objects.get(pk=num_iter)
+        sext_dict_list.append(make_sext_dict(source, num_iter))
+        num_iter += 1
+
+    return sext_dict_list
+
+def make_sext_line_list(sext_dict_list):
+
+    sext_line_list = []
+
+    sext_dict_list_sorted = sorted(sext_dict_list, key=lambda k: k['obs_x'])
+
+    for source in sext_dict_list_sorted:
+        sext_line = make_sext_file_line(source)
+        sext_line_list.append(sext_line)
+
+    return sext_line_list
