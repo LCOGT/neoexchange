@@ -706,7 +706,7 @@ def store_catalog_sources(catfile):
 
     return (num_sources_created, num_in_table)
 
-def make_sext_file_line(catsrc, num_iter):
+def make_sext_dict(catsrc, num_iter):
 
     sext_params = { 'number':num_iter,
                     'obs_x':catsrc.obs_x,
@@ -722,6 +722,10 @@ def make_sext_file_line(catsrc, num_iter):
                     'ra':catsrc.obs_ra,
                     'dec':catsrc.obs_dec
                   }
+
+    return sext_params
+
+def make_sext_file_line(sext_params):
 
     print_format = "      %4i   %8.3f   %8.3f  %7.4f %5.1f    %5.3f     %4.2f   %1i  %4.2f   %6.1f   %2i %9.5f %9.5f"
 
