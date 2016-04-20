@@ -702,6 +702,29 @@ def store_catalog_sources(catfile):
                 num_sources_created += 1
         num_in_table = len(table)
     else:
-        logger.warn("Could not open %s" %catfile)
+        logger.warn("Could not open %s" % catfile)
 
     return (num_sources_created, num_in_table)
+
+def make_sext_file_line(catsrc, num_iter):
+
+    sext_params = { 'number':num_iter,
+                    'obs_x':catsrc.obs_x,
+                    'obs_y':catsrc.obs_y,
+                    'obs_mag':catsrc.obs_mag,
+                    'theta':catsrc.position_angle,
+                    'elongation':2,
+                    'fwhm':catsrc.frame.fwhm,
+                    'flags':catsrc.flags,
+                    'deltamu':3,
+                    'flux':4,
+                    'area':5,
+                    'ra':catsrc.obs_ra,
+                    'dec':catsrc.obs_dec
+                  }
+
+    print_format = "      %4i   %8.3f   %8.3f  %7.4f %5.1f    %5.3f     %4.2f   %1i  %4.2f   %6.1f   %2i %9.5f %9.5f"
+
+    sext_line = print_format % (sext_params['number'], sext_params['obs_x'], sext_params['obs_y'], sext_params['obs_mag'], sext_params['theta'], sext_params['elongation'], sext_params['fwhm'], sext_params['flags'], sext_params['deltamu'], sext_params['flux'], sext_params['area'], sext_params['ra'], sext_params['dec'])
+
+    return sext_line

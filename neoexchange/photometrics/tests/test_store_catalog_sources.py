@@ -95,3 +95,17 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertEqual(num_sources_created, 0)
         self.assertEqual(num_in_table, 0)
 
+class MakeSEXTFileTest(FITSUnitTest):
+
+    def test_line_creation(self):
+
+        test_line = '         1    106.118     18.611  17.1818 -79.4    2.000     2.17   0  3.00      4.0    5  86.86805 -27.57513'
+
+        num_iter = 1
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
+
+        sext_line = make_sext_file_line(CatalogSources.objects.first(), num_iter)
+
+        self.assertEqual(sext_line, test_line)
+
