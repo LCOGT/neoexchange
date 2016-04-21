@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 def call_cross_match_and_zeropoint(catfile, cat_name = "UCAC4",  set_row_limit = 10000, rmag_limit = "<=15.0"):
 
-    if type(catfile) == 'str':
+    if type(catfile) == str:
 
         header, table = extract_catalog(catfile)
 
@@ -310,6 +310,8 @@ def oracdr_catalog_mapping():
                     ('obs_mag_err'   , 'FLUXERR_AUTO'),
                     ('obs_sky_bkgd'  , 'BACKGROUND'),
                     ('flags'         , 'FLAGS'),
+                    ('flux_max'      , 'FLUX_MAX'),
+                    ('threshold'     , 'THRESHOLD'),
                  ])
 
     return header_dict, table_dict
@@ -356,6 +358,8 @@ def fitsldac_catalog_mapping():
                     ('obs_mag_err'   , 'FLUXERR_AUTO'),
                     ('obs_sky_bkgd'  , 'BACKGROUND'),
                     ('flags'         , 'FLAGS'),
+                    ('flux_max'      , 'FLUX_MAX'),
+                    ('threshold'     , 'THRESHOLD'),
                  ])
 
     return header_dict, table_dict

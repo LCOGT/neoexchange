@@ -1101,6 +1101,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    @skipIf(True, "write test for no internet")
     def test_vizier_down(self):
         self.fail("write test for no internet")
 
@@ -1138,7 +1139,9 @@ class FITSUnitTest(TestCase):
                         ('obs_mag', '>f4'), 
                         ('obs_mag_err', '>f4'), 
                         ('obs_sky_bkgd', '>f4'), 
-                        ('flags', '>i2')
+                        ('flags', '>i2'),
+                        ('flux_max', '>f4'),
+                        ('threshold', '>f4')
                        ]
         self.basic_table = Table(dtype = column_types)
 
@@ -1432,7 +1435,7 @@ class FITSSubsetCatalogTable(FITSUnitTest):
 
     def test_dimensions(self):
         expected_rows = 360
-        expected_columns = 13
+        expected_columns = 15
 
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
         new_table = subset_catalog_table(self.test_table, tbl_mapping)
@@ -1442,7 +1445,7 @@ class FITSSubsetCatalogTable(FITSUnitTest):
 
     def test_ldac_dimensions(self):
         expected_rows = 860
-        expected_columns = 13
+        expected_columns = 15
 
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
         new_table = subset_catalog_table(self.test_ldactable, tbl_mapping)
@@ -1469,6 +1472,8 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_mag_err'  : 0.037939535221954708,
                                    'obs_sky_bkgd' : 746.41577148,
                                    'flags' : 0,
+                                   'flux_max' : 486.95441,
+                                   'threshold' : 43.438805,
                                  })
 
         catalog_items = get_catalog_items(self.test_header, self.table_firstitem)
@@ -1492,6 +1497,8 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_mag_err'  : self.flux2mag * self.table_lastitem['FLUXERR_AUTO']/self.table_lastitem['FLUX_AUTO'],
                                    'obs_sky_bkgd' : 744.8538208,
                                    'flags' : 0,
+                                   'flux_max' : 9418.0869,
+                                   'threshold' : 43.438805,
                                  })
 
         catalog_items = get_catalog_items(self.test_header, self.table_lastitem)
@@ -1522,6 +1529,8 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_mag_err'  : self.flux2mag * self.table_item_flags24['FLUXERR_AUTO']/self.table_item_flags24['FLUX_AUTO'],
                                    'obs_sky_bkgd' :741.20977783,
                                    'flags' : 24,
+                                   'flux_max' : 2913.0918,
+                                   'threshold' : 43.438805,
                                  })
 
         catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
@@ -1546,6 +1555,8 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_mag_err'  : 0.037939535221954708,
                                    'obs_sky_bkgd' : 746.41577148,
                                    'flags' : 0,
+                                   'flux_max' : 486.95441,
+                                   'threshold' : 43.438805,
                                  })
 
         header_items = {'zeropoint' : -99}
@@ -1570,6 +1581,8 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_mag_err'  : 0.037939535221954708,
                                    'obs_sky_bkgd' : 746.41577148,
                                    'flags' : 0,
+                                   'flux_max' : 486.95441,
+                                   'threshold' : 43.438805,
                                  })
 
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
@@ -1593,6 +1606,8 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_mag_err'  : 0.037939535221954708,
                                    'obs_sky_bkgd' : 746.41577148,
                                    'flags' : 0,
+                                   'flux_max' : 486.95441,
+                                   'threshold' : 43.438805,
                                  })
 
         catalog_items = get_catalog_items(header_items, self.table_firstitem)
@@ -1615,6 +1630,8 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_mag_err'  : 0.037677686175571018,
                                    'obs_sky_bkgd' : 175.43216,
                                    'flags' : 0,
+                                   'flux_max' : 1838.5421,
+                                   'threshold' : 25.514057,
                                  })
 
 
