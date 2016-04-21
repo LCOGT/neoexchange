@@ -19,9 +19,20 @@ from subprocess import call
 
 logger = logging.getLogger(__name__)
 
-def setup_scamp_dir(source_dir, dest_dir):
+def default_scamp_config_files():
     config_files = ['scamp_neox.cfg']
 
+    return config_files
+
+def setup_scamp_dir(source_dir, dest_dir):
+
+    scamp_config_files = default_scamp_config_files()
+    
+    return_value = setup_working_dir(source_dir, dest_dir, scamp_config_files)
+
+    return return_value
+
+def setup_working_dir(source_dir, dest_dir, config_files):
     if not os.path.exists(source_dir):
         logger.error("Source path '%s' does not exist" % source_dir)
         return -1
