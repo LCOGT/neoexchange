@@ -23,7 +23,7 @@ from django.forms.models import model_to_dict
 #Import module to test
 from photometrics.external_codes import *
 
-class TestSCAMPRunner(TestCase):
+class ExternalCodeUnitTest(TestCase):
 
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
@@ -43,6 +43,8 @@ class TestSCAMPRunner(TestCase):
             print "Removed", self.test_dir
         except OSError:
             print "Error removing temporary test directory", self.test_dir
+
+class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_setup_scamp_dir_bad_destdir(self):
 
@@ -68,3 +70,33 @@ class TestSCAMPRunner(TestCase):
 
         self.assertEqual(expected_status, status)
         self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox.cfg')))
+
+class TestSExtractorRunner(ExternalCodeUnitTest):
+
+    def test_setup_sextractor_dir_bad_destdir(self):
+
+        expected_status = -2
+
+        status = setup_sextractor_dir(self.source_dir, os.path.join('/usr/share/wibble'))
+
+        self.assertEqual(expected_status, status)
+
+    def test_setup_sextractor_dir_bad_srcdir(self):
+
+        expected_status = -1
+
+        status = setup_sextractor_dir('wibble', self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_setup_sextractor_dir(self):
+
+        expected_configs = default_sextractor_config_files()
+        expected_status = 0
+
+        status = setup_sextractor_dir(self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+        for config_file in expected_configs:
+            test_file = os.path.join(self.test_dir, config_file)
+        self.assertTrue(os.path.exists(test_file))

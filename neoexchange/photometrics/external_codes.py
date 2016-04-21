@@ -24,11 +24,26 @@ def default_scamp_config_files():
 
     return config_files
 
+def default_sextractor_config_files():
+    config_files = ['sextractor_neox.conf',
+                    'sextractor_ascii.params',
+                    'gauss_1.5_3x3.conv', 'default.nnw']
+
+    return config_files
+
 def setup_scamp_dir(source_dir, dest_dir):
 
     scamp_config_files = default_scamp_config_files()
-    
+
     return_value = setup_working_dir(source_dir, dest_dir, scamp_config_files)
+
+    return return_value
+
+def setup_sextractor_dir(source_dir, dest_dir):
+
+    sextractor_config_files = default_sextractor_config_files()
+
+    return_value = setup_working_dir(source_dir, dest_dir, sextractor_config_files)
 
     return return_value
 
