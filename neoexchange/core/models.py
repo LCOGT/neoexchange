@@ -21,9 +21,10 @@ from astrometrics.ephem_subs import compute_ephem, comp_FOM
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.ast_subs import normal_to_packed
+from astrometrics.ephem_subs import get_sitecam_params
 from astropy.time import Time
 from datetime import datetime
-from math import pi
+from math import pi, log10
 import reversion
 
 OBJECT_TYPES = (
@@ -381,6 +382,8 @@ class CatalogSources(models.Model):
     ellipticity = models.FloatField('Ellipticity')
     aperture_size = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
     flags = models.IntegerField('Source flags', help_text='Bitmask of flags', default=0)
+    flux_max = models.FloatField('Peak flux above background', blank=True, null=True)
+    threshold = models.FloatField('Detection threshold above background', blank=True, null=True)
 
     class Meta:
         verbose_name = _('Catalog Source')
@@ -394,6 +397,16 @@ class CatalogSources(models.Model):
     def make_fwhm(self):
         fwhm = ((self.major_axis+self.minor_axis)/2)*2
         return fwhm
+
+    def make_mu_max(self):
+        pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
+        mu_max = (-2.5*log10(self.flux_max/pixel_scale**2))+self.frame.zeropoint
+        return mu_max
+
+    def make_mu_threshold(self):
+        pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
+        mu_threshold = (-2.5*log10(self.threshold/pixel_scale**2))+self.frame.zeropoint
+        return mu_threshold
 
     def make_flux(self):
         flux = 10.0**((self.obs_mag)/2.5)

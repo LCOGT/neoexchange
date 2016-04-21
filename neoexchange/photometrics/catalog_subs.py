@@ -699,7 +699,9 @@ def store_catalog_sources(catfile):
                                 'position_angle': source['ccd_pa'],
                                 'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
                                 'aperture_size': 3.0,
-                                'flags': source['flags']
+                                'flags': source['flags'],
+                                'flux_max': source['flux_max'],
+                                'threshold': source['threshold']
                             }
             cat_src, created = CatalogSources.objects.get_or_create(**source_params)
             if created == True:
@@ -720,7 +722,7 @@ def make_sext_dict(catsrc, num_iter):
                     'elongation':catsrc.make_elongation(),
                     'fwhm':catsrc.make_fwhm(),
                     'flags':catsrc.flags,
-                    'deltamu':3.0,
+                    'deltamu':catsrc.make_mu_threshold()-catsrc.make_mu_max(),
                     'flux':catsrc.make_flux(),
                     'area':catsrc.make_area(),
                     'ra':catsrc.obs_ra,

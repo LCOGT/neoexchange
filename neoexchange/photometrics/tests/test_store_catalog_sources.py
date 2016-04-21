@@ -107,7 +107,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         'elongation':1.076,
                         'fwhm':3.63,
                         'flags':0,
-                        'deltamu':3.0,
+                        'deltamu':2.624,
                         'flux':7459839.6,
                         'area':10.3126,
                         'ra':86.86805,
@@ -128,7 +128,7 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_params['elongation'], test_dict['elongation'], 3)
         self.assertAlmostEqual(sext_params['fwhm'], test_dict['fwhm'], 2)
         self.assertEqual(sext_params['flags'], test_dict['flags'])
-        self.assertAlmostEqual(sext_params['deltamu'], test_dict['deltamu'], 1)
+        self.assertAlmostEqual(sext_params['deltamu'], test_dict['deltamu'], 3)
         self.assertAlmostEqual(sext_params['flux'], test_dict['flux'], 1)
         self.assertAlmostEqual(sext_params['area'], test_dict['area'], 4)
         self.assertAlmostEqual(sext_params['ra'], test_dict['ra'], 5)
@@ -144,14 +144,14 @@ class MakeSEXTFileTest(FITSUnitTest):
                         'elongation':1.076,
                         'fwhm':3.63,
                         'flags':0,
-                        'deltamu':3.0,
+                        'deltamu':2.624,
                         'flux':7459839.6,
                         'area':10.3126,
                         'ra':86.86805,
                         'dec':-27.57513
                   }
 
-        test_line = '         1    106.118     18.611  17.1818 -79.4    1.076     3.63   0  3.00   7459839.6   10  86.86805 -27.57513'
+        test_line = '         1    106.118     18.611  17.1818 -79.4    1.076     3.63   0  2.62   7459839.6   10  86.86805 -27.57513'
 
         num_iter = 1
 
@@ -171,7 +171,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'elongation':1.076,
                             'fwhm':3.63,
                             'flags':0,
-                            'deltamu':3.0,
+                            'deltamu':2.624,
                             'flux':7459839.6,
                             'area':10.3126,
                             'ra':86.86805,
@@ -186,7 +186,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'elongation':1.115,
                             'fwhm':5.19,
                             'flags':0,
-                            'deltamu':3.0,
+                            'deltamu':5.840,
                             'flux':388810.2,
                             'area':21.1172,
                             'ra':86.72729,
@@ -205,7 +205,7 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_dict_list[0]['elongation'], test_dict_first['elongation'], 3)
         self.assertAlmostEqual(sext_dict_list[0]['fwhm'], test_dict_first['fwhm'], 2)
         self.assertEqual(sext_dict_list[0]['flags'], test_dict_first['flags'])
-        self.assertAlmostEqual(sext_dict_list[0]['deltamu'], test_dict_first['deltamu'], 1)
+        self.assertAlmostEqual(sext_dict_list[0]['deltamu'], test_dict_first['deltamu'], 3)
         self.assertAlmostEqual(sext_dict_list[0]['flux'], test_dict_first['flux'], 1)
         self.assertAlmostEqual(sext_dict_list[0]['area'], test_dict_first['area'], 4)
         self.assertAlmostEqual(sext_dict_list[0]['ra'], test_dict_first['ra'], 5)
@@ -219,7 +219,7 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_dict_list[-1]['elongation'], test_dict_last['elongation'], 3)
         self.assertAlmostEqual(sext_dict_list[-1]['fwhm'], test_dict_last['fwhm'], 2)
         self.assertEqual(sext_dict_list[-1]['flags'], test_dict_last['flags'])
-        self.assertAlmostEqual(sext_dict_list[-1]['deltamu'], test_dict_last['deltamu'], 1)
+        self.assertAlmostEqual(sext_dict_list[-1]['deltamu'], test_dict_last['deltamu'], 3)
         self.assertAlmostEqual(sext_dict_list[-1]['flux'], test_dict_last['flux'], 1)
         self.assertAlmostEqual(sext_dict_list[-1]['area'], test_dict_last['area'], 4)
         self.assertAlmostEqual(sext_dict_list[-1]['ra'], test_dict_last['ra'], 5)
@@ -237,7 +237,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'elongation':1.611,
                             'fwhm':2.10,
                             'flags':0,
-                            'deltamu':3.0,
+                            'deltamu':4.251,
                             'flux':14890849.2,
                             'area':3.2757,
                             'ra':86.88133,
@@ -251,14 +251,14 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'elongation':1.245,
                             'fwhm':3.35,
                             'flags':0,
-                            'deltamu':3.0,
+                            'deltamu':2.277,
                             'flux':10144470.9,
                             'area':8.6837,
                             'ra':86.58798,
                             'dec':-27.74070
                           }]
 
-        test_line_list = ['        18     15.468    115.396  17.9323 -47.8    1.611     2.10   0  3.00   14890849.2    3  86.88133 -27.58767', '       269   2018.674   1295.295  17.5156  82.3    1.245     3.35   0  3.00   10144470.9    8  86.58798 -27.74070']
+        test_line_list = ['        18     15.468    115.396  17.9323 -47.8    1.611     2.10   0  4.25   14890849.2    3  86.88133 -27.58767', '       269   2018.674   1295.295  17.5156  82.3    1.245     3.35   0  2.28   10144470.9    8  86.58798 -27.74070']
 
         sext_dict_list = make_sext_dict_list(self.test_filename)
 
