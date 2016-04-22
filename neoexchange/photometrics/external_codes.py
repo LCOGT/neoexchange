@@ -32,14 +32,18 @@ def default_scamp_config_files():
 
     return config_files
 
-def default_sextractor_config_files():
+def default_sextractor_config_files(catalog_type='ASCII'):
     '''Return a list of the needed files for SExtractor. The config file should
     be in element 0'''
 
+    common_config_files = ['gauss_1.5_3x3.conv', 'default.nnw']
     config_files = ['sextractor_neox.conf',
-                    'sextractor_ascii.params',
-                    'gauss_1.5_3x3.conv', 'default.nnw']
+                    'sextractor_ascii.params']
+    if catalog_type == 'FITS_LDAC':
+        config_files = ['sextractor_neox_ldac.conf',
+                        'sextractor_ldac.params']
 
+    config_files = config_files + common_config_files
     return config_files
 
 def setup_scamp_dir(source_dir, dest_dir):
@@ -52,11 +56,11 @@ def setup_scamp_dir(source_dir, dest_dir):
 
     return return_value
 
-def setup_sextractor_dir(source_dir, dest_dir):
+def setup_sextractor_dir(source_dir, dest_dir, catalog_type='ASCII'):
     '''Setup a temporary working directory for running SExtractor in <dest_dir>.
     The needed config files are symlinked from <source_dir>'''
 
-    sextractor_config_files = default_sextractor_config_files()
+    sextractor_config_files = default_sextractor_config_files(catalog_type)
 
     return_value = setup_working_dir(source_dir, dest_dir, sextractor_config_files)
 
@@ -83,7 +87,7 @@ def setup_working_dir(source_dir, dest_dir, config_files):
     for config in config_files:
         config_src_filepath = os.path.join(source_dir, config)
         config_dest_filepath = os.path.join(dest_dir, config)
-        if os.path.exists(config_dest_filepath):
+        if os.path.lexists(config_dest_filepath):
             try:
                 os.unlink(config_dest_filepath)
             except OSError:
@@ -146,13 +150,13 @@ def determine_options(fits_file):
     options = options.rstrip()
     return options
 
-def run_sextractor(source_dir, dest_dir, fits_file, binary=None, dbg=False):
+def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False):
     '''Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
     to the required config files.'''
 
-    status = setup_sextractor_dir(source_dir, dest_dir)
+    status = setup_sextractor_dir(source_dir, dest_dir, catalog_type)
     if status != 0:
         return status
 
@@ -161,7 +165,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, dbg=False):
         logger.error("Could not locate 'sex' executable in PATH")
         return -42
 
-    sextractor_config_file = default_sextractor_config_files()[0]
+    sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     options = determine_options(fits_file)
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()

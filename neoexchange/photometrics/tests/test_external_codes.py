@@ -141,6 +141,19 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         self.assertEqual(14+2086, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
+    def test_setup_ldac_sextractor_dir(self):
+
+        expected_configs = default_sextractor_config_files(catalog_type = 'FITS_LDAC')
+        expected_status = 0
+
+        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type = 'FITS_LDAC')
+
+        self.assertEqual(expected_status, status)
+
+        for config_file in expected_configs:
+            test_file = os.path.join(self.test_dir, config_file)
+            self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+
 
 class TestDetermineOptions(ExternalCodeUnitTest):
 
