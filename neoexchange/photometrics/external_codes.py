@@ -83,12 +83,16 @@ def setup_working_dir(source_dir, dest_dir, config_files):
     for config in config_files:
         config_src_filepath = os.path.join(source_dir, config)
         config_dest_filepath = os.path.join(dest_dir, config)
-        if not os.path.exists(config_dest_filepath):
+        if os.path.exists(config_dest_filepath):
             try:
-                os.link(config_src_filepath, config_dest_filepath)
+                os.unlink(config_dest_filepath)
             except OSError:
-                logger.error("Could not create link for %s to %s" % ( config, config_dest_filepath))
-                num_bad_links += 1
+                logger.warn("Could not unlink %s" % ( config_dest_filepath))
+        try:
+            os.symlink(config_src_filepath, config_dest_filepath)
+        except OSError:
+            logger.error("Could not create link for %s to %s" % ( config, config_dest_filepath))
+            num_bad_links += 1
     return_status = 0
     if num_bad_links > 0:
         return_status = -3
@@ -156,7 +160,6 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, dbg=False):
     if binary == None:
         logger.error("Could not locate 'sex' executable in PATH")
         return -42
-    bin_status = setup_working_dir(source_dir, dest_dir, [binary,])
 
     sextractor_config_file = default_sextractor_config_files()[0]
     options = determine_options(fits_file)
@@ -166,6 +169,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, dbg=False):
     if dbg == True:
         retcode_or_cmdline = cmdline
     else:
+        logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
