@@ -100,3 +100,17 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         for config_file in expected_configs:
             test_file = os.path.join(self.test_dir, config_file)
         self.assertTrue(os.path.exists(test_file))
+
+    def test_run_sextractor_nofile(self):
+
+        expected_cmdline = './sex  -c sextractor_neox.conf'
+        cmdline= run_sextractor(self.source_dir, self.test_dir, '', binary='./sex', dbg=True)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_run_sextractor_file(self):
+
+        expected_cmdline = './sex foo.fits -c sextractor_neox.conf'
+        cmdline= run_sextractor(self.source_dir, self.test_dir, 'foo.fits', binary='./sex', dbg=True)
+
+        self.assertEqual(expected_cmdline, cmdline)
