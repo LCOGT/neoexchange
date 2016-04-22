@@ -150,6 +150,12 @@ def determine_options(fits_file):
     options = options.rstrip()
     return options
 
+def determine_scamp_options(fits_catalog):
+
+    options = ''
+
+    return options
+
 def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False):
     '''Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
@@ -168,6 +174,46 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     options = determine_options(fits_file)
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
+    cmdline = cmdline.rstrip()
+
+    if dbg == True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline
+
+def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
+    '''Run SCAMP (using either the binary specified by [binary] or by
+    looking for 'scamp' in the PATH) on the passed <fits_catalog_path> with the
+    results and any temporary files created in <dest_dir>. <source_dir> is the
+    path to the required config files.'''
+
+    status = setup_scamp_dir(source_dir, dest_dir)
+    if status != 0:
+        return status
+
+    binary = binary or find_binary("scamp")
+    if binary == None:
+        logger.error("Could not locate 'scamp' executable in PATH")
+        return -42
+
+    scamp_config_file = default_scamp_config_files()[0]
+    options = determine_scamp_options(fits_catalog_path)
+
+    # SCAMP writes the output header file to the path that the FITS file is in,
+    # not to the directory SCAMP is being run from...
+    # If the fits_catalog has a path component, we symlink it to the directory.
+    fits_catalog = os.path.basename(fits_catalog_path)
+    if fits_catalog != fits_catalog_path:
+        fits_catalog = os.path.join(dest_dir, fits_catalog)
+        # If the file exists and is a link (or a broken link), then remove it
+        if os.path.lexists(fits_catalog) and os.path.islink(fits_catalog):
+            os.unlink(fits_catalog)
+        os.symlink(fits_catalog_path, fits_catalog)
+    cmdline = "%s %s -c %s %s" % ( binary, fits_catalog, scamp_config_file, options )
     cmdline = cmdline.rstrip()
 
     if dbg == True:

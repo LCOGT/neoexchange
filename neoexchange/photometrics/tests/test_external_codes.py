@@ -33,6 +33,9 @@ class ExternalCodeUnitTest(TestCase):
         self.source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
 
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+        self.test_fits_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
+
+        self.debug_print = False
 
     def tearDown(self):
         remove = True
@@ -45,7 +48,7 @@ class ExternalCodeUnitTest(TestCase):
                 print "Error removing files in temporary test directory", self.test_dir
             try:
                 os.rmdir(self.test_dir)
-                print "Removed", self.test_dir
+                if self.debug_print: print "Removed", self.test_dir
             except OSError:
                 print "Error removing temporary test directory", self.test_dir
 
@@ -130,7 +133,8 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         status = run_sextractor(self.source_dir, self.test_dir, self.test_fits_file)
 
         self.assertEqual(expected_status, status)
-        print glob(os.path.join(self.test_dir, '*'))
+
+        if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
         output_cat = os.path.join(self.test_dir, 'test.cat')
         self.assertTrue(os.path.exists(output_cat))
         test_fh = open(output_cat, 'r')
@@ -153,6 +157,30 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         for config_file in expected_configs:
             test_file = os.path.join(self.test_dir, config_file)
             self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
+
+    @skipIf(find_binary("scamp") == None, "Could not find SCAMP binary ('scamp') in PATH")
+    def test_run_scamp_realfile(self):
+
+        expected_status = 0
+        expected_line1 = 'EQUINOX =        2000.00000000 / Mean equinox'
+
+        status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
+
+        self.assertEqual(expected_status, status)
+        if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+
+        header_file = os.path.basename(self.test_fits_catalog).replace('fits', 'head')
+        output_header = os.path.join(self.test_dir, header_file)
+        self.assertTrue(os.path.exists(output_header), msg=output_header + ' is missing')
+        self.assertFalse(os.path.exists(self.test_fits_catalog.replace('fits', 'head')), msg=output_header + ' exists in the wrong place')
+
+        test_fh = open(output_header, 'r')
+        test_lines = test_fh.readlines()
+        test_fh.close()
+
+        # Expected value is 29 lines of FITS header
+        self.assertEqual(29, len(test_lines))
+        self.assertEqual(expected_line1, test_lines[3].rstrip())
 
 
 class TestDetermineOptions(ExternalCodeUnitTest):
