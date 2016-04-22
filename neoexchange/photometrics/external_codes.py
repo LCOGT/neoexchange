@@ -16,6 +16,11 @@ GNU General Public License for more details.
 import logging
 import os
 from subprocess import call
+from collections import OrderedDict
+
+from astropy.io import fits
+
+from photometrics.catalog_subs import oracdr_catalog_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +114,34 @@ def find_binary(program):
 
     return None
 
+def determine_options(fits_file):
+
+    option_mapping = OrderedDict([
+                        ('gain'      , '-GAIN'),
+                        ('zeropoint' , '-MAG_ZEROPOINT'),
+                        ('pixel_scale' , '-PIXEL_SCALE'),
+                        ('saturation'  , '-SATUR_LEVEL'),
+                     ])
+
+    options = ''
+    if not os.path.exists(fits_file):
+        logger.error("FITS file %s does not exist" % fits_file)
+        return options
+    try:
+        hdulist = fits.open(fits_file)
+    except IOError as e:
+        logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
+        return options
+
+    header = hdulist[0].header
+    header_mapping, table_mapping = oracdr_catalog_mapping()
+
+    for option in option_mapping.keys():
+        if header.get(header_mapping[option], -99) != -99:
+            options += option_mapping[option] +' ' + str(header.get(header_mapping[option])) + ' '
+    options = options.rstrip()
+    return options
+
 def run_sextractor(source_dir, dest_dir, fits_file, binary=None, dbg=False):
     '''Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
@@ -126,7 +159,9 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, dbg=False):
     bin_status = setup_working_dir(source_dir, dest_dir, [binary,])
 
     sextractor_config_file = default_sextractor_config_files()[0]
-    cmdline = "%s %s -c %s" % ( binary, fits_file, sextractor_config_file )
+    options = determine_options(fits_file)
+    cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
+    cmdline = cmdline.rstrip()
 
     if dbg == True:
         retcode_or_cmdline = cmdline

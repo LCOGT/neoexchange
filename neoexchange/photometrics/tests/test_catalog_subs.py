@@ -318,6 +318,8 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_status' : self.test_header['WCSERR'],
                             'astrometric_fit_nstars' : self.test_header['WCSMATCH'],
                             'astrometric_catalog'    : 'UCAC3',
+                            'gain'          : self.test_header['GAIN'],
+                            'saturation'    : self.test_header['SATURATE'],
                           }
 
         header, table = open_fits_catalog(self.test_filename)

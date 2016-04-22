@@ -31,6 +31,8 @@ class ExternalCodeUnitTest(TestCase):
         # Path to the config files
         self.source_dir = os.path.join('photometrics', 'configs')
 
+        self.test_fits_file = os.path.join('photometrics', 'tests', 'example-sbig-e10.fits')
+
     def tearDown(self):
         try:
             files_to_remove = glob(os.path.join(self.test_dir, '*'))
@@ -114,3 +116,12 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         cmdline= run_sextractor(self.source_dir, self.test_dir, 'foo.fits', binary='./sex', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
+
+class TestDetermineOptions(ExternalCodeUnitTest):
+
+    def test1(self):
+        expected_options = '-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000'
+
+        options = determine_options(self.test_fits_file)
+
+        self.assertEqual(expected_options, options)

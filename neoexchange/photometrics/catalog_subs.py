@@ -74,6 +74,8 @@ def oracdr_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : 'WCSMATCH',
                     'astrometric_catalog'    : 'WCCATTYP',
+                    'gain'          : 'GAIN',
+                    'saturation'    : 'SATURATE'
                   }
 
     table_dict = OrderedDict([
