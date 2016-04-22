@@ -178,3 +178,79 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
     return retcode_or_cmdline
+
+def updateFITSWCS(fits_file, scamp_file):
+    '''Update the WCS information in a fits file with a bad WCS solution
+    using the SCAMP generated FITS-like .head ascii file.'''
+
+    fits_file_output = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10_output.fits'))
+
+    data, header = fits.getdata(fits_file, header=True)
+
+    for i in range(1, 100):
+        line = scamp_file.readline()
+        if 'HISTORY' in line:
+            wcssolvr = str(line[34:39]+'-'+line[48:53])
+        if 'CUNIT1' in line:
+            cunit1 = line[9:31]
+        if 'CUNIT2' in line:
+            cunit2 = line[9:31]
+        if 'CRVAL1' in line:
+            crval1 = float(line[9:31])
+        if 'CRVAL2' in line:
+            crval2 = float(line[9:31])
+        if 'CRPIX1' in line:
+            crpix1 = float(line[9:31])
+        if 'CRPIX2' in line:
+            crpix2 = float(line[9:31])
+        if 'CD1_1' in line:
+            cd1_1 = float(line[9:31])
+        if 'CD1_2' in line:
+            cd1_2 = float(line[9:31])
+        if 'CD2_1' in line:
+            cd2_1 = float(line[9:31])
+        if 'CD2_2' in line:
+            cd2_2 = float(line[9:31])
+        if 'ASTIRMS1' in line:
+            astirms1 = round(float(line[9:31]),7)
+        if 'ASTIRMS2' in line:
+            astirms2 = round(float(line[9:31]),7)
+        if 'ASTRRMS1' in line:
+            astrrms1 = round(float(line[9:31]),7)
+        if 'ASTRRMS2' in line:
+            astrrms2 = round(float(line[9:31]),7)
+
+    #need to figure out how to get these values out of scamp standard output
+    wcsrfcat = 'null'
+    wcsimcat = 'null'
+    wcsnref = int(0)
+    wcsmatch = int(0)
+    wccattyp = 'null'
+
+    #header keywords we have
+    header['WCSDELRA'] = header['CRVAL1'] - crval1
+    header['WCSDELDE'] = header['CRVAL2'] - crval2
+    header['CRVAL1'] = crval1
+    header['CRVAL2'] = crval2
+    header['CRPIX1'] = crpix1
+    header['CRPIX2'] = crpix2
+    header['CD1_1'] = cd1_1
+    header['CD1_2'] = cd1_2
+    header['CD2_1'] = cd2_1
+    header['CD2_2'] = cd2_2
+    header['WCSSOLVR'] = wcssolvr
+    header['WCSRFCAT'] = wcsrfcat
+    header['WCSIMCAT'] = wcsimcat
+    header['WCSNREF'] = wcsnref
+    header['WCSMATCH'] = wcsmatch
+    header['WCCATTYP'] = wccattyp
+    header['WCSRDRES'] = str(str(astrrms1)+'/'+str(astrrms2))
+    header['WCSERR'] = 0
+
+    #header keywords we don't have
+    header['CUNIT1'] = cunit1
+    header['CUNIT2'] = cunit2
+
+    fits.writeto(fits_file_output, data, header, clobber=True)
+
+    return fits_file, fits_file_output, scamp_file

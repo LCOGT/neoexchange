@@ -17,6 +17,7 @@ import os
 from glob import glob
 import tempfile
 from unittest import skipIf
+from astropy.io import fits
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -177,3 +178,102 @@ class TestDetermineOptions(ExternalCodeUnitTest):
         options = determine_options(self.test_fits_file)
 
         self.assertEqual(expected_options, options)
+
+class TestUpdateFITSWCS(TestCase):
+
+    def test_read_FITS_header(self):
+
+        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+
+        expected_object = 'S509435'
+
+        hdu_number = 0
+        header = fits.getheader(test_fits_file, hdu_number)
+        object_val = header['OBJECT']
+
+        self.assertEqual(expected_object, object_val)
+
+    def test_read_SCAMP_header(self):
+
+        test_scamp_file = open(os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.head')), 'r')
+
+        expected_radesys_value = " 'ICRS    '           "
+
+        for i in range(1, 100):
+            line = test_scamp_file.readline()
+            if 'RADESYS' in line:
+                radesys_value = line[9:31]
+
+        test_scamp_file.close()
+
+        self.assertEqual(expected_radesys_value, radesys_value)
+
+    def test_update_FITS_WCS(self):
+
+        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+
+        test_scamp_file = open(os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.head')), 'r')
+
+        fits_file, fits_file_output, scamp_file = updateFITSWCS(test_fits_file, test_scamp_file)
+
+        test_scamp_file.close()
+
+        expected_crval1 = 1.783286919001E+02
+        expected_crval2 = 1.169387882835E+01
+        expected_crpix1 = 2.047592457311E+03
+        expected_crpix2 = 2.048419571848E+03
+        expected_cd1_1 = 1.082433886779E-04
+        expected_cd1_2 = 6.824629998000E-07
+        expected_cd2_1 = 7.053875928440E-07
+        expected_cd2_2 = -1.082408809463E-04
+        expected_wcssolvr = 'SCAMP-2.0.4'
+        expected_wcsrfcat = 'null'
+        expected_wcsimcat = 'null'
+        expected_wcsnref = 0
+        expected_wcsmatch = 0
+        expected_wccattyp = 'null'
+        expected_wcsrdres = '6.1e-05/5.68e-05'
+        expected_wcsdelra = 37.175
+        expected_wcsdelde = -51.299
+        expected_wcserr = 0
+
+        hdu_number = 0
+        header = fits.getheader(fits_file_output, hdu_number)
+        crval1 = header['CRVAL1']
+        crval2 = header['CRVAL2']
+        crpix1 = header['CRPIX1']
+        crpix2 = header['CRPIX2']
+        cd1_1 = header['CD1_1']
+        cd1_2 = header['CD1_2']
+        cd2_1 = header['CD2_1']
+        cd2_2 = header['CD2_2']
+        wcssolvr = header['WCSSOLVR']
+        wcsrfcat = header['WCSRFCAT']
+        wcsimcat = header['WCSIMCAT']
+        wcsnref = header['WCSNREF']
+        wcsmatch = header['WCSMATCH']
+        wccattyp = header['WCCATTYP']
+        wcsrdres = header['WCSRDRES']
+        wcsdelra = header['WCSDELRA']
+        wcsdelde = header['WCSDELDE']
+        wcserr = header['WCSERR']
+
+        self.assertEqual(expected_crval1, crval1)
+        self.assertEqual(expected_crval2, crval2)
+        self.assertEqual(expected_crpix1, crpix1)
+        self.assertEqual(expected_crpix2, crpix2)
+        self.assertEqual(expected_cd1_1, cd1_1)
+        self.assertEqual(expected_cd1_2, cd1_2)
+        self.assertEqual(expected_cd2_1, cd2_1)
+        self.assertEqual(expected_cd2_2, cd2_2)
+        self.assertEqual(expected_wcssolvr, wcssolvr)
+        self.assertEqual(expected_wcsrfcat, wcsrfcat)
+        self.assertEqual(expected_wcsimcat, wcsimcat)
+        self.assertEqual(expected_wcsnref, wcsnref)
+        self.assertEqual(expected_wcsmatch, wcsmatch)
+        self.assertEqual(expected_wccattyp, wccattyp)
+        self.assertEqual(expected_wcsrdres, wcsrdres)
+        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
+        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
+        self.assertEqual(expected_wcserr, wcserr)
+
