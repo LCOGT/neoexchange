@@ -261,13 +261,16 @@ class TestUpdateFITSWCS(TestCase):
         expected_wcsnref = 0
         expected_wcsmatch = 0
         expected_wccattyp = 'null'
-        expected_wcsrdres = '6.1e-05/5.68e-05'
+        expected_wcsrdres = '0.21947/0.20434'
         expected_wcsdelra = 37.175
         expected_wcsdelde = -51.299
         expected_wcserr = 0
+        expected_units = 'deg'
 
         hdu_number = 0
         header = fits.getheader(fits_file_output, hdu_number)
+        cunit1 = header['CUNIT1']
+        cunit2 = header['CUNIT2']
         crval1 = header['CRVAL1']
         crval2 = header['CRVAL2']
         crpix1 = header['CRPIX1']
@@ -287,6 +290,8 @@ class TestUpdateFITSWCS(TestCase):
         wcsdelde = header['WCSDELDE']
         wcserr = header['WCSERR']
 
+        self.assertEqual(expected_units, cunit1)
+        self.assertEqual(expected_units, cunit2)
         self.assertEqual(expected_crval1, crval1)
         self.assertEqual(expected_crval2, crval2)
         self.assertEqual(expected_crpix1, crpix1)

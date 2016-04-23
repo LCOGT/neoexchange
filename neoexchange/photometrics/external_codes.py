@@ -263,9 +263,10 @@ def updateFITSWCS(fits_file, scamp_file):
         if 'HISTORY' in line:
             wcssolvr = str(line[34:39]+'-'+line[48:53])
         if 'CUNIT1' in line:
-            cunit1 = line[9:31]
+            # Trim spaces, remove single quotes
+            cunit1 = line[9:31].strip().replace("'", "")
         if 'CUNIT2' in line:
-            cunit2 = line[9:31]
+            cunit2 = line[9:31].strip().replace("'", "")
         if 'CRVAL1' in line:
             crval1 = float(line[9:31])
         if 'CRVAL2' in line:
@@ -287,9 +288,9 @@ def updateFITSWCS(fits_file, scamp_file):
         if 'ASTIRMS2' in line:
             astirms2 = round(float(line[9:31]),7)
         if 'ASTRRMS1' in line:
-            astrrms1 = round(float(line[9:31]),7)
+            astrrms1 = round(float(line[9:31])*3600.0,5)
         if 'ASTRRMS2' in line:
-            astrrms2 = round(float(line[9:31]),7)
+            astrrms2 = round(float(line[9:31])*3600.0,5)
 
     #need to figure out how to get these values out of scamp standard output
     wcsrfcat = 'null'
@@ -318,9 +319,9 @@ def updateFITSWCS(fits_file, scamp_file):
     header['WCSRDRES'] = str(str(astrrms1)+'/'+str(astrrms2))
     header['WCSERR'] = 0
 
-    #header keywords we don't have
-    header['CUNIT1'] = cunit1
-    header['CUNIT2'] = cunit2
+    #header keywords we don't have. Insert after CTYPE2
+    header.insert('CTYPE2', ('CUNIT1', cunit1, 'Unit of 1st axis'), after=True)
+    header.insert('CUNIT1', ('CUNIT2', cunit2, 'Unit of 2nd axis'), after=True)
 
     # Need to force the CHECKSUM to be recomputed. Trap for young players..
     fits.writeto(fits_file_output, data, header, clobber=True, checksum=True)
