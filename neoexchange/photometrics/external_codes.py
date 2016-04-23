@@ -17,8 +17,10 @@ import logging
 import os
 from subprocess import call
 from collections import OrderedDict
+import warnings
 
 from astropy.io import fits
+from astropy.io.votable import parse
 
 from photometrics.catalog_subs import oracdr_catalog_mapping
 
@@ -224,6 +226,29 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
         retcode_or_cmdline = call(args, cwd=dest_dir)
 
     return retcode_or_cmdline
+
+def get_scamp_xml_info(scamp_xml_file):
+
+    # SCAMP VOTable's are malformed and will throw an astropy W42 warning which
+    # we don't want. Wrap in context manager to get rid of this
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore")
+        votable = parse(scamp_xml_file)
+
+    # Extract the Fields and F(ield)Groups tables from the VOTable
+    fields_table = votable.get_table_by_id('Fields')
+    fgroups_table = votable.get_table_by_id('FGroups')
+
+    reference_catalog = fgroups_table.array['AstRef_Catalog'].data[0]
+    reference_catalog = reference_catalog.replace('-', '')
+    info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
+             'num_refstars' : fields_table.array['NDetect'].data[0],
+             'wcs_refcat'   : "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower(),
+             'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
+             'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0],
+           }
+
+    return info
 
 def updateFITSWCS(fits_file, scamp_file):
     '''Update the WCS information in a fits file with a bad WCS solution

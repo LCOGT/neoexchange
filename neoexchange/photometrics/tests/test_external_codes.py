@@ -306,3 +306,21 @@ class TestUpdateFITSWCS(TestCase):
         self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
         self.assertEqual(expected_wcserr, wcserr)
 
+class TestGetSCAMPXMLInfo(TestCase):
+
+    def setUp(self):
+
+        self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
+
+    def test_read(self):
+
+        expected_results = { 'num_refstars' : 606,
+                             'num_match'    : 64,
+                             'wcs_refcat'   : '<Vizier/aserver.cgi?ucac4@cds>',
+                             'wcs_cattype'  : 'UCAC4@CDS',
+                             'wcs_imagecat' : 'ldac_test_catalog.fits'
+                           }
+
+        results = get_scamp_xml_info(self.test_scamp_xml)
+
+        self.assertEqual(expected_results, results)
