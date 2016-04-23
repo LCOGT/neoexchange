@@ -209,21 +209,24 @@ class TestDetermineOptions(ExternalCodeUnitTest):
 
 class TestUpdateFITSWCS(TestCase):
 
-    def test_read_FITS_header(self):
+    def setUp(self):
 
-        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+        self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+        self.test_scamp_headfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.head'))
+
+    def test_read_FITS_header(self):
 
         expected_object = 'S509435'
 
         hdu_number = 0
-        header = fits.getheader(test_fits_file, hdu_number)
+        header = fits.getheader(self.test_fits_file, hdu_number)
         object_val = header['OBJECT']
 
         self.assertEqual(expected_object, object_val)
 
     def test_read_SCAMP_header(self):
 
-        test_scamp_file = open(os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.head')), 'r')
+        test_scamp_file = open(self.test_scamp_headfile, 'r')
 
         expected_radesys_value = " 'ICRS    '           "
 
@@ -238,11 +241,9 @@ class TestUpdateFITSWCS(TestCase):
 
     def test_update_FITS_WCS(self):
 
-        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+        test_scamp_file = open(self.test_scamp_headfile, 'r')
 
-        test_scamp_file = open(os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.head')), 'r')
-
-        fits_file, fits_file_output, scamp_file = updateFITSWCS(test_fits_file, test_scamp_file)
+        fits_file, fits_file_output, scamp_file = updateFITSWCS(self.test_fits_file, test_scamp_file)
 
         test_scamp_file.close()
 
