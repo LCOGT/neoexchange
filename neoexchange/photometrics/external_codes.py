@@ -322,6 +322,7 @@ def updateFITSWCS(fits_file, scamp_file):
     header['CUNIT1'] = cunit1
     header['CUNIT2'] = cunit2
 
-    fits.writeto(fits_file_output, data, header, clobber=True)
+    # Need to force the CHECKSUM to be recomputed. Trap for young players..
+    fits.writeto(fits_file_output, data, header, clobber=True, checksum=True)
 
     return fits_file, fits_file_output, scamp_file
