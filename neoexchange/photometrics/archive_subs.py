@@ -54,9 +54,9 @@ def determine_archive_start_end(dt=None):
     dt = dt or datetime.utcnow()
     start = datetime(dt.year, dt.month, dt.day, 17, 0, 0)
     end = datetime(dt.year, dt.month, dt.day, 16, 0, 0)
-    if dt.hour >= 0 and dt.hour <= 15:
+    if dt.hour >= 0 and dt.hour <= 16:
         start = start - timedelta(days=1)
-    elif dt.hour >= 16 and dt.hour <= 23:
+    elif dt.hour >= 17 and dt.hour <= 23:
         end = end + timedelta(days=1)
 
     return start, end

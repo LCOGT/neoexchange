@@ -70,7 +70,7 @@ class Test_Determine_Archive_Start_End(TestCase):
         self.assertEqual(expected_end, end)
 
     def test_date_just_past_day_rollover(self):
-        dt = datetime(2016, 4, 13, 16, 00, 01)
+        dt = datetime(2016, 4, 13, 17, 00, 01)
 
         expected_start = datetime(2016, 4, 13, 17, 0, 0)
         expected_end = datetime(2016, 4, 14, 16, 0, 0)

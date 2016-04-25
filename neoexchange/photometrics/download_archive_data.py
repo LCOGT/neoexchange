@@ -66,6 +66,6 @@ if username and password:
         except:
             print "Error creating output path", out_path
             os.sys.exit(-1)
-    print "Downloading data"
+    print "Downloading data to", out_path
     dl_frames = download_files(frames, out_path)
     print "Downloaded %d frames" % ( len(dl_frames) )
