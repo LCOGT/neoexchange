@@ -1315,7 +1315,7 @@ class TestConfigureDefaults(TestCase):
         test_params = {
               'exp_count': 42,
               'exp_time': 42.0,
-              'site_code': 'E99',
+              'site_code': 'Q59',
               }
 
         expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',

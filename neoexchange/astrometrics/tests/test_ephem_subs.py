@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -94,7 +94,7 @@ class TestGetMountLimits(TestCase):
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
     def test_point4m_by_site_code2(self):
-        (neg_limit, pos_limit, alt_limit) = get_mountlimits('E99')
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('Q59')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
     def test_point4m_by_site_code3(self):
@@ -805,7 +805,7 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.point4m_exp_overhead, exp_overhead)
 
     def test_point4m_site3(self):
-        site_code = 'E99'
+        site_code = 'Q59'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(1.139, pixel_scale)
@@ -973,7 +973,7 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_hgt, 0.0)
 
     def test_aust_point4m_num2_by_code(self):
-        site_code = 'E99'
+        site_code = 'Q59'
 
         expected_site_name = 'LCOGT COJ Node 0m4b at Siding Spring'
 

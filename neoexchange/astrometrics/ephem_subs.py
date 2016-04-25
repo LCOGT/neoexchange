@@ -700,7 +700,7 @@ def get_mag_mapping(site_code):
     good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
     # COJ normally has bad seeing, allow more time
     bad_onem_site_codes = ['Q63', 'Q64']
-    point4m_site_codes = ['Z21', 'W89', 'F66', 'E99']
+    point4m_site_codes = ['Z21', 'W89', 'F66', 'Q59']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
@@ -969,7 +969,7 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long # West of Greenwich !
         site_hgt = 3037.0
         site_name = 'LCOGT OGG Node 0m4b at Maui'
-    elif site_code == 'COJ-CLMA-0M4B' or site_code == 'E99':
+    elif site_code == 'COJ-CLMA-0M4B' or site_code == 'Q59':
 # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
         (site_lat, status)  =  S.sla_daf2r(31, 16, 22.48)
         site_lat = -site_lat   # Southern hemisphere !
@@ -1144,7 +1144,7 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z21', 'E99', 'F66', 'W89']:
+    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z21', 'Q59', 'F66', 'W89']:
         ha_pos_limit = 4.46 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 15.0
@@ -1200,7 +1200,7 @@ def get_sitecam_params(site):
     point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z21', 'W89', 'F66', 'E99']
+    valid_point4m_codes = ['Z21', 'W89', 'F66', 'Q59']
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
