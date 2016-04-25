@@ -393,12 +393,19 @@ def determine_approx_moon_cycle(dt=None, moon_type='FULL_MOON', dbg=False):
     if dbg: print year, year_fraction
 
     moon_cycle = (year - 2000.0) * 12.3685
+    if dbg: print "Before rounding:", moon_cycle
     if moon_type == 'FULL_MOON':
-        moon_cycle = ceil(moon_cycle * 2.0) / 2.0
+        orig_moon_cycle = moon_cycle
+        moon_cycle = round(moon_cycle * 2.0) / 2.0
+        if dbg: print "  In rounding", moon_cycle
+        if moon_cycle-0.5 <= 0.0001:
+            moon_cycle += 0.5
+        if moon_cycle < orig_moon_cycle:
+            moon_cycle += 1.0
     else:
         # New Moon, round to nearest integer
         moon_cycle = round(moon_cycle)
-    if dbg: print moon_cycle
+    if dbg: print " After rounding:", moon_cycle
     return moon_cycle
 
 def time_in_julian_centuries(dt_or_jd):

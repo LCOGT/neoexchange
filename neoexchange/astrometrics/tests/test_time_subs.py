@@ -271,7 +271,7 @@ class TestDetermineApproxMoonCycle(TestCase):
 
         expected_cycle = -283
 
-        cycle = determine_approx_moon_cycle(dt, 'NEW_MOON', dbg=True)
+        cycle = determine_approx_moon_cycle(dt, 'NEW_MOON', dbg=False)
 
         self.assertEqual(expected_cycle, cycle)
 
@@ -291,7 +291,7 @@ class TestDetermineApproxMoonCycle(TestCase):
 
         expected_cycle = 202.5
 
-        cycle = determine_approx_moon_cycle(dt, 'FULL_MOON', dbg=True)
+        cycle = determine_approx_moon_cycle(dt, 'FULL_MOON', dbg=False)
 
         self.assertEqual(expected_cycle, cycle)
 
@@ -334,7 +334,7 @@ class TestTimeOfFullMoon(TestCase):
 # Value from Meeus p. 353 back converted to datetime
         expected_dt = datetime(1977, 2, 18, 10, 35, 4)
 
-        moon_time = time_of_full_moon(dt, 'NEW_MOON', True)
+        moon_time = time_of_full_moon(dt, 'NEW_MOON')
 
         self.assertEqual(expected_dt, moon_time)
 
