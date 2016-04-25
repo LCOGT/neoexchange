@@ -250,13 +250,15 @@ def get_scamp_xml_info(scamp_xml_file):
 
     return info
 
-def updateFITSWCS(fits_file, scamp_file):
+def updateFITSWCS(fits_file, scamp_file, scamp_xml_file):
     '''Update the WCS information in a fits file with a bad WCS solution
     using the SCAMP generated FITS-like .head ascii file.'''
 
     fits_file_output = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10_output.fits'))
 
     data, header = fits.getdata(fits_file, header=True)
+
+    scamp_info = get_scamp_xml_info(scamp_xml_file)
 
     for i in range(1, 100):
         line = scamp_file.readline()
@@ -293,11 +295,11 @@ def updateFITSWCS(fits_file, scamp_file):
             astrrms2 = round(float(line[9:31])*3600.0,5)
 
     #need to figure out how to get these values out of scamp standard output
-    wcsrfcat = 'null'
-    wcsimcat = 'null'
-    wcsnref = int(0)
-    wcsmatch = int(0)
-    wccattyp = 'null'
+    wcsrfcat = scamp_info['wcs_refcat']
+    wcsimcat = scamp_info['wcs_imagecat']
+    wcsnref = scamp_info['num_refstars']
+    wcsmatch = scamp_info['num_match']
+    wccattyp = scamp_info['wcs_cattype']
 
     #header keywords we have
     header['WCSDELRA'] = header['CRVAL1'] - crval1

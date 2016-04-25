@@ -213,6 +213,7 @@ class TestUpdateFITSWCS(TestCase):
 
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
         self.test_scamp_headfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.head'))
+        self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
 
     def test_read_FITS_header(self):
 
@@ -243,7 +244,7 @@ class TestUpdateFITSWCS(TestCase):
 
         test_scamp_file = open(self.test_scamp_headfile, 'r')
 
-        fits_file, fits_file_output, scamp_file = updateFITSWCS(self.test_fits_file, test_scamp_file)
+        fits_file, fits_file_output, scamp_file = updateFITSWCS(self.test_fits_file, test_scamp_file, self.test_scamp_xml)
 
         test_scamp_file.close()
 
@@ -256,11 +257,11 @@ class TestUpdateFITSWCS(TestCase):
         expected_cd2_1 = 7.053875928440E-07
         expected_cd2_2 = -1.082408809463E-04
         expected_wcssolvr = 'SCAMP-2.0.4'
-        expected_wcsrfcat = 'null'
-        expected_wcsimcat = 'null'
-        expected_wcsnref = 0
-        expected_wcsmatch = 0
-        expected_wccattyp = 'null'
+        expected_wcsrfcat = '<Vizier/aserver.cgi?ucac4@cds>'
+        expected_wcsimcat = 'ldac_test_catalog.fits'
+        expected_wcsnref = 606
+        expected_wcsmatch = 64
+        expected_wccattyp = 'UCAC4@CDS'
         expected_wcsrdres = '0.21947/0.20434'
         expected_wcsdelra = 37.175
         expected_wcsdelde = -51.299
