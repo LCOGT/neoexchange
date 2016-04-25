@@ -21,7 +21,8 @@ from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, \
-    degreestohms, parse_neocp_date, get_semester_dates
+    degreestohms, parse_neocp_date, get_semester_dates, time_of_full_moon, \
+    determine_approx_moon_cycle, time_in_julian_centuries
 
 class TestJD2datetime(TestCase):
 
@@ -261,3 +262,89 @@ class TestGetSemesterDates(TestCase):
 
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
+
+class TestDetermineApproxMoonCycle(TestCase):
+
+    def test_meeus_example(self):
+
+        dt = datetime(1977, 2, 18)
+
+        expected_cycle = -283
+
+        cycle = determine_approx_moon_cycle(dt, 'NEW_MOON', dbg=True)
+
+        self.assertEqual(expected_cycle, cycle)
+
+    def test_full_moon_defaulting(self):
+
+        dt = datetime(1977, 2, 18)
+
+        expected_cycle = -282.5
+
+        cycle = determine_approx_moon_cycle(dt)
+
+        self.assertEqual(expected_cycle, cycle)
+
+    def test_2016may_full_moon(self):
+
+        dt = datetime(2016, 4, 22)
+
+        expected_cycle = 202.5
+
+        cycle = determine_approx_moon_cycle(dt, 'FULL_MOON', dbg=True)
+
+        self.assertEqual(expected_cycle, cycle)
+
+class TestTimeInJulianCenturies(TestCase):
+
+    def test_example_jd(self):
+        jd = 2446895.5
+
+        expected_T = -0.127296372348
+
+        T = time_in_julian_centuries(jd)
+
+        self.assertAlmostEqual(expected_T, T, 12)
+
+    def test_example_mjd(self):
+        jd = 46895.0
+
+        expected_T = -0.127296372348
+
+        T = time_in_julian_centuries(jd)
+
+        self.assertAlmostEqual(expected_T, T, 12)
+
+    def test_example_datetime(self):
+        dt = datetime(1987, 4, 10, 0, 0, 0)
+
+        expected_T = -0.127296372348
+
+        T = time_in_julian_centuries(dt)
+
+        self.assertAlmostEqual(expected_T, T, 12)
+
+class TestTimeOfFullMoon(TestCase):
+
+    def test_meeus_example(self):
+
+
+        dt = datetime(1977, 2, 14)
+
+# Value from Meeus p. 353 back converted to datetime
+        expected_dt = datetime(1977, 2, 18, 10, 35, 4)
+
+        moon_time = time_of_full_moon(dt, 'NEW_MOON', True)
+
+        self.assertEqual(expected_dt, moon_time)
+
+    def test_2016may_full_moon(self):
+
+        dt = datetime(2016, 4, 25, 17, 21, 0)
+
+# Value from http://aa.usno.navy.mil/cgi-bin/aa_phases.pl?year=2016&month=4&day=25&nump=50&format=p
+        expected_dt = datetime(2016, 5, 21, 21, 14, 0)
+
+        moon_time = time_of_full_moon(dt, 'FULL_MOON', True)
+
+        self.assertEqual(expected_dt, moon_time)

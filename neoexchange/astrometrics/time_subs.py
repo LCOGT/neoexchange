@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta
-from math import degrees
+from math import degrees, ceil
 
 import slalib as S
 
@@ -162,17 +162,20 @@ def extract_packed_date(value):
     except ValueError:
         return lookup[value]
 
-def jd_utc2datetime(jd):
+def jd_utc2datetime(jd, mjd=False):
     '''Converts a passed Julian date to a Python datetime object. 'None' is
     returned if the conversion was not possible.'''
 
-    try:
-        mjd_utc = jd-2400000.5
-    except TypeError:
+    if mjd == False:
         try:
-            mjd_utc = float(jd)-2400000.5
-        except:
-            return None
+            mjd_utc = jd-2400000.5
+        except TypeError:
+            try:
+                mjd_utc = float(jd)-2400000.5
+            except:
+                return None
+    else:
+        mjd_utc = jd
     year, month,day, frac, status = S.sla_djcl(mjd_utc)
     if status != 0:
         return None
@@ -375,3 +378,58 @@ def dttodecimalday(dt, microdays=False):
         date_string = ""
 
     return date_string
+
+def determine_approx_moon_cycle(dt=None, moon_type='FULL_MOON', dbg=False):
+
+    dt = dt or datetime.utcnow()
+
+    # Determine fraction of year
+    year, day_in_year, status = S.sla_clyd(dt.year, dt.month, dt.day)
+    if status != 0:
+        logger.err("Bad status value (%d) from SLA_CLYD" % ( status))
+        return None
+    year_fraction = day_in_year / 365.0
+    year = year + year_fraction
+    if dbg: print year, year_fraction
+
+    moon_cycle = (year - 2000.0) * 12.3685
+    if moon_type == 'FULL_MOON':
+        moon_cycle = ceil(moon_cycle * 2.0) / 2.0
+    else:
+        # New Moon, round to nearest integer
+        moon_cycle = round(moon_cycle)
+    if dbg: print moon_cycle
+    return moon_cycle
+
+def time_in_julian_centuries(dt_or_jd):
+
+    if type(dt_or_jd) == datetime:
+        mjd_utc = datetime2mjd_utc(dt_or_jd)
+
+    else:
+        jd = dt_or_jd
+
+        if jd > 2400000.0:
+            mjd_utc = jd - 2400000.5
+        else:
+            mjd_utc = jd
+
+    T = (mjd_utc - 51544.5) / 36525.0
+
+    return T
+
+def time_of_full_moon(dt=None, moon_type='FULL_MOON', dbg=False):
+    '''Compute dates of nearest Full Moon to datetime [dt] which can be either
+    passed or datetime.utcnow() will be used.'''
+
+    dt = dt or datetime.utcnow()
+
+    # Time in Julian centuries
+    T = time_in_julian_centuries(dt)
+
+    k = determine_approx_moon_cycle(dt, moon_type, dbg)
+    moontime_jd_tdb = 2451550.09766 + 29.530588861 * k + 0.00015437 * T**2 -\
+        0.000000150 * T**3 + 0.00000000073 * T**4
+
+    moontime_dt = jd_utc2datetime(moontime_jd_tdb)
+    return moontime_dt
