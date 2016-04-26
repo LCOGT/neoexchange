@@ -297,6 +297,16 @@ class TestDetermineApproxMoonCycle(TestCase):
 
         self.assertEqual(expected_cycle, cycle)
 
+    def test_2016may_full_moon2(self):
+
+        dt = datetime(2016, 4, 25, 17, 21, 0)
+
+        expected_cycle = 202.5
+
+        cycle = determine_approx_moon_cycle(dt, 'FULL_MOON', dbg=True)
+
+        self.assertEqual(expected_cycle, cycle)
+
 class TestTimeInJulianCenturies(TestCase):
 
     def test_example_jd(self):
@@ -351,14 +361,18 @@ class TestTimeOfFullMoon(TestCase):
 
     def test_meeus_example(self):
 
-
         dt = datetime(1977, 2, 14)
+        dbg = False
 
 # Value from Meeus p. 353 back converted to datetime
-        expected_dt = datetime(1977, 2, 18, 10, 35, 4)
+#       expected_dt = datetime(1977, 2, 18, 10, 35, 4) # Value before corrections
+#       expected_dt = datetime(1977, 2, 18, 3, 37, 42) # Value in TDB
+        expected_dt = datetime(1977, 2, 18, 3, 36, 54) # Value in UTC
 
-        moon_time = time_of_full_moon(dt, 'NEW_MOON')
+        moon_time = time_of_full_moon(dt, 'NEW_MOON', dbg)
 
+        delta = expected_dt - moon_time
+        if dbg: print "Delta=", delta.total_seconds()
         self.assertEqual(expected_dt, moon_time)
 
     def test_2016may_full_moon(self):
@@ -370,4 +384,6 @@ class TestTimeOfFullMoon(TestCase):
 
         moon_time = time_of_full_moon(dt, 'FULL_MOON', True)
 
+        delta = expected_dt - moon_time
+        print "Delta=", delta.total_seconds()
         self.assertEqual(expected_dt, moon_time)

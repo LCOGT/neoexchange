@@ -380,6 +380,13 @@ def dttodecimalday(dt, microdays=False):
     return date_string
 
 def determine_approx_moon_cycle(dt=None, moon_type='FULL_MOON', dbg=False):
+    '''Determine the Moon cycle value for the given datetime <dt> (either passed
+    or UTC 'now') and moon phase type ['FULL_MOON', 'NEW_MOON'].
+    The returned value of the cycle is the number of moons of the specified type
+    since <moon_cycle> = 0.0 (corresponding to New Moon on 2000 Jan 6), values
+    ending in 0.50 give Full Moons (0.25 and 0.75 give First/Last Quarters
+    respectively but are unimplmented). Any other values of <moon_cycle> have
+    no meaning.'''
 
     dt = dt or datetime.utcnow()
 
@@ -398,7 +405,7 @@ def determine_approx_moon_cycle(dt=None, moon_type='FULL_MOON', dbg=False):
         orig_moon_cycle = moon_cycle
         moon_cycle = round(moon_cycle * 2.0) / 2.0
         if dbg: print "  In rounding", moon_cycle
-        if moon_cycle-0.5 <= 0.0001:
+        if moon_cycle-int(moon_cycle) <= 0.0001:
             moon_cycle += 0.5
         if moon_cycle < orig_moon_cycle:
             moon_cycle += 1.0
@@ -470,8 +477,101 @@ def time_of_full_moon(dt=None, moon_type='FULL_MOON', dbg=False):
     earth_ecc, M, Mprime, F, Omega = moon_fundamental_arguments(k, T)
     if dbg: print earth_ecc, M, Mprime, F, Omega
 
-    if moon_type == 'FULL_MOON':
-        corr = -0.40614 * sin(Mprime)
-    moontime_dt = jd_utc2datetime(moontime_jd_tdb)
+    corr = 0.0
+    if moon_type == 'NEW_MOON':
+        corr = -0.40720 * sin(Mprime) \
+               +0.17241 * earth_ecc * sin(M) \
+               +0.01608 * sin(2.0*Mprime) \
+               +0.01039 * sin(2.0*F) \
+               +0.00739 * earth_ecc * sin(Mprime-M) \
+               -0.00514 * earth_ecc * sin(Mprime+M) \
+               +0.00208 * earth_ecc**2 * sin(2.0*M)
+    elif moon_type == 'FULL_MOON':
+        corr = -0.40614 * sin(Mprime) \
+               +0.17302 * earth_ecc * sin(M) \
+               +0.01614 * sin(2.0*Mprime) \
+               +0.01043 * sin(2.0*F) \
+               +0.00734 * earth_ecc * sin(Mprime-M) \
+               -0.00515 * earth_ecc * sin(Mprime+M) \
+               +0.00209 * earth_ecc**2 * sin(2.0*M)
+    else:
+        logger.warn("Unsupported moon phase %s, not calculating corrections" % moon_type)
+
+    # These corrections have the same value for both moon types
+    if moon_type == 'NEW_MOON' or moon_type == 'FULL_MOON':
+        corr +=-0.00111 * sin(Mprime-2.0*F) \
+               -0.00057 * sin(Mprime+2.0*F) \
+               +0.00056 * earth_ecc * sin(2.0*Mprime+M) \
+               -0.00042 * sin(3.0*Mprime) \
+               +0.00042 * earth_ecc * sin(M+2.0*F) \
+               +0.00038 * earth_ecc * sin(M-2.0*F) \
+               -0.00024 * earth_ecc * sin(2.0*Mprime-M) \
+               -0.00017 * sin(Omega) \
+               -0.00007 * sin(Mprime + 2.0*M) \
+               +0.00004 * sin(2.0*Mprime - 2.0*F) \
+               +0.00004 * sin(3.0*M) \
+               +0.00003 * sin(Mprime + M - 2.0*F) \
+               +0.00003 * sin(2.0*Mprime + 2.0*F) \
+               -0.00003 * sin(Mprime + M + 2.0*F) \
+               +0.00003 * sin(Mprime - M + 2.0*F) \
+               -0.00002 * sin(Mprime - M - 2.0*F) \
+               -0.00002 * sin(3.0*Mprime + M) \
+               +0.00002 * sin(4.0*Mprime)
+
+    if dbg: print "Correction=", corr
+
+    # Sine of Planetary arguments, converted to radians and normalized
+    A1 = 299.77 +  0.107408 * k - 0.009173 * T**2
+    sinA1 = sin(S.sla_dranrm(radians(A1)))
+    A2 = 251.88 +  0.016321 * k
+    sinA2 = sin(S.sla_dranrm(radians(A2)))
+    A3 = 251.83 + 26.651886 * k
+    sinA3 = sin(S.sla_dranrm(radians(A3)))
+    A4 = 349.42 + 36.412478 * k
+    sinA4 = sin(S.sla_dranrm(radians(A4)))
+    A5 =  84.66 + 18.206239 * k
+    sinA5 = sin(S.sla_dranrm(radians(A5)))
+    A6 = 141.74 + 53.303771 * k
+    sinA6 = sin(S.sla_dranrm(radians(A6)))
+    A7 = 207.14 +  2.453732 * k
+    sinA7 = sin(S.sla_dranrm(radians(A7)))
+    A8 = 154.84 +  7.306860 * k
+    sinA8 = sin(S.sla_dranrm(radians(A8)))
+    A9 =  34.52 + 27.261239 * k
+    sinA9 = sin(S.sla_dranrm(radians(A9)))
+    A10 = 207.19 + 0.121824 * k
+    sinA10 = sin(S.sla_dranrm(radians(A10)))
+    A11 = 291.34 + 1.844379 * k
+    sinA11 = sin(S.sla_dranrm(radians(A11)))
+    A12 = 161.72 + 24.198154 * k
+    sinA12 = sin(S.sla_dranrm(radians(A12)))
+    A13 = 239.56 + 25.513099 * k
+    sinA13 = sin(S.sla_dranrm(radians(A13)))
+    A14 = 331.55 + 3.592518 * k
+    sinA14 = sin(S.sla_dranrm(radians(A14)))
+
+    plan_corr = 0.000325 * sinA1 + 0.000165 * sinA2 + 0.000164 * sinA3 +\
+                0.000126 * sinA4 + 0.000110 * sinA5 + 0.000062 * sinA6 +\
+                0.000060 * sinA7 + 0.000056 * sinA8 + 0.000047 * sinA9 +\
+                0.000042 * sinA10 + 0.000040 * sinA11 + 0.000037 * sinA12 +\
+                0.000035 * sinA13 + 0.000023 * sinA14
+    if dbg: print "Plan corr.=", plan_corr
+
+    moontime_jd_tdb = moontime_jd_tdb + corr + plan_corr
+    # Determine offset  TDB-UTC (well from TT, we ignore ~2.4ms of TDB-TT)
+    # We first compute the MJD_TDB of the computed Moon phase, determine the
+    # TT-UTC offset, subtract it to get a MJD_UTC and then recompute TT-UTC
+    # for that MJD_UTC. The majority of the time this will give the same answer
+    # but this should guard against leap-second straddling oddities
+    mjd_tdb = moontime_jd_tdb - 2400000.5
+    mjd_utc = mjd_tdb - (S.sla_dtt(mjd_tdb)/86400.0)
+    time_corr = S.sla_dtt(mjd_utc)
+
+    if dbg: print "MJD_TDB, TT-UTC=", mjd_tdb, S.sla_dtt(mjd_tdb)
+    if dbg: print "MJD_UTC, TT-UTC=", mjd_utc, time_corr
+    if dbg: print "Time corr.=", (time_corr/86400.0), time_corr
+
+    moontime_jd_utc = moontime_jd_tdb - (time_corr/86400.0)
+    moontime_dt = jd_utc2datetime(moontime_jd_utc)
 
     return moontime_dt
