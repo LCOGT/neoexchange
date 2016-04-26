@@ -425,6 +425,25 @@ def time_in_julian_centuries(dt_or_jd):
 
     return T
 
+def moon_fundamental_arguments(k, T):
+
+    # Calculate fundamental arguments
+    earth_ecc = 1.0 - 0.002516 * T - 0.0000074 * T**2
+
+    # Mean anomaly of the Sun
+    sun_M = 2.5534 + 29.10535670 * k - 0.0000014 * T**2 - 0.00000011 * T**3
+
+    # Mean anomaly of the Moon
+    moon_M = 201.5643 + 385.81693528 * k + 0.0107582 * T**2 + 0.00001238 * T**3 - 0.000000058 * T**4
+
+    # Argument of latitude of the Moon
+    arg_lat = 160.7108 + 390.67050284 * k - 0.0016118 * T**2 - 0.00000227 * T**3 + 0.000000011 * T**4
+
+    # Longitude of the ascending node of the Moon
+    long_asc = 124.7746 - 1.56375588 * k + 0.0020672 * T**2 + 0.00000215 * T**3
+
+    return earth_ecc, sun_M, moon_M, arg_lat, long_asc
+
 def time_of_full_moon(dt=None, moon_type='FULL_MOON', dbg=False):
     '''Compute dates of nearest Full Moon to datetime [dt] which can be either
     passed or datetime.utcnow() will be used.'''
@@ -439,17 +458,7 @@ def time_of_full_moon(dt=None, moon_type='FULL_MOON', dbg=False):
         0.000000150 * T**3 + 0.00000000073 * T**4
 
     # Calculate corrections to get true (apparent) phase
-    # Calculate fundamental arguments
-    earth_ecc = 1.0 - 0.002516 * T - 0.0000074 * T**2
-    # Mean anomaly of the Sun
-    sun_M = 2.5534 + 29.10535670 * k - 0.0000014 * T**2 - 0.00000011 * T**3
-    # Mean anomaly of the Moon
-    moon_M = 201.5643 + 385.81693528 * k + 0.0107582 * T**2 + 0.00001238 * T**3 - 0.000000058 * T**4
-    sine_moon_M = sin(S.sla_dranrm(radians(moon_M)))
-    # Argument of latitude of the Moon
-    arg_lat = 160.7108 + 390.67050284 * k - 0.0016118 * T**2 - 0.00000227 * T**3 + 0.000000011 * T**4
-    # Longitude of the ascending node of the Moon
-    long_asc = 124.7746 - 1.56375588 * k + 0.0020672 * T**2 + 0.00000215 * T**3
+    earth_ecc, sun_M, moon_M, arg_lat, long_asc = moon_fundamental_arguments(k, T)
 
     if dbg: print earth_ecc, sun_M, moon_M, arg_lat, long_asc
     if moon_type == 'FULL_MOON':

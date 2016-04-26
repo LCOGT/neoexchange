@@ -22,7 +22,8 @@ from neox.tests.mocks import MockDateTime
 #Import module to test
 from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, \
     degreestohms, parse_neocp_date, get_semester_dates, time_of_full_moon, \
-    determine_approx_moon_cycle, time_in_julian_centuries
+    determine_approx_moon_cycle, time_in_julian_centuries, \
+    moon_fundamental_arguments
 
 class TestJD2datetime(TestCase):
 
@@ -323,6 +324,27 @@ class TestTimeInJulianCenturies(TestCase):
         T = time_in_julian_centuries(dt)
 
         self.assertAlmostEqual(expected_T, T, 12)
+
+class TestMoonFundamentalArguments(TestCase):
+
+    def test_fundarg_meeus_example(self):
+        k = -283
+        T = -0.22881
+
+        expected_E = 1.0005753
+        expected_M = -8234.2625
+        expected_Mprime = -108984.6278
+        expected_F = -110399.0416
+        expected_Omega = 567.3176
+
+        E, M, Mprime, F, Omega = moon_fundamental_arguments(k, T)
+
+        precision = 4
+        self.assertAlmostEqual(expected_E, E, 7)
+        self.assertAlmostEqual(expected_M, M, precision)
+        self.assertAlmostEqual(expected_Mprime, Mprime, precision)
+        self.assertAlmostEqual(expected_F, F, precision)
+        self.assertAlmostEqual(expected_Omega, Omega, precision)
 
 class TestTimeOfFullMoon(TestCase):
 
