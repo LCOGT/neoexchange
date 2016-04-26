@@ -425,34 +425,31 @@ def time_in_julian_centuries(dt_or_jd):
 
     return T
 
-def normalize_deg(value):
-    '''Normalize the passed <value> into the range 0..360.0'''
-
-    value = fmod(value, 360.0)
-    if value < 0.0: value += 360.0
-
-    return value
-
 def moon_fundamental_arguments(k, T):
+    '''Compute the fundamental arguments of the Moon orbit given <k> the Moon
+    cycle count from 2000 and <T> the number of Julian centuries since 2000.0.
+    The fundamental arguments are converted to radians and normalized into the
+    range 0...2PI.'''
 
     # Calculate fundamental arguments
+    # Eccentricity of the Earth's orbit
     earth_ecc = 1.0 - 0.002516 * T - 0.0000074 * T**2
 
     # Mean anomaly of the Sun
     sun_M = 2.5534 + 29.10535670 * k - 0.0000014 * T**2 - 0.00000011 * T**3
-    sun_M = normalize_deg(sun_M)
+    sun_M = S.sla_dranrm(radians(sun_M))
 
     # Mean anomaly of the Moon
     moon_M = 201.5643 + 385.81693528 * k + 0.0107582 * T**2 + 0.00001238 * T**3 - 0.000000058 * T**4
-    moon_M = normalize_deg(moon_M)
+    moon_M = S.sla_dranrm(radians(moon_M))
 
     # Argument of latitude of the Moon
     arg_lat = 160.7108 + 390.67050284 * k - 0.0016118 * T**2 - 0.00000227 * T**3 + 0.000000011 * T**4
-    arg_lat = normalize_deg(arg_lat)
+    arg_lat = S.sla_dranrm(radians(arg_lat))
 
     # Longitude of the ascending node of the Moon
     long_asc = 124.7746 - 1.56375588 * k + 0.0020672 * T**2 + 0.00000215 * T**3
-    long_asc = normalize_deg(long_asc)
+    long_asc = S.sla_dranrm(radians(long_asc))
 
     return earth_ecc, sun_M, moon_M, arg_lat, long_asc
 
@@ -470,11 +467,11 @@ def time_of_full_moon(dt=None, moon_type='FULL_MOON', dbg=False):
         0.000000150 * T**3 + 0.00000000073 * T**4
 
     # Calculate corrections to get true (apparent) phase
-    earth_ecc, sun_M, moon_M, arg_lat, long_asc = moon_fundamental_arguments(k, T)
+    earth_ecc, M, Mprime, F, Omega = moon_fundamental_arguments(k, T)
+    if dbg: print earth_ecc, M, Mprime, F, Omega
 
-    if dbg: print earth_ecc, sun_M, moon_M, arg_lat, long_asc
     if moon_type == 'FULL_MOON':
-        corr = -0.40614 * sunM
+        corr = -0.40614 * sin(Mprime)
     moontime_dt = jd_utc2datetime(moontime_jd_tdb)
 
     return moontime_dt

@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from django.test import TestCase
 from datetime import datetime, timedelta
 from mock import patch
+from math import radians
 
 from neox.tests.mocks import MockDateTime
 
@@ -332,10 +333,10 @@ class TestMoonFundamentalArguments(TestCase):
         T = -0.22881
 
         expected_E      = 1.0005753
-        expected_M      =  45.7375 # Un-normalized  -8234.2625
-        expected_Mprime =  95.3722 # Un-normalized  -108984.6278
-        expected_F      = 120.9584 # Un-normalized  -110399.0416
-        expected_Omega  = 207.3176 # Un-normalized  567.3176
+        expected_M      = radians( 45.7375) # Un-normalized    -8234.2625
+        expected_Mprime = radians( 95.3722) # Un-normalized  -108984.6278
+        expected_F      = radians(120.9584) # Un-normalized  -110399.0416
+        expected_Omega  = radians(207.3176) # Un-normalized      567.3176
 
         E, M, Mprime, F, Omega = moon_fundamental_arguments(k, T)
 
