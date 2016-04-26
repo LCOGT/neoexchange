@@ -593,7 +593,7 @@ def times_of_lunation(dt=None, dbg=False):
     mean_time_between_lunations = timedelta(days=29, seconds=(((12*60.0)+44)*60.0)+3.0)
 
     dt = dt or datetime.utcnow()
-#    dt = dt - mean_time_between_lunations
+
     first_moon = time_of_moon_phase(dt-mean_time_between_lunations, 'FULL_MOON', dbg)
     # Make sure the t_first_moon <= dt <= t_second_moon
     if first_moon >= dt:
