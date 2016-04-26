@@ -359,20 +359,22 @@ class TestMoonFundamentalArguments(TestCase):
 
 class TestTimeOfFullMoon(TestCase):
 
+    def setUp(self):
+        self.dbg = False
+
     def test_meeus_example(self):
 
         dt = datetime(1977, 2, 14)
-        dbg = False
 
 # Value from Meeus p. 353 back converted to datetime
 #       expected_dt = datetime(1977, 2, 18, 10, 35, 4) # Value before corrections
 #       expected_dt = datetime(1977, 2, 18, 3, 37, 42) # Value in TDB
         expected_dt = datetime(1977, 2, 18, 3, 36, 54) # Value in UTC
 
-        moon_time = time_of_full_moon(dt, 'NEW_MOON', dbg)
+        moon_time = time_of_full_moon(dt, 'NEW_MOON', self.dbg)
 
         delta = expected_dt - moon_time
-        if dbg: print "Delta=", delta.total_seconds()
+        if self.dbg: print "Delta=", delta.total_seconds()
         self.assertEqual(expected_dt, moon_time)
 
     def test_2016may_full_moon(self):
@@ -380,10 +382,25 @@ class TestTimeOfFullMoon(TestCase):
         dt = datetime(2016, 4, 25, 17, 21, 0)
 
 # Value from http://aa.usno.navy.mil/cgi-bin/aa_phases.pl?year=2016&month=4&day=25&nump=50&format=p
-        expected_dt = datetime(2016, 5, 21, 21, 14, 0)
+        expected_dt = datetime(2016, 5, 21, 21, 14)
 
-        moon_time = time_of_full_moon(dt, 'FULL_MOON', True)
+        moon_time = time_of_full_moon(dt, 'FULL_MOON', self.dbg)
 
         delta = expected_dt - moon_time
-        print "Delta=", delta.total_seconds()
-        self.assertEqual(expected_dt, moon_time)
+        delta = delta.total_seconds()
+        if self.dbg:  print "Delta=", delta
+        self.assertLessEqual(delta, 60.0)
+
+    def test_2016jan_new_moon(self):
+
+        dt = datetime(2016, 1, 5, 12, 00, 0)
+
+# Value from http://aa.usno.navy.mil/cgi-bin/aa_phases.pl?year=2016&month=1&day=1&nump=50&format=p
+        expected_dt = datetime(2016, 1, 10, 01, 30)
+
+        moon_time = time_of_full_moon(dt, 'NEW_MOON', self.dbg)
+
+        delta = expected_dt - moon_time
+        delta = delta.total_seconds()
+        if self.dbg: print "Delta=", delta
+        self.assertLessEqual(delta, 60.0)
