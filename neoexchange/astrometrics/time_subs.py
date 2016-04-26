@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta
-from math import degrees, ceil
+from math import degrees, radians, ceil, sin
 
 import slalib as S
 
@@ -438,5 +438,22 @@ def time_of_full_moon(dt=None, moon_type='FULL_MOON', dbg=False):
     moontime_jd_tdb = 2451550.09766 + 29.530588861 * k + 0.00015437 * T**2 -\
         0.000000150 * T**3 + 0.00000000073 * T**4
 
+    # Calculate corrections to get true (apparent) phase
+    # Calculate fundamental arguments
+    earth_ecc = 1.0 - 0.002516 * T - 0.0000074 * T**2
+    # Mean anomaly of the Sun
+    sun_M = 2.5534 + 29.10535670 * k - 0.0000014 * T**2 - 0.00000011 * T**3
+    # Mean anomaly of the Moon
+    moon_M = 201.5643 + 385.81693528 * k + 0.0107582 * T**2 + 0.00001238 * T**3 - 0.000000058 * T**4
+    sine_moon_M = sin(S.sla_dranrm(radians(moon_M)))
+    # Argument of latitude of the Moon
+    arg_lat = 160.7108 + 390.67050284 * k - 0.0016118 * T**2 - 0.00000227 * T**3 + 0.000000011 * T**4
+    # Longitude of the ascending node of the Moon
+    long_asc = 124.7746 - 1.56375588 * k + 0.0020672 * T**2 + 0.00000215 * T**3
+
+    if dbg: print earth_ecc, sun_M, moon_M, arg_lat, long_asc
+    if moon_type == 'FULL_MOON':
+        corr = -0.40614 * sunM
     moontime_dt = jd_utc2datetime(moontime_jd_tdb)
+
     return moontime_dt
