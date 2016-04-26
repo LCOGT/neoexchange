@@ -22,7 +22,7 @@ from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, \
-    degreestohms, parse_neocp_date, get_semester_dates, time_of_full_moon, \
+    degreestohms, parse_neocp_date, get_semester_dates, time_of_moon_phase, \
     determine_approx_moon_cycle, time_in_julian_centuries, \
     moon_fundamental_arguments
 
@@ -357,12 +357,12 @@ class TestMoonFundamentalArguments(TestCase):
         self.assertAlmostEqual(expected_F, F, precision)
         self.assertAlmostEqual(expected_Omega, Omega, precision)
 
-class TestTimeOfFullMoon(TestCase):
+class TestTimeOfMoonPhase(TestCase):
 
     def setUp(self):
         self.dbg = False
 
-    def test_meeus_example(self):
+    def test_new_moon_meeus_example(self):
 
         dt = datetime(1977, 2, 14)
 
@@ -371,7 +371,7 @@ class TestTimeOfFullMoon(TestCase):
 #       expected_dt = datetime(1977, 2, 18, 3, 37, 42) # Value in TDB
         expected_dt = datetime(1977, 2, 18, 3, 36, 54) # Value in UTC
 
-        moon_time = time_of_full_moon(dt, 'NEW_MOON', self.dbg)
+        moon_time = time_of_moon_phase(dt, 'NEW_MOON', self.dbg)
 
         delta = expected_dt - moon_time
         if self.dbg: print "Delta=", delta.total_seconds()
@@ -384,7 +384,7 @@ class TestTimeOfFullMoon(TestCase):
 # Value from http://aa.usno.navy.mil/cgi-bin/aa_phases.pl?year=2016&month=4&day=25&nump=50&format=p
         expected_dt = datetime(2016, 5, 21, 21, 14)
 
-        moon_time = time_of_full_moon(dt, 'FULL_MOON', self.dbg)
+        moon_time = time_of_moon_phase(dt, 'FULL_MOON', self.dbg)
 
         delta = expected_dt - moon_time
         delta = delta.total_seconds()
@@ -398,7 +398,7 @@ class TestTimeOfFullMoon(TestCase):
 # Value from http://aa.usno.navy.mil/cgi-bin/aa_phases.pl?year=2016&month=1&day=1&nump=50&format=p
         expected_dt = datetime(2016, 1, 10, 01, 30)
 
-        moon_time = time_of_full_moon(dt, 'NEW_MOON', self.dbg)
+        moon_time = time_of_moon_phase(dt, 'NEW_MOON', self.dbg)
 
         delta = expected_dt - moon_time
         delta = delta.total_seconds()

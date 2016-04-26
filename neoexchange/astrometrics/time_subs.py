@@ -460,23 +460,29 @@ def moon_fundamental_arguments(k, T):
 
     return earth_ecc, sun_M, moon_M, arg_lat, long_asc
 
-def time_of_full_moon(dt=None, moon_type='FULL_MOON', dbg=False):
-    '''Compute dates of nearest Full Moon to datetime [dt] which can be either
-    passed or datetime.utcnow() will be used.'''
+def time_of_moon_phase(dt=None, moon_type='FULL_MOON', dbg=False):
+    '''Compute dates of nearest Full Moon or New Moon to datetime [dt] which can
+    be either passed or datetime.utcnow() will be used.
+    The method is based on that of Meeus, Chap. 49 of _Astronomical Algorithms_.
+    The returned time is a datetime in UTC.'''
 
     dt = dt or datetime.utcnow()
 
     # Time in Julian centuries
     T = time_in_julian_centuries(dt)
 
+    # Determine cycle count of the nearest moon phase to dt
     k = determine_approx_moon_cycle(dt, moon_type, dbg)
+
+    # Calculate approximate JD_TDB of the requested moon phase
     moontime_jd_tdb = 2451550.09766 + 29.530588861 * k + 0.00015437 * T**2 -\
         0.000000150 * T**3 + 0.00000000073 * T**4
 
-    # Calculate corrections to get true (apparent) phase
     earth_ecc, M, Mprime, F, Omega = moon_fundamental_arguments(k, T)
     if dbg: print earth_ecc, M, Mprime, F, Omega
 
+    # Calculate corrections to get true (apparent) phase as functions of the
+    # fundamental angles.
     corr = 0.0
     if moon_type == 'NEW_MOON':
         corr = -0.40720 * sin(Mprime) \
@@ -558,11 +564,12 @@ def time_of_full_moon(dt=None, moon_type='FULL_MOON', dbg=False):
     if dbg: print "Plan corr.=", plan_corr
 
     moontime_jd_tdb = moontime_jd_tdb + corr + plan_corr
-    # Determine offset  TDB-UTC (well from TT, we ignore ~2.4ms of TDB-TT)
+
+    # Determine offset TDB-UTC (well from TT, we ignore ~2.4ms of TDB-TT..)
     # We first compute the MJD_TDB of the computed Moon phase, determine the
     # TT-UTC offset, subtract it to get a MJD_UTC and then recompute TT-UTC
     # for that MJD_UTC. The majority of the time this will give the same answer
-    # but this should guard against leap-second straddling oddities
+    # but this should guard against leap-second straddling oddities.
     mjd_tdb = moontime_jd_tdb - 2400000.5
     mjd_utc = mjd_tdb - (S.sla_dtt(mjd_tdb)/86400.0)
     time_corr = S.sla_dtt(mjd_utc)
