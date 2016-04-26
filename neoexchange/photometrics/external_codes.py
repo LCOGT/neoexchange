@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+from math import floor
 from subprocess import call
 from collections import OrderedDict
 import warnings
@@ -25,6 +26,14 @@ from astropy.io.votable import parse
 from photometrics.catalog_subs import oracdr_catalog_mapping
 
 logger = logging.getLogger(__name__)
+
+def default_mtdlink_config_files():
+    '''Return a list of the needed files for MTDLINK. The config file should be in
+    element 0'''
+
+    config_files = ['mtdi.lcogt.param']
+
+    return config_files
 
 def default_scamp_config_files():
     '''Return a list of the needed files for SCAMP. The config file should be in
@@ -47,6 +56,16 @@ def default_sextractor_config_files(catalog_type='ASCII'):
 
     config_files = config_files + common_config_files
     return config_files
+
+def setup_mtdlink_dir(source_dir, dest_dir):
+    '''Setup a temporary working directory for running MTDLINK in <dest_dir>. The
+    needed config files are symlinked from <source_dir>'''
+
+    mtdlink_config_files = default_mtdlink_config_files()
+
+    return_value = setup_working_dir(source_dir, dest_dir, mtdlink_config_files)
+
+    return return_value
 
 def setup_scamp_dir(source_dir, dest_dir):
     '''Setup a temporary working directory for running SCAMP in <dest_dir>. The
@@ -152,6 +171,38 @@ def determine_options(fits_file):
     options = options.rstrip()
     return options
 
+def determine_mtdlink_options(fits_file, num_fits_files, pa_rate_dict):
+
+    option_mapping = OrderedDict([
+                        ('zeropoint' , '-IP_MAGZEROPOINT'),
+                        ('saturation'  , '-IP_MAXADU'),
+                     ])
+
+    options = ''
+    if not os.path.exists(fits_file):
+        logger.error("FITS file %s does not exist" % fits_file)
+        return options
+    try:
+        hdulist = fits.open(fits_file)
+    except IOError as e:
+        logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
+        return options
+
+    header = hdulist[0].header
+    header_mapping, table_mapping = oracdr_catalog_mapping()
+
+    for option in option_mapping.keys():
+        if header.get(header_mapping[option], -99) != -99:
+            options += option_mapping[option] +' ' + str(header.get(header_mapping[option])) + ' '
+    options += '-CPUTIME' + ' ' + str(num_fits_files*200) + ' '
+    options += '-MAXMISSES' + ' ' + str(int(floor(num_fits_files/2.5))) + ' '
+    options += '-FILTER_PA' + ' ' + str(pa_rate_dict['filter_pa']) + ' '
+    options += '-FILTER_DELTAPA' + ' ' + str(pa_rate_dict['filter_deltapa']) + ' '
+    options += '-FILTER_MINRATE' + ' ' + str(pa_rate_dict['filter_minrate']) + ' '
+    options += '-FILTER_MAXRATE' + ' ' + str(pa_rate_dict['filter_maxrate']) + ' '
+    options = options.rstrip()
+    return options
+
 def determine_scamp_options(fits_catalog):
 
     options = ''
@@ -216,6 +267,35 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
             os.unlink(fits_catalog)
         os.symlink(fits_catalog_path, fits_catalog)
     cmdline = "%s %s -c %s %s" % ( binary, fits_catalog, scamp_config_file, options )
+    cmdline = cmdline.rstrip()
+
+    if dbg == True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
+
+    return retcode_or_cmdline
+
+def run_mtdlink(source_dir, dest_dir, fits_files, num_fits_files, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
+    '''Run MTDLINK (using either the binary specified by [binary] or by
+    looking for 'mtdlink' in the PATH) on the passed <fits_files> with the results
+    and any temporary files created in <dest_dir>. <source_dir> is the path
+    to the required config files.'''
+
+    status = setup_mtdlink_dir(source_dir, dest_dir)
+    if status != 0:
+        return status
+
+    binary = binary or find_binary("mtdlink")
+    if binary == None:
+        logger.error("Could not locate 'mtdlink' executable in PATH")
+        return -42
+
+    mtdlink_config_file = default_mtdlink_config_files()[0]
+    options = determine_mtdlink_options(fits_files, num_fits_files, pa_rate_dict)
+    cmdline = "%s %s %s" % ( binary, options, fits_files )
     cmdline = cmdline.rstrip()
 
     if dbg == True:
@@ -294,7 +374,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file):
         if 'ASTRRMS2' in line:
             astrrms2 = round(float(line[9:31])*3600.0,5)
 
-    #need to figure out how to get these values out of scamp standard output
+    #update from scamp xml VOTable
     wcsrfcat = scamp_info['wcs_refcat']
     wcsimcat = scamp_info['wcs_imagecat']
     wcsnref = scamp_info['num_refstars']

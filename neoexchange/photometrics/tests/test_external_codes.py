@@ -53,6 +53,145 @@ class ExternalCodeUnitTest(TestCase):
             except OSError:
                 print "Error removing temporary test directory", self.test_dir
 
+class TestMTDLINKRunner(ExternalCodeUnitTest):
+
+    def test_setup_mtdlink_dir_bad_destdir(self):
+
+        expected_status = -2
+
+        status = setup_mtdlink_dir(self.source_dir, os.path.join('/usr/share/wibble'))
+
+        self.assertEqual(expected_status, status)
+
+    def test_setup_mtdlink_dir_bad_srcdir(self):
+
+        expected_status = -1
+
+        status = setup_mtdlink_dir('wibble', self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_setup_mtdlink_dir(self):
+
+        expected_status = 0
+
+        status = setup_mtdlink_dir(self.source_dir, self.test_dir)
+
+        self.assertEqual(expected_status, status)
+
+    def test_run_mtdlink_nofile(self):
+
+        pa_rate_dict = {    'filter_pa': 255.0,
+                            'filter_detlapa': 5.0,
+                            'filter_minrate': 0.38,
+                            'filter_maxrate': 0.4,
+                        }
+
+        expected_cmdline = 'mtdlink'
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, '', 8, pa_rate_dict, binary='mtdlink', dbg=True)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    def test_run_mtdlink_file(self):
+
+        pa_rate_dict = {    'filter_pa': 255.0,
+                            'filter_detlapa': 5.0,
+                            'filter_minrate': 0.38,
+                            'filter_maxrate': 0.4,
+                        }
+
+
+        expected_cmdline = 'mtdlink  foo.fits foo2.fits foo3.fits'
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, 'foo.fits foo2.fits foo3.fits', 3, pa_rate_dict, binary='mtdlink', dbg=True)
+
+        self.assertEqual(expected_cmdline, cmdline)
+
+    @skipIf(find_binary("mtdlink") == None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+    def test_run_mtdlink_realfile(self):
+
+        expected_status = 0
+        expected_line1 = 'DETSV2.0'
+
+        test_fits_file_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
+        test_fits_file_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
+        test_fits_file_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
+        test_fits_file_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0101-e90.fits'))
+        test_fits_file_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0102-e90.fits'))
+        test_fits_file_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0103-e90.fits'))
+        test_fits_file_7 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0104-e90.fits'))
+        test_fits_file_8 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0105-e90.fits'))
+
+        data, header = fits.getdata(test_fits_file_1, header=True)
+        if header['MJD'] == None:
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_1, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_2, header=True)
+        if header['MJD'] == None:
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_2, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_3, header=True)
+        if header['MJD'] == None:
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_3, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_4, header=True)
+        if header['MJD'] == None:
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_4, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_5, header=True)
+        if header['MJD'] == None:
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_5, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_6, header=True)
+        if header['MJD'] == None:
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_6, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_7, header=True)
+        if header['MJD'] == None:
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_7, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_8, header=True)
+        if header['MJD'] == None:
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_8, data, header, clobber=True, checksum=True)
+
+        test_file_string = str(test_fits_file_1)+' '+str(test_fits_file_2)+' '+str(test_fits_file_3)+' '+str(test_fits_file_4)+' '+str(test_fits_file_5)+' '+str(test_fits_file_6)+' '+str(test_fits_file_7)+' '+str(test_fits_file_8)
+
+        pa_rate_dict = {    'filter_pa': 255.0,
+                            'filter_detlapa': 5.0,
+                            'filter_minrate': 0.38,
+                            'filter_maxrate': 0.4,
+                        }
+
+        status = run_mtdlink(self.source_dir, self.test_dir, test_file_string, 8, pa_rate_dict)
+
+        self.assertEqual(expected_status, status)
+
+        if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+        output_mtds = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.mtds')
+        self.assertTrue(os.path.exists(output_mtds))
+        test_fh = open(output_mtds, 'r')
+        test_lines = test_fh.readlines()
+        test_fh.close()
+
+        # Expected value is 10 lines of intro plus 336 sources
+        self.assertEqual(10+336, len(test_lines))
+        self.assertEqual(expected_line1, test_lines[0].rstrip())
+
 class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_setup_scamp_dir_bad_destdir(self):
@@ -204,6 +343,29 @@ class TestDetermineOptions(ExternalCodeUnitTest):
         expected_options = '-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000'
 
         options = determine_options(self.test_fits_file)
+
+        self.assertEqual(expected_options, options)
+
+class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
+
+    def test_nofile(self):
+        expected_options = ''
+
+        options = determine_mtdlink_options('wibble', 8)
+
+        self.assertEqual(expected_options, options)
+
+    def test_badfile(self):
+        expected_options = ''
+
+        options = determine_mtdlink_options(os.path.join(self.source_dir, 'scamp_neox.cfg'), 8)
+
+        self.assertEqual(expected_options, options)
+
+    def test1(self):
+        expected_options = '-IP_MAXADU 46000 -CPUTIME 1600 -MAXMISSES 3'
+
+        options = determine_mtdlink_options(self.test_fits_file, 8)
 
         self.assertEqual(expected_options, options)
 
