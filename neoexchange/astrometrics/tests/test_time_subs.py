@@ -24,7 +24,7 @@ from neox.tests.mocks import MockDateTime
 from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, \
     degreestohms, parse_neocp_date, get_semester_dates, time_of_moon_phase, \
     determine_approx_moon_cycle, time_in_julian_centuries, \
-    moon_fundamental_arguments
+    moon_fundamental_arguments, times_of_lunation
 
 class TestJD2datetime(TestCase):
 
@@ -303,7 +303,7 @@ class TestDetermineApproxMoonCycle(TestCase):
 
         expected_cycle = 202.5
 
-        cycle = determine_approx_moon_cycle(dt, 'FULL_MOON', dbg=True)
+        cycle = determine_approx_moon_cycle(dt, 'FULL_MOON', dbg=False)
 
         self.assertEqual(expected_cycle, cycle)
 
@@ -404,3 +404,95 @@ class TestTimeOfMoonPhase(TestCase):
         delta = delta.total_seconds()
         if self.dbg: print "Delta=", delta
         self.assertLessEqual(delta, 60.0)
+
+class TestTimesOfLunation(TestCase):
+
+    def setUp(self):
+        self.dbg = False
+
+    def compare_lunation(self, expected_lunation, lunation):
+
+        moon = 0
+        while moon < len(expected_lunation):
+            delta = expected_lunation[moon] - lunation[moon]
+            delta = delta.total_seconds()
+            if self.dbg: print "Delta=", delta
+            self.assertLessEqual(delta, 60.0, msg="Expected, Got= %s, %s" % (expected_lunation[moon], lunation[moon]))
+            moon += 1
+
+    def test_2016april_lunation_example(self):
+
+        dt = datetime(2016, 4, 18)
+
+        expected_lunation = (datetime(2016, 3, 23, 12,  1),
+                             datetime(2016, 4, 22,  5, 24))
+
+        lunation = times_of_lunation(dt, self.dbg)
+
+        self.compare_lunation(expected_lunation, lunation)
+
+    def test_2016april_lunation_example2(self):
+
+        dt = datetime(2016, 4, 22)
+
+        expected_lunation = (datetime(2016, 3, 23, 12,  1),
+                             datetime(2016, 4, 22,  5, 24))
+
+        lunation = times_of_lunation(dt, self.dbg)
+
+        self.compare_lunation(expected_lunation, lunation)
+
+    def test_2016last_lunation_example1(self):
+
+        dt = datetime(2016, 12, 22)
+
+        expected_lunation = (datetime(2016, 12, 14, 00,  5),
+                             datetime(2017,  1, 12, 11, 34))
+
+        lunation = times_of_lunation(dt, self.dbg)
+
+        self.compare_lunation(expected_lunation, lunation)
+
+    def test_2016last_lunation_example2(self):
+
+        dt = datetime(2017, 1, 2)
+
+        expected_lunation = (datetime(2016, 12, 14, 00,  5),
+                             datetime(2017,  1, 12, 11, 34))
+
+        lunation = times_of_lunation(dt, self.dbg)
+
+        self.compare_lunation(expected_lunation, lunation)
+
+    def test_2016first_lunation_example1(self):
+
+        dt = datetime(2015, 12, 26)
+
+        expected_lunation = (datetime(2015, 12, 22, 11, 11),
+                             datetime(2016,  1, 24,  1, 46))
+
+        lunation = times_of_lunation(dt, self.dbg)
+
+        self.compare_lunation(expected_lunation, lunation)
+
+    def test_2016first_lunation_example2(self):
+
+        dt = datetime(2016, 1, 2)
+
+        expected_lunation = (datetime(2015, 12, 22, 11, 11),
+                             datetime(2016,  1, 24,  1, 46))
+
+        lunation = times_of_lunation(dt, self.dbg)
+
+        self.compare_lunation(expected_lunation, lunation)
+
+    def test_2015blue_moon(self):
+
+        dt = datetime(2015, 7, 4, 12, 34, 56)
+
+        expected_lunation = (datetime(2015,  7,  2,  2, 20),
+                             datetime(2015,  7, 31, 10, 43))
+
+        lunation = times_of_lunation(dt, self.dbg)
+
+        self.compare_lunation(expected_lunation, lunation)

@@ -582,3 +582,22 @@ def time_of_moon_phase(dt=None, moon_type='FULL_MOON', dbg=False):
     moontime_dt = jd_utc2datetime(moontime_jd_utc)
 
     return moontime_dt
+
+def times_of_lunation(dt=None, dbg=False):
+    '''Determine the times of a lunation (from Full Moon to Full Moon) for
+    datetime [dt] which can be either passed or datetime.utcnow() will be used.
+    The returned times are in a tuple of datetimes in UTC.'''
+
+    # Mean time between consecutive Full Moons (from Meeus _Astronomical
+    # Algorithms_, p 354)
+    mean_time_between_lunations = timedelta(days=29, seconds=(((12*60.0)+44)*60.0)+3.0)
+
+    dt = dt or datetime.utcnow()
+#    dt = dt - mean_time_between_lunations
+    first_moon = time_of_moon_phase(dt-mean_time_between_lunations, 'FULL_MOON', dbg)
+    # Make sure the t_first_moon <= dt <= t_second_moon
+    if first_moon >= dt:
+        first_moon = time_of_moon_phase(dt-(2*mean_time_between_lunations), 'FULL_MOON', dbg)
+    second_moon = time_of_moon_phase(dt, 'FULL_MOON', dbg)
+
+    return (first_moon, second_moon)
