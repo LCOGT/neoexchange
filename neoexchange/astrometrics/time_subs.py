@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta
-from math import degrees, radians, ceil, sin
+from math import degrees, radians, ceil, sin, fmod
 
 import slalib as S
 
@@ -425,6 +425,14 @@ def time_in_julian_centuries(dt_or_jd):
 
     return T
 
+def normalize_deg(value):
+    '''Normalize the passed <value> into the range 0..360.0'''
+
+    value = fmod(value, 360.0)
+    if value < 0.0: value += 360.0
+
+    return value
+
 def moon_fundamental_arguments(k, T):
 
     # Calculate fundamental arguments
@@ -432,15 +440,19 @@ def moon_fundamental_arguments(k, T):
 
     # Mean anomaly of the Sun
     sun_M = 2.5534 + 29.10535670 * k - 0.0000014 * T**2 - 0.00000011 * T**3
+    sun_M = normalize_deg(sun_M)
 
     # Mean anomaly of the Moon
     moon_M = 201.5643 + 385.81693528 * k + 0.0107582 * T**2 + 0.00001238 * T**3 - 0.000000058 * T**4
+    moon_M = normalize_deg(moon_M)
 
     # Argument of latitude of the Moon
     arg_lat = 160.7108 + 390.67050284 * k - 0.0016118 * T**2 - 0.00000227 * T**3 + 0.000000011 * T**4
+    arg_lat = normalize_deg(arg_lat)
 
     # Longitude of the ascending node of the Moon
     long_asc = 124.7746 - 1.56375588 * k + 0.0020672 * T**2 + 0.00000215 * T**3
+    long_asc = normalize_deg(long_asc)
 
     return earth_ecc, sun_M, moon_M, arg_lat, long_asc
 

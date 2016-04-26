@@ -331,11 +331,11 @@ class TestMoonFundamentalArguments(TestCase):
         k = -283
         T = -0.22881
 
-        expected_E = 1.0005753
-        expected_M = -8234.2625
-        expected_Mprime = -108984.6278
-        expected_F = -110399.0416
-        expected_Omega = 567.3176
+        expected_E      = 1.0005753
+        expected_M      =  45.7375 # Un-normalized  -8234.2625
+        expected_Mprime =  95.3722 # Un-normalized  -108984.6278
+        expected_F      = 120.9584 # Un-normalized  -110399.0416
+        expected_Omega  = 207.3176 # Un-normalized  567.3176
 
         E, M, Mprime, F, Omega = moon_fundamental_arguments(k, T)
 
