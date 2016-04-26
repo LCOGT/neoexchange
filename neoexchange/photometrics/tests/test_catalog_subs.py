@@ -552,3 +552,55 @@ class FITSReadCatalog(FITSUnitTest):
 
 
         self.compare_tables(expected_catalog, catalog_items, 4)
+
+
+class TestUpdateLDACCatalogWCS(FITSUnitTest):
+
+    def setUp(self):
+        super(TestUpdateLDACCatalogWCS, self).setUp()
+        self.new_test_ldacfilename = self.test_ldacfilename + '.new'
+        if os.path.exists(self.new_test_ldacfilename):
+            os.unlink(self.new_test_ldacfilename)
+
+    def tearDown(self):
+        remove = True
+        if os.path.exists(self.new_test_ldacfilename) and remove:
+            os.unlink(self.new_test_ldacfilename)
+
+    def test_bad_image_file(self):
+        test_file = os.path.join('photometrics', 'tests', '__init__.py')
+
+        expected_status = -1
+
+        status = update_ldac_catalog_wcs(test_file, test_file, False)
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_image_wcs(self):
+        test_file = os.path.join('photometrics', 'tests', 'new.fits')
+
+        expected_status = -2
+
+        status = update_ldac_catalog_wcs(test_file, test_file, False)
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_catalog(self):
+        test_file = os.path.join('photometrics', 'tests', 'new.fits')
+        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+
+        expected_status = -3
+
+        status = update_ldac_catalog_wcs(test_fits_file, test_file, False)
+
+        self.assertEqual(expected_status, status)
+
+    def test_null_update(self):
+        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+
+        expected_status = 0
+
+        status = update_ldac_catalog_wcs(test_fits_file, self.test_ldacfilename, False)
+
+        self.assertEqual(expected_status, status)
+        self.assertTrue(os.path.exists(self.test_ldacfilename + '.new'))

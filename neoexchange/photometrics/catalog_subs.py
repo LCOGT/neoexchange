@@ -24,6 +24,7 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import Angle
 import astropy.units as u
+from astropy.wcs import WCS
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
@@ -396,6 +397,66 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
                 source_items['obs_mag'] += header_items['zeropoint']
             out_table.add_row(source_items)
     return out_table
+
+
+def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
+    '''Updates the world co-ordinates (ALPHA_J2000, DELTA_J2000) in a FITS LDAC
+    catalog <fits_catalog> with a new WCS read from a FITS image
+    <fits_image_file>.
+    The transformation is done using the CCD XWIN_IMAGE, YWIN_IMAGE values
+    passed through astropy's wcs_pix2world().
+    '''
+
+    needed_cols = ['ccd_x', 'ccd_y', 'obs_ra', 'obs_dec']
+    status = 0
+    # Open FITS image and extract WCS
+    try:
+        header = fits.getheader(fits_image_file)
+        new_wcs = WCS(header)
+    except IOError as e:
+        logger.error("Error reading WCS from %s. Error was: %s" % (fits_image_file, e))
+        return -1
+    if header.get('WCSERR', -99) < 0:
+        logger.error("Bad value of WCSERR in the header indicating bad fit")
+        return -2
+
+    # Extract FITS LDAC catalog
+    try:
+        hdulist = fits.open(fits_catalog)
+    except IOError as e:
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_catalog, e))
+        return -3
+    if len(hdulist) != 3:
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_catalog, "No LDAC table found"))
+        return -3
+    if len(hdulist) > 2 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD':
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_catalog, "No LDAC table found"))
+        return -3
+
+    tbl_table = hdulist[2].data
+
+    hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+    # Check if all columns exist first
+    for column in needed_cols:
+        if tbl_mapping[column] not in tbl_table.names:
+            raise FITSTblException(column)
+            return None
+
+    # Pull out columns as arrays
+    ccd_x = tbl_table[tbl_mapping['ccd_x']]
+    ccd_y = tbl_table[tbl_mapping['ccd_y']]
+
+    new_ra, new_dec = new_wcs.wcs_pix2world(ccd_x, ccd_y, 1)
+
+    tbl_table[tbl_mapping['obs_ra']] = new_ra
+    tbl_table[tbl_mapping['obs_dec']] = new_dec
+
+    # Write out new catalog file
+    new_fits_catalog = fits_catalog
+    if overwrite != True:
+        new_fits_catalog = new_fits_catalog + '.new'
+    hdulist.writeto(new_fits_catalog, checksum=True)
+    return status
 
 def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
     '''High-level routine to read LCOGT FITS catalogs from <catfile>.
