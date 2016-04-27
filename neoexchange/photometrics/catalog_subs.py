@@ -416,7 +416,7 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     except IOError as e:
         logger.error("Error reading WCS from %s. Error was: %s" % (fits_image_file, e))
         return -1
-    if header.get('WCSERR', -99) < 0:
+    if header.get('WCSERR', 99) > 0:
         logger.error("Bad value of WCSERR in the header indicating bad fit")
         return -2
 

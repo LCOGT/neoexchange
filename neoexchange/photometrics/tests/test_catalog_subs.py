@@ -577,7 +577,7 @@ class TestUpdateLDACCatalogWCS(FITSUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_bad_image_wcs(self):
-        test_file = os.path.join('photometrics', 'tests', 'new.fits')
+        test_file = os.path.join('photometrics', 'tests', 'example-sbig-e10.fits')
 
         expected_status = -2
 
@@ -586,8 +586,8 @@ class TestUpdateLDACCatalogWCS(FITSUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_bad_catalog(self):
-        test_file = os.path.join('photometrics', 'tests', 'new.fits')
-        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+        test_fits_file = os.path.join('photometrics', 'tests', 'example-good_wcs.fits')
+        test_file = os.path.join('photometrics', 'tests', 'example-sbig-e10.fits')
 
         expected_status = -3
 
@@ -596,7 +596,7 @@ class TestUpdateLDACCatalogWCS(FITSUnitTest):
         self.assertEqual(expected_status, status)
 
     def test_null_update(self):
-        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-good_wcs.fits'))
 
         expected_status = 0
 
