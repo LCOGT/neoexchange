@@ -313,7 +313,11 @@ def get_scamp_xml_info(scamp_xml_file):
     # we don't want. Wrap in context manager to get rid of this
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")
-        votable = parse(scamp_xml_file)
+        try:
+            votable = parse(scamp_xml_file)
+        except IOError as e:
+            logger.error("Unable to open SCAMP VOTable XML file %s (Reason=%s)" % (scamp_xml_file, e))
+            return None
 
     # Extract the Fields and F(ield)Groups tables from the VOTable
     fields_table = votable.get_table_by_id('Fields')
@@ -330,18 +334,31 @@ def get_scamp_xml_info(scamp_xml_file):
 
     return info
 
-def updateFITSWCS(fits_file, scamp_file, scamp_xml_file):
+def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     '''Update the WCS information in a fits file with a bad WCS solution
-    using the SCAMP generated FITS-like .head ascii file.'''
+    using the SCAMP generated FITS-like .head ascii file.
+    <fits_file> should the processed CCD image to update, <scamp_file> is
+    the SCAMP-produced .head file, <scamp_xml_file> is the SCAMP-produced
+    XML output file and <fits_file_output> is the new output FITS file.'''
 
-    fits_file_output = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10_output.fits'))
-
-    data, header = fits.getdata(fits_file, header=True)
+    try:
+        data, header = fits.getdata(fits_file, header=True)
+    except IOError as e:
+        logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
+        return -1
 
     scamp_info = get_scamp_xml_info(scamp_xml_file)
+    if scamp_info == None:
+        return -2
 
-    for i in range(1, 100):
-        line = scamp_file.readline()
+    try:
+        scamp_head_fh = open(scamp_file, 'r')
+    except IOError as e:
+        logger.error("Unable to open SCAMP header file %s (Reason=%s)" % (scamp_file, e))
+        return -3
+
+    # Read in SCAMP .head file
+    for line in scamp_head_fh:
         if 'HISTORY' in line:
             wcssolvr = str(line[34:39]+'-'+line[48:53])
         if 'CUNIT1' in line:
@@ -373,6 +390,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file):
             astrrms1 = round(float(line[9:31])*3600.0,5)
         if 'ASTRRMS2' in line:
             astrrms2 = round(float(line[9:31])*3600.0,5)
+    scamp_head_fh.close()
 
     #update from scamp xml VOTable
     wcsrfcat = scamp_info['wcs_refcat']
@@ -401,11 +419,13 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file):
     header['WCSRDRES'] = str(str(astrrms1)+'/'+str(astrrms2))
     header['WCSERR'] = 0
 
-    #header keywords we don't have. Insert after CTYPE2
-    header.insert('CTYPE2', ('CUNIT1', cunit1, 'Unit of 1st axis'), after=True)
-    header.insert('CUNIT1', ('CUNIT2', cunit2, 'Unit of 2nd axis'), after=True)
+    #header keywords we (probably) don't have. Insert after CTYPE2
+    if header.get('CUNIT1', None) == None:
+        header.insert('CTYPE2', ('CUNIT1', cunit1, 'Unit of 1st axis'), after=True)
+    if header.get('CUNIT2', None) == None:
+        header.insert('CUNIT1', ('CUNIT2', cunit2, 'Unit of 2nd axis'), after=True)
 
     # Need to force the CHECKSUM to be recomputed. Trap for young players..
     fits.writeto(fits_file_output, data, header, clobber=True, checksum=True)
 
-    return fits_file, fits_file_output, scamp_file
+    return 0

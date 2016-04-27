@@ -404,11 +404,10 @@ class TestUpdateFITSWCS(TestCase):
 
     def test_update_FITS_WCS(self):
 
-        test_scamp_file = open(self.test_scamp_headfile, 'r')
+        fits_file_output = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10_output.fits'))
+        status = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, self.test_scamp_xml, fits_file_output)
 
-        fits_file, fits_file_output, scamp_file = updateFITSWCS(self.test_fits_file, test_scamp_file, self.test_scamp_xml)
-
-        test_scamp_file.close()
+        self.assertEqual(status, 0)
 
         expected_crval1 = 1.783286919001E+02
         expected_crval2 = 1.169387882835E+01
