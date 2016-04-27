@@ -143,7 +143,7 @@ def find_binary(program):
 
     return None
 
-def determine_options(fits_file):
+def determine_sext_options(fits_file):
 
     option_mapping = OrderedDict([
                         ('gain'      , '-GAIN'),
@@ -225,7 +225,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
         return -42
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
-    options = determine_options(fits_file)
+    options = determine_sext_options(fits_file)
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
 
