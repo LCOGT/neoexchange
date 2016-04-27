@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 from datetime import datetime, timedelta
 import os, sys
+from hashlib import md5
 
 import requests
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings
@@ -69,7 +70,7 @@ def get_frame_data(start_date, end_date, auth_header='', proposal='LCO2015B-005'
     as the key(which is returned)'''
 
     base_url = get_base_url()
-    archive_url = '%s/frames/?start=%s&end=%s&PROPID=%s' % (base_url, start_date, end_date, proposal)
+    archive_url = '%s/frames/?start=%s&end=%s&OBSTYPE=%s&PROPID=%s' % (base_url, start_date, end_date, 'EXPOSE', proposal)
 
     frames = {}
     for reduction_lvl in red_lvls:
@@ -102,7 +103,7 @@ def get_catalog_data(frames, auth_header='', dbg=False):
 
     return catalogs
 
-def check_for_existing_file(filename, dbg=False):
+def check_for_existing_file(filename, archive_md5=None, dbg=False):
     '''Tries to determine whether a higher reduction level of the file exists. If it does, True is
     returned otherwise False is returned'''
 
@@ -123,6 +124,12 @@ def check_for_existing_file(filename, dbg=False):
                 if os.path.exists(new_path):
                     print "Higher level reduction file exists"
                     return True
+                if os.path.exists(filename) and archive_md5 != None:
+                    md5sum = md5(open(filename, 'rb').read()).hexdigest()
+                    if dbg: print filename, md5sum, archive_md5
+                    if md5sum == archive_md5:
+                        print "File exists with correct MD5 sum"
+                        return True
             else:
                 if os.path.exists(filename):
                     print "-90 level reduction file already exists."
@@ -148,8 +155,9 @@ def download_files(frames, output_path, dbg=False):
         for frame in frames_to_download:
             if dbg: print frame['filename']
             filename = os.path.join(output_path, frame['filename'])
-            if check_for_existing_file(filename, dbg):
-                print "Skipping existing file"
+            archive_md5 = frame['version_set'][-1]['md5']
+            if check_for_existing_file(filename, archive_md5, dbg):
+                print "Skipping existing file", frame['filename']
             else:
                 if dbg: print "Writing file to",filename
                 downloaded_frames.append(filename)
