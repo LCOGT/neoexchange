@@ -514,7 +514,7 @@ def increment_red_level(product):
         filename_noext = file_bits[0]
         red_level = filename_noext[-2:]
         if red_level.isdigit():
-            red_level = str(int(red_level)+1)
+            red_level = "%02.2d" % (min(int(red_level)+1,99),)
             filename_noext = filename_noext[:-2] + red_level
             new_product = filename_noext + file_bits[1]
     return new_product

@@ -1186,14 +1186,25 @@ def block_status(block_id):
     return status
 
 def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
+    '''Checks the astrometric fit status of <catfile> and performs a source
+    extraction and refit if it is bad. The name of the newly created FITS LDAC
+    catalog from this process is returned or an integer status code if no
+    fit was needed or could not be performed.'''
 
+    # Open catalog, get header and check fit status
     fits_header, junk_table = open_fits_catalog(catfile, header_only=True)
     header = get_catalog_header(fits_header, 'LCOGT')
     if header != {}:
         logger.debug("astrometric fit status=%d" %  header['astrometric_fit_status'])
         if header['astrometric_fit_status'] != 0:
             fits_file = determine_filenames(catfile)
+            if fits_file == None:
+                logger.error("Could not determine matching image for %s" % catfile)
+                return -1
             fits_file = os.path.join(os.path.dirname(catfile), fits_file)
+            if os.path.exists(fits_file) == False or os.path.isfile(fits_file) == False:
+                logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
+                return -1
             logger.debug("Running SExtractor on: %s" % fits_file)
             sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type='FITS_LDAC')
             if sext_status == 0:
@@ -1227,4 +1238,5 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
             return 0
     else:
         logger.error("Could not check catalog %s" % catfile)
+        return -2
     return new_ldac_catalog

@@ -1782,10 +1782,11 @@ class TestCheckCatalogAndRefit(TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
 
-        self.phot_tests_dir = os.path.join('photometrics', 'tests')
+        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_image = os.path.join(self.phot_tests_dir, 'example-sbig-e10.fits')
         self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
         self.test_ldac_catalog = os.path.join(self.phot_tests_dir, 'ldac_test_catalog.fits')
-        self.configs_dir = os.path.join('photometrics', 'configs')
+        self.configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
 
         # Create a version of the test catalog with a good WCS in the temp dir
         hdulist = fits.open(self.test_catalog, mode='denywrite')
@@ -1814,10 +1815,45 @@ class TestCheckCatalogAndRefit(TestCase):
             except OSError:
                 print "Error removing temporary test directory", self.temp_dir
 
-    def test_good_catalog(self):
+    def test_good_catalog_nofit_needed(self):
 
         expected_status = 0
 
         status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_catalog_good_wcs)
 
         self.assertEqual(expected_status, status)
+
+    def test_bad_catalog_name(self):
+
+        expected_status = -1
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_catalog)
+
+        self.assertEqual(expected_status, status)
+
+    def test_no_matching_image(self):
+
+        expected_status = -1
+
+        # Symlink catalog to temp dir with valid name
+        temp_test_catalog = os.path.join(self.temp_dir, 'oracdr_test_e08_cat.fits')
+        os.symlink(self.test_catalog, temp_test_catalog)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, temp_test_catalog)
+
+        self.assertEqual(expected_status, status)
+
+    def test_good_catalog_refit(self):
+
+        expected_file = os.path.join(self.temp_dir, 'oracdr_test_e09_ldac.fits')
+
+        # Symlink catalog and image to temp dir with valid name
+        temp_test_catalog = os.path.join(self.temp_dir, 'oracdr_test_e08_cat.fits')
+        os.symlink(self.test_catalog, temp_test_catalog)
+        temp_test_image = os.path.join(self.temp_dir, 'oracdr_test_e08.fits')
+        os.symlink(self.test_image, temp_test_image)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, temp_test_catalog)
+
+        self.assertEqual(expected_file, status)
+        self.assertTrue(os.path.exists(expected_file))

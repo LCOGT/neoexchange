@@ -633,6 +633,13 @@ class TestDetermineFilenames(TestCase):
 
         self.assertEqual(expected_product, filename)
 
+    def test_catalog_wrong_format(self):
+
+        expected_product = None
+
+        filename = determine_filenames('oracdr_test_catalog.fits')
+
+        self.assertEqual(expected_product, filename)
 
 class TestIncrementRedLevel(TestCase):
 
@@ -694,6 +701,24 @@ class TestIncrementRedLevel(TestCase):
 
         expected_product = 'cpt1m013-kb76-20160222-0110-e91_ldac.fits'
         product = 'cpt1m013-kb76-20160222-0110-e90_ldac.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_semiraw_ldac_catalog(self):
+
+        expected_product = 'oracdr_test_e09_ldac.fits'
+        product = 'oracdr_test_e08_ldac.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_maxvalue_image(self):
+
+        expected_product = 'lsc0m4990kb29-20160420-0099-e99.fits'
+        product = 'lsc0m4990kb29-20160420-0099-e99.fits'
 
         filename = increment_red_level(product)
 
