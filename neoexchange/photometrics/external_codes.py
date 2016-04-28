@@ -210,6 +210,19 @@ def determine_scamp_options(fits_catalog):
 
     return options
 
+def add_l1filter(fits_file):
+    '''Adds a L1FILTER keyword into the <fits_file> with the same value
+    as FILTER. If not found, nothing is done.'''
+
+    hdulist = fits.open(fits_file, mode='update')
+    prihdr = hdulist[0].header
+    filter_val = prihdr.get('FILTER', None)
+    if filter_val:
+        prihdr['L1FILTER'] = (filter_val, 'Copy of FILTER for SCAMP')
+    hdulist.close()
+
+    return
+
 @timeit
 def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False):
     '''Run SExtractor (using either the binary specified by [binary] or by
@@ -225,6 +238,12 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
     if binary == None:
         logger.error("Could not locate 'sex' executable in PATH")
         return -42
+
+    # If we are making FITS_LDAC catalogs for SCAMP, we need to create a new
+    # header keyword of L1FILTER and set the value to FILTER. This prevents
+    # SCAMP false matching on the first FITS keyword starting with FILTER
+    if catalog_type == 'FITS_LDAC':
+        add_l1filter(fits_file)
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
     options = determine_sext_options(fits_file)
