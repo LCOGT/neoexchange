@@ -16,6 +16,7 @@ GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta
 from math import degrees
+import time
 
 import slalib as S
 
@@ -375,3 +376,16 @@ def dttodecimalday(dt, microdays=False):
         date_string = ""
 
     return date_string
+
+def timeit(method):
+    '''Decorator for timing methods'''
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+
+        print '%r (%r, %r) %2.2f sec' % \
+              (method.__name__, args, kw, te-ts)
+        return result
+
+    return timed
