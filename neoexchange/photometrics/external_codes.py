@@ -280,6 +280,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
         # Open /dev/null for writing to lose the SCAMP output into
         DEVNULL = open(os.devnull, 'w')
         retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL)
+        DEVNULL.close()
 
     return retcode_or_cmdline
 
