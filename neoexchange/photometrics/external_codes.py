@@ -23,6 +23,7 @@ import warnings
 from astropy.io import fits
 from astropy.io.votable import parse
 
+from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
 
 logger = logging.getLogger(__name__)
@@ -209,6 +210,7 @@ def determine_scamp_options(fits_catalog):
 
     return options
 
+@timeit
 def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='ASCII', dbg=False):
     '''Run SExtractor (using either the binary specified by [binary] or by
     looking for 'sex' in the PATH) on the passed <fits_file> with the results
@@ -238,6 +240,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
 
     return retcode_or_cmdline
 
+@timeit
 def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     '''Run SCAMP (using either the binary specified by [binary] or by
     looking for 'scamp' in the PATH) on the passed <fits_catalog_path> with the
