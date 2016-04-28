@@ -36,6 +36,16 @@ class ExternalCodeUnitTest(TestCase):
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
         self.test_fits_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
 
+        self.test_fits_file_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
+        self.test_fits_file_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
+        self.test_fits_file_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
+        self.test_fits_file_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0101-e90.fits'))
+        self.test_fits_file_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0102-e90.fits'))
+        self.test_fits_file_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0103-e90.fits'))
+        self.test_fits_file_7 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0104-e90.fits'))
+        self.test_fits_file_8 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0105-e90.fits'))
+        self.test_mtds_file = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.mtds'))
+
         self.debug_print = False
 
     def tearDown(self):
@@ -82,27 +92,27 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
     def test_run_mtdlink_nofile(self):
 
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_detlapa': 5.0,
+                            'filter_deltapa': 5.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
         expected_cmdline = 'mtdlink'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, '', 8, pa_rate_dict, binary='mtdlink', dbg=True)
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file, '', 8, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_run_mtdlink_file(self):
 
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_detlapa': 5.0,
+                            'filter_deltapa': 5.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
 
         expected_cmdline = 'mtdlink  foo.fits foo2.fits foo3.fits'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, 'foo.fits foo2.fits foo3.fits', 3, pa_rate_dict, binary='mtdlink', dbg=True)
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file, 'foo.fits foo2.fits foo3.fits', 3, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -112,14 +122,14 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         expected_status = 0
         expected_line1 = 'DETSV2.0'
 
-        test_fits_file_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
-        test_fits_file_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
-        test_fits_file_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
-        test_fits_file_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0101-e90.fits'))
-        test_fits_file_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0102-e90.fits'))
-        test_fits_file_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0103-e90.fits'))
-        test_fits_file_7 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0104-e90.fits'))
-        test_fits_file_8 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0105-e90.fits'))
+        test_fits_file_1 = self.test_fits_file_1
+        test_fits_file_2 = self.test_fits_file_2
+        test_fits_file_3 = self.test_fits_file_3
+        test_fits_file_4 = self.test_fits_file_4
+        test_fits_file_5 = self.test_fits_file_5
+        test_fits_file_6 = self.test_fits_file_6
+        test_fits_file_7 = self.test_fits_file_7
+        test_fits_file_8 = self.test_fits_file_8
 
         data, header = fits.getdata(test_fits_file_1, header=True)
         if header['MJD'] == None:
@@ -172,12 +182,12 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_file_string = str(test_fits_file_1)+' '+str(test_fits_file_2)+' '+str(test_fits_file_3)+' '+str(test_fits_file_4)+' '+str(test_fits_file_5)+' '+str(test_fits_file_6)+' '+str(test_fits_file_7)+' '+str(test_fits_file_8)
 
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_detlapa': 5.0,
+                            'filter_deltapa': 5.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
-        status = run_mtdlink(self.source_dir, self.test_dir, test_file_string, 8, pa_rate_dict)
+        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file, test_file_string, 8, pa_rate_dict)
 
         self.assertEqual(expected_status, status)
 
@@ -188,8 +198,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_lines = test_fh.readlines()
         test_fh.close()
 
-        # Expected value is 10 lines of intro plus 336 sources
-        self.assertEqual(10+336, len(test_lines))
+        # Expected value is 10 lines of intro plus 2408 sources
+        self.assertEqual(10+2408, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
 class TestSCAMPRunner(ExternalCodeUnitTest):
@@ -351,21 +361,39 @@ class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
     def test_nofile(self):
         expected_options = ''
 
-        options = determine_mtdlink_options('wibble', 8)
+        pa_rate_dict = {    'filter_pa': 255.0,
+                            'filter_deltapa': 5.0,
+                            'filter_minrate': 0.38,
+                            'filter_maxrate': 0.4,
+                        }
+
+        options = determine_mtdlink_options('wibble', 8, pa_rate_dict)
 
         self.assertEqual(expected_options, options)
 
     def test_badfile(self):
         expected_options = ''
 
-        options = determine_mtdlink_options(os.path.join(self.source_dir, 'scamp_neox.cfg'), 8)
+        pa_rate_dict = {    'filter_pa': 255.0,
+                            'filter_deltapa': 5.0,
+                            'filter_minrate': 0.38,
+                            'filter_maxrate': 0.4,
+                        }
+
+        options = determine_mtdlink_options(os.path.join(self.source_dir, 'scamp_neox.cfg'), 8, pa_rate_dict)
 
         self.assertEqual(expected_options, options)
 
     def test1(self):
-        expected_options = '-IP_MAXADU 46000 -CPUTIME 1600 -MAXMISSES 3'
+        expected_options = '-IP_MAXADU 46000 -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 5.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
 
-        options = determine_mtdlink_options(self.test_fits_file, 8)
+        pa_rate_dict = {    'filter_pa': 255.0,
+                            'filter_deltapa': 5.0,
+                            'filter_minrate': 0.38,
+                            'filter_maxrate': 0.4,
+                        }
+
+        options = determine_mtdlink_options(self.test_fits_file, 8, pa_rate_dict)
 
         self.assertEqual(expected_options, options)
 

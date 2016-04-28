@@ -303,7 +303,8 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
 
     return retcode_or_cmdline
 
-def run_mtdlink(source_dir, dest_dir, fits_files, num_fits_files, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
+@timeit
+def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
     '''Run MTDLINK (using either the binary specified by [binary] or by
     looking for 'mtdlink' in the PATH) on the passed <fits_files> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -320,6 +321,17 @@ def run_mtdlink(source_dir, dest_dir, fits_files, num_fits_files, pa_rate_dict, 
 
     mtdlink_config_file = default_mtdlink_config_files()[0]
     options = determine_mtdlink_options(fits_files, num_fits_files, pa_rate_dict)
+
+    # MTDLINK writes the output header file to the path that the FITS files are in,
+    # not to the directory MTDLINK is being run from...
+    # If the fits_catalog has a path component, we symlink it to the directory.
+    mtds_file = os.path.basename(mtds_file_path)
+    if mtds_file != mtds_file_path:
+        mtds_file = os.path.join(dest_dir, mtds_file)
+        # If the file exists and is a link (or a broken link), then remove it
+        if os.path.lexists(mtds_file) and os.path.islink(mtds_file):
+            os.unlink(mtds_file)
+        os.symlink(mtds_file_path, mtds_file)
     cmdline = "%s %s %s" % ( binary, options, fits_files )
     cmdline = cmdline.rstrip()
 
