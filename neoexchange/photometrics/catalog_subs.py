@@ -16,6 +16,7 @@ GNU General Public License for more details.
 '''
 
 import logging
+import os
 from datetime import datetime, timedelta
 from math import sqrt, log10, log
 from collections import OrderedDict
@@ -189,9 +190,9 @@ def fits_ldac_to_header(header_array):
 
     return header
 
-def open_fits_catalog(catfile):
+def open_fits_catalog(catfile, header_only=False):
     '''Opens a FITS source catalog specified by <catfile> and returns the header
-    and table data'''
+    and table data. If [header_only]= is True, only the header is returned.'''
 
     header = {}
     table = {}
@@ -204,10 +205,12 @@ def open_fits_catalog(catfile):
 
     if len(hdulist) == 2:
         header = hdulist[0].header
-        table = hdulist[1].data
+        if header_only == False:
+            table = hdulist[1].data
     elif len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) == 'LDAC_IMHEAD':
         # This is a FITS_LDAC catalog produced by SExtractor for SCAMP
-        table = hdulist[2].data
+        if header_only == False:
+            table = hdulist[2].data
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
     else:
@@ -453,9 +456,11 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
 
     # Write out new catalog file
     new_fits_catalog = fits_catalog
+    to_clobber = True
     if overwrite != True:
         new_fits_catalog = new_fits_catalog + '.new'
-    hdulist.writeto(new_fits_catalog, checksum=True)
+        to_clobber = False
+    hdulist.writeto(new_fits_catalog, checksum=True, clobber=to_clobber)
     return status
 
 def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
@@ -472,3 +477,42 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
         table = get_catalog_items(header, fits_table, catalog_type, flag_filter)
 
     return header, table
+
+def determine_filenames(product):
+    '''Given a passed <product> filename, determine the corresponding catalog
+    filename and vice-versa
+    '''
+
+    new_product = None
+    product = os.path.basename(product)
+    if '_cat.fits' in product:
+        new_product = product.replace('_cat', '', 1)
+    else:
+        file_bits =  product.split(os.extsep)
+        if len(file_bits) == 2:
+            filename_noext = file_bits[0]
+            if filename_noext[-2:].isdigit():
+                new_product = filename_noext + '_cat' + os.extsep + file_bits[1]
+    return new_product
+
+def increment_red_level(product):
+
+    new_product = None
+    product = os.path.basename(product)
+    if '_cat' in product :
+        file_bits =  product.split('_cat')
+        file_bits[1] = '_cat' + file_bits[1]
+    elif '_ldac' in product :
+        file_bits =  product.split('_ldac')
+        file_bits[1] = '_ldac' + file_bits[1]
+    else:
+        file_bits =  product.split(os.extsep)
+        file_bits[1] = os.extsep + file_bits[1]
+    if len(file_bits) == 2:
+        filename_noext = file_bits[0]
+        red_level = filename_noext[-2:]
+        if red_level.isdigit():
+            red_level = str(int(red_level)+1)
+            filename_noext = filename_noext[:-2] + red_level
+            new_product = filename_noext + file_bits[1]
+    return new_product

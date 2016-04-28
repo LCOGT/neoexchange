@@ -604,3 +604,102 @@ class TestUpdateLDACCatalogWCS(FITSUnitTest):
 
         self.assertEqual(expected_status, status)
         self.assertTrue(os.path.exists(self.test_ldacfilename + '.new'))
+
+
+class TestDetermineFilenames(TestCase):
+
+    def test_catalog_to_image(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e10.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e10_cat.fits')
+
+        self.assertEqual(expected_product, filename)
+
+    def test_catalog_to_image_with_path(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e10.fits'
+
+        product = os.path.join('photometrics', 'tests', 'cpt1m013-kb76-20160222-0110-e10_cat.fits')
+        filename = determine_filenames(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_image_to_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e90_cat.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e90.fits')
+
+        self.assertEqual(expected_product, filename)
+
+
+class TestIncrementRedLevel(TestCase):
+
+    def test_quicklook_image(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e11.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e10.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_quicklook_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e11_cat.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e10_cat.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_finalred_image(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e91.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e90.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_finalred_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e91_cat.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e90_cat.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_curtisred_image(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e92.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e91.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_curtisred_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e92_cat.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e91_cat.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_finalred_ldac_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e91_ldac.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e90_ldac.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+class TestCheckCatalogAndRefit(FITSUnitTest):
+
+    def foo(self):
+        pass
