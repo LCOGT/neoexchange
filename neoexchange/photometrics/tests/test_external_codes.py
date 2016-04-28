@@ -323,26 +323,26 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         self.assertEqual(expected_line1, test_lines[3].rstrip())
 
 
-class TestDetermineOptions(ExternalCodeUnitTest):
+class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_nofile(self):
         expected_options = ''
 
-        options = determine_options('wibble')
+        options = determine_sext_options('wibble')
 
         self.assertEqual(expected_options, options)
 
     def test_badfile(self):
         expected_options = ''
 
-        options = determine_options(os.path.join(self.source_dir, 'scamp_neox.cfg'))
+        options = determine_sext_options(os.path.join(self.source_dir, 'scamp_neox.cfg'))
 
         self.assertEqual(expected_options, options)
 
     def test1(self):
         expected_options = '-GAIN 1.4 -PIXEL_SCALE 0.467 -SATUR_LEVEL 46000'
 
-        options = determine_options(self.test_fits_file)
+        options = determine_sext_options(self.test_fits_file)
 
         self.assertEqual(expected_options, options)
 
