@@ -36,15 +36,23 @@ class ExternalCodeUnitTest(TestCase):
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
         self.test_fits_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
 
-        self.test_fits_file_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
-        self.test_fits_file_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
-        self.test_fits_file_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
-        self.test_fits_file_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0101-e90.fits'))
-        self.test_fits_file_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0102-e90.fits'))
-        self.test_fits_file_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0103-e90.fits'))
-        self.test_fits_file_7 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0104-e90.fits'))
-        self.test_fits_file_8 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0105-e90.fits'))
-        self.test_mtds_file = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.mtds'))
+        self.test_fits_file_set1_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
+        self.test_fits_file_set1_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
+        self.test_fits_file_set1_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
+        self.test_fits_file_set1_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0101-e90.fits'))
+        self.test_fits_file_set1_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0102-e90.fits'))
+        self.test_fits_file_set1_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0103-e90.fits'))
+        self.test_fits_file_set1_7 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0104-e90.fits'))
+        self.test_fits_file_set1_8 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0105-e90.fits'))
+        self.test_mtds_file_set1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.mtds'))
+
+        self.test_fits_file_set2_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0095-e90.fits'))
+        self.test_fits_file_set2_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0096-e90.fits'))
+        self.test_fits_file_set2_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0097-e90.fits'))
+        self.test_fits_file_set2_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0098-e90.fits'))
+        self.test_fits_file_set2_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0099-e90.fits'))
+        self.test_fits_file_set2_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0100-e90.fits'))
+        self.test_mtds_file_set2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0095-e90.mtds'))
 
         self.debug_print = False
 
@@ -98,7 +106,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
                         }
 
         expected_cmdline = 'mtdlink'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file, '', 8, pa_rate_dict, binary='mtdlink', dbg=True)
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, '', 8, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -112,7 +120,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
 
         expected_cmdline = 'mtdlink  foo.fits foo2.fits foo3.fits'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file, 'foo.fits foo2.fits foo3.fits', 3, pa_rate_dict, binary='mtdlink', dbg=True)
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, 'foo.fits foo2.fits foo3.fits', 3, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -122,64 +130,65 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         expected_status = 0
         expected_line1 = 'DETSV2.0'
 
-        test_fits_file_1 = self.test_fits_file_1
-        test_fits_file_2 = self.test_fits_file_2
-        test_fits_file_3 = self.test_fits_file_3
-        test_fits_file_4 = self.test_fits_file_4
-        test_fits_file_5 = self.test_fits_file_5
-        test_fits_file_6 = self.test_fits_file_6
-        test_fits_file_7 = self.test_fits_file_7
-        test_fits_file_8 = self.test_fits_file_8
+        test_fits_file_set1_1 = self.test_fits_file_set1_1
+        test_fits_file_set1_2 = self.test_fits_file_set1_2
+        test_fits_file_set1_3 = self.test_fits_file_set1_3
+        test_fits_file_set1_4 = self.test_fits_file_set1_4
+        test_fits_file_set1_5 = self.test_fits_file_set1_5
+        test_fits_file_set1_6 = self.test_fits_file_set1_6
+        test_fits_file_set1_7 = self.test_fits_file_set1_7
+        test_fits_file_set1_8 = self.test_fits_file_set1_8
 
-        data, header = fits.getdata(test_fits_file_1, header=True)
-        if header['MJD'] == None:
+        data, header = fits.getdata(test_fits_file_set1_1, header=True)
+        if 'MJD' not in header :
             mjd = header['MJD-OBS']
             header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_1, data, header, clobber=True, checksum=True)
+            fits.writeto(test_fits_file_set1_1, data, header, clobber=True, checksum=True)
 
-        data, header = fits.getdata(test_fits_file_2, header=True)
-        if header['MJD'] == None:
+        data, header = fits.getdata(test_fits_file_set1_2, header=True)
+        if 'MJD' not in header :
             mjd = header['MJD-OBS']
             header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_2, data, header, clobber=True, checksum=True)
+            fits.writeto(test_fits_file_set1_2, data, header, clobber=True, checksum=True)
 
-        data, header = fits.getdata(test_fits_file_3, header=True)
-        if header['MJD'] == None:
+        data, header = fits.getdata(test_fits_file_set1_3, header=True)
+        if 'MJD' not in header :
             mjd = header['MJD-OBS']
             header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_3, data, header, clobber=True, checksum=True)
+            fits.writeto(test_fits_file_set1_3, data, header, clobber=True, checksum=True)
 
-        data, header = fits.getdata(test_fits_file_4, header=True)
-        if header['MJD'] == None:
+        data, header = fits.getdata(test_fits_file_set1_4, header=True)
+        if 'MJD' not in header :
             mjd = header['MJD-OBS']
             header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_4, data, header, clobber=True, checksum=True)
+            fits.writeto(test_fits_file_set1_4, data, header, clobber=True, checksum=True)
 
-        data, header = fits.getdata(test_fits_file_5, header=True)
-        if header['MJD'] == None:
+        data, header = fits.getdata(test_fits_file_set1_5, header=True)
+        if 'MJD' not in header :
             mjd = header['MJD-OBS']
             header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_5, data, header, clobber=True, checksum=True)
+            fits.writeto(test_fits_file_set1_5, data, header, clobber=True, checksum=True)
 
-        data, header = fits.getdata(test_fits_file_6, header=True)
-        if header['MJD'] == None:
+        data, header = fits.getdata(test_fits_file_set1_6, header=True)
+        if 'MJD' not in header :
             mjd = header['MJD-OBS']
             header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_6, data, header, clobber=True, checksum=True)
+            fits.writeto(test_fits_file_set1_6, data, header, clobber=True, checksum=True)
 
-        data, header = fits.getdata(test_fits_file_7, header=True)
-        if header['MJD'] == None:
+        data, header = fits.getdata(test_fits_file_set1_7, header=True)
+        if 'MJD' not in header :
             mjd = header['MJD-OBS']
             header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_7, data, header, clobber=True, checksum=True)
+            fits.writeto(test_fits_file_set1_7, data, header, clobber=True, checksum=True)
 
-        data, header = fits.getdata(test_fits_file_8, header=True)
-        if header['MJD'] == None:
+        data, header = fits.getdata(test_fits_file_set1_8, header=True)
+        if 'MJD' not in header :
             mjd = header['MJD-OBS']
             header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_8, data, header, clobber=True, checksum=True)
+            fits.writeto(test_fits_file_set1_8, data, header, clobber=True, checksum=True)
 
-        test_file_string = str(test_fits_file_1)+' '+str(test_fits_file_2)+' '+str(test_fits_file_3)+' '+str(test_fits_file_4)+' '+str(test_fits_file_5)+' '+str(test_fits_file_6)+' '+str(test_fits_file_7)+' '+str(test_fits_file_8)
+        test_file_string = str(test_fits_file_set1_1)+' '+str(test_fits_file_set1_2)+' '+str(test_fits_file_set1_3)+' '+str(test_fits_file_set1_4)+' '+str(test_fits_file_set1_5)+' '+str(test_fits_file_set1_6)+' '+str(test_fits_file_set1_7)+' '+str(test_fits_file_set1_8)
+
 
         pa_rate_dict = {    'filter_pa': 255.0,
                             'filter_deltapa': 5.0,
@@ -187,7 +196,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
                             'filter_maxrate': 0.4,
                         }
 
-        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file, test_file_string, 8, pa_rate_dict)
+        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, test_file_string, 8, pa_rate_dict)
 
         self.assertEqual(expected_status, status)
 
@@ -200,6 +209,79 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         # Expected value is 10 lines of intro plus 2408 sources
         self.assertEqual(10+2408, len(test_lines))
+        self.assertEqual(expected_line1, test_lines[0].rstrip())
+
+    @skipIf(find_binary("mtdlink") == None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+    def test_run_mtdlink_realfile_different_set(self):
+
+        expected_status = 0
+        expected_line1 = 'DETSV2.0'
+
+        test_fits_file_set2_1 = self.test_fits_file_set2_1
+        test_fits_file_set2_2 = self.test_fits_file_set2_2
+        test_fits_file_set2_3 = self.test_fits_file_set2_3
+        test_fits_file_set2_4 = self.test_fits_file_set2_4
+        test_fits_file_set2_5 = self.test_fits_file_set2_5
+        test_fits_file_set2_6 = self.test_fits_file_set2_6
+
+        data, header = fits.getdata(test_fits_file_set2_1, header=True)
+        if 'MJD' not in header :
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_set2_1, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_set2_2, header=True)
+        if 'MJD' not in header :
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_set2_2, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_set2_3, header=True)
+        if 'MJD' not in header :
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_set2_3, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_set2_4, header=True)
+        if 'MJD' not in header :
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_set2_4, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_set2_5, header=True)
+        if 'MJD' not in header :
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_set2_5, data, header, clobber=True, checksum=True)
+
+        data, header = fits.getdata(test_fits_file_set2_6, header=True)
+        if 'MJD' not in header :
+            mjd = header['MJD-OBS']
+            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+            fits.writeto(test_fits_file_set2_6, data, header, clobber=True, checksum=True)
+
+        test_file_string = str(test_fits_file_set2_1)+' '+str(test_fits_file_set2_2)+' '+str(test_fits_file_set2_3)+' '+str(test_fits_file_set2_4)+' '+str(test_fits_file_set2_5)+' '+str(test_fits_file_set2_6)
+
+
+        pa_rate_dict = {    'filter_pa': 345.0,
+                            'filter_deltapa': 25.0,
+                            'filter_minrate': 0.46,
+                            'filter_maxrate': 0.5,
+                        }
+
+        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set2, test_file_string, 6, pa_rate_dict)
+
+        self.assertEqual(expected_status, status)
+
+        if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+        output_mtds = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.mtds')
+        self.assertTrue(os.path.exists(output_mtds))
+        test_fh = open(output_mtds, 'r')
+        test_lines = test_fh.readlines()
+        test_fh.close()
+
+        # Expected value is 8 lines of intro plus 138 sources
+        self.assertEqual(8+138, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
 class TestSCAMPRunner(ExternalCodeUnitTest):
