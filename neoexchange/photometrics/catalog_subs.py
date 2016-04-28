@@ -496,6 +496,8 @@ def determine_filenames(product):
     return new_product
 
 def increment_red_level(product):
+    '''Determines the reduction level of a passed pipeline product <product>,
+    and increments the reduction level by 1.'''
 
     new_product = None
     product = os.path.basename(product)

@@ -698,8 +698,3 @@ class TestIncrementRedLevel(TestCase):
         filename = increment_red_level(product)
 
         self.assertEqual(expected_product, filename)
-
-class TestCheckCatalogAndRefit(FITSUnitTest):
-
-    def foo(self):
-        pass

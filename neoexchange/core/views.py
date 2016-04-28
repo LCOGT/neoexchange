@@ -1224,6 +1224,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     os.rename(fits_ldac_catalog_path, new_ldac_catalog)
         else:
             logger.info("Catalog %s already has good WCS fit status" % catfile)
+            return 0
     else:
         logger.error("Could not check catalog %s" % catfile)
     return new_ldac_catalog
