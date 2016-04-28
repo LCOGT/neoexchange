@@ -277,7 +277,9 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     else:
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-        retcode_or_cmdline = call(args, cwd=dest_dir)
+        # Open /dev/null for writing to lose the SCAMP output into
+        DEVNULL = open(os.devnull, 'w')
+        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=DEVNULL, stderr=DEVNULL)
 
     return retcode_or_cmdline
 
