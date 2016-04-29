@@ -13,6 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
+import os
 from datetime import datetime, timedelta
 from django.db.models import Q
 from django.forms.models import model_to_dict
@@ -40,6 +41,9 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates
 from astrometrics.ast_subs import determine_asteroid_type
+from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
+from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
+    determine_filenames, increment_red_level, update_ldac_catalog_wcs
 import logging
 import reversion
 import json
@@ -1180,3 +1184,59 @@ def block_status(block_id):
                 else:
                     logger.debug("No update to block %s" % block)
     return status
+
+def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
+    '''Checks the astrometric fit status of <catfile> and performs a source
+    extraction and refit if it is bad. The name of the newly created FITS LDAC
+    catalog from this process is returned or an integer status code if no
+    fit was needed or could not be performed.'''
+
+    # Open catalog, get header and check fit status
+    fits_header, junk_table = open_fits_catalog(catfile, header_only=True)
+    header = get_catalog_header(fits_header, 'LCOGT')
+    if header != {}:
+        logger.debug("astrometric fit status=%d" %  header['astrometric_fit_status'])
+        if header['astrometric_fit_status'] != 0:
+            fits_file = determine_filenames(catfile)
+            if fits_file == None:
+                logger.error("Could not determine matching image for %s" % catfile)
+                return -1
+            fits_file = os.path.join(os.path.dirname(catfile), fits_file)
+            if os.path.exists(fits_file) == False or os.path.isfile(fits_file) == False:
+                logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
+                return -1
+            logger.debug("Running SExtractor on: %s" % fits_file)
+            sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type='FITS_LDAC')
+            if sext_status == 0:
+                fits_ldac_catalog ='test_ldac.fits'
+                logger.debug("Running SCAMP")
+                scamp_status = run_scamp(configs_dir, dest_dir, fits_ldac_catalog, dbg)
+
+                if scamp_status == 0:
+                    scamp_file = os.path.basename(fits_ldac_catalog).replace('.fits', '.head' )
+                    scamp_file = os.path.join(dest_dir, scamp_file)
+                    scamp_xml_file = os.path.join(dest_dir, 'scamp.xml')
+
+                    # Update WCS in image file
+                    # Get new output filename
+                    fits_file_output = increment_red_level(fits_file)
+                    fits_file_output = os.path.join(dest_dir, fits_file_output)
+                    logger.debug("Updating bad WCS in image file: %s" % fits_file_output)
+                    status = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
+
+                    # Update RA, Dec columns in LDAC catalog file
+                    logger.debug("Updating RA, Dec in LDAC catalog file: %s" % fits_ldac_catalog )
+                    fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
+                    update_ldac_catalog_wcs(fits_file_output, fits_ldac_catalog_path, overwrite=True)
+
+                    # Rename catalog to permanent name
+                    new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
+                    logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
+                    os.rename(fits_ldac_catalog_path, new_ldac_catalog)
+        else:
+            logger.info("Catalog %s already has good WCS fit status" % catfile)
+            return 0
+    else:
+        logger.error("Could not check catalog %s" % catfile)
+        return -2
+    return new_ldac_catalog

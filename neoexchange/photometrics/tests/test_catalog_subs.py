@@ -1395,6 +1395,8 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_status' : self.test_header['WCSERR'],
                             'astrometric_fit_nstars' : self.test_header['WCSMATCH'],
                             'astrometric_catalog'    : 'UCAC3',
+                            'gain'          : self.test_header['GAIN'],
+                            'saturation'    : self.test_header['SATURATE'],
                           }
 
         header, table = open_fits_catalog(self.test_filename)
@@ -1641,3 +1643,174 @@ class FITSReadCatalog(FITSUnitTest):
 
 
         self.compare_tables(expected_catalog, catalog_items, 4)
+
+
+class TestUpdateLDACCatalogWCS(FITSUnitTest):
+
+    def setUp(self):
+        super(TestUpdateLDACCatalogWCS, self).setUp()
+        self.new_test_ldacfilename = self.test_ldacfilename + '.new'
+        if os.path.exists(self.new_test_ldacfilename):
+            os.unlink(self.new_test_ldacfilename)
+
+    def tearDown(self):
+        remove = True
+        if os.path.exists(self.new_test_ldacfilename) and remove:
+            os.unlink(self.new_test_ldacfilename)
+
+    def test_bad_image_file(self):
+        test_file = os.path.join('photometrics', 'tests', '__init__.py')
+
+        expected_status = -1
+
+        status = update_ldac_catalog_wcs(test_file, test_file, False)
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_image_wcs(self):
+        test_file = os.path.join('photometrics', 'tests', 'example-sbig-e10.fits')
+
+        expected_status = -2
+
+        status = update_ldac_catalog_wcs(test_file, test_file, False)
+
+        self.assertEqual(expected_status, status)
+
+    def test_bad_catalog(self):
+        test_fits_file = os.path.join('photometrics', 'tests', 'example-good_wcs.fits')
+        test_file = os.path.join('photometrics', 'tests', 'example-sbig-e10.fits')
+
+        expected_status = -3
+
+        status = update_ldac_catalog_wcs(test_fits_file, test_file, False)
+
+        self.assertEqual(expected_status, status)
+
+    def test_null_update(self):
+        test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-good_wcs.fits'))
+
+        expected_status = 0
+
+        status = update_ldac_catalog_wcs(test_fits_file, self.test_ldacfilename, False)
+
+        self.assertEqual(expected_status, status)
+        self.assertTrue(os.path.exists(self.test_ldacfilename + '.new'))
+
+
+class TestDetermineFilenames(TestCase):
+
+    def test_catalog_to_image(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e10.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e10_cat.fits')
+
+        self.assertEqual(expected_product, filename)
+
+    def test_catalog_to_image_with_path(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e10.fits'
+
+        product = os.path.join('photometrics', 'tests', 'cpt1m013-kb76-20160222-0110-e10_cat.fits')
+        filename = determine_filenames(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_image_to_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e90_cat.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e90.fits')
+
+        self.assertEqual(expected_product, filename)
+
+    def test_catalog_wrong_format(self):
+
+        expected_product = None
+
+        filename = determine_filenames('oracdr_test_catalog.fits')
+
+        self.assertEqual(expected_product, filename)
+
+class TestIncrementRedLevel(TestCase):
+
+    def test_quicklook_image(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e11.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e10.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_quicklook_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e11_cat.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e10_cat.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_finalred_image(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e91.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e90.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_finalred_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e91_cat.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e90_cat.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_curtisred_image(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e92.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e91.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_curtisred_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e92_cat.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e91_cat.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_finalred_ldac_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e91_ldac.fits'
+        product = 'cpt1m013-kb76-20160222-0110-e90_ldac.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_semiraw_ldac_catalog(self):
+
+        expected_product = 'oracdr_test_e09_ldac.fits'
+        product = 'oracdr_test_e08_ldac.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)
+
+    def test_maxvalue_image(self):
+
+        expected_product = 'lsc0m4990kb29-20160420-0099-e99.fits'
+        product = 'lsc0m4990kb29-20160420-0099-e99.fits'
+
+        filename = increment_red_level(product)
+
+        self.assertEqual(expected_product, filename)

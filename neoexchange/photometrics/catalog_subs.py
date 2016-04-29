@@ -27,6 +27,7 @@ from astropy.coordinates import Angle
 from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
+from astropy.wcs import WCS
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 from core.models import CatalogSources, Frame
@@ -294,6 +295,8 @@ def oracdr_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : 'WCSMATCH',
                     'astrometric_catalog'    : 'WCCATTYP',
+                    'gain'          : 'GAIN',
+                    'saturation'    : 'SATURATE'
                   }
 
     table_dict = OrderedDict([
@@ -410,9 +413,9 @@ def fits_ldac_to_header(header_array):
 
     return header
 
-def open_fits_catalog(catfile):
+def open_fits_catalog(catfile, header_only=False):
     '''Opens a FITS source catalog specified by <catfile> and returns the header
-    and table data'''
+    and table data. If [header_only]= is True, only the header is returned.'''
 
     header = {}
     table = {}
@@ -425,10 +428,12 @@ def open_fits_catalog(catfile):
 
     if len(hdulist) == 2:
         header = hdulist[0].header
-        table = hdulist[1].data
+        if header_only == False:
+            table = hdulist[1].data
     elif len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) == 'LDAC_IMHEAD':
         # This is a FITS_LDAC catalog produced by SExtractor for SCAMP
-        table = hdulist[2].data
+        if header_only == False:
+            table = hdulist[2].data
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
     else:
@@ -619,6 +624,68 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
             out_table.add_row(source_items)
     return out_table
 
+
+def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
+    '''Updates the world co-ordinates (ALPHA_J2000, DELTA_J2000) in a FITS LDAC
+    catalog <fits_catalog> with a new WCS read from a FITS image
+    <fits_image_file>.
+    The transformation is done using the CCD XWIN_IMAGE, YWIN_IMAGE values
+    passed through astropy's wcs_pix2world().
+    '''
+
+    needed_cols = ['ccd_x', 'ccd_y', 'obs_ra', 'obs_dec']
+    status = 0
+    # Open FITS image and extract WCS
+    try:
+        header = fits.getheader(fits_image_file)
+        new_wcs = WCS(header)
+    except IOError as e:
+        logger.error("Error reading WCS from %s. Error was: %s" % (fits_image_file, e))
+        return -1
+    if header.get('WCSERR', 99) > 0:
+        logger.error("Bad value of WCSERR in the header indicating bad fit")
+        return -2
+
+    # Extract FITS LDAC catalog
+    try:
+        hdulist = fits.open(fits_catalog)
+    except IOError as e:
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_catalog, e))
+        return -3
+    if len(hdulist) != 3:
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_catalog, "No LDAC table found"))
+        return -3
+    if len(hdulist) > 2 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD':
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (fits_catalog, "No LDAC table found"))
+        return -3
+
+    tbl_table = hdulist[2].data
+
+    hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+    # Check if all columns exist first
+    for column in needed_cols:
+        if tbl_mapping[column] not in tbl_table.names:
+            raise FITSTblException(column)
+            return None
+
+    # Pull out columns as arrays
+    ccd_x = tbl_table[tbl_mapping['ccd_x']]
+    ccd_y = tbl_table[tbl_mapping['ccd_y']]
+
+    new_ra, new_dec = new_wcs.wcs_pix2world(ccd_x, ccd_y, 1)
+
+    tbl_table[tbl_mapping['obs_ra']] = new_ra
+    tbl_table[tbl_mapping['obs_dec']] = new_dec
+
+    # Write out new catalog file
+    new_fits_catalog = fits_catalog
+    to_clobber = True
+    if overwrite != True:
+        new_fits_catalog = new_fits_catalog + '.new'
+        to_clobber = False
+    hdulist.writeto(new_fits_catalog, checksum=True, clobber=to_clobber)
+    return status
+
 def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
     '''High-level routine to read LCOGT FITS catalogs from <catfile>.
     This returns a dictionary of needed header items and an AstroPy table of
@@ -764,3 +831,44 @@ def make_sext_line_list(sext_dict_list):
         sext_line_list.append(sext_line)
 
     return sext_line_list
+
+def determine_filenames(product):
+    '''Given a passed <product> filename, determine the corresponding catalog
+    filename and vice-versa
+    '''
+
+    new_product = None
+    product = os.path.basename(product)
+    if '_cat.fits' in product:
+        new_product = product.replace('_cat', '', 1)
+    else:
+        file_bits =  product.split(os.extsep)
+        if len(file_bits) == 2:
+            filename_noext = file_bits[0]
+            if filename_noext[-2:].isdigit():
+                new_product = filename_noext + '_cat' + os.extsep + file_bits[1]
+    return new_product
+
+def increment_red_level(product):
+    '''Determines the reduction level of a passed pipeline product <product>,
+    and increments the reduction level by 1.'''
+
+    new_product = None
+    product = os.path.basename(product)
+    if '_cat' in product :
+        file_bits =  product.split('_cat')
+        file_bits[1] = '_cat' + file_bits[1]
+    elif '_ldac' in product :
+        file_bits =  product.split('_ldac')
+        file_bits[1] = '_ldac' + file_bits[1]
+    else:
+        file_bits =  product.split(os.extsep)
+        file_bits[1] = os.extsep + file_bits[1]
+    if len(file_bits) == 2:
+        filename_noext = file_bits[0]
+        red_level = filename_noext[-2:]
+        if red_level.isdigit():
+            red_level = "%02.2d" % (min(int(red_level)+1,99),)
+            filename_noext = filename_noext[:-2] + red_level
+            new_product = filename_noext + file_bits[1]
+    return new_product

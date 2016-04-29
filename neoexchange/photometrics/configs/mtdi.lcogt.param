@@ -1,0 +1,198 @@
+# Important moving object detection parameters for G96
+DEBUG_SEXLIST    0 0 0 0 0 0 0 # List of sextractor numbers to debug on
+DEBUG_SEXNUM     0             # 1=output stats on object above
+
+CPUTIME          900    # Seconds of CPU time before program terminates
+PLATESCALE       0      # 0 = get platescale from Fits header
+X_SIZE           0      # image array size, in columns, 0=fits header
+Y_SIZE           0      # image array size, in lines, 0=fits header
+MAXMTDS          2000   # Don't save more than this many detections
+MINSCORE         30     # Automatically toss out object with worse score
+MAXMISSES        -1     # Always requres 3 hits, -1 = any number of misses
+
+#
+# Values specific to running image subtraction algorithm and generating transient
+# point sources
+IP_EMIN_NOISE           0.82   # Tunes avg-min noise weight
+IP_DARK_SEC             3.4    # Counts/sec to set avgNoise baseline at
+IP_BLURCOEF             0.60   # Default blur setting
+IP_MAXADU             64000    # Assume pixel is saturated if >
+IP_XTRIM                  6    # Compression creates artifacts at x borders
+IP_PINHOLE               1.88  # Size of Average seeing disc in arcsec^2
+IP_MAGZEROPOINT        27.0    # Extrapolated Magnitude at 0 ADU counts
+IP_ASTDYNAMICTHRESHOLD  0.004  # fraction of pixels above threshold
+IP_MAXDYNAMICSNR        2.80   # No matter above, go this sensative
+IP_ABOVEBORDERTHRESH    2.20   # Total area SNR above border pixel average
+IP_TOTALTHRESH          0.70   # Total area SNR above threshold
+IP_FAINTTHRESH          2.5    # Used to count faint detections
+IP_FAINTMIN             900    # minimum number of faint detections
+
+IP_FTS2DM            1120.00   # Scale Flux above Threshold to deltamu
+IP_FBS2DM               0.00   # Scale Flux above border to deltamu
+
+#
+# Parameters to score by whether object appears in one or both
+# of .sext and .iext files
+#
+MATCH_DIST        2.6    # pixel distance to match .sext and .iext points
+C0_NOIEXT         1.8    # add this to score of each point with no .iext detection
+C0_NOSEXT         2.9    # add this to score of each point with no .sext detection
+C0_IEXTSEXT       4.0    # add this to each vector without at least 2 matches
+C1_NOIEXT         0.0    # C0_NOIEXT * C1_NOIEXT * (TRANSIENTS-MINFRAMETRANSIENTS)/MINFRAMETRANSIENTS
+C1_NOSEXT         0.0    # C0_NOSEXT * C1_NOIEXT * (TRANSIENTS-MINFRAMETRANSIENTS)/MINFRAMETRANSIENTS
+#
+# detections around bright stars have an unusually low
+# sqrt(area/M_PI) / fwhm ratio
+# We can reduce false detections from these points by
+# balancing the ZP_AREA_FWHM constants
+# C0 is the maximum penalty that can be applied
+# C1 is the multiplier for the amount under ZP
+# FWHM_TOL is the smallest fwhm value that this applies too
+#
+ZP_AREA_FWHM      0.59
+C1_AREA_FWHM     50.0
+C0_AREA_FWHM      5.0
+
+ZP_MU_FWHM        0.126
+C1_MU_FWHM      150.0
+C0_MU_FWHM        5.0
+
+ZP_SUMMU_FWHM     0.60
+C1_SUMMU_FWHM    86.0
+C0_SUMMU_FWHM     5.0
+#
+# These Three pairs define the shape of the deltamu/pixels_frame
+# curve used tune the zero point ZP_MIDMU
+# The curve matches ZP_MIDMU + pow(pixels/frame - ZP_MIDRATE, exponent) * coeficient
+# The coeficient is calculated that at RATE2 the new ZP_MIDMU will be RATE2_MU
+# The exponent is calculated so that at RATE1 the new ZP_MMIDMU will be RATE1_MU
+MINRATE           1.00  # minimum vector length in pixels/frame
+MINRATE_MU        0.80  # The deltamu value assign zp_midmu at MINRATE
+ZP_MINRATE        1.6   # Rate to start using slow mover detection code
+ZP_MIDRATE        7.80  # pixels/field where fast mover curve starts
+ZP_MIDMU          0.67  # deltamu for objects slower than ZP_MIDRATE
+RATE1            12.00  # mid point between MIDRATE and RATE2 to fit curve
+RATE1_MU          0.72  # The deltamu value assign zp_midmu at RATE1
+RATE2           200.00  # end point from MIDRATE and RATE1 to fit curve
+RATE2_MU          1.04  # The deltamu value assign zp_midmu at RATE2
+MAXRATE5        200     # maximum vector length in pixels/frame for 5+ frames
+MAXRATE         400     # maximum vector length in pixels/frame for 4 frames
+MAXRATE_MU        1.16  # The deltamu value assign zp_midmu at MAXRATE
+
+MAX_ACC          5.00   # Tunes maximum acceleration to allow
+MIN_MAG         99.0    # faintest magnitude which is 'real'
+MIN_DIST         3.0    # Must move at least this many pixels from 1st to last point
+TOLERANCE        4.0    # radius of matching box for rocks
+STAR_TOL         0.67   # radius of matching box for star removal
+BSTAR_TOL        4.0    # radius of matching box for bright stars
+SIZE_BRIGHT      150    # value of area to be considered bright star
+SATURATION        13    # deltamu where stars start to staturate ccd
+SATURATION_AREA   40    # Saturated object will always light up this much area
+FWHM_RADIUS      6.0    # radius around bright star to look for high fwhm fringe det
+CX_FWHM_RADIUS   0.25   # How much to use penalties outside of radius
+FWHM_TOL         7.0    # tolerance in FWHM (pixels)
+MAG_TOL          2.5    # magnitude scatter allowed from start to end
+DELTAMU_TOL      1.2    # delta mu scatter allowed from start to end
+THETA_TOL        359    # tolerance in pos. angle, deg.
+ELONG_TOL        2.5    # tolerance in elongation
+RMSERR_MAX       1.7    # maximum straight-line deviation
+DELTAMUMIN       0.10   # minimum delta mu
+DELTAMUMAX      13.0    # maximum delta mu
+MINFASTMU       -0.75   # additional deltaMu for an object at midrate
+FASTAREA         0.5    # Fraction of streakLength pixels that must be lit
+MINFASTAREA     -2.0    # add this to streakLength for min pixels
+FASTMISSMINUS    350    # Every this many pixels, allow one less miss
+DELTAMUMISS      0.07   # Additional signal to require per missed data point
+MIN_SEXT           1    # unless -nosext is used, required this many .sext points
+
+
+# These parameters control transient density filtering
+MAXTRANSIENTS  25000    # Thin faintest transients over this count
+DENSITYSUM         8    # sum of all density values must not exceed this
+C1_DENSITYSUM    2.0    # penalty rate when sum goes over DENSITYSUM
+C0_DENSITYSUM    8.0    # Maximum penalty for DENSITYSUM
+FASTDENSITY      4.0    # densitySum -= pixels_frame / fastDensity;
+BESTDENSITY      3.0    # Density value after wich score gets dinged
+RADIUSDENSITY    0.2    # rate we reduce allowed density by star proximity
+C1_DENSITY       3.0
+C0_DENSITY       4.0
+LIMITBRIGHT        3    # Number of brighter transients/box to protect
+LIMITDIM           8    # Number of faint transients/box allowed
+DENSITYBOXSIZE    50    # Density window box dimensions
+DENSITYTHRESHOLD 1.0    # Deltamu value where transient is bright
+LIMITCOLUMN       55    # Number of points that can appear in a 3 wide column
+
+# Score tuning parameters
+ZP_FITERROR       0.60  # 0 score < this
+ZP_FITAREA       0.002  # final ZP_FITERR += area*FITAREA
+ZP_FITSTREAK     0.0001 # final ZP_FITERR += streakLength*FITSTREAK
+ZP_MISSFIT        0.14  # final ZP_FITERR -= numMisses * MISSFIT
+ZP_MINMU          0.31
+ZP_MIDMUIMAGES    0.15
+ZP_RANGEMU        0.48
+ZP_NOISEMU        0.51
+ZP_MISSMU         0.08
+ZP_SUMMU          0     # Auto set as ZP_MIDMU * num frames
+ZP_MIDAREA        2.0
+ZP_NOISEMAG       0.71
+ZP_NOISEAREA      1.9
+ZP_MINFWHM        0.6
+ZP_MAXFWHM       15.0
+ZP_NOISEFWHM      6.0
+ZP_ELONG          3.6   # could be a star bloom tail
+ZP_FASTSTARMU     0.5   # if we find a star in another frame within this Mu range
+ZP_FASTAREA       0.001
+ZP_FASTFWHM       0.025
+ZP_BLENDAREA     50     # Don't check blend flag if object stays this large
+ZP_MINTRAIL       2.4   # Look at theta angles for object with this trail length
+ZP_ANGLETRAIL    13.0   # Trail theta deltas outside this get scored against (deg)
+
+# Some parameters have a secondary score elbow
+LOW_MIDMU         0.51  #  Whem MIDMU gets below this, hurt score even harder
+C1_LOW_MIDMU      10.0
+
+# bright objects can have theri penalties mitigated by RF_MIDMU
+# faing objects can have their penalties exagerated by CF_MIDMU
+# 0.0 CF_MIDMU disables, increases score by ratio otherwise
+# 1.0 RD_MIDMU disables, < 1.0 places maximum that score can be reduced by
+CF_MIDMU          0.15
+RF_MIDMU          0.95
+RF_IEXTSEXT       0.95  # reduce score of detections with 2 or more .iext .sext matches
+
+# These tune how much we reduce the score of bigger/brighter objects
+# The higher the number the slower the score improves
+RD_DELTAMU        1.00
+RD_AREA           0.20
+RD_FITERROR       8.00
+RD_NOISEMAG       1.00
+RD_ANGLETRAIL     1.10
+
+# Multipliers for each score parameter, C2 = exponent
+C1_FITERROR      60.0
+C2_FITERROR       2.05
+C1_MIDMU          9.0
+C2_MIDMU          1.6
+C1_MINMU          7.0 
+C1_RANGEMU        3.0
+C1_NOISEMU        4.0
+C2_NOISEMU        1.2
+C1_NOISEMAG      12.0
+C1_SUMMU         12.0
+C1_MIDAREA        1.9
+C1_NOISEAREA      2.0
+C2_NOISEAREA      1.0
+C1_MINFWHM        0.0
+C1_MAXFWHM        0.0
+C1_NOISEFWHM      0.0
+C1_ELONG          0.0 
+C0_FASTSTARMU     5.0
+C1_FASTSTARMU     4.0
+C2_FASTSTARMU     1.5      # Exponent for number of objects close to stars
+C1_MINRATE        0.35
+C0_MINRATE        0.50
+C0_MISSES        10.0
+CX_FASTMISS       0.001
+C1_MISSES         0.0
+C0_BLENDED        0.9
+C2_BLENDED        1.5
+C1_ANGLETRAIL     1.5      # if ZP_ANGLETRAIL delta exceeded, score excess by this
