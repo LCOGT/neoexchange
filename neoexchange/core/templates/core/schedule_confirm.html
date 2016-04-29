@@ -8,7 +8,7 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Confirm Scheduling for: {{body.current_name}}</h1>
+        <h1>{{body.current_name}}: Confirm Scheduling</h1>
     </div>
 {% endblock%}
 
@@ -27,7 +27,7 @@
         <div class="row">
 
         {% if data %}
-        <h3 class="section-title">Submitted Parameters</h3>
+        <h6 class="section-title">Submitted Parameters</h6>
         <table class="keyvalue-table" style="width:100%">
             <tbody>
                 <tr id="id_proposal">
@@ -44,7 +44,7 @@
                 </tr>
             </tbody>
         </table>
-        <h3 class="section-title">Calculated characteristics at {{ data.mid_time }}</h3>
+        <h6 class="section-title">Calculated characteristics at {{ data.mid_time }}</h6>
         <table class="keyvalue-table" style="width:100%">
             <tbody>
                 <tr id="id_ra">
