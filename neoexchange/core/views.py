@@ -153,6 +153,23 @@ class BlockListView(ListView):
     context_object_name="block_list"
     paginate_by = 20
 
+def fetch_from_archive(tracking_num, proposal_code):
+    filters = []
+    origname = origname[0:31]
+    url =settings.ARCHIVE_API + 'frames/?basename={}'.format(origname)
+    headers = {'Authorization': 'Token {}'.format(settings.ARCHIVE_API_TOKEN)}
+    try:
+        response = requests.get(url, headers=headers, timeout=20).json()
+    except:
+        return []
+    for datum in response['results']:
+        filter_params = {
+                'fits': datum['url'],
+                'fullname' : filter_name
+                }
+        filters.append(filter_params)
+    return filters
+
 def fetch_observations(tracking_num, proposal_code):
     query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
     data = framedb_lookup(query)
