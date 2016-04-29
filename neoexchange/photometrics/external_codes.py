@@ -172,29 +172,10 @@ def determine_sext_options(fits_file):
     options = options.rstrip()
     return options
 
-def determine_mtdlink_options(fits_file, num_fits_files, pa_rate_dict):
-
-    option_mapping = OrderedDict([
-                        ('zeropoint' , '-IP_MAGZEROPOINT'),
-                        ('saturation'  , '-IP_MAXADU'),
-                     ])
+def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
 
     options = ''
-    if not os.path.exists(fits_file):
-        logger.error("FITS file %s does not exist" % fits_file)
-        return options
-    try:
-        hdulist = fits.open(fits_file)
-    except IOError as e:
-        logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
-        return options
-
-    header = hdulist[0].header
-    header_mapping, table_mapping = oracdr_catalog_mapping()
-
-    for option in option_mapping.keys():
-        if header.get(header_mapping[option], -99) != -99:
-            options += option_mapping[option] +' ' + str(header.get(header_mapping[option])) + ' '
+    options += '-paramfile' + ' ' + str(param_file) + ' '
     options += '-CPUTIME' + ' ' + str(num_fits_files*200) + ' '
     options += '-MAXMISSES' + ' ' + str(int(floor(num_fits_files/2.5))) + ' '
     options += '-FILTER_PA' + ' ' + str(pa_rate_dict['filter_pa']) + ' '
@@ -304,7 +285,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     return retcode_or_cmdline
 
 @timeit
-def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
+def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files, param_file, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
     '''Run MTDLINK (using either the binary specified by [binary] or by
     looking for 'mtdlink' in the PATH) on the passed <fits_files> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -320,7 +301,21 @@ def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files
         return -42
 
     mtdlink_config_file = default_mtdlink_config_files()[0]
-    options = determine_mtdlink_options(fits_files, num_fits_files, pa_rate_dict)
+    fits_file_list = fits_files.split(' ')
+    first_fits_file = fits_file_list[0]
+    options = determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict)
+
+    # MTDLINK requires an 'MJD' keyword to be in the header.
+    # If one doesn't exist, copy 'MJD-OBS' to 'MJD'.
+    y = 0
+    for f in fits_file_list:
+        if os.path.exists(f):
+            data, header = fits.getdata(f, header=True)
+            if 'MJD' not in header :
+                mjd = header['MJD-OBS'] + (0.5*header['exptime']/86400.0)
+                header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+                fits.writeto(f, data, header, clobber=True, checksum=True)
+        y += 1
 
     # MTDLINK writes the output header file to the path that the FITS files are in,
     # not to the directory MTDLINK is being run from...
@@ -332,8 +327,45 @@ def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files
         if os.path.lexists(mtds_file) and os.path.islink(mtds_file):
             os.unlink(mtds_file)
         os.symlink(mtds_file_path, mtds_file)
-    cmdline = "%s %s %s" % ( binary, options, fits_files )
+
+    # MTDLINK wants the input fits files to be in the directory MTDLINK is
+    # being run from...
+    # If the fits files have a path component, we symlink them to the directory.
+    symlink_fits_files = []
+    y = 0
+    for f in fits_file_list:
+        fits_file = os.path.basename(fits_file_list[y])
+        if fits_file != fits_file_list[y]:
+            fits_file = os.path.join(dest_dir, fits_file)
+            # If the file exists and is a link (or a broken link), then remove it
+            if os.path.lexists(fits_file) and os.path.islink(fits_file):
+                os.unlink(fits_file)
+            os.symlink(fits_file_list[y], fits_file)
+        symlink_fits_files.append(fits_file)
+        y += 1
+
+    # MTDLINK wants the input sext files to be in the directory MTDLINK is
+    # being run from...
+    # If the sext files have a path component, we symlink them to the directory.
+    fits_file_list = fits_files.split(' ')
+    symlink_sext_files = []
+    y = 0
+    for f in fits_file_list:
+        sext_file = os.path.basename(fits_file_list[y].replace('fits', 'sext'))
+        if sext_file != fits_file_list[y].replace('fits', 'sext'):
+            sext_file = os.path.join(dest_dir, sext_file)
+            # If the file exists and is a link (or a broken link), then remove it
+            if os.path.lexists(sext_file) and os.path.islink(sext_file):
+                os.unlink(sext_file)
+            os.symlink(fits_file_list[y].replace('fits', 'sext'), sext_file)
+        symlink_sext_files.append(sext_file)
+        y += 1
+
+    linked_fits_files = ' '.join(symlink_fits_files)
+
+    cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files )
     cmdline = cmdline.rstrip()
+    print cmdline
 
     if dbg == True:
         retcode_or_cmdline = cmdline

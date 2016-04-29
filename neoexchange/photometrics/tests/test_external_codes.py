@@ -99,28 +99,32 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
     def test_run_mtdlink_nofile(self):
 
+        param_file = 'mtdi.lcogt.param'
+
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 5.0,
+                            'filter_deltapa': 10.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
-        expected_cmdline = 'mtdlink'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, '', 8, pa_rate_dict, binary='mtdlink', dbg=True)
+        expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, '', 8, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
     def test_run_mtdlink_file(self):
 
+        param_file = 'mtdi.lcogt.param'
+
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 5.0,
+                            'filter_deltapa': 10.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
 
-        expected_cmdline = 'mtdlink  foo.fits foo2.fits foo3.fits'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, 'foo.fits foo2.fits foo3.fits', 3, pa_rate_dict, binary='mtdlink', dbg=True)
+        expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 600 -MAXMISSES 1 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4 foo.fits foo2.fits foo3.fits'
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, 'foo.fits foo2.fits foo3.fits', 3, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -139,76 +143,61 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_fits_file_set1_7 = self.test_fits_file_set1_7
         test_fits_file_set1_8 = self.test_fits_file_set1_8
 
-        data, header = fits.getdata(test_fits_file_set1_1, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set1_1, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set1_2, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set1_2, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set1_3, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set1_3, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set1_4, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set1_4, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set1_5, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set1_5, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set1_6, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set1_6, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set1_7, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set1_7, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set1_8, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set1_8, data, header, clobber=True, checksum=True)
-
         test_file_string = str(test_fits_file_set1_1)+' '+str(test_fits_file_set1_2)+' '+str(test_fits_file_set1_3)+' '+str(test_fits_file_set1_4)+' '+str(test_fits_file_set1_5)+' '+str(test_fits_file_set1_6)+' '+str(test_fits_file_set1_7)+' '+str(test_fits_file_set1_8)
 
+        param_file = 'mtdi.lcogt.param'
 
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 5.0,
+                            'filter_deltapa': 10.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
-        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, test_file_string, 8, pa_rate_dict)
+        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, test_file_string, 8, param_file, pa_rate_dict)
 
         self.assertEqual(expected_status, status)
 
         if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+        input_fits_1 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_1))
+        input_fits_2 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0099-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_2))
+        input_fits_3 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0100-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_3))
+        input_fits_4 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0101-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_4))
+        input_fits_5 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0102-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_5))
+        input_fits_6 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0103-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_6))
+        input_fits_7 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0104-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_7))
+        input_fits_8 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0105-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_8))
+        input_sext_1 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_1))
+        input_sext_2 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0099-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_2))
+        input_sext_3 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0100-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_3))
+        input_sext_4 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0101-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_4))
+        input_sext_5 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0102-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_5))
+        input_sext_6 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0103-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_6))
+        input_sext_7 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0104-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_7))
+        input_sext_8 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0105-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_8))
         output_mtds = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.mtds')
         self.assertTrue(os.path.exists(output_mtds))
         test_fh = open(output_mtds, 'r')
         test_lines = test_fh.readlines()
         test_fh.close()
 
-        # Expected value is 10 lines of intro plus 2408 sources
-        self.assertEqual(10+2408, len(test_lines))
+        # Expected value is 10 lines of intro plus 336 sources
+        self.assertEqual(10+336, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
     @skipIf(find_binary("mtdlink") == None, "Could not find MTDLINK binary ('mtdlink') in PATH")
@@ -224,44 +213,9 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_fits_file_set2_5 = self.test_fits_file_set2_5
         test_fits_file_set2_6 = self.test_fits_file_set2_6
 
-        data, header = fits.getdata(test_fits_file_set2_1, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set2_1, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set2_2, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set2_2, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set2_3, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set2_3, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set2_4, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set2_4, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set2_5, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set2_5, data, header, clobber=True, checksum=True)
-
-        data, header = fits.getdata(test_fits_file_set2_6, header=True)
-        if 'MJD' not in header :
-            mjd = header['MJD-OBS']
-            header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-            fits.writeto(test_fits_file_set2_6, data, header, clobber=True, checksum=True)
-
         test_file_string = str(test_fits_file_set2_1)+' '+str(test_fits_file_set2_2)+' '+str(test_fits_file_set2_3)+' '+str(test_fits_file_set2_4)+' '+str(test_fits_file_set2_5)+' '+str(test_fits_file_set2_6)
 
+        param_file = 'mtdi.lcogt.param'
 
         pa_rate_dict = {    'filter_pa': 345.0,
                             'filter_deltapa': 25.0,
@@ -269,19 +223,43 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
                             'filter_maxrate': 0.5,
                         }
 
-        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set2, test_file_string, 6, pa_rate_dict)
+        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set2, test_file_string, 6, param_file, pa_rate_dict)
 
         self.assertEqual(expected_status, status)
 
         if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+        input_fits_1 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_1))
+        input_fits_2 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0096-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_2))
+        input_fits_3 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0097-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_3))
+        input_fits_4 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0098-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_4))
+        input_fits_5 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0099-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_5))
+        input_fits_6 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0100-e90.fits')
+        self.assertTrue(os.path.exists(input_fits_6))
+        input_sext_1 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_1))
+        input_sext_2 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0096-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_2))
+        input_sext_3 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0097-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_3))
+        input_sext_4 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0098-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_4))
+        input_sext_5 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0099-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_5))
+        input_sext_6 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0100-e90.sext')
+        self.assertTrue(os.path.exists(input_sext_6))
         output_mtds = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.mtds')
         self.assertTrue(os.path.exists(output_mtds))
         test_fh = open(output_mtds, 'r')
         test_lines = test_fh.readlines()
         test_fh.close()
 
-        # Expected value is 8 lines of intro plus 138 sources
-        self.assertEqual(8+138, len(test_lines))
+        # Expected value is 8 lines of intro plus 132 sources
+        self.assertEqual(8+132, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
 class TestSCAMPRunner(ExternalCodeUnitTest):
@@ -441,41 +419,47 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
 
     def test_nofile(self):
-        expected_options = ''
+        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+
+        param_file = 'mtdi.lcogt.param'
 
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 5.0,
+                            'filter_deltapa': 10.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
-        options = determine_mtdlink_options('wibble', 8, pa_rate_dict)
+        options = determine_mtdlink_options(8, param_file, pa_rate_dict)
 
         self.assertEqual(expected_options, options)
 
     def test_badfile(self):
-        expected_options = ''
+        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+
+        param_file = 'mtdi.lcogt.param'
 
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 5.0,
+                            'filter_deltapa': 10.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
-        options = determine_mtdlink_options(os.path.join(self.source_dir, 'scamp_neox.cfg'), 8, pa_rate_dict)
+        options = determine_mtdlink_options(8, param_file, pa_rate_dict)
 
         self.assertEqual(expected_options, options)
 
     def test1(self):
-        expected_options = '-IP_MAXADU 46000 -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 5.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+
+        param_file = 'mtdi.lcogt.param'
 
         pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 5.0,
+                            'filter_deltapa': 10.0,
                             'filter_minrate': 0.38,
                             'filter_maxrate': 0.4,
                         }
 
-        options = determine_mtdlink_options(self.test_fits_file, 8, pa_rate_dict)
+        options = determine_mtdlink_options(8, param_file, pa_rate_dict)
 
         self.assertEqual(expected_options, options)
 
