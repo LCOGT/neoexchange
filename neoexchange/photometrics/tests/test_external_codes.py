@@ -527,6 +527,7 @@ class TestUpdateFITSWCS(TestCase):
         expected_cd1_2 = 6.824629998000E-07
         expected_cd2_1 = 7.053875928440E-07
         expected_cd2_2 = -1.082408809463E-04
+        expected_secpix = 0.389669
         expected_wcssolvr = 'SCAMP-2.0.4'
         expected_wcsrfcat = '<Vizier/aserver.cgi?ucac4@cds>'
         expected_wcsimcat = 'ldac_test_catalog.fits'
@@ -551,16 +552,17 @@ class TestUpdateFITSWCS(TestCase):
         cd1_2 = header['CD1_2']
         cd2_1 = header['CD2_1']
         cd2_2 = header['CD2_2']
+        secpix   = header['SECPIX']
         wcssolvr = header['WCSSOLVR']
         wcsrfcat = header['WCSRFCAT']
         wcsimcat = header['WCSIMCAT']
-        wcsnref = header['WCSNREF']
+        wcsnref  = header['WCSNREF']
         wcsmatch = header['WCSMATCH']
         wccattyp = header['WCCATTYP']
         wcsrdres = header['WCSRDRES']
         wcsdelra = header['WCSDELRA']
         wcsdelde = header['WCSDELDE']
-        wcserr = header['WCSERR']
+        wcserr   = header['WCSERR']
 
         self.assertEqual(expected_units, cunit1)
         self.assertEqual(expected_units, cunit2)
@@ -572,6 +574,7 @@ class TestUpdateFITSWCS(TestCase):
         self.assertEqual(expected_cd1_2, cd1_2)
         self.assertEqual(expected_cd2_1, cd2_1)
         self.assertEqual(expected_cd2_2, cd2_2)
+        self.assertEqual(expected_secpix, secpix)
         self.assertEqual(expected_wcssolvr, wcssolvr)
         self.assertEqual(expected_wcsrfcat, wcsrfcat)
         self.assertEqual(expected_wcsimcat, wcsimcat)
@@ -589,15 +592,22 @@ class TestGetSCAMPXMLInfo(TestCase):
 
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
 
+        self.maxDiff = None
+
     def test_read(self):
 
         expected_results = { 'num_refstars' : 606,
                              'num_match'    : 64,
                              'wcs_refcat'   : '<Vizier/aserver.cgi?ucac4@cds>',
                              'wcs_cattype'  : 'UCAC4@CDS',
-                             'wcs_imagecat' : 'ldac_test_catalog.fits'
+                             'wcs_imagecat' : 'ldac_test_catalog.fits',
+                             'pixel_scale'  : 0.389669
                            }
 
         results = get_scamp_xml_info(self.test_scamp_xml)
 
-        self.assertEqual(expected_results, results)
+        for key in expected_results.keys():
+            if key == 'pixel_scale':
+                self.assertAlmostEqual(expected_results[key], results[key], 6)
+            else:
+                self.assertEqual(expected_results[key], results[key])

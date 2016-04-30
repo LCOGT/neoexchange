@@ -367,6 +367,7 @@ def get_scamp_xml_info(scamp_xml_file):
              'wcs_refcat'   : "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower(),
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
              'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0],
+             'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean()
            }
 
     return info
@@ -435,6 +436,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     wcsnref = scamp_info['num_refstars']
     wcsmatch = scamp_info['num_match']
     wccattyp = scamp_info['wcs_cattype']
+    secpix = round(scamp_info['pixel_scale'],6)
 
     #header keywords we have
     header['WCSDELRA'] = header['CRVAL1'] - crval1
@@ -447,6 +449,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     header['CD1_2'] = cd1_2
     header['CD2_1'] = cd2_1
     header['CD2_2'] = cd2_2
+    header['SECPIX'] = (secpix, '[arcsec/pixel] Fitted pixel scale on sky')
     header['WCSSOLVR'] = wcssolvr
     header['WCSRFCAT'] = wcsrfcat
     header['WCSIMCAT'] = wcsimcat
