@@ -387,6 +387,10 @@ def fits_ldac_to_header(header_array):
                 header.add_comment(comment_text)
             elif keyword.rstrip() != "HISTORY":
                 comment_loc = card.rfind('/ ')
+                # if no comment found, (comment_loc= -1), set to length of string
+                # to ensure we get everything
+                if comment_loc == -1:
+                    comment_loc = len(card)
                 value = card[10:comment_loc]
                 if '.' in value:
                     try:

@@ -25,7 +25,7 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import Angle
 import astropy.units as u
-from numpy import where
+from numpy import where, array
 
 from core.models import Body
 
@@ -1440,6 +1440,38 @@ class FITSReadHeader(FITSUnitTest):
         frame_header = get_catalog_header(header, "FITS_LDAC")
 
         self.assertEqual(expected_params, frame_header)
+
+class FITSLDACToHeader(FITSUnitTest):
+
+    def setUp(self):
+
+        self.header_array = array(['SIMPLE  =                    T / conforms to FITS standard',
+                                   'BITPIX  =                  -32 / array data type',
+                                   'NAXIS   =                    2 / number of array dimensions',
+                                   'NAXIS1  =                 2028',
+                                   'NAXIS2  =                 2038',
+                                   "COMMENT   FITS (Flexible Image Transport System) format is defined in 'Astronomy",
+                                   "COMMENT   and Astrophysics', volume 376, page 359; bibcode: 2001A&A...376..359H"], 
+                                   dtype='|S80')
+
+    def test_nocomment(self):
+
+        header = fits_ldac_to_header(self.header_array)
+
+        self.assertEqual(header['BITPIX'], -32)
+        self.assertEqual(header['NAXIS1'], 2028)
+        self.assertEqual(header['NAXIS2'], 2038)
+
+    def test_comments(self):
+
+        self.header_array[2] = 'NAXIS1  =                 2028 / length of data axis 1'
+        self.header_array[3] = 'NAXIS2  =                 2038 / length of data axis 2'
+
+        header = fits_ldac_to_header(self.header_array)
+
+        self.assertEqual(header['BITPIX'], -32)
+        self.assertEqual(header['NAXIS1'], 2028)
+        self.assertEqual(header['NAXIS2'], 2038)
 
 class FITSSubsetCatalogTable(FITSUnitTest):
 
