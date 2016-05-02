@@ -362,7 +362,7 @@ def fitsldac_catalog_mapping():
                     ('obs_sky_bkgd'  , 'BACKGROUND'),
                     ('flags'         , 'FLAGS'),
                     ('flux_max'      , 'FLUX_MAX'),
-                    ('threshold'     , 'THRESHOLD'),
+                    ('threshold'     , 'MU_THRESHOLD'),
                  ])
 
     return header_dict, table_dict
@@ -500,6 +500,15 @@ def convert_value(keyword, value):
             newvalue = "%.4fm" % dimension
         except IndexError:
             logger.warn("Need to pass a tuple of (number of x/y pixels, pixel scale) to compute a width/height")
+    elif keyword == 'mu_threshold':
+        try:
+            # Calculate threshold in magnitudes per sq. arcsec by dividing the
+            # threshold counts by pixel area and converting to a magnitude
+            newvalue = pow(10, (value[0]/-2.5)) * (value[1]*value[1])
+        except IndexError:
+            logger.warn("Need to pass a tuple of (threshold in mag per sq. arcsec, pixel scale) to compute a threshold")
+        except TypeError:
+            logger.warn("Need to pass a tuple of (threshold in mag per sq. arcsec, pixel scale) to compute a threshold")
 
     return newvalue
 
@@ -619,6 +628,10 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
             # If a good zeropoint is available from the header, add that too.
             source_items['obs_mag_err'] = convert_value('obs_mag_err', (source_items['obs_mag_err'], source_items['obs_mag']))
             source_items['obs_mag'] = convert_value('obs_mag', source_items['obs_mag'])
+            # Convert MU_THRESHOLD (in magnitudes per sq. arcsec) into a THRESHOLD
+            # in counts
+            if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
+                source_items['threshold'] = convert_value('mu_threshold', (source_items['threshold'], header_items['pixel_scale']))
             if header_items.get('zeropoint', -99) != -99:
                 source_items['obs_mag'] += header_items['zeropoint']
             out_table.add_row(source_items)

@@ -1220,7 +1220,7 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertNotEqual(unexpected_value, tbl)
 
     def test_ldac_catalog_read_length(self):
-        expected_hdr_len = 293 + 46
+        expected_hdr_len = 352
         expected_tbl_len = len(self.test_ldactable)
 
         hdr, tbl = open_fits_catalog(self.test_ldacfilename)
@@ -1239,7 +1239,7 @@ class OpenFITSCatalog(FITSUnitTest):
                 msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
 
     def test_ldac_catalog_read_hdr_keyword(self):
-        expected_hdr_value = 'fl03'
+        expected_hdr_value = 'kb76'
 
         hdr, tbl = open_fits_catalog(self.test_ldacfilename)
 
@@ -1256,8 +1256,8 @@ class OpenFITSCatalog(FITSUnitTest):
 
     def test_ldac_catalog_read_xy(self):
         # X,Y CCD Co-ordinates of the last detection
-        expected_x = 1134.2564770504712
-        expected_y = 2992.2858194541695
+        expected_x = 1758.0389801526617
+        expected_y = 2024.9652134253395
 
         hdr, tbl = open_fits_catalog(self.test_ldacfilename)
 
@@ -1370,6 +1370,14 @@ class Test_Convert_Values(FITSUnitTest):
 
         self.assertEqual(expected_value, value)
 
+    def test_mu_threshold(self):
+
+        expected_value = 34.158398
+
+        value = convert_value('mu_threshold', (-5.4871593, 0.467))
+
+        self.assertAlmostEqual(expected_value, value, 5)
+
 class FITSReadHeader(FITSUnitTest):
 
     def test_header(self):
@@ -1446,7 +1454,7 @@ class FITSSubsetCatalogTable(FITSUnitTest):
         self.assertEqual(expected_columns, len(new_table.colnames))
 
     def test_ldac_dimensions(self):
-        expected_rows = 860
+        expected_rows = 974
         expected_columns = 15
 
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
@@ -1619,21 +1627,21 @@ class FITSReadCatalog(FITSUnitTest):
     def test_ldac_first_item(self):
 
         expected_catalog = self.basic_table
-        expected_catalog.add_row({ 'ccd_x' : 2189.4019002323894,
-                                   'ccd_y' :  35.979511838066465,
-                                   'major_axis'  : 2.806724,
-                                   'minor_axis'  : 2.686966,
-                                   'ccd_pa'      : 33.54286,
-                                   'obs_ra'  :  178.3429720052357,
-                                   'obs_dec' :  11.91179225051301,
+        expected_catalog.add_row({ 'ccd_x' : 1375.7452509015964,
+                                   'ccd_y' :  42.12366067399433,
+                                   'major_axis'  : 1.88223171,
+                                   'minor_axis'  : 1.73628092,
+                                   'ccd_pa'      : 7.76751757,
+                                   'obs_ra'  :  219.7877046646191,
+                                   'obs_dec' :  -9.6401399241501036,
                                    'obs_ra_err'  : 8.92232262319e-06,
                                    'obs_dec_err' : 8.12455029148e-06,
-                                   'obs_mag'      : -2.5*log10(15599.6777344) +28.55,
-                                   'obs_mag_err'  : 0.037677686175571018,
-                                   'obs_sky_bkgd' : 175.43216,
+                                   'obs_mag'      : -2.5*log10(206447.5625) +00.00,
+                                   'obs_mag_err'  : 0.0034573016162758306,
+                                   'obs_sky_bkgd' : 343.17666626,
                                    'flags' : 0,
-                                   'flux_max' : 1838.5421,
-                                   'threshold' : 25.514057,
+                                   'flux_max' : 5177.54296875,
+                                   'threshold' : 29.2062811208271
                                  })
 
 
