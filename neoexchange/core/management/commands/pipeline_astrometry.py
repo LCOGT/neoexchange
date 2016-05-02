@@ -58,16 +58,18 @@ class Command(BaseCommand):
             self.stdout.write("Processing %s" % catalog)
             new_catalog_or_status = check_catalog_and_refit(configs_dir, temp_dir, catalog)
             new_catalog = new_catalog_or_status
+            catalog_type = 'FITS_LDAC'
             if str(new_catalog_or_status).isdigit():
                 if new_catalog_or_status != 0:
                     self.stdout.write("Error reprocessing %s (Error code= %s" % (catalog, new_catalog_or_status))
                     exit(-3)
                 new_catalog = catalog
+                catalog_type = 'LCOGT'
 
             # Step 2: Check for good zeropoint and redetermine if needed. Ingest
             # results into CatalogSources
-            self.stdout.write("Creating CatalogSources from %s" % new_catalog)
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog)
+            self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type)
 
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
