@@ -7,6 +7,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 
 from core.views import check_catalog_and_refit
+from photometrics.catalog_subs import store_catalog_sources
 #from core.models import CatalogSources
 
 class Command(BaseCommand):
@@ -55,10 +56,18 @@ class Command(BaseCommand):
             # Step 1: Determine if astrometric fit in catalog is good and
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
-            check_catalog_and_refit(configs_dir, temp_dir, catalog)
+            new_catalog_or_status = check_catalog_and_refit(configs_dir, temp_dir, catalog)
+            new_catalog = new_catalog_or_status
+            if str(new_catalog_or_status).isdigit():
+                if new_catalog_or_status != 0:
+                    self.stdout.write("Error reprocessing %s (Error code= %s" % (catalog, new_catalog_or_status))
+                    exit(-3)
+                new_catalog = catalog
 
             # Step 2: Check for good zeropoint and redetermine if needed. Ingest
             # results into CatalogSources
+            self.stdout.write("Creating CatalogSources from %s" % new_catalog)
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog)
 
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources

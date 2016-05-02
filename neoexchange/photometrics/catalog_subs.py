@@ -713,13 +713,13 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     return header, table
 
-def store_catalog_sources(catfile):
+def store_catalog_sources(catfile, catalog_type='LCOGT'):
 
     num_sources_created = 0
     num_in_table = 0
 
     #read the catalog file
-    header, table = extract_catalog(catfile)
+    header, table = extract_catalog(catfile, catalog_type)
 
     if header and table:
 
