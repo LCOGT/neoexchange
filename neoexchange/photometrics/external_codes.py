@@ -372,7 +372,11 @@ def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files
     else:
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-        retcode_or_cmdline = call(args, cwd=dest_dir)
+#        retcode_or_cmdline = call(args, cwd=dest_dir)
+        # Open mtdlink_output.out for writing the MTDLINK output into
+        output_file = open(os.path.join(dest_dir, 'mtdlink_output.out'), 'w')
+        retcode_or_cmdline = call(args, cwd=dest_dir, stdout=output_file, stderr=output_file)
+        output_file.close()
 
     return retcode_or_cmdline
 

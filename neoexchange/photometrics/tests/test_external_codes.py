@@ -133,6 +133,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         expected_status = 0
         expected_line1 = 'DETSV2.0'
+	expected_line1_file = 'mtdlink: Starting verbose mode'
 
         test_fits_file_set1_1 = self.test_fits_file_set1_1
         test_fits_file_set1_2 = self.test_fits_file_set1_2
@@ -150,7 +151,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         pa_rate_dict = {    'filter_pa': 255.0,
                             'filter_deltapa': 10.0,
                             'filter_minrate': 0.38,
-                            'filter_maxrate': 0.4,
+                            'filter_maxrate': 0.40,
                         }
 
         status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, test_file_string, 8, param_file, pa_rate_dict)
@@ -200,11 +201,22 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertEqual(10+336, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
+        output_file = os.path.join(self.test_dir, 'mtdlink_output.out')
+        self.assertTrue(os.path.exists(output_file))
+        test_fh_file = open(output_file, 'r')
+        test_lines_file = test_fh_file.readlines()
+        test_fh_file.close()
+
+        # Expected value is 58 lines
+        self.assertEqual(58, len(test_lines_file))
+        self.assertEqual(expected_line1_file, test_lines_file[0].rstrip())
+
     @skipIf(find_binary("mtdlink") == None, "Could not find MTDLINK binary ('mtdlink') in PATH")
     def test_run_mtdlink_realfile_different_set(self):
 
         expected_status = 0
         expected_line1 = 'DETSV2.0'
+	expected_line1_file = 'mtdlink: Starting verbose mode'
 
         test_fits_file_set2_1 = self.test_fits_file_set2_1
         test_fits_file_set2_2 = self.test_fits_file_set2_2
@@ -261,6 +273,16 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         # Expected value is 8 lines of intro plus 132 sources
         self.assertEqual(8+132, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
+
+        output_file = os.path.join(self.test_dir, 'mtdlink_output.out')
+        self.assertTrue(os.path.exists(output_file))
+        test_fh_file = open(output_file, 'r')
+        test_lines_file = test_fh_file.readlines()
+        test_fh_file.close()
+
+        # Expected value is 58 lines
+        self.assertEqual(52, len(test_lines_file))
+        self.assertEqual(expected_line1_file, test_lines_file[0].rstrip())
 
 class TestSCAMPRunner(ExternalCodeUnitTest):
 
