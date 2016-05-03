@@ -47,7 +47,7 @@ elif len(argv) == 3:
         obs_date += timedelta(seconds=17*3600)
     except ValueError:
         print usage
-    proposal = argv[3]
+    proposal = argv[2]
 elif len(argv) > 3:
     print usage
 

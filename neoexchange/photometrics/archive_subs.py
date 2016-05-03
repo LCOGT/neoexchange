@@ -69,12 +69,14 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
     Each reduction level is queried in turn and results are added to a dictionary with the reduction level
     as the key(which is returned)'''
 
+    limit = 1000
     base_url = get_base_url()
-    archive_url = '%s/frames/?start=%s&end=%s&OBSTYPE=%s&PROPID=%s' % (base_url, start_date, end_date, obstype, proposal)
+    archive_url = '%s/frames/?limit=%d&start=%s&end=%s&OBSTYPE=%s&PROPID=%s' % (base_url, limit, start_date, end_date, obstype, proposal)
 
     frames = {}
     for reduction_lvl in red_lvls:
         search_url = archive_url + '&RLEVEL='+ reduction_lvl
+#        print "search_url=%s" % search_url
         response = requests.get(search_url, headers=auth_header).json()
         frames_for_red_lvl = { reduction_lvl : response['results'] }
         frames.update(frames_for_red_lvl)
