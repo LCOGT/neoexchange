@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -107,6 +107,20 @@ class SourceMeasurementAdmin(admin.ModelAdmin):
     list_display = ('body_name', 'frame', 'flags', 'obs_ra_hms', 'obs_dec_dms', 'site_code')
     search_fields = ('body__name', 'body__provisional_name')
 
+class CatalogSourcesAdmin(admin.ModelAdmin):
+
+    def site_code(self, obj):
+        return obj.frame.sitecode
+
+    def obs_ra_hms(self, obj):
+        return degreestohms(obj.obs_ra,' ')
+
+    def obs_dec_dms(self, obj):
+        return degreestodms(obj.obs_dec,' ')
+
+    list_display = ('frame', 'flags', 'obs_ra_hms', 'obs_dec_dms', 'obs_mag', 'site_code')
+    list_filter = ('frame__sitecode', 'flags')
+    search_fields = ('frame__filename',)
 
 admin.site.register(Body,BodyAdmin)
 admin.site.register(Frame,FrameAdmin)
@@ -114,3 +128,4 @@ admin.site.register(Block,BlockAdmin)
 admin.site.register(Proposal,ProposalAdmin)
 admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
+admin.site.register(CatalogSources,CatalogSourcesAdmin)
