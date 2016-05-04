@@ -31,7 +31,7 @@ from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
+    MagRangeError,  LCOGT_site_codes
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
@@ -40,6 +40,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates
 from astrometrics.ast_subs import determine_asteroid_type
+from frame_proc import parse_frames
 import logging
 import reversion
 import json
@@ -152,47 +153,6 @@ class BlockListView(ListView):
     queryset=Block.objects.order_by('-block_start')
     context_object_name="block_list"
     paginate_by = 20
-
-def fetch_from_archive(tracking_num, proposal_code):
-    filters = []
-    origname = origname[0:31]
-    url =settings.ARCHIVE_API + 'frames/?basename={}'.format(origname)
-    headers = {'Authorization': 'Token {}'.format(settings.ARCHIVE_API_TOKEN)}
-    try:
-        response = requests.get(url, headers=headers, timeout=20).json()
-    except:
-        return []
-    for datum in response['results']:
-        filter_params = {
-                'fits': datum['url'],
-                'fullname' : filter_name
-                }
-        filters.append(filter_params)
-    return filters
-
-def fetch_observations(tracking_num, proposal_code):
-    query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
-    data = framedb_lookup(query)
-    if data:
-        imgs = [(d["date_obs"],d["origname"][:-5]) for d in data]
-        return imgs
-    else:
-        return False
-
-def framedb_lookup(query):
-    try:
-        client = requests.session()
-        # First have to authenticate
-        login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
-        # Because we are sending log in details it has to go over SSL
-        data_url = 'https://data.lcogt.net%s' % query
-        resp = client.post(data_url, data=login_data, timeout=20)
-        data = resp.json()
-
-    except Exception, e:
-        print(e)
-        return False
-    return data
 
 
 class BlockReport(LoginRequiredMixin, View):
@@ -1073,86 +1033,11 @@ def check_request_status(tracking_num=None):
         logger.error("Request API timed out")
     return data
 
-def check_for_images(eventid=False):
-    images = None
-    client = requests.session()
-    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
-    data_url = 'https://data.lcogt.net/find?blkuid=%s&order_by=-date_obs&full_header=1' % eventid
-    try:
-        resp = client.post(data_url, data=login_data, timeout=20)
-        images = resp.json()
-    except ValueError:
-        logger.error("Request API did not return JSON %s" % resp.text)
-    except requests.exceptions.Timeout:
-        logger.error("Data view timed out")
-    return images
-
-def create_frame(params, block=None):
-    # Return None if params is just whitespace
-    if not params:
-        return None
-    our_site_codes = LCOGT_site_codes()
-    if params.get('groupid', None):
-    # In these cases we are parsing the FITS header
-        frame_params = frame_params_from_block(params, block)
-    else:
-        # We are parsing observation logs
-        frame_params = frame_params_from_log(params, block)
-    frame, frame_created = Frame.objects.get_or_create(**frame_params)
-    if frame_created:
-        msg = "created"
-    else:
-        msg = "updated"
-    logger.debug("Frame %s %s" % (frame, msg))
-    return frame
-
-def frame_params_from_block(params, block):
-    # In these cases we are parsing the FITS header
-    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
-    frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : sitecode,
-                     'filter'   : params.get('filter_name', "B"),
-                     'frametype': Frame.SINGLE_FRAMETYPE,
-                     'block'    : block,
-                     'instrument': params.get('instrume', None),
-                     'filename'  : params.get('origname', None),
-                     'exptime'   : params.get('exptime', None),
-                 }
-    return frame_params
-
-def frame_params_from_log(params, block):
-    our_site_codes = LCOGT_site_codes()
-    # We are parsing observation logs
-    sitecode = params.get('site_code', None)
-    if sitecode in our_site_codes:
-        if params.get('flags', None) != 'K':
-            frame_type = Frame.SINGLE_FRAMETYPE
-        else:
-            frame_type = Frame.STACK_FRAMETYPE
-    else:
-        if params.get('obs_type', None) == 'S':
-            frame_type = Frame.SATELLITE_FRAMETYPE
-        else:
-            frame_type = Frame.NONLCO_FRAMETYPE
-    frame_params = { 'midpoint' : params.get('obs_date', None),
-                     'sitecode' : sitecode,
-                     'block'    : block,
-                     'filter'   : params.get('filter', "B"),
-                     'frametype' : frame_type
-                   }
-    return frame_params
-
-def ingest_frames(images, block):
-    for image in images:
-        frame = create_frame(image, block)
-    logger.debug("Ingested %s frames" % len(images))
-    return
-
 def block_status(block_id):
     '''
     Check if a block has been observed. If it has, record when the longest run finished
     - RequestDB API is used for block status
-    - FrameDB API is used for number and datestamp of images
+    - Archive API is used for number and datestamp of images
     - We do not count scheduler blocks which include < 3 exposures
     '''
     status = False
@@ -1173,12 +1058,12 @@ def block_status(block_id):
         logger.error('Request no. %s' % k)
         if not v['schedule']:
             logger.error('No schedule returned by API')
+        images, date_obs = parse_frames(v['frames'])
         for event in v['schedule']:
-            images = check_for_images(eventid=event['id'])
             if images:
                 num_scheduled += 1
                 try:
-                    last_image = datetime.strptime(images[0]['date_obs'][:19],'%Y-%m-%d %H:%M:%S')
+                    last_image = datetime.strptime(date_obs,'%Y-%m-%d %H:%M:%S')
                 except ValueError:
                     logger.error('Image datetime stamp is badly formatted %s' % images[0]['date_obs'])
                     return False
