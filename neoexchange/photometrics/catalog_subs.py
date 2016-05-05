@@ -823,11 +823,9 @@ def make_sext_file_line(sext_params):
 
     return sext_line
 
-def make_sext_dict_list(catfile):
+def make_sext_dict_list():
 
     sext_dict_list = []
-
-    num_sources_created, num_in_table = store_catalog_sources(catfile)
 
     num_iter = 1
     while num_iter <= CatalogSources.objects.count():
@@ -848,6 +846,28 @@ def make_sext_line_list(sext_dict_list):
         sext_line_list.append(sext_line)
 
     return sext_line_list
+
+def make_sext_files(dest_dir):
+
+    num_iter=1
+    prev_filename = 'foo.fits'
+    filename = Frame.objects.get(pk=num_iter).filename
+    while prev_filename not in str(Frame.objects.get(pk=num_iter).filename):
+        sext_dict_list = make_sext_dict_list()
+        sext_line_list = make_sext_line_list(sext_dict_list)
+        sext_filename = open(os.path.join(dest_dir, str(CatalogSources.objects.get(pk=num_iter).frame).replace('.fits', '.sext')), 'w')
+        for line in sext_line_list:
+            sext_filename.write(line)
+            sext_filename.write('\n')
+        sext_filename.close()
+        num_iter += 1
+        try:
+            prev_filename = filename
+            filename = Frame.objects.get(pk=num_iter).filename
+        except:
+            break
+
+    return
 
 def determine_filenames(product):
     '''Given a passed <product> filename, determine the corresponding catalog
