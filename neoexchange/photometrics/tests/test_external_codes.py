@@ -17,7 +17,9 @@ import os
 from glob import glob
 import tempfile
 from unittest import skipIf
+
 from astropy.io import fits
+from numpy import array
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -626,6 +628,11 @@ class TestReadMTDSFile(TestCase):
 
         self.maxDiff = None
 
+        # Pylint can go to hell...
+        self.dtypes =\
+             {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
+                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
+             }
     def test_no_file(self):
 
         expected_dets = {}
@@ -635,6 +642,9 @@ class TestReadMTDSFile(TestCase):
         self.assertEqual(expected_dets, dets)
 
     def test_read(self):
+
+        expected_array = array([(0001, 1, 3283, 2457444.656045, 10.924317, 39.27700, 2103.245, 2043.026, 19.26, 12.970, 1.764, -60.4, 0.27, 1.39, 34, 1.10, 0.497, 0.2, 9.0, 6.7),],
+                                dtype=self.dtypes)
 
         expected_dets_dict = {  'version'   : 'DETSV2.0',
                                 'num_frames': 6,
@@ -658,4 +668,8 @@ class TestReadMTDSFile(TestCase):
             else:
                 self.assertEqual(expected_dets_dict[key], dets[key])
 
+        det1 = dets['detections'][0]
+        frame = 0
+        for column in expected_array.dtype.names:
+            self.assertAlmostEqual(expected_array[column][frame], det1[column][frame], 7)
 
