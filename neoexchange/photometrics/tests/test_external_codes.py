@@ -646,9 +646,14 @@ class TestReadMTDSFile(TestCase):
                                             ('elp1m008-fl05-20160225-0099-e90.fits', 2457444.663875),
                                             ('elp1m008-fl05-20160225-0100-e90.fits', 2457444.665812),
                                            ],
-                                'num_detections' : 23
+                                'num_detections' : 23,
+                                'detections': [None] * 23
                              }
 
         dets = read_mtds_file(self.test_mtds_file)
 
-        self.assertEqual(expected_dets_dict, dets)
+        for key in expected_dets_dict.keys():
+            if key == 'detections':
+                self.assertEqual(len(expected_dets_dict[key]), len(dets[key]))
+            else:
+                self.assertEqual(expected_dets_dict[key], dets[key])

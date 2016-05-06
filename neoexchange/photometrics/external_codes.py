@@ -563,7 +563,7 @@ def read_mtds_file(mtdsfile, dbg=False):
              'num_frames' : num_frames,
              'frames' : frames,
              'num_detections' : num_detections,
-#             'detections' : detections
+             'detections' : detections
            }
 
     return dets
