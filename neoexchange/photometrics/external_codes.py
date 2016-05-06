@@ -22,7 +22,7 @@ import warnings
 
 from astropy.io import fits
 from astropy.io.votable import parse
-from numpy import loadtxt, vsplit
+from numpy import loadtxt, split
 
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
@@ -517,6 +517,9 @@ def read_mtds_file(mtdsfile, dbg=False):
     except IOError:
         return {}
 
+    dtypes = {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
+                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
+             }
     # Read header
     version = mtds_fh.readline().rstrip()
     frames_string = mtds_fh.readline()
@@ -546,16 +549,17 @@ def read_mtds_file(mtdsfile, dbg=False):
     # will get # detection sub arrays of # frames x 20 columns which we can
     # pickle/store later
 
-    dets_array = loadtxt(mtds_fh)
+    dets_array = loadtxt(mtds_fh, dtype=dtypes)
 
     # Check for correct number of entries
+    if dbg: print dets_array.shape
     num_detections = dets_array.shape[0] / num_frames
     if dets_array.shape[0] / float(num_frames) != num_detections:
         logger.error("Incorrect number of detection entries (Expected %d, got %d)" % (num_frames*num_detections, dets_array.shape[0]))
         num_detections = None
         detections = None
     if num_detections:
-        detections = vsplit(dets_array, num_detections)
+        detections = split(dets_array, num_detections)
     mtds_fh.close()
 
     # Assemble dictionary'o'stuff...
