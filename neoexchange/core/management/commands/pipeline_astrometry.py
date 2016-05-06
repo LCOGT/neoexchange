@@ -17,6 +17,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('datadir', help='Path to the data to ingest')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary dir')
+        parser.add_argument('--temp-dir', dest='temp_dir', action="store", help='Name of the temporary directory to use')
 
     def determine_images_and_catalogs(self, datadir, output=True):
 
@@ -28,7 +29,8 @@ class Command(BaseCommand):
             if len(fits_files) == 0 and len(fits_catalogs) == 0:
                 self.stdout.write("No FITS files and catalogs found in directory %s" % datadir)
                 fits_files, fits_catalogs = None, None
-            self.stdout.write("Found %d FITS files and %d catalogs" % ( len(fits_files), len(fits_catalogs)))
+            else:
+                self.stdout.write("Found %d FITS files and %d catalogs" % ( len(fits_files), len(fits_catalogs)))
         else:
             self.stdout.write("Could not open directory $s" % datadir)
             fits_files, fits_catalogs = None, None
@@ -46,7 +48,14 @@ class Command(BaseCommand):
         if fits_files == None or fits_catalogs == None:
             exit(-2)
 
-        temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        # If a --temp_dir option was given on the command line use that as our
+        # directory, otherwise create a random directory in /tmp
+        if options['temp_dir']:
+            temp_dir = options['temp_dir']
+            os.makedirs(temp_dir)
+        else:
+            temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
         keep_temp = ''
         if options['keep_temp_dir']: keep_temp = ' (will keep)'
         self.stdout.write("Using %s as temp dir%s" % (temp_dir, keep_temp ))
@@ -74,9 +83,9 @@ class Command(BaseCommand):
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
 
-            # Step 4: Run MTDLINK to find moving objects
+        # Step 4: Run MTDLINK to find moving objects
 
-            # Step 5: Read MTDLINK output file and create candidates in NEOexchange
+        # Step 5: Read MTDLINK output file and create candidates in NEOexchange
 
         # Tidy up
         if options['keep_temp_dir'] != True:
