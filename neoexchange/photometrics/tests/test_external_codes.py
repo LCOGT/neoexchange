@@ -617,3 +617,38 @@ class TestGetSCAMPXMLInfo(TestCase):
                 self.assertAlmostEqual(expected_results[key], results[key], 6)
             else:
                 self.assertEqual(expected_results[key], results[key])
+
+class TestReadMTDSFile(TestCase):
+
+    def setUp(self):
+
+        self.test_mtds_file = os.path.join('photometrics', 'tests', 'elp1m008-fl05-20160225-0095-e90.mtds')
+
+        self.maxDiff = None
+
+    def test_no_file(self):
+
+        expected_dets = {}
+
+        dets = read_mtds_file('wibble')
+
+        self.assertEqual(expected_dets, dets)
+
+    def test_read(self):
+
+        expected_dets_dict = {  'version'   : 'DETSV2.0',
+                                'num_frames': 6,
+                                'frames' : [
+                                            ('elp1m008-fl05-20160225-0095-e90.fits', 2457444.656045),
+                                            ('elp1m008-fl05-20160225-0096-e90.fits', 2457444.657980),
+                                            ('elp1m008-fl05-20160225-0097-e90.fits', 2457444.659923),
+                                            ('elp1m008-fl05-20160225-0098-e90.fits', 2457444.661883),
+                                            ('elp1m008-fl05-20160225-0099-e90.fits', 2457444.663875),
+                                            ('elp1m008-fl05-20160225-0100-e90.fits', 2457444.665812),
+                                           ],
+                                'num_detections' : 23
+                             }
+
+        dets = read_mtds_file(self.test_mtds_file)
+
+        self.assertEqual(expected_dets_dict, dets)

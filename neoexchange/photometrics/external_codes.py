@@ -22,6 +22,7 @@ import warnings
 
 from astropy.io import fits
 from astropy.io.votable import parse
+from numpy import loadtxt, vsplit
 
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
@@ -505,3 +506,64 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     fits.writeto(fits_file_output, data, header, clobber=True, checksum=True)
 
     return 0
+
+def read_mtds_file(mtdsfile, dbg=False):
+    '''Read a detections file produced by mtdlink and return a dictionary of the
+    version number, number of frames, number of detections and a list of
+    detections (as #frames x 20 column numpy arrays)'''
+
+    try:
+        mtds_fh = open(mtdsfile, 'r')
+    except IOError:
+        return {}
+
+    # Read header
+    version = mtds_fh.readline().rstrip()
+    frames_string = mtds_fh.readline()
+    num_frames = frames_string.split('/')[0]
+    num_frames = int(num_frames.rstrip())
+
+    frame = 0
+    frames = []
+    while frame < num_frames:
+        frame_string = mtds_fh.readline()
+        if dbg: print frame, frame_string
+        frame_chunks = frame_string.split(' ')
+        frame_filename = frame_chunks[0]
+        frame_jd = float(frame_chunks[1])
+
+        # basic check that the JD is within the expected range
+        # values are 2014-01-01 to 2036-12-31 converted to Julian Dates
+        if frame_jd < 2456658.5 or frame_jd > 2465058.5:
+            logger.warn("Frame %s has suspicious JD value %f outside expected range" % (frame_filename, frame_jd))
+        frames.append((frame_filename, frame_jd))
+        frame += 1
+
+    # Suck in rows and columns of detections into a numpy array. The shape should
+    # (# detections x # frames, 20). We can divide the number of rows by the
+    # number of frames and that will give us the number of detections.
+    # If we then vertically split the array on the number of detections, we
+    # will get # detection sub arrays of # frames x 20 columns which we can
+    # pickle/store later
+
+    dets_array = loadtxt(mtds_fh)
+
+    # Check for correct number of entries
+    num_detections = dets_array.shape[0] / num_frames
+    if dets_array.shape[0] / float(num_frames) != num_detections:
+        logger.error("Incorrect number of detection entries (Expected %d, got %d)" % (num_frames*num_detections, dets_array.shape[0]))
+        num_detections = None
+        detections = None
+    if num_detections:
+        detections = vsplit(dets_array, num_detections)
+    mtds_fh.close()
+
+    # Assemble dictionary'o'stuff...
+    dets = { 'version' : version,
+             'num_frames' : num_frames,
+             'frames' : frames,
+             'num_detections' : num_detections,
+#             'detections' : detections
+           }
+
+    return dets
