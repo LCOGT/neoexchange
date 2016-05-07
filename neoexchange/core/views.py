@@ -26,7 +26,7 @@ from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from httplib import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
@@ -1240,3 +1240,32 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Could not check catalog %s" % catfile)
         return -2
     return new_ldac_catalog
+
+def make_plot(request):
+
+    import matplotlib
+    matplotlib.use('Agg')
+    import aplpy
+    import io
+
+    fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
+    fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
+
+    sources = CatalogSources.objects.filter(frame__filename__contains=fits_file[0:28]).values_list('obs_ra', 'obs_dec')
+
+    fig = aplpy.FITSFigure(fits_filepath)
+    fig.show_grayscale(pmin=0.25, pmax=98.0)
+    ra = [X[0] for X in sources]
+    dec = [X[1] for X in sources]
+
+    fig.show_markers(ra, dec, edgecolor='green', facecolor='none', marker='o', s=15, alpha=0.5)
+
+    buffer = io.BytesIO()
+    fig.save(buffer, format='png')
+    fig.save(fits_filepath.replace('.fits', '.png'), format='png')
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+def plotframe(request):
+
+    return render(request, 'core/frame_plot.html')
