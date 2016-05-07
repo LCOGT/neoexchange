@@ -234,6 +234,11 @@ class MeasurementViewBody(View):
         measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         return render(request, self.template, {'body':body, 'measures' : measures})
 
+class CandidatesViewBlock(LoginRequiredMixin, View):
+    template = 'core/candidates.html'
+    def get(self, request, *args, **kwargs):
+       return render(request, self.template)
+
 def ephemeris(request):
 
     form = EphemQuery(request.GET)

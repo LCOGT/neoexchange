@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+{% load url from future %}
+{% block header %}Candidate detections{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+{% block extramenu %}
+    <div class="headingleft">
+	<h1>Source Measurements for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+    </div>
+{% endblock%}
+{% block main-content %}
+    <div id="main" class="fill-height">
+    </div>
+{% endblock %}
