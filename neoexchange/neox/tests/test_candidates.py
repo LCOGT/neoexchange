@@ -29,7 +29,7 @@ class TestBlockCandidates(FunctionalTest):
         link.click()
         self.browser.implicitly_wait(3)
         new_url = self.browser.current_url
-        self.assertEqual(str(new_url), target_url)
+        self.assertEqual(new_url, target_url)
 
         # He sees links that will go to a more detailed block view and goes
         # to the first Block.
@@ -41,7 +41,7 @@ class TestBlockCandidates(FunctionalTest):
         link.click()
         self.browser.implicitly_wait(3)
         new_url = self.browser.current_url
-        self.assertEqual(str(new_url), block_url)
+        self.assertEqual(new_url, block_url)
 
         # He goes to the (secret for now) candidates display page
         cands_url = self.live_server_url + reverse('view-candidates',kwargs={'pk':1})
@@ -55,6 +55,6 @@ class TestBlockCandidates(FunctionalTest):
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
         new_url = self.browser.current_url
-        self.assertEqual(str(cands_url), new_url)
+        self.assertEqual(cands_url, new_url)
 
       
