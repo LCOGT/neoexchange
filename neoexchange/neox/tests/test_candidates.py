@@ -57,4 +57,12 @@ class TestBlockCandidates(FunctionalTest):
         new_url = self.browser.current_url
         self.assertEqual(cands_url, new_url)
 
+        self.check_for_header_in_table('id_candidates',\
+            'ID Score R.A. Dec. CCD X CCD Y Magnitude Speed Position Angle')
+        # Position below computed for 2015-07-01 17:00:00
+        testlines =[u'1 1.10 10:55:27.54 +39:16:37.2 2103.245 2043.026 19.26 1.2425 0.2',
+                    u'2 2.10 10:55:41.11 +39:04:33.9 1695.444  173.967 20.01 1.2275 357.0']
+        self.check_for_row_in_table('id_candidates', testlines[0])
+        self.check_for_row_in_table('id_candidates', testlines[1])
+
       

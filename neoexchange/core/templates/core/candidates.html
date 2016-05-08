@@ -6,10 +6,51 @@
 {% block bodyclass %}page{% endblock %}
 {% block extramenu %}
     <div class="headingleft">
-	<h1>Candidate Detections for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+        <h1>Candidate Detections for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
     </div>
 {% endblock%}
 {% block main-content %}
     <div id="main" class="fill-height">
+        <div class="fullwidth">
+            <table class="datatable" id="id_candidates">
+                <thead>
+                    <tr>
+                        <th class="list_title">
+                            <span class="sortable" id="id">ID</span>
+                        </th>
+                        <th class="list_project">
+                            <span class="sortable" id="score">Score</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="ra">R.A.</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="dec">Dec.</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="ccd_x">CCD X</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="ccd_y">CCD Y</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="magnitude">Magnitude</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="speed">Speed</span>
+                        </th>
+                        <th>
+                            <span class="sortable" id="pa">Position Angle</span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for line in candidates %}
+                    <tr>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
     </div>
 {% endblock %}
