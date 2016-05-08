@@ -416,6 +416,30 @@ class CatalogSources(models.Model):
         area = pi*self.major_axis*self.minor_axis
         return area
 
+class Candidate(models.Model):
+    '''Class to hold candidate moving object detections found by the moving
+    object code'''
+
+    block = models.ForeignKey(Block)
+    cand_id = models.PositiveIntegerField('Candidate Id')
+    score = models.FloatField('Candidate Score')
+    avg_x = models.FloatField('CCD X co-ordinate')
+    avg_y = models.FloatField('CCD Y co-ordinate')
+    avg_ra = models.FloatField('Observed RA (degrees)')
+    avg_dec = models.FloatField('Observed Dec (degrees)')
+    avg_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
+    speed = models.FloatField('Speed (degrees/day)')
+    position_angle = models.FloatField('Position angle (degrees)')
+    detections = models.BinaryField('Detections array', blank=True, null=True, editable=False)
+
+    def convert_speed(self):
+        '''Convert speed in degrees/day into arcsec/min'''
+        new_speed = (self.speed*3600.0)/(24.0*60.0)
+        return new_speed
+
+    class Meta:
+        verbose_name = _('Candidates')
+
 class ProposalPermission(models.Model):
     '''
     Linking a user to proposals in NEOx to control their access

@@ -47,6 +47,15 @@
                 <tbody>
                 {% for line in candidates %}
                     <tr>
+                        <td>{{line.cand_id}}</td>
+                        <td>{{line.score|floatformat:2}}</td>
+                        <td>{{line.avg_ra|degreestohms:":"}}</td>
+                        <td>{{line.avg_dec|degreestodms:":"}}</td>
+                        <td>{{line.avg_x|floatformat:3}}</td>
+                        <td>{{line.avg_y|floatformat:3}}</td>
+                        <td>{{line.avg_mag|floatformat:2}}</td>
+                        <td>{{line.convert_speed|floatformat:4}}</td>
+                        <td>{{line.position_angle}}</td>
                     </tr>
                 {% endfor %}
                 </tbody>

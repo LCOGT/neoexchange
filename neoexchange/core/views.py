@@ -238,7 +238,7 @@ class CandidatesViewBlock(LoginRequiredMixin, View):
     template = 'core/candidates.html'
     def get(self, request, *args, **kwargs):
        block = Block.objects.get(pk=kwargs['pk'])
-       candidates = {} # Candidates.objects.filter(block=block).order_by('score')
+       candidates = Candidate.objects.filter(block=block).order_by('score')
        return render(request, self.template, {'body':block.body,'candidates':candidates,'slot':block})
 
 def ephemeris(request):
