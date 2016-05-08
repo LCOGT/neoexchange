@@ -438,7 +438,10 @@ class Candidate(models.Model):
         return new_speed
 
     class Meta:
-        verbose_name = _('Candidates')
+        verbose_name = _('Candidate')
+
+    def __unicode__(self):
+        return "%s#%04d" % (self.block.tracking_number, self.cand_id)
 
 class ProposalPermission(models.Model):
     '''

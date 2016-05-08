@@ -39,9 +39,10 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates
+    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from astrometrics.ast_subs import determine_asteroid_type
-from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
+from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
+    read_mtds_file
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
 import logging
@@ -49,6 +50,7 @@ import reversion
 import json
 import requests
 from urlparse import urljoin
+import numpy as np
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -1247,6 +1249,55 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Could not check catalog %s" % catfile)
         return -2
     return new_ldac_catalog
+
+def store_detections(mtdsfile, dbg=False):
+
+    moving_objects = read_mtds_file(mtdsfile)
+    if moving_objects != {} and len(moving_objects.get('detections', [])) > 0:
+        det_frame = moving_objects['frames'][0]
+        try:
+            frame = Frame.objects.get(filename=det_frame[0])
+        except Candidate.MultipleObjectsReturned:
+            logger.error("Frame %s exists multiple times" % det_frame[0])
+            return None
+        except Candidate.DoesNotExist:
+            logger.error("Frame %s does not exist" % det_frame[0])
+            return None
+        for candidate in moving_objects['detections']:
+            # These parameters are the same for all frames and do not need
+            # averaging
+            score = candidate[0]['score']
+            speed = candidate[0]['velocity']
+            position_angle = candidate[0]['pos_angle']
+            # These need averaging across the frames. Accumulate means as doubles
+            # (float64) to avoid loss of precision.
+            mean_ra = candidate['ra'].mean(dtype=np.float64) * 15.0
+            mean_dec = candidate['dec'].mean(dtype=np.float64)
+            mean_x = candidate['x'].mean(dtype=np.float64)
+            mean_y = candidate['y'].mean(dtype=np.float64)
+            # Need to construct a masked array for the magnitude to avoid 
+            # problems with 0.00 values
+            mag = np.ma.masked_array(candidate['mag'], mask=candidate['mag'] <= 0.0)
+            mean_mag = mag.mean(dtype=np.float64)
+
+            # Store candidate moving object
+            params = {  'block' : frame.block,
+                        'cand_id' : candidate['det_number'][0],
+                        'score' : score,
+                        'avg_x' : mean_x,
+                        'avg_y' : mean_y,
+                        'avg_ra' : mean_ra,
+                        'avg_dec' : mean_dec,
+                        'avg_mag' : mean_mag,
+                        'speed' : speed, 
+                        'position_angle' : position_angle,
+                        'detections' : candidate.tostring()
+                    }
+            if dbg: print params
+            cand, created = Candidate.objects.get_or_create(**params)
+            if dbg: print cand, created
+
+    return
 
 def make_plot(request):
 

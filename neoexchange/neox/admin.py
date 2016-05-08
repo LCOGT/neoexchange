@@ -122,6 +122,41 @@ class CatalogSourcesAdmin(admin.ModelAdmin):
     list_filter = ('frame__sitecode', 'flags')
     search_fields = ('frame__filename',)
 
+class CandidateAdmin(admin.ModelAdmin):
+
+    def score_fmt(self, obj):
+        return "%.2f" % obj.score
+    score_fmt.short_description = 'Score'
+    score_fmt.admin_order_field = 'score'
+
+    def avg_x_fmt(self, obj):
+        return "%.2f" % obj.avg_x
+    avg_x_fmt.short_description = 'Mean X co-ord'
+    avg_x_fmt.admin_order_field = 'abg_x'
+
+    def avg_y_fmt(self, obj):
+        return "%.2f" % obj.avg_y
+    avg_y_fmt.short_description = 'Mean Y co-ord'
+    avg_y_fmt.admin_order_field = 'avg_y'
+
+    def avg_ra_fmt(self, obj):
+        return "%.5f" % obj.avg_ra
+    avg_ra_fmt.short_description = 'Mean RA value'
+    avg_ra_fmt.admin_order_field = 'avg_ra'
+
+    def avg_dec_fmt(self, obj):
+        return "%.5f" % obj.avg_dec
+    avg_dec_fmt.short_description = 'Mean Dec value'
+    avg_dec_fmt.admin_order_field = 'avg_dec'
+
+    def avg_mag_fmt(self, obj):
+        return "%.1f" % obj.avg_mag
+    avg_mag_fmt.short_description = 'Mean Mag.'
+    avg_mag_fmt.admin_order_field = 'avg_mag'
+
+    list_display = ('__unicode__', 'cand_id', 'score_fmt', 'avg_x_fmt', 'avg_y_fmt', 'avg_ra_fmt', 'avg_dec_fmt', 'avg_mag_fmt', 'speed', 'position_angle')
+    ordering = ('-block__id', 'cand_id')
+
 admin.site.register(Body,BodyAdmin)
 admin.site.register(Frame,FrameAdmin)
 admin.site.register(Block,BlockAdmin)
@@ -129,3 +164,4 @@ admin.site.register(Proposal,ProposalAdmin)
 admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
 admin.site.register(CatalogSources,CatalogSourcesAdmin)
+admin.site.register(Candidate,CandidateAdmin)
