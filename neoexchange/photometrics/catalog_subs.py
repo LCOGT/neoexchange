@@ -850,9 +850,7 @@ def make_sext_line_list(sext_dict_list):
 def make_sext_files(dest_dir):
 
     num_iter=1
-    prev_filename = 'foo.fits'
-    filename = Frame.objects.get(pk=num_iter).filename
-    while prev_filename not in str(Frame.objects.get(pk=num_iter).filename):
+    while num_iter <= Frame.objects.count():
         sext_dict_list = make_sext_dict_list()
         sext_line_list = make_sext_line_list(sext_dict_list)
         sext_filename = open(os.path.join(dest_dir, str(CatalogSources.objects.get(pk=num_iter).frame).replace('.fits', '.sext')), 'w')
@@ -861,11 +859,6 @@ def make_sext_files(dest_dir):
             sext_filename.write('\n')
         sext_filename.close()
         num_iter += 1
-        try:
-            prev_filename = filename
-            filename = Frame.objects.get(pk=num_iter).filename
-        except:
-            break
 
     return
 
