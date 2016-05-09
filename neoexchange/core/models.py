@@ -12,20 +12,21 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
+from datetime import datetime
+from math import pi, log10
+import reversion
+
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
-from astrometrics.ephem_subs import compute_ephem, comp_FOM
-from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
-from astrometrics.sources_subs import translate_catalog_code
-from astrometrics.ast_subs import normal_to_packed
-from astrometrics.ephem_subs import get_sitecam_params
 from astropy.time import Time
-from datetime import datetime
-from math import pi, log10
-import reversion
+
+from astrometrics.ast_subs import normal_to_packed
+from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params
+from astrometrics.sources_subs import translate_catalog_code
+from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 
 OBJECT_TYPES = (
                 ('N','NEO'),
