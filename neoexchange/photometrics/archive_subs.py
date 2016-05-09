@@ -138,6 +138,18 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False):
                     return True
     return False
 
+def check_for_bad_file(filename, reject_dir='Bad'):
+
+    reject_file = False
+    reject_dir_path = os.path.join(os.path.dirname(filename), reject_dir)
+    if os.path.exists(reject_dir_path) and os.path.isdir(reject_dir_path):
+        frame = os.path.basename(filename)
+        bad_frame = os.path.join(reject_dir_path, frame)
+        if os.path.exists(bad_frame):
+            print "Skipping bad file", os.path.join(reject_dir, frame)
+            reject_file = True
+    return reject_file
+
 def download_files(frames, output_path, dbg=False):
     '''Downloads and saves to disk, the specified files from the new Science
     Archive. Returns a list of the frames that were downloaded.
@@ -158,7 +170,8 @@ def download_files(frames, output_path, dbg=False):
             if dbg: print frame['filename']
             filename = os.path.join(output_path, frame['filename'])
             archive_md5 = frame['version_set'][-1]['md5']
-            if check_for_existing_file(filename, archive_md5, dbg):
+            if check_for_existing_file(filename, archive_md5, dbg) or \
+                check_for_bad_file(filename):
                 print "Skipping existing file", frame['filename']
             else:
                 if dbg: print "Writing file to",filename
