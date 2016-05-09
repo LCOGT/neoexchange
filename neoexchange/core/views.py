@@ -1257,10 +1257,10 @@ def store_detections(mtdsfile, dbg=False):
         det_frame = moving_objects['frames'][0]
         try:
             frame = Frame.objects.get(filename=det_frame[0])
-        except Candidate.MultipleObjectsReturned:
+        except Frame.MultipleObjectsReturned:
             logger.error("Frame %s exists multiple times" % det_frame[0])
             return None
-        except Candidate.DoesNotExist:
+        except Frame.DoesNotExist:
             logger.error("Frame %s does not exist" % det_frame[0])
             return None
         for candidate in moving_objects['detections']:
