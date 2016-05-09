@@ -62,15 +62,55 @@ def mock_check_request_status(tracking_num):
                         "timestamp": "2015-10-22 18:04:26",
                         "state": "COMPLETED",
                         "request_number": "0000445739",
+                        "frames": [
+                            {
+                                "url": "https://archive-api.lcogt.net/frames/993407/",
+                                "headers": "https://archive-api.lcogt.net/frames/993407/headers/",
+                                "data": "",
+                                "filename": "lsc1m009-fl03-20151021-0210-e00.fits.fz"
+                            },
+                            {
+                                "url": "https://archive-api.lcogt.net/frames/993704/",
+                                "headers": "https://archive-api.lcogt.net/frames/993704/headers/",
+                                "data": "",
+                                "filename": "lsc1m009-fl03-20151021-0211-e91.fits.fz"
+                            },
+                            {
+                                "url": "https://archive-api.lcogt.net/frames/993705/",
+                                "headers": "https://archive-api.lcogt.net/frames/993705/headers/",
+                                "data": "",
+                                "filename": "lsc1m009-fl03-20151021-0210-e91.fits.fz"
+                            },
+                            {
+                                "url": "https://archive-api.lcogt.net/frames/993713/",
+                                "headers": "https://archive-api.lcogt.net/frames/993713/headers/",
+                                "data": "",
+                                "filename": "lsc1m009-fl03-20151021-0209-e91.fits.fz"
+                            }
+                        ]
                     }
                 }
             }
     return status
 
+def mock_fetch_headers(header_url):
+    header = {
+            'SITEID' : "ogg",
+            'ENCID'  : "doma",
+            'TELID'  : "1m0a",
+            'DATE_OBS' : "2015-10-22T07:10:29.201",
+            'FILTER': "V",
+            'INSTRUME': "fl03",
+            'ORIGNAME': "lsc1m009-fl03-20151021-0211-e91",
+            'EXPTIME' : 300.0,
+            'GROUPID'   : 'tmp',
+            }
+    return header
+
 def mock_check_request_status_null(tracking_num):
     return []
 
-def mock_check_for_images(eventid):
+def mock_parse_images(eventid):
     images = [{"propid":"LCO2015B-005",
                 "date_obs":"2015-10-22 07:35:41",
                 "origname":"file0.fits",
@@ -85,7 +125,7 @@ def mock_check_for_images(eventid):
             "hdrver":"LCOGT-HDR-1.3.0"}]
     return images
 
-def mock_check_for_2_images(eventid):
+def mock_parse_2_images(eventid):
     images = [{"propid":"LCO2015B-005",
                 "date_obs":"2015-10-22 07:35:41",
                 "origname":"file0.fits",
@@ -94,9 +134,9 @@ def mock_check_for_2_images(eventid):
             "date_obs":"2015-10-22 07:34:41",
             "origname":"file1.fits",
             "hdrver":"LCOGT-HDR-1.3.0"}]
-    return images
+    return images, "2015-10-22 07:33:41.789"
 
-def mock_check_for_images_millisecs(eventid):
+def mock_parse_images_millisecs(eventid):
     images = [{"propid":"LCO2015B-005",
                 "date_obs":"2015-10-22 07:35:41.789",
                 "origname":"file0.fits",
@@ -109,9 +149,10 @@ def mock_check_for_images_millisecs(eventid):
             "date_obs":"2015-10-22 07:33:41.789",
             "origname":"file2.fits",
             "hdrver":"LCOGT-HDR-1.3.0"}]
-    return images
+    return images, "2015-10-22 07:33:41.789"
 
-def mock_check_for_images_bad_date(eventid):
+
+def mock_parse_images_bad_date(eventid):
     images = [{"propid":"LCO2015B-005",
                 "date_obs":"2015-10-22 07:35",
                 "origname":"file0.fits",
@@ -124,7 +165,7 @@ def mock_check_for_images_bad_date(eventid):
             "date_obs":"2015-10-22 07:33",
             "origname":"file2.fits",
             "hdrver":"LCOGT-HDR-1.3.0"}]
-    return images
+    return images, "2015-10-22 07:33"
 
 def mock_ingest_frames(images, block):
     return None

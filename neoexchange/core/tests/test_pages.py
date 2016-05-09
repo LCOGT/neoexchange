@@ -21,12 +21,14 @@ from django.template.loader import render_to_string
 from django.views.generic import ListView
 from django.forms.models import model_to_dict
 from django.contrib.auth.models import User
+from mock import patch
 from unittest import skipIf
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.models import Body, Proposal, Block
 from neox.settings import VERSION
+from neox.tests.mocks import mock_check_request_status
 
 class HomePageTest(TestCase):
 
@@ -280,6 +282,7 @@ class BlocksPageTest(TestCase):
         found = reverse('block-view',kwargs={'pk':1})
         self.assertEqual(found, '/block/1/')
 
+    @patch('core.views.check_request_status', mock_check_request_status)
     def test_block_detail_page_renders_template(self):
         self.setUp()
         blocks = Block.objects.all()

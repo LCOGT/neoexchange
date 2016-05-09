@@ -1,5 +1,12 @@
 from django.conf import settings
+from core.models import Frame
+from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
+    determine_darkness_times, determine_slot_length, determine_exp_time_count, \
+    MagRangeError,  LCOGT_site_codes
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 
@@ -22,49 +29,23 @@ def fetch_from_archive(tracking_num, proposal_code):
 
 def fetch_headers(header_url):
     filters = []
-    origname = origname[0:31]
     headers = {'Authorization': 'Token {}'.format(settings.ARCHIVE_API_TOKEN)}
     try:
-        response = requests.get(header_url, headers=headers, timeout=20).json()
+        response = requests.get(header_url, headers=headers, timeout=20)
     except:
         return []
-    if response.get('data', None):
-        date_obs = datetime.strptime(data['DATE_OBS'][:19],'%Y-%m-%d %H:%M:%S')
+    if response.json().get('data', None):
+        return response['data']
     else:
-        date_obs = None
-
-    return date_obs
-
-def fetch_observations(tracking_num, proposal_code):
-    query = "/find?propid=%s&order_by=-date_obs&tracknum=%s" % (proposal_code,tracking_num)
-    data = framedb_lookup(query)
-    if data:
-        imgs = [(d["date_obs"],d["origname"][:-5]) for d in data]
-        return imgs
-    else:
-        return False
-
-def check_for_images(eventid=False):
-    images = None
-    client = requests.session()
-    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
-    data_url = 'https://data.lcogt.net/find?blkuid=%s&order_by=-date_obs&full_header=1' % eventid
-    try:
-        resp = client.post(data_url, data=login_data, timeout=20)
-        images = resp.json()
-    except ValueError:
-        logger.error("Request API did not return JSON %s" % resp.text)
-    except requests.exceptions.Timeout:
-        logger.error("Data view timed out")
-    return images
+        return None
 
 def create_frame(params, block=None):
     # Return None if params is just whitespace
     if not params:
         return None
     our_site_codes = LCOGT_site_codes()
-    if params.get('groupid', None):
-    # In these cases we are parsing the FITS header
+    if params.get('GROUPID', None):
+        # In these cases we are parsing the FITS header
         frame_params = frame_params_from_block(params, block)
     else:
         # We are parsing observation logs
@@ -79,15 +60,15 @@ def create_frame(params, block=None):
 
 def frame_params_from_block(params, block):
     # In these cases we are parsing the FITS header
-    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
-    frame_params = { 'midpoint' : params.get('date_obs', None),
+    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
+    frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
-                     'filter'   : params.get('filter_name', "B"),
+                     'filter'   : params.get('FILTER', "B"),
                      'frametype': Frame.SINGLE_FRAMETYPE,
                      'block'    : block,
-                     'instrument': params.get('instrume', None),
-                     'filename'  : params.get('origname', None),
-                     'exptime'   : params.get('exptime', None),
+                     'instrument': params.get('INSTRUME', None),
+                     'filename'  : params.get('ORIGNAME', None),
+                     'exptime'   : params.get('EXPTIME', None),
                  }
     return frame_params
 
@@ -123,13 +104,29 @@ def parse_frames(frame_list):
     '''
     ODIN API returns all data products not just the final reduction
     For the most recent frame, find the date_obs from its FITS header
-    returns list of frames which end in 91 == final reduction and date_obs
+    returns list of frame headers which end in 91 == final reduction and date_obs
     '''
-    frames = []
+    frame_header = []
+    date_obs = False
     for frame in frame_list:
         if frame['filename'].endswith('e91.fits.fz'):
-            frames.append(frame)
-    # Find DATE_OBS
-    date_obs = fetch_headers(frame[0]['headers'])
+            # API call to retrieve headers
+            header = fetch_headers(frame['headers'])
+            if header:
+                frame_header.append(header)
+            else:
+                logger.error('No header returned for %s' % frame['filename'])
+    # Find DATE_OBS of most recent frame
+    if frame_header:
+        date_obs = frame_header[0]['DATE_OBS']
+    return frame_header, date_obs
 
-    return frames, date_obs
+def image_list(frames):
+    '''
+    Produces a list of image basenames/orignames from a request object
+    '''
+    frame_list = []
+    for frame in frames:
+        if frame['filename'].endswith('e91.fits.fz'):
+            frame_list.append(frame['filename'][0:31])
+    return frame_list

@@ -40,7 +40,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates
 from astrometrics.ast_subs import determine_asteroid_type
-from frame_proc import parse_frames
+from frame_proc import parse_frames, create_frame, ingest_frames, image_list
 import logging
 import reversion
 import json
@@ -143,7 +143,12 @@ class BlockDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(BlockDetailView, self).get_context_data(**kwargs)
-        context['images'] = fetch_observations(context['block'].tracking_number, context['block'].proposal.code)
+        resp = check_request_status(context['block'].tracking_number)
+        if resp:
+            for rid, req in resp['requests'].items():
+                if req['frames']:
+                    images = image_list(req['frames'])
+                    context['images'] = images
         return context
 
 
@@ -1055,21 +1060,29 @@ def block_status(block_id):
     # For each of these times find out if any data was taken and if it was close to what we wanted
     num_scheduled = 0 # Number of times the scheduler tried to observe this
     for k,v in data['requests'].items():
-        logger.error('Request no. %s' % k)
+        logger.debug('Request no. %s' % k)
         if not v['schedule']:
             logger.error('No schedule returned by API')
+            return False
+        # Remove anything but reduced frames and look up headers
+        if not v.get('frames',None):
+            logger.error('No frames returned by API')
+            return False
         images, date_obs = parse_frames(v['frames'])
+        try:
+            last_image = datetime.strptime(date_obs[0:19],'%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            if "T" in date_obs:
+                last_image = datetime.strptime(date_obs[0:19],'%Y-%m-%dT%H:%M:%S')
+            else:
+                logger.error('Image datetime stamp is badly formatted %s' % date_obs)
+                return False
         for event in v['schedule']:
             if images:
                 num_scheduled += 1
-                try:
-                    last_image = datetime.strptime(date_obs,'%Y-%m-%d %H:%M:%S')
-                except ValueError:
-                    logger.error('Image datetime stamp is badly formatted %s' % images[0]['date_obs'])
-                    return False
                 if len(images) >= 3:
                     block.num_observed = num_scheduled
-                    logger.error('Image %s x %s' % (event['id'], num_scheduled))
+                    logger.debug('Image %s x %s' % (event['id'], num_scheduled))
                     if (not block.when_observed or last_image > block.when_observed):
                         block.when_observed = last_image
                     if block.block_end < datetime.utcnow():
