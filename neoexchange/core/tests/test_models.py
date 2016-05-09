@@ -17,13 +17,14 @@ from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from django.db.utils import IntegrityError
+from numpy import array, arange
 from unittest import skipIf
 from mock import patch
 from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources
+    CatalogSources, Candidate
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -804,3 +805,104 @@ class TestCatalogSources(TestCase):
         self.assertEqual(new_catsrc.obs_x, 42.0)
         self.assertEqual(new_catsrc.frame.filter, 'w')
         self.assertEqual(new_catsrc.frame.exptime, 40.0)
+
+class TestCandidate(TestCase):
+
+    def setUp(self):
+        # Initialise with a test body, a test proposal and a test frame
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-07-13 18:00:00',
+                         'block_end'   : '2015-07-14 03:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 40.0,
+                         'active'   : True,
+                         'num_observed' : 1,
+                         'when_observed' : '2015-07-13 21:20:00',
+                         'reported' : False
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : datetime(2015,07,13,21,9,51),
+                    'block'         : self.test_block,
+                 }
+        self.test_frame = Frame.objects.create(**frame_params)
+
+        # Pylint can go to hell...
+        self.dtypes =\
+             {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
+                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
+             }
+
+        self.dets_array = array([(0001, 1, 3283, 2457444.656045, 10.924317, 39.27700, 2103.245, 2043.026, 19.26, 12.970, 1.764, -60.4, 0.27, 1.39, 34, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (0001, 2,    0, 2457444.657980, 10.924298, 39.27793, 2103.468, 2043.025,  0.00,  1.000, 1.000,   0.0, 0.27, 0.00,  0, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (0001, 3, 3409, 2457444.659923, 10.924271, 39.27887, 2104.491, 2043.034, 19.20, 11.350, 1.373, -57.3, 0.27, 1.38, 52, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (0001, 4, 3176, 2457444.661883, 10.924257, 39.27990, 2104.191, 2043.844, 19.01, 10.680, 1.163, -41.5, 0.27, 1.52, 52, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (0001, 5, 3241, 2457444.663875, 10.924237, 39.28087, 2104.365, 2043.982, 19.17, 12.940, 1.089, -31.2, 0.27, 1.27, 55, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (0001, 6, 3319, 2457444.665812, 10.924220, 39.28172, 2104.357, 2043.175, 18.82, 12.910, 1.254, -37.8, 0.27, 1.38, 69, 1.10, 0.497, 0.2, 9.0, 6.7),],
+                                dtype=self.dtypes)
+
+        self.dets_byte_array = self.dets_array.tostring()
+        cand_params = { 'block'  : self.test_block,
+                        'cand_id' : 0001,
+                        'score'  : 1.42,
+                        'avg_x'  : 1024.0,
+                        'avg_y'  : 1042.3,
+                        'avg_ra' : 123.42,
+                        'avg_dec' : -42.3,
+                        'avg_mag' : 20.7,
+                        'speed'   : 0.497,
+                        'position_angle' : 90.4,
+                        'detections' : self.dets_byte_array
+                       }
+        self.test_candidate = Candidate.objects.create(**cand_params)
+
+        self.maxDiff = None
+
+
+    def test_convert_speed(self):
+
+        expected_value = 1.2425
+
+        new_speed = self.test_candidate.convert_speed()
+
+        self.assertEqual(expected_value, new_speed)
+
+    def test_unpack_dets_array(self):
+        new_dets_array = self.test_candidate.unpack_dets()
+
+        self.assertEqual(type(self.dets_array), type(new_dets_array))
+        for frame in arange(self.dets_array.shape[0]):
+            for column in self.dets_array.dtype.names:
+                self.assertAlmostEqual(self.dets_array[column][frame], new_dets_array[column][frame], 7)

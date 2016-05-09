@@ -24,6 +24,7 @@ from astropy.io import fits
 from astropy.io.votable import parse
 from numpy import loadtxt, split
 
+from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
 from photometrics.catalog_subs import oracdr_catalog_mapping
 
@@ -517,9 +518,6 @@ def read_mtds_file(mtdsfile, dbg=False):
     except IOError:
         return {}
 
-    dtypes = {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
-                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
-             }
     # Read header
     version = mtds_fh.readline().rstrip()
     frames_string = mtds_fh.readline()
@@ -548,6 +546,8 @@ def read_mtds_file(mtdsfile, dbg=False):
     # If we then vertically split the array on the number of detections, we
     # will get # detection sub arrays of # frames x 20 columns which we can
     # pickle/store later
+
+    dtypes = detections_array_dtypes()
 
     dets_array = loadtxt(mtds_fh, dtype=dtypes)
 

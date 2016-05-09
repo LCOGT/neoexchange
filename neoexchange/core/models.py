@@ -22,6 +22,7 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from astropy.time import Time
+from numpy import fromstring
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params
@@ -417,6 +418,16 @@ class CatalogSources(models.Model):
         area = pi*self.major_axis*self.minor_axis
         return area
 
+def detections_array_dtypes():
+    '''Declare the columns and types of the structured numpy array for holding
+    the per-frame detections from the mtdlink moving object code'''
+
+    dtypes = {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
+                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
+             }
+
+    return dtypes
+
 class Candidate(models.Model):
     '''Class to hold candidate moving object detections found by the moving
     object code'''
@@ -437,6 +448,13 @@ class Candidate(models.Model):
         '''Convert speed in degrees/day into arcsec/min'''
         new_speed = (self.speed*3600.0)/(24.0*60.0)
         return new_speed
+
+    def unpack_dets(self):
+        '''Unpacks the binary BLOB from the detections field into a numpy
+        structured array'''
+        dtypes = detections_array_dtypes()
+        dets = fromstring(self.detections, dtype=dtypes)
+        return dets
 
     class Meta:
         verbose_name = _('Candidate')
