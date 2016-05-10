@@ -128,6 +128,7 @@ INSTALLED_APPS = (
     'suit',
     'neox',
     'core',
+    'astrometer',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
