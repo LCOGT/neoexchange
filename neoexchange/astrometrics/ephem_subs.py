@@ -1125,17 +1125,17 @@ def LCOGT_site_codes():
 
 def LCOGT_domes_to_site_codes(siteid, encid, telid):
     '''Return a mapping of LCOGT Site-Enclosure-Telescope to site codes'''
-    valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
-                         'LSC-DOMA-1M0A' : 'W85',
-                         'LSC-DOMB-1M0A' : 'W86',
-                         'LSC-DOMC-1M0A' : 'W87',
-                         'CPT-DOMA-1M0A' : 'K91',
-                         'CPT-DOMB-1M0A' : 'K92',
-                         'CPT-DOMC-1M0A' : 'K93',
-                         'COJ-DOMA-1M0A' : 'Q63',
-                         'COJ-DOMB-1M0A' : 'Q64',
-                         'OGG-CLMA-2M0A' : 'F65',
-                         'COJ-CLMA-2M0A' : 'E10' }
+    valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37', 
+                         'LSC-DOMA-1M0A' : 'W85', 
+                         'LSC-DOMB-1M0A' : 'W86', 
+                         'LSC-DOMC-1M0A' : 'W87', 
+                         'CPT-DOMA-1M0A' : 'K91', 
+                         'CPT-DOMB-1M0A' : 'K92', 
+                         'CPT-DOMC-1M0A' : 'K93', 
+                         'COJ-DOMA-1M0A' : 'Q63', 
+                         'COJ-DOMB-1M0A' : 'Q64', 
+                         'OGG-CLMA-2M0A' : 'F65', 
+                         'COJ-CLMA-2M0A' : 'E10' } 
 
     instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
     return valid_site_codes.get(instance, 'XXX')

@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+Copyright (C) 2014-2015 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -12,22 +12,18 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
-from datetime import datetime
-from math import pi, log10
-import reversion
-
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
-from astropy.time import Time
-from numpy import fromstring
-
-from astrometrics.ast_subs import normal_to_packed
-from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params
-from astrometrics.sources_subs import translate_catalog_code
+from astrometrics.ephem_subs import compute_ephem, comp_FOM
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
+from astrometrics.sources_subs import translate_catalog_code
+from astrometrics.ast_subs import normal_to_packed
+from astropy.time import Time
+from datetime import datetime
+import reversion
 
 OBJECT_TYPES = (
                 ('N','NEO'),
@@ -358,109 +354,6 @@ class SourceMeasurement(models.Model):
         verbose_name = _('Source Measurement')
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
-
-class CatalogSources(models.Model):
-    '''Class to represent the measurements (X, Y, RA, Dec, Magnitude, shape and
-    errors) extracted from a catalog extraction performed on a Frame (having
-    site code, date/time etc.). These will allow the storage of information for
-    reference stars and candidate objects, allowing the display and measurement
-    of objects.
-    '''
-
-#    body = models.ForeignKey(Body)
-    frame = models.ForeignKey(Frame)
-    obs_x = models.FloatField('CCD X co-ordinate')
-    obs_y = models.FloatField('CCD Y co-ordinate')
-    obs_ra = models.FloatField('Observed RA')
-    obs_dec = models.FloatField('Observed Dec')
-    obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
-    err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
-    err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)
-    err_obs_mag = models.FloatField('Error on Observed Magnitude', blank=True, null=True)
-    background = models.FloatField('Background')
-    major_axis = models.FloatField('Ellipse major axis')
-    minor_axis = models.FloatField('Ellipse minor axis')
-    position_angle = models.FloatField('Ellipse position angle')
-    ellipticity = models.FloatField('Ellipticity')
-    aperture_size = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
-    flags = models.IntegerField('Source flags', help_text='Bitmask of flags', default=0)
-    flux_max = models.FloatField('Peak flux above background', blank=True, null=True)
-    threshold = models.FloatField('Detection threshold above background', blank=True, null=True)
-
-    class Meta:
-        verbose_name = _('Catalog Source')
-        verbose_name_plural = _('Catalog Sources')
-        db_table = 'catalog_source'
-
-    def make_elongation(self):
-        elongation = self.major_axis/self.minor_axis
-        return elongation
-
-    def make_fwhm(self):
-        fwhm = ((self.major_axis+self.minor_axis)/2)*2
-        return fwhm
-
-    def make_mu_max(self):
-        pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
-        mu_max = (-2.5*log10(self.flux_max/pixel_scale**2))+self.frame.zeropoint
-        return mu_max
-
-    def make_mu_threshold(self):
-        pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
-        mu_threshold = (-2.5*log10(self.threshold/pixel_scale**2))+self.frame.zeropoint
-        return mu_threshold
-
-    def make_flux(self):
-        flux = 10.0**((self.obs_mag)/2.5)
-        return flux
-
-    def make_area(self):
-        area = pi*self.major_axis*self.minor_axis
-        return area
-
-def detections_array_dtypes():
-    '''Declare the columns and types of the structured numpy array for holding
-    the per-frame detections from the mtdlink moving object code'''
-
-    dtypes = {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
-                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
-             }
-
-    return dtypes
-
-class Candidate(models.Model):
-    '''Class to hold candidate moving object detections found by the moving
-    object code'''
-
-    block = models.ForeignKey(Block)
-    cand_id = models.PositiveIntegerField('Candidate Id')
-    score = models.FloatField('Candidate Score')
-    avg_x = models.FloatField('CCD X co-ordinate')
-    avg_y = models.FloatField('CCD Y co-ordinate')
-    avg_ra = models.FloatField('Observed RA (degrees)')
-    avg_dec = models.FloatField('Observed Dec (degrees)')
-    avg_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
-    speed = models.FloatField('Speed (degrees/day)')
-    position_angle = models.FloatField('Position angle (degrees)')
-    detections = models.BinaryField('Detections array', blank=True, null=True, editable=False)
-
-    def convert_speed(self):
-        '''Convert speed in degrees/day into arcsec/min'''
-        new_speed = (self.speed*3600.0)/(24.0*60.0)
-        return new_speed
-
-    def unpack_dets(self):
-        '''Unpacks the binary BLOB from the detections field into a numpy
-        structured array'''
-        dtypes = detections_array_dtypes()
-        dets = fromstring(self.detections, dtype=dtypes)
-        return dets
-
-    class Meta:
-        verbose_name = _('Candidate')
-
-    def __unicode__(self):
-        return "%s#%04d" % (self.block.tracking_number, self.cand_id)
 
 class ProposalPermission(models.Model):
     '''

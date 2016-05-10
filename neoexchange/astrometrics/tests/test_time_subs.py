@@ -261,4 +261,3 @@ class TestGetSemesterDates(TestCase):
 
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
-
