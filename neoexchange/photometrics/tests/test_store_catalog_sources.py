@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from datetime import datetime, timedelta
 from unittest import skipIf
-from math import sqrt, log10, log
+from math import sqrt, log10, log, pow
 import os
 import mock
 from django.test import TestCase
@@ -93,3 +93,19 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertEqual(CatalogSources.objects.count(), 0)
         self.assertEqual(num_sources_created, 0)
         self.assertEqual(num_in_table, 0)
+
+    def test_ldac_catalog(self):
+
+        expected_num_sources_created = 885
+        expected_num_in_table = 885
+        expected_threshold = pow(10, -5.338894/-2.5) * pow(0.467,2)
+        num_sources_created, num_in_table = \
+         store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC')
+
+        self.assertEqual(expected_num_sources_created, num_sources_created)
+        self.assertEqual(expected_num_in_table, num_in_table)
+
+        last_catsrc = CatalogSources.objects.last()
+
+        self.assertAlmostEqual(last_catsrc.flux_max, 242.60461, 5)
+        self.assertAlmostEqual(last_catsrc.threshold, expected_threshold, 5)
