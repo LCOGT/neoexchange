@@ -28,12 +28,12 @@ var data = {{summary|safe}};
 
         var margin = {
                                 top: 20,
-                                right: 30,
-                                bottom: 60,
+                                right: 20,
+                                bottom: 40,
                                 left: 60
                         },
                                 width = 900 - margin.left - margin.right,
-                                height = 345 - margin.top - margin.bottom,
+                                height = 315 - margin.top - margin.bottom,
                                 that = this;
 
 
@@ -69,7 +69,7 @@ var data = {{summary|safe}};
       y.domain([0, d3.max(data, function(d) { return d.total; })]);
                         x.domain(data.map(function (d) {return d.proposal;}));
 
-                        svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis).selectAll("text").style("text-anchor", "start").attr("dx", "-.8em").attr("transform", "rotate(25)" );
+                        svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis);
 
                         svg.append("g").attr("class", "y axis").call(yAxis);
 

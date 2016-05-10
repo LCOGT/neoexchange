@@ -42,8 +42,8 @@ table.datatable  tr:hover {
 
 .keyvalue-table>tbody>tr>td {
   vertical-align: middle;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 11px;
+  padding-bottom: 11px;
   border-top: none;
   border-bottom: 1px solid #ddd;
 }
@@ -391,11 +391,16 @@ form.filter_form input { color: black; }
     width: 100%;
     z-index: 100;
 }
-
+.extramenu_padder {
+margin: 12px 32px 12px 32px;
+box-sizing: border-box;
+-moz-box-sizing: border-box;
+-webkit-box-sizing: border-box;
+}
 .buttons .button { margin-left:0.5em; margin-right: 0px; display: inline-block; }
 .buttons .button:first-child { margin-left:0em; }
 #extramenu .buttons { float: right; display: inline-block; }
-#extramenu .headingleft { display: inline-block; margin: 8px 0 0 ; }
+#extramenu .headingleft { display: inline-block; }
 a#menutoggle { display: none; }
 .buttons .buttongroup { display: inline-block; }
 body.view .button.disable { display: none; }
