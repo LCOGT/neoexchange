@@ -15,7 +15,7 @@
     <div class="container">
         <div id="main">
             {% if body.id  and form %}
-            <h4 class="section-title">Parameters for: {{body.current_name}}</h4>
+            <h5 class="section-title">Parameters for: {{body.current_name}}</h5>
             <div class="section-title">
             <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
             {% csrf_token %}
