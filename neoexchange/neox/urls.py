@@ -23,8 +23,6 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary
 
-from astrometer.views import BlockFramesView, fitsanalyse
-
 from django.contrib.auth.views import login, logout
 
 admin.autodiscover()
@@ -37,7 +35,6 @@ urlpatterns = [
     url(r'^block/(?P<pk>\d+)/upload/$',UploadReport.as_view(), name='upload-report'),
     url(r'^block/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBlock.as_view(template='core/mpcreport.html'), name='view-report-mpc'),
     url(r'^block/(?P<pk>\d+)/measurements/$', MeasurementViewBlock.as_view(), name='view-report'),
-    url(r'^block/(?P<pk>\d+)/astrometer/$',BlockFramesView.as_view(), name='block-ast'),
     url(r'^block/(?P<pk>\d+)/$',BlockDetailView.as_view(model=Block), name='block-view'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
@@ -48,7 +45,6 @@ urlpatterns = [
     url(r'^ranking/$', ranking, name='ranking'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
-    url(r'^fitsanalyse/$', fitsanalyse, name='fitsanalyse'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout' ),
     url(r'^admin/', include(admin.site.urls)),
