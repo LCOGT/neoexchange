@@ -7,7 +7,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 
 from core.views import check_catalog_and_refit
-from photometrics.catalog_subs import store_catalog_sources
+from photometrics.catalog_subs import store_catalog_sources, make_sext_file
 #from core.models import CatalogSources
 
 class Command(BaseCommand):
@@ -82,6 +82,8 @@ class Command(BaseCommand):
 
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
+            self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))
+            fits_filename = make_sext_file(temp_dir, new_catalog)
 
         # Step 4: Run MTDLINK to find moving objects
 

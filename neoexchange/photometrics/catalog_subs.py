@@ -817,23 +817,51 @@ def make_sext_dict(catsrc, num_iter):
 
 def make_sext_file_line(sext_params):
 
-    print_format = "      %4i   %8.3f   %8.3f  %7.4f %5.1f    %5.3f     %4.2f   %1i  %4.2f   %6.1f   %2i %9.5f %9.5f"
+    print_format = "      %4i   %8.3f   %8.3f  %7.4f %5.1f    %5.3f     %4.2f   %1i  %4.2f   %12.1f   %2i %9.5f %9.5f"
 
     sext_line = print_format % (sext_params['number'], sext_params['obs_x'], sext_params['obs_y'], sext_params['obs_mag'], sext_params['theta'], sext_params['elongation'], sext_params['fwhm'], sext_params['flags'], sext_params['deltamu'], sext_params['flux'], sext_params['area'], sext_params['ra'], sext_params['dec'])
 
     return sext_line
 
-def make_sext_dict_list():
+def make_sext_dict_list(new_catalog):
 
     sext_dict_list = []
 
+    if 'e11_ldac.fits' in new_catalog:
+        fits_filename = new_catalog.replace('e11_ldac.fits', 'e00.fits')
+        fits_filename = fits_filename.split('/')[-1]
+    elif 'e10_ldac.fits' in new_catalog:
+        fits_filename = new_catalog.replace('e10_ldac.fits', 'e00.fits')
+        fits_filename = fits_filename.split('/')[-1]
+    elif 'e91_ldac.fits' in new_catalog:
+        fits_filename = new_catalog.replace('e91_ldac.fits', 'e00.fits')
+        fits_filename = fits_filename.split('/')[-1]
+    elif 'e90_ldac.fits' in new_catalog:
+        fits_filename = new_catalog.replace('e90_ldac.fits', 'e00.fits')
+        fits_filename = fits_filename.split('/')[-1]
+    elif 'e11_cat.fits' in new_catalog:
+        fits_filename = new_catalog.replace('e11_cat.fits', 'e00.fits')
+        fits_filename = fits_filename.split('/')[-1]
+    elif 'e10_cat.fits' in new_catalog:
+        fits_filename = new_catalog.replace('e10_cat.fits', 'e00.fits')
+        fits_filename = fits_filename.split('/')[-1]
+    elif 'e91_cat.fits' in new_catalog:
+        fits_filename = new_catalog.replace('e91_cat.fits', 'e00.fits')
+        fits_filename = fits_filename.split('/')[-1]
+    elif 'e90_cat.fits' in new_catalog:
+        fits_filename = new_catalog.replace('e90_cat.fits', 'e00.fits')
+        fits_filename = fits_filename.split('/')[-1]
+    else:
+        fits_filename = new_catalog
+        fits_filename = fits_filename.split('/')[-1]
+
+    sources = CatalogSources.objects.filter(frame__filename=fits_filename)
     num_iter = 1
-    while num_iter <= CatalogSources.objects.count():
-        source = CatalogSources.objects.get(pk=num_iter)
+    for source in sources:
         sext_dict_list.append(make_sext_dict(source, num_iter))
         num_iter += 1
 
-    return sext_dict_list
+    return sext_dict_list, fits_filename
 
 def make_sext_line_list(sext_dict_list):
 
@@ -847,20 +875,17 @@ def make_sext_line_list(sext_dict_list):
 
     return sext_line_list
 
-def make_sext_files(dest_dir):
+def make_sext_file(dest_dir, new_catalog):
 
-    num_iter=1
-    while num_iter <= Frame.objects.count():
-        sext_dict_list = make_sext_dict_list()
-        sext_line_list = make_sext_line_list(sext_dict_list)
-        sext_filename = open(os.path.join(dest_dir, str(CatalogSources.objects.get(pk=num_iter).frame).replace('.fits', '.sext')), 'w')
-        for line in sext_line_list:
-            sext_filename.write(line)
-            sext_filename.write('\n')
-        sext_filename.close()
-        num_iter += 1
+    sext_dict_list, fits_filename = make_sext_dict_list(new_catalog)
+    sext_line_list = make_sext_line_list(sext_dict_list)
+    sext_filename = open(os.path.join(dest_dir, fits_filename.replace('.fits', '.sext')), 'w')
+    for line in sext_line_list:
+        sext_filename.write(line)
+        sext_filename.write('\n')
+    sext_filename.close()
 
-    return
+    return fits_filename
 
 def determine_filenames(product):
     '''Given a passed <product> filename, determine the corresponding catalog
