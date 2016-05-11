@@ -1263,12 +1263,15 @@ def store_detections(mtdsfile, dbg=False):
         except Frame.DoesNotExist:
             logger.error("Frame %s does not exist" % det_frame[0])
             return None
+        jds = np.array([x[1] for x in moving_objects['frames']], dtype=np.float64)
+        mean_jd = jds.mean(dtype=np.float64)
+        mean_dt = jd_utc2datetime(mean_jd)
         for candidate in moving_objects['detections']:
             # These parameters are the same for all frames and do not need
             # averaging
             score = candidate[0]['score']
             speed = candidate[0]['velocity']
-            position_angle = candidate[0]['pos_angle']
+            sky_position_angle = candidate[0]['sky_pos_angle']
             # These need averaging across the frames. Accumulate means as doubles
             # (float64) to avoid loss of precision.
             mean_ra = candidate['ra'].mean(dtype=np.float64) * 15.0
@@ -1283,6 +1286,7 @@ def store_detections(mtdsfile, dbg=False):
             # Store candidate moving object
             params = {  'block' : frame.block,
                         'cand_id' : candidate['det_number'][0],
+                        'avg_midpoint' : mean_dt,
                         'score' : score,
                         'avg_x' : mean_x,
                         'avg_y' : mean_y,
@@ -1290,7 +1294,7 @@ def store_detections(mtdsfile, dbg=False):
                         'avg_dec' : mean_dec,
                         'avg_mag' : mean_mag,
                         'speed' : speed, 
-                        'position_angle' : position_angle,
+                        'sky_motion_pa' : sky_position_angle,
                         'detections' : candidate.tostring()
                     }
             if dbg: print params

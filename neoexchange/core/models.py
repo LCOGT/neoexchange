@@ -367,7 +367,6 @@ class CatalogSources(models.Model):
     of objects.
     '''
 
-#    body = models.ForeignKey(Body)
     frame = models.ForeignKey(Frame)
     obs_x = models.FloatField('CCD X co-ordinate')
     obs_y = models.FloatField('CCD Y co-ordinate')
@@ -422,7 +421,7 @@ def detections_array_dtypes():
     '''Declare the columns and types of the structured numpy array for holding
     the per-frame detections from the mtdlink moving object code'''
 
-    dtypes = {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
+    dtypes = {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'sky_pos_angle', 'pixels_frame', 'streak_length'),
                 'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
              }
 
@@ -435,13 +434,14 @@ class Candidate(models.Model):
     block = models.ForeignKey(Block)
     cand_id = models.PositiveIntegerField('Candidate Id')
     score = models.FloatField('Candidate Score')
-    avg_x = models.FloatField('CCD X co-ordinate')
-    avg_y = models.FloatField('CCD Y co-ordinate')
-    avg_ra = models.FloatField('Observed RA (degrees)')
-    avg_dec = models.FloatField('Observed Dec (degrees)')
-    avg_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
+    avg_midpoint = models.DateTimeField('Average UTC midpoint')
+    avg_x = models.FloatField('Average CCD X co-ordinate')
+    avg_y = models.FloatField('Average CCD Y co-ordinate')
+    avg_ra = models.FloatField('Average Observed RA (degrees)')
+    avg_dec = models.FloatField('Average Observed Dec (degrees)')
+    avg_mag = models.FloatField('Average Observed Magnitude', blank=True, null=True)
     speed = models.FloatField('Speed (degrees/day)')
-    position_angle = models.FloatField('Position angle (degrees)')
+    sky_motion_pa = models.FloatField('Position angle of motion on the sky (degrees)')
     detections = models.BinaryField('Detections array', blank=True, null=True, editable=False)
 
     def convert_speed(self):

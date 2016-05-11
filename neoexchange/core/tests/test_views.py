@@ -36,8 +36,8 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement, block_status, clean_crossid, create_frame, \
     frame_params_from_block, schedule_check, summarise_block_efficiency, \
-    check_catalog_and_refit
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame
+    check_catalog_and_refit, store_detections
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
 from core.forms import EphemQuery
 
 
@@ -1857,3 +1857,65 @@ class TestCheckCatalogAndRefit(TestCase):
 
         self.assertEqual(expected_file, status)
         self.assertTrue(os.path.exists(expected_file))
+
+class TestStoreDetections(TestCase):
+
+    def setUp(self):
+
+        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_mtds = os.path.join(self.phot_tests_dir, 'elp1m008-fl05-20160225-0095-e90.mtds')
+        # Initialise with three test bodies a test proposal and several blocks.
+        # The first body has a provisional name (e.g. a NEO candidate), the
+        # other 2 do not (e.g. Goldstone targets)
+        params = {  'provisional_name' : 'P10sSA6',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body_with_provname, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015B-005',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_with_provname,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
+                         'block_start' : '2016-02-26 03:00:00',
+                         'block_end'   : '2016-02-26 13:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = { 'block'    : self.test_block,
+                         'filename' : 'elp1m008-fl05-20160225-0095-e90.fits',
+                         'sitecode' : 'V37',
+                         'midpoint' : datetime(2016, 2, 26, 3, 44, 42)
+                       }
+
+        self.test_frame = Frame.objects.create(**frame_params)
+
+    def test_store_detections(self):
+        expected_num_cands = 23
+
+        store_detections(self.test_mtds)
+
+        cands = Candidate.objects.all()
+        self.assertEqual(expected_num_cands, len(cands))
