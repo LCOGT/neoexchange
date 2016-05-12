@@ -1,5 +1,8 @@
 from .base import FunctionalTest
 from django.core.urlresolvers import reverse
+from mock import patch
+from neox.tests.mocks import mock_check_request_status
+
 #from selenium import webdriver
 
 class BlocksListValidationTest(FunctionalTest):
@@ -35,6 +38,7 @@ class BlocksListValidationTest(FunctionalTest):
 
 class BlockDetailValidationTest(FunctionalTest):
 
+    @patch('core.views.check_request_status', mock_check_request_status)
     def test_can_show_block_details(self):
         # A new user, Timo, comes along to the site
         self.browser.get(self.live_server_url)

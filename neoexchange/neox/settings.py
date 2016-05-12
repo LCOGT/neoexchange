@@ -232,6 +232,8 @@ NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
 REQUEST_API_URL = 'https://lcogt.net/observe/service/request/get/userrequeststatus/'
+ARCHIVE_API_URL = 'https://archive-api.lcogt.net/frames/'
+ARCHIVE_API_TOKEN = os.environ.get('ARCHIVE_API_TOKEN','')
 
 #######################
 # Test Database setup #
