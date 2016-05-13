@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -37,7 +37,8 @@ from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
-from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, parse_neocp_decimal_date
+from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
+    parse_neocp_decimal_date, get_semester_dates
 from astrometrics.ast_subs import determine_asteroid_type
 import logging
 import reversion
@@ -59,13 +60,16 @@ class LoginRequiredMixin(object):
         return login_required(view)
 
 def user_proposals(user):
+    '''
+    Returns active proposals the given user has permissions for
+    '''
     if type(user) != User:
         try:
             user = User.objects.get(username=user)
         except ObjectDoesNotExist:
             raise ValidationError
 
-    proposals = Proposal.objects.filter(proposalpermission__user=user)
+    proposals = Proposal.objects.filter(proposalpermission__user=user, active=True)
 
     return proposals
 
@@ -82,6 +86,28 @@ class MyProposalsMixin(object):
 def home(request):
     params = build_unranked_list_params()
     return render(request, 'core/home.html', params)
+
+
+class BlockTimeSummary(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        block_summary = summarise_block_efficiency()
+        return render(request, 'core/block_time_summary.html', {'summary':json.dumps(block_summary)})
+
+def summarise_block_efficiency():
+    summary = []
+    proposals = Proposal.objects.all()
+    for proposal in proposals:
+        blocks = Block.objects.filter(proposal=proposal)
+        observed = blocks.filter(num_observed__isnull=False)
+        if len(blocks) > 0:
+            proposal_summary = {
+                                 'proposal':proposal.code,
+                                 'Observed' : observed.count(),
+                                 'Not Observed' : blocks.count() - observed.count()
+                               }
+            summary.append(proposal_summary)
+    return summary
 
 
 class BodyDetailView(DetailView):
@@ -138,15 +164,16 @@ def fetch_observations(tracking_num, proposal_code):
 
 def framedb_lookup(query):
     try:
-        conn = HTTPSConnection("data.lcogt.net", timeout=20)
-        params = urllib.urlencode(
-            {'username': settings.NEO_ODIN_USER, 'password': settings.NEO_ODIN_PASSWD})
-        #query = "/find?%s" % params
-        conn.request("POST", query, params)
-        response = conn.getresponse()
-        r = response.read()
-        data = json.loads(r)
-    except:
+        client = requests.session()
+        # First have to authenticate
+        login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+        # Because we are sending log in details it has to go over SSL
+        data_url = 'https://data.lcogt.net%s' % query
+        resp = client.post(data_url, data=login_data, timeout=20)
+        data = resp.json()
+
+    except Exception, e:
+        print(e)
         return False
     return data
 
@@ -333,6 +360,12 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
+    # Determine the semester boundaries for the current time and truncate the dark time and
+    # therefore the windows appropriately.
+    semester_start, semester_end = get_semester_dates(datetime.utcnow())
+    dark_start = max(dark_start, semester_start)
+    dark_end = min(dark_end, semester_end)
+
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
         dbg=False, perturb=True, display=False)
@@ -974,11 +1007,13 @@ def create_source_measurement(obs_lines, block=None):
                         prior_frame = Frame.objects.get(frametype = Frame.SATELLITE_FRAMETYPE,
                                                         midpoint = params['obs_date'],
                                                         sitecode = params['site_code'])
-                        prior_frame.extrainfo = params['extrainfo']
-                        prior_frame.save()
-                        # Replace SourceMeasurement in list to be returned with
-                        # updated version
-                        measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
+                        if prior_frame.extrainfo != params['extrainfo']:
+                            prior_frame.extrainfo = params['extrainfo']
+                            prior_frame.save()
+                        if len(measures) > 0:
+                            # Replace SourceMeasurement in list to be returned with
+                            # updated version
+                            measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:
                         logger.warn("Matching satellite frame for %s from %s on %s does not exist" % params['body'], params['obs_date'],params['site_code'])
                     except Frame.MultipleObjectsReturned:

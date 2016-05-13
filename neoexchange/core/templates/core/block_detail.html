@@ -13,11 +13,10 @@
 
 {% block main-content %}
     <!-- Main body -->
-    <div class="container">
-        <div id="main">
+    <div class="container" id="main">
             <div class="row">
-                <div class="fourcol">
-                    <h3 class="section-title">Details of the Block</h3>
+                <div class="eight columns">
+                    <h5 class="section-title">Details of the Block</h5>
                     <table class="keyvalue-table" id="id_blockdetail">
                         <tbody>
                             <tr>
@@ -75,34 +74,32 @@
                       </tbody>
                     </table>
                 </div>
-                <div class="twocol lastcol">
-                    <h3 class="section-title">Actions</h3>
-                    <div class="row">
+                <div class="four columns">
+                    <h5 class="section-title">Actions</h5>
                         {% if request.user.is_authenticated %}
                           {% if not object.reported and object.num_observed > 0 %}
-                        <a class="btn btn-secondary" href="{% url 'report-block' object.id %}">Report</a><br/>
+{% comment "Needs astrometry branch merging" %}
+                            <a class="button button-primary" href="{% url 'block-ast' object.id %}">Astrometer</a><br/>
+{% endcomment %}
+                            <a class="button button-primary" href="{% url 'report-block' object.id %}">Report</a><br/>
                           {% elif object.reported %}
-                        <a class="btn btn-secondary" href="{% url 'view-report' object.id %}">View report in MPC format</a><br/>
-                        <a class="btn btn-secondary" href="{% url 'upload-report' object.id %}">Upload MPC format</a>
+                            <a class="button button-primary" href="{% url 'view-report' object.id %}">View report in MPC format</a><br/>
+                            <a class="button button-primary" href="{% url 'upload-report' object.id %}">Upload MPC format</a>
                           {%else%}
                           No actions available
                           {% endif %}
                         {% else %}
                         <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
                         {% endif %}
-                    </div>
                     {% if images and request.user.is_authenticated %}
-                    <h3 class="section-title">Observations</h3>
-                    <div class="row">
+                    <h5 class="section-title">Observations</h5>
                         <ul class="observations">
                         {% for img in images %}
                         <li class="thumb"><a href="http://lcogt.net/observations/identity/?origname={{img.1}}.fits"><img src="http://data.lcogt.net/thumbnail/{{img.1}}/?width=150&height=150&gamma=2.5&label=0"></a></li>
                         {% endfor %}
                         </ul>
-                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-    </div>
 {% endblock %}
