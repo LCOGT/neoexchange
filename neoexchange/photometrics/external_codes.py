@@ -287,7 +287,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     return retcode_or_cmdline
 
 @timeit
-def run_mtdlink(source_dir, dest_dir, fits_files, num_fits_files, param_file, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
+def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
     '''Run MTDLINK (using either the binary specified by [binary] or by
     looking for 'mtdlink' in the PATH) on the passed <fits_files> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -304,8 +304,6 @@ def run_mtdlink(source_dir, dest_dir, fits_files, num_fits_files, param_file, pa
 
     mtdlink_config_file = default_mtdlink_config_files()[0]
     options = determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict)
-
-    fits_file_list = fits_files.split(' ')
 
     # MTDLINK requires an 'MJD' keyword to be in the header.
     # If one doesn't exist, copy 'MJD-OBS' to 'MJD'.
@@ -335,7 +333,6 @@ def run_mtdlink(source_dir, dest_dir, fits_files, num_fits_files, param_file, pa
     # MTDLINK wants the input sext files to be in the directory MTDLINK is
     # being run from...
     # If the sext files have a path component, we symlink them to the directory.
-    fits_file_list = fits_files.split(' ')
     symlink_sext_files = []
     for f in fits_file_list:
         sext_file = os.path.basename(f.replace('fits', 'sext'))

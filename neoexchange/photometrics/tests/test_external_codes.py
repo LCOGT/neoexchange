@@ -110,7 +110,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
                         }
 
         expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, '', 8, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, [], 8, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -126,7 +126,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
 
         expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 600 -MAXMISSES 1 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4 foo.fits foo2.fits foo3.fits'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, 'foo.fits foo2.fits foo3.fits', 3, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, ['foo.fits', 'foo2.fits', 'foo3.fits'], 3, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -135,7 +135,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         expected_status = 0
         expected_line1 = 'DETSV2.0'
-	expected_line1_file = 'mtdlink: Starting verbose mode'
+        expected_line1_file = 'mtdlink: Starting verbose mode'
 
         test_fits_file_set1_1 = self.test_fits_file_set1_1
         test_fits_file_set1_2 = self.test_fits_file_set1_2
@@ -146,7 +146,15 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_fits_file_set1_7 = self.test_fits_file_set1_7
         test_fits_file_set1_8 = self.test_fits_file_set1_8
 
-        test_file_string = str(test_fits_file_set1_1)+' '+str(test_fits_file_set1_2)+' '+str(test_fits_file_set1_3)+' '+str(test_fits_file_set1_4)+' '+str(test_fits_file_set1_5)+' '+str(test_fits_file_set1_6)+' '+str(test_fits_file_set1_7)+' '+str(test_fits_file_set1_8)
+        test_file_list = []
+        test_file_list.append(test_fits_file_set1_1)
+        test_file_list.append(test_fits_file_set1_2)
+        test_file_list.append(test_fits_file_set1_3)
+        test_file_list.append(test_fits_file_set1_4)
+        test_file_list.append(test_fits_file_set1_5)
+        test_file_list.append(test_fits_file_set1_6)
+        test_file_list.append(test_fits_file_set1_7)
+        test_file_list.append(test_fits_file_set1_8)
 
         param_file = 'mtdi.lcogt.param'
 
@@ -156,7 +164,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
                             'filter_maxrate': 0.40,
                         }
 
-        status = run_mtdlink(self.source_dir, self.test_dir, test_file_string, 8, param_file, pa_rate_dict)
+        status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 8, param_file, pa_rate_dict)
 
         self.assertEqual(expected_status, status)
 
@@ -199,8 +207,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_lines = test_fh.readlines()
         test_fh.close()
 
-        # Expected value is 10 lines of intro plus 336 sources
-        self.assertEqual(10+336, len(test_lines))
+        # Expected value is 10 lines of intro plus 200 sources
+        self.assertEqual(10+200, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
         output_file = os.path.join(self.test_dir, 'mtdlink_output.out')
@@ -227,7 +235,13 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_fits_file_set2_5 = self.test_fits_file_set2_5
         test_fits_file_set2_6 = self.test_fits_file_set2_6
 
-        test_file_string = str(test_fits_file_set2_1)+' '+str(test_fits_file_set2_2)+' '+str(test_fits_file_set2_3)+' '+str(test_fits_file_set2_4)+' '+str(test_fits_file_set2_5)+' '+str(test_fits_file_set2_6)
+        test_file_list = []
+        test_file_list.append(test_fits_file_set2_1)
+        test_file_list.append(test_fits_file_set2_2)
+        test_file_list.append(test_fits_file_set2_3)
+        test_file_list.append(test_fits_file_set2_4)
+        test_file_list.append(test_fits_file_set2_5)
+        test_file_list.append(test_fits_file_set2_6)
 
         param_file = 'mtdi.lcogt.param'
 
@@ -237,7 +251,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
                             'filter_maxrate': 0.5,
                         }
 
-        status = run_mtdlink(self.source_dir, self.test_dir, test_file_string, 6, param_file, pa_rate_dict)
+        status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 6, param_file, pa_rate_dict)
 
         self.assertEqual(expected_status, status)
 
