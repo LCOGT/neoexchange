@@ -174,6 +174,16 @@ def determine_sext_options(fits_file):
     options = options.rstrip()
     return options
 
+def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
+
+    pa_rate_dict = {    'filter_pa': pa,
+                        'filter_deltapa': deltapa,
+                        'filter_minrate': minrate/3600.0*1440.0, #mtdlink needs motion rates in deg/day, not arcsec/min
+                        'filter_maxrate': maxrate/3600.0*1440.0,
+                   }
+
+    return pa_rate_dict
+
 def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
 
     options = ''
@@ -327,7 +337,8 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
             # If the file exists and is a link (or a broken link), then remove it
             if os.path.lexists(fits_file) and os.path.islink(fits_file):
                 os.unlink(fits_file)
-            os.symlink(f, fits_file)
+            if not os.path.exists(fits_file):
+                os.symlink(f, fits_file)
         symlink_fits_files.append(fits_file)
 
     # MTDLINK wants the input sext files to be in the directory MTDLINK is
@@ -341,7 +352,8 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
             # If the file exists and is a link (or a broken link), then remove it
             if os.path.lexists(sext_file) and os.path.islink(sext_file):
                 os.unlink(sext_file)
-            os.symlink(f.replace('fits', 'sext'), sext_file)
+            if not os.path.exists(sext_file):
+                os.symlink(f.replace('fits', 'sext'), sext_file)
         symlink_sext_files.append(sext_file)
 
     linked_fits_files = ' '.join(symlink_fits_files)
