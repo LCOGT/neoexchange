@@ -827,41 +827,50 @@ def make_sext_dict_list(new_catalog):
 
     sext_dict_list = []
 
+    #get fits filename for doing Django query of frame filename
     if 'e11_ldac.fits' in new_catalog:
-        fits_filename = new_catalog.replace('e11_ldac.fits', 'e00.fits')
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog.replace('e11_ldac.fits', 'e00.fits')
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
     elif 'e10_ldac.fits' in new_catalog:
-        fits_filename = new_catalog.replace('e10_ldac.fits', 'e00.fits')
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog.replace('e10_ldac.fits', 'e00.fits')
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
     elif 'e91_ldac.fits' in new_catalog:
-        fits_filename = new_catalog.replace('e91_ldac.fits', 'e00.fits')
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog.replace('e91_ldac.fits', 'e00.fits')
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
     elif 'e90_ldac.fits' in new_catalog:
-        fits_filename = new_catalog.replace('e90_ldac.fits', 'e00.fits')
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog.replace('e90_ldac.fits', 'e00.fits')
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
     elif 'e11_cat.fits' in new_catalog:
-        fits_filename = new_catalog.replace('e11_cat.fits', 'e00.fits')
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog.replace('e11_cat.fits', 'e00.fits')
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
     elif 'e10_cat.fits' in new_catalog:
-        fits_filename = new_catalog.replace('e10_cat.fits', 'e00.fits')
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog.replace('e10_cat.fits', 'e00.fits')
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
     elif 'e91_cat.fits' in new_catalog:
-        fits_filename = new_catalog.replace('e91_cat.fits', 'e00.fits')
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog.replace('e91_cat.fits', 'e00.fits')
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
     elif 'e90_cat.fits' in new_catalog:
-        fits_filename = new_catalog.replace('e90_cat.fits', 'e00.fits')
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog.replace('e90_cat.fits', 'e00.fits')
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
     else:
-        fits_filename = new_catalog
-        fits_filename = fits_filename.split('/')[-1]
+        fits_filename_frame = new_catalog
+        fits_filename_frame = fits_filename_frame.split('/')[-1]
 
-    sources = CatalogSources.objects.filter(frame__filename=fits_filename)
+    #get correct fits filename for naming .sext file
+    if '_ldac.fits' in new_catalog:
+        real_fits_filename = new_catalog.replace('_ldac.fits', '.fits')
+    elif '_cat.fits' in new_catalog:
+        real_fits_filename = new_catalog.replace('_cat.fits', '.fits')
+    else:
+        real_fits_filename = new_catalog
+
+    sources = CatalogSources.objects.filter(frame__filename=fits_filename_frame)
     num_iter = 1
     for source in sources:
         sext_dict_list.append(make_sext_dict(source, num_iter))
         num_iter += 1
 
-    return sext_dict_list, fits_filename
+    return sext_dict_list, real_fits_filename
 
 def make_sext_line_list(sext_dict_list):
 
