@@ -546,10 +546,14 @@ def read_mtds_file(mtdsfile, dbg=False):
     # Check for correct number of entries
     if dbg: print dets_array.shape
     num_detections = dets_array.shape[0] / num_frames
-    if dets_array.shape[0] / float(num_frames) != num_detections:
+    if num_detections == 0:
+        logger.warn("Found 0 detection entries")
+        num_detections = 0
+        detections = []
+    elif dets_array.shape[0] / float(num_frames) != num_detections:
         logger.error("Incorrect number of detection entries (Expected %d, got %d)" % (num_frames*num_detections, dets_array.shape[0]))
-        num_detections = None
-        detections = None
+        num_detections = 0
+        detections = []
     if num_detections:
         detections = split(dets_array, num_detections)
     mtds_fh.close()

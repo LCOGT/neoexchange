@@ -622,6 +622,7 @@ class TestReadMTDSFile(TestCase):
     def setUp(self):
 
         self.test_mtds_file = os.path.join('photometrics', 'tests', 'elp1m008-fl05-20160225-0095-e90.mtds')
+        self.hdr_only_mtds_file = os.path.join('photometrics', 'tests', 'cpt1m013-kb76-20160505-0205-e11.mtds')
 
         self.maxDiff = None
 
@@ -637,6 +638,31 @@ class TestReadMTDSFile(TestCase):
         dets = read_mtds_file('wibble')
 
         self.assertEqual(expected_dets, dets)
+
+    def test_no_detections(self):
+    
+        expected_dets_dict = {  'version'   : 'DETSV2.0',
+                                'num_frames': 6,
+                                'frames' : [
+                                            ('cpt1m013-kb76-20160505-0205-e11.fits', 2457514.335058),
+                                            ('cpt1m013-kb76-20160505-0206-e11.fits', 2457514.336033),
+                                            ('cpt1m013-kb76-20160505-0207-e10.fits', 2457514.336977),
+                                            ('cpt1m013-kb76-20160505-0208-e10.fits', 2457514.337878),
+                                            ('cpt1m013-kb76-20160505-0210-e10.fits', 2457514.339695),
+                                            ('cpt1m013-kb76-20160505-0213-e11.fits', 2457514.342520),
+                                           ],
+                                'num_detections' : 0,
+                                'detections': []
+                             }
+
+        dets = read_mtds_file(self.hdr_only_mtds_file)
+
+        for key in expected_dets_dict.keys():
+            if key == 'detections':
+                self.assertEqual(len(expected_dets_dict[key]), len(dets[key]))
+            else:
+                self.assertEqual(expected_dets_dict[key], dets[key], msg="Failed on %s" % key)
+
 
     def test_read(self):
 
