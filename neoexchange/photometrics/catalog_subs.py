@@ -864,7 +864,8 @@ def make_sext_dict_list(new_catalog):
     else:
         real_fits_filename = new_catalog
 
-    sources = CatalogSources.objects.filter(frame__filename=fits_filename_frame)
+    #May need to filter objects within 5 pixels of frame edge as does in cleansex.tcl
+    sources = CatalogSources.objects.filter(frame__filename=fits_filename_frame, obs_mag__gt=0.0)
     num_iter = 1
     for source in sources:
         sext_dict_list.append(make_sext_dict(source, num_iter))
