@@ -6,7 +6,7 @@ import tempfile
 
 from django.core.management.base import BaseCommand, CommandError
 
-from core.views import check_catalog_and_refit
+from core.views import check_catalog_and_refit, store_detections
 from photometrics.catalog_subs import store_catalog_sources, make_sext_file
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 #from core.models import CatalogSources
@@ -104,6 +104,11 @@ class Command(BaseCommand):
         retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict)
 
         # Step 5: Read MTDLINK output file and create candidates in NEOexchange
+        mtds_file = fits_file_list[0].replace('.fits', '.mtds')
+        if os.path.exists(mtds_file):
+            store_detections(mtds_file,dbg=True)
+        else:
+            self.stdout.wrote("Cannot find the MTDS output file  %s" % mtds_file)
 
         # Tidy up
         if options['keep_temp_dir'] != True:
