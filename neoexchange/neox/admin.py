@@ -47,7 +47,10 @@ class BlockAdmin(reversion.VersionAdmin):
     def body_name(self, obj):
         return obj.body.current_name()
 
-    list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported',  )
+    def proposal_code(self, obj):
+        return obj.proposal.code
+
+    list_display = ('groupid', 'body_name', 'site', 'tracking_number', 'proposal_code', 'block_start', 'num_observed', 'active', 'reported',  )
     list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
 
     ordering = ('-block_start',)
