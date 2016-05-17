@@ -13,7 +13,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
+from datetime import datetime
 from django.test import TestCase
+from django.forms.models import model_to_dict
+
 from core.models import Body, Proposal
 
 #Import module to test
@@ -23,22 +26,44 @@ class EphemQueryFormTest(TestCase):
 
 
     def setUp(self):
+
+        self.maxDiff = None
+
         params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
-                    'epochofel'     : '2015-03-19 00:00:00',
+                    'epochofel'     : datetime(2015, 3, 19, 00,00,00),
                     'meananom'      : 325.2636,
                     'argofperih'    : 85.19251,
                     'longascnode'   : 147.81325,
                     'orbinc'        : 8.34739,
                     'eccentricity'  : 0.1896865,
                     'meandist'      : 1.2176312,
-                    'source_type'   : 'U',
-                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'source_type'   : u'U',
+                    'elements_type' : u'MPC_MINOR_PLANET',
                     'active'        : True,
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'P10uMBz'
+        params['name'] = '2016 GS221'
+        self.body_similar_name1, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'P10uMD9'
+        params['name'] = '2016 GS216'
+        self.body_similar_name2, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = 'P10uJHG'
+        params['name'] = '2016 GS216'
+        params['source_type']= 'N'
+        self.body_similar_name3, created = Body.objects.get_or_create(**params)
+
+        params['provisional_name'] = u'P10ucyy'
+        params['name'] = u'2016 GS2'
+        params['source_type']= u'N'
+        params['origin'] = u'G'
+        self.body_similar_name4, created = Body.objects.get_or_create(**params)
 
         comet_params = { 'abs_mag': 20.5,
                          'active': True,
@@ -124,6 +149,16 @@ class EphemQueryFormTest(TestCase):
                                   })
         self.assertTrue(form.is_valid())
 
+    def test_form_returns_correct_target(self):
+        form = EphemQuery(data = {'target' : '2016 GS2',
+                                  'utc_date' : '2016-05-11',
+                                  'site_code' : 'K92',
+                                  'alt_limit' : 30.0
+                                  })
+        self.assertTrue(form.is_valid())
+        data = form.cleaned_data
+        body_elements = model_to_dict(data['target'])
+        self.assertEqual(model_to_dict(self.body_similar_name4), body_elements)
 
 class TestScheduleForm(TestCase):
 

@@ -27,10 +27,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
-from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, clean_mpcorbit, \
-    create_source_measurement, block_status, clean_crossid, create_frame, \
-    frame_params_from_block, schedule_check, summarise_block_efficiency
+from core.views import *
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
@@ -1770,3 +1767,126 @@ class TestSummarise_Block_Efficiency(TestCase):
         summary = summarise_block_efficiency()
 
         self.assertEqual(expected_summary, summary)
+
+class TestUpdate_Crossids(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'LM05OFG',
+                    'abs_mag'       : 24.7,
+                    'slope'         : 0.15,
+                    'epochofel'     : datetime(2016,07,31,00,00,00),
+                    'meananom'      :   8.5187,
+                    'argofperih'    : 227.23234,
+                    'longascnode'   :  57.83134,
+                    'orbinc'        : 5.40829,
+                    'eccentricity'  : 0.6914565,
+                    'meandist'      : 2.8126642,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'G',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_goldstone_is_not_overridden(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('G', body.origin)
+        self.assertEqual('2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_arecibo_comet_is_not_overridden(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'C/2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        self.body.source_type = u'C'
+        self.body.origin = u'A'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('A', body.origin)
+        self.assertEqual('C/2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_jointradar_neo_is_not_overridden(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        self.body.origin = u'R'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('R', body.origin)
+        self.assertEqual('2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_old_mpc_neo_is_overridden(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        self.body.origin = u'M'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_new_mpc_neo_is_not_overridden(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 11, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        self.body.origin = u'M'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('2016 JD18', body.name)
