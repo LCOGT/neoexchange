@@ -57,7 +57,8 @@ class Command(BaseCommand):
         # directory, otherwise create a random directory in /tmp
         if options['temp_dir']:
             temp_dir = options['temp_dir']
-            os.makedirs(temp_dir)
+            if os.path.exists(temp_dir) == False:
+                os.makedirs(temp_dir)
         else:
             temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
 
@@ -104,11 +105,12 @@ class Command(BaseCommand):
         retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict)
 
         # Step 5: Read MTDLINK output file and create candidates in NEOexchange
-        mtds_file = fits_file_list[0].replace('.fits', '.mtds')
-        if os.path.exists(mtds_file):
-            store_detections(mtds_file,dbg=True)
-        else:
-            self.stdout.wrote("Cannot find the MTDS output file  %s" % mtds_file)
+        if len(fits_file_list) > 0:
+            mtds_file = fits_file_list[0].replace('.fits', '.mtds')
+            if os.path.exists(mtds_file):
+                store_detections(mtds_file,dbg=True)
+            else:
+                self.stdout.wrote("Cannot find the MTDS output file  %s" % mtds_file)
 
         # Tidy up
         if options['keep_temp_dir'] != True:
