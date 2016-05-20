@@ -1895,7 +1895,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         'fwhm':3.63,
                         'flags':0,
                         'deltamu':2.624,
-                        'flux':7459839.6,
+                        'flux':11228.2,
                         'area':10.3126,
                         'ra':86.86805,
                         'dec':-27.57513
@@ -1932,7 +1932,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         'fwhm':3.62,
                         'flags':0,
                         'deltamu':5.6216,
-                        'flux':987383.5,
+                        'flux':206447.5,
                         'area':10.2670,
                         'ra':219.78770,
                         'dec':-9.64014
@@ -1969,13 +1969,13 @@ class MakeSEXTFileTest(FITSUnitTest):
                         'fwhm':3.63,
                         'flags':0,
                         'deltamu':2.624,
-                        'flux':7459839.6,
+                        'flux':11228.2,
                         'area':10.3126,
                         'ra':86.86805,
                         'dec':-27.57513
                     }
 
-        test_line = '         1    106.118     18.611  17.1818  -79.4       1.076      3.63   0  2.62         7459839.6    10  86.86805 -27.57513'
+        test_line = '         1    106.118     18.611  17.1818  -79.4       1.076      3.63   0  2.62        11228.2    10  86.86805 -27.57513'
 
         num_iter = 1
 
@@ -1996,13 +1996,13 @@ class MakeSEXTFileTest(FITSUnitTest):
                         'fwhm':3.62,
                         'flags':0,
                         'deltamu':5.6216,
-                        'flux':987383.5,
+                        'flux':206447.5,
                         'area':10.2670,
                         'ra':219.78770,
                         'dec':-9.64014
                     }
 
-        test_line = '         1   1375.745     42.124  14.9862    7.8       1.084      3.62   0  5.62          987383.5    10 219.78770  -9.64014'
+        test_line = '         1   1375.745     42.124  14.9862    7.8       1.084      3.62   0  5.62       206447.5    10 219.78770  -9.64014'
 
         num_iter = 1
 
@@ -2023,7 +2023,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'fwhm':2.77,
                             'flags':0,
                             'deltamu':4.367,
-                            'flux':0.000241,
+                            'flux':4145.7,
                             'area':5.1214,
                             'ra':218.18484,
                             'dec':9.89281
@@ -2038,7 +2038,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'fwhm':4.05,
                             'flags':0,
                             'deltamu':2.567,
-                            'flux':0.000150,
+                            'flux':6673.6,
                             'area':12.6809,
                             'ra':218.15360,
                             'dec':9.63506
@@ -2055,36 +2055,36 @@ class MakeSEXTFileTest(FITSUnitTest):
     def test_multiple_sources_sext_dict_ldac(self):
 
         test_dict_first = { 'number':1,
-                            'obs_x':518.000,
-                            'obs_y':9.075,
-                            'obs_mag':15.1200,
-                            'theta':-87.16,
-                            'elongation':1.507,
-                            'fwhm':0.60,
+                            'obs_x':886.245,
+                            'obs_y':18.211,
+                            'obs_mag':16.2081,
+                            'theta':-77.62,
+                            'elongation':1.050,
+                            'fwhm':3.42,
                             'flags':0,
-                            'deltamu':2.6685,
-                            'flux':1116814.1,
-                            'area':0.2703,
-                            'ra':218.19205,
-                            'dec':9.89383
+                            'deltamu':3.9049,
+                            'flux':40643.1,
+                            'area':9.2044,
+                            'ra':218.14304,
+                            'dec':9.89449
                           }
 
-        test_dict_last = {  'number':1256,
-                            'obs_x':1483.036,
-                            'obs_y':13.034,
-                            'obs_mag':14.3184,
-                            'theta':28.209,
-                            'elongation':1.022,
-                            'fwhm':1.29,
+        test_dict_last = {  'number':692,
+                            'obs_x':708.003,
+                            'obs_y':1960.001,
+                            'obs_mag':18.4868,
+                            'theta':7.218,
+                            'elongation':1.005,
+                            'fwhm':1.30,
                             'flags':0,
-                            'deltamu':4.331,
-                            'flux':533777.4,
-                            'area':1.2978,
-                            'ra':218.06450,
-                            'dec':9.89436
+                            'deltamu':5.605,
+                            'flux':4983.4,
+                            'area':1.3271,
+                            'ra':218.16421,
+                            'dec':9.64090
                          }
 
-        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0204-e11_ldac.fits')
+        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
         num_sources_created, num_in_table = store_catalog_sources(cat_ldacfilename, catalog_type = 'FITS_LDAC')
 
         sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename)
@@ -2117,7 +2117,7 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_dict_list[-1]['ra'], test_dict_last['ra'], 5)
         self.assertAlmostEqual(sext_dict_list[-1]['dec'], test_dict_last['dec'], 5)
 
-        self.assertEqual(len(sext_dict_list), 1256)
+        self.assertEqual(len(sext_dict_list), 692)
 
     def test_make_sext_line_list(self):
 
@@ -2130,7 +2130,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'fwhm':3.89,
                             'flags':0,
                             'deltamu':1.670,
-                            'flux':0.0002642,
+                            'flux':3785.5,
                             'area':11.1111,
                             'ra':218.25162,
                             'dec':9.69550
@@ -2161,45 +2161,45 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_make_sext_line_list_ldac(self):
 
-        test_dict_list = [{  'number':507,
-                            'obs_x':5.991,
-                            'obs_y':1640.976,
-                            'obs_mag':14.1396,
-                            'theta':37.1,
-                            'elongation':1.001,
-                            'fwhm':0.58,
+        test_dict_list = [{  'number':405,
+                            'obs_x':5.959,
+                            'obs_y':800.006,
+                            'obs_mag':20.7902,
+                            'theta':-89.1,
+                            'elongation':1.070,
+                            'fwhm':0.63,
                             'flags':0,
-                            'deltamu':4.44,
-                            'flux':452714.0,
+                            'deltamu':2.82,
+                            'flux':597.2,
                             'area':0,
-                            'ra':218.25765,
-                            'dec':9.68097
+                            'ra':218.25847,
+                            'dec':9.79143
                           },
-                          {  'number':352,
-                            'obs_x':2017.867,
-                            'obs_y':1736.179,
-                            'obs_mag':16.3142,
-                            'theta':-8.2,
-                            'elongation':1.328,
-                            'fwhm':1.09,
+                          {  'number':456,
+                            'obs_x':2017.041,
+                            'obs_y':655.951,
+                            'obs_mag':20.1782,
+                            'theta':80.4,
+                            'elongation':1.006,
+                            'fwhm':1.30,
                             'flags':0,
-                            'deltamu':0.88,
-                            'flux':3354919.2,
-                            'area':0,
-                            'ra':217.99181,
-                            'dec':9.67076
+                            'deltamu':3.91,
+                            'flux':1049.4,
+                            'area':1,
+                            'ra':217.99272,
+                            'dec':9.81255
                           }]
 
-        test_line_list = ['       507      5.991   1640.976  14.1396   37.1       1.001      0.58   0  4.44          452714.0     0 218.25765   9.68097', '       352   2017.867   1736.179  16.3142   -8.2       1.328      1.09   0  0.88         3354919.2     0 217.99181   9.67076']
+        test_line_list = ['       405      5.959    800.006  20.7902  -89.1       1.070      0.63   0  2.82          597.2     0 218.25847   9.79143', '       456   2017.041    655.951  20.1782   80.4       1.006      1.30   0  3.91         1049.4     1 217.99272   9.81255']
 
-        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0204-e11_ldac.fits')
+        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
         num_sources_created, num_in_table = store_catalog_sources(cat_ldacfilename, catalog_type = 'FITS_LDAC')
 
         sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename)
 
         sext_line_list = make_sext_line_list(sext_dict_list)
 
-        self.assertEqual(len(sext_line_list), 1256)
+        self.assertEqual(len(sext_line_list), 692)
         self.assertEqual(sext_line_list[0], test_line_list[0])
         self.assertEqual(sext_line_list[-1], test_line_list[1])
 
@@ -2208,7 +2208,7 @@ class TestMakeSEXTFile(ExternalCodeUnitTest):
 
     def test_make_sext_file(self):
 
-        cat_filename = os.path.join(os.getenv('HOME'), 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0204-e10_cat.fits')
+        cat_filename = os.path.join(os.getenv('HOME'), 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
 
         num_sources_created, num_in_table = store_catalog_sources(cat_filename)
 
@@ -2224,8 +2224,8 @@ class TestMakeSEXTFile(ExternalCodeUnitTest):
 
     def test_make_sext_file_diff_file(self):
 
-        expected_first_line =  '       418     17.195   1182.871  15.2507    6.1       1.244      4.62   0  4.20         1259727.4    16 141.91405 -13.52058'
-        expected_second_line = '       260     17.438   1718.387  16.8568    2.6       1.188      3.69   0  2.81         5530109.9    10 141.91406 -13.59004'
+        expected_first_line =  '       418     17.195   1182.871  15.2507    6.1       1.244      4.62   0  4.20        59298.4    16 141.91405 -13.52058'
+        expected_second_line = '       260     17.438   1718.387  16.8568    2.6       1.188      3.69   0  2.81        13507.8    10 141.91406 -13.59004'
 
         cat_filename = os.path.join(os.getenv('HOME'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90_cat.fits')
 
@@ -2245,10 +2245,10 @@ class TestMakeSEXTFile(ExternalCodeUnitTest):
 
     def test_make_sext_file_ldac(self):
 
-        expected_first_line =  '       507      5.991   1640.976  14.1396   37.1       1.001      0.58   0  4.44          452714.0     0 218.25765   9.68097'
-        expected_second_line = '      1010      7.958    624.210  15.5224  -36.8       1.213      1.15   0  3.20         1617933.7     1 218.25868   9.81324'
+        expected_first_line =  '       405      5.959    800.006  20.7902  -89.1       1.070      0.63   0  2.82          597.2     0 218.25847   9.79143'
+        expected_second_line = '        98      6.019   1641.004  19.9684  -84.8       1.005      0.58   0  4.16         1273.2     0 218.25739   9.68169'
 
-        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0204-e11_ldac.fits')
+        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
 
         num_sources_created, num_in_table = store_catalog_sources(cat_ldacfilename, catalog_type = 'FITS_LDAC')
 
@@ -2260,6 +2260,6 @@ class TestMakeSEXTFile(ExternalCodeUnitTest):
         test_lines = test_file.readlines()
         test_file.close()
 
-        self.assertEqual(1256, len(test_lines))
+        self.assertEqual(692, len(test_lines))
         self.assertEqual(expected_first_line, test_lines[0].rstrip())
         self.assertEqual(expected_second_line, test_lines[1].rstrip())
