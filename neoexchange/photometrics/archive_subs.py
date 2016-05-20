@@ -150,7 +150,7 @@ def check_for_bad_file(filename, reject_dir='Bad'):
             reject_file = True
     return reject_file
 
-def download_files(frames, output_path, dbg=False):
+def download_files(frames, output_path, verbose=False, dbg=False):
     '''Downloads and saves to disk, the specified files from the new Science
     Archive. Returns a list of the frames that were downloaded.
     Takes a dictionary <frames> (keyed by reduction levels and produced by
@@ -158,7 +158,8 @@ def download_files(frames, output_path, dbg=False):
     archive API and downloads the files to <output_path>. Lower reduction level
     files (e.g. -e10 quicklook files) will not be downloaded if a higher
     reduction level already exists and frames will not be downloaded if they
-    already exist.'''
+    already exist. If [verbose] is set to True, the filename of the downloaded
+    file will be printed.'''
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -174,7 +175,7 @@ def download_files(frames, output_path, dbg=False):
                 check_for_bad_file(filename):
                 print "Skipping existing file", frame['filename']
             else:
-                if dbg: print "Writing file to",filename
+                if dbg or verbose: print "Writing file to",filename
                 downloaded_frames.append(filename)
                 with open(filename, 'wb') as f:
                     f.write(requests.get(frame['url']).content)

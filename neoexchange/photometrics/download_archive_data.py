@@ -27,7 +27,7 @@ usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[0] )
 # Defaults
 proposal='LCO2016A-021'
 obs_date = datetime.utcnow()
-obstype = 'EXPOSE' # Set to blank to get frames and catalogs
+obstype = '' # Set to blank to get frames and catalogs
 redlevel = ['90', '10']
 
 # Parse command line arguments
@@ -58,6 +58,10 @@ if username and password:
     start_date, end_date = determine_archive_start_end(obs_date)
     print "Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal )
     frames = get_frame_data(start_date, end_date, auth_headers, obstype, proposal, red_lvls=redlevel)
+    if 'CATALOG' in obstype or obstype == '':
+        catalogs = get_catalog_data(frames, auth_headers)
+        for red_lvl in frames.keys():
+            frames[red_lvl] = frames[red_lvl] + catalogs[red_lvl]
     for red_lvl in frames.keys():
         print "Found %d frames for reduction level: %s" % ( len(frames[red_lvl]), red_lvl )
     daydir = start_date.strftime('%Y%m%d')
@@ -69,5 +73,5 @@ if username and password:
             print "Error creating output path", out_path
             os.sys.exit(-1)
     print "Downloading data to", out_path
-    dl_frames = download_files(frames, out_path)
+    dl_frames = download_files(frames, out_path, verbose=True)
     print "Downloaded %d frames" % ( len(dl_frames) )
