@@ -281,7 +281,7 @@ class Frame(models.Model):
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
     zeropoint_err = models.FloatField('Error on Frame zeropoint (mag.)', null=True, blank=True)
-    fwhm        = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
+    fwhm        = models.FloatField('Full width at half maximum (FWHM; arcsec)', null=True, blank=True)
     frametype   = models.SmallIntegerField('Frame Type', null=False, blank=False, default=0, choices=FRAMETYPE_CHOICES)
     extrainfo   = models.TextField(blank=True, null=True)
     rms_of_fit  = models.FloatField('RMS of astrometric fit (arcsec)', null=True, blank=True)
