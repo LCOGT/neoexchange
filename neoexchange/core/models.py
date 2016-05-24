@@ -410,7 +410,7 @@ class CatalogSources(models.Model):
         return mu_threshold
 
     def make_flux(self):
-        flux = 10.0**((self.obs_mag)/2.5)
+        flux = 10.0**((self.obs_mag-self.frame.zeropoint)/-2.5)
         return flux
 
     def make_area(self):
