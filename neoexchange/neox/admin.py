@@ -155,7 +155,7 @@ class CandidateAdmin(admin.ModelAdmin):
     avg_mag_fmt.admin_order_field = 'avg_mag'
 
     def avg_midpoint_fmt(self, obj):
-        return obj.abg_midpoint.strftime('%Y-%m-%d %H:%M:%S')
+        return obj.avg_midpoint.strftime('%Y-%m-%d %H:%M:%S')
     avg_midpoint_fmt.short_description = 'Mean Frame midpoint'
     avg_midpoint_fmt.admin_order_field = 'avg_midpoint'
 
