@@ -74,7 +74,7 @@ class Command(BaseCommand):
             # Step 1: Determine if astrometric fit in catalog is good and
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
-            new_catalog_or_status = check_catalog_and_refit(configs_dir, temp_dir, catalog)
+            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog)
             new_catalog = new_catalog_or_status
             catalog_type = 'FITS_LDAC'
             if str(new_catalog_or_status).isdigit():
@@ -106,11 +106,11 @@ class Command(BaseCommand):
 
         # Step 5: Read MTDLINK output file and create candidates in NEOexchange
         if len(fits_file_list) > 0:
-            mtds_file = fits_file_list[0].replace('.fits', '.mtds')
+            mtds_file = os.path.join(temp_dir, fits_file_list[0].replace('.fits', '.mtds'))
             if os.path.exists(mtds_file):
-                store_detections(mtds_file,dbg=True)
+                store_detections(mtds_file,dbg=False)
             else:
-                self.stdout.wrote("Cannot find the MTDS output file  %s" % mtds_file)
+                self.stdout.write("Cannot find the MTDS output file  %s" % mtds_file)
 
         # Tidy up
         if options['keep_temp_dir'] != True:

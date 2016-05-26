@@ -315,17 +315,6 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
     mtdlink_config_file = default_mtdlink_config_files()[0]
     options = determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict)
 
-    # MTDLINK requires an 'MJD' keyword to be in the header.
-    # If one doesn't exist, copy 'MJD-OBS' to 'MJD'.
-    for f in fits_file_list:
-        if os.path.exists(f):
-            data, header = fits.getdata(f, header=True)
-            if 'MJD' not in header :
-                mjd = header['MJD-OBS'] + (0.5*header['exptime']/86400.0)
-                header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-                fits.writeto(f, data, header, clobber=True, checksum=True)
-
-
     # MTDLINK wants the input fits files to be in the directory MTDLINK is
     # being run from...
     # If the fits files have a path component, we symlink them to the directory.
@@ -341,22 +330,20 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
                 os.symlink(f, fits_file)
         symlink_fits_files.append(fits_file)
 
-    # MTDLINK wants the input sext files to be in the directory MTDLINK is
-    # being run from...
-    # If the sext files have a path component, we symlink them to the directory.
-    symlink_sext_files = []
-    for f in fits_file_list:
-        sext_file = os.path.basename(f.replace('fits', 'sext'))
-        if sext_file != f.replace('fits', 'sext'):
-            sext_file = os.path.join(dest_dir, sext_file)
-            # If the file exists and is a link (or a broken link), then remove it
-            if os.path.lexists(sext_file) and os.path.islink(sext_file):
-                os.unlink(sext_file)
-            if not os.path.exists(sext_file):
-                os.symlink(f.replace('fits', 'sext'), sext_file)
-        symlink_sext_files.append(sext_file)
-
     linked_fits_files = ' '.join(symlink_fits_files)
+
+    # MTDLINK requires an 'MJD' keyword to be in the header.
+    # If one doesn't exist, copy 'MJD-OBS' to 'MJD'.
+    for f in fits_file_list:
+        if os.path.exists(f):
+            data, header = fits.getdata(f, header=True)
+            if 'MJD' not in header :
+                mjd = header['MJD-OBS'] + (0.5*header['exptime']/86400.0)
+                header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
+                fits.writeto(f, data, header, clobber=True, checksum=True)
+        else:
+            logger.error("Could not find fits file in PATH")
+            return -43
 
     cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files )
     cmdline = cmdline.rstrip()

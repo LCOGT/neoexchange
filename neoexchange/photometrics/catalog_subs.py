@@ -60,7 +60,6 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
 
         query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
-#        print len(result), result.return_value
 
         #resulting catalog table
         if len(result) < 1:
@@ -95,8 +94,6 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
             cat_table = result[0]
         else:
             break
-
-#    print cat_table, cat_name
 
     return cat_table, cat_name
 
@@ -732,6 +729,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
 def store_catalog_sources(catfile, catalog_type='LCOGT'):
 
+    num_new_frames_created = 0
     num_sources_created = 0
     num_in_table = 0
 
@@ -749,23 +747,55 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
             if std_zeropoint < 0.1:
                 header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
 
-        #store sources in neoexchange(CatalogSources table)
-        frame_params = {    'sitecode':header['site_code'],
-                            'instrument':header['instrument'],
-                            'filter':header['filter'],
-                            'filename':header['framename'],
-                            'exptime':header['exptime'],
-                            'midpoint':header['obs_midpoint'],
-                            'block':None,
-                            'zeropoint':header['zeropoint'],
-                            'zeropoint_err':header['zeropoint_err'],
-                            'fwhm':header['fwhm'],
-                            'frametype':Frame.SINGLE_FRAMETYPE,
-                            'rms_of_fit':header['astrometric_fit_rms'],
-                            'nstars_in_fit':header['astrometric_fit_nstars'],
-                        }
+        #get the fits filename from the catfile in order to get the Block from the Frame
+        if 'e90_cat.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e90_cat.fits', 'e90.fits'))
+        if 'e91_ldac.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e91_ldac.fits', 'e91.fits'))
+        elif 'e10_cat.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e10_cat.fits', 'e10.fits'))
+        elif 'e11_ldac.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e11_ldac.fits', 'e11.fits'))
+        try:
+            frame = Frame.objects.get(filename=fits_file, block__isnull=False)
+        except Frame.MultipleObjectsReturned:
+            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file, frame))
+            return -3
+        except Frame.DoesNotExist:
+            logger.error("Frame entry for fits file %s does not exist" % fits_file)
+            return -3
 
-        frame, created = Frame.objects.get_or_create(**frame_params)
+        #if a Frame exists for the fits file with a non-null block
+        #that has a bad zeropoint, update the zeropoint computed
+        #above in the Frame
+        try:
+            frame = Frame.objects.get(filename=fits_file, block__isnull=False, zeropoint__lt=0)
+            if frame.zeropoint < 0 and frame.zeropoint_err < 0:
+                frame.zeropoint=header['zeropoint']
+                frame.zeropoint_err=header['zeropoint_err']
+                frame.save()
+        except Frame.MultipleObjectsReturned:
+            pass
+        except Frame.DoesNotExist:
+            #store sources in neoexchange(CatalogSources table)
+            frame_params = {    'sitecode':header['site_code'],
+                                'instrument':header['instrument'],
+                                'filter':header['filter'],
+                                'filename':determine_filenames(catfile),
+                                'exptime':header['exptime'],
+                                'midpoint':header['obs_midpoint'],
+                                'block':frame.block,
+                                'zeropoint':header['zeropoint'],
+                                'zeropoint_err':header['zeropoint_err'],
+                                'fwhm':header['fwhm'],
+                                'frametype':Frame.SINGLE_FRAMETYPE,
+                                'rms_of_fit':header['astrometric_fit_rms'],
+                                'nstars_in_fit':header['astrometric_fit_nstars'],
+                            }
+
+            frame, created = Frame.objects.get_or_create(**frame_params)
+            if created == True:
+                num_new_frames_created += 1
 
         for source in table:
             source_params = {   'frame':frame,
@@ -797,7 +827,8 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
     return (num_sources_created, num_in_table)
 
 def make_sext_dict(catsrc, num_iter):
-
+    '''create a dictionary of needed parameters
+    for the .sext file creation needed for mtdlink'''
     sext_params = { 'number':num_iter,
                     'obs_x':catsrc.obs_x,
                     'obs_y':catsrc.obs_y,
@@ -816,6 +847,8 @@ def make_sext_dict(catsrc, num_iter):
     return sext_params
 
 def make_sext_file_line(sext_params):
+    '''format the print line for the .sext files
+    needed for mtdlink'''
 
     print_format = "      %4i   %8.3f   %8.3f  %7.4f %6.1f    %8.3f     %5.2f   %1i  %4.2f   %12.1f   %3i %9.5f %9.5f"
 
@@ -824,56 +857,34 @@ def make_sext_file_line(sext_params):
     return sext_line
 
 def make_sext_dict_list(new_catalog):
+    '''create a list of dictionary entries for
+    creating the .sext files needed for mtdlink'''
 
     sext_dict_list = []
 
-    #get fits filename for doing Django query of frame filename
-    if 'e11_ldac.fits' in new_catalog:
-        fits_filename_frame = new_catalog.replace('e11_ldac.fits', 'e00.fits')
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-    elif 'e10_ldac.fits' in new_catalog:
-        fits_filename_frame = new_catalog.replace('e10_ldac.fits', 'e00.fits')
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-    elif 'e91_ldac.fits' in new_catalog:
-        fits_filename_frame = new_catalog.replace('e91_ldac.fits', 'e00.fits')
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-    elif 'e90_ldac.fits' in new_catalog:
-        fits_filename_frame = new_catalog.replace('e90_ldac.fits', 'e00.fits')
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-    elif 'e11_cat.fits' in new_catalog:
-        fits_filename_frame = new_catalog.replace('e11_cat.fits', 'e00.fits')
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-    elif 'e10_cat.fits' in new_catalog:
-        fits_filename_frame = new_catalog.replace('e10_cat.fits', 'e00.fits')
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-    elif 'e91_cat.fits' in new_catalog:
-        fits_filename_frame = new_catalog.replace('e91_cat.fits', 'e00.fits')
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-    elif 'e90_cat.fits' in new_catalog:
-        fits_filename_frame = new_catalog.replace('e90_cat.fits', 'e00.fits')
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-    else:
-        fits_filename_frame = new_catalog
-        fits_filename_frame = fits_filename_frame.split('/')[-1]
-
     #get correct fits filename for naming .sext file
     if '_ldac.fits' in new_catalog:
-        real_fits_filename = new_catalog.replace('_ldac.fits', '.fits')
+        real_fits_filename = os.path.basename(new_catalog).replace('_ldac.fits', '.fits')
+        fits_filename_path = new_catalog.replace('_ldac.fits', '.fits')
     elif '_cat.fits' in new_catalog:
-        real_fits_filename = new_catalog.replace('_cat.fits', '.fits')
+        real_fits_filename = os.path.basename(new_catalog).replace('_cat.fits', '.fits')
+        fits_filename_path = new_catalog.replace('_cat.fits', '.fits')
     else:
         real_fits_filename = new_catalog
 
     #May need to filter objects within 5 pixels of frame edge as does in cleansex.tcl
-    sources = CatalogSources.objects.filter(frame__filename=fits_filename_frame, obs_mag__gt=0.0)
+    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0)
     num_iter = 1
     for source in sources:
         sext_dict_list.append(make_sext_dict(source, num_iter))
         num_iter += 1
 
-    return sext_dict_list, real_fits_filename
+    return sext_dict_list, fits_filename_path
 
 def make_sext_line_list(sext_dict_list):
+    '''sort the list of dictionary entries and
+    create a list of formatted strings to be
+    printed in the .sext files needed for mtdlink'''
 
     sext_line_list = []
 
@@ -886,16 +897,18 @@ def make_sext_line_list(sext_dict_list):
     return sext_line_list
 
 def make_sext_file(dest_dir, new_catalog):
+    '''Synthesizes the .sext file needed for running
+    mtdlink instead of running sextractor again'''
 
-    sext_dict_list, fits_filename = make_sext_dict_list(new_catalog)
+    sext_dict_list, fits_filename_path = make_sext_dict_list(new_catalog)
     sext_line_list = make_sext_line_list(sext_dict_list)
-    sext_filename = open(os.path.join(dest_dir, fits_filename.replace('.fits', '.sext')), 'w')
+    sext_filename = open(os.path.join(dest_dir, os.path.basename(fits_filename_path).replace('.fits', '.sext')), 'w')
     for line in sext_line_list:
         sext_filename.write(line)
         sext_filename.write('\n')
     sext_filename.close()
 
-    return fits_filename
+    return fits_filename_path
 
 def determine_filenames(product):
     '''Given a passed <product> filename, determine the corresponding catalog
@@ -906,6 +919,8 @@ def determine_filenames(product):
     product = os.path.basename(product)
     if '_cat.fits' in product:
         new_product = product.replace('_cat', '', 1)
+    elif '_ldac.fits' in product:
+        new_product = product.replace('_ldac', '', 1)
     else:
         file_bits =  product.split(os.extsep)
         if len(file_bits) == 2:

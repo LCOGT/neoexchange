@@ -1200,13 +1200,15 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     catalog from this process is returned or an integer status code if no
     fit was needed or could not be performed.'''
 
+    num_new_frames_created = 0
+
     # Open catalog, get header and check fit status
     fits_header, junk_table = open_fits_catalog(catfile, header_only=True)
     header = get_catalog_header(fits_header, 'LCOGT')
     if header != {}:
         logger.debug("astrometric fit status=%d" %  header['astrometric_fit_status'])
+        fits_file = determine_filenames(catfile)
         if header['astrometric_fit_status'] != 0:
-            fits_file = determine_filenames(catfile)
             if fits_file == None:
                 logger.error("Could not determine matching image for %s" % catfile)
                 return -1
@@ -1233,6 +1235,42 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     logger.debug("Updating bad WCS in image file: %s" % fits_file_output)
                     status = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
 
+                    #if a Frame does not exist for the fits file with a non-null block
+                    #create one with the fits filename
+                    if len(Frame.objects.filter(filename=os.path.basename(fits_file_output), block__isnull=False)) < 1:
+                        if 'e90.fits' in os.path.basename(fits_file):
+                            fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
+                        elif 'e10.fits' in os.path.basename(fits_file):
+                            fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+                        try:
+                            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
+                        except Frame.MultipleObjectsReturned:
+                            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" %(fits_file_output, frames_with_blocks))
+                            return -3
+                        except Frame.DoesNotExist:
+                            logger.error("Frame entry for fits file %s does not exist" % fits_file_output)
+                            return -3
+
+                        #Create a new Frame entry for new fits_file_output name
+                        frame_params = {    'sitecode':header['site_code'],
+                                            'instrument':header['instrument'],
+                                            'filter':header['filter'],
+                                            'filename':os.path.basename(fits_file_output),
+                                            'exptime':header['exptime'],
+                                            'midpoint':header['obs_midpoint'],
+                                            'block':frame.block,
+                                            'zeropoint':header['zeropoint'],
+                                            'zeropoint_err':header['zeropoint_err'],
+                                            'fwhm':header['fwhm'],
+                                            'frametype':Frame.SINGLE_FRAMETYPE,
+                                            'rms_of_fit':header['astrometric_fit_rms'],
+                                            'nstars_in_fit':header['astrometric_fit_nstars'],
+                                        }
+
+                        frame, created = Frame.objects.get_or_create(**frame_params)
+                        if created == True:
+                            num_new_frames_created += 1
+
                     # Update RA, Dec columns in LDAC catalog file
                     logger.debug("Updating RA, Dec in LDAC catalog file: %s" % fits_ldac_catalog )
                     fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
@@ -1243,12 +1281,49 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
                     os.rename(fits_ldac_catalog_path, new_ldac_catalog)
         else:
+            #if a Frame does not exist for the fits file with a non-null block
+            #create one with the fits filename
+            if len(Frame.objects.filter(filename=os.path.basename(fits_file), block__isnull=False)) < 1:
+                #create a new Frame even if WCS fit is good in order to have the real fits filename in the Frame
+                if 'e90.fits' in os.path.basename(fits_file):
+                    fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
+                elif 'e10.fits' in os.path.basename(fits_file):
+                    fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+                try:
+                    frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
+                except Frame.MultipleObjectsReturned:
+                    logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" %(fits_file_output, frames_with_blocks))
+                    return -3
+                except Frame.DoesNotExist:
+                    logger.error("Frame entry for fits file %s does not exist" % fits_file_output)
+                    return -3
+
+                #Create a new Frame entry for new fits_file_output name
+                frame_params = {    'sitecode':header['site_code'],
+                                    'instrument':header['instrument'],
+                                    'filter':header['filter'],
+                                    'filename':os.path.basename(fits_file),
+                                    'exptime':header['exptime'],
+                                    'midpoint':header['obs_midpoint'],
+                                    'block':frame.block,
+                                    'zeropoint':header['zeropoint'],
+                                    'zeropoint_err':header['zeropoint_err'],
+                                    'fwhm':header['fwhm'],
+                                    'frametype':Frame.SINGLE_FRAMETYPE,
+                                    'rms_of_fit':header['astrometric_fit_rms'],
+                                    'nstars_in_fit':header['astrometric_fit_nstars'],
+                                }
+
+                frame, created = Frame.objects.get_or_create(**frame_params)
+                if created == True:
+                    num_new_frames_created += 1
             logger.info("Catalog %s already has good WCS fit status" % catfile)
-            return 0
+            return 0, num_new_frames_created
     else:
         logger.error("Could not check catalog %s" % catfile)
-        return -2
-    return new_ldac_catalog
+        return -2, num_new_frames_created
+
+    return new_ldac_catalog, num_new_frames_created
 
 def store_detections(mtdsfile, dbg=False):
 
@@ -1256,7 +1331,7 @@ def store_detections(mtdsfile, dbg=False):
     if moving_objects != {} and len(moving_objects.get('detections', [])) > 0:
         det_frame = moving_objects['frames'][0]
         try:
-            frame = Frame.objects.get(filename=det_frame[0])
+            frame = Frame.objects.get(filename=det_frame[0], block__isnull=False)
         except Frame.MultipleObjectsReturned:
             logger.error("Frame %s exists multiple times" % det_frame[0])
             return None
@@ -1283,23 +1358,33 @@ def store_detections(mtdsfile, dbg=False):
             mag = np.ma.masked_array(candidate['mag'], mask=candidate['mag'] <= 0.0)
             mean_mag = mag.mean(dtype=np.float64)
 
-            # Store candidate moving object
-            params = {  'block' : frame.block,
-                        'cand_id' : candidate['det_number'][0],
-                        'avg_midpoint' : mean_dt,
-                        'score' : score,
-                        'avg_x' : mean_x,
-                        'avg_y' : mean_y,
-                        'avg_ra' : mean_ra,
-                        'avg_dec' : mean_dec,
-                        'avg_mag' : mean_mag,
-                        'speed' : speed, 
-                        'sky_motion_pa' : sky_position_angle,
-                        'detections' : candidate.tostring()
-                    }
-            if dbg: print params
-            cand, created = Candidate.objects.get_or_create(**params)
-            if dbg: print cand, created
+            try:
+                cand = Candidate.objects.get(block=frame.block, cand_id=candidate['det_number'][0], avg_midpoint=mean_dt, score=score,\
+                        avg_x=mean_x, avg_y=mean_y,avg_ra=mean_ra, avg_dec=mean_dec, avg_mag=mean_mag, speed=speed,\
+                        sky_motion_pa=sky_position_angle)
+                if cand.detections!=candidate.tostring():
+                    cand.detections=candidate.tostring()
+                    cand.save()
+            except Candidate.MultipleObjectsReturned:
+                pass
+            except Candidate.DoesNotExist:
+                # Store candidate moving object
+                params = {  'block' : frame.block,
+                            'cand_id' : candidate['det_number'][0],
+                            'avg_midpoint' : mean_dt,
+                            'score' : score,
+                            'avg_x' : mean_x,
+                            'avg_y' : mean_y,
+                            'avg_ra' : mean_ra,
+                            'avg_dec' : mean_dec,
+                            'avg_mag' : mean_mag,
+                            'speed' : speed,
+                            'sky_motion_pa' : sky_position_angle,
+                            'detections' : candidate.tostring()
+                        }
+                if dbg: print params
+                cand, created = Candidate.objects.get_or_create(**params)
+                if dbg: print cand, created
 
     return
 
