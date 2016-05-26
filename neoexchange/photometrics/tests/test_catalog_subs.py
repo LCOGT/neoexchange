@@ -33,6 +33,7 @@ from core.models import Body
 
 #Import module to test
 from photometrics.catalog_subs import *
+from core.views import check_catalog_and_refit
 
 class ZeropointUnitTest(TestCase):
 
@@ -1886,63 +1887,63 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_dictionary_creation(self):
 
+        frame_params = {    'sitecode':'V37',
+                            'instrument':'fl05',
+                            'filter':'w',
+                            'filename':'elp1m008-fl05-20160225-0100-e91.fits',
+                            'exptime':125.0,
+                            'midpoint':datetime(2016, 2, 26, 3, 58, 46, 189000),
+                            'block':None,
+                            'zeropoint':29.6113857745,
+                            'zeropoint_err':0.0414642608048,
+                            'fwhm':3.246,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':10.0,
+                        }
+
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+
+        source_params = {   'frame':self.test_frame,
+                            'obs_x': 2165.8260536,
+                            'obs_y': 57.1152786081,
+                            'obs_ra': 163.864883508,
+                            'obs_dec': 39.0624181436,
+                            'obs_mag': 21.4522571564,
+                            'err_obs_ra': 0.0000143653990456,
+                            'err_obs_dec': 0.0000414534439506,
+                            'err_obs_mag': 0.0147576071322,
+                            'background': 1712.08544922,
+                            'major_axis': 1.71870410442,
+                            'minor_axis': 1.58122706413,
+                            'position_angle': -74.1212539673,
+                            'ellipticity': 0.0799887776375,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 126.969825745,
+                            'threshold': 59.2340202332
+                        }
+        self.test_cat_src, created = CatalogSources.objects.get_or_create(**source_params)
+
         test_dict = {   'number':1,
-                        'obs_x':106.118,
-                        'obs_y':18.611,
-                        'obs_mag':17.1818,
-                        'theta':-79.4,
-                        'elongation':1.076,
-                        'fwhm':3.63,
+                        'obs_x':2165.826,
+                        'obs_y':57.115,
+                        'obs_mag':21.4523,
+                        'theta':-74.1,
+                        'elongation':1.087,
+                        'fwhm':3.30,
                         'flags':0,
-                        'deltamu':2.624,
-                        'flux':11228.2,
-                        'area':10.3126,
-                        'ra':86.86805,
-                        'dec':-27.57513
+                        'deltamu':0.828,
+                        'flux':1835.1,
+                        'area':8.5378,
+                        'ra':163.86488,
+                        'dec':39.06242
                     }
 
         num_iter = 1
 
-        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
-
-        sext_params = make_sext_dict(CatalogSources.objects.first(), num_iter)
-
-        self.assertEqual(sext_params['number'], test_dict['number'])
-        self.assertAlmostEqual(sext_params['obs_x'], test_dict['obs_x'], 3)
-        self.assertAlmostEqual(sext_params['obs_y'], test_dict['obs_y'], 3)
-        self.assertAlmostEqual(sext_params['obs_mag'], test_dict['obs_mag'], 4)
-        self.assertAlmostEqual(sext_params['theta'], test_dict['theta'], 1)
-        self.assertAlmostEqual(sext_params['elongation'], test_dict['elongation'], 3)
-        self.assertAlmostEqual(sext_params['fwhm'], test_dict['fwhm'], 2)
-        self.assertEqual(sext_params['flags'], test_dict['flags'])
-        self.assertAlmostEqual(sext_params['deltamu'], test_dict['deltamu'], 3)
-        self.assertAlmostEqual(sext_params['flux'], test_dict['flux'], 1)
-        self.assertAlmostEqual(sext_params['area'], test_dict['area'], 4)
-        self.assertAlmostEqual(sext_params['ra'], test_dict['ra'], 5)
-        self.assertAlmostEqual(sext_params['dec'], test_dict['dec'], 5)
-
-    def test_dictionary_creation_ldac(self):
-
-        test_dict = {   'number':1,
-                        'obs_x':1375.745,
-                        'obs_y':42.124,
-                        'obs_mag':14.9862,
-                        'theta':7.77,
-                        'elongation':1.084,
-                        'fwhm':3.62,
-                        'flags':0,
-                        'deltamu':5.6216,
-                        'flux':206447.5,
-                        'area':10.2670,
-                        'ra':219.78770,
-                        'dec':-9.64014
-                    }
-
-        num_iter = 1
-
-        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type = 'FITS_LDAC')
-
-        sext_params = make_sext_dict(CatalogSources.objects.first(), num_iter)
+        sext_params = make_sext_dict(self.test_cat_src, num_iter)
 
         self.assertEqual(sext_params['number'], test_dict['number'])
         self.assertAlmostEqual(sext_params['obs_x'], test_dict['obs_x'], 3)
@@ -1976,37 +1977,6 @@ class MakeSEXTFileTest(FITSUnitTest):
                     }
 
         test_line = '         1    106.118     18.611  17.1818  -79.4       1.076      3.63   0  2.62        11228.2    10  86.86805 -27.57513'
-
-        num_iter = 1
-
-        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
-
-        sext_line = make_sext_file_line(test_dict)
-
-        self.assertEqual(sext_line, test_line)
-
-    def test_line_creation_ldac(self):
-
-        test_dict = {   'number':1,
-                        'obs_x':1375.745,
-                        'obs_y':42.124,
-                        'obs_mag':14.9862,
-                        'theta':7.77,
-                        'elongation':1.084,
-                        'fwhm':3.62,
-                        'flags':0,
-                        'deltamu':5.6216,
-                        'flux':206447.5,
-                        'area':10.2670,
-                        'ra':219.78770,
-                        'dec':-9.64014
-                    }
-
-        test_line = '         1   1375.745     42.124  14.9862    7.8       1.084      3.62   0  5.62       206447.5    10 219.78770  -9.64014'
-
-        num_iter = 1
-
-        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type = 'FITS_LDAC')
 
         sext_line = make_sext_file_line(test_dict)
 
@@ -2044,7 +2014,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'dec':9.63506
                   }
 
-        cat_filename = os.path.join(os.getenv('HOME'), 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0204-e10_cat.fits')
+        cat_filename = os.path.join(os.getenv('HOME'), 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
         num_sources_created, num_in_table = store_catalog_sources(cat_filename)
 
         sext_dict_list, fits_filename = make_sext_dict_list(cat_filename)
@@ -2121,46 +2091,6 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_make_sext_line_list(self):
 
-        test_dict_list = [{ 'number':100,
-                            'obs_x':12.5250,
-                            'obs_y':1550.001,
-                            'obs_mag':-8.9453,
-                            'theta':87.9,
-                            'elongation':1.604,
-                            'fwhm':3.89,
-                            'flags':0,
-                            'deltamu':1.670,
-                            'flux':3785.5,
-                            'area':11.1111,
-                            'ra':218.25162,
-                            'dec':9.69550
-                          },
-                          { 'number':36,
-                            'obs_x':2011.931,
-                            'obs_y':1944.857,
-                            'obs_mag':-11.2158,
-                            'theta':-82.2,
-                            'elongation':1.234,
-                            'fwhm':4.85,
-                            'flags':0,
-                            'deltamu':4.1130,
-                            'flux':0.00003263,
-                            'area':18.111,
-                            'ra':217.98856,
-                            'dec':9.64428
-                          }]
-
-        cat_filename = os.path.join(os.getenv('HOME'), 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0204-e10_cat.fits')
-        num_sources_created, num_in_table = store_catalog_sources(cat_filename)
-
-        sext_dict_list, fits_filename = make_sext_dict_list(cat_filename)
-
-        sext_line_list = make_sext_line_list(sext_dict_list)
-
-        self.assertEqual(len(sext_line_list), 0)
-
-    def test_make_sext_line_list_ldac(self):
-
         test_dict_list = [{  'number':405,
                             'obs_x':5.959,
                             'obs_y':800.006,
@@ -2192,14 +2122,9 @@ class MakeSEXTFileTest(FITSUnitTest):
 
         test_line_list = ['       405      5.959    800.006  20.7902  -89.1       1.070      0.63   0  2.82          597.2     0 218.25847   9.79143', '       456   2017.041    655.951  20.1782   80.4       1.006      1.30   0  3.91         1049.4     1 217.99272   9.81255']
 
-        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
-        num_sources_created, num_in_table = store_catalog_sources(cat_ldacfilename, catalog_type = 'FITS_LDAC')
+        sext_line_list = make_sext_line_list(test_dict_list)
 
-        sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename)
-
-        sext_line_list = make_sext_line_list(sext_dict_list)
-
-        self.assertEqual(len(sext_line_list), 692)
+        self.assertEqual(len(sext_line_list), 2)
         self.assertEqual(sext_line_list[0], test_line_list[0])
         self.assertEqual(sext_line_list[-1], test_line_list[1])
 
