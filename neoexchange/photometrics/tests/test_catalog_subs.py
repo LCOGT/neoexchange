@@ -2152,49 +2152,10 @@ class TestMakeSEXTFile(ExternalCodeUnitTest):
 
     def test_make_sext_file(self):
 
-        cat_filename = os.path.join(os.getenv('HOME'), 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
-
-        num_sources_created, num_in_table = store_catalog_sources(cat_filename)
-
-        fits_filename = make_sext_file(self.test_dir, cat_filename)
-
-        sext_file = os.path.join(self.test_dir, fits_filename.replace('.fits', '.sext'))
-        self.assertTrue(os.path.exists(sext_file))
-        test_file = open(sext_file, 'r')
-        test_lines = test_file.readlines()
-        test_file.close()
-
-        self.assertEqual(0, len(test_lines))
-
-    def test_make_sext_file_diff_file(self):
-
-        expected_first_line =  '       418     17.195   1182.871  15.2507    6.1       1.244      4.62   0  4.20        59298.4    16 141.91405 -13.52058'
-        expected_second_line = '       260     17.438   1718.387  16.8568    2.6       1.188      3.69   0  2.81        13507.8    10 141.91406 -13.59004'
-
-        cat_filename = os.path.join(os.getenv('HOME'), 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90_cat.fits')
-
-        num_sources_created, num_in_table = store_catalog_sources(cat_filename)
-
-        fits_filename = make_sext_file(self.test_dir, cat_filename)
-
-        sext_file = os.path.join(self.test_dir, fits_filename.replace('.fits', '.sext'))
-        self.assertTrue(os.path.exists(sext_file))
-        test_file = open(sext_file, 'r')
-        test_lines = test_file.readlines()
-        test_file.close()
-
-        self.assertEqual(472, len(test_lines))
-        self.assertEqual(expected_first_line, test_lines[0].rstrip())
-        self.assertEqual(expected_second_line, test_lines[1].rstrip())
-
-    def test_make_sext_file_ldac(self):
-
         expected_first_line =  '       405      5.959    800.006  20.7902  -89.1       1.070      0.63   0  2.82          597.2     0 218.25847   9.79143'
         expected_second_line = '        98      6.019   1641.004  19.9684  -84.8       1.005      0.58   0  4.16         1273.2     0 218.25739   9.68169'
 
         cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
-
-        num_sources_created, num_in_table = store_catalog_sources(cat_ldacfilename, catalog_type = 'FITS_LDAC')
 
         fits_filename = make_sext_file(self.test_dir, cat_ldacfilename)
 
