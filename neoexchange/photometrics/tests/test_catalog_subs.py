@@ -1885,7 +1885,7 @@ class ExternalCodeUnitTest(TestCase):
 
 class MakeSEXTFileTest(FITSUnitTest):
 
-    def test_dictionary_creation(self):
+    def setUp(self):
 
         frame_params = {    'sitecode':'V37',
                             'instrument':'fl05',
@@ -1903,7 +1903,6 @@ class MakeSEXTFileTest(FITSUnitTest):
                         }
 
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
-
 
         source_params = {   'frame':self.test_frame,
                             'obs_x': 2165.8260536,
@@ -1925,6 +1924,67 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'threshold': 59.2340202332
                         }
         self.test_cat_src, created = CatalogSources.objects.get_or_create(**source_params)
+
+        frame_params = {    'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'cpt1m013-kb76-20160505-0205-e11.fits',
+                            'exptime':60.0,
+                            'midpoint':datetime(2016, 5, 5,20, 2, 29),
+                            'block':None,
+                            'zeropoint':27.7305864552,
+                            'zeropoint_err':0.0776317342309,
+                            'fwhm':2.825,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':3.0,
+                        }
+
+        self.test_frame_2, created = Frame.objects.get_or_create(**frame_params)
+
+        source_params = {   'frame':self.test_frame_2,
+                            'obs_x': 886.244640655,
+                            'obs_y': 18.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_2, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_2,
+                            'obs_x': 708.002750723,
+                            'obs_y': 1960.00075651,
+                            'obs_ra': 218.164206491,
+                            'obs_dec': 9.64089784636,
+                            'obs_mag': 18.4867630005,
+                            'err_obs_ra': 0.0000016381997233,
+                            'err_obs_dec': 0.0000016349852456,
+                            'err_obs_mag': 0.00311457808129,
+                            'background': 43.1037330627,
+                            'major_axis': 0.651648461819,
+                            'minor_axis': 0.648237645626,
+                            'position_angle': 7.21760177612,
+                            'ellipticity': 0.00523412227631,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 4937.96289062,
+                            'threshold': 28.2903823853
+                        }
+        self.test_cat_src_3, created = CatalogSources.objects.get_or_create(**source_params)
+
+    def test_dictionary_creation(self):
 
         test_dict = {   'number':1,
                         'obs_x':2165.826,
@@ -1985,61 +2045,21 @@ class MakeSEXTFileTest(FITSUnitTest):
     def test_multiple_sources_sext_dict(self):
 
         test_dict_first = { 'number':1,
-                            'obs_x':520.404,
-                            'obs_y':28.866,
-                            'obs_mag':-9.0440,
-                            'theta':47.7,
-                            'elongation':2.248,
-                            'fwhm':2.77,
-                            'flags':0,
-                            'deltamu':4.367,
-                            'flux':4145.7,
-                            'area':5.1214,
-                            'ra':218.18484,
-                            'dec':9.89281
-                          }
-
-        test_dict_last = {  'number':113,
-                            'obs_x':757.435,
-                            'obs_y':2016.138,
-                            'obs_mag':-9.5609,
-                            'theta':-88.881,
-                            'elongation':1.273,
-                            'fwhm':4.05,
-                            'flags':0,
-                            'deltamu':2.567,
-                            'flux':6673.6,
-                            'area':12.6809,
-                            'ra':218.15360,
-                            'dec':9.63506
-                  }
-
-        cat_filename = os.path.join(os.getenv('HOME'), 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
-        num_sources_created, num_in_table = store_catalog_sources(cat_filename)
-
-        sext_dict_list, fits_filename = make_sext_dict_list(cat_filename)
-
-        #negative magnitudes filtered out when making .sext files, so should get an empty list
-        self.assertEqual(len(sext_dict_list), 0)
-
-    def test_multiple_sources_sext_dict_ldac(self):
-
-        test_dict_first = { 'number':1,
                             'obs_x':886.245,
                             'obs_y':18.211,
                             'obs_mag':16.2081,
                             'theta':-77.62,
-                            'elongation':1.050,
-                            'fwhm':3.42,
+                            'elongation':1.00,
+                            'fwhm':3.34,
                             'flags':0,
                             'deltamu':3.9049,
                             'flux':40643.1,
-                            'area':9.2044,
+                            'area':8.7652,
                             'ra':218.14304,
                             'dec':9.89449
                           }
 
-        test_dict_last = {  'number':692,
+        test_dict_last = {  'number':2,
                             'obs_x':708.003,
                             'obs_y':1960.001,
                             'obs_mag':18.4868,
@@ -2055,7 +2075,6 @@ class MakeSEXTFileTest(FITSUnitTest):
                          }
 
         cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
-        num_sources_created, num_in_table = store_catalog_sources(cat_ldacfilename, catalog_type = 'FITS_LDAC')
 
         sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename)
 
@@ -2087,7 +2106,7 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_dict_list[-1]['ra'], test_dict_last['ra'], 5)
         self.assertAlmostEqual(sext_dict_list[-1]['dec'], test_dict_last['dec'], 5)
 
-        self.assertEqual(len(sext_dict_list), 692)
+        self.assertEqual(len(sext_dict_list), 2)
 
     def test_make_sext_line_list(self):
 
