@@ -1292,10 +1292,10 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                 try:
                     frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
                 except Frame.MultipleObjectsReturned:
-                    logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" %(fits_file_output, frames_with_blocks))
+                    logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file_orig, frames_with_blocks))
                     return -3
                 except Frame.DoesNotExist:
-                    logger.error("Frame entry for fits file %s does not exist" % fits_file_output)
+                    logger.error("Frame entry for fits file %s does not exist" % fits_file_orig)
                     return -3
 
                 #Create a new Frame entry for new fits_file_output name
