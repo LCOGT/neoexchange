@@ -102,7 +102,7 @@ class Command(BaseCommand):
         #May change this to get pa and rate from compute_ephem later
         pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
 
-        retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict)
+#        retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict)
 
         # Step 5: Read MTDLINK output file and create candidates in NEOexchange
         if len(fits_file_list) > 0:

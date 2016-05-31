@@ -741,10 +741,12 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
         #check for good zeropoints
         if header.get('zeropoint',-99) == -99 or header.get('zeropoint_err',-99) == -99:
             #if bad, determine new zeropoint
+            print "Refitting zeropoint"
             header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table))
-
+            print "New zp=", avg_zeropoint, std_zeropoint, count, num_in_calc
             #if crossmatch is good, update new zeropoint
             if std_zeropoint < 0.1:
+                print "Got good zeropoint"
                 header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
 
         #get the fits filename from the catfile in order to get the Block from the Frame

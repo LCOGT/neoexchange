@@ -1083,6 +1083,20 @@ def check_for_images(eventid=False):
         logger.error("Data view timed out")
     return images
 
+def check_for_images_by_propid(propid=False):
+    images = None
+    client = requests.session()
+    login_data = dict(username=settings.NEO_ODIN_USER, password=settings.NEO_ODIN_PASSWD)
+    data_url = 'https://data.lcogt.net/find?day_obs__gt=2015-12-07&day_obs__lt=2016-03-31&propid=%s&order_by=-date_obs&full_header=1' % propid
+    try:
+        resp = client.post(data_url, data=login_data, timeout=20)
+        images = resp.json()
+    except ValueError:
+        logger.error("Request API did not return JSON %s" % resp.text)
+    except requests.exceptions.Timeout:
+        logger.error("Data view timed out")
+    return images
+
 def create_frame(params, block=None):
     # Return None if params is just whitespace
     if not params:
