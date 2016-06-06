@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.2.3'
+VERSION = '1.3.0'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -231,7 +231,10 @@ DATABASES = {
 NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
-REQUEST_API_URL = 'https://lcogt.net/observe/service/request/get/userrequeststatus/'
+REQUEST_API_URL = 'https://lcogt.net/observe/api/user_request/%s/requests/'
+FRAMES_API_URL = 'https://lcogt.net/observe/api/request/%s/frames/'
+
+REDUCED_DATA_SUFFIX = 'e90'
 
 #######################
 # Test Database setup #

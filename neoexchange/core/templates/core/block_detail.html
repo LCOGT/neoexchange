@@ -3,6 +3,38 @@
 
 {% block header %}Block details{% endblock %}
 
+{% block script-content %}
+<script type="text/javascript">
+$(document).ready(function(){
+
+var frame_ids = {{images|safe}};
+
+for (i=0;i<frame_ids.length;i++){
+  var frame = frame_ids[i]['id']
+  $.ajax({
+     url: 'https://thumbnails.lcogt.net/'+ frame+'/',
+     data: {
+        format: 'json',
+     },
+     error: function() {
+        $('#observations').html('<p>An error has occurred</p>');
+     },
+     dataType: 'jsonp',
+     success: function(data) {
+        var $item = $('<li class="thumb">').html('<img src="'+ data.url +'"/>');
+        $('#observations').append($item)
+     },
+     type: 'GET'
+  });
+}
+
+</script>
+{% for img in images %}
+<li class="thumb"><a href="http://lcogt.net/observations/identity/?origname={{img.1}}.fits"><img src="http://data.lcogt.net/thumbnail/{{img.1}}/?width=150&height=150&gamma=2.5&label=0"></a></li>
+{% endfor %}
+
+{% endblock %}
+
 {% block bodyclass %}page{% endblock %}
 
 {% block extramenu %}
@@ -91,12 +123,9 @@
                         {% else %}
                         <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
                         {% endif %}
-                    {% if images and request.user.is_authenticated %}
+                    {% if request.user.is_authenticated %}
                     <h5 class="section-title">Observations</h5>
                         <ul class="observations">
-                        {% for img in images %}
-                        <li class="thumb"><a href="http://lcogt.net/observations/identity/?origname={{img.1}}.fits"><img src="http://data.lcogt.net/thumbnail/{{img.1}}/?width=150&height=150&gamma=2.5&label=0"></a></li>
-                        {% endfor %}
                         </ul>
                     {% endif %}
                 </div>
