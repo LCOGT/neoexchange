@@ -10,7 +10,7 @@ $(document).ready(function(){
 var frame_ids = {{images|safe}};
 
 for (i=0;i<frame_ids.length;i++){
-  var frame = frame_ids[i]['id']
+  var frame = frame_ids[i];
   $.ajax({
      url: 'https://thumbnails.lcogt.net/'+ frame+'/',
      data: {
@@ -27,11 +27,9 @@ for (i=0;i<frame_ids.length;i++){
      type: 'GET'
   });
 }
+});
 
 </script>
-{% for img in images %}
-<li class="thumb"><a href="http://lcogt.net/observations/identity/?origname={{img.1}}.fits"><img src="http://data.lcogt.net/thumbnail/{{img.1}}/?width=150&height=150&gamma=2.5&label=0"></a></li>
-{% endfor %}
 
 {% endblock %}
 
@@ -125,7 +123,7 @@ for (i=0;i<frame_ids.length;i++){
                         {% endif %}
                     {% if request.user.is_authenticated %}
                     <h5 class="section-title">Observations</h5>
-                        <ul class="observations">
+                        <ul id="observations">
                         </ul>
                     {% endif %}
                 </div>

@@ -33,7 +33,7 @@ def fetch_observations(tracking_num):
     headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     data = check_request_status(headers, tracking_num)
     for r in data:
-        images = check_for_images(request=r['request_number'])
+        images = check_for_images(headers,request_id=r['request_number'])
         image_list += [i['id'] for i in images]
     return image_list
 

@@ -41,7 +41,7 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates
 from astrometrics.ast_subs import determine_asteroid_type
 from core.frames import block_status, frame_params_from_block, frame_params_from_log, \
-    ingest_frames, create_frame, check_for_images, check_request_status
+    ingest_frames, create_frame, check_for_images, check_request_status, fetch_observations
 import logging
 import reversion
 import json
@@ -144,7 +144,7 @@ class BlockDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(BlockDetailView, self).get_context_data(**kwargs)
-        #context['images'] = fetch_observations(context['block'].tracking_number)
+        context['images'] = fetch_observations(context['block'].tracking_number)
         return context
 
 
