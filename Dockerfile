@@ -51,6 +51,8 @@ RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
         && yum -y install supervisor libssl \
         && yum -y groupinstall "Development Tools" \
+        && yum -y install 'http://www.astromatic.net/download/sextractor/sextractor-2.19.5-1.x86_64.rpm' \
+        && yum -y install 'http://www.astromatic.net/download/scamp/scamp-2.0.4-1.x86_64.rpm' \
         && yum -y update
 
 # Setup our python env now so it can be cached
