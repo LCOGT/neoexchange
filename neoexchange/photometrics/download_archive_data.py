@@ -28,7 +28,7 @@ usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[0] )
 proposal='LCO2016A-021'
 obs_date = datetime.utcnow()
 obstype = '' # Set to blank to get frames and catalogs
-redlevel = ['90', '10']
+redlevel = ['91', '11']
 
 # Parse command line arguments
 if len(argv) == 2:
