@@ -742,6 +742,10 @@ def update_crossids(astobj, dbg=False):
         if dbg:
             print "Did not create new Body"
         # Find out if the details have changed, if they have, save a revision
+        # But first check if it is a comet or NEO and came from somewhere other
+        # than the MPC. In this case, leave it active.
+        if body.source_type in ['N', 'C'] and body.origin != 'M':
+            kwargs['active'] = True
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)

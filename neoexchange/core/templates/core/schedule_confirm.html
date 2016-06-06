@@ -13,8 +13,7 @@
 {% endblock%}
 
 {% block main-content %}
-    <div class="container">
-        <div id="main">
+    <div class="container" id="main">
         <form action="{% url  'schedule-confirm' body.id %}" method="POST" >
         {% csrf_token %}
           <div class="row">
@@ -25,63 +24,65 @@
                   {% endfor %}
           </div>
         <div class="row">
-
-        {% if data %}
-        <h6 class="section-title">Submitted Parameters</h6>
-        <table class="keyvalue-table" style="width:100%">
-            <tbody>
-                <tr id="id_proposal">
-                    <td class="kv-key">Proposal</td>
-                    <td class="kv-value">{{ data.proposal_code }}</td>
-                </tr>
-                <tr id="id_site">
-                    <td class="kv-key">Site</td>
-                    <td class="kv-value">{{data.site_code}}</td>
-                </tr>
-                <tr id="id_utc_date">
-                    <td class="kv-key">UTC date</td>
-                    <td class="kv-value">{{ data.utc_date}}</td>
-                </tr>
-            </tbody>
-        </table>
-        <h6 class="section-title">Calculated characteristics at {{ data.mid_time }}</h6>
-        <table class="keyvalue-table" style="width:100%">
-            <tbody>
-                <tr id="id_ra">
-                    <td class="kv-key">Right Ascension</td>
-                    <td class="kv-value">{{ data.ra_midpoint|radianstohms:" " }}</td>
-                </tr>
-                <tr id="id_dec">
-                    <td class="kv-key">Declination</td>
-                    <td class="kv-value">{{ data.dec_midpoint|radianstodms:" " }}</td>
-                </tr>
-                 <tr id="id_magnitude">
-                    <td class="kv-key">Magnitude</td>
-                    <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
-                </tr>
-                <tr id="id_speed">
-                    <td class="kv-key">Speed</td>
-                    <td class="kv-value">{{ data.speed|floatformat:2 }} '/min</td>
-                </tr>
-                <tr id="id_slot_length">
-                    <td class="kv-key">Slot length</td>
-                    <td class="kv-value">{{ form.slot_length }} mins</td>
-                </tr>
-                <tr id="id_no_of_exps">
-                    <td class="kv-key">No. of exposures</td>
-                    <td class="kv-value">{{ data.exp_count }}</td>
-                </tr>
-                <tr id="id_exp_length">
-                    <td class="kv-key">Exposure length</td>
-                    <td class="kv-value">{{ data.exp_length|floatformat:1 }} secs</td>
-                </tr>
-                <tr id="id_window">
-                    <td class="kv-key">Window (UTC)</td>
-                    <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
-                </tr>
-            </tbody>
-        </table>
-    {% endif %}
+          <div class="eight columns">
+            {% if data %}
+            <h6 class="section-title">Submitted Parameters</h6>
+            <table class="keyvalue-table" style="width:100%">
+                <tbody>
+                    <tr id="id_proposal">
+                        <td class="kv-key">Proposal</td>
+                        <td class="kv-value">{{ data.proposal_code }}</td>
+                    </tr>
+                    <tr id="id_site">
+                        <td class="kv-key">Site</td>
+                        <td class="kv-value">{{data.site_code}}</td>
+                    </tr>
+                    <tr id="id_utc_date">
+                        <td class="kv-key">UTC date</td>
+                        <td class="kv-value">{{ data.utc_date}}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <h6 class="section-title">Calculated characteristics at {{ data.mid_time }}</h6>
+            <table class="keyvalue-table" style="width:100%">
+                <tbody>
+                    <tr id="id_ra">
+                        <td class="kv-key">Right Ascension</td>
+                        <td class="kv-value">{{ data.ra_midpoint|radianstohms:" " }}</td>
+                    </tr>
+                    <tr id="id_dec">
+                        <td class="kv-key">Declination</td>
+                        <td class="kv-value">{{ data.dec_midpoint|radianstodms:" " }}</td>
+                    </tr>
+                     <tr id="id_magnitude">
+                        <td class="kv-key">Magnitude</td>
+                        <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
+                    </tr>
+                    <tr id="id_speed">
+                        <td class="kv-key">Speed</td>
+                        <td class="kv-value">{{ data.speed|floatformat:2 }} '/min</td>
+                    </tr>
+                    <tr id="id_slot_length">
+                        <td class="kv-key">Slot length</td>
+                        <td class="kv-value">{{ form.slot_length }} mins</td>
+                    </tr>
+                    <tr id="id_no_of_exps">
+                        <td class="kv-key">No. of exposures</td>
+                        <td class="kv-value">{{ data.exp_count }}</td>
+                    </tr>
+                    <tr id="id_exp_length">
+                        <td class="kv-key">Exposure length</td>
+                        <td class="kv-value">{{ data.exp_length|floatformat:1 }} secs</td>
+                    </tr>
+                    <tr id="id_window">
+                        <td class="kv-key">Window (UTC)</td>
+                        <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        {% endif %}
+      </div>
+      <div class="four columns">
         {% if form.errors%}
         <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
         {% else %}
@@ -96,8 +97,8 @@
           {{form.site_code}}
           {{form.group_id}}
         </div>
+      </div>
 
     </form>
-    </div>
     </div>
 {% endblock %}
