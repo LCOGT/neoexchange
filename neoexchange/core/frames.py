@@ -6,13 +6,13 @@ from photometrics.archive_subs import archive_login
 from django.conf import settings
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('core')
 
 def odin_login(username, password):
 
-    archive_url = settings.RBAUTH_TOKEN_URL
+    auth_url = settings.REQUEST_AUTH_API_URL
     #  Get the authentication token
-    response = requests.post(archive_url,
+    response = requests.post(auth_url,
         data = {
                 'username': username,
                 'password': password
@@ -41,10 +41,10 @@ def fetch_observations(tracking_num):
 def lcogt_api_call(auth_header, url):
     data = None
     try:
-        resp = requests.post(url, headers=auth_header, timeout=20)
+        resp = requests.get(url, headers=auth_header, timeout=20)
         data = resp.json()
-    except ValueError:
-        logger.error("Request API did not return JSON")
+    except ValueError, err:
+        logger.error("Request %s API did not return JSON: %s" % (url, resp.status_code))
     except requests.exceptions.Timeout:
         logger.error("Request API timed out")
     return data
@@ -161,6 +161,7 @@ def block_status(block_id):
 
     # Get authentication token for ODIN
     headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
+    logger.debug("Checking request status for %s" % block_id)
     data = check_request_status(headers, tracking_num)
     # data is a full LCOGT request dict for this tracking number.
     if not data:
@@ -169,7 +170,7 @@ def block_status(block_id):
     exposure_count = 0
     for r in data:
         images = check_for_images(headers, request_id=r['request_number'])
-        logger.error('Request no. %s x %s images' % (r['request_number'],len(images)))
+        logger.debug('Request no. %s x %s images' % (r['request_number'],len(images)))
         if images:
             if len(images) >= 3:
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])

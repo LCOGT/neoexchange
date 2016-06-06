@@ -177,7 +177,7 @@ LOGGING = {
             'filters': ['require_debug_false']
         },
         'console': {
-            'level': 'ERROR',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         }
@@ -195,7 +195,7 @@ LOGGING = {
         },
         'core' : {
             'handlers' : ['file','console'],
-            'level'    : 'ERROR',
+            'level'    : 'DEBUG',
         },
         'astrometrics' : {
             'handlers' : ['file','console'],
@@ -231,8 +231,9 @@ DATABASES = {
 NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
-REQUEST_API_URL = 'https://lcogt.net/observe/api/user_request/%s/requests/'
-FRAMES_API_URL = 'https://lcogt.net/observe/api/request/%s/frames/'
+REQUEST_API_URL = 'https://lcogt.net/observe/api/user_requests/%s/requests/'
+FRAMES_API_URL = 'https://lcogt.net/observe/api/requests/%s/frames/'
+REQUEST_AUTH_API_URL = 'https://lcogt.net/observe/api/api-token-auth/'
 
 REDUCED_DATA_SUFFIX = 'e90'
 
