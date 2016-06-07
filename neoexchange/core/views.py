@@ -178,7 +178,6 @@ class UploadReport(LoginRequiredMixin, FormView):
 
     def form_invalid(self, form, **kwargs):
         context = self.get_context_data(**kwargs)
-        print context['view'].request
         slot = Block.objects.get(pk=form['block_id'].value())
         return render(context['view'].request, 'core/uploadreport.html', {'form':form,'slot':slot})
 
