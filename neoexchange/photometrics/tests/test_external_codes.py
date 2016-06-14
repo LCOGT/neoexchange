@@ -114,15 +114,16 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         pa_rate_dict = make_pa_rate_dict(pa=255.0, deltapa=10.0, minrate=0.95, maxrate=1.0)
 
-        expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 600 -MAXMISSES 1 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4 foo.fits foo2.fits foo3.fits'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, ['foo.fits', 'foo2.fits', 'foo3.fits'], 3, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
+        expected_status = -43
+        status = run_mtdlink(self.source_dir, self.test_dir, ['foo.fits', 'foo2.fits', 'foo3.fits'], 3, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
 
-        self.assertEqual(expected_cmdline, cmdline)
+        self.assertEqual(expected_status, status)
 
     @skipIf(find_binary("mtdlink") == None, "Could not find MTDLINK binary ('mtdlink') in PATH")
     def test_run_mtdlink_realfile(self):
 
         expected_status = 0
+        expected_line1_sext_file = '       418     17.195   1182.871  15.2507    6.1       1.244      4.62   0  4.20        59298.4    16 141.91405 -13.52058'
         expected_line1 = 'DETSV2.0'
         expected_line1_file = 'mtdlink: Starting verbose mode'
 
@@ -147,6 +148,15 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         param_file = 'mtdi.lcogt.param'
 
+        for f in test_file_list:
+            sext_file = os.path.basename(f).replace('.fits', '.sext')
+            sext_file = os.path.join(self.test_dir, sext_file)
+            # If the file exists and is a link (or a broken link), then remove it
+            if os.path.lexists(sext_file) and os.path.islink(sext_file):
+                os.unlink(sext_file)
+            if not os.path.exists(sext_file):
+                os.symlink(f.replace('.fits', '.sext'), sext_file)
+
         pa_rate_dict = make_pa_rate_dict(pa=255.0, deltapa=10.0, minrate=0.95, maxrate=1.0)
 
         status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 8, param_file, pa_rate_dict)
@@ -170,8 +180,14 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(input_fits_7))
         input_fits_8 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0105-e90.fits')
         self.assertTrue(os.path.exists(input_fits_8))
+
         input_sext_1 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.sext')
         self.assertTrue(os.path.exists(input_sext_1))
+        test_fh_file = open(input_sext_1, 'r')
+        test_lines_file = test_fh_file.readlines()
+        test_fh_file.close()
+        self.assertEqual(472, len(test_lines_file))
+        self.assertEqual(expected_line1_sext_file, test_lines_file[0].rstrip())
         input_sext_2 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0099-e90.sext')
         self.assertTrue(os.path.exists(input_sext_2))
         input_sext_3 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0100-e90.sext')
@@ -186,6 +202,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(input_sext_7))
         input_sext_8 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0105-e90.sext')
         self.assertTrue(os.path.exists(input_sext_8))
+
         output_mtds = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.mtds')
         self.assertTrue(os.path.exists(output_mtds))
         test_fh = open(output_mtds, 'r')
@@ -210,6 +227,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
     def test_run_mtdlink_realfile_different_set(self):
 
         expected_status = 0
+        expected_line1_sext_file = '      5021      5.602   3418.469  21.1217 -80.7    3.268     6.21   0  0.98   1506.9    4 164.15665  39.42453'
         expected_line1 = 'DETSV2.0'
         expected_line1_file = 'mtdlink: Starting verbose mode'
 
@@ -230,6 +248,15 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         param_file = 'mtdi.lcogt.param'
 
+        for f in test_file_list:
+            sext_file = os.path.basename(f).replace('.fits', '.sext')
+            sext_file = os.path.join(self.test_dir, sext_file)
+            # If the file exists and is a link (or a broken link), then remove it
+            if os.path.lexists(sext_file) and os.path.islink(sext_file):
+                os.unlink(sext_file)
+            if not os.path.exists(sext_file):
+                os.symlink(f.replace('.fits', '.sext'), sext_file)
+
         pa_rate_dict = make_pa_rate_dict(pa=345.0, deltapa=25.0, minrate=1.15, maxrate=1.25)
 
         status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 6, param_file, pa_rate_dict)
@@ -249,8 +276,14 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(input_fits_5))
         input_fits_6 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0100-e90.fits')
         self.assertTrue(os.path.exists(input_fits_6))
+
         input_sext_1 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.sext')
         self.assertTrue(os.path.exists(input_sext_1))
+        test_fh_file = open(input_sext_1, 'r')
+        test_lines_file = test_fh_file.readlines()
+        test_fh_file.close()
+        self.assertEqual(7189, len(test_lines_file))
+        self.assertEqual(expected_line1_sext_file, test_lines_file[0].rstrip())
         input_sext_2 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0096-e90.sext')
         self.assertTrue(os.path.exists(input_sext_2))
         input_sext_3 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0097-e90.sext')
@@ -261,6 +294,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(input_sext_5))
         input_sext_6 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0100-e90.sext')
         self.assertTrue(os.path.exists(input_sext_6))
+
         output_mtds = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.mtds')
         self.assertTrue(os.path.exists(output_mtds))
         test_fh = open(output_mtds, 'r')
