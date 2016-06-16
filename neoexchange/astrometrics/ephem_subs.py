@@ -700,6 +700,7 @@ def get_mag_mapping(site_code):
     good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
     # COJ normally has bad seeing, allow more time
     bad_onem_site_codes = ['Q63', 'Q64']
+    point4m_site_codes = ['Z21', 'W89', 'F66', 'Q59']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
@@ -735,6 +736,17 @@ def get_mag_mapping(site_code):
                 21   : 27.5,
                 21.5 : 32.5,
                 22.0 : 35
+               }
+    elif site_code in point4m_site_codes:
+        mag_mapping = {
+                12   : 15.0,
+                15   : 17.5,
+                17.5 : 20,
+                18.5 : 22.5,
+                19.5 : 25,
+                20   : 27.5,
+                20.5 : 32.5,
+                21.0 : 35
                }
     else:
         mag_mapping = {}
@@ -895,7 +907,7 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long # West of Greenwich !
         site_hgt = 2201.0
         site_name = 'LCOGT LSC Node 1m0 Dome C at Cerro Tololo'
-    elif site_code == 'LSC-AQWA-0M4A' or site_code == 'W85':
+    elif site_code == 'LSC-AQWA-0M4A' or site_code == 'W89':
 # Latitude, longitude from somewhere
         (site_lat, status)  =  S.sla_daf2r(30, 10, 3.79)
         site_lat = -site_lat   # Southern hemisphere !
@@ -943,6 +955,27 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(149, 04, 14.75)
         site_hgt = 1168.0
         site_name = 'LCOGT COJ Node 1m0 Dome B at Siding Spring'
+    elif site_code == 'TFN-AQWA-0M4A' or site_code == 'Z21':
+# Latitude, longitude from Todd B./Google Earth
+        (site_lat, status)  =  S.sla_daf2r(28, 18, 1.11)
+        (site_long, status) =  S.sla_daf2r(16, 30, 42.13)
+        site_long = -site_long # West of Greenwich !
+        site_hgt = 2390.0
+        site_name = 'LCOGT TFN Node 0m4a Aqawan A at Tenerife'
+    elif site_code == 'OGG-CLMA-0M4B' or site_code == 'F66':
+# Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
+        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
+        (site_long, status) =  S.sla_daf2r(156, 15, 27.11)
+        site_long = -site_long # West of Greenwich !
+        site_hgt = 3037.0
+        site_name = 'LCOGT OGG Node 0m4b at Maui'
+    elif site_code == 'COJ-CLMA-0M4B' or site_code == 'Q59':
+# Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
+        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.48)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) =  S.sla_daf2r(149, 04, 14.91)
+        site_hgt = 1191.0
+        site_name = 'LCOGT COJ Node 0m4b at Siding Spring'
     else:
 # Obtain latitude, longitude of the observing site.
 # Reverse longitude to get the more normal East-positive convention
@@ -1111,15 +1144,16 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site:
-        ha_pos_limit = 4.25 * 15.0
-        ha_neg_limit = -4.25 * 15.0
+    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z21', 'Q59', 'F66', 'W89']:
+        ha_pos_limit = 4.46 * 15.0
+        ha_neg_limit = -4.5 * 15.0
+        alt_limit = 15.0
 
     return (ha_neg_limit, ha_pos_limit, alt_limit)
 
 def LCOGT_site_codes():
     '''Return a list of LCOGT site codes'''
-    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'F65', 'E10' ] 
+    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'F65', 'E10', 'Z21' ] 
 
     return valid_site_codes
 
@@ -1146,26 +1180,30 @@ def get_sitecam_params(site):
     site_code is set to 'XXX' and the others are set to -1 in the event of an
     unrecognized site.'''
 
+    # Field of view is in arcmin, pixel scale is in arcsec, overheads are in
+    # seconds.
     onem_fov = 15.5
     onem_pixscale = 0.464
     onem_sinistro_fov = 26.4
     onem_sinistro_pixscale = 0.389
-    point4m_fov = 24.35
-    point4m_pixscale = 0.571
+    point4m_pixscale = 1.139 # bin 2, from average kb29 values
+    point4m_fov = 29.1
     normal_alt_limit = 30.0
     twom_alt_limit = 20.0
+    point4m_alt_limit = 15.0
 
     onem_exp_overhead = 15.5
     sinistro_exp_overhead = 48.0
     onem_setup_overhead = 120.0
     twom_setup_overhead = 180.0
     twom_exp_overhead = 22.5
-    point4m_exp_overhead = 7.5 # for BPL
+    point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()
+    valid_point4m_codes = ['Z21', 'W89', 'F66', 'Q59']
 
     site = site.upper()
-    if site == 'FTN' or 'OGG-CLMA' in site or site == 'F65':
+    if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
         site_code = 'F65'
         setup_overhead = twom_setup_overhead
         exp_overhead = twom_exp_overhead
@@ -1173,7 +1211,7 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(10.0)
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
-    elif site == 'FTS' or 'COJ-CLMA' in site or site == 'E10':
+    elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':
         site_code = 'E10'
         setup_overhead = twom_setup_overhead
         exp_overhead = twom_exp_overhead
@@ -1181,6 +1219,14 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(10.0)
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
+    elif site in valid_point4m_codes:
+        site_code = site
+        setup_overhead = onem_setup_overhead
+        exp_overhead = point4m_exp_overhead
+        pixel_scale = point4m_pixscale
+        fov = arcmins_to_radians(point4m_fov)
+        max_exp_length = 300.0
+        alt_limit = point4m_alt_limit
     elif site in valid_site_codes:
         setup_overhead = onem_setup_overhead
         exp_overhead = onem_exp_overhead
