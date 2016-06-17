@@ -1,12 +1,20 @@
 import os
 from glob import glob
-from math import atan2, pi
+from math import atan2, degrees
+from sys import path, exit
 
 import numpy as np
 from astropy.io import fits
 from astropy.constants import au
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+
+path.insert(0, os.path.join(os.getenv('HOME'), 'GIT/neoexchange/neoexchange'))
+os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
+import django
+from django.conf import settings
+django.setup()
+from core.models import Frame
 
 def determine_images_and_catalogs(datadir, output=True):
 
@@ -57,12 +65,13 @@ def make_mask(image, saturation, low_clip=0.0):
     return mask
 
 def determine_aperture_size(delta, pixscale):
-    '''Determine the size of a 1000km aperture for the passed pixel scale and
-    distance <delta>'''
+    '''Determine the size of a comet-photometry standard 10,000km aperture for
+    the passed pixel scale <pixscale> (in arcsec/pixel) and distance <delta> (in AU)'''
 
-    Mm_in_pix = atan2(1000.,(au.to('km').value*delta)) * 180 / pi * 3600.0 / pixscale
-  
-    return Mm_in_pix
+    Mm_in_pix = degrees(atan2(1000.,(au.to('km').value*delta))) * 3600.0 / pixscale
+    aperture_size = 10.0 * Mm_in_pix
+
+    return aperture_size
 
 def interpolate_ephemeris(ephem_file, jd):
 
@@ -86,6 +95,7 @@ def interpolate_ephemeris(ephem_file, jd):
 
     # Read last two lines (one after the passed JD and the one before) and 
     # interpolate RA, Dec between the two.
+    # XXX TODO Interpolate other values also
     (edate,ejd2,sun,moon,ra2,dec2,delta_ra,delta_dec,amass,ext,r,rdot,delta,deldot,phase) = line.split(',',15)[0:15]
     (edate,ejd1,sun,moon,ra1,dec1) = lastline.split(',', 6)[0:6]
 
@@ -94,5 +104,16 @@ def interpolate_ephemeris(ephem_file, jd):
     frac=(jd - float(ejd1)) / (float(ejd2) - float(ejd1))
     ra = ra_dec_1.ra + frac*(ra_dec_2.ra - ra_dec_1.ra)
     dec = ra_dec_1.dec + frac*(ra_dec_2.dec - ra_dec_1.dec)
-    
+    print ra.to_string(unit=u.hour, sep=('h ', 'm ', 's')), dec.to_string(alwayssign=True, unit=u.degree, sep=('d ', "' ", '"'))
     return ra.degree, dec.degree, float(delta_ra), float(delta_dec), float(delta), float(phase)
+
+def retrieve_zp_err(fits_frame):
+    try:
+        frame = Frame.objects.get(filename=fits_frame)
+    except Frame.DoesNotExist:
+        print "No DB record of %s" % fits_frame
+        exit(-1)
+    except Frame.MultipleObjectsReturned:
+        print "Multiple processed frame records found for %s" % fits_frame
+        exit(-1)
+    return frame.zeropoint, frame.zeropoint_err
