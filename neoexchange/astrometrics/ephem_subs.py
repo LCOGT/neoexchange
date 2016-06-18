@@ -1153,7 +1153,7 @@ def get_mountlimits(site_code_or_name):
 
 def LCOGT_site_codes():
     '''Return a list of LCOGT site codes'''
-    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'F65', 'E10', 'Z21' ] 
+    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'F65', 'E10', 'Z21', 'Q59' ] 
 
     return valid_site_codes
 
@@ -1169,7 +1169,10 @@ def LCOGT_domes_to_site_codes(siteid, encid, telid):
                          'COJ-DOMA-1M0A' : 'Q63',
                          'COJ-DOMB-1M0A' : 'Q64',
                          'OGG-CLMA-2M0A' : 'F65',
-                         'COJ-CLMA-2M0A' : 'E10' }
+                         'COJ-CLMA-2M0A' : 'E10',
+                         'TFN-AQWA-0M4A' : 'Z21',
+                         'OGG-CLMA-0M4B' : 'F66',
+                         'COJ-CLMA-0M4B' : 'Q59' }
 
     instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
     return valid_site_codes.get(instance, 'XXX')
