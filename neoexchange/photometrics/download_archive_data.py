@@ -75,3 +75,5 @@ if username and password:
     print "Downloading data to", out_path
     dl_frames = download_files(frames, out_path, verbose=True)
     print "Downloaded %d frames" % ( len(dl_frames) )
+else:
+    print "No username or password defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD)"

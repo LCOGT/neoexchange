@@ -118,12 +118,15 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False):
         red_lvl = chunks[4][1:3]
         if dbg: print "red_lvl, digit?=", red_lvl, red_lvl.isdigit()
         if red_lvl.isdigit():
-            if int(red_lvl) < 90:
+            if int(red_lvl) < 91:
                 new_lvl = "%s90%s" % (chunks[4][0], chunks[4][3:])
+                new_lvl2 = "%s91%s" % (chunks[4][0], chunks[4][3:])
                 new_filename = "%s-%s-%s-%s-%s%s" % (chunks[0], chunks[1], chunks[2], chunks[3], new_lvl, extension)
-                if dbg: print "new_filename=",new_filename
+                new_filename2 = "%s-%s-%s-%s-%s%s" % (chunks[0], chunks[1], chunks[2], chunks[3], new_lvl2, extension)
+                if dbg: print "new_filename=",new_filename, new_filename2
                 new_path = os.path.join(path, new_filename)
-                if os.path.exists(new_path):
+                new_path2 = os.path.join(path, new_filename2)
+                if os.path.exists(new_path) or os.path.exists(new_path2):
                     print "Higher level reduction file exists"
                     return True
                 if os.path.exists(filename) and archive_md5 != None:
