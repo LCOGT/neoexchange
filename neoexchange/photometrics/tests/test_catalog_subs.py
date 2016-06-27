@@ -1130,6 +1130,8 @@ class FITSUnitTest(TestCase):
         hdulist.close()
         self.ldac_table_firstitem = self.test_ldactable[0:1]
 
+        self.test_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits.fz')
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -1266,6 +1268,13 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN_IMAGE'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN_IMAGE'], self.precision)
+
+    def test_banzai_read_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
 
 class Test_Convert_Values(FITSUnitTest):
 
