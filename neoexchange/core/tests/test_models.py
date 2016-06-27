@@ -861,7 +861,7 @@ class TestCandidate(TestCase):
 
         # Pylint can go to hell...
         self.dtypes =\
-             {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
+             {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'sky_pos_angle', 'pixels_frame', 'streak_length'),
                 'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
              }
 
@@ -877,13 +877,14 @@ class TestCandidate(TestCase):
         cand_params = { 'block'  : self.test_block,
                         'cand_id' : 0001,
                         'score'  : 1.42,
+                        'avg_midpoint' : datetime(2016, 2, 26, 3, 53, 7),
                         'avg_x'  : 1024.0,
                         'avg_y'  : 1042.3,
                         'avg_ra' : 123.42,
                         'avg_dec' : -42.3,
                         'avg_mag' : 20.7,
                         'speed'   : 0.497,
-                        'position_angle' : 90.4,
+                        'sky_motion_pa' : 90.4,
                         'detections' : self.dets_byte_array
                        }
         self.test_candidate = Candidate.objects.create(**cand_params)

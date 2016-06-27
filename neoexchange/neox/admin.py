@@ -154,7 +154,12 @@ class CandidateAdmin(admin.ModelAdmin):
     avg_mag_fmt.short_description = 'Mean Mag.'
     avg_mag_fmt.admin_order_field = 'avg_mag'
 
-    list_display = ('__unicode__', 'cand_id', 'score_fmt', 'avg_x_fmt', 'avg_y_fmt', 'avg_ra_fmt', 'avg_dec_fmt', 'avg_mag_fmt', 'speed', 'position_angle')
+    def avg_midpoint_fmt(self, obj):
+        return obj.avg_midpoint.strftime('%Y-%m-%d %H:%M:%S')
+    avg_midpoint_fmt.short_description = 'Mean Frame midpoint'
+    avg_midpoint_fmt.admin_order_field = 'avg_midpoint'
+
+    list_display = ('__unicode__', 'cand_id', 'score_fmt', 'avg_midpoint_fmt', 'avg_x_fmt', 'avg_y_fmt', 'avg_ra_fmt', 'avg_dec_fmt', 'avg_mag_fmt', 'speed', 'sky_motion_pa')
     ordering = ('-block__id', 'cand_id')
 
 admin.site.register(Body,BodyAdmin)

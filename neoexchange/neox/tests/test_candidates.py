@@ -1,4 +1,6 @@
 from .base import FunctionalTest
+from datetime import datetime
+
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 
@@ -23,26 +25,28 @@ class TestBlockCandidates(FunctionalTest):
         cparams = { 'block' : self.test_block,
                     'cand_id': 1,
                     'score' : 1.10,
+                    'avg_midpoint' : datetime(2015, 4, 20, 18, 6, 6),
                     'avg_x' : 2103.245,
                     'avg_y' : 2043.026,
                     'avg_ra' : 10.924317*15.0,
                     'avg_dec' : 39.27700,
                     'avg_mag' : 19.26,
                     'speed' : 0.497,
-                    'position_angle' : 0.2
+                    'sky_motion_pa' : 0.2
                     }
         self.detection1, created = Candidate.objects.get_or_create(pk=1, **cparams)
 
         cparams = { 'block' : self.test_block,
                     'cand_id' : 2,
                     'score' : 2.10,
+                    'avg_midpoint' : datetime(2015, 4, 20, 18, 6, 6),
                     'avg_x' : 1695.444,
                     'avg_y' :  173.967,
                     'avg_ra' : 10.928085*15.0,
                     'avg_dec' : 39.07607,
                     'avg_mag' : 20.01,
                     'speed' : 0.491,
-                    'position_angle' : 357.0
+                    'sky_motion_pa' : 357.0
                     }
         self.detection2, created = Candidate.objects.get_or_create(pk=42, **cparams)
 
@@ -91,10 +95,10 @@ class TestBlockCandidates(FunctionalTest):
         self.assertEqual(cands_url, new_url)
 
         self.check_for_header_in_table('id_candidates',\
-            'ID Score R.A. Dec. CCD X CCD Y Magnitude Speed Position Angle')
+            'ID Score UTC midpoint R.A. Dec. CCD X CCD Y Magnitude Speed Position Angle')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 1.10 10:55:27.54 +39:16:37.2 2103.245 2043.026 19.26 1.2425 0.2',
-                    u'2 2.10 10:55:41.11 +39:04:33.9 1695.444 173.967 20.01 1.2275 357.0']
+        testlines =[u'1 1.10 2015 04 20.75424 10:55:27.54 +39:16:37.2 2103.245 2043.026 19.26 1.2425 0.2',
+                    u'2 2.10 2015 04 20.75424 10:55:41.11 +39:04:33.9 1695.444 173.967 20.01 1.2275 357.0']
         self.check_for_row_in_table('id_candidates', testlines[0])
         self.check_for_row_in_table('id_candidates', testlines[1])
 

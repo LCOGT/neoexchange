@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from datetime import datetime, timedelta
 from unittest import skipIf
-from math import sqrt, log10, log
+from math import sqrt, log10, log, pow
 import os
 import mock
 from django.test import TestCase
@@ -24,14 +24,126 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import Angle
 import astropy.units as u
+from numpy import where
 
-from core.models import Body, CatalogSources
+from core.models import Body, Proposal, Block, CatalogSources
 from test_catalog_subs import FITSUnitTest
 
 #Import module to test
 from photometrics.catalog_subs import *
 
 class StoreCatalogSourcesTest(FITSUnitTest):
+
+    def setUp(self):
+        # Read in example FITS source catalog
+        self.test_filename = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0100-e90_cat.fits'))
+        hdulist = fits.open(self.test_filename)
+        self.test_header = hdulist[0].header
+        self.test_table = hdulist[1].data
+        hdulist.close()
+        self.table_firstitem = self.test_table[0:1]
+        self.table_lastitem = self.test_table[-1:]
+        self.table_item_flags24 = self.test_table[2:3]
+        self.table_num_flags0 = len(where(self.test_table['flags']==0)[0])
+
+        body_params = {     'provisional_name': '2016 DX',
+                            'origin': 'M',
+                            'source_type': 'U',
+                            'elements_type': 'MPC Minor Planet',
+                            'active': False,
+                            'epochofel': '2016-07-31 00:00:00',
+                            'orbinc': 27.93004,
+                            'longascnode': 124.91942,
+                            'argofperih': 82.05117,
+                            'eccentricity': 0.3916546,
+                            'meandist': 2.6852071,
+                            'meananom': 12.96218,
+                            'perihdist': 1.6335335,
+                            'abs_mag': 17.7,
+                            'slope': 0.15,
+                        }
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        proposal_params = { 'code': 'test',
+                            'title': 'test',
+                            'pi':'sgreenstreet@lcogt.net',
+                            'tag': 'LCOGT',
+                            'active': True
+                          }
+        self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        block_params = {    'telclass': '1m0',
+                            'site': 'V37',
+                            'body': self.test_body,
+                            'proposal': self.test_proposal,
+                            'groupid': None,
+                            'block_start': datetime(2016, 2, 26, 3),
+                            'block_end': datetime(2016, 2, 26, 5),
+                            'tracking_number': '0010',
+                            'num_exposures': 6,
+                            'exp_length': 125.0,
+                            'num_observed': 1,
+                            'when_observed': datetime(2016, 2, 26, 3, 57, 44),
+                            'active': False,
+                            'reported': False,
+                            'when_reported':None
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {    'sitecode':'V37',
+                            'instrument':'fl05',
+                            'filter':'w',
+                            'filename':'elp1m008-fl05-20160225-0100-e90.fits',
+                            'exptime':125.0,
+                            'midpoint':datetime(2016, 2, 26, 3, 58, 46, 189000),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':3.246,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':10.0,
+                        }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+        self.test_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
+        hdulist = fits.open(self.test_ldacfilename)
+        self.test_ldactable = hdulist[2].data
+        hdulist.close()
+
+        block_params2 = {   'telclass': '1m0',
+                            'site': 'K92',
+                            'body': self.test_body,
+                            'proposal': self.test_proposal,
+                            'groupid': None,
+                            'block_start': datetime(2016, 5, 5,19),
+                            'block_end': datetime(2016, 5, 5, 21),
+                            'tracking_number': '0009',
+                            'num_exposures': 6,
+                            'exp_length': 60.0,
+                            'num_observed': 1,
+                            'when_observed': datetime(2016, 5, 5, 20, 12, 44),
+                            'active': False,
+                            'reported': False,
+                            'when_reported':None
+                        }
+        self.test_block2, created = Block.objects.get_or_create(**block_params2)
+
+        frame_params2 = {   'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'cpt1m013-kb76-20160505-0205-e11.fits',
+                            'exptime':60.0,
+                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
+                            'block':self.test_block2,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.825,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':3.0,
+                        }
+        self.test_frame2, created = Frame.objects.get_or_create(**frame_params2)
 
     def test1(self):
 
@@ -44,8 +156,8 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         last_catsrc=CatalogSources.objects.last()
 
-        self.assertAlmostEqual(last_catsrc.obs_x, 1067.9471, 4)
-        self.assertAlmostEqual(last_catsrc.obs_y, 1973.7445, 4)
+        self.assertAlmostEqual(last_catsrc.obs_x, 878.4902, 4)
+        self.assertAlmostEqual(last_catsrc.obs_y, 2018.1714, 4)
 
     def test_zeropoint_update(self):
 
@@ -68,7 +180,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         first_catsrc=CatalogSources.objects.first()
 
         self.assertGreater(first_catsrc.obs_mag, 0.0)
-        self.assertAlmostEqual(first_catsrc.err_obs_mag, 0.0037, 4)
+        self.assertAlmostEqual(first_catsrc.err_obs_mag, 0.0051, 4)
 
     def test_duplicate_entries(self):
 
@@ -93,3 +205,19 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertEqual(CatalogSources.objects.count(), 0)
         self.assertEqual(num_sources_created, 0)
         self.assertEqual(num_in_table, 0)
+
+    def test_ldac_catalog(self):
+
+        expected_num_sources_created = 692
+        expected_num_in_table = 692
+        expected_threshold = pow(10, -5.2825128/-2.5) * pow(0.467,2)
+        num_sources_created, num_in_table = \
+         store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC')
+
+        self.assertEqual(expected_num_sources_created, num_sources_created)
+        self.assertEqual(expected_num_in_table, num_in_table)
+
+        last_catsrc = CatalogSources.objects.last()
+
+        self.assertAlmostEqual(last_catsrc.flux_max, 4937.96289, 5)
+        self.assertAlmostEqual(last_catsrc.threshold, expected_threshold, 5)

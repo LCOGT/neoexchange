@@ -46,7 +46,6 @@ class ExternalCodeUnitTest(TestCase):
         self.test_fits_file_set1_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0103-e90.fits'))
         self.test_fits_file_set1_7 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0104-e90.fits'))
         self.test_fits_file_set1_8 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0105-e90.fits'))
-        self.test_mtds_file_set1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.mtds'))
 
         self.test_fits_file_set2_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0095-e90.fits'))
         self.test_fits_file_set2_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0096-e90.fits'))
@@ -54,7 +53,6 @@ class ExternalCodeUnitTest(TestCase):
         self.test_fits_file_set2_4 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0098-e90.fits'))
         self.test_fits_file_set2_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0099-e90.fits'))
         self.test_fits_file_set2_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0100-e90.fits'))
-        self.test_mtds_file_set2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0095-e90.mtds'))
 
         self.debug_print = False
 
@@ -103,14 +101,10 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         param_file = 'mtdi.lcogt.param'
 
-        pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 10.0,
-                            'filter_minrate': 0.38,
-                            'filter_maxrate': 0.4,
-                        }
+        pa_rate_dict = make_pa_rate_dict(pa=255.0, deltapa=10.0, minrate=0.95, maxrate=1.0)
 
         expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, '', 8, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, [], 8, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -118,24 +112,20 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         param_file = 'mtdi.lcogt.param'
 
-        pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 10.0,
-                            'filter_minrate': 0.38,
-                            'filter_maxrate': 0.4,
-                        }
+        pa_rate_dict = make_pa_rate_dict(pa=255.0, deltapa=10.0, minrate=0.95, maxrate=1.0)
 
+        expected_status = -43
+        status = run_mtdlink(self.source_dir, self.test_dir, ['foo.fits', 'foo2.fits', 'foo3.fits'], 3, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
 
-        expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 600 -MAXMISSES 1 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4 foo.fits foo2.fits foo3.fits'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, 'foo.fits foo2.fits foo3.fits', 3, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
-
-        self.assertEqual(expected_cmdline, cmdline)
+        self.assertEqual(expected_status, status)
 
     @skipIf(find_binary("mtdlink") == None, "Could not find MTDLINK binary ('mtdlink') in PATH")
     def test_run_mtdlink_realfile(self):
 
         expected_status = 0
+        expected_line1_sext_file = '       418     17.195   1182.871  15.2507    6.1       1.244      4.62   0  4.20        59298.4    16 141.91405 -13.52058'
         expected_line1 = 'DETSV2.0'
-	expected_line1_file = 'mtdlink: Starting verbose mode'
+        expected_line1_file = 'mtdlink: Starting verbose mode'
 
         test_fits_file_set1_1 = self.test_fits_file_set1_1
         test_fits_file_set1_2 = self.test_fits_file_set1_2
@@ -146,17 +136,30 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_fits_file_set1_7 = self.test_fits_file_set1_7
         test_fits_file_set1_8 = self.test_fits_file_set1_8
 
-        test_file_string = str(test_fits_file_set1_1)+' '+str(test_fits_file_set1_2)+' '+str(test_fits_file_set1_3)+' '+str(test_fits_file_set1_4)+' '+str(test_fits_file_set1_5)+' '+str(test_fits_file_set1_6)+' '+str(test_fits_file_set1_7)+' '+str(test_fits_file_set1_8)
+        test_file_list = []
+        test_file_list.append(test_fits_file_set1_1)
+        test_file_list.append(test_fits_file_set1_2)
+        test_file_list.append(test_fits_file_set1_3)
+        test_file_list.append(test_fits_file_set1_4)
+        test_file_list.append(test_fits_file_set1_5)
+        test_file_list.append(test_fits_file_set1_6)
+        test_file_list.append(test_fits_file_set1_7)
+        test_file_list.append(test_fits_file_set1_8)
 
         param_file = 'mtdi.lcogt.param'
 
-        pa_rate_dict = {    'filter_pa': 255.0,
-                            'filter_deltapa': 10.0,
-                            'filter_minrate': 0.38,
-                            'filter_maxrate': 0.40,
-                        }
+        for f in test_file_list:
+            sext_file = os.path.basename(f).replace('.fits', '.sext')
+            sext_file = os.path.join(self.test_dir, sext_file)
+            # If the file exists and is a link (or a broken link), then remove it
+            if os.path.lexists(sext_file) and os.path.islink(sext_file):
+                os.unlink(sext_file)
+            if not os.path.exists(sext_file):
+                os.symlink(f.replace('.fits', '.sext'), sext_file)
 
-        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set1, test_file_string, 8, param_file, pa_rate_dict)
+        pa_rate_dict = make_pa_rate_dict(pa=255.0, deltapa=10.0, minrate=0.95, maxrate=1.0)
+
+        status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 8, param_file, pa_rate_dict)
 
         self.assertEqual(expected_status, status)
 
@@ -177,8 +180,14 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(input_fits_7))
         input_fits_8 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0105-e90.fits')
         self.assertTrue(os.path.exists(input_fits_8))
+
         input_sext_1 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.sext')
         self.assertTrue(os.path.exists(input_sext_1))
+        test_fh_file = open(input_sext_1, 'r')
+        test_lines_file = test_fh_file.readlines()
+        test_fh_file.close()
+        self.assertEqual(472, len(test_lines_file))
+        self.assertEqual(expected_line1_sext_file, test_lines_file[0].rstrip())
         input_sext_2 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0099-e90.sext')
         self.assertTrue(os.path.exists(input_sext_2))
         input_sext_3 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0100-e90.sext')
@@ -193,14 +202,15 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(input_sext_7))
         input_sext_8 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0105-e90.sext')
         self.assertTrue(os.path.exists(input_sext_8))
+
         output_mtds = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.mtds')
         self.assertTrue(os.path.exists(output_mtds))
         test_fh = open(output_mtds, 'r')
         test_lines = test_fh.readlines()
         test_fh.close()
 
-        # Expected value is 10 lines of intro plus 336 sources
-        self.assertEqual(10+336, len(test_lines))
+        # Expected value is 10 lines of intro plus 200 sources
+        self.assertEqual(10+200, len(test_lines))
         self.assertEqual(expected_line1, test_lines[0].rstrip())
 
         output_file = os.path.join(self.test_dir, 'mtdlink_output.out')
@@ -217,8 +227,9 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
     def test_run_mtdlink_realfile_different_set(self):
 
         expected_status = 0
+        expected_line1_sext_file = '      5021      5.602   3418.469  21.1217 -80.7    3.268     6.21   0  0.98   1506.9    4 164.15665  39.42453'
         expected_line1 = 'DETSV2.0'
-	expected_line1_file = 'mtdlink: Starting verbose mode'
+        expected_line1_file = 'mtdlink: Starting verbose mode'
 
         test_fits_file_set2_1 = self.test_fits_file_set2_1
         test_fits_file_set2_2 = self.test_fits_file_set2_2
@@ -227,17 +238,28 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         test_fits_file_set2_5 = self.test_fits_file_set2_5
         test_fits_file_set2_6 = self.test_fits_file_set2_6
 
-        test_file_string = str(test_fits_file_set2_1)+' '+str(test_fits_file_set2_2)+' '+str(test_fits_file_set2_3)+' '+str(test_fits_file_set2_4)+' '+str(test_fits_file_set2_5)+' '+str(test_fits_file_set2_6)
+        test_file_list = []
+        test_file_list.append(test_fits_file_set2_1)
+        test_file_list.append(test_fits_file_set2_2)
+        test_file_list.append(test_fits_file_set2_3)
+        test_file_list.append(test_fits_file_set2_4)
+        test_file_list.append(test_fits_file_set2_5)
+        test_file_list.append(test_fits_file_set2_6)
 
         param_file = 'mtdi.lcogt.param'
 
-        pa_rate_dict = {    'filter_pa': 345.0,
-                            'filter_deltapa': 25.0,
-                            'filter_minrate': 0.46,
-                            'filter_maxrate': 0.5,
-                        }
+        for f in test_file_list:
+            sext_file = os.path.basename(f).replace('.fits', '.sext')
+            sext_file = os.path.join(self.test_dir, sext_file)
+            # If the file exists and is a link (or a broken link), then remove it
+            if os.path.lexists(sext_file) and os.path.islink(sext_file):
+                os.unlink(sext_file)
+            if not os.path.exists(sext_file):
+                os.symlink(f.replace('.fits', '.sext'), sext_file)
 
-        status = run_mtdlink(self.source_dir, self.test_dir, self.test_mtds_file_set2, test_file_string, 6, param_file, pa_rate_dict)
+        pa_rate_dict = make_pa_rate_dict(pa=345.0, deltapa=25.0, minrate=1.15, maxrate=1.25)
+
+        status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 6, param_file, pa_rate_dict)
 
         self.assertEqual(expected_status, status)
 
@@ -254,8 +276,14 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(input_fits_5))
         input_fits_6 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0100-e90.fits')
         self.assertTrue(os.path.exists(input_fits_6))
+
         input_sext_1 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.sext')
         self.assertTrue(os.path.exists(input_sext_1))
+        test_fh_file = open(input_sext_1, 'r')
+        test_lines_file = test_fh_file.readlines()
+        test_fh_file.close()
+        self.assertEqual(7189, len(test_lines_file))
+        self.assertEqual(expected_line1_sext_file, test_lines_file[0].rstrip())
         input_sext_2 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0096-e90.sext')
         self.assertTrue(os.path.exists(input_sext_2))
         input_sext_3 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0097-e90.sext')
@@ -266,6 +294,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertTrue(os.path.exists(input_sext_5))
         input_sext_6 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0100-e90.sext')
         self.assertTrue(os.path.exists(input_sext_6))
+
         output_mtds = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.mtds')
         self.assertTrue(os.path.exists(output_mtds))
         test_fh = open(output_mtds, 'r')
@@ -625,12 +654,13 @@ class TestReadMTDSFile(TestCase):
     def setUp(self):
 
         self.test_mtds_file = os.path.join('photometrics', 'tests', 'elp1m008-fl05-20160225-0095-e90.mtds')
+        self.hdr_only_mtds_file = os.path.join('photometrics', 'tests', 'cpt1m013-kb76-20160505-0205-e11.mtds')
 
         self.maxDiff = None
 
         # Pylint can go to hell...
         self.dtypes =\
-             {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'pos_angle', 'pixels_frame', 'streak_length'),
+             {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'sky_pos_angle', 'pixels_frame', 'streak_length'),
                 'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
              }
     def test_no_file(self):
@@ -640,6 +670,31 @@ class TestReadMTDSFile(TestCase):
         dets = read_mtds_file('wibble')
 
         self.assertEqual(expected_dets, dets)
+
+    def test_no_detections(self):
+    
+        expected_dets_dict = {  'version'   : 'DETSV2.0',
+                                'num_frames': 6,
+                                'frames' : [
+                                            ('cpt1m013-kb76-20160505-0205-e11.fits', 2457514.335058),
+                                            ('cpt1m013-kb76-20160505-0206-e11.fits', 2457514.336033),
+                                            ('cpt1m013-kb76-20160505-0207-e10.fits', 2457514.336977),
+                                            ('cpt1m013-kb76-20160505-0208-e10.fits', 2457514.337878),
+                                            ('cpt1m013-kb76-20160505-0210-e10.fits', 2457514.339695),
+                                            ('cpt1m013-kb76-20160505-0213-e11.fits', 2457514.342520),
+                                           ],
+                                'num_detections' : 0,
+                                'detections': []
+                             }
+
+        dets = read_mtds_file(self.hdr_only_mtds_file)
+
+        for key in expected_dets_dict.keys():
+            if key == 'detections':
+                self.assertEqual(len(expected_dets_dict[key]), len(dets[key]))
+            else:
+                self.assertEqual(expected_dets_dict[key], dets[key], msg="Failed on %s" % key)
+
 
     def test_read(self):
 
