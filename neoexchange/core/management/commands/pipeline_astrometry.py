@@ -75,14 +75,17 @@ class Command(BaseCommand):
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
             new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog)
-            new_catalog = new_catalog_or_status
-            catalog_type = 'FITS_LDAC'
-            if str(new_catalog_or_status).isdigit():
+
+            try:
+                int(new_catalog_or_status)
                 if new_catalog_or_status != 0:
-                    self.stdout.write("Error reprocessing %s (Error code= %s" % (catalog, new_catalog_or_status))
+                    self.stdout.write("Error reprocessing %s (Error code= %s)" % (catalog, new_catalog_or_status))
                     exit(-3)
                 new_catalog = catalog
                 catalog_type = 'LCOGT'
+            except ValueError:
+                new_catalog = new_catalog_or_status
+                catalog_type = 'FITS_LDAC'
 
             # Step 2: Check for good zeropoint and redetermine if needed. Ingest
             # results into CatalogSources

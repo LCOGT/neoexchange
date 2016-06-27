@@ -1211,11 +1211,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
         if header['astrometric_fit_status'] != 0:
             if fits_file == None:
                 logger.error("Could not determine matching image for %s" % catfile)
-                return -1
+                return -1, num_new_frames_created
             fits_file = os.path.join(os.path.dirname(catfile), fits_file)
             if os.path.exists(fits_file) == False or os.path.isfile(fits_file) == False:
                 logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
-                return -1
+                return -1, num_new_frames_created
             logger.debug("Running SExtractor on: %s" % fits_file)
             sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type='FITS_LDAC')
             if sext_status == 0:
@@ -1246,10 +1246,10 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                             frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
                         except Frame.MultipleObjectsReturned:
                             logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" %(fits_file_output, frames_with_blocks))
-                            return -3
+                            return -3, num_new_frames_created
                         except Frame.DoesNotExist:
                             logger.error("Frame entry for fits file %s does not exist" % fits_file_output)
-                            return -3
+                            return -3, num_new_frames_created
 
                         #Create a new Frame entry for new fits_file_output name
                         frame_params = {    'sitecode':header['site_code'],
@@ -1293,10 +1293,10 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
                 except Frame.MultipleObjectsReturned:
                     logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file_orig, frames_with_blocks))
-                    return -3
+                    return -3, num_new_frames_created
                 except Frame.DoesNotExist:
                     logger.error("Frame entry for fits file %s does not exist" % fits_file_orig)
-                    return -3
+                    return -3, num_new_frames_created
 
                 #Create a new Frame entry for new fits_file_output name
                 frame_params = {    'sitecode':header['site_code'],
