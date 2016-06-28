@@ -1131,6 +1131,10 @@ class FITSUnitTest(TestCase):
         self.ldac_table_firstitem = self.test_ldactable[0:1]
 
         self.test_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits.fz')
+        hdulist = fits.open(self.test_banzaifilename)
+        self.test_banzaitable = hdulist['CAT'].data
+        hdulist.close()
+        self.banzai_table_firstitem = self.test_banzaitable[0:1]
 
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
@@ -1275,6 +1279,41 @@ class OpenFITSCatalog(FITSUnitTest):
         hdr, tbl = open_fits_catalog(self.test_banzaifilename)
         self.assertNotEqual(unexpected_value, hdr)
         self.assertNotEqual(unexpected_value, tbl)
+
+    def test_banzai_catalog_read_length(self):
+        expected_hdr_len = 264
+        expected_tbl_len = len(self.test_banzaitable)
+
+        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+
+    def test_banzai_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'kb29'
+
+        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+
+    def test_catalog_read_tbl_column(self):
+        expected_tbl_value = 'XWIN'
+#        expected_tbl_units = 'pixel'   # No units in the new table (yet?)
+
+        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertEqual(expected_tbl_value, tbl.columns[2].name)
+#        self.assertEqual(expected_tbl_units, tbl.columns[2].unit)
+
+    def test_banzai_catalog_read_xy(self):
+        # X,Y CCD Co-ordinates of the last detection
+        expected_x = 761.8881406628243
+        expected_y = 499.55203310820161
+
+        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
+        self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
 
 class Test_Convert_Values(FITSUnitTest):
 
