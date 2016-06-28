@@ -1203,8 +1203,8 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     num_new_frames_created = 0
 
     # Open catalog, get header and check fit status
-    fits_header, junk_table = open_fits_catalog(catfile, header_only=True)
-    header = get_catalog_header(fits_header, 'LCOGT')
+    fits_header, junk_table, cattype = open_fits_catalog(catfile, header_only=True)
+    header = get_catalog_header(fits_header, cattype)
     if header != {}:
         logger.debug("astrometric fit status=%d" %  header['astrometric_fit_status'])
         fits_file = determine_filenames(catfile)

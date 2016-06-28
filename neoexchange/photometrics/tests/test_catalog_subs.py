@@ -1132,6 +1132,7 @@ class FITSUnitTest(TestCase):
 
         self.test_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits.fz')
         hdulist = fits.open(self.test_banzaifilename)
+        self.test_banzaiheader = hdulist['SCI'].header
         self.test_banzaitable = hdulist['CAT'].data
         hdulist.close()
         self.banzai_table_firstitem = self.test_banzaitable[0:1]
@@ -1291,7 +1292,7 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_banzai_catalog_read_length(self):
-        expected_hdr_len = 264
+        expected_hdr_len = 278-23 # Total-compression keywords
         expected_tbl_len = len(self.test_banzaitable)
         expected_cattype = 'BANZAI'
 
@@ -1302,7 +1303,7 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertEqual(expected_cattype, cattype)
 
     def test_banzai_catalog_read_hdr_keyword(self):
-        expected_hdr_value = 'kb29'
+        expected_hdr_value = 'kb76'
 
         hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
 
@@ -1319,8 +1320,8 @@ class OpenFITSCatalog(FITSUnitTest):
 
     def test_banzai_catalog_read_xy(self):
         # X,Y CCD Co-ordinates of the last detection
-        expected_x = 761.8881406628243
-        expected_y = 499.55203310820161
+        expected_x = 1990.0072393055439
+        expected_y = 1219.86182435688
 
         hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
 
@@ -1498,9 +1499,37 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : 22,
                             'astrometric_catalog'    : 'UCAC4',
                           }
+        expected_cattype = "FITS_LDAC"
 
         header, table, cattype = open_fits_catalog(self.test_ldacfilename)
+        self.assertEqual(expected_cattype, cattype)
         frame_header = get_catalog_header(header, "FITS_LDAC")
+
+        self.assertEqual(expected_params, frame_header)
+
+    def test_banzai_header(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        frame_header = get_catalog_header(header, "BANZAI")
 
         self.assertEqual(expected_params, frame_header)
 

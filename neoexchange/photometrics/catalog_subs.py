@@ -28,6 +28,7 @@ from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
 from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 from core.models import CatalogSources, Frame
@@ -364,6 +365,54 @@ def fitsldac_catalog_mapping():
 
     return header_dict, table_dict
 
+def banzai_catalog_mapping():
+    '''Returns two dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for new pipeline (BANZAI) format catalog
+    files.'''
+
+    header_dict = { 'site_id'    : 'SITEID',
+                    'enc_id'     : 'ENCID',
+                    'tel_id'     : 'TELID',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'ORIGNAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : '<WCS>',
+#                    'zeropoint'  : 'L1ZP',
+#                    'zeropoint_err' : 'L1ZPERR',
+#                    'zeropoint_src' : 'L1ZPSRC',
+                    'fwhm'          : 'L1FWHM',
+#                    'astrometric_fit_rms'    : 'WCSRDRES',
+                    'astrometric_fit_status' : 'WCSERR',
+#                    'astrometric_fit_nstars' : 'WCSMATCH',
+                    'astrometric_catalog'    : '<ASTROMCAT>',
+                  }
+
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'XWIN'),
+                    ('ccd_y'         , 'YWIN'),
+                    ('obs_ra'        , 'RA'),
+                    ('obs_dec'       , 'DEC'),
+#                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+#                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'A'),
+                    ('minor_axis'    , 'B'),
+                    ('ccd_pa'        , 'THETA'),
+                    ('obs_mag'       , 'FLUX_'),
+                    ('obs_mag_err'   , 'FLUXERR'),
+                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAG'),
+#                    ('flux_max'      , 'FLUX_MAX'),
+#                    ('threshold'     , 'MU_THRESHOLD'),
+                 ])
+
+    return header_dict, table_dict
+
 def convert_to_string_value(value):
     left_end = value.find("'")
     right_end = value.rfind("'")
@@ -550,6 +599,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
     elif catalog_type == 'FITS_LDAC':
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+    elif catalog_type == 'BANZAI':
+        hdr_mapping, tbl_mapping = banzai_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
@@ -569,6 +620,17 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 new_value = value
             header_item = { item: new_value }
             header_items.update(header_item)
+        elif fits_keyword[0] == '<' and fits_keyword[-1] == '>':
+            if fits_keyword == '<WCS>':
+                fits_wcs = WCS(catalog_header)
+                pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
+                header_item = { item: round(pixscale,5) }
+                header_items.update(header_item)
+            elif fits_keyword == '<ASTROMCAT>' and catalog_type == 'BANZAI':
+                # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based
+                # solves
+                header_item = { item: '2MASS' }
+                header_items.update(header_item)
         else:
             raise FITSHdrException(fits_keyword)
 
@@ -614,6 +676,8 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
     elif catalog_type == 'FITS_LDAC':
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+    elif catalog_type == 'BANZAI':
+        hdr_mapping, tbl_mapping = banzai_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None
