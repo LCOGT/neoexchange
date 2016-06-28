@@ -1895,7 +1895,7 @@ class TestCheckCatalogAndRefit(TestCase):
 
     def test_bad_catalog_name(self):
 
-        expected_status = -1
+        expected_status = (-1, 0)
 
         status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_catalog)
 
@@ -1903,7 +1903,7 @@ class TestCheckCatalogAndRefit(TestCase):
 
     def test_no_matching_image(self):
 
-        expected_status = -1
+        expected_status = (-1, 0)
 
         # Symlink catalog to temp dir with valid name
         temp_test_catalog = os.path.join(self.temp_dir, 'oracdr_test_e08_cat.fits')
