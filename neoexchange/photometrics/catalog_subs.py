@@ -415,30 +415,35 @@ def fits_ldac_to_header(header_array):
     return header
 
 def open_fits_catalog(catfile, header_only=False):
-    '''Opens a FITS source catalog specified by <catfile> and returns the header
-    and table data. If [header_only]= is True, only the header is returned.'''
+    '''Opens a FITS source catalog specified by <catfile> and returns the header,
+    table data and catalog type. If [header_only]= is True, only the header is 
+    returned, and <table> is set to an empty dictionary.'''
 
     header = {}
     table = {}
+    cattype = None
 
     try:
         hdulist = fits.open(catfile)
     except IOError as e:
         logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
-        return header, table
+        return header, table, cattype
 
     if len(hdulist) == 2:
         header = hdulist[0].header
+        cattype = 'LCOGT'
         if header_only == False:
             table = hdulist[1].data
     elif len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) == 'LDAC_IMHEAD':
         # This is a FITS_LDAC catalog produced by SExtractor for SCAMP
         if header_only == False:
             table = hdulist[2].data
+        cattype = 'FITS_LDAC'
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
     elif len(hdulist) == 4:
         # New BANZAI-format data
+        cattype = 'BANZAI'
         try:
             sci_index = hdulist.index_of('SCI')
         except KeyError:
@@ -459,7 +464,7 @@ def open_fits_catalog(catfile, header_only=False):
 
     hdulist.close()
 
-    return header, table
+    return header, table, cattype
 
 def convert_value(keyword, value):
     '''Routine to perform domain-specific transformation of values read from the
@@ -724,7 +729,7 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
     not be opened.'''
 
     header = table = None
-    fits_header, fits_table = open_fits_catalog(catfile)
+    fits_header, fits_table, cattype = open_fits_catalog(catfile)
 
     if fits_header != {} and fits_table != {}:
         header = get_catalog_header(fits_header, catalog_type)

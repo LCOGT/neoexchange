@@ -1171,34 +1171,40 @@ class OpenFITSCatalog(FITSUnitTest):
     def test_catalog_does_not_exist(self):
         expected_hdr = {}
         expected_tbl = {}
+        expected_cattype = None
 
-        hdr, tbl = open_fits_catalog('wibble')
+        hdr, tbl, cattype = open_fits_catalog('wibble')
 
         self.assertEqual(expected_hdr, hdr)
         self.assertEqual(expected_tbl, tbl)
+        self.assertEqual(expected_cattype, cattype)
 
     def test_catalog_is_not_FITS(self):
         expected_hdr = {}
         expected_tbl = {}
+        expected_cattype = None
 
-        hdr, tbl = open_fits_catalog(os.path.join('photometrics', 'tests', '__init__.py'))
+        hdr, tbl, cattype = open_fits_catalog(os.path.join('photometrics', 'tests', '__init__.py'))
 
         self.assertEqual(expected_hdr, hdr)
         self.assertEqual(expected_tbl, tbl)
+        self.assertEqual(expected_cattype, cattype)
 
     def test_catalog_read_length(self):
         expected_hdr_len = len(self.test_header)
         expected_tbl_len = len(self.test_table)
+        expected_cattype = 'LCOGT'
 
-        hdr, tbl = open_fits_catalog(self.test_filename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_filename)
 
         self.assertEqual(expected_hdr_len, len(hdr))
         self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
 
     def test_catalog_read_hdr_keyword(self):
         expected_hdr_value = self.test_header['INSTRUME']
 
-        hdr, tbl = open_fits_catalog(self.test_filename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_filename)
 
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
@@ -1206,7 +1212,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_tbl_value = 'X_IMAGE'
         expected_tbl_units = 'pixel'
 
-        hdr, tbl = open_fits_catalog(self.test_filename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_filename)
 
         self.assertEqual(expected_tbl_value, tbl.columns[1].name)
         self.assertEqual(expected_tbl_units, tbl.columns[1].unit)
@@ -1216,7 +1222,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_x = 1067.9471
         expected_y = 1973.7445
 
-        hdr, tbl = open_fits_catalog(self.test_filename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_filename)
 
         self.assertAlmostEqual(expected_x, tbl[-1]['X_IMAGE'], 4)
         self.assertAlmostEqual(expected_y, tbl[-1]['Y_IMAGE'], 4)
@@ -1224,24 +1230,27 @@ class OpenFITSCatalog(FITSUnitTest):
     def test_ldac_read_catalog(self):
         unexpected_value = {}
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
         self.assertNotEqual(unexpected_value, hdr)
         self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
 
     def test_ldac_catalog_read_length(self):
         expected_hdr_len = 352
         expected_tbl_len = len(self.test_ldactable)
+        expected_cattype = 'FITS_LDAC'
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         self.assertEqual(expected_hdr_len, len(hdr))
         self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
 
     def test_ldac_catalog_header(self):
         outpath = os.path.join("photometrics", "tests")
         expected_header = fits.Header.fromfile(os.path.join(outpath,"test_header"), sep='\n', endcard=False, padding=False)
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         for key in expected_header:
             self.assertEqual(expected_header[key], hdr[key], \
@@ -1250,7 +1259,7 @@ class OpenFITSCatalog(FITSUnitTest):
     def test_ldac_catalog_read_hdr_keyword(self):
         expected_hdr_value = 'kb76'
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
@@ -1258,7 +1267,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_tbl_value = 'XWIN_IMAGE'
         expected_tbl_units = 'pixel'
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         self.assertEqual(expected_tbl_value, tbl.columns[1].name)
         self.assertEqual(expected_tbl_units, tbl.columns[1].unit)
@@ -1268,7 +1277,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_x = 1758.0389801526617
         expected_y = 2024.9652134253395
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN_IMAGE'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN_IMAGE'], self.precision)
@@ -1276,23 +1285,26 @@ class OpenFITSCatalog(FITSUnitTest):
     def test_banzai_read_catalog(self):
         unexpected_value = {}
 
-        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
         self.assertNotEqual(unexpected_value, hdr)
         self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
 
     def test_banzai_catalog_read_length(self):
         expected_hdr_len = 264
         expected_tbl_len = len(self.test_banzaitable)
+        expected_cattype = 'BANZAI'
 
-        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
 
         self.assertEqual(expected_hdr_len, len(hdr))
         self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
 
     def test_banzai_catalog_read_hdr_keyword(self):
         expected_hdr_value = 'kb29'
 
-        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
 
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
@@ -1300,7 +1312,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_tbl_value = 'XWIN'
 #        expected_tbl_units = 'pixel'   # No units in the new table (yet?)
 
-        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
 
         self.assertEqual(expected_tbl_value, tbl.columns[2].name)
 #        self.assertEqual(expected_tbl_units, tbl.columns[2].unit)
@@ -1310,7 +1322,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_x = 761.8881406628243
         expected_y = 499.55203310820161
 
-        hdr, tbl = open_fits_catalog(self.test_banzaifilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
@@ -1458,7 +1470,7 @@ class FITSReadHeader(FITSUnitTest):
                             'saturation'    : self.test_header['SATURATE'],
                           }
 
-        header, table = open_fits_catalog(self.test_filename)
+        header, table, cattype = open_fits_catalog(self.test_filename)
         frame_header = get_catalog_header(header)
 
         self.assertEqual(expected_params, frame_header)
@@ -1487,7 +1499,7 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_catalog'    : 'UCAC4',
                           }
 
-        header, table = open_fits_catalog(self.test_ldacfilename)
+        header, table, cattype = open_fits_catalog(self.test_ldacfilename)
         frame_header = get_catalog_header(header, "FITS_LDAC")
 
         self.assertEqual(expected_params, frame_header)
@@ -1728,8 +1740,8 @@ class FITSReadCatalog(FITSUnitTest):
                                  })
 
 
-        header, table = open_fits_catalog(self.test_ldacfilename)
-        header_items = get_catalog_header(header, "FITS_LDAC")
+        header, table, cattype = open_fits_catalog(self.test_ldacfilename)
+        header_items = get_catalog_header(header, cattype)
         catalog_items = get_catalog_items(header_items, self.ldac_table_firstitem, "FITS_LDAC")
 
 
