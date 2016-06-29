@@ -1002,6 +1002,7 @@ def determine_filenames(product):
     '''
 
     new_product = None
+    full_path = product
     product = os.path.basename(product)
     if '_cat.fits' in product:
         new_product = product.replace('_cat', '', 1)
@@ -1013,6 +1014,12 @@ def determine_filenames(product):
             filename_noext = file_bits[0]
             if filename_noext[-2:].isdigit():
                 new_product = filename_noext + '_cat' + os.extsep + file_bits[1]
+        elif len(file_bits) == 3:
+            # Fpacked BANZAI product - output is input
+            new_product = None
+            funpack_status = funpack_fits_file(full_path)
+            if funpack_status == 0:
+                new_product = file_bits[0] + os.extsep + file_bits[1]
     return new_product
 
 def increment_red_level(product):
@@ -1038,3 +1045,23 @@ def increment_red_level(product):
             filename_noext = filename_noext[:-2] + red_level
             new_product = filename_noext + file_bits[1]
     return new_product
+
+def funpack_fits_file(fpack_file):
+    '''Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
+    value of 0 is returned if the unpacked file already exists or the uncompress
+    was successful, -1 is returned otherwise'''
+
+    file_bits =  fpack_file.split(os.extsep)
+    if len(file_bits) != 3 and file_bits[-1].lower() != 'fz':
+        return -1
+    unpacked_file = file_bits[0] + os.extsep + file_bits[1]
+    if os.path.exists(unpacked_file):
+        return 0
+    hdulist = fits.open(fpack_file)
+    header = hdulist['SCI'].header
+    data = hdulist['SCI'].data
+    hdu = fits.PrimaryHDU(data, header)
+    hdu.writeto(unpacked_file, checksum=True)
+    hdulist.close()
+
+    return 0

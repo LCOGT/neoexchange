@@ -1194,6 +1194,22 @@ def block_status(block_id):
                     logger.debug("No update to block %s" % block)
     return status
 
+def determine_original_name(fits_file):
+    '''Determines the ORIGNAME for the FITS file <fits_file>.
+    This is pretty disgusting and a sign we are probably doing something wrong
+    and should store the true filename but at least it's contained to one place
+    now...'''
+    fits_file_orig = fits_file
+    if 'e90.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
+    elif 'e10.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+    elif 'e91.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
+    elif 'e11.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
+    return fits_file_orig
+
 def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     '''Checks the astrometric fit status of <catfile> and performs a source
     extraction and refit if it is bad. The name of the newly created FITS LDAC
@@ -1238,10 +1254,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     #if a Frame does not exist for the fits file with a non-null block
                     #create one with the fits filename
                     if len(Frame.objects.filter(filename=os.path.basename(fits_file_output), block__isnull=False)) < 1:
-                        if 'e90.fits' in os.path.basename(fits_file):
-                            fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
-                        elif 'e10.fits' in os.path.basename(fits_file):
-                            fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+                        fits_file_orig = determine_original_name(fits_file)
                         try:
                             frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
                         except Frame.MultipleObjectsReturned:
@@ -1259,8 +1272,8 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                                             'exptime':header['exptime'],
                                             'midpoint':header['obs_midpoint'],
                                             'block':frame.block,
-                                            'zeropoint':header['zeropoint'],
-                                            'zeropoint_err':header['zeropoint_err'],
+                                            'zeropoint':header.get('zeropoint', -99),
+                                            'zeropoint_err':header.get('zeropoint_err', -99),
                                             'fwhm':header['fwhm'],
                                             'frametype':Frame.SINGLE_FRAMETYPE,
                                             'rms_of_fit':header['astrometric_fit_rms'],
@@ -1280,15 +1293,18 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
                     logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
                     os.rename(fits_ldac_catalog_path, new_ldac_catalog)
+                else:
+                    logger.error("Execution of SCAMP failed")
+                    return -4, 0
+            else:
+                logger.error("Execution of SExtractor failed")
+                return -4, 0
         else:
             #if a Frame does not exist for the fits file with a non-null block
             #create one with the fits filename
             if len(Frame.objects.filter(filename=os.path.basename(fits_file), block__isnull=False)) < 1:
                 #create a new Frame even if WCS fit is good in order to have the real fits filename in the Frame
-                if 'e90.fits' in os.path.basename(fits_file):
-                    fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
-                elif 'e10.fits' in os.path.basename(fits_file):
-                    fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+                fits_file_orig = determine_original_name(fits_file)
                 try:
                     frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
                 except Frame.MultipleObjectsReturned:
