@@ -22,6 +22,15 @@
                 <div class="bigtext">{{blocks}}</div>
                 <div class="smalltext">active blocks</div>
             </a>
+            <div id="mooninfo">
+                <div class="bigtext">Moon phase <span id="mooncent"></span></div>
+                <svg id="moon" style="position:absolute; right:0%; top:0%;" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg" version="1.1"/>
+                <script type="text/javascript" src="{% static "core/js/moon-phase.js" %}" charset="UTF-8"></script>
+                <script type="text/javascript" charset="UTF-8">
+                    var today = today || new Date();
+                    document.getElementById('mooncent').innerHTML += (moon_day(today)*100).toFixed(1) + "%";
+                </script>
+            </div>
         </div>
     </div>
 
