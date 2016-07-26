@@ -28,7 +28,7 @@ usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[0] )
 proposal='LCO2016A-021'
 obs_date = datetime.utcnow()
 obstype = '' # Set to blank to get frames and catalogs
-redlevel = ['90', '10']
+redlevel = ['91', '11']
 
 # Parse command line arguments
 if len(argv) == 2:
@@ -75,3 +75,5 @@ if username and password:
     print "Downloading data to", out_path
     dl_frames = download_files(frames, out_path, verbose=True)
     print "Downloaded %d frames" % ( len(dl_frames) )
+else:
+    print "No username or password defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD)"
