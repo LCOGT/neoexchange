@@ -30,7 +30,7 @@ from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement,  clean_crossid, create_frame, \
-    frame_params_from_block, schedule_check, summarise_block_efficiency
+    frame_params_from_block, schedule_check, summarise_block_efficiency, update_crossids
 from core.frames import block_status
 
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame

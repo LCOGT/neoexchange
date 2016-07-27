@@ -4,6 +4,7 @@ from core.models import Block, Frame
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from photometrics.archive_subs import archive_login
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 import logging
 
 logger = logging.getLogger('core')
@@ -32,6 +33,8 @@ def fetch_observations(tracking_num):
     image_list = []
     headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     data = check_request_status(headers, tracking_num)
+    if data.get('detail','') == 'Not found.':
+        return image_list
     for r in data:
         images = check_for_images(headers,request_id=r['request_number'])
         image_list += [i['id'] for i in images]
