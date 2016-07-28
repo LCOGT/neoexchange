@@ -32,7 +32,7 @@ SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('Q63','Siding Spring, Aust. (COJ - Q63-64)'),
          ('Q59','Siding Spring, Aust. (COJ - Q59; 0.4m)'),
          ('Z21','Tenerife, Spain (TFN - Z21; 0.4m)'),
-         ('F66','Maui, Hawaii (OGG - F66; 0.4m)'))
+         ('T04','Maui, Hawaii (OGG - T04; 0.4m)'))
 
 class EphemQuery(forms.Form):
 
