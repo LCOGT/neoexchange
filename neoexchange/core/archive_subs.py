@@ -18,37 +18,20 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 import os, sys
 from hashlib import md5
+from django.conf import settings
+from frames import get_lcogt_headers
 
 import requests
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings
 if sys.version_info < (2,7,9):
     requests.packages.urllib3.disable_warnings()
 
-def get_base_url():
-    '''Return the base URL of the archive service'''
-    archive_url = 'https://archive-api.lcogt.net'
-    return archive_url
-
 def archive_login(username, password):
-
-    base_url = get_base_url()
-    archive_url = base_url + '/api-token-auth/'
-    #  Get the authentication token
-    response = requests.post(archive_url,
-        data = {
-                'username': username,
-                'password': password
-               }).json()
-
-    try:
-        token = response.get('token')
-
-        # Store the Authorization header
-        headers = {'Authorization': 'Token ' + token}
-    except TypeError:
-        headers = None
-
-    return headers
+    '''
+    Wrapper function to get API token for Archive
+    '''
+    archive_url = settings.ARCHIVE_TOKEN_URL
+    return get_lcogt_headers(archive_url, username, password)
 
 def determine_archive_start_end(dt=None):
 
@@ -71,7 +54,7 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
     dictionary with the reduction level as the key (which is returned)'''
 
     limit = 1000
-    base_url = get_base_url()
+    base_url = settings.ARCHIVE_API_URL
     archive_url = '%s/frames/?limit=%d&start=%s&end=%s&OBSTYPE=%s&PROPID=%s' % (base_url, limit, start_date, end_date, obstype, proposal)
 
     frames = {}
@@ -87,7 +70,7 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
 def get_catalog_data(frames, auth_header='', dbg=False):
     '''Get associated catalog files for the passed <frames>'''
 
-    base_url = get_base_url()
+    base_url = settings.ARCHIVE_API_URL
 
     catalogs = {}
     for reduction_lvl in frames.keys():

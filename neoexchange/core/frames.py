@@ -9,9 +9,7 @@ import logging
 
 logger = logging.getLogger('core')
 
-def odin_login(username, password):
-
-    auth_url = settings.REQUEST_AUTH_API_URL
+def get_lcogt_headers(auth_url, username, password):
     #  Get the authentication token
     response = requests.post(auth_url,
         data = {
@@ -28,6 +26,16 @@ def odin_login(username, password):
         headers = None
 
     return headers
+
+
+def odin_login(username, password):
+    '''
+    Wrapper function to get ODIN headers
+    '''
+    auth_url = settings.REQUEST_AUTH_API_URL
+
+    return get_lcogt_headers(auth_url,username, password)
+
 
 def fetch_observations(tracking_num):
     image_list = []
