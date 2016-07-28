@@ -63,11 +63,12 @@ def determine_archive_start_end(dt=None):
     return start, end
 
 def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', proposal='LCO2015B-005', red_lvls=['90', '10']):
-    '''Obtain the list of frames between <start_date> and <end_date>. An authorization token (from e.g.
-    archive_login()) will likely be needed to get a proprietary data. By default we download data from
-    [proposal]=LCO2015B-005 and for reduction levels 90 (final processed) and 10 (quicklook).
-    Each reduction level is queried in turn and results are added to a dictionary with the reduction level
-    as the key(which is returned)'''
+    '''Obtain the list of frames between <start_date> and <end_date>. An
+    authorization token (from e.g. odin_login()) will likely be needed to get
+    proprietary data. By default we download data from [proposal]=LCO2015B-005
+    and for reduction levels 90 (final processed) and 10 (quicklook).
+    Each reduction level is queried in turn and results are added to a
+    dictionary with the reduction level as the key (which is returned)'''
 
     limit = 1000
     base_url = get_base_url()
