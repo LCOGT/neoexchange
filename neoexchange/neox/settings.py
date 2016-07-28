@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.3.0'
+VERSION = '1.4.0'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -235,6 +235,7 @@ REQUEST_API_URL = 'https://lcogt.net/observe/api/user_requests/%s/requests/'
 FRAMES_API_URL = 'https://lcogt.net/observe/api/requests/%s/frames/'
 REQUEST_AUTH_API_URL = 'https://lcogt.net/observe/api/api-token-auth/'
 
+ARCHIVE_FRAMES_URL = 'https://archive-api.lcogt.net/frames/'
 REDUCED_DATA_SUFFIX = 'e90'
 
 #######################
