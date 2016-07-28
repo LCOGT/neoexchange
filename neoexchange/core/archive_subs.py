@@ -55,7 +55,7 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
 
     limit = 1000
     base_url = settings.ARCHIVE_FRAMES_URL
-    archive_url = '%s/?limit=%d&start=%s&end=%s&OBSTYPE=%s&PROPID=%s' % (base_url, limit, start_date, end_date, obstype, proposal)
+    archive_url = '%s?limit=%d&start=%s&end=%s&OBSTYPE=%s&PROPID=%s' % (base_url, limit, start_date, end_date, obstype, proposal)
 
     frames = {}
     for reduction_lvl in red_lvls:
@@ -79,7 +79,7 @@ def get_catalog_data(frames, auth_header='', dbg=False):
         catalogs_for_red_lvl = []
         for frame in frames_to_search:
             if dbg: print frame['filename'], frame['id']
-            catquery_url = "%s/%d/related/" % ( base_url, frame['id'] )
+            catquery_url = "%s%d/related/" % ( base_url, frame['id'] )
             response = requests.get(catquery_url, headers=auth_header).json()
             if len(response) >= 1:
                 for catalog in response:
