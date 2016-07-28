@@ -305,6 +305,24 @@ li.dropdown-menu:after {
   background: #314657;
 }
 
+.content-container {
+  display:table-row;
+}
+
+.home-button{
+  display:table-cell;
+  padding-left:10px;
+  }
+
+#moon, #moonphase {
+  display:table-cell;
+}
+
+.home-button svg {
+  height:75px;
+  width:75px;
+}
+
 .highlightbox {
   min-height: 20px;
   padding: 19px;
