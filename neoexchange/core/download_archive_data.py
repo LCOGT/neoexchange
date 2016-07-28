@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 import os
 from sys import argv
 
-from archive_subs import *
+from archive_subs import archive_login, get_frame_data, get_catalog_data, determine_archive_start_end
 
 usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[0] )
 
@@ -51,7 +51,7 @@ elif len(argv) == 3:
 elif len(argv) > 3:
     print usage
 
-username = os.environ.get('NEOX_ODIN_USER', None) 
+username = os.environ.get('NEOX_ODIN_USER', None)
 password = os.environ.get('NEOX_ODIN_PASSWD',None)
 if username and password:
     auth_headers = archive_login(username, password)

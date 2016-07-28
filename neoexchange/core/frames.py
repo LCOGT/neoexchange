@@ -1,10 +1,11 @@
 import requests
 from datetime import datetime
+from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+
 from core.models import Block, Frame
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from photometrics.archive_subs import archive_login
-from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 import logging
 
 logger = logging.getLogger('core')
