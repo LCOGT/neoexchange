@@ -270,6 +270,8 @@ CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
 RBAUTH_TOKEN_URL = 'https://lcogt.net/observe/o/token/'
 RBAUTH_PROFILE_API = 'https://lcogt.net/observe/api/profile/'
 RBAUTH_PROPOSAL_API = 'https://lcogt.net/observe/api/proposals/'
+ARCHIVE_API_URL = 'https://archive-api.lcogt.net'
+ARCHIVE_TOKEN_URL = 'https://archive-api.lcogt.net/api-token-auth/'
 
 ##################
 # LOCAL SETTINGS #
