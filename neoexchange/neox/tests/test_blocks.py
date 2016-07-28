@@ -64,7 +64,7 @@ class BlockDetailValidationTest(FunctionalTest):
 
         # He notices the page title has the name of the site and the header
         # mentions block details
-        self.assertIn('Block details | LCOGT NEOx', self.browser.title)
+        self.assertIn('Block details', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Block: 1', header_text)
 
