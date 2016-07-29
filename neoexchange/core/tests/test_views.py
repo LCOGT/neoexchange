@@ -21,13 +21,18 @@ from bs4 import BeautifulSoup
 import os
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
-    mock_check_request_status_null, mock_check_for_2_images, mock_check_for_images_millisecs, \
-    mock_check_for_images_bad_date, mock_ingest_frames
+    mock_check_request_status_null, mock_check_for_images_no_millisecs, \
+    mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
-from core.views import *
+from core.views import home, clean_NEOCP_object, save_and_make_revision, \
+    update_MPC_orbit, check_for_block, clean_mpcorbit, \
+    create_source_measurement,  clean_crossid, create_frame, \
+    frame_params_from_block, schedule_check, summarise_block_efficiency, update_crossids
+from core.frames import block_status
+
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
@@ -470,51 +475,51 @@ class TestCheck_for_block(TestCase):
 
         self.assertEqual(expected_state, block_state)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_active(self):
         resp = block_status(1)
         self.assertTrue(resp)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_2_images)
-    def test_block_update_active(self):
-        resp = block_status(1)
-        self.assertFalse(resp)
-
     @skipIf(True, "Edward needs to fix...")
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_not_active(self):
         resp = block_status(2)
         self.assertFalse(resp)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
     @patch('core.views.ingest_frames', mock_ingest_frames)
+    @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_check_status_change(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
         myblock = Block.objects.get(id=blockid)
         self.assertFalse(myblock.active)
 
-    @patch('core.views.check_request_status', mock_check_request_status_null)
-    @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_request_status', mock_check_request_status_null)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_check_no_obs(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
         self.assertFalse(resp)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images_millisecs)
-    @patch('core.views.ingest_frames', mock_ingest_frames)
-    def test_block_update_millisecs(self):
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.ingest_frames', mock_ingest_frames)
+    @patch('core.frames.lcogt_api_call', mock_check_for_images_no_millisecs)
+    def test_block_update_no_millisecs(self):
         blockid = self.test_block5.id
         resp = block_status(blockid)
         self.assertTrue(resp)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images_bad_date)
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.lcogt_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
         blockid = self.test_block5.id
         resp = block_status(blockid)
@@ -1357,16 +1362,16 @@ class TestFrames(TestCase):
 
     def test_ingest_frames_block(self):
         params = {
-                    'date_obs': "2015-04-20 21:41:05",
-                    'siteid': 'cpt',
-                    'encid': 'doma',
-                    'telid': '1m0a',
-                    'filter_name': 'R',
-                    'instrume': "kb70",
-                    'origname': "cpt1m010-kb70-20150420-0001-e00.fits",
-                    'exptime': '30',
-                    'groupid': 'tmp'
-                 }
+                        "DATE_OBS": "2016-06-01T09:43:28.067",
+                        "ENCID": "doma",
+                        "SITEID":"cpt",
+                        "TELID":"1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00.fits",
+                        "EXPTIME" : "30",
+                        "GROUPID"   : "TEMP"
+                }
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
         self.assertEqual(1,frames.count())
