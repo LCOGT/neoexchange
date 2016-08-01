@@ -42,7 +42,7 @@ def fetch_observations(tracking_num):
     image_list = []
     headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     data = check_request_status(headers, tracking_num)
-    if data.get('detail','') == 'Not found.':
+    if type(data) != list and data.get('detail','') == 'Not found.':
         return image_list
     for r in data:
         images = check_for_images(headers,request_id=r['request_number'])
