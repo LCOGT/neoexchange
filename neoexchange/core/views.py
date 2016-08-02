@@ -14,6 +14,7 @@ GNU General Public License for more details.
 '''
 
 from datetime import datetime, timedelta
+from math import sqrt, degrees
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
@@ -671,8 +672,21 @@ def clean_NEOCP_object(page_list):
                 'elements_type': 'MPC_MINOR_PLANET',
                 'active': True,
                 'origin': 'M',
-                'update_time' : datetime.utcnow()
+                'update_time' : datetime.utcnow(),
+                'arc_length' : None,
+                'not_seen' : None
             }
+            arc_length = None
+            arc_units = current[14]
+            if arc_units == 'days':
+                arc_length = float(current[13])
+            elif arc_units == 'hrs':
+                arc_length = float(current[13]) / 24.0
+            elif arc_units == 'min':
+                arc_length = float(current[13]) / 1440.0
+            if arc_length:
+                params['arc_length'] = arc_length
+
         elif len(current) == 22 or len(current) == 23 or len(current) == 24:
             params = {
                 'abs_mag': float(current[1]),
@@ -715,6 +729,26 @@ def clean_NEOCP_object(page_list):
             logger.warn(
                 "Did not get right number of parameters for %s. Values %s", current[0], current)
             params = {}
+        if params != {}:
+            # Check for objects that should be treated as comets (e>0.9)
+            if params['eccentricity'] > 0.9:
+                gauss_k = degrees(0.01720209895) # Gaussian gravitional constant
+
+                if params['slope'] == 0.15:
+                    params['slope'] = 4.0
+                params['source_type'] = 'C'
+                params['elements_type'] = 'MPC_COMET'
+                params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
+
+                # Compute 'n', the mean daily motion
+                n = gauss_k / (params['meandist'] * sqrt( params['meandist'] ))
+                
+                days_from_perihelion = (360.0 - params['meananom']) / n
+                params['epochofperih'] = params['epochofel'] + timedelta(days=days_from_perihelion)
+#                print n, days_from_perihelion, params['epochofperih']
+                params['meananom'] = None
+                
+
     else:
         params = {}
     return params
