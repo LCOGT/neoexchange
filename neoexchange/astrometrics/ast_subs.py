@@ -16,6 +16,8 @@ GNU General Public License for more details.
 '''
 
 import re
+from math import degrees, sqrt
+from datetime import timedelta
 
 class PackedError(Exception):
     '''Raised when an invalid pack code is found'''
@@ -168,3 +170,23 @@ def determine_asteroid_type(perihdist, eccentricity):
         else:
             obj_type = 'C'  # Comet
     return obj_type
+
+def determine_time_of_perih(meandist, meananom, epochofel):
+    '''Calculate time of perihelion passage from passed semimajor axis (<meandist>:in AU),
+    mean anomaly (<meananom>:in degrees), and the epoch of the elements 
+    (<epochofel>:as a datetime).
+    Returns the epoch of perihelion as a datetime.'''
+
+    gauss_k = degrees(0.01720209895) # Gaussian gravitional constant
+
+    # Compute 'n', the mean daily motion
+    n = gauss_k / (meandist * sqrt( meandist ))
+
+    if meananom > 180.0 and meananom < 360.0:
+        days_from_perihelion = (360.0 - meananom) / n
+    else:
+        days_from_perihelion = -( meananom / n )
+    epochofperih = epochofel + timedelta(days=days_from_perihelion)
+#    print n, days_from_perihelion, epochofperih
+
+    return epochofperih

@@ -39,7 +39,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_NEOCP_observations, PackedError
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates
-from astrometrics.ast_subs import determine_asteroid_type
+from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
 from core.frames import block_status, frame_params_from_block, frame_params_from_log, \
     ingest_frames, create_frame, check_for_images, check_request_status, fetch_observations
 import logging
@@ -671,8 +671,21 @@ def clean_NEOCP_object(page_list):
                 'elements_type': 'MPC_MINOR_PLANET',
                 'active': True,
                 'origin': 'M',
-                'update_time' : datetime.utcnow()
+                'update_time' : datetime.utcnow(),
+                'arc_length' : None,
+                'not_seen' : None
             }
+            arc_length = None
+            arc_units = current[14]
+            if arc_units == 'days':
+                arc_length = float(current[13])
+            elif arc_units == 'hrs':
+                arc_length = float(current[13]) / 24.0
+            elif arc_units == 'min':
+                arc_length = float(current[13]) / 1440.0
+            if arc_length:
+                params['arc_length'] = arc_length
+
         elif len(current) == 22 or len(current) == 23 or len(current) == 24:
             params = {
                 'abs_mag': float(current[1]),
@@ -715,6 +728,17 @@ def clean_NEOCP_object(page_list):
             logger.warn(
                 "Did not get right number of parameters for %s. Values %s", current[0], current)
             params = {}
+        if params != {}:
+            # Check for objects that should be treated as comets (e>0.9)
+            if params['eccentricity'] > 0.9:
+
+                if params['slope'] == 0.15:
+                    params['slope'] = 4.0
+                params['source_type'] = 'C'
+                params['elements_type'] = 'MPC_COMET'
+                params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
+                params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+                params['meananom'] = None
     else:
         params = {}
     return params

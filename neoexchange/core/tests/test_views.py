@@ -239,6 +239,34 @@ class TestClean_NEOCP_Object(TestCase):
         self.assertEqual('L', body.origin)
         self.assertEqual('D', body.source_type)
 
+    @patch('core.views.datetime', MockDateTime)
+    def test_should_be_comets(self):
+
+        MockDateTime.change_datetime(2016, 8, 1, 23, 00, 00)
+
+        obs_page = [u'P10vY9r 11.8  0.15  K167B 359.98102  162.77868  299.00048  105.84058  0.9976479  0.00002573 1136.349844                 66   1   35 days 0.42         NEOCPNomin',
+                   ]
+
+        expected_elements = { 'abs_mag'     : 11.8,
+                              'slope'       : 4.0,
+                              'epochofel'   : datetime(2016, 7, 11, 0, 0, 0),
+                              'argofperih'  : 162.77868,
+                              'longascnode' : 299.00048,
+                              'orbinc'      : 105.84058,
+                              'eccentricity':  0.9976479,
+                              'epochofperih': datetime(2018, 7, 18, 16, 0, 8, 802657),
+                              'perihdist'   : 1136.349844 * (1.0 - 0.9976479),
+                              'meananom'    : None,
+                             # 'MDM':   0.36954350,
+                              'elements_type': 'MPC_COMET',
+                              'origin'      : 'M',
+                              'source_type' : 'C',
+                              'active'      : True,
+                              'arc_length'  : 35.0,
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
 
 class TestCheck_for_block(TestCase):
 
