@@ -739,8 +739,6 @@ def clean_NEOCP_object(page_list):
                 params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
                 params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
                 params['meananom'] = None
-                
-
     else:
         params = {}
     return params
