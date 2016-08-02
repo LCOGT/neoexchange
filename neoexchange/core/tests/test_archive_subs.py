@@ -21,7 +21,7 @@ from django.test import TestCase
 
 from neox.tests.mocks import MockDateTime
 #Import module to test
-from photometrics.archive_subs import *
+from core.archive_subs import *
 
 class Test_Determine_Archive_Start_End(TestCase):
 
