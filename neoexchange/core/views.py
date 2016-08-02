@@ -14,7 +14,6 @@ GNU General Public License for more details.
 '''
 
 from datetime import datetime, timedelta
-from math import sqrt, degrees
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
@@ -40,7 +39,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_NEOCP_observations, PackedError
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates
-from astrometrics.ast_subs import determine_asteroid_type
+from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
 from core.frames import block_status, frame_params_from_block, frame_params_from_log, \
     ingest_frames, create_frame, check_for_images, check_request_status, fetch_observations
 import logging
@@ -732,20 +731,13 @@ def clean_NEOCP_object(page_list):
         if params != {}:
             # Check for objects that should be treated as comets (e>0.9)
             if params['eccentricity'] > 0.9:
-                gauss_k = degrees(0.01720209895) # Gaussian gravitional constant
 
                 if params['slope'] == 0.15:
                     params['slope'] = 4.0
                 params['source_type'] = 'C'
                 params['elements_type'] = 'MPC_COMET'
                 params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
-
-                # Compute 'n', the mean daily motion
-                n = gauss_k / (params['meandist'] * sqrt( params['meandist'] ))
-                
-                days_from_perihelion = (360.0 - params['meananom']) / n
-                params['epochofperih'] = params['epochofel'] + timedelta(days=days_from_perihelion)
-#                print n, days_from_perihelion, params['epochofperih']
+                params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
                 params['meananom'] = None
                 
 
