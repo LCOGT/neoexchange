@@ -35,7 +35,7 @@ from core.models import CatalogSources, Frame
 
 logger = logging.getLogger(__name__)
 
-def call_cross_match_and_zeropoint(catfile, cat_name = "UCAC4",  set_row_limit = 10000, rmag_limit = "<=15.0"):
+def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance = 0.1, cat_name = "UCAC4",  set_row_limit = 10000, rmag_limit = "<=15.0"):
 
     if type(catfile) == str:
 
@@ -49,7 +49,7 @@ def call_cross_match_and_zeropoint(catfile, cat_name = "UCAC4",  set_row_limit =
 
     cross_match_table = cross_match(table, cat_table, cat_name)
 
-    avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
+    avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance)
 
     return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc
 
@@ -200,7 +200,7 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
 
     return cross_match_table
 
-def get_zeropoint(cross_match_table):
+def get_zeropoint(cross_match_table, std_zeropoint_tolerance):
     '''Computes a zeropoint from the two catalogues in 'cross_match_table' and iterates until all outliers are thrown out.'''
 
     avg_zeropoint = 40.0
@@ -211,7 +211,7 @@ def get_zeropoint(cross_match_table):
 
     while num_iter < 800:
 
-        if std_zeropoint > 0.1:
+        if std_zeropoint > std_zeropoint_tolerance:
             count = 0
             sum_r_mag_mean_numerator = 0.0
             sum_r_mag_mean_denominator = 0.0
@@ -230,8 +230,10 @@ def get_zeropoint(cross_match_table):
                         num_in_calc = count
                 y += 1
 
-            if count > 0:
+            if count > 2:
                 avg_zeropoint = sum_r_mag_mean_numerator / sum_r_mag_mean_denominator #weighted mean zeropoint
+            else:
+                avg_zeropoint = 40.0
 
             y = 0
             for value in cross_match_table['r mag diff']:
@@ -241,8 +243,10 @@ def get_zeropoint(cross_match_table):
                         std_zeropoint_denominator += (1.0 / cross_match_table['r mag err'][y])
                 y += 1
 
-            if count > 0:
+            if count > 2:
                 std_zeropoint = sqrt(std_zeropoint_numerator / (((float(count) - 1)/float(count)) * std_zeropoint_denominator))
+            else:
+                std_zeropoint = 10.0
 
         r_mag_diff_threshold -= 0.05
         num_iter += 1
@@ -877,7 +881,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     return header, table
 
-def store_catalog_sources(catfile, catalog_type='LCOGT'):
+def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'):
 
     num_new_frames_created = 0
     num_sources_created = 0
@@ -891,12 +895,15 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
         #check for good zeropoints
         if header.get('zeropoint',-99) == -99 or header.get('zeropoint_err',-99) == -99:
             #if bad, determine new zeropoint
-            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table))
-
-            print "ZP=%.2f+/-%.2f" % (avg_zeropoint, std_zeropoint)
+            print "Refitting zeropoint, tolerance set to ", std_zeropoint_tolerance
+            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
+            print "New zp=", avg_zeropoint, std_zeropoint, count, num_in_calc
             #if crossmatch is good, update new zeropoint
-            if std_zeropoint < 0.1:
+            if std_zeropoint < std_zeropoint_tolerance:
+                print "Got good zeropoint - updating header"
                 header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
+            else:
+                print "Didn't get good zeropoint - not updating header"
 
         #get the fits filename from the catfile in order to get the Block from the Frame
         if 'e90_cat.fits' in os.path.basename(catfile):
@@ -934,25 +941,32 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
         except Frame.MultipleObjectsReturned:
             pass
         except Frame.DoesNotExist:
-            #store sources in neoexchange(CatalogSources table)
-            frame_params = {    'sitecode':header['site_code'],
-                                'instrument':header['instrument'],
-                                'filter':header['filter'],
-                                'filename':determine_filenames(catfile),
-                                'exptime':header['exptime'],
-                                'midpoint':header['obs_midpoint'],
-                                'block':frame.block,
-                                'zeropoint':header['zeropoint'],
-                                'zeropoint_err':header['zeropoint_err'],
-                                'fwhm':header['fwhm'],
-                                'frametype':Frame.SINGLE_FRAMETYPE,
-                                'rms_of_fit':header['astrometric_fit_rms'],
-                                'nstars_in_fit':header['astrometric_fit_nstars'],
-                            }
+            try:
+                frame = Frame.objects.get(filename=fits_file, block__isnull=False, zeropoint__gt=0)
+                if frame.zeropoint > 0 and frame.zeropoint_err > 0:
+                    frame.zeropoint=header['zeropoint']
+                    frame.zeropoint_err=header['zeropoint_err']
+                    frame.save()
+            except Frame.DoesNotExist:
+                #store sources in neoexchange(CatalogSources table)
+                frame_params = {    'sitecode':header['site_code'],
+                                    'instrument':header['instrument'],
+                                    'filter':header['filter'],
+                                    'filename':determine_filenames(catfile),
+                                    'exptime':header['exptime'],
+                                    'midpoint':header['obs_midpoint'],
+                                    'block':frame.block,
+                                    'zeropoint':header['zeropoint'],
+                                    'zeropoint_err':header['zeropoint_err'],
+                                    'fwhm':header['fwhm'],
+                                    'frametype':Frame.SINGLE_FRAMETYPE,
+                                    'rms_of_fit':header['astrometric_fit_rms'],
+                                    'nstars_in_fit':header['astrometric_fit_nstars'],
+                                }
 
-            frame, created = Frame.objects.get_or_create(**frame_params)
-            if created == True:
-                num_new_frames_created += 1
+                frame, created = Frame.objects.get_or_create(**frame_params)
+                if created == True:
+                    num_new_frames_created += 1
 
         for source in table:
             source_params = {   'frame':frame,

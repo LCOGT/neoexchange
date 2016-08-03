@@ -145,10 +145,73 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                         }
         self.test_frame2, created = Frame.objects.get_or_create(**frame_params2)
 
+        body2_params = {    'provisional_name': '67P',
+                            'origin': 'M',
+                            'source_type': 'U',
+                            'elements_type': 'MPC Comet',
+                            'active': False,
+                            'epochofel': '2021-11-02 00:00:00',
+                            'orbinc': 3.87139,
+                            'longascnode': 36.33226,
+                            'argofperih': 22.13412,
+                            'eccentricity': 0.6497023,
+                            'meandist': 3.4559747,
+                            'meananom': 359.99129,
+                            'perihdist': 1.21062,
+                            'epochofperih': '2021-11-02 01:21:47',
+                        }
+        self.test_body_2, created = Body.objects.get_or_create(**body_params)
+
+        self.test_ldacfilename_2 = os.path.join(os.path.sep, 'tmp', 'tmp_neox_67P', 'coj1m003-kb71-20151229-0202-e91_ldac.fits')
+        hdulist = fits.open(self.test_ldacfilename_2)
+        self.test_header_2 = hdulist[0].header
+        self.test_table_2 = hdulist[2].data
+        hdulist.close()
+        self.table_2_firstitem = self.test_table[0:1]
+        self.table_2_lastitem = self.test_table[-1:]
+        self.table_2_item_flags24 = self.test_table[2:3]
+        self.table_2_num_flags0 = len(where(self.test_table['flags']==0)[0])
+
+        block_params3 = {   'telclass': '1m0',
+                            'site': 'Q64',
+                            'body': self.test_body_2,
+                            'proposal': self.test_proposal,
+                            'groupid': None,
+                            'block_start': datetime(2015, 12, 29, 16),
+                            'block_end': datetime(2015, 12, 29, 19),
+                            'tracking_number': '0011',
+                            'num_exposures': 1,
+                            'exp_length': 60.0,
+                            'num_observed': 1,
+                            'when_observed': datetime(2015, 12, 29, 17, 19, 00),
+                            'active': False,
+                            'reported': False,
+                            'when_reported':None
+                        }
+        self.test_block3, created = Block.objects.get_or_create(**block_params3)
+
+        frame_params3 = {   'sitecode':'W64',
+                            'instrument':'kb71',
+                            'filter':'rp',
+                            'filename':'coj1m003-kb71-20151229-0202-e91.fits',
+                            'exptime':60.0,
+                            'midpoint':datetime(2015, 12, 29, 17, 19, 30),
+                            'block':self.test_block3,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':3.811,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':3.0,
+                        }
+        self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
+
     def test1(self):
 
         ###
-        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
+        std_zeropoint_tolerance = 0.1
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename, std_zeropoint_tolerance)
 
         self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
         self.assertEqual(num_sources_created, self.table_num_flags0)
@@ -161,13 +224,15 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
     def test_zeropoint_update(self):
 
-        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
+        std_zeropoint_tolerance = 0.1
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename, std_zeropoint_tolerance)
 
         self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
 
         header, table = extract_catalog(self.test_filename)
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table))
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
 
         self.assertLess(header['zeropoint'], 0.0)
         self.assertLess(header['zeropoint_err'], 0.0)
@@ -184,13 +249,15 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
     def test_duplicate_entries(self):
 
-        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
+        std_zeropoint_tolerance = 0.1
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename, std_zeropoint_tolerance)
 
         self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
         self.assertEqual(num_sources_created, self.table_num_flags0)
         self.assertEqual(num_in_table, self.table_num_flags0)
 
-        num_sources_created, num_in_table = store_catalog_sources(self.test_filename)
+        num_sources_created, num_in_table = store_catalog_sources(self.test_filename, std_zeropoint_tolerance)
 
         self.assertEqual(CatalogSources.objects.count(), self.table_num_flags0)
         self.assertEqual(num_sources_created, 0)
@@ -200,7 +267,9 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         bad_filename = os.path.join('photometrics','tests','__init__.py')
 
-        num_sources_created, num_in_table = store_catalog_sources(bad_filename)
+        std_zeropoint_tolerance = 0.1
+
+        num_sources_created, num_in_table = store_catalog_sources(bad_filename, std_zeropoint_tolerance)
 
         self.assertEqual(CatalogSources.objects.count(), 0)
         self.assertEqual(num_sources_created, 0)
@@ -208,11 +277,13 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
     def test_ldac_catalog(self):
 
+        std_zeropoint_tolerance = 0.1
+
         expected_num_sources_created = 692
         expected_num_in_table = 692
         expected_threshold = pow(10, -5.2825128/-2.5) * pow(0.467,2)
         num_sources_created, num_in_table = \
-         store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC')
+         store_catalog_sources(self.test_ldacfilename, std_zeropoint_tolerance, catalog_type='FITS_LDAC')
 
         self.assertEqual(expected_num_sources_created, num_sources_created)
         self.assertEqual(expected_num_in_table, num_in_table)
@@ -221,3 +292,51 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         self.assertAlmostEqual(last_catsrc.flux_max, 4937.96289, 5)
         self.assertAlmostEqual(last_catsrc.threshold, expected_threshold, 5)
+
+    def test_zeropoint_NOT_update(self):
+
+        std_zeropoint_tolerance = 0.1
+
+        expected_num_sources_created = 1367
+        expected_num_in_table = 1367
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename_2, std_zeropoint_tolerance, catalog_type='FITS_LDAC')
+
+        self.assertEqual(expected_num_sources_created, num_sources_created)
+        self.assertEqual(expected_num_in_table, num_in_table)
+
+        first_catsrc=CatalogSources.objects.first()
+        last_catsrc=CatalogSources.objects.last()
+
+        self.assertLess(first_catsrc.obs_mag, 0.0)
+        self.assertLess(last_catsrc.obs_mag, 0.0)
+
+    def test_zeropoint_update_no_new_frame(self):
+
+        std_zeropoint_tolerance = 0.1
+
+        expected_num_sources_created = 1367
+        expected_num_in_table = 1367
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename_2, std_zeropoint_tolerance, catalog_type='FITS_LDAC')
+
+        self.assertEqual(expected_num_sources_created, num_sources_created)
+        self.assertEqual(expected_num_in_table, num_in_table)
+
+        last_catsrc=CatalogSources.objects.last()
+
+        self.assertLess(last_catsrc.obs_mag, 0.0)
+
+        std_zeropoint_tolerance = 0.15
+
+        expected_num_sources_created = 1367
+        expected_num_in_table = 1367
+
+        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename_2, std_zeropoint_tolerance, catalog_type='FITS_LDAC')
+
+        self.assertEqual(expected_num_sources_created, num_sources_created)
+        self.assertEqual(expected_num_in_table, num_in_table)
+
+        last_catsrc=CatalogSources.objects.last()
+
+        self.assertGreater(last_catsrc.obs_mag, 0.0)
