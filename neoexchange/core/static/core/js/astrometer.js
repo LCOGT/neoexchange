@@ -71,6 +71,10 @@ function zoomImage(x,y){
   ministage.update();
 }
 
+function handleLoad(event) {
+  stage.update();
+}
+
 function changeImage(index) {
   //
   //
@@ -85,9 +89,10 @@ function changeImage(index) {
   frame_container = '#imgCanvas'
   fetch_thumbnail(frames[currentindex].img, frame_container, img_params);
   image_url = $('#imgCanvas').attr('src')
-  console.log(image_url)
 
   img_holder = new createjs.Bitmap(image_url);
+  // Update the stage when the image data has loaded
+  img_holder.image.onload = handleLoad;
   // Duplicate this image on to the mini canvas
   zoomImage(500,100);
   // Scale the image to fit inside canvas
