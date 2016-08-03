@@ -90,7 +90,9 @@ class Command(BaseCommand):
             # Step 2: Check for good zeropoint and redetermine if needed. Ingest
             # results into CatalogSources
             self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type)
+            # set tolerance for determining the zeropoint
+            std_zeropoint_tolerance = 0.1
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, std_zeropoint_tolerance, catalog_type)
 
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
