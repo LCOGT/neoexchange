@@ -42,89 +42,88 @@ class MockDateTime(datetime):
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
 
-def mock_check_request_status(tracking_num):
-    status = {  "title": "WT1190F_W86-20151022",
-                "timestamp": "2015-10-22 18:04:25",
-                "tracking_number": str(tracking_num),
-                "state": "COMPLETED",
-                "requests": {
-                    "0000445739": {
-                        "schedule": [
-                            {
-                                "end": "2015-10-22 07:30:37",
-                                "telescope": "1m0a.domb.lsc",
-                                "start": "2015-10-22 07:09:29",
-                                "state": "COMPLETED",
-                                "frames": [],
-                                "id": 70243611,
-                            }
-                        ],
-                        "timestamp": "2015-10-22 18:04:26",
-                        "state": "COMPLETED",
-                        "request_number": "0000445739",
-                    }
-                }
-            }
+def mock_check_request_status(headers, tracking_num):
+    status = [{'constraints': [{'id': 611796, 'request': 617292}],
+             'end_time': '2015-10-22 07:30:37',
+             'fail_count': 0,
+             'locations': [{'observatory': None,
+               'site': 'lsc',
+               'telescope': None,
+               'telescope_class': '1m0'}],
+             'molecules': [{'acquire_mode': 'WCS',
+               'bin_x': 2,
+               'exposure_count': 1,
+               'exposure_time': 300.0,
+               'filter': 'B',
+               'id': 1001945,
+               'instrument_name': '1M0-SCICAM-SBIG',
+               'priority': 1,
+               'request': 617292,
+               'type': 'EXPOSE'},
+              ],
+             'proposal_id': 'LCOEPO2014B-XXX',
+             'request_number': '0000445739',
+             'start_time': '2015-10-22 07:09:29',
+             'targets': [{'acquire_mode': 'OPTIONAL',
+               'argofperih': None,
+               'coordinate_system': 'ICRS',
+               'dailymot': None,
+               'dec': 47.1952583333,
+               'eccentricity': None,
+               'epoch': 2000.0,
+               'epochofel': None,
+               'epochofperih': None,
+               'equinox': 'J2000',
+               'longascnode': None,
+               'longofperih': None,
+               'meananom': None,
+               'meandist': None,
+               'meanlong': None,
+               'name': 'M51',
+               'orbinc': None,
+               'parallax': 0.0,
+               'perihdist': None,
+               'proper_motion_dec': 0.0,
+               'proper_motion_ra': 0.0,
+               'ra': 202.469575,
+               'type': 'SIDEREAL'}],
+             'windows': [{'end': '2015-10-22T09:00:00',
+               'start': '2015-10-22T07:00:00'}]
+             }]
     return status
 
-def mock_check_request_status_null(tracking_num):
+
+def mock_check_request_status_null(headers, tracking_num):
     return []
 
-def mock_check_for_images(eventid):
-    images = [{"propid":"LCO2015B-005",
-                "date_obs":"2015-10-22 07:35:41",
-                "origname":"file0.fits",
-                "hdrver":"LCOGT-HDR-1.3.0"},
-            {"propid":"LCO2015B-005",
-            "date_obs":"2015-10-22 07:34:41",
-            "origname":"file1.fits",
-            "hdrver":"LCOGT-HDR-1.3.0"},
-            {"propid":"LCO2015B-005",
-            "date_obs":"2015-10-22 07:33:41",
-            "origname":"file2.fits",
-            "hdrver":"LCOGT-HDR-1.3.0"}]
-    return images
 
-def mock_check_for_2_images(eventid):
-    images = [{"propid":"LCO2015B-005",
-                "date_obs":"2015-10-22 07:35:41",
-                "origname":"file0.fits",
-                "hdrver":"LCOGT-HDR-1.3.0"},
-            {"propid":"LCO2015B-005",
-            "date_obs":"2015-10-22 07:34:41",
-            "origname":"file1.fits",
-            "hdrver":"LCOGT-HDR-1.3.0"}]
-    return images
+def mock_check_for_images_no_millisecs(auth_header, request_id):
+    header = { "data": {
+                    "DATE_OBS": "2016-06-01T09:43:28",
+                    "ENCID": "clma",
+                    "SITEID":"lsc",
+                    "TELID":"1m0a",
+                    "FILTER": "rp",
+                    "INSTRUME" : "kb27",
+                    "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
+                    "EXPTIME" : "200.0"
+            }
+        }
+    return header
 
-def mock_check_for_images_millisecs(eventid):
-    images = [{"propid":"LCO2015B-005",
-                "date_obs":"2015-10-22 07:35:41.789",
-                "origname":"file0.fits",
-                "hdrver":"LCOGT-HDR-1.3.0"},
-            {"propid":"LCO2015B-005",
-            "date_obs":"2015-10-22 07:34:41.789",
-            "origname":"file1.fits",
-            "hdrver":"LCOGT-HDR-1.3.0"},
-            {"propid":"LCO2015B-005",
-            "date_obs":"2015-10-22 07:33:41.789",
-            "origname":"file2.fits",
-            "hdrver":"LCOGT-HDR-1.3.0"}]
-    return images
-
-def mock_check_for_images_bad_date(eventid):
-    images = [{"propid":"LCO2015B-005",
-                "date_obs":"2015-10-22 07:35",
-                "origname":"file0.fits",
-                "hdrver":"LCOGT-HDR-1.3.0"},
-            {"propid":"LCO2015B-005",
-            "date_obs":"2015-10-22 07:34",
-            "origname":"file1.fits",
-            "hdrver":"LCOGT-HDR-1.3.0"},
-            {"propid":"LCO2015B-005",
-            "date_obs":"2015-10-22 07:33",
-            "origname":"file2.fits",
-            "hdrver":"LCOGT-HDR-1.3.0"}]
-    return images
+def mock_check_for_images_bad_date(auth_header, request_id):
+    header = { "data": {
+                    "DATE_OBS": "2016-06-01T09:43",
+                    "ENCID": "clma",
+                    "SITEID":"lsc",
+                    "TELID":"1m0a",
+                    "FILTER": "rp",
+                    "INSTRUME" : "kb27",
+                    "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
+                    "EXPTIME" : "200.0"
+            }
+        }
+    return header
 
 def mock_ingest_frames(images, block):
     return None
@@ -158,3 +157,39 @@ def mock_rbauth_login(email, password, request=None):
         'name': 'LCOGT NEO Follow-up Network'}
         ]
     return profile, proposals
+
+def mock_check_for_images(auth_header, request_id):
+    images = [
+    {u'filename': u'ogg0m406-kb27-20160531-0063-e90_cat.fits',
+      u'headers': u'https://archive-api.lcogt.net/frames/4029371/headers/',
+      u'id': 4029371,
+      u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/32de/ogg0m406-kb27-20160531-0063-e90_cat'},
+     {u'filename': u'ogg0m406-kb27-20160531-0063-e90.fits',
+      u'headers': u'https://archive-api.lcogt.net/frames/4029372/headers/',
+      u'id': 4029372,
+      u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/e00c/ogg0m406-kb27-20160531-0063-e90'},
+     {u'filename': u'ogg0m406-kb27-20160531-0063-e00.fits.fz',
+      u'headers': u'https://archive-api.lcogt.net/frames/4028223/headers/',
+      u'id': 4028223,
+      u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/bbd6/ogg0m406-kb27-20160531-0063-e00'},
+     ]
+    return images
+
+def mock_archive_frame_header(archive_headers, images):
+    header = { "data": {
+                    "DATE_OBS": "2016-06-01T09:43:28.067",
+                    "ENCID": "clma",
+                    "SITEID":"lsc",
+                    "TELID":"1m0a",
+                    "FILTER": "rp",
+                    "INSTRUME" : "kb27",
+                    "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
+                    "EXPTIME" : "200.0",
+                    "GROUPID" : "TEMP"
+            }
+        }
+    return header
+
+def mock_fetch_observations(tracking_num):
+    images = ['1','2','3']
+    return images

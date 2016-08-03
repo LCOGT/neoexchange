@@ -343,9 +343,16 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     # Calculate magnitude of object
         if p_orbelems['H'] and p_orbelems['G']:
-            mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
-                (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
-
+            try:
+                mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
+                    (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
+            except ValueError:
+                logger.error("Error computing magnitude")
+                logger.error("{")
+                for key in p_orbelems:
+                    logger.error("'%s': %s" % (key, str(p_orbelems[key])))
+                logger.error("}")
+                logger.error("r, delta=%f %f" % (r,delta))
     az_rad, alt_rad = moon_alt_az(d, ra, dec, site_long, site_lat, site_hgt)
     airmass = S.sla_airmas((pi/2.0)-alt_rad)
     alt_deg = degrees(alt_rad)

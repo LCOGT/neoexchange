@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.test import TestCase
 
 #Import module to test
@@ -319,3 +319,27 @@ class TestDetermineAsteroidType(TestCase):
         expected_type = 'A'
         obj_type = determine_asteroid_type(5.05, 0.0561)
         self.assertEqual(obj_type, expected_type)
+
+class TestDetermineTimeOfPerihelion(TestCase):
+
+    def test_perihelion_in_future(self):
+        meandist = 1000.0
+        meananom = 359.0
+        epochofel = datetime(2016, 7, 11, 0, 0, 0)
+
+        expected_time_of_perih = epochofel + timedelta(days=32084.54804999279)
+
+        time_of_perih = determine_time_of_perih(meandist, meananom, epochofel)
+
+        self.assertEqual(expected_time_of_perih, time_of_perih)
+
+    def test_perihelion_in_past(self):
+        meandist = 1000.0
+        meananom = 1.0
+        epochofel = datetime(2016, 7, 11, 0, 0, 0)
+
+        expected_time_of_perih = epochofel - timedelta(days=32084.54804999279)
+
+        time_of_perih = determine_time_of_perih(meandist, meananom, epochofel)
+
+        self.assertEqual(expected_time_of_perih, time_of_perih)
