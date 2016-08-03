@@ -17,14 +17,15 @@
 	var img_holder;
 	var mini_img;
 	var frames = {{images|safe}}
-	var data_url = 'http://data.lcogt.net/thumbnail/'
-	var img_params = '/?width=1000&height=1000&gamma=2.5&label=0'
+	var data_url = 'https://thumbnails.lcogt.net/'
+	var img_params = '?width=1000&height=1000'
 
 	$(document).ready(function(){
 		setUp();
 
+		loadThumbnails(frames);
+
 		$('.image_switch').click(function(){
-				console.log("here")
 				var frameid = $(this).data('imgsrc');
 				console.log(frameid);
 				changeImage(frameid);
@@ -58,7 +59,7 @@
 
 					<div id="middle">
 						<div id="wrapper">
-							<canvas id="imgCanvas" width="600" height="600"><p>Image has failed to load.</p></canvas>
+							<canvas id="imgCanvas" width="600" height="600" src=""><p>Image has failed to load.</p></canvas>
 						</div>
 					</div>
 				</div>
@@ -75,9 +76,6 @@
 								<button id="stop" onclick="stopBlink();">STOP</button>
 							</div>
               <ul class="observations">
-              {% for img in images %}
-              <li class="thumb"><a href="#main" class="image_switch" data-imgsrc='{{forloop.counter0}}'><img src="http://data.lcogt.net/thumbnail/{{img.img}}/?width=50&height=50&gamma=2.5&label=0"></a></li>
-              {% endfor %}
               </ul>
           {% endif %}
         </div>

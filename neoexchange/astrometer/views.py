@@ -29,7 +29,8 @@ from httplib import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
 
 from core.models import Frame, Block, Proposal, SourceMeasurement
-from core.views import fetch_observations
+from core.frames import block_status, frame_params_from_block, frame_params_from_log, \
+    ingest_frames, create_frame, check_for_images, check_request_status, fetch_observations
 
 import logging
 import reversion
@@ -47,10 +48,10 @@ class BlockFramesView(DetailView):
     def get_context_data(self, **kwargs):
         img_list = []
         context = super(BlockFramesView, self).get_context_data(**kwargs)
-        images = fetch_observations(context['block'].tracking_number, context['block'].proposal.code)
+        images = fetch_observations(context['block'].tracking_number)
         if images:
             for img in images:
-                img_dict = {'img'     :str(img[1]),
+                img_dict = {'img'     : img,
                             'sources' : [{'x':100,'y':100},{'x':200,'y':200},{'x':300,'y':300}],
                             'targets' :  [{'x':150,'y':150}]
                             }

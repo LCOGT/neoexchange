@@ -8,6 +8,7 @@ function setUp(){
     index = 0;
   }
   changeImage(index);
+
 }
 
 function addCircle(x, y, r, fill, name, draggable) {
@@ -81,7 +82,10 @@ function changeImage(index) {
   // Remove everything already on the stage
   stage.removeAllChildren();
 
-  image_url = data_url + frames[currentindex].img + img_params;
+  frame_container = '#imgCanvas'
+  fetch_thumbnail(frames[currentindex].img, frame_container, img_params);
+  image_url = $('#imgCanvas').attr('src')
+  console.log(image_url)
 
   img_holder = new createjs.Bitmap(image_url);
   // Duplicate this image on to the mini canvas
@@ -108,4 +112,27 @@ function changeImage(index) {
   // Update the name of the current frame on the page
   $("#frame_id_holder").text(frames[currentindex].img);
 
+}
+
+function loadThumbnails(frames){
+  for(var i in frames)
+   {
+     var frame = frames[i] ;
+      var thumbnail_container;
+      thumbnail_container = $('ul.observations');
+      link_url = "http://lcogt.net/observations/frame/"+frame.img+"/"
+      var thumb_html = '<li class="thumb"><a href="#main" class="image_switch" data-imgsrc="'+frame.img+'"><img src="https://lcogt.net/files/no-image_120.png" id="frame-'+frame.img+'"></a></li>';
+
+      thumbnail_container.append(thumb_html);
+      fetch_thumbnail(frame.img,'.observations img#frame-'+frame.img);
+    }
+}
+
+function fetch_thumbnail(frameid, frame_container,options=''){
+  var url = "https://thumbnails.lcogt.net/" + frameid +"/" +options;
+  var resp;
+  $.get(url, function(data){
+      resp = data.url;
+      $(frame_container).attr('src', resp);
+  });
 }
