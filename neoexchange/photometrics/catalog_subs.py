@@ -490,7 +490,7 @@ def open_fits_catalog(catfile, header_only=False):
         cattype = 'FITS_LDAC'
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
-    elif len(hdulist) == 4:
+    elif len(hdulist) == 4 or (len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD'):
         # New BANZAI-format data
         cattype = 'BANZAI'
         try:

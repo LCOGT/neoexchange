@@ -1137,6 +1137,13 @@ class FITSUnitTest(TestCase):
         hdulist.close()
         self.banzai_table_firstitem = self.test_banzaitable[0:1]
 
+        self.test_uncomp_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits')
+        hdulist = fits.open(self.test_uncomp_banzaifilename)
+        self.test_uncomp_banzaiheader = hdulist['SCI'].header
+        self.test_uncomp_banzaitable = hdulist['CAT'].data
+        hdulist.close()
+        self.uncomp_banzai_table_firstitem = self.test_banzaitable[0:1]
+
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
                         ('obs_ra', '>f8'), 
@@ -1324,6 +1331,51 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_y = 1219.86182435688
 
         hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
+        self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
+
+    def test_uncomp_banzai_read_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
+
+    def test_uncomp_banzai_catalog_read_length(self):
+        expected_hdr_len = 251
+        expected_tbl_len = len(self.test_uncomp_banzaitable)
+        expected_cattype = 'BANZAI'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
+
+    def test_uncomp_banzai_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'kb76'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+
+    def test_uncomp_banzai_catalog_read_tbl_column(self):
+        expected_tbl_value = 'XWIN'
+#        expected_tbl_units = 'pixel'   # No units in the new table (yet?)
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+
+        self.assertEqual(expected_tbl_value, tbl.columns[2].name)
+#        self.assertEqual(expected_tbl_units, tbl.columns[2].unit)
+
+    def test_uncomp_banzai_catalog_read_xy(self):
+        # X,Y CCD Co-ordinates of the last detection
+        expected_x = 1990.0072393055439
+        expected_y = 1219.86182435688
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
