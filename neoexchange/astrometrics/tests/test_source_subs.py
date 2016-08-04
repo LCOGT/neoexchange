@@ -29,7 +29,7 @@ from neox.tests.mocks import MockDateTime
 from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
-    fetch_NEOCP_observations, imap_login, fetch_NASA_targets
+    fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1296,3 +1296,120 @@ class TestIMAPLogin(TestCase):
         expected_targets = ['2016 BA14']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
+
+class TestConfigureDefaults(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_1m_sbig_cpt(self):
+        expected_params = { 'binning': 2,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SBIG',
+                            'observatory': '',
+                            'pondtelescope': '1m0',
+                            'site': 'CPT',
+                            'site_code': 'K92'}
+
+
+        params = { 'site_code' : 'K92' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sbig_lsc(self):
+        expected_params = { 'binning': 2,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SBIG',
+                            'observatory': '',
+                            'pondtelescope': '1m0',
+                            'site': 'LSC',
+                            'site_code': 'W85'}
+
+
+        params = { 'site_code' : 'W85' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sinistro_lsc(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': 'domb',
+                            'pondtelescope': '1m0',
+                            'site': 'LSC',
+                            'site_code': 'W86'}
+
+
+        params = { 'site_code' : 'W86' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sinistro_elp(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': '',
+                            'pondtelescope': '1m0',
+                            'site': 'ELP',
+                            'site_code': 'V37'}
+
+
+        params = { 'site_code' : 'V37' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sinistro_lsc_domec(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': 'domb',
+                            'pondtelescope': '1m0',
+                            'site': 'LSC',
+                            'site_code': 'W86'}
+
+
+        params = { 'site_code' : 'W87' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_2m_ogg(self):
+        expected_params = { 'binning': 2,
+                            'filter': 'solar',
+                            'instrument': '2M0-SCICAM-SPECTRAL',
+                            'observatory': '',
+                            'pondtelescope': '2m0',
+                            'site': 'OGG',
+                            'site_code': 'F65'}
+
+
+        params = { 'site_code' : 'F65' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_2m_coj(self):
+        expected_params = { 'binning': 2,
+                            'filter': 'solar',
+                            'instrument': '2M0-SCICAM-SPECTRAL',
+                            'observatory': '',
+                            'pondtelescope': '2m0',
+                            'site': 'COJ',
+                            'site_code': 'E10'}
+
+
+        params = { 'site_code' : 'E10' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
