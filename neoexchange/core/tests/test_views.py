@@ -260,7 +260,7 @@ class TestClean_NEOCP_Object(TestCase):
                              # 'MDM':   0.36954350,
                               'elements_type': 'MPC_COMET',
                               'origin'      : 'M',
-                              'source_type' : 'C',
+                              'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 35.0,
                             }
