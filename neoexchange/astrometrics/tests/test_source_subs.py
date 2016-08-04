@@ -1382,6 +1382,22 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(params, expected_params)
 
+    def test_1m_sinistro_cpt_domec(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': 'domc',
+                            'pondtelescope': '1m0',
+                            'site': 'CPT',
+                            'site_code': 'K93'}
+
+
+        params = { 'site_code' : 'K93' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
     def test_2m_ogg(self):
         expected_params = { 'binning': 2,
                             'filter': 'solar',
