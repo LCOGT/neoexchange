@@ -174,6 +174,16 @@ def determine_sext_options(fits_file):
     options = options.rstrip()
     return options
 
+def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
+
+    pa_rate_dict = {    'filter_pa': pa,
+                        'filter_deltapa': deltapa,
+                        'filter_minrate': minrate/3600.0*1440.0, #mtdlink needs motion rates in deg/day, not arcsec/min
+                        'filter_maxrate': maxrate/3600.0*1440.0,
+                   }
+
+    return pa_rate_dict
+
 def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
 
     options = ''
@@ -287,7 +297,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     return retcode_or_cmdline
 
 @timeit
-def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files, param_file, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
+def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
     '''Run MTDLINK (using either the binary specified by [binary] or by
     looking for 'mtdlink' in the PATH) on the passed <fits_files> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -303,13 +313,27 @@ def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files
         return -42
 
     mtdlink_config_file = default_mtdlink_config_files()[0]
-    fits_file_list = fits_files.split(' ')
-    first_fits_file = fits_file_list[0]
     options = determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict)
+
+    # MTDLINK wants the input fits files to be in the directory MTDLINK is
+    # being run from...
+    # If the fits files have a path component, we symlink them to the directory.
+    symlink_fits_files = []
+    for f in fits_file_list:
+        fits_file = os.path.basename(f)
+        if fits_file != f:
+            fits_file = os.path.join(dest_dir, fits_file)
+            # If the file exists and is a link (or a broken link), then remove it
+            if os.path.lexists(fits_file) and os.path.islink(fits_file):
+                os.unlink(fits_file)
+            if not os.path.exists(fits_file):
+                os.symlink(f, fits_file)
+        symlink_fits_files.append(fits_file)
+
+    linked_fits_files = ' '.join(symlink_fits_files)
 
     # MTDLINK requires an 'MJD' keyword to be in the header.
     # If one doesn't exist, copy 'MJD-OBS' to 'MJD'.
-    y = 0
     for f in fits_file_list:
         if os.path.exists(f):
             data, header = fits.getdata(f, header=True)
@@ -317,53 +341,9 @@ def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files
                 mjd = header['MJD-OBS'] + (0.5*header['exptime']/86400.0)
                 header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
                 fits.writeto(f, data, header, clobber=True, checksum=True)
-        y += 1
-
-    # MTDLINK writes the output header file to the path that the FITS files are in,
-    # not to the directory MTDLINK is being run from...
-    # If the fits_catalog has a path component, we symlink it to the directory.
-    mtds_file = os.path.basename(mtds_file_path)
-    if mtds_file != mtds_file_path:
-        mtds_file = os.path.join(dest_dir, mtds_file)
-        # If the file exists and is a link (or a broken link), then remove it
-        if os.path.lexists(mtds_file) and os.path.islink(mtds_file):
-            os.unlink(mtds_file)
-        os.symlink(mtds_file_path, mtds_file)
-
-    # MTDLINK wants the input fits files to be in the directory MTDLINK is
-    # being run from...
-    # If the fits files have a path component, we symlink them to the directory.
-    symlink_fits_files = []
-    y = 0
-    for f in fits_file_list:
-        fits_file = os.path.basename(fits_file_list[y])
-        if fits_file != fits_file_list[y]:
-            fits_file = os.path.join(dest_dir, fits_file)
-            # If the file exists and is a link (or a broken link), then remove it
-            if os.path.lexists(fits_file) and os.path.islink(fits_file):
-                os.unlink(fits_file)
-            os.symlink(fits_file_list[y], fits_file)
-        symlink_fits_files.append(fits_file)
-        y += 1
-
-    # MTDLINK wants the input sext files to be in the directory MTDLINK is
-    # being run from...
-    # If the sext files have a path component, we symlink them to the directory.
-    fits_file_list = fits_files.split(' ')
-    symlink_sext_files = []
-    y = 0
-    for f in fits_file_list:
-        sext_file = os.path.basename(fits_file_list[y].replace('fits', 'sext'))
-        if sext_file != fits_file_list[y].replace('fits', 'sext'):
-            sext_file = os.path.join(dest_dir, sext_file)
-            # If the file exists and is a link (or a broken link), then remove it
-            if os.path.lexists(sext_file) and os.path.islink(sext_file):
-                os.unlink(sext_file)
-            os.symlink(fits_file_list[y].replace('fits', 'sext'), sext_file)
-        symlink_sext_files.append(sext_file)
-        y += 1
-
-    linked_fits_files = ' '.join(symlink_fits_files)
+        else:
+            logger.error("Could not find fits file in PATH")
+            return -43
 
     cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files )
     cmdline = cmdline.rstrip()
@@ -374,7 +354,6 @@ def run_mtdlink(source_dir, dest_dir, mtds_file_path, fits_files, num_fits_files
     else:
         logger.debug("cmdline=%s" % cmdline)
         args = cmdline.split()
-#        retcode_or_cmdline = call(args, cwd=dest_dir)
         # Open mtdlink_output.out for writing the MTDLINK output into
         output_file = open(os.path.join(dest_dir, 'mtdlink_output.out'), 'w')
         retcode_or_cmdline = call(args, cwd=dest_dir, stdout=output_file, stderr=output_file)
@@ -554,10 +533,14 @@ def read_mtds_file(mtdsfile, dbg=False):
     # Check for correct number of entries
     if dbg: print dets_array.shape
     num_detections = dets_array.shape[0] / num_frames
-    if dets_array.shape[0] / float(num_frames) != num_detections:
+    if num_detections == 0:
+        logger.warn("Found 0 detection entries")
+        num_detections = 0
+        detections = []
+    elif dets_array.shape[0] / float(num_frames) != num_detections:
         logger.error("Incorrect number of detection entries (Expected %d, got %d)" % (num_frames*num_detections, dets_array.shape[0]))
-        num_detections = None
-        detections = None
+        num_detections = 0
+        detections = []
     if num_detections:
         detections = split(dets_array, num_detections)
     mtds_fh.close()

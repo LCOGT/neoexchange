@@ -24,7 +24,7 @@ class Migration(migrations.Migration):
                 ('quality', models.IntegerField(default=-1, verbose_name=b'Frame Quality (-1: unassessed)')),
                 ('zeropoint', models.FloatField(null=True, verbose_name=b'Frame zeropoint (mag.)', blank=True)),
                 ('zeropoint_err', models.FloatField(null=True, verbose_name=b'Error on Frame zeropoint (mag.)', blank=True)),
-                ('fwhm', models.FloatField(null=True, verbose_name=b'Frame zeropoint (mag.)', blank=True)),
+                ('fwhm', models.FloatField(null=True, verbose_name=b'Full width at half maximum (FWHM; arcsec)', blank=True)),
                 ('frametype', models.SmallIntegerField(default=0, verbose_name=b'Frame Type', choices=[(0, b'Single frame'), (1, b'Stack of frames'), (2, b'Non-LCOGT data'), (3, b'Satellite data'), (4, b'Spectrum')])),
                 ('extrainfo', models.TextField(blank=True)),
                 ('rms_of_fit', models.FloatField(null=True, verbose_name=b'RMS of astrometric fit (arcsec)', blank=True)),

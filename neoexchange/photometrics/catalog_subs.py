@@ -34,7 +34,7 @@ from core.models import CatalogSources, Frame
 
 logger = logging.getLogger(__name__)
 
-def call_cross_match_and_zeropoint(catfile, cat_name = "UCAC4",  set_row_limit = 10000, rmag_limit = "<=15.0"):
+def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance = 0.1, cat_name = "UCAC4",  set_row_limit = 10000, rmag_limit = "<=15.0"):
 
     if type(catfile) == str:
 
@@ -48,7 +48,7 @@ def call_cross_match_and_zeropoint(catfile, cat_name = "UCAC4",  set_row_limit =
 
     cross_match_table = cross_match(table, cat_table, cat_name)
 
-    avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
+    avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance)
 
     return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc
 
@@ -60,7 +60,6 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
 
         query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
-#        print len(result), result.return_value
 
         #resulting catalog table
         if len(result) < 1:
@@ -95,8 +94,6 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
             cat_table = result[0]
         else:
             break
-
-#    print cat_table, cat_name
 
     return cat_table, cat_name
 
@@ -202,7 +199,7 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
 
     return cross_match_table
 
-def get_zeropoint(cross_match_table):
+def get_zeropoint(cross_match_table, std_zeropoint_tolerance):
     '''Computes a zeropoint from the two catalogues in 'cross_match_table' and iterates until all outliers are thrown out.'''
 
     avg_zeropoint = 40.0
@@ -212,7 +209,7 @@ def get_zeropoint(cross_match_table):
 
     while num_iter < 800:
 
-        if std_zeropoint > 0.1:
+        if std_zeropoint > std_zeropoint_tolerance:
             count = 0
             sum_r_mag_mean_numerator = 0.0
             sum_r_mag_mean_denominator = 0.0
@@ -231,8 +228,10 @@ def get_zeropoint(cross_match_table):
                         num_in_calc = count
                 y += 1
 
-            if count > 0:
+            if count > 2:
                 avg_zeropoint = sum_r_mag_mean_numerator / sum_r_mag_mean_denominator #weighted mean zeropoint
+            else:
+                avg_zeropoint = 40.0
 
             y = 0
             for value in cross_match_table['r mag diff']:
@@ -242,8 +241,10 @@ def get_zeropoint(cross_match_table):
                         std_zeropoint_denominator += (1.0 / cross_match_table['r mag err'][y])
                 y += 1
 
-            if count > 0:
+            if count > 2:
                 std_zeropoint = sqrt(std_zeropoint_numerator / (((float(count) - 1)/float(count)) * std_zeropoint_denominator))
+            else:
+                std_zeropoint = 10.0
 
         r_mag_diff_threshold -= 0.05
         num_iter += 1
@@ -730,8 +731,9 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     return header, table
 
-def store_catalog_sources(catfile, catalog_type='LCOGT'):
+def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'):
 
+    num_new_frames_created = 0
     num_sources_created = 0
     num_in_table = 0
 
@@ -743,29 +745,72 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
         #check for good zeropoints
         if header.get('zeropoint',-99) == -99 or header.get('zeropoint_err',-99) == -99:
             #if bad, determine new zeropoint
-            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table))
-
+            print "Refitting zeropoint, tolerance set to ", std_zeropoint_tolerance
+            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
+            print "New zp=", avg_zeropoint, std_zeropoint, count, num_in_calc
             #if crossmatch is good, update new zeropoint
-            if std_zeropoint < 0.1:
+            if std_zeropoint < std_zeropoint_tolerance:
+                print "Got good zeropoint - updating header"
                 header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
+            else:
+                print "Didn't get good zeropoint - not updating header"
 
-        #store sources in neoexchange(CatalogSources table)
-        frame_params = {    'sitecode':header['site_code'],
-                            'instrument':header['instrument'],
-                            'filter':header['filter'],
-                            'filename':header['framename'],
-                            'exptime':header['exptime'],
-                            'midpoint':header['obs_midpoint'],
-                            'block':None,
-                            'zeropoint':header['zeropoint'],
-                            'zeropoint_err':header['zeropoint_err'],
-                            'fwhm':header['fwhm'],
-                            'frametype':Frame.SINGLE_FRAMETYPE,
-                            'rms_of_fit':header['astrometric_fit_rms'],
-                            'nstars_in_fit':header['astrometric_fit_nstars'],
-                        }
+        #get the fits filename from the catfile in order to get the Block from the Frame
+        if 'e90_cat.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e90_cat.fits', 'e90.fits'))
+        if 'e91_ldac.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e91_ldac.fits', 'e91.fits'))
+        elif 'e10_cat.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e10_cat.fits', 'e10.fits'))
+        elif 'e11_ldac.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e11_ldac.fits', 'e11.fits'))
+        try:
+            frame = Frame.objects.get(filename=fits_file, block__isnull=False)
+        except Frame.MultipleObjectsReturned:
+            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file, frame))
+            return -3
+        except Frame.DoesNotExist:
+            logger.error("Frame entry for fits file %s does not exist" % fits_file)
+            return -3
 
-        frame, created = Frame.objects.get_or_create(**frame_params)
+        #if a Frame exists for the fits file with a non-null block
+        #that has a bad zeropoint, update the zeropoint computed
+        #above in the Frame
+        try:
+            frame = Frame.objects.get(filename=fits_file, block__isnull=False, zeropoint__lt=0)
+            if frame.zeropoint < 0 and frame.zeropoint_err < 0:
+                frame.zeropoint=header['zeropoint']
+                frame.zeropoint_err=header['zeropoint_err']
+                frame.save()
+        except Frame.MultipleObjectsReturned:
+            pass
+        except Frame.DoesNotExist:
+            try:
+                frame = Frame.objects.get(filename=fits_file, block__isnull=False, zeropoint__gt=0)
+                if frame.zeropoint > 0 and frame.zeropoint_err > 0:
+                    frame.zeropoint=header['zeropoint']
+                    frame.zeropoint_err=header['zeropoint_err']
+                    frame.save()
+            except Frame.DoesNotExist:
+                #store sources in neoexchange(CatalogSources table)
+                frame_params = {    'sitecode':header['site_code'],
+                                    'instrument':header['instrument'],
+                                    'filter':header['filter'],
+                                    'filename':determine_filenames(catfile),
+                                    'exptime':header['exptime'],
+                                    'midpoint':header['obs_midpoint'],
+                                    'block':frame.block,
+                                    'zeropoint':header['zeropoint'],
+                                    'zeropoint_err':header['zeropoint_err'],
+                                    'fwhm':header['fwhm'],
+                                    'frametype':Frame.SINGLE_FRAMETYPE,
+                                    'rms_of_fit':header['astrometric_fit_rms'],
+                                    'nstars_in_fit':header['astrometric_fit_nstars'],
+                                }
+
+                frame, created = Frame.objects.get_or_create(**frame_params)
+                if created == True:
+                    num_new_frames_created += 1
 
         for source in table:
             source_params = {   'frame':frame,
@@ -797,7 +842,8 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
     return (num_sources_created, num_in_table)
 
 def make_sext_dict(catsrc, num_iter):
-
+    '''create a dictionary of needed parameters
+    for the .sext file creation needed for mtdlink'''
     sext_params = { 'number':num_iter,
                     'obs_x':catsrc.obs_x,
                     'obs_y':catsrc.obs_y,
@@ -816,26 +862,44 @@ def make_sext_dict(catsrc, num_iter):
     return sext_params
 
 def make_sext_file_line(sext_params):
+    '''format the print line for the .sext files
+    needed for mtdlink'''
 
-    print_format = "      %4i   %8.3f   %8.3f  %7.4f %5.1f    %5.3f     %4.2f   %1i  %4.2f   %6.1f   %2i %9.5f %9.5f"
+    print_format = "      %4i   %8.3f   %8.3f  %7.4f %6.1f    %8.3f     %5.2f   %1i  %4.2f   %12.1f   %3i %9.5f %9.5f"
 
     sext_line = print_format % (sext_params['number'], sext_params['obs_x'], sext_params['obs_y'], sext_params['obs_mag'], sext_params['theta'], sext_params['elongation'], sext_params['fwhm'], sext_params['flags'], sext_params['deltamu'], sext_params['flux'], sext_params['area'], sext_params['ra'], sext_params['dec'])
 
     return sext_line
 
-def make_sext_dict_list():
+def make_sext_dict_list(new_catalog):
+    '''create a list of dictionary entries for
+    creating the .sext files needed for mtdlink'''
 
     sext_dict_list = []
 
+    #get correct fits filename for naming .sext file
+    if '_ldac.fits' in new_catalog:
+        real_fits_filename = os.path.basename(new_catalog).replace('_ldac.fits', '.fits')
+        fits_filename_path = new_catalog.replace('_ldac.fits', '.fits')
+    elif '_cat.fits' in new_catalog:
+        real_fits_filename = os.path.basename(new_catalog).replace('_cat.fits', '.fits')
+        fits_filename_path = new_catalog.replace('_cat.fits', '.fits')
+    else:
+        real_fits_filename = new_catalog
+
+    #May need to filter objects within 5 pixels of frame edge as does in cleansex.tcl
+    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0)
     num_iter = 1
-    while num_iter <= CatalogSources.objects.count():
-        source = CatalogSources.objects.get(pk=num_iter)
+    for source in sources:
         sext_dict_list.append(make_sext_dict(source, num_iter))
         num_iter += 1
 
-    return sext_dict_list
+    return sext_dict_list, fits_filename_path
 
 def make_sext_line_list(sext_dict_list):
+    '''sort the list of dictionary entries and
+    create a list of formatted strings to be
+    printed in the .sext files needed for mtdlink'''
 
     sext_line_list = []
 
@@ -847,20 +911,19 @@ def make_sext_line_list(sext_dict_list):
 
     return sext_line_list
 
-def make_sext_files(dest_dir):
+def make_sext_file(dest_dir, new_catalog):
+    '''Synthesizes the .sext file needed for running
+    mtdlink instead of running sextractor again'''
 
-    num_iter=1
-    while num_iter <= Frame.objects.count():
-        sext_dict_list = make_sext_dict_list()
-        sext_line_list = make_sext_line_list(sext_dict_list)
-        sext_filename = open(os.path.join(dest_dir, str(CatalogSources.objects.get(pk=num_iter).frame).replace('.fits', '.sext')), 'w')
-        for line in sext_line_list:
-            sext_filename.write(line)
-            sext_filename.write('\n')
-        sext_filename.close()
-        num_iter += 1
+    sext_dict_list, fits_filename_path = make_sext_dict_list(new_catalog)
+    sext_line_list = make_sext_line_list(sext_dict_list)
+    sext_filename = open(os.path.join(dest_dir, os.path.basename(fits_filename_path).replace('.fits', '.sext')), 'w')
+    for line in sext_line_list:
+        sext_filename.write(line)
+        sext_filename.write('\n')
+    sext_filename.close()
 
-    return
+    return fits_filename_path
 
 def determine_filenames(product):
     '''Given a passed <product> filename, determine the corresponding catalog
@@ -871,6 +934,8 @@ def determine_filenames(product):
     product = os.path.basename(product)
     if '_cat.fits' in product:
         new_product = product.replace('_cat', '', 1)
+    elif '_ldac.fits' in product:
+        new_product = product.replace('_ldac', '', 1)
     else:
         file_bits =  product.split(os.extsep)
         if len(file_bits) == 2:
