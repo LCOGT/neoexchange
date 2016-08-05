@@ -1578,8 +1578,8 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_catalog'    : '2MASS',
                             'astrometric_fit_rms'    : 0.3,
                             'astrometric_fit_nstars' : -4,
-                            'zeropoint'     : -99.0,
-                            'zeropoint_err' : -99.0,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
                             'zeropoint_src' : 'N/A',
                           }
         expected_cattype = "BANZAI"

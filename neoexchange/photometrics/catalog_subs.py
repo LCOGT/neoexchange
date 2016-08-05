@@ -206,6 +206,7 @@ def get_zeropoint(cross_match_table):
     avg_zeropoint = 40.0
     std_zeropoint = 10.0
     num_iter = 0
+    num_in_calc = 0
     r_mag_diff_threshold = 40.0
 
     while num_iter < 800:
@@ -602,7 +603,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     elif catalog_type == 'BANZAI':
         hdr_mapping, tbl_mapping = banzai_catalog_mapping()
         fixed_values_map = {'<ASTROMCAT>' : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
-                            '<ZP>'        : -99.0, # Hardwire zeropoint to -99.0 for BANZAI catalogs
+                            '<ZP>'        : -99, # Hardwire zeropoint to -99.0 for BANZAI catalogs
                             '<ZPSRC>'     : 'N/A', # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
                             '<WCSRDRES>'  : 0.3, # Hardwire RMS to 0.3"
                             '<WCSMATCH>'  : -4  # Hardwire no. of stars matched to 4 (1 quad)
@@ -848,14 +849,16 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
             fits_file = os.path.basename(catfile.replace('e10_cat.fits', 'e10.fits'))
         elif 'e11_ldac.fits' in os.path.basename(catfile):
             fits_file = os.path.basename(catfile.replace('e11_ldac.fits', 'e11.fits'))
+        else:
+            fits_file = os.path.basename(catfile)
         try:
             frame = Frame.objects.get(filename=fits_file, block__isnull=False)
         except Frame.MultipleObjectsReturned:
             logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file, frame))
-            return -3
+            return -3, -3
         except Frame.DoesNotExist:
             logger.error("Frame entry for fits file %s does not exist" % fits_file)
-            return -3
+            return -3, -3
 
         #if a Frame exists for the fits file with a non-null block
         #that has a bad zeropoint, update the zeropoint computed
