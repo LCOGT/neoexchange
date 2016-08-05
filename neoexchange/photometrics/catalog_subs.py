@@ -368,7 +368,8 @@ def fitsldac_catalog_mapping():
 def banzai_catalog_mapping():
     '''Returns two dictionaries of the mapping between the FITS header and table
     items and CatalogItem quantities for new pipeline (BANZAI) format catalog
-    files.'''
+    files. Items in angle brackets (<FOO>) need to be derived (pixel scale)
+    or assumed as they are missing from the headers.'''
 
     header_dict = { 'site_id'    : 'SITEID',
                     'enc_id'     : 'ENCID',
@@ -383,13 +384,13 @@ def banzai_catalog_mapping():
                     'field_width' : 'NAXIS1',
                     'field_height' : 'NAXIS2',
                     'pixel_scale' : '<WCS>',
-#                    'zeropoint'  : 'L1ZP',
-#                    'zeropoint_err' : 'L1ZPERR',
-#                    'zeropoint_src' : 'L1ZPSRC',
+                    'zeropoint'     : '<ZP>',
+                    'zeropoint_err' : '<ZP>',
+                    'zeropoint_src' : '<ZPSRC>',
                     'fwhm'          : 'L1FWHM',
-#                    'astrometric_fit_rms'    : 'WCSRDRES',
+                    'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
-#                    'astrometric_fit_nstars' : 'WCSMATCH',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<ASTROMCAT>',
                   }
 
@@ -403,7 +404,7 @@ def banzai_catalog_mapping():
                     ('major_axis'    , 'A'),
                     ('minor_axis'    , 'B'),
                     ('ccd_pa'        , 'THETA'),
-                    ('obs_mag'       , 'FLUX_'),
+                    ('obs_mag'       , 'FLUX'),
                     ('obs_mag_err'   , 'FLUXERR'),
                     ('obs_sky_bkgd'  , 'BACKGROUND'),
                     ('flags'         , 'FLAG'),
@@ -587,8 +588,7 @@ def convert_value(keyword, value):
 def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     '''Look through the FITS catalog header for the concepts we want for which
     the keyword is given in the mapping specified for the [catalog_type]
-    (Currently the LCOGT ORAC-DR FITS Catalog is the only supported mapping
-    type)
+
     The required header items are returned in a dictionary. A FITSHdrException
     is raised if a required keyword is missing or the value of a keyword is
     'UNKNOWN'.
@@ -601,6 +601,12 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
     elif catalog_type == 'BANZAI':
         hdr_mapping, tbl_mapping = banzai_catalog_mapping()
+        fixed_values_map = {'<ASTROMCAT>' : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
+                            '<ZP>'        : -99.0, # Hardwire zeropoint to -99.0 for BANZAI catalogs
+                            '<ZPSRC>'     : 'N/A', # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
+                            '<WCSRDRES>'  : 0.3, # Hardwire RMS to 0.3"
+                            '<WCSMATCH>'  : -4  # Hardwire no. of stars matched to 4 (1 quad)
+                            }
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
@@ -621,15 +627,15 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
             header_item = { item: new_value }
             header_items.update(header_item)
         elif fits_keyword[0] == '<' and fits_keyword[-1] == '>':
+            header_item = None
             if fits_keyword == '<WCS>':
                 fits_wcs = WCS(catalog_header)
                 pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
                 header_item = { item: round(pixscale,5) }
-                header_items.update(header_item)
-            elif fits_keyword == '<ASTROMCAT>' and catalog_type == 'BANZAI':
-                # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based
-                # solves
-                header_item = { item: '2MASS' }
+            if catalog_type == 'BANZAI':
+                if fits_keyword in fixed_values_map:
+                    header_item = { item: fixed_values_map[fits_keyword] }
+            if header_item:
                 header_items.update(header_item)
         else:
             raise FITSHdrException(fits_keyword)

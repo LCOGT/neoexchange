@@ -89,6 +89,8 @@ class Command(BaseCommand):
                     exit(-3)
                 new_catalog = catalog
                 catalog_type = 'LCOGT'
+                if 'e91' in catalog or 'e11' in catalog:
+                    catalog_type = 'BANZAI'
             except ValueError:
                 new_catalog = new_catalog_or_status
                 catalog_type = 'FITS_LDAC'
