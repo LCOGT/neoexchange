@@ -1885,6 +1885,14 @@ class TestDetermineFilenames(TestCase):
 
     def test_catalog_to_image(self):
 
+        expected_product = 'cpt1m013-kb76-20160222-0110-e90.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e90_cat.fits')
+
+        self.assertEqual(expected_product, filename)
+
+    def test_ql_catalog_to_image(self):
+
         expected_product = 'cpt1m013-kb76-20160222-0110-e10.fits'
 
         filename = determine_filenames('cpt1m013-kb76-20160222-0110-e10_cat.fits')
@@ -1908,6 +1916,14 @@ class TestDetermineFilenames(TestCase):
 
         self.assertEqual(expected_product, filename)
 
+    def test_ql_image_to_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e10_cat.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e10.fits')
+
+        self.assertEqual(expected_product, filename)
+
     def test_catalog_wrong_format(self):
 
         expected_product = None
@@ -1916,6 +1932,21 @@ class TestDetermineFilenames(TestCase):
 
         self.assertEqual(expected_product, filename)
 
+    def test_banzai_image_to_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e91.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e91.fits')
+
+        self.assertEqual(expected_product, filename)
+
+    def test_banzai_ql_image_to_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e11.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e11.fits')
+
+        self.assertEqual(expected_product, filename)
 
 class TestIncrementRedLevel(TestCase):
 

@@ -1009,11 +1009,16 @@ def determine_filenames(product):
     elif '_ldac.fits' in product:
         new_product = product.replace('_ldac', '', 1)
     else:
-        file_bits =  product.split(os.extsep)
+        file_bits = product.split(os.extsep)
         if len(file_bits) == 2:
             filename_noext = file_bits[0]
-            if filename_noext[-2:].isdigit():
-                new_product = filename_noext + '_cat' + os.extsep + file_bits[1]
+            red_level = filename_noext[-2:]
+            if red_level.isdigit():
+                if int(red_level) == 90 or int(red_level) == 10:
+                    new_product = filename_noext + '_cat' + os.extsep + file_bits[1]
+                else:
+                    # Uncompressed BANZAI product - output is input
+                    new_product = file_bits[0] + os.extsep + file_bits[1]
         elif len(file_bits) == 3:
             # Fpacked BANZAI product - output is input
             new_product = None
