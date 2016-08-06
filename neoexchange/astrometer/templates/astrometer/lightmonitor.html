@@ -21,15 +21,14 @@
 	var img_params = '?width=1000&height=1000'
 
 	$(document).ready(function(){
-		setUp();
 
 		loadThumbnails(frames);
+		setUp();
 
-		$('.image_switch').click(function(){
-				var frameid = $(this).data('imgsrc');
-				console.log(frameid);
-				changeImage(frameid);
-		});
+    // $.when.apply(null, deferreds).done(function() {
+		// 	setUp();
+		// });
+
 	});
 
 </script>
@@ -58,6 +57,10 @@
 					</div>{% endif %}
 
 					<div id="middle">
+						<div id="image-loading">
+							<i class="fa fa-refresh fa-spin fa-8x fa-fw"></i>
+							<span class="sr-only">Loading Image...</span>
+						</div>
 						<div id="wrapper">
 							<canvas id="imgCanvas" width="600" height="600" src=""><p>Image has failed to load.</p></canvas>
 						</div>
@@ -67,16 +70,18 @@
         <div class="four columns">
 					<h3 class="section-title">Zoom Region</h3>
 					<canvas id="zoomCanvas" width="200" height="200"><p>Image has failed to load.</p></canvas>
-					<div id="frame_id_holder"></div>
 
           {% if images %}
-          <h3 class="section-title">Image Sequence</h3>
-							<div id="blink-buttons-holder">
-								<button id="start" onclick="startBlink();">Blink</button>
-								<button id="stop" onclick="stopBlink();">STOP</button>
+          <h3 class="section-title">Controls</h3>
+							<div class="button-holder">
+								<button id="start" onclick="prevImage();"><i class="fa fa-arrow-circle-o-left" aria-hidden="true"></i></button>
+								<span id="current_image_index"></span> of <span id="number_images"></span>
+								<button id="stop" onclick="nextImage();"><i class="fa fa-arrow-circle-o-right" aria-hidden="true"></i></button>
 							</div>
-              <ul class="observations">
-              </ul>
+							<div class="button-holder">
+								<button id="blink-start" onclick="startBlink();">Blink On</button>
+								<button id="blink-stop" onclick="stopBlink();">Blink Off</button>
+							</div>
           {% endif %}
         </div>
       </div>

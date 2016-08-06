@@ -287,6 +287,9 @@ class Frame(models.Model):
     rms_of_fit  = models.FloatField('RMS of astrometric fit (arcsec)', null=True, blank=True)
     nstars_in_fit  = models.FloatField('No. of stars used in astrometric fit', null=True, blank=True)
     time_uncertainty = models.FloatField('Time uncertainty (seconds)', null=True, blank=True)
+    frameid     = models.IntegerField('Archive ID', null=True, blank=True)
+    x_size      = models.IntegerField('Size x pixels', null=True, blank=True)
+    y_size      = models.IntegerField('Size y pixels', null=True, blank=True)
 
     class Meta:
         verbose_name = _('Observed Frame')

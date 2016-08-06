@@ -42,12 +42,6 @@ $('#logout-btn').click(function(){
   logout();
 });
 
-if(localStorage.getItem('token') !== null){
-  $('#login-form').hide();
-  $('#logout').show();
-  getProposals();
-}
-
 $('.alert .close').on('click', function(){
     $(this).parent().hide();
 });

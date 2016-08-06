@@ -2,13 +2,36 @@
 
 
 function setUp(){
+
   stage = new createjs.Stage("imgCanvas");
   ministage = new createjs.Stage("zoomCanvas");
   if (frames.length>0){
     index = 0;
   }
+
   changeImage(index);
 
+  $('#number_images').text(frames.length);
+  $('#blink-stop').hide();
+
+}
+
+function nextImage() {
+  var next_i = index +1;
+  if (next_i <= frames.length){
+    changeImage(next_i);
+  } else {
+    console.log('Final Image')
+  }
+}
+
+function prevImage() {
+  var prev_i = index -1;
+  if (prev_i > 0){
+    changeImage(prev_i);
+  } else {
+    console.log('First Image')
+  }
 }
 
 function addCircle(x, y, r, fill, name, draggable) {
@@ -53,20 +76,26 @@ function startBlink() {
     index++;
     changeImage (index);
   }, 500);
+  $('#blink-stop').show();
+  $('#blink-start').hide();
 }
 
 function stopBlink() {
   clearInterval(blinker);
+  $('#blink-stop').hide();
+  $('#blink-start').show();
 }
 
 function zoomImage(x,y){
   var width = 200;
   var height = 200;
+  var x_i = 5/3*x;
+  var y_i = 5/3*y;
   ministage.removeAllChildren();
-  mini_img = img_holder.clone()
+  mini_img = img_holder.clone();
   mini_img.scaleX=2;
   mini_img.scaleY=2;
-  mini_img.sourceRect = new createjs.Rectangle(x-width/2,y-width/2,width,height);
+  mini_img.sourceRect = new createjs.Rectangle(x_i-width/4,y_i-height/4,width,height);
   ministage.addChild(mini_img);
   ministage.update();
 }
@@ -75,20 +104,28 @@ function handleLoad(event) {
   stage.update();
 }
 
-function changeImage(index) {
+function changeImage(ind) {
   //
   //
-  if (isNaN(index)) {
-    currentindex = Math.floor(Math.random() * frames.length);
+  if (typeof(ind) == 'undefined') {
+    index = 0;
   } else {
-    currentindex = index % frames.length;
+    index = ind % frames.length;
   }
   // Remove everything already on the stage
   stage.removeAllChildren();
 
+  // Change label
+  $('#current_image_index').text(index+1);
   frame_container = '#imgCanvas'
-  fetch_thumbnail(frames[currentindex].img, frame_container, img_params);
-  image_url = $('#imgCanvas').attr('src')
+  image_url = frames[index].url;
+
+  if (typeof(image_url) == 'undefined') {
+    $('#image-loading').show();
+    return;
+  }else{
+    $('#image-loading').hide();
+  }
 
   img_holder = new createjs.Bitmap(image_url);
   // Update the stage when the image data has loaded
@@ -101,43 +138,37 @@ function changeImage(index) {
   stage.addChild(img_holder);
 
   // Add background sources
-  for (var i=0; i <frames[currentindex].sources.length;i++) {
-    source = frames[currentindex].sources[i];
-    name = "source_" + i;
-    addCircle(source.x, source.y, point_size, "#e74c3c", name, false);
-  }
+  // for (var i=0; i <frames[index].sources.length;i++) {
+  //   source = frames[index].sources[i];
+  //   name = "source_" + i;
+  //   addCircle(source.x, source.y, point_size, "#e74c3c", name, false);
+  // }
   // Add targets
-  for (var i=0; i <frames[currentindex].targets.length;i++) {
-    target = frames[currentindex].targets[i];
+  for (var i=0; i <frames[index].targets.length;i++) {
+    target = frames[index].targets[i];
     name = "target_" + i;
     addCircle(target.x, target.y, point_size, "#58FA58", name, true);
   }
   stage.update();
-
-  // Update the name of the current frame on the page
-  $("#frame_id_holder").text(frames[currentindex].img);
 
 }
 
 function loadThumbnails(frames){
   for(var i in frames)
    {
-     var frame = frames[i] ;
-      var thumbnail_container;
-      thumbnail_container = $('ul.observations');
-      link_url = "http://lcogt.net/observations/frame/"+frame.img+"/"
-      var thumb_html = '<li class="thumb"><a href="#main" class="image_switch" data-imgsrc="'+frame.img+'"><img src="https://lcogt.net/files/no-image_120.png" id="frame-'+frame.img+'"></a></li>';
-
-      thumbnail_container.append(thumb_html);
-      fetch_thumbnail(frame.img,'.observations img#frame-'+frame.img);
+     var frame = frames[i];
+     fetch_thumbnail(frame, img_params)
     }
+  return
 }
 
-function fetch_thumbnail(frameid, frame_container,options=''){
-  var url = "https://thumbnails.lcogt.net/" + frameid +"/" +options;
-  var resp;
+function fetch_thumbnail(frame, options=''){
+  var url = "https://thumbnails.lcogt.net/" + frame.img +"/" +options;
   $.get(url, function(data){
-      resp = data.url;
-      $(frame_container).attr('src', resp);
+      var resp = data.url;
+      frame['url'] = resp;
+      // Preload the image
+      var image = new Image()
+      image.src = resp;
   });
 }

@@ -3,7 +3,7 @@ from datetime import datetime
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
-from core.models import Block, Frame
+from core.models import Block, Frame, Candidate
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from photometrics.archive_subs import archive_login
 import logging
@@ -49,6 +49,27 @@ def fetch_observations(tracking_num):
         image_list += [i['id'] for i in images]
     return image_list
 
+def find_images_for_block(blockid):
+    '''
+    Look up Frames and Candidates in Block.
+    Output all candidates coords for each frame for Light Monitor to display
+    '''
+    frames = Frame.objects.filter(block__id=blockid, filename__isnull=False).order_by('frameid')
+    cands = Candidate.objects.filter(block__id=blockid)
+    dets = cands[0].unpack_dets()
+    d_zip = zip(dets['frame_number'], dets['x'], dets['y'])
+    cs = {a[0] : (a[1], a[2]) for a in d_zip}
+    img_list = []
+    for i, img in enumerate(frames):
+        print img.id
+        target = {'x':cs[i+1][0], 'y':cs[i+1][1]}
+        img_dict = {'img'     : str(img.frameid),
+                    # 'sources' : [],
+                    'targets' : [target]
+                    }
+        img_list.append(img_dict)
+    return img_list
+
 
 def lcogt_api_call(auth_header, url):
     data = None
@@ -79,14 +100,14 @@ def check_for_images(auth_header, request_id):
     return reduced_data
 
 
-def create_frame(params, block=None):
+def create_frame(params, block=None, frameid=None):
     # Return None if params is just whitespace
     if not params:
         return None
     our_site_codes = LCOGT_site_codes()
     if params.get('GROUPID', None):
     # In these cases we are parsing the FITS header
-        frame_params = frame_params_from_header(params, block)
+        frame_params = frame_params_from_header(params, block, frameid)
     else:
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
@@ -98,7 +119,7 @@ def create_frame(params, block=None):
     logger.debug("Frame %s %s" % (frame, msg))
     return frame
 
-def frame_params_from_header(params, block):
+def frame_params_from_header(params, block, frameid=None):
     # In these cases we are parsing the FITS header
     sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
@@ -109,6 +130,9 @@ def frame_params_from_header(params, block):
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
+                     'x_size'    : params.get('NAXIS1', None),
+                     'y_size'    : params.get('NAXIS2', None),
+                     'frameid'   : frameid
                  }
     return frame_params
 
@@ -151,8 +175,8 @@ def frame_params_from_log(params, block):
 def ingest_frames(images, block):
     archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     for image in images:
-        image_header = lcogt_api_call(archive_headers, image)
-        frame = create_frame(image_header['data'], block)
+        image_header = lcogt_api_call(archive_headers, image['headers'])
+        frame = create_frame(image_header['data'], block, frameid=image['id'])
     logger.debug("Ingested %s frames" % len(images))
     return
 
@@ -188,7 +212,7 @@ def block_status(block_id):
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
-                last_image_header = lcogt_api_call(archive_headers, images[0])
+                last_image_header = lcogt_api_call(archive_headers, images[0]['headers'])
                 try:
                     last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19],'%Y-%m-%dT%H:%M:%S')
                 except ValueError:
