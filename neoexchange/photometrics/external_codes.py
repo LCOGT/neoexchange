@@ -236,10 +236,17 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
     # header keyword of L1FILTER and set the value to FILTER. This prevents
     # SCAMP false matching on the first FITS keyword starting with FILTER
     if catalog_type == 'FITS_LDAC':
-        add_l1filter(fits_file)
+        root_fits_file = fits_file
+        if '[SCI]' in fits_file:
+            # Banzai format, strip off extension
+            root_fits_file = fits_file.replace('[SCI]', '')
+        add_l1filter(root_fits_file)
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
-    options = determine_sext_options(fits_file)
+    if '[SCI]' in fits_file:
+        options = determine_sext_options(root_fits_file)
+    else:
+        options = determine_sext_options(fits_file)
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
 

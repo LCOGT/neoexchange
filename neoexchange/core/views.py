@@ -1224,6 +1224,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     if header != {}:
         logger.debug("astrometric fit status=%d" %  header['astrometric_fit_status'])
         fits_file = determine_filenames(catfile)
+#        print "fits_file,catfile=",fits_file,catfile
         if header['astrometric_fit_status'] != 0:
             if fits_file == None:
                 logger.error("Could not determine matching image for %s" % catfile)
@@ -1300,6 +1301,31 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                 logger.error("Execution of SExtractor failed")
                 return -4, 0
         else:
+            # Astrometric fit was good
+            if cattype == 'BANZAI':
+                # Need to re-extract catalog
+                fits_file = os.path.join(os.path.dirname(catfile), fits_file)
+                if os.path.exists(fits_file) == False or os.path.isfile(fits_file) == False:
+                    logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
+                    return -1, num_new_frames_created
+                fits_file_for_sext = fits_file + "[SCI]"
+                logger.debug("Running SExtractor on BANZAI file: %s" % fits_file_for_sext)
+                sext_status = run_sextractor(configs_dir, dest_dir, fits_file_for_sext, catalog_type='FITS_LDAC')
+                if sext_status == 0:
+                    fits_ldac_catalog ='test_ldac.fits'
+                    fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
+#                    update_ldac_catalog_wcs(fits_file_output, fits_ldac_catalog_path, overwrite=True)
+
+                    # Rename catalog to permanent name
+                    new_ldac_catalog = os.path.join(dest_dir, fits_file.replace('.fits', '_ldac.fits'))
+                    logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
+                    os.rename(fits_ldac_catalog_path, new_ldac_catalog)
+                    return new_ldac_catalog, 1
+
+                else:
+                    logger.error("Execution of SExtractor failed")
+                    return -4, 0
+
             #if a Frame does not exist for the fits file with a non-null block
             #create one with the fits filename
             if len(Frame.objects.filter(filename=os.path.basename(fits_file), block__isnull=False)) < 1:
