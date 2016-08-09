@@ -1315,9 +1315,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     fits_ldac_catalog ='test_ldac.fits'
                     fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
 #                    update_ldac_catalog_wcs(fits_file_output, fits_ldac_catalog_path, overwrite=True)
+                    fits_file_output = increment_red_level(fits_file)
+                    fits_file_output = os.path.join(dest_dir, fits_file_output)
 
                     # Rename catalog to permanent name
-                    new_ldac_catalog = os.path.join(dest_dir, fits_file.replace('.fits', '_ldac.fits'))
+                    new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
                     logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
                     os.rename(fits_ldac_catalog_path, new_ldac_catalog)
                     return new_ldac_catalog, 1

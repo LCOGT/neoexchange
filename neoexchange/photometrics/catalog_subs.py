@@ -415,6 +415,56 @@ def banzai_catalog_mapping():
 
     return header_dict, table_dict
 
+
+def banzai_ldac_catalog_mapping():
+    '''Returns two dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for FITS_LDAC catalogs extracted from the 
+    new pipeline (BANZAI) format files. Items in angle brackets (<FOO>) need to
+    be derived (pixel scale) or assumed as they are missing from the headers.'''
+
+    header_dict = { 'site_id'    : 'SITEID',
+                    'enc_id'     : 'ENCID',
+                    'tel_id'     : 'TELID',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'ORIGNAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : '<WCS>',
+                    'zeropoint'     : '<ZP>',
+                    'zeropoint_err' : '<ZP>',
+                    'zeropoint_src' : '<ZPSRC>',
+                    'fwhm'          : 'L1FWHM',
+                    'astrometric_fit_rms'    : '<WCSRDRES>',
+                    'astrometric_fit_status' : 'WCSERR',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
+                    'astrometric_catalog'    : '<ASTROMCAT>',
+                  }
+
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'XWIN_IMAGE'),
+                    ('ccd_y'         , 'YWIN_IMAGE'),
+                    ('obs_ra'        , 'ALPHA_J2000'),
+                    ('obs_dec'       , 'DELTA_J2000'),
+                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'AWIN_IMAGE'),
+                    ('minor_axis'    , 'BWIN_IMAGE'),
+                    ('ccd_pa'        , 'THETAWIN_IMAGE'),
+                    ('obs_mag'       , 'FLUX_AUTO'),
+                    ('obs_mag_err'   , 'FLUXERR_AUTO'),
+                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAGS'),
+                    ('flux_max'      , 'FLUX_MAX'),
+                    ('threshold'     , 'MU_THRESHOLD'),
+                 ])
+
+    return header_dict, table_dict
+
 def convert_to_string_value(value):
     left_end = value.find("'")
     right_end = value.rfind("'")
@@ -490,6 +540,8 @@ def open_fits_catalog(catfile, header_only=False):
         if header_only == False:
             table = hdulist[2].data
         cattype = 'FITS_LDAC'
+        if 'e92_ldac' in catfile or 'e12_ldac' in catfile:
+            cattype = 'BANZAI_LDAC'
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
     elif len(hdulist) == 4 or (len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD'):
@@ -595,6 +647,13 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     'UNKNOWN'.
     '''
 
+    fixed_values_map = {'<ASTROMCAT>' : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
+                        '<ZP>'        : -99, # Hardwire zeropoint to -99.0 for BANZAI catalogs
+                        '<ZPSRC>'     : 'N/A', # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
+                        '<WCSRDRES>'  : 0.3, # Hardwire RMS to 0.3"
+                        '<WCSMATCH>'  : -4  # Hardwire no. of stars matched to 4 (1 quad)
+                        }
+
     header_items = {}
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
@@ -602,12 +661,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
     elif catalog_type == 'BANZAI':
         hdr_mapping, tbl_mapping = banzai_catalog_mapping()
-        fixed_values_map = {'<ASTROMCAT>' : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
-                            '<ZP>'        : -99, # Hardwire zeropoint to -99.0 for BANZAI catalogs
-                            '<ZPSRC>'     : 'N/A', # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
-                            '<WCSRDRES>'  : 0.3, # Hardwire RMS to 0.3"
-                            '<WCSMATCH>'  : -4  # Hardwire no. of stars matched to 4 (1 quad)
-                            }
+    elif catalog_type == 'BANZAI_LDAC':
+        hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
@@ -633,7 +688,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 fits_wcs = WCS(catalog_header)
                 pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
                 header_item = { item: round(pixscale,5) }
-            if catalog_type == 'BANZAI':
+            if catalog_type == 'BANZAI' or catalog_type == 'BANZAI_LDAC':
                 if fits_keyword in fixed_values_map:
                     header_item = { item: fixed_values_map[fits_keyword] }
             if header_item:
@@ -685,6 +740,8 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
     elif catalog_type == 'BANZAI':
         hdr_mapping, tbl_mapping = banzai_catalog_mapping()
+    elif catalog_type == 'BANZAI_LDAC':
+        hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None

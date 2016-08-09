@@ -94,6 +94,8 @@ class Command(BaseCommand):
             except ValueError:
                 new_catalog = new_catalog_or_status
                 catalog_type = 'FITS_LDAC'
+                if 'e91' in catalog or 'e11' in catalog:
+                    catalog_type = 'BANZAI_LDAC'
 
             # Step 2: Check for good zeropoint and redetermine if needed. Ingest
             # results into CatalogSources
