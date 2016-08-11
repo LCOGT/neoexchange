@@ -1314,7 +1314,6 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                 if sext_status == 0:
                     fits_ldac_catalog ='test_ldac.fits'
                     fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
-#                    update_ldac_catalog_wcs(fits_file_output, fits_ldac_catalog_path, overwrite=True)
                     fits_file_output = increment_red_level(fits_file)
                     fits_file_output = os.path.join(dest_dir, fits_file_output)
 
@@ -1322,11 +1321,13 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
                     logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
                     os.rename(fits_ldac_catalog_path, new_ldac_catalog)
-                    return new_ldac_catalog, 1
 
                 else:
                     logger.error("Execution of SExtractor failed")
                     return -4, 0
+            else:
+                logger.info("Catalog %s already has good WCS fit status" % catfile)
+                return 0, num_new_frames_created
 
             #if a Frame does not exist for the fits file with a non-null block
             #create one with the fits filename
@@ -1361,8 +1362,6 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                 frame, created = Frame.objects.get_or_create(**frame_params)
                 if created == True:
                     num_new_frames_created += 1
-            logger.info("Catalog %s already has good WCS fit status" % catfile)
-            return 0, num_new_frames_created
     else:
         logger.error("Could not check catalog %s" % catfile)
         return -2, num_new_frames_created

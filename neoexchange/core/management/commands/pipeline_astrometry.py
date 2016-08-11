@@ -101,7 +101,10 @@ class Command(BaseCommand):
             # results into CatalogSources
             self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
             num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type)
-
+            if num_sources_created > 0 and num_in_catalog > 0:
+                self.stdout.write("Created %d sources from %d in catalog" % (num_sources_created, num_in_catalog) )
+            else:
+                self.stdout.write("Error occured storing catalog sources (Error code= %d)" % num_sources_created)
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
             self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))

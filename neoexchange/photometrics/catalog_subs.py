@@ -906,6 +906,10 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
             fits_file = os.path.basename(catfile.replace('e10_cat.fits', 'e10.fits'))
         elif 'e11_ldac.fits' in os.path.basename(catfile):
             fits_file = os.path.basename(catfile.replace('e11_ldac.fits', 'e11.fits'))
+        elif 'e92_ldac.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e91.fits'))
+        elif 'e12_ldac.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e12_ldac.fits', 'e11.fits'))
         else:
             fits_file = os.path.basename(catfile)
         try:
