@@ -5,28 +5,10 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from core.models import Block, Frame
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
-from photometrics.archive_subs import archive_login
+from core.urlsubs import get_lcogt_headers
 import logging
 
 logger = logging.getLogger('core')
-
-def get_lcogt_headers(auth_url, username, password):
-    #  Get the authentication token
-    response = requests.post(auth_url,
-        data = {
-                'username': username,
-                'password': password
-               }).json()
-
-    try:
-        token = response.get('token')
-
-        # Store the Authorization header
-        headers = {'Authorization': 'Token ' + token}
-    except TypeError:
-        headers = None
-
-    return headers
 
 
 def odin_login(username, password):
