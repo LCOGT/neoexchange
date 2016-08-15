@@ -893,6 +893,7 @@ def store_catalog_sources(catfile, catalog_type='LCOGT'):
             #if bad, determine new zeropoint
             header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table))
 
+            print "ZP=%.2f+/-%.2f" % (avg_zeropoint, std_zeropoint)
             #if crossmatch is good, update new zeropoint
             if std_zeropoint < 0.1:
                 header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)

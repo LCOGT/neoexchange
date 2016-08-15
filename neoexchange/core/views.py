@@ -1314,7 +1314,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                 if sext_status == 0:
                     fits_ldac_catalog ='test_ldac.fits'
                     fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
-                    fits_file_output = increment_red_level(fits_file)
+                    fits_file_output = os.path.basename(fits_file)
                     fits_file_output = os.path.join(dest_dir, fits_file_output)
 
                     # Rename catalog to permanent name
