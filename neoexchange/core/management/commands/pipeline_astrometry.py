@@ -51,7 +51,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("==== Pipeline processing astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
-        datadir = os.path.join(os.path.abspath(options['datadir']), '')
+        datadir = os.path.expanduser(options['datadir'])
+        datadir = os.path.join(datadir, '')
         self.stdout.write("datapath=%s" % (datadir))
 
         # Get lists of images and catalogs
@@ -63,6 +64,7 @@ class Command(BaseCommand):
         # directory, otherwise create a random directory in /tmp
         if options['temp_dir']:
             temp_dir = options['temp_dir']
+            temp_dir = os.path.expanduser(temp_dir)
             if os.path.exists(temp_dir) == False:
                 os.makedirs(temp_dir)
         else:
