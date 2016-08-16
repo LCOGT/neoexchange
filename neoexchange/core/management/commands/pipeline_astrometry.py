@@ -52,7 +52,6 @@ class Command(BaseCommand):
 
         # set tolerance for determining the zeropoint and catalog to use (should be cmdline options)
         std_zeropoint_tolerance = 0.10
-        ref_cat = 'PPMXL' ; 'UCAC4'
 
         self.stdout.write("==== Pipeline processing astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
@@ -108,11 +107,11 @@ class Command(BaseCommand):
             # results into CatalogSources
             self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
 
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, std_zeropoint_tolerance, catalog_type, ref_cat)
-            if num_sources_created > 0 and num_in_catalog > 0:
-                self.stdout.write("Created %d sources from %d in catalog" % (num_sources_created, num_in_catalog) )
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, std_zeropoint_tolerance, catalog_type)
+            if num_sources_created >= 0 and num_in_catalog > 0:
+                self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog) )
             else:
-                self.stdout.write("Error occured storing catalog sources (Error code= %d)" % num_sources_created)
+                self.stdout.write("Error occured storing catalog sources (Error code= %d, %d)" % (num_sources_created, num_in_catalog))
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
             self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))

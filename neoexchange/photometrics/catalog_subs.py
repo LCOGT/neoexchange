@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+import numpy as np
 from datetime import datetime, timedelta
 from math import sqrt, log10, log
 from collections import OrderedDict
@@ -63,7 +64,10 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
 
         #resulting catalog table
-        if len(result) < 1:
+        #if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo the query; if the resulting catalog table is still empty, fill the table with zeros
+        if cat_name == "UCAC4": rmag = 'rmag'
+        else: rmag = 'r2mag'
+        if (len(result) < 1) or (np.sum(~result[0][rmag].mask)<1):
             if "PPMXL" in cat_name:
                 cat_name = "UCAC4"
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
@@ -82,6 +86,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
                     zeros_list = list(0.0 for i in range(0,100000))
                     zeros_int_list = list(0 for i in range(0,100000))
                     cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list], names=('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'))
+     #if the resulting table is neither empty nor missing columns values, set the cat_table
         else:
             cat_table = result[0]
 
@@ -881,7 +886,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     return header, table
 
-def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT', ref_cat='UCAC4'):
+def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'):
 
     num_new_frames_created = 0
     num_sources_created = 0
@@ -896,7 +901,7 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
         if header.get('zeropoint',-99) == -99 or header.get('zeropoint_err',-99) == -99:
             #if bad, determine new zeropoint
             print "Refitting zeropoint, tolerance set to ", std_zeropoint_tolerance
-            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance, ref_cat)
+            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
             print "New zp=", avg_zeropoint, std_zeropoint, count, num_in_calc
             #if crossmatch is good, update new zeropoint
             if std_zeropoint < std_zeropoint_tolerance:

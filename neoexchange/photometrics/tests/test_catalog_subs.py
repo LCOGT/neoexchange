@@ -312,6 +312,29 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
+    def test_get_cat_ra_dec_empty_rmag_column_UCAC4(self):
+
+        expected_ra_last_source = 306.66333600
+
+        expected_dec_last_source = -26.750156
+
+        expected_rmag_last_source = 14.7
+
+        expected_len_cat_table = 52
+
+        cat_table, cat_name = get_vizier_catalog_table(306.6792, -26.6278, "15m", "15m")
+
+        ra_last_source = cat_table['_RAJ2000'][-1]
+
+        dec_last_source = cat_table['_DEJ2000'][-1]
+
+        rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
+
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
     def test_cross_match_UCAC4_longerThan_testFITS(self):
         #test with cat 1 as longer UCAC4 table values and cat 2 as shorter test FITS table values
 
@@ -915,13 +938,13 @@ class ZeropointUnitTest(TestCase):
     def test_get_zeropoint(self):
         #test zeropoint calculation
 
-        expected_avg_zeropoint = 0.7785
+        expected_avg_zeropoint = 0.8520
 
-        expected_std_zeropoint = 0.077074639149
+        expected_std_zeropoint = 0.1745
 
-        expected_count = 2
+        expected_count = 3
 
-        expected_num_in_calc = 2
+        expected_num_in_calc = 3
 
         cross_match_table_data = [(299.510143, 299.510127, 1.6000e-05, 34.960303, 34.960327, 2.4000e-05, 14.4499998093, 15.5469999313, 0.05, 1.097000),
                                   (299.860871, 299.860889, 1.8000e-05, 35.381474, 35.381485, 1.1000e-05, 14.0799999237, 14.9130001068, 0.03, 0.833000),
@@ -929,7 +952,7 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
-        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
+        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.2)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
@@ -960,7 +983,7 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
-        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
+        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.1)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
@@ -970,9 +993,9 @@ class ZeropointUnitTest(TestCase):
     def test_get_zeropoint_inconclusive_value(self):
         #test zeropoint calculation
 
-        expected_avg_zeropoint = 4.47955
+        expected_avg_zeropoint = 40.0
 
-        expected_std_zeropoint = 0.716794144089
+        expected_std_zeropoint = 10.0
 
         expected_count = 0
 
@@ -984,7 +1007,7 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
-        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
+        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.1)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
@@ -1050,7 +1073,7 @@ class ZeropointUnitTest(TestCase):
 
         catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, "PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
@@ -1096,7 +1119,7 @@ class ZeropointUnitTest(TestCase):
 
         catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, "PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
