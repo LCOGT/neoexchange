@@ -881,7 +881,7 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     return header, table
 
-def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'):
+def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT', ref_cat='UCAC4'):
 
     num_new_frames_created = 0
     num_sources_created = 0
@@ -896,7 +896,7 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
         if header.get('zeropoint',-99) == -99 or header.get('zeropoint_err',-99) == -99:
             #if bad, determine new zeropoint
             print "Refitting zeropoint, tolerance set to ", std_zeropoint_tolerance
-            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
+            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance, ref_cat)
             print "New zp=", avg_zeropoint, std_zeropoint, count, num_in_calc
             #if crossmatch is good, update new zeropoint
             if std_zeropoint < std_zeropoint_tolerance:

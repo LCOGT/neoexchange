@@ -49,6 +49,11 @@ class Command(BaseCommand):
         return fits_files, fits_catalogs
 
     def handle(self, *args, **options):
+
+        # set tolerance for determining the zeropoint and catalog to use (should be cmdline options)
+        std_zeropoint_tolerance = 0.10
+        ref_cat = 'PPMXL' ; 'UCAC4'
+
         self.stdout.write("==== Pipeline processing astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         datadir = os.path.expanduser(options['datadir'])
@@ -102,9 +107,8 @@ class Command(BaseCommand):
             # Step 2: Check for good zeropoint and redetermine if needed. Ingest
             # results into CatalogSources
             self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
-            # set tolerance for determining the zeropoint
-            std_zeropoint_tolerance = 0.1
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, std_zeropoint_tolerance, catalog_type)
+
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, std_zeropoint_tolerance, catalog_type, ref_cat)
             if num_sources_created > 0 and num_in_catalog > 0:
                 self.stdout.write("Created %d sources from %d in catalog" % (num_sources_created, num_in_catalog) )
             else:
