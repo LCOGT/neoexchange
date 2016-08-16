@@ -55,20 +55,27 @@ def find_images_for_block(blockid):
     Output all candidates coords for each frame for Light Monitor to display
     '''
     frames = Frame.objects.filter(block__id=blockid, filename__isnull=False).order_by('frameid')
-    cands = Candidate.objects.filter(block__id=blockid)
-    dets = cands[0].unpack_dets()
-    d_zip = zip(dets['frame_number'], dets['x'], dets['y'])
-    cs = {a[0] : (a[1], a[2]) for a in d_zip}
+    targets = candidates_by_block(blockid,frames.count())
     img_list = []
     for i, img in enumerate(frames):
-        print img.id
-        target = {'x':cs[i+1][0], 'y':cs[i+1][1]}
+        if not img.frameid:
+            return []
         img_dict = {'img'     : str(img.frameid),
                     # 'sources' : [],
-                    'targets' : [target]
+                    'candidates' : targets[i+1]
                     }
         img_list.append(img_dict)
     return img_list
+
+def candidates_by_block(blockid, num_frames):
+    targets = {i : [] for i in range(1,num_frames+1)}
+    cands = Candidate.objects.filter(block__id=blockid)
+    for cand in cands:
+        dets = cand.unpack_dets()
+        d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'])
+        for a in d_zip:
+            targets[a[0]].append({'x':a[1], 'y':a[2], 'ra':a[3], 'dec': a[4]})
+    return targets
 
 
 def lcogt_api_call(auth_header, url):

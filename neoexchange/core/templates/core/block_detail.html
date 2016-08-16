@@ -4,18 +4,6 @@
 {% block header %}Block details{% endblock %}
 
 {% block script-content %}
-<script src="{% static "core/js/astrometer.js" %}"  type="text/javascript" ></script>
-<script type="text/javascript">
-$(document).ready(function(){
-
-var frames = {{images|safe}};
-
-loadThumbnails(frames);
-
-});
-
-</script>
-
 {% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -90,7 +78,7 @@ loadThumbnails(frames);
                     </table>
                 </div>
                 <div class="four columns">
-                    <h5 class="section-title">Actions</h5>
+                    <h5 class="section-title">Controls</h5>
                         {% if request.user.is_authenticated %}
                           {% if object.num_observed > 0 %}
                             <a class="button button-primary" href="{% url 'block-ast' object.id %}">Astrometer</a><br/>
@@ -104,11 +92,6 @@ loadThumbnails(frames);
                         {% else %}
                         <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
                         {% endif %}
-                    {% if request.user.is_authenticated %}
-                    <h5 class="section-title">Observations</h5>
-                        <ul class="observations">
-                        </ul>
-                    {% endif %}
                 </div>
             </div>
         </div>

@@ -17,17 +17,44 @@
 	var img_holder;
 	var mini_img;
 	var frames = {{images|safe}}
+	var accepted = Array();
 	var data_url = 'https://thumbnails.lcogt.net/'
 	var img_params = '?width=1000&height=1000'
 
 	$(document).ready(function(){
 
-		loadThumbnails(frames);
 		setUp();
+		loadThumbnails(frames);
 
-    // $.when.apply(null, deferreds).done(function() {
-		// 	setUp();
-		// });
+		$('.candidate-select').click(function(){
+			var ind = $(this).data('id');
+		  startBlink(ind, false);
+			$('.candidate-accept').show();
+			$(".cand-"+ind+"-accept").data('id', ind);
+			$(".cand-"+ind+"-reject").data('id', ind);
+		});
+
+		$('#blink-stop').click(function(){
+			stopBlink();
+			$('.candidate-accept').hide();
+		})
+
+		$('#blink-start').click(function(){
+			startBlink(0,true);
+		})
+
+		$('#cand-accept').click(function(){
+			console.log('clicked')
+			var cand_id = $(this).data('id');
+			acceptCandidate(cand_id);
+			stopBlink();
+		})
+
+		$('#cand-reject').click(function(){
+			var cand_id = $(this).data('id');
+			rejectCandidate(cand_id);
+			stopBlink();
+		})
 
 	});
 
@@ -48,8 +75,9 @@
 <!-- Main body -->
 <div class="container" id="main">
         <div class="row">
+					{% if images %}
             <div class="eight columns">
-                <h3 class="section-title">Find the moving object!</h3>
+                <h3 class="section-title">Looking for {{object.body.current_name}}</h3>
 {% if messages %}					<div id="message">
 						<ul class="messages">
 {% for message in messages %}{%ifchanged%}<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message|safe }}</li>{%endifchanged%}{% endfor %}
@@ -58,8 +86,8 @@
 
 					<div id="middle">
 						<div id="image-loading">
-							<i class="fa fa-refresh fa-spin fa-8x fa-fw"></i>
-							<span class="sr-only">Loading Image...</span>
+							<i class="fa fa-refresh fa-spin fa-fw fa-4x"></i>
+							<p>Loading Image...</p>
 						</div>
 						<div id="wrapper">
 							<canvas id="imgCanvas" width="600" height="600" src=""><p>Image has failed to load.</p></canvas>
@@ -71,19 +99,47 @@
 					<h3 class="section-title">Zoom Region</h3>
 					<canvas id="zoomCanvas" width="200" height="200"><p>Image has failed to load.</p></canvas>
 
-          {% if images %}
           <h3 class="section-title">Controls</h3>
 							<div class="button-holder">
-								<button id="start" onclick="prevImage();"><i class="fa fa-arrow-circle-o-left" aria-hidden="true"></i></button>
+								<button id="prev-img-btn" onclick="prevImage();"><i class="fa fa-arrow-circle-left fa-2x" aria-hidden="true"></i></button>
 								<span id="current_image_index"></span> of <span id="number_images"></span>
-								<button id="stop" onclick="nextImage();"><i class="fa fa-arrow-circle-o-right" aria-hidden="true"></i></button>
+								<button id="next-img-btn" onclick="nextImage();"><i class="fa fa-arrow-circle-right fa-2x" aria-hidden="true"></i></button>
 							</div>
 							<div class="button-holder">
-								<button id="blink-start" onclick="startBlink();">Blink On</button>
-								<button id="blink-stop" onclick="stopBlink();">Blink Off</button>
+								<ul id="candidate-list" class="candidate-controls">
+									<li class='grey-dark blink-all-candidates'>
+								    <span class='candidate' id="blink-start">
+											<span class="block-status-item"><i class="fa fa-refresh"></i></span>
+									    <span class='block-status-item'>Blink all Candidates</span>
+										</span>
+										<span class='candidate' id="blink-stop">
+											<span class="block-status-item"><i class="fa fa-stop-circle" aria-hidden="true"></i></span>
+											<span class='block-status-item'>Stop Blinking</span>
+										</span>
+							    </li>
+								</ul>
+								<ul class="candidate-controls candidate-accept" style="display:none;">
+									<li class='green'>
+										<span class="block-status-item" ><i class="fa fa-check"></i></span>
+										<span class='block-status-item' id="cand-accept" data-id="">Accept</span>
+								</li>
+								<li class='red'>
+									<span class="block-status-item" ><i class="fa fa-times"></i></span>
+									<span class='block-status-item' id="cand-reject" data-id="">Reject</span>
+							</li>
+						</ul>
+						<ul class="candidate-controls candidate-accept" style="display:none;">
+							<li class='green'>
+								<span class="block-status-item" ><i class="fa fa-cloud-upload" aria-hidden="true"></i></span>
+								<span class='block-status-item' id="cand-submit">Upload Candidates</span>
+							</li>
+						</ul>
 							</div>
-          {% endif %}
         </div>
+				{% else %}
+				<h3 class="section-title">Looking for {{object.body.current_name}}</h3>
+				<p>There are currently no images or candidates available to measure.</p>
+				{% endif %}
       </div>
     </div>
 {% endblock %}
