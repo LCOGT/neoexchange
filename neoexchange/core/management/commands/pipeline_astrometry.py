@@ -7,7 +7,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 
 from core.views import check_catalog_and_refit, store_detections
-from photometrics.catalog_subs import store_catalog_sources, make_sext_file
+from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 #from core.models import CatalogSources
 
@@ -115,8 +115,10 @@ class Command(BaseCommand):
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
             self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))
-            fits_filename = make_sext_file(temp_dir, new_catalog)
+            fits_filename = make_sext_file(temp_dir, new_catalog, catalog_type)
 
+            if 'BANZAI' in catalog_type:
+                fits_filename = extract_sci_image(catalog, new_catalog)
             fits_file_list.append(fits_filename)
 
         # Step 4: Run MTDLINK to find moving objects
@@ -125,7 +127,7 @@ class Command(BaseCommand):
         #May change this to get pa and rate from compute_ephem later
         pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
 
-        retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict)
+        retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
 
         # Step 5: Read MTDLINK output file and create candidates in NEOexchange
         if len(fits_file_list) > 0:

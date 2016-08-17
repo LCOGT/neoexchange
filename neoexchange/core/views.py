@@ -1224,7 +1224,6 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     if header != {}:
         logger.debug("astrometric fit status=%d" %  header['astrometric_fit_status'])
         fits_file = determine_filenames(catfile)
-#        print "fits_file,catfile=",fits_file,catfile
         if header['astrometric_fit_status'] != 0:
             if fits_file == None:
                 logger.error("Could not determine matching image for %s" % catfile)

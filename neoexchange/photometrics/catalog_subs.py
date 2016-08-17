@@ -1032,7 +1032,7 @@ def make_sext_file_line(sext_params):
 
     return sext_line
 
-def make_sext_dict_list(new_catalog):
+def make_sext_dict_list(new_catalog, catalog_type):
     '''create a list of dictionary entries for
     creating the .sext files needed for mtdlink'''
 
@@ -1046,7 +1046,8 @@ def make_sext_dict_list(new_catalog):
         real_fits_filename = os.path.basename(new_catalog).replace('_cat.fits', '.fits')
         fits_filename_path = new_catalog.replace('_cat.fits', '.fits')
     else:
-        real_fits_filename = new_catalog
+        real_fits_filename = os.path.basename(new_catalog)
+        fits_filename_path = new_catalog
 
     #May need to filter objects within 5 pixels of frame edge as does in cleansex.tcl
     sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0)
@@ -1072,11 +1073,11 @@ def make_sext_line_list(sext_dict_list):
 
     return sext_line_list
 
-def make_sext_file(dest_dir, new_catalog):
+def make_sext_file(dest_dir, new_catalog, catalog_type):
     '''Synthesizes the .sext file needed for running
     mtdlink instead of running sextractor again'''
 
-    sext_dict_list, fits_filename_path = make_sext_dict_list(new_catalog)
+    sext_dict_list, fits_filename_path = make_sext_dict_list(new_catalog, catalog_type)
     sext_line_list = make_sext_line_list(sext_dict_list)
     sext_filename = open(os.path.join(dest_dir, os.path.basename(fits_filename_path).replace('.fits', '.sext')), 'w')
     for line in sext_line_list:
@@ -1160,3 +1161,26 @@ def funpack_fits_file(fpack_file):
     hdulist.close()
 
     return 0
+
+def extract_sci_image(file_path, catalog_path):
+    '''Extracts the science image out of the BANZAI multi-extension fits files.'''
+
+    fits_file = os.path.basename(file_path)
+    fits_filename_path = os.path.join(os.path.dirname(catalog_path), fits_file)
+
+    if os.path.exists(fits_filename_path):
+        return fits_filename_path
+
+    try:
+        hdulist = fits.open(file_path)
+    except IOError as e:
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
+
+    try:
+        sci_index = hdulist.index_of('SCI')
+        hdulist = hdulist[sci_index]
+        hdulist.writeto(fits_filename_path)
+    except KeyError:
+        sci_index = -1
+
+    return fits_filename_path

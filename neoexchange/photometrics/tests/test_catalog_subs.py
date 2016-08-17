@@ -2275,8 +2275,9 @@ class MakeSEXTFileTest(FITSUnitTest):
                          }
 
         cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
+        catalog_type = 'FITS_LDAC'
 
-        sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename)
+        sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename, catalog_type)
 
         self.assertEqual(sext_dict_list[0]['number'], test_dict_first['number'])
         self.assertAlmostEqual(sext_dict_list[0]['obs_x'], test_dict_first['obs_x'], 3)
@@ -2356,8 +2357,9 @@ class TestMakeSEXTFile(ExternalCodeUnitTest):
         expected_second_line = '        98      6.019   1641.004  19.9684  -84.8       1.005      0.58   0  4.16         1273.2     0 218.25739   9.68169'
 
         cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
+        catalog_type = 'FITS_LDAC'
 
-        fits_filename = make_sext_file(self.test_dir, cat_ldacfilename)
+        fits_filename = make_sext_file(self.test_dir, cat_ldacfilename, catalog_type)
 
         sext_file = os.path.join(self.test_dir, fits_filename.replace('.fits', '.sext'))
         self.assertTrue(os.path.exists(sext_file))
