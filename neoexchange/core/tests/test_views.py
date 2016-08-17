@@ -36,7 +36,7 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement, block_status, clean_crossid, create_frame, \
     frame_params_from_block, schedule_check, summarise_block_efficiency, \
-    check_catalog_and_refit, store_detections
+    check_catalog_and_refit, store_detections, update_crossids
 from core.frames import block_status
 
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
@@ -267,7 +267,7 @@ class TestClean_NEOCP_Object(TestCase):
                              # 'MDM':   0.36954350,
                               'elements_type': 'MPC_COMET',
                               'origin'      : 'M',
-                              'source_type' : 'C',
+                              'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 35.0,
                             }
@@ -1959,6 +1959,7 @@ class TestCheckCatalogAndRefit(TestCase):
 
         self.assertEqual(expected_file, status)
         self.assertTrue(os.path.exists(expected_file))
+        self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
 
 
 class TestUpdate_Crossids(TestCase):
@@ -2083,7 +2084,6 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('N', body.source_type)
         self.assertEqual('M', body.origin)
         self.assertEqual('2016 JD18', body.name)
-        self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
 
 class TestStoreDetections(TestCase):
 
