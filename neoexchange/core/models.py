@@ -23,6 +23,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from astropy.time import Time
 from numpy import fromstring
+from picklefield.fields import PickledObjectField
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params
@@ -290,6 +291,7 @@ class Frame(models.Model):
     frameid     = models.IntegerField('Archive ID', null=True, blank=True)
     x_size      = models.IntegerField('Size x pixels', null=True, blank=True)
     y_size      = models.IntegerField('Size y pixels', null=True, blank=True)
+    wcs         = PickledObjectField('WCS info', blank=True, null=True, editable=False)
 
     class Meta:
         verbose_name = _('Observed Frame')

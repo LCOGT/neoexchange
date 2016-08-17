@@ -18,6 +18,8 @@ from django.test import TestCase
 from django.forms.models import model_to_dict
 from django.db.utils import IntegrityError
 from numpy import array, arange
+from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
 from unittest import skipIf
 from mock import patch
 from neox.tests.mocks import MockDateTime
@@ -503,6 +505,49 @@ class TestFrame(TestCase):
         self.assertEqual(params['sitecode'], frame.sitecode)
         self.assertEqual(params['filter'], frame.filter)
         self.assertEqual(params['midpoint'], frame.midpoint)
+
+    def test_store_null_WCS_info(self):
+        null_wcs = WCS()
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : null_wcs
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertNotEqual(None, frame.wcs)
+        self.assertEqual(null_wcs, frame.wcs)
+
+    def test_store_TAN_WCS_info(self):
+        # Hand-roll (mmm sushi..) a celestial WCS
+        w = WCS(naxis=2)
+        w.wcs.crpix = [ 1024.0, 1024.0]
+        pixel_scale = 0.469/3600.0
+        w.wcs.cdelt = array([-pixel_scale, pixel_scale])
+        w.wcs.crval = [150.0, -30.0]
+        w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : w
+                 }
+        frame = Frame.objects.create(**params)
+
+        pix_coord = array([[512.0, 512.0]])
+        self.assertEqual(w, frame.wcs)
+        self.assertEqual(w.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(w.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertEqual(pixel_scale, proj_plane_pixel_scales(frame.wcs)[0])
+        self.assertEqual(pixel_scale, proj_plane_pixel_scales(frame.wcs)[1])
 
 class TestSourceMeasurement(TestCase):
 
