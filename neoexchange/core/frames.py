@@ -2,6 +2,7 @@ import requests
 from datetime import datetime
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
+from astropy.wcs import WCS
 
 from core.models import Block, Frame, Candidate
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
@@ -129,6 +130,7 @@ def create_frame(params, block=None, frameid=None):
 def frame_params_from_header(params, block, frameid=None):
     # In these cases we are parsing the FITS header
     sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
+
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
@@ -141,6 +143,16 @@ def frame_params_from_header(params, block, frameid=None):
                      'y_size'    : params.get('NAXIS2', None),
                      'frameid'   : frameid
                  }
+    # Try and create a WCS object from the header. If successful, add to frame
+    # params
+    wcs = None
+    try:
+        wcs = WCS(params)
+        print wcs
+        frame_params['wcs'] = wcs
+    except ValueError:
+        logger.warn("Error creating WCS entry from frameid=%s" % frameid)
+
     return frame_params
 
 def frame_params_from_block(params, block):

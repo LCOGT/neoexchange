@@ -356,6 +356,15 @@ class TestFrame(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
+        # Hand-rolled WCS for pickling testing
+        self.naxis_header = {'NAXIS1' : 2028, 'NAXIS2' : 2038, 'NAXIS' :2}
+        self.w = WCS(self.naxis_header)
+        self.w.wcs.crpix = [ 1024.0, 1024.0]
+        self.pixel_scale = 0.469/3600.0
+        self.w.wcs.cd = array([[self.pixel_scale, 0.0], [0.0, -self.pixel_scale]])
+        self.w.wcs.crval = [150.0, -30.0]
+        self.w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+
     def test_create_LCOGT_K93_w_single(self):
         params = {  'sitecode'      : 'K93',
                     'instrument'    : 'kb75',
@@ -518,19 +527,12 @@ class TestFrame(TestCase):
                     'wcs'           : null_wcs
                  }
         frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
 
         self.assertNotEqual(None, frame.wcs)
         self.assertEqual(null_wcs, frame.wcs)
 
     def test_store_TAN_WCS_info(self):
-        # Hand-roll (mmm sushi..) a celestial WCS
-        w = WCS(naxis=2)
-        w.wcs.crpix = [ 1024.0, 1024.0]
-        pixel_scale = 0.469/3600.0
-        w.wcs.cdelt = array([-pixel_scale, pixel_scale])
-        w.wcs.crval = [150.0, -30.0]
-        w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
-
         params = {  'sitecode'      : 'K93',
                     'instrument'    : 'kb75',
                     'filter'        : 'w',
@@ -538,16 +540,34 @@ class TestFrame(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : '2015-07-13 21:09:51',
                     'block'         : self.test_block,
-                    'wcs'           : w
+                    'wcs'           : self.w
                  }
         frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
 
         pix_coord = array([[512.0, 512.0]])
-        self.assertEqual(w, frame.wcs)
-        self.assertEqual(w.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
-        self.assertEqual(w.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
-        self.assertEqual(pixel_scale, proj_plane_pixel_scales(frame.wcs)[0])
-        self.assertEqual(pixel_scale, proj_plane_pixel_scales(frame.wcs)[1])
+        self.assertEqual(self.w, frame.wcs)
+        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[0])
+        self.assertEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[1])
+
+    def test_restore_WCS_naxis(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : self.w
+                 }
+        frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
+
+        self.assertEqual(self.w.naxis, frame.wcs.naxis)
+        self.assertEqual(self.w._naxis1, frame.wcs._naxis1)
+        self.assertEqual(self.w._naxis2, frame.wcs._naxis2)
 
 class TestSourceMeasurement(TestCase):
 
