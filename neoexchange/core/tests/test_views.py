@@ -460,6 +460,20 @@ class TestCheck_for_block(TestCase):
 
         self.assertEqual(expected_state, block_state)
 
+    def test_body_with_no_provname1_no_blocks_sinistro(self):
+
+        new_body = self.body_no_provname1
+        params = { 'site_code' : 'K93'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                    }
+        expected_state = 0
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+
     def test_body_with_no_provname1_one_block(self):
 
         new_body = self.body_no_provname1
