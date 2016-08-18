@@ -22,8 +22,14 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import model_to_dict
 from astropy.time import Time
+from astropy.wcs import WCS
 from numpy import fromstring
-from picklefield.fields import PickledObjectField
+try:
+    # cpython 2.x
+    from cPickle import loads, dumps
+except ImportError:
+    from pickle import loads, dumps
+from base64 import b64decode, b64encode
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params
@@ -255,6 +261,68 @@ class Block(models.Model):
 
         return u'%s is %sactive' % (self.tracking_number,text)
 
+def unpickle_wcs(wcs_string):
+    '''Takes a pickled string and turns into an astropy WCS object'''
+    wcs_bytes = wcs_string.encode()     # encode str to bytes
+    wcs_bytes = b64decode(wcs_bytes)
+    wcs_header = loads(wcs_bytes)
+    return WCS(wcs_header)
+
+def pickle_wcs(wcs_object):
+    '''Turn out base64encoded string from astropy WCS object. This does
+    not use the inbuilt pickle/__reduce__ which loses needed information'''
+    if wcs_object is not None:
+        wcs_header = wcs_object.to_header()
+        # Add back missing NAXIS keywords, change back to CD matrix
+        wcs_header.insert(0, ("NAXIS", 2, "number of array dimensions"))
+        wcs_header.insert(1, ("NAXIS1", wcs_object._naxis1, ""))
+        wcs_header.insert(2, ("NAXIS2", wcs_object._naxis2, ""))
+        wcs_header.remove("CDELT1")
+        wcs_header.remove("CDELT2")
+        # Some of these may be missing depending on whether there was any rotation
+        for pc in ['PC1_1', 'PC1_2', 'PC2_1', 'PC2_2']:
+            if pc in wcs_header:
+                wcs_header.rename_keyword(pc, pc.replace("PC", "CD"))
+        value = dumps(wcs_header, protocol=2)
+        value = b64encode(value).decode()
+    else:
+        value = wcs_object
+    return value
+
+class WCSField(models.Field):
+
+    description = "Store astropy.wcs objects"
+
+    def __init__(self, *args, **kwargs):
+        kwargs['serialize'] = False
+        kwargs['editable'] = False
+        super(WCSField, self).__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super(WCSField, self).deconstruct()
+        del kwargs["serialize"]
+        del kwargs["editable"]
+        return name, path, args, kwargs
+
+    def from_db_value(self, value, expression, connection, context):
+        if value is None:
+            return value
+        return unpickle_wcs(value)
+
+    def to_python(self, value):
+        if isinstance(value, WCS):
+            return value
+
+        if value is None:
+            return value
+
+        return unpickle_wcs(value)
+
+    def get_prep_value(self, value):
+        return pickle_wcs(value)
+
+    def get_internal_type(self):
+        return 'TextField'
 
 class Frame(models.Model):
     ''' Model to represent (FITS) frames of data from observations successfully
@@ -291,8 +359,9 @@ class Frame(models.Model):
     frameid     = models.IntegerField('Archive ID', null=True, blank=True)
     x_size      = models.IntegerField('Size x pixels', null=True, blank=True)
     y_size      = models.IntegerField('Size y pixels', null=True, blank=True)
-    wcs         = PickledObjectField('WCS info', blank=True, null=True, editable=False)
+    wcs         = WCSField('WCS info', blank=True, null=True, editable=False)
 
+    
     class Meta:
         verbose_name = _('Observed Frame')
         verbose_name_plural = _('Observed Frames')
