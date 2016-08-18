@@ -825,7 +825,7 @@ def fetch_arecibo_targets(page=None):
 def imap_login(username, password, server='imap.gmail.com'):
     '''Logs into the specified IMAP [server] (Google's gmail is assumed if not
     specified) with the provide username and password.
-    
+
     An imaplib.IMAP4_SSL connection instance is returned or None if the
     login failed'''
 
@@ -863,7 +863,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         # Look for messages to the mailing list but without specifying a charset
         status, msgnums = mailbox.search(None, 'TO', list_address,\
                                                'FROM', list_author)
-        # Messages numbers come back in a space-separated string inside a 
+        # Messages numbers come back in a space-separated string inside a
         # 1-element list in msgnums
         if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
 
@@ -880,7 +880,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
                         date_tuple = email.utils.parsedate_tz(msg['Date'])
                         msg_utc_date = datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
                         time_diff = datetime.utcnow() - msg_utc_date
-                        # See if the subject has the right prefix and suffix and is 
+                        # See if the subject has the right prefix and suffix and is
                         # within a day of 'now'
                         if list_prefix in msg_subject and list_suffix in msg_subject and \
                             time_diff <= timedelta(days=date_cutoff):

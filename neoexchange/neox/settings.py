@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.4.2'
+VERSION = '1.5.0'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -20,7 +20,7 @@ PREFIX = os.environ.get('PREFIX', '')
 if PREFIX != '':
     FORCE_SCRIPT_NAME = '/neoexchange'
 
-BASE_DIR = os.path.dirname(CURRENT_PATH)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SESSION_COOKIE_NAME='neox.sessionid'
 
@@ -43,7 +43,7 @@ ALLOWED_HOSTS = ['*']
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
 # In a Windows environment this must be set to your system time zone.
-TIME_ZONE = 'UTC'
+# TIME_ZONE = 'UTC'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -118,6 +118,21 @@ TEMPLATES = [
     },
 ]
 
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
 LOGIN_URL = PREFIX +'/accounts/login/'
 
 LOGIN_REDIRECT_URL = PREFIX + '/'
@@ -125,9 +140,6 @@ LOGIN_REDIRECT_URL = PREFIX + '/'
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
-    'suit',
-    'neox',
-    'core',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -136,6 +148,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.messages',
     'reversion',
+    'core.apps.CoreConfig',
     'opbeat.contrib.django',
 )
 

@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from core.models import Block, Frame
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from core.urlsubs import get_lcogt_headers
+from core.archive_subs import archive_login
 import logging
 
 logger = logging.getLogger('core')
