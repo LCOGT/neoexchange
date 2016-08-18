@@ -18,6 +18,7 @@ from django.test import TestCase
 from django.forms.models import model_to_dict
 from django.db.utils import IntegrityError
 from numpy import array, arange
+from numpy.testing import assert_allclose
 from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
 from unittest import skipIf
@@ -26,7 +27,7 @@ from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources, Candidate
+    CatalogSources, Candidate, WCSField
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -530,7 +531,13 @@ class TestFrame(TestCase):
         frame.refresh_from_db()     # Ensure pickling happens
 
         self.assertNotEqual(None, frame.wcs)
-        self.assertEqual(null_wcs, frame.wcs)
+
+        pix_coord = array([[512.0, 512.0]])
+        assert_allclose(null_wcs.wcs.pc, frame.wcs.wcs.cd, rtol=1e-8)
+        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[0], 10)
+        self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[1], 10)
 
     def test_store_TAN_WCS_info(self):
         params = {  'sitecode'      : 'K93',
@@ -546,11 +553,11 @@ class TestFrame(TestCase):
         frame.refresh_from_db()     # Ensure pickling happens
 
         pix_coord = array([[512.0, 512.0]])
-        self.assertEqual(self.w, frame.wcs)
+        assert_allclose(self.w.wcs.cd, frame.wcs.wcs.cd, rtol=1e-8)
         self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
         self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
-        self.assertEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[0])
-        self.assertEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[1])
+        self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[0], 10)
+        self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[1], 10)
 
     def test_restore_WCS_naxis(self):
         params = {  'sitecode'      : 'K93',
@@ -568,6 +575,27 @@ class TestFrame(TestCase):
         self.assertEqual(self.w.naxis, frame.wcs.naxis)
         self.assertEqual(self.w._naxis1, frame.wcs._naxis1)
         self.assertEqual(self.w._naxis2, frame.wcs._naxis2)
+
+class TestWCSField(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_deconstruct_editable_default(self):
+
+        instance_WCSField = WCSField()
+        name, path, args, kwargs = instance_WCSField.deconstruct()
+        new_instance = WCSField(*args, **kwargs)
+        self.assertEqual(instance_WCSField.editable, new_instance.editable)
+
+    def test_deconstruct_editable_force_true(self):
+
+        instance_WCSField = WCSField(editable=True)
+        name, path, args, kwargs = instance_WCSField.deconstruct()
+        new_instance = WCSField(*args, **kwargs)
+        self.assertEqual(instance_WCSField.editable, new_instance.editable)
+        self.assertFalse(instance_WCSField.editable)
+        self.assertFalse(new_instance.editable)
 
 class TestSourceMeasurement(TestCase):
 

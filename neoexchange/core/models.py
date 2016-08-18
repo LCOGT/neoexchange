@@ -20,6 +20,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
+from django.utils.encoding import force_text
 from django.forms.models import model_to_dict
 from astropy.time import Time
 from astropy.wcs import WCS
@@ -271,6 +272,8 @@ def unpickle_wcs(wcs_string):
 def pickle_wcs(wcs_object):
     '''Turn out base64encoded string from astropy WCS object. This does
     not use the inbuilt pickle/__reduce__ which loses needed information'''
+    pickle_protocol = 2
+
     if wcs_object is not None:
         wcs_header = wcs_object.to_header()
         # Add back missing NAXIS keywords, change back to CD matrix
@@ -280,10 +283,21 @@ def pickle_wcs(wcs_object):
         wcs_header.remove("CDELT1")
         wcs_header.remove("CDELT2")
         # Some of these may be missing depending on whether there was any rotation
+        num_missing = 0
         for pc in ['PC1_1', 'PC1_2', 'PC2_1', 'PC2_2']:
             if pc in wcs_header:
                 wcs_header.rename_keyword(pc, pc.replace("PC", "CD"))
-        value = dumps(wcs_header, protocol=2)
+            else:
+                num_missing += 1
+        # Check if there was no PC matrix at all, insert a unity CD matrix
+        if num_missing == 4:
+            cd_comment = "Coordinate transformation matrix element"
+            wcs_header.insert("CRVAL2", ("CD1_1", 1.0, cd_comment), after=True)
+            wcs_header.insert( "CD1_1", ("CD1_2", 0.0, cd_comment), after=True)
+            wcs_header.insert( "CD1_2", ("CD2_1", 0.0, cd_comment), after=True)
+            wcs_header.insert( "CD2_1", ("CD2_2", 1.0, cd_comment), after=True)
+
+        value = dumps(wcs_header, protocol=pickle_protocol)
         value = b64encode(value).decode()
     else:
         value = wcs_object
@@ -294,13 +308,11 @@ class WCSField(models.Field):
     description = "Store astropy.wcs objects"
 
     def __init__(self, *args, **kwargs):
-        kwargs['serialize'] = False
-        kwargs['editable'] = False
+        kwargs.setdefault('editable', False)
         super(WCSField, self).__init__(*args, **kwargs)
 
     def deconstruct(self):
         name, path, args, kwargs = super(WCSField, self).deconstruct()
-        del kwargs["serialize"]
         del kwargs["editable"]
         return name, path, args, kwargs
 
@@ -320,6 +332,15 @@ class WCSField(models.Field):
 
     def get_prep_value(self, value):
         return pickle_wcs(value)
+
+    def get_db_prep_value(self, value, connection=None, prepared=False):
+        if value is not None:
+            value = force_text(pickle_wcs(value))
+        return value
+
+    def value_to_string(self, obj):
+        value = self.value_from_object(obj)
+        return self.get_db_prep_value(value)
 
     def get_internal_type(self):
         return 'TextField'
