@@ -21,7 +21,9 @@ from django.core.urlresolvers import reverse_lazy
 from core.models import Body, Block, SourceMeasurement
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
-    UploadReport, BlockTimeSummary
+    UploadReport, BlockTimeSummary, plotframe, make_plot, CandidatesViewBlock
+
+from astrometer.views import BlockFramesView, fitsanalyse
 
 from django.contrib.auth.views import login, logout
 
@@ -29,12 +31,15 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
-    url(r'^block/list/$', BlockListView.as_view(model=Block, queryset=Block.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
+    url(r'^makeplot/$', make_plot, name='makeplot'),
+    url(r'^plotframe/$', plotframe),
+    url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),    url(r'^block/list/$', BlockListView.as_view(model=Block, queryset=Block.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/report/$',BlockReport.as_view(), name='report-block'),
     url(r'^block/(?P<pk>\d+)/upload/$',UploadReport.as_view(), name='upload-report'),
     url(r'^block/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBlock.as_view(template='core/mpcreport.html'), name='view-report-mpc'),
     url(r'^block/(?P<pk>\d+)/measurements/$', MeasurementViewBlock.as_view(), name='view-report'),
+    url(r'^block/(?P<pk>\d+)/astrometer/$',BlockFramesView.as_view(), name='block-ast'),
+    url(r'^block/(?P<pk>\d+)/candidates/$', CandidatesViewBlock.as_view(), name='view-candidates'),
     url(r'^block/(?P<pk>\d+)/$',BlockDetailView.as_view(model=Block), name='block-view'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
@@ -45,7 +50,9 @@ urlpatterns = [
     url(r'^ranking/$', ranking, name='ranking'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
+    url(r'^fitsanalyse/$', fitsanalyse, name='fitsanalyse'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
+    url(r'^accounts/login/api/$', login, {'template_name': 'core/login-api.html'}, name='auth_login_api'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout' ),
     url(r'^admin/', include(admin.site.urls)),
 ]

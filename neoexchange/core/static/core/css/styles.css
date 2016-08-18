@@ -29,12 +29,24 @@ table.datatable td { border-bottom: 1px solid #e6e6e6; color: #202020; white-spa
 table.datatable td a { display: block; }
 table.datatable .wider { width: 12%; }
 
-table.datatable  tr.odd, .odd {
+table.datatable  tr.odd, .odd, .grey-dark {
     background-color: #eee;
 }
-table.datatable  tr.even, .even {
+table.datatable  tr.even, .even, .grey-light {
     background-color: #f9f9f9;
 }
+
+.green {
+  color: #4F8A10;
+  background-color: #DFF2BF;
+}
+.green a{color: #4F8A10;}
+
+.red {
+  color: #D8000C;
+  background-color: #FFBABA;
+}
+.red a {color: #D8000C;}
 
 table.datatable  tr:hover {
     background-color: #ddd;
@@ -803,10 +815,14 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
  text-shadow: 0 0 5px #00ff00;
 }
 
-ul.block-status { margin: 0; padding: 0; list-style: none; }
-ul.block-status li { padding: 8px 0; border-top: 1px solid white; list-style: none;}
-.block-status-line {display:block;}
+.blink-all-candidates {display:block;}
+.candidate-select {display:table-cell;}
+ul.block-status, ul.candidate-control { margin: 0; padding: 0; list-style: none; }
+ul.block-status li, ul.candidate-controls li { padding: 8px 0; border-top: 1px solid white; list-style: none;}
+.block-status-line, .candidate {display:block;cursor:pointer;}
 .block-status-item { display:table-cell; padding: 0 10px;}
+
+ul.candidate-controls li:hover {background-color:#eee; }
 
 /* Responsive design styles */
 

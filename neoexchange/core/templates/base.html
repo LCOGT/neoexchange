@@ -14,7 +14,7 @@
 		{% endblock %}
 		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
 		{% block css-content %}{% endblock %}
-		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="{% static "core/css/font-awesome.min.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/skeleton.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/normalize.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/styles.css" %}">
@@ -29,6 +29,13 @@
 		<script type="text/javascript" src="{% static "core/js/jquery-ui-1.10.3.min.js" %}"></script>
 		<script type="text/javascript">
 			$(document).ready(function(){
+
+				/* Grab the token from localstorage and makes sure we can use it */
+				$.ajaxPrefilter(function(options, originalOptions, jqXHR){
+				  if(options.url.indexOf('lcogt.net/') >= 0 && localStorage.getItem('token')){
+				    jqXHR.setRequestHeader('Authorization', 'Token ' + localStorage.getItem('token'));
+				  }
+				});
 
 				$(document).on('click','#messages-inbox',function(event){
 					centreDiv('#show-messages');
@@ -65,7 +72,7 @@
 									{% if user.first_name %}{{ user.first_name }}{% else %}{{user.username}}{% endif %}
 								</li>
 								<li>
-									<a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}"> Logout</a>
+									<a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}" id="logout-btn"> Logout</a>
 								</li>
 								{% else %}
 								<li>

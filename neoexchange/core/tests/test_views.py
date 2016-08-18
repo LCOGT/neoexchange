@@ -13,13 +13,18 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
+import os
 from datetime import datetime
+from unittest import skipIf
+import tempfile
+from glob import glob
+
 from django.test import TestCase
 from django.forms.models import model_to_dict
-from unittest import skipIf
 from bs4 import BeautifulSoup
-import os
 from mock import patch
+from astropy.io import fits
+
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
     mock_check_request_status_null, mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header
@@ -29,11 +34,13 @@ from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
-    create_source_measurement,  clean_crossid, create_frame, \
-    frame_params_from_block, schedule_check, summarise_block_efficiency, update_crossids
+    create_source_measurement, block_status, clean_crossid, create_frame, \
+    frame_params_from_block, schedule_check, summarise_block_efficiency, \
+    check_catalog_and_refit, store_detections
 from core.frames import block_status
 
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
+
 from core.forms import EphemQuery
 
 
@@ -1801,6 +1808,159 @@ class TestSummarise_Block_Efficiency(TestCase):
 
         self.assertEqual(expected_summary, summary)
 
+class TestCheckCatalogAndRefit(TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
+        self.configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
+
+        self.debug_print = False
+
+        self.test_cat_good_wcs = os.path.join(os.environ['HOME'], 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0207-e10_cat.fits')
+
+        body_params = {     'provisional_name': '2016 DX',
+                            'origin': 'M',
+                            'source_type': 'U',
+                            'elements_type': 'MPC Minor Planet',
+                            'active': False,
+                            'epochofel': '2016-07-31 00:00:00',
+                            'orbinc': 27.93004,
+                            'longascnode': 124.91942,
+                            'argofperih': 82.05117,
+                            'eccentricity': 0.3916546,
+                            'meandist': 2.6852071,
+                            'meananom': 12.96218,
+                            'perihdist': 1.6335335,
+                            'abs_mag': 17.7,
+                            'slope': 0.15,
+                        }
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        proposal_params = { 'code': 'test',
+                            'title': 'test',
+                            'pi':'sgreenstreet@lcogt.net',
+                            'tag': 'LCOGT',
+                            'active': True
+                          }
+        self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        block_params = {    'telclass': '1m0',
+                            'site': 'K92',
+                            'body': self.test_body,
+                            'proposal': self.test_proposal,
+                            'groupid': None,
+                            'block_start': datetime(2016, 5, 5,19),
+                            'block_end': datetime(2016, 5, 5, 21),
+                            'tracking_number': '0009',
+                            'num_exposures': 6,
+                            'exp_length': 60.0,
+                            'num_observed': 1,
+                            'when_observed': datetime(2016, 5, 5, 20, 12, 44),
+                            'active': False,
+                            'reported': False,
+                            'when_reported':None
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {    'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'cpt1m013-kb76-20160505-0207-e00.fits',
+                            'exptime':60.0,
+                            'midpoint':datetime(2016, 5, 5, 20, 4, 45),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.825,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':3.0,
+                        }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+        self.test_cat_bad_wcs = os.path.join(os.environ['HOME'], 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
+        self.test_fits_bad_wcs = os.path.join(os.environ['HOME'], 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10.fits')
+
+        frame_params2 = {    'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'cpt1m013-kb76-20160505-0205-e00.fits',
+                            'exptime':60.0,
+                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.825,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':3.0,
+                        }
+        self.test_frame2, created = Frame.objects.get_or_create(**frame_params2)
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print "Error removing files in temporary test directory", self.temp_dir
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print: print "Removed", self.temp_dir
+            except OSError:
+                print "Error removing temporary test directory", self.temp_dir
+
+    def test_good_catalog_nofit_needed(self):
+
+        expected_status_and_num_frames = (0, 1)
+
+#        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_catalog_good_wcs)
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_cat_good_wcs)
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+    def test_bad_catalog_name(self):
+
+        expected_status = (-1, 0)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_catalog)
+
+        self.assertEqual(expected_status, status)
+
+    def test_no_matching_image(self):
+
+        expected_status = (-1, 0)
+
+        # Symlink catalog to temp dir with valid name
+        temp_test_catalog = os.path.join(self.temp_dir, 'oracdr_test_e08_cat.fits')
+        os.symlink(self.test_catalog, temp_test_catalog)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, temp_test_catalog)
+
+        self.assertEqual(expected_status, status)
+
+    def test_good_catalog_refit(self):
+
+        expected_file = os.path.join(self.temp_dir, 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
+        expected_num_new_frames_created = 1
+
+        # Symlink catalog and image to temp dir with valid name
+        temp_test_catalog = os.path.join(self.temp_dir, 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
+        os.symlink(self.test_cat_bad_wcs, temp_test_catalog)
+        temp_test_image = os.path.join(self.temp_dir, 'cpt1m013-kb76-20160505-0205-e10.fits')
+        os.symlink(self.test_fits_bad_wcs, temp_test_image)
+
+        status, num_new_frames_created = check_catalog_and_refit(self.configs_dir, self.temp_dir, temp_test_catalog)
+
+        self.assertEqual(expected_file, status)
+        self.assertTrue(os.path.exists(expected_file))
+
+
 class TestUpdate_Crossids(TestCase):
 
     def setUp(self):
@@ -1923,3 +2083,66 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('N', body.source_type)
         self.assertEqual('M', body.origin)
         self.assertEqual('2016 JD18', body.name)
+        self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
+
+class TestStoreDetections(TestCase):
+
+    def setUp(self):
+
+        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_mtds = os.path.join(self.phot_tests_dir, 'elp1m008-fl05-20160225-0095-e90.mtds')
+        # Initialise with three test bodies a test proposal and several blocks.
+        # The first body has a provisional name (e.g. a NEO candidate), the
+        # other 2 do not (e.g. Goldstone targets)
+        params = {  'provisional_name' : 'P10sSA6',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body_with_provname, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015B-005',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_with_provname,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
+                         'block_start' : '2016-02-26 03:00:00',
+                         'block_end'   : '2016-02-26 13:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = { 'block'    : self.test_block,
+                         'filename' : 'elp1m008-fl05-20160225-0095-e90.fits',
+                         'sitecode' : 'V37',
+                         'midpoint' : datetime(2016, 2, 26, 3, 44, 42)
+                       }
+
+        self.test_frame = Frame.objects.create(**frame_params)
+
+    def test_store_detections(self):
+        expected_num_cands = 23
+
+        store_detections(self.test_mtds)
+
+        cands = Candidate.objects.all()
+        self.assertEqual(expected_num_cands, len(cands))
