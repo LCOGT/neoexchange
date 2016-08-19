@@ -1,5 +1,5 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
-Django==1.10
+Django>=1.10,<1.11
 MySQL-python
 astropy>=1.1.1
 beautifulsoup4
@@ -15,6 +15,7 @@ wsgiref
 requests[security]
 selenium
 reqdbclient==0.6.25
+rise-set
 pytest-django
 mock
 opbeat
