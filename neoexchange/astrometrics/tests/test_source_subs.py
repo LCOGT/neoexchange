@@ -191,7 +191,7 @@ class TestPreviousNEOCPParser(TestCase):
 
     def test_non_neo(self):
 
-        items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>').sub, u' = WQ39346(Aug. 19.79 UT)\n']
+        items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
         expected = [u'WQ39346', '2015 QF', '', u'(Aug. 19.79 UT)']
         
         crossmatch = parse_previous_NEOCP_id(items)
@@ -200,7 +200,7 @@ class TestPreviousNEOCPParser(TestCase):
 
     def test_neo(self):
 
-        items = [u' 2015 PK', BeautifulSoup('<sub>229</sub>').sub, u' = P10n00U (Aug. 17.98 UT)  [see ', BeautifulSoup('<a href="/mpec/K15/K15Q10.html"><i>MPEC</i> 2015-Q10</a>').a, u']\n']
+        items = [u' 2015 PK', BeautifulSoup('<sub>229</sub>', "html.parser").sub, u' = P10n00U (Aug. 17.98 UT)  [see ', BeautifulSoup('<a href="/mpec/K15/K15Q10.html"><i>MPEC</i> 2015-Q10</a>', "html.parser").a, u']\n']
         expected = [u'P10n00U', u'2015 PK229', u'MPEC 2015-Q10', u'(Aug. 17.98 UT)']
         
         crossmatch = parse_previous_NEOCP_id(items)
@@ -209,7 +209,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_good_comet(self):
 
         items = [u' Comet C/2015 Q1 = SW40sQ (Aug. 19.49 UT)  [see ',
-            BeautifulSoup('<a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>').a,
+            BeautifulSoup('<a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>', "html.parser").a,
             u']\n']
         expected = [u'SW40sQ', u'C/2015 Q1', u'IAUC 2015-', u'(Aug. 19.49 UT)']
         
@@ -219,7 +219,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_good_comet_cbet(self):
 
         items = [u' Comet C/2015 O1 = P10ms6N(July 21.99 UT)  [see ',
-            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>').a,
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser").a,
             u']\n']
 
         expected = [u'P10ms6N', u'C/2015 O1', u'CBET 4119', u'(July 21.99 UT)']
@@ -230,7 +230,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_bad_comet(self):
 
         items = [u' Comet C/2015 P3 = MAT01  (Aug. 11.23 UT)  [see ',
-            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004136.txt"><i>CBET</i> 4136</a>').a,
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004136.txt"><i>CBET</i> 4136</a>', "html.parser").a,
              u']\n']
         expected = [u'MAT01', u'C/2015 P3', u'CBET 4136', u'(Aug. 11.23 UT)']
         
@@ -240,7 +240,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_bad_comet2(self):
 
         items = [u' Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)  [see ', 
-            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>').a,
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>', "html.parser").a,
              u']\n']
         expected = [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
         
@@ -250,7 +250,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_bad_comet3(self):
 
         items = [u' Comet C/2015 X8 = NM0015a (Dec. 18.63 UT)  [see ', 
-            BeautifulSoup(' <a href="/mpec/K15/K15Y20.html"><i>MPEC</i> 2015-Y20</a>').a,
+            BeautifulSoup(' <a href="/mpec/K15/K15Y20.html"><i>MPEC</i> 2015-Y20</a>', "html.parser").a,
              u']\n']
         expected = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Dec. 18.63 UT)']
         
@@ -390,7 +390,7 @@ class TestParseNEOCP(TestCase):
 
     def test_parse_neocp_no_objects(self):
 
-        obj_ids = parse_NEOCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+        obj_ids = parse_NEOCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser"))
 
         self.assertEqual(obj_ids, None)
 
@@ -435,7 +435,7 @@ class TestParseNEOCPExtraParams(TestCase):
 
     def test_parse_neocpep_no_objects(self):
 
-        obj_ids = parse_NEOCP_extra_params(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+        obj_ids = parse_NEOCP_extra_params(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser"))
 
         self.assertEqual(obj_ids, None)
 
@@ -454,7 +454,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td align="right">&nbsp;  0.06&nbsp;</td>
         <td align="right">&nbsp;31.0&nbsp;</td>
         <td align="right">&nbsp; 4.878&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'CAH024', {'score' : 99,
@@ -487,7 +487,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td></td>
         <td></td>
         <td></td><td></td></tr>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'WR0159E', {'score' : None,
@@ -518,7 +518,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td align="right">&nbsp;  0.86&nbsp;</td>
         <td align="right">&nbsp;20.5&nbsp;</td>
         <td align="right">&nbsp; 0.665&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'P10o4Gp', {'score' : 88,
@@ -549,7 +549,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td align="right">&nbsp;  1.16&nbsp;</td>
         <td align="right">&nbsp;24.4&nbsp;</td>
         <td align="right">&nbsp;17.455&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'P10nw2g', {'score' : 100,
@@ -592,7 +592,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td align="right">&nbsp;  1.16&nbsp;</td>
         <td align="right">&nbsp;24.4&nbsp;</td>
         <td align="right">&nbsp;17.455&nbsp;</td><tr>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = [(u'P10nI6D', {'score' : 60,
@@ -655,7 +655,7 @@ class TestParsePCCP(TestCase):
 
     def test_parse_pccp_no_objects(self):
 
-        obj_ids = parse_PCCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+        obj_ids = parse_PCCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser"))
 
         self.assertEqual(obj_ids, None)
 
@@ -675,7 +675,7 @@ class TestParsePCCP(TestCase):
         <td align="right">&nbsp; 15.44&nbsp;</td>
         <td align="right">&nbsp;14.4&nbsp;</td>
         <td align="right">&nbsp; 0.726&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_PCCP(html)
         expected_obj_ids = [(u'WR0159E', {'score' : 10,
@@ -722,7 +722,7 @@ class TestParsePCCP(TestCase):
         <td align="right">&nbsp; 15.44&nbsp;</td>
         <td align="right">&nbsp;14.4&nbsp;</td>
         <td align="right">&nbsp; 0.726&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_PCCP(html)
         expected_obj_ids = [(u'WR0159E', {'score' : 10,
@@ -1071,7 +1071,7 @@ class TestFetchNEOCPObservations(TestCase):
         self.maxDiff = None
 
     def test_removed_object(self):
-        page = BeautifulSoup('<html><body><pre>\nNone available at this time.\n</pre></body></html>')
+        page = BeautifulSoup('<html><body><pre>\nNone available at this time.\n</pre></body></html>', "html.parser")
         expected = None
 
         observations = fetch_NEOCP_observations(page)
@@ -1081,7 +1081,7 @@ class TestFetchNEOCPObservations(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'), 'r')
         obs_data = test_fh.read()
         test_fh.close()
-        page = BeautifulSoup(obs_data)
+        page = BeautifulSoup(obs_data, "html.parser")
 
         expected = [u'     P10pqB2  C2015 11 17.40000 03 44 26.153-07 26 22.40         20.8 wLNEOCPF51',
                     u'     P10pqB2  C2015 11 17.41166 03 44 24.591-07 26 51.93         20.9 wLNEOCPF51',
