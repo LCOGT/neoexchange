@@ -139,8 +139,10 @@ class OpenFITSCatalog(FITSUnitTest):
         unexpected_value = {}
 
         hdr, tbl = open_fits_catalog(self.test_ldacfilename)
-        self.assertNotEqual(unexpected_value, hdr)
-        self.assertNotEqual(unexpected_value, tbl)
+        for i in hdr:
+            self.assertNotEqual(unexpected_value, i)
+        for i in tbl:
+            self.assertNotEqual(unexpected_value, i)
 
     def test_ldac_catalog_read_length(self):
         expected_hdr_len = 293 + 46
