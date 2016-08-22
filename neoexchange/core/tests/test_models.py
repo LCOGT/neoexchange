@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
+from django.db import connection
 from django.db.utils import IntegrityError
 from numpy import array, arange
 from numpy.testing import assert_allclose
@@ -596,6 +597,10 @@ class TestWCSField(TestCase):
         self.assertEqual(instance_WCSField.editable, new_instance.editable)
         self.assertFalse(instance_WCSField.editable)
         self.assertFalse(new_instance.editable)
+
+    def test_db_parameters_respects_db_type(self):
+        f = WCSField()
+        self.assertEqual(f.db_parameters(connection)['type'], 'text')
 
 class TestSourceMeasurement(TestCase):
 

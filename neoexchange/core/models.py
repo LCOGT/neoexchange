@@ -309,6 +309,7 @@ class WCSField(models.Field):
 
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('editable', False)
+        kwargs['editable'] = False
         super(WCSField, self).__init__(*args, **kwargs)
 
     def deconstruct(self):
