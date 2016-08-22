@@ -378,11 +378,25 @@ class Frame(models.Model):
     nstars_in_fit  = models.FloatField('No. of stars used in astrometric fit', null=True, blank=True)
     time_uncertainty = models.FloatField('Time uncertainty (seconds)', null=True, blank=True)
     frameid     = models.IntegerField('Archive ID', null=True, blank=True)
-    x_size      = models.IntegerField('Size x pixels', null=True, blank=True)
-    y_size      = models.IntegerField('Size y pixels', null=True, blank=True)
     wcs         = WCSField('WCS info', blank=True, null=True, editable=False)
 
-    
+
+    def get_x_size(self):
+        x_size = None
+        try:
+            x_size = self.wcs._naxis1
+        except AttributeError:
+            pass
+        return x_size
+
+    def get_y_size(self):
+        y_size = None
+        try:
+            y_size = self.wcs._naxis2
+        except AttributeError:
+            pass
+        return y_size
+
     class Meta:
         verbose_name = _('Observed Frame')
         verbose_name_plural = _('Observed Frames')

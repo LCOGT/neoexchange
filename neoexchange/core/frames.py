@@ -139,8 +139,6 @@ def frame_params_from_header(params, block, frameid=None):
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
-                     'x_size'    : params.get('NAXIS1', None),
-                     'y_size'    : params.get('NAXIS2', None),
                      'frameid'   : frameid
                  }
     # Try and create a WCS object from the header. If successful, add to frame
