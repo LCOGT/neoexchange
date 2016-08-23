@@ -146,7 +146,6 @@ def frame_params_from_header(params, block, frameid=None):
     wcs = None
     try:
         wcs = WCS(params)
-        print wcs
         frame_params['wcs'] = wcs
     except ValueError:
         logger.warn("Error creating WCS entry from frameid=%s" % frameid)

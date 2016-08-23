@@ -274,7 +274,7 @@ def pickle_wcs(wcs_object):
     not use the inbuilt pickle/__reduce__ which loses needed information'''
     pickle_protocol = 2
 
-    if wcs_object is not None:
+    if wcs_object is not None and isinstance(wcs_object, WCS):
         wcs_header = wcs_object.to_header()
         # Add back missing NAXIS keywords, change back to CD matrix
         wcs_header.insert(0, ("NAXIS", 2, "number of array dimensions"))
