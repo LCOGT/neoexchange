@@ -13,7 +13,7 @@ pytz
 six==1.9.0
 wsgiref
 requests[security]
-selenium=>2.53,<3.0
+selenium>=2.53,<3.0
 reqdbclient==0.6.25
 rise-set
 pytest-django
