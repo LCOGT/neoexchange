@@ -11,13 +11,13 @@ class BlocksListValidationTest(FunctionalTest):
         # He sees a link to 'active blocks'
         link = self.browser.find_element_by_partial_link_text('active blocks')
         target_url = self.live_server_url + '/block/list/'
-        self.assertEqual(link.get_attribute('href'), target_url)
+        self.assertIn(link.get_attribute('href'), target_url)
 
         # He clicks the link to go to the blocks page
-        link.click()
-        self.browser.implicitly_wait(3)
+        with self.wait_for_page_load(timeout=10):
+            link.click()
         new_url = self.browser.current_url
-        self.assertEqual(str(new_url), target_url)
+        self.assertIn(str(new_url), target_url)
 
         # He notices the page title has the name of the site and the header
         # mentions current targets
@@ -42,23 +42,23 @@ class BlockDetailValidationTest(FunctionalTest):
         # He sees a link to 'active blocks'
         link = self.browser.find_element_by_partial_link_text('active blocks')
         target_url = self.live_server_url + '/block/list/'
-        self.assertEqual(link.get_attribute('href'), target_url)
+        self.assertIn(link.get_attribute('href'), target_url)
 
         # He clicks the link to go to the blocks page
-        link.click()
-        self.browser.implicitly_wait(3)
+        with self.wait_for_page_load(timeout=10):
+            link.click()
         new_url = self.browser.current_url
-        self.assertEqual(str(new_url), target_url)
+        self.assertIn(str(new_url), target_url)
 
         # He sees links that will go to a more detailed block view and goes
         # to the first Block.
         link = self.browser.find_element_by_link_text('1')
         block_url = self.live_server_url + reverse('block-view',kwargs={'pk':1})
-        self.assertEqual(link.get_attribute('href'), block_url)
+        self.assertIn(link.get_attribute('href'), block_url)
 
         # He clicks the link to go to the block details page
-        link.click()
-        self.browser.implicitly_wait(3)
+        with self.wait_for_page_load(timeout=10):
+            link.click()
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), block_url)
 
