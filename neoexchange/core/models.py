@@ -23,7 +23,6 @@ from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.ast_subs import normal_to_packed
 from astropy.time import Time
 from datetime import datetime
-import reversion
 
 OBJECT_TYPES = (
                 ('N','NEO'),
@@ -206,7 +205,6 @@ class Body(models.Model):
             and self.name != None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name,text)
-reversion.register(Body)
 
 
 class Block(models.Model):

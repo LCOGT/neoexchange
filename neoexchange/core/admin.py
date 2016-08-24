@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+Copyright (C) 2014-2016 LCOGT
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ from astrometrics.time_subs import degreestohms, degreestodms
 
 from reversion.admin import VersionAdmin
 
+@admin.register(Body)
 class BodyAdmin(VersionAdmin):
     fieldsets = (
         (None, {
@@ -38,6 +39,7 @@ class BodyAdmin(VersionAdmin):
     ordering = ('-ingest',)
 
 
+@admin.register(Block)
 class BlockAdmin(VersionAdmin):
     def format_block_start(self, obj):
         return obj.block_start.strftime('%Y-%m-%d %H:%M')
@@ -52,6 +54,7 @@ class BlockAdmin(VersionAdmin):
 
     ordering = ('-block_start',)
 
+@admin.register(Frame)
 class FrameAdmin(VersionAdmin):
     def format_midpoint(self, obj):
         return obj.midpoint.strftime('%Y-%m-%d %H:%M:%S')
@@ -108,9 +111,6 @@ class SourceMeasurementAdmin(admin.ModelAdmin):
     search_fields = ('body__name', 'body__provisional_name')
 
 
-admin.site.register(Body,BodyAdmin)
-admin.site.register(Frame,FrameAdmin)
-admin.site.register(Block,BlockAdmin)
 admin.site.register(Proposal,ProposalAdmin)
 admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
