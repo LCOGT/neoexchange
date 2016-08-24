@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from core.models import Block, Frame
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from core.urlsubs import get_lcogt_headers
+from core.archive_subs import archive_login
 import logging
 
 logger = logging.getLogger('core')
@@ -37,6 +38,8 @@ def lcogt_api_call(auth_header, url):
     try:
         resp = requests.get(url, headers=auth_header, timeout=20)
         data = resp.json()
+    except requests.exceptions.InvalidSchema, err:
+        logger.error("Request call to %s failed with: %s" % (url, err))
     except ValueError, err:
         logger.error("Request %s API did not return JSON: %s" % (url, resp.status_code))
     except requests.exceptions.Timeout:
