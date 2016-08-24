@@ -24,6 +24,8 @@ from re import sub
 from math import degrees
 from datetime import datetime, timedelta
 from socket import error
+from random import randint
+from time import sleep
 
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
@@ -55,6 +57,24 @@ def download_file(url, file_to_save):
             else:
                 print "HTTP Error: %s" % (e.code,)
 
+def random_delay(lower_limit=10, upper_limit=20):
+    '''Waits a random number of integer seconds between [lower_limit; default 10]
+    and [upper_limit; default 20]. Useful for slowing down web requests to prevent
+    overloading remote systems. The executed delay is returned.'''
+
+    try:
+        lower_limit = max(int(lower_limit), 0)
+    except ValueError:
+        lower_limit = 10
+    try:
+        upper_limit = int(upper_limit)
+    except ValueError:
+        upper_limit = 20
+
+    delay = randint(lower_limit, upper_limit)
+    sleep(delay)
+
+    return delay
 
 def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
     '''Fetches the specified URL from <url> and parses it using BeautifulSoup.
