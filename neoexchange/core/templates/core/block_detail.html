@@ -3,6 +3,21 @@
 
 {% block header %}Block details{% endblock %}
 
+{% block script-content %}
+<script src="{% static "core/js/astrometer.js" %}"  type="text/javascript" ></script>
+<script type="text/javascript">
+$(document).ready(function(){
+
+var frames = {{images|safe}};
+
+loadThumbnails(frames);
+
+});
+
+</script>
+
+{% endblock %}
+
 {% block bodyclass %}page{% endblock %}
 
 {% block extramenu %}
@@ -77,10 +92,8 @@
                 <div class="four columns">
                     <h5 class="section-title">Actions</h5>
                         {% if request.user.is_authenticated %}
-                          {% if not object.reported and object.num_observed > 0 %}
-{% comment "Needs astrometry branch merging" %}
+                          {% if object.num_observed > 0 %}
                             <a class="button button-primary" href="{% url 'block-ast' object.id %}">Astrometer</a><br/>
-{% endcomment %}
                             <a class="button button-primary" href="{% url 'report-block' object.id %}">Report</a><br/>
                           {% elif object.reported %}
                             <a class="button button-primary" href="{% url 'view-report' object.id %}">View report in MPC format</a><br/>
@@ -91,12 +104,9 @@
                         {% else %}
                         <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
                         {% endif %}
-                    {% if images and request.user.is_authenticated %}
+                    {% if request.user.is_authenticated %}
                     <h5 class="section-title">Observations</h5>
                         <ul class="observations">
-                        {% for img in images %}
-                        <li class="thumb"><a href="http://lcogt.net/observations/identity/?origname={{img.1}}.fits"><img src="http://data.lcogt.net/thumbnail/{{img.1}}/?width=150&height=150&gamma=2.5&label=0"></a></li>
-                        {% endfor %}
                         </ul>
                     {% endif %}
                 </div>

@@ -42,8 +42,8 @@ table.datatable  tr:hover {
 
 .keyvalue-table>tbody>tr>td {
   vertical-align: middle;
-  padding-top: 5px;
-  padding-bottom: 5px;
+  padding-top: 11px;
+  padding-bottom: 11px;
   border-top: none;
   border-bottom: 1px solid #ddd;
 }
@@ -305,6 +305,24 @@ li.dropdown-menu:after {
   background: #314657;
 }
 
+.content-container {
+  display:table-row;
+}
+
+.home-button{
+  display:table-cell;
+  padding-left:10px;
+  }
+
+#moon, #moonphase {
+  display:table-cell;
+}
+
+.home-button svg {
+  height:75px;
+  width:75px;
+}
+
 .highlightbox {
   min-height: 20px;
   padding: 19px;
@@ -391,11 +409,16 @@ form.filter_form input { color: black; }
     width: 100%;
     z-index: 100;
 }
-
+.extramenu_padder {
+margin: 12px 32px 12px 32px;
+box-sizing: border-box;
+-moz-box-sizing: border-box;
+-webkit-box-sizing: border-box;
+}
 .buttons .button { margin-left:0.5em; margin-right: 0px; display: inline-block; }
 .buttons .button:first-child { margin-left:0em; }
 #extramenu .buttons { float: right; display: inline-block; }
-#extramenu .headingleft { display: inline-block; margin: 8px 0 0 ; }
+#extramenu .headingleft { display: inline-block; }
 a#menutoggle { display: none; }
 .buttons .buttongroup { display: inline-block; }
 body.view .button.disable { display: none; }
@@ -1003,3 +1026,6 @@ ul.block-status li { padding: 8px 0; border-top: 1px solid white; list-style: no
 	#gui .request_options .remove { padding: 4px; }
 	.yes, .no { margin-top: 4px; }
 }
+
+.moon { fill:#D6D5C0; }
+.moonback { fill:black;stroke:#fff;stroke-width:1px; }

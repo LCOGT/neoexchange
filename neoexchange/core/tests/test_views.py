@@ -26,8 +26,8 @@ from mock import patch
 from astropy.io import fits
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
-    mock_check_request_status_null, mock_check_for_2_images, mock_check_for_images_millisecs, \
-    mock_check_for_images_bad_date, mock_ingest_frames
+    mock_check_request_status_null, mock_check_for_images_no_millisecs, \
+    mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
@@ -37,7 +37,10 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     create_source_measurement, block_status, clean_crossid, create_frame, \
     frame_params_from_block, schedule_check, summarise_block_efficiency, \
     check_catalog_and_refit, store_detections
+from core.frames import block_status
+
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
+
 from core.forms import EphemQuery
 
 
@@ -243,6 +246,34 @@ class TestClean_NEOCP_Object(TestCase):
         self.assertEqual('L', body.origin)
         self.assertEqual('D', body.source_type)
 
+    @patch('core.views.datetime', MockDateTime)
+    def test_should_be_comets(self):
+
+        MockDateTime.change_datetime(2016, 8, 1, 23, 00, 00)
+
+        obs_page = [u'P10vY9r 11.8  0.15  K167B 359.98102  162.77868  299.00048  105.84058  0.9976479  0.00002573 1136.349844                 66   1   35 days 0.42         NEOCPNomin',
+                   ]
+
+        expected_elements = { 'abs_mag'     : 11.8,
+                              'slope'       : 4.0,
+                              'epochofel'   : datetime(2016, 7, 11, 0, 0, 0),
+                              'argofperih'  : 162.77868,
+                              'longascnode' : 299.00048,
+                              'orbinc'      : 105.84058,
+                              'eccentricity':  0.9976479,
+                              'epochofperih': datetime(2018, 7, 18, 16, 0, 8, 802657),
+                              'perihdist'   : 1136.349844 * (1.0 - 0.9976479),
+                              'meananom'    : None,
+                             # 'MDM':   0.36954350,
+                              'elements_type': 'MPC_COMET',
+                              'origin'      : 'M',
+                              'source_type' : 'C',
+                              'active'      : True,
+                              'arc_length'  : 35.0,
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
 
 class TestCheck_for_block(TestCase):
 
@@ -479,51 +510,51 @@ class TestCheck_for_block(TestCase):
 
         self.assertEqual(expected_state, block_state)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_active(self):
         resp = block_status(1)
         self.assertTrue(resp)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_2_images)
-    def test_block_update_active(self):
-        resp = block_status(1)
-        self.assertFalse(resp)
-
     @skipIf(True, "Edward needs to fix...")
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_not_active(self):
         resp = block_status(2)
         self.assertFalse(resp)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
     @patch('core.views.ingest_frames', mock_ingest_frames)
+    @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_check_status_change(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
         myblock = Block.objects.get(id=blockid)
         self.assertFalse(myblock.active)
 
-    @patch('core.views.check_request_status', mock_check_request_status_null)
-    @patch('core.views.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_request_status', mock_check_request_status_null)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_check_no_obs(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
         self.assertFalse(resp)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images_millisecs)
-    @patch('core.views.ingest_frames', mock_ingest_frames)
-    def test_block_update_millisecs(self):
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.ingest_frames', mock_ingest_frames)
+    @patch('core.frames.lcogt_api_call', mock_check_for_images_no_millisecs)
+    def test_block_update_no_millisecs(self):
         blockid = self.test_block5.id
         resp = block_status(blockid)
         self.assertTrue(resp)
 
-    @patch('core.views.check_request_status', mock_check_request_status)
-    @patch('core.views.check_for_images', mock_check_for_images_bad_date)
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.lcogt_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
         blockid = self.test_block5.id
         resp = block_status(blockid)
@@ -1366,16 +1397,16 @@ class TestFrames(TestCase):
 
     def test_ingest_frames_block(self):
         params = {
-                    'date_obs': "2015-04-20 21:41:05",
-                    'siteid': 'cpt',
-                    'encid': 'doma',
-                    'telid': '1m0a',
-                    'filter_name': 'R',
-                    'instrume': "kb70",
-                    'origname': "cpt1m010-kb70-20150420-0001-e00.fits",
-                    'exptime': '30',
-                    'groupid': 'tmp'
-                 }
+                        "DATE_OBS": "2016-06-01T09:43:28.067",
+                        "ENCID": "doma",
+                        "SITEID":"cpt",
+                        "TELID":"1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00.fits",
+                        "EXPTIME" : "30",
+                        "GROUPID"   : "TEMP"
+                }
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
         self.assertEqual(1,frames.count())
@@ -1895,7 +1926,7 @@ class TestCheckCatalogAndRefit(TestCase):
 
     def test_bad_catalog_name(self):
 
-        expected_status = -1
+        expected_status = (-1, 0)
 
         status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_catalog)
 
@@ -1903,7 +1934,7 @@ class TestCheckCatalogAndRefit(TestCase):
 
     def test_no_matching_image(self):
 
-        expected_status = -1
+        expected_status = (-1, 0)
 
         # Symlink catalog to temp dir with valid name
         temp_test_catalog = os.path.join(self.temp_dir, 'oracdr_test_e08_cat.fits')
@@ -1928,6 +1959,130 @@ class TestCheckCatalogAndRefit(TestCase):
 
         self.assertEqual(expected_file, status)
         self.assertTrue(os.path.exists(expected_file))
+
+
+class TestUpdate_Crossids(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'LM05OFG',
+                    'abs_mag'       : 24.7,
+                    'slope'         : 0.15,
+                    'epochofel'     : datetime(2016,07,31,00,00,00),
+                    'meananom'      :   8.5187,
+                    'argofperih'    : 227.23234,
+                    'longascnode'   :  57.83134,
+                    'orbinc'        : 5.40829,
+                    'eccentricity'  : 0.6914565,
+                    'meandist'      : 2.8126642,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'G',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_goldstone_is_not_overridden(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('G', body.origin)
+        self.assertEqual('2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_arecibo_comet_is_not_overridden(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'C/2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        self.body.source_type = u'C'
+        self.body.origin = u'A'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('A', body.origin)
+        self.assertEqual('C/2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_jointradar_neo_is_not_overridden(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        self.body.origin = u'R'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('R', body.origin)
+        self.assertEqual('2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_old_mpc_neo_is_overridden(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 13, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        self.body.origin = u'M'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_new_mpc_neo_is_not_overridden(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2016, 5, 11, 10, 40, 0)
+
+        crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
+
+        self.body.origin = u'M'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('2016 JD18', body.name)
         self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
 
 class TestStoreDetections(TestCase):
