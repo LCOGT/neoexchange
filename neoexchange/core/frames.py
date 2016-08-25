@@ -1,5 +1,6 @@
 import requests
 from datetime import datetime
+from math import ceil
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -39,6 +40,7 @@ def lcogt_api_call(auth_header, url):
         resp = requests.get(url, headers=auth_header, timeout=20)
         data = resp.json()
     except requests.exceptions.InvalidSchema, err:
+        data = None
         logger.error("Request call to %s failed with: %s" % (url, err))
     except ValueError, err:
         logger.error("Request %s API did not return JSON: %s" % (url, resp.status_code))
@@ -136,8 +138,11 @@ def frame_params_from_log(params, block):
 def ingest_frames(images, block):
     archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     for image in images:
-        image_header = lcogt_api_call(archive_headers, image)
-        frame = create_frame(image_header['data'], block)
+        image_header = lcogt_api_call(archive_headers, image.get('headers', None))
+        if image_header:
+            frame = create_frame(image_header['data'], block)
+        else:
+            logger.error("Could not obtain header for %s" % image)
     logger.debug("Ingested %s frames" % len(images))
     return
 
@@ -173,7 +178,11 @@ def block_status(block_id):
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
-                last_image_header = lcogt_api_call(archive_headers, images[0])
+                last_image_dict = images[0]
+                last_image_header = lcogt_api_call(archive_headers, last_image_dict.get('headers', None))
+                if last_image_header == None:
+                    logger.error('Image header was not returned for %s' % last_image_dict)
+                    return False
                 try:
                     last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19],'%Y-%m-%dT%H:%M:%S')
                 except ValueError:
@@ -183,7 +192,11 @@ def block_status(block_id):
                     block.when_observed = last_image
                 if block.block_end < datetime.utcnow():
                     block.active = False
-                block.num_observed = exposure_count
+#                block.num_observed = exposure_count
+                # This is not correct either but better than it is currently working
+                # which is just setting # of times the block has been observed to the
+                # number of exposures in the block... XXX to fix
+                block.num_observed = int( ceil( len(images) / float(exposure_count) ) )
                 block.save()
                 status = True
                 logger.debug("Block %s updated" % block)
