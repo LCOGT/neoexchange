@@ -1058,19 +1058,21 @@ def create_source_measurement(obs_lines, block=None):
 
     return measures
 
-def frame_params_from_block(params, block):
-    # In these cases we are parsing the FITS header
-    sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
-    frame_params = { 'midpoint' : params.get('date_obs', None),
-                     'sitecode' : sitecode,
-                     'filter'   : params.get('filter_name', "B"),
-                     'frametype': Frame.SINGLE_FRAMETYPE,
-                     'block'    : block,
-                     'instrument': params.get('instrume', None),
-                     'filename'  : params.get('origname', None),
-                     'exptime'   : params.get('exptime', None),
-                 }
-    return frame_params
+def determine_original_name(fits_file):
+    '''Determines the ORIGNAME for the FITS file <fits_file>.
+    This is pretty disgusting and a sign we are probably doing something wrong
+    and should store the true filename but at least it's contained to one place
+    now...'''
+    fits_file_orig = fits_file
+    if 'e90.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
+    elif 'e10.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+    elif 'e91.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
+    elif 'e11.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
+    return fits_file_orig
 
 def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     '''Checks the astrometric fit status of <catfile> and performs a source
@@ -1081,8 +1083,8 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     num_new_frames_created = 0
 
     # Open catalog, get header and check fit status
-    fits_header, junk_table = open_fits_catalog(catfile, header_only=True)
-    header = get_catalog_header(fits_header, 'LCOGT')
+    fits_header, junk_table, cattype = open_fits_catalog(catfile, header_only=True)
+    header = get_catalog_header(fits_header, cattype)
     if header != {}:
         logger.debug("astrometric fit status=%d" %  header['astrometric_fit_status'])
         fits_file = determine_filenames(catfile)
@@ -1116,10 +1118,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     #if a Frame does not exist for the fits file with a non-null block
                     #create one with the fits filename
                     if len(Frame.objects.filter(filename=os.path.basename(fits_file_output), block__isnull=False)) < 1:
-                        if 'e90.fits' in os.path.basename(fits_file):
-                            fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
-                        elif 'e10.fits' in os.path.basename(fits_file):
-                            fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+                        fits_file_orig = determine_original_name(fits_file)
                         try:
                             frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
                         except Frame.MultipleObjectsReturned:
@@ -1137,8 +1136,8 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                                             'exptime':header['exptime'],
                                             'midpoint':header['obs_midpoint'],
                                             'block':frame.block,
-                                            'zeropoint':header['zeropoint'],
-                                            'zeropoint_err':header['zeropoint_err'],
+                                            'zeropoint':header.get('zeropoint', -99),
+                                            'zeropoint_err':header.get('zeropoint_err', -99),
                                             'fwhm':header['fwhm'],
                                             'frametype':Frame.SINGLE_FRAMETYPE,
                                             'rms_of_fit':header['astrometric_fit_rms'],
@@ -1158,15 +1157,46 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                     new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
                     logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
                     os.rename(fits_ldac_catalog_path, new_ldac_catalog)
+                else:
+                    logger.error("Execution of SCAMP failed")
+                    return -4, 0
+            else:
+                logger.error("Execution of SExtractor failed")
+                return -4, 0
         else:
+            # Astrometric fit was good
+            if cattype == 'BANZAI':
+                # Need to re-extract catalog
+                fits_file = os.path.join(os.path.dirname(catfile), fits_file)
+                if os.path.exists(fits_file) == False or os.path.isfile(fits_file) == False:
+                    logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
+                    return -1, num_new_frames_created
+                fits_file_for_sext = fits_file + "[SCI]"
+                logger.debug("Running SExtractor on BANZAI file: %s" % fits_file_for_sext)
+                sext_status = run_sextractor(configs_dir, dest_dir, fits_file_for_sext, catalog_type='FITS_LDAC')
+                if sext_status == 0:
+                    fits_ldac_catalog ='test_ldac.fits'
+                    fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
+                    fits_file_output = os.path.basename(fits_file)
+                    fits_file_output = os.path.join(dest_dir, fits_file_output)
+
+                    # Rename catalog to permanent name
+                    new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
+                    logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
+                    os.rename(fits_ldac_catalog_path, new_ldac_catalog)
+
+                else:
+                    logger.error("Execution of SExtractor failed")
+                    return -4, 0
+            else:
+                logger.info("Catalog %s already has good WCS fit status" % catfile)
+                return 0, num_new_frames_created
+
             #if a Frame does not exist for the fits file with a non-null block
             #create one with the fits filename
             if len(Frame.objects.filter(filename=os.path.basename(fits_file), block__isnull=False)) < 1:
                 #create a new Frame even if WCS fit is good in order to have the real fits filename in the Frame
-                if 'e90.fits' in os.path.basename(fits_file):
-                    fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
-                elif 'e10.fits' in os.path.basename(fits_file):
-                    fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+                fits_file_orig = determine_original_name(fits_file)
                 try:
                     frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
                 except Frame.MultipleObjectsReturned:
@@ -1195,8 +1225,6 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                 frame, created = Frame.objects.get_or_create(**frame_params)
                 if created == True:
                     num_new_frames_created += 1
-            logger.info("Catalog %s already has good WCS fit status" % catfile)
-            return 0, num_new_frames_created
     else:
         logger.error("Could not check catalog %s" % catfile)
         return -2, num_new_frames_created

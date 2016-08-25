@@ -312,6 +312,29 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
+    def test_get_cat_ra_dec_empty_rmag_column_UCAC4(self):
+
+        expected_ra_last_source = 306.66333600
+
+        expected_dec_last_source = -26.750156
+
+        expected_rmag_last_source = 14.7
+
+        expected_len_cat_table = 52
+
+        cat_table, cat_name = get_vizier_catalog_table(306.6792, -26.6278, "15m", "15m")
+
+        ra_last_source = cat_table['_RAJ2000'][-1]
+
+        dec_last_source = cat_table['_DEJ2000'][-1]
+
+        rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
+
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
+        self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
     def test_cross_match_UCAC4_longerThan_testFITS(self):
         #test with cat 1 as longer UCAC4 table values and cat 2 as shorter test FITS table values
 
@@ -915,13 +938,13 @@ class ZeropointUnitTest(TestCase):
     def test_get_zeropoint(self):
         #test zeropoint calculation
 
-        expected_avg_zeropoint = 0.7785
+        expected_avg_zeropoint = 0.8520
 
-        expected_std_zeropoint = 0.077074639149
+        expected_std_zeropoint = 0.1745
 
-        expected_count = 2
+        expected_count = 3
 
-        expected_num_in_calc = 2
+        expected_num_in_calc = 3
 
         cross_match_table_data = [(299.510143, 299.510127, 1.6000e-05, 34.960303, 34.960327, 2.4000e-05, 14.4499998093, 15.5469999313, 0.05, 1.097000),
                                   (299.860871, 299.860889, 1.8000e-05, 35.381474, 35.381485, 1.1000e-05, 14.0799999237, 14.9130001068, 0.03, 0.833000),
@@ -929,7 +952,7 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
-        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
+        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.2)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
@@ -960,7 +983,7 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
-        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
+        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.1)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
@@ -970,9 +993,9 @@ class ZeropointUnitTest(TestCase):
     def test_get_zeropoint_inconclusive_value(self):
         #test zeropoint calculation
 
-        expected_avg_zeropoint = 4.47955
+        expected_avg_zeropoint = 40.0
 
-        expected_std_zeropoint = 0.716794144089
+        expected_std_zeropoint = 10.0
 
         expected_count = 0
 
@@ -984,7 +1007,7 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
-        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table)
+        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.1)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 4)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 4)
@@ -1050,7 +1073,7 @@ class ZeropointUnitTest(TestCase):
 
         catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, "PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
@@ -1096,7 +1119,7 @@ class ZeropointUnitTest(TestCase):
 
         catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, "PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
@@ -1129,6 +1152,20 @@ class FITSUnitTest(TestCase):
         self.test_ldactable = hdulist[2].data
         hdulist.close()
         self.ldac_table_firstitem = self.test_ldactable[0:1]
+
+        self.test_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits.fz')
+        hdulist = fits.open(self.test_banzaifilename)
+        self.test_banzaiheader = hdulist['SCI'].header
+        self.test_banzaitable = hdulist['CAT'].data
+        hdulist.close()
+        self.banzai_table_firstitem = self.test_banzaitable[0:1]
+
+        self.test_uncomp_banzaifilename = os.path.join('photometrics', 'tests', 'banzai_test_frame.fits')
+        hdulist = fits.open(self.test_uncomp_banzaifilename)
+        self.test_uncomp_banzaiheader = hdulist['SCI'].header
+        self.test_uncomp_banzaitable = hdulist['CAT'].data
+        hdulist.close()
+        self.uncomp_banzai_table_firstitem = self.test_banzaitable[0:1]
 
         column_types = [('ccd_x', '>f4'), 
                         ('ccd_y', '>f4'), 
@@ -1165,34 +1202,40 @@ class OpenFITSCatalog(FITSUnitTest):
     def test_catalog_does_not_exist(self):
         expected_hdr = {}
         expected_tbl = {}
+        expected_cattype = None
 
-        hdr, tbl = open_fits_catalog('wibble')
+        hdr, tbl, cattype = open_fits_catalog('wibble')
 
         self.assertEqual(expected_hdr, hdr)
         self.assertEqual(expected_tbl, tbl)
+        self.assertEqual(expected_cattype, cattype)
 
     def test_catalog_is_not_FITS(self):
         expected_hdr = {}
         expected_tbl = {}
+        expected_cattype = None
 
-        hdr, tbl = open_fits_catalog(os.path.join('photometrics', 'tests', '__init__.py'))
+        hdr, tbl, cattype = open_fits_catalog(os.path.join('photometrics', 'tests', '__init__.py'))
 
         self.assertEqual(expected_hdr, hdr)
         self.assertEqual(expected_tbl, tbl)
+        self.assertEqual(expected_cattype, cattype)
 
     def test_catalog_read_length(self):
         expected_hdr_len = len(self.test_header)
         expected_tbl_len = len(self.test_table)
+        expected_cattype = 'LCOGT'
 
-        hdr, tbl = open_fits_catalog(self.test_filename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_filename)
 
         self.assertEqual(expected_hdr_len, len(hdr))
         self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
 
     def test_catalog_read_hdr_keyword(self):
         expected_hdr_value = self.test_header['INSTRUME']
 
-        hdr, tbl = open_fits_catalog(self.test_filename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_filename)
 
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
@@ -1200,7 +1243,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_tbl_value = 'X_IMAGE'
         expected_tbl_units = 'pixel'
 
-        hdr, tbl = open_fits_catalog(self.test_filename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_filename)
 
         self.assertEqual(expected_tbl_value, tbl.columns[1].name)
         self.assertEqual(expected_tbl_units, tbl.columns[1].unit)
@@ -1210,7 +1253,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_x = 1067.9471
         expected_y = 1973.7445
 
-        hdr, tbl = open_fits_catalog(self.test_filename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_filename)
 
         self.assertAlmostEqual(expected_x, tbl[-1]['X_IMAGE'], 4)
         self.assertAlmostEqual(expected_y, tbl[-1]['Y_IMAGE'], 4)
@@ -1218,24 +1261,27 @@ class OpenFITSCatalog(FITSUnitTest):
     def test_ldac_read_catalog(self):
         unexpected_value = {}
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
         self.assertNotEqual(unexpected_value, hdr)
         self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
 
     def test_ldac_catalog_read_length(self):
         expected_hdr_len = 352
         expected_tbl_len = len(self.test_ldactable)
+        expected_cattype = 'FITS_LDAC'
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         self.assertEqual(expected_hdr_len, len(hdr))
         self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
 
     def test_ldac_catalog_header(self):
         outpath = os.path.join("photometrics", "tests")
         expected_header = fits.Header.fromfile(os.path.join(outpath,"test_header"), sep='\n', endcard=False, padding=False)
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         for key in expected_header:
             self.assertEqual(expected_header[key], hdr[key], \
@@ -1244,7 +1290,7 @@ class OpenFITSCatalog(FITSUnitTest):
     def test_ldac_catalog_read_hdr_keyword(self):
         expected_hdr_value = 'kb76'
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
@@ -1252,7 +1298,7 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_tbl_value = 'XWIN_IMAGE'
         expected_tbl_units = 'pixel'
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         self.assertEqual(expected_tbl_value, tbl.columns[1].name)
         self.assertEqual(expected_tbl_units, tbl.columns[1].unit)
@@ -1262,10 +1308,100 @@ class OpenFITSCatalog(FITSUnitTest):
         expected_x = 1758.0389801526617
         expected_y = 2024.9652134253395
 
-        hdr, tbl = open_fits_catalog(self.test_ldacfilename)
+        hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN_IMAGE'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN_IMAGE'], self.precision)
+
+    def test_banzai_read_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
+
+    def test_banzai_catalog_read_length(self):
+        expected_hdr_len = 278-23 # Total-compression keywords
+        expected_tbl_len = len(self.test_banzaitable)
+        expected_cattype = 'BANZAI'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
+
+    def test_banzai_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'kb76'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+
+    def test_catalog_read_tbl_column(self):
+        expected_tbl_value = 'XWIN'
+#        expected_tbl_units = 'pixel'   # No units in the new table (yet?)
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertEqual(expected_tbl_value, tbl.columns[2].name)
+#        self.assertEqual(expected_tbl_units, tbl.columns[2].unit)
+
+    def test_banzai_catalog_read_xy(self):
+        # X,Y CCD Co-ordinates of the last detection
+        expected_x = 1990.0072393055439
+        expected_y = 1219.86182435688
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_banzaifilename)
+
+        self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
+        self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
+
+    def test_uncomp_banzai_read_catalog(self):
+        unexpected_value = {}
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+        self.assertNotEqual(unexpected_value, hdr)
+        self.assertNotEqual(unexpected_value, tbl)
+        self.assertNotEqual(unexpected_value, cattype)
+
+    def test_uncomp_banzai_catalog_read_length(self):
+        expected_hdr_len = 251
+        expected_tbl_len = len(self.test_uncomp_banzaitable)
+        expected_cattype = 'BANZAI'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+
+        self.assertEqual(expected_hdr_len, len(hdr))
+        self.assertEqual(expected_tbl_len, len(tbl))
+        self.assertEqual(expected_cattype, cattype)
+
+    def test_uncomp_banzai_catalog_read_hdr_keyword(self):
+        expected_hdr_value = 'kb76'
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+
+        self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
+
+    def test_uncomp_banzai_catalog_read_tbl_column(self):
+        expected_tbl_value = 'XWIN'
+#        expected_tbl_units = 'pixel'   # No units in the new table (yet?)
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+
+        self.assertEqual(expected_tbl_value, tbl.columns[2].name)
+#        self.assertEqual(expected_tbl_units, tbl.columns[2].unit)
+
+    def test_uncomp_banzai_catalog_read_xy(self):
+        # X,Y CCD Co-ordinates of the last detection
+        expected_x = 1990.0072393055439
+        expected_y = 1219.86182435688
+
+        hdr, tbl, cattype = open_fits_catalog(self.test_uncomp_banzaifilename)
+
+        self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
+        self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
 
 class Test_Convert_Values(FITSUnitTest):
 
@@ -1410,7 +1546,7 @@ class FITSReadHeader(FITSUnitTest):
                             'saturation'    : self.test_header['SATURATE'],
                           }
 
-        header, table = open_fits_catalog(self.test_filename)
+        header, table, cattype = open_fits_catalog(self.test_filename)
         frame_header = get_catalog_header(header)
 
         self.assertEqual(expected_params, frame_header)
@@ -1438,9 +1574,42 @@ class FITSReadHeader(FITSUnitTest):
                             'astrometric_fit_nstars' : 22,
                             'astrometric_catalog'    : 'UCAC4',
                           }
+        expected_cattype = "FITS_LDAC"
 
-        header, table = open_fits_catalog(self.test_ldacfilename)
+        header, table, cattype = open_fits_catalog(self.test_ldacfilename)
+        self.assertEqual(expected_cattype, cattype)
         frame_header = get_catalog_header(header, "FITS_LDAC")
+
+        self.assertEqual(expected_params, frame_header)
+
+    def test_banzai_header(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        frame_header = get_catalog_header(header, "BANZAI")
 
         self.assertEqual(expected_params, frame_header)
 
@@ -1680,8 +1849,8 @@ class FITSReadCatalog(FITSUnitTest):
                                  })
 
 
-        header, table = open_fits_catalog(self.test_ldacfilename)
-        header_items = get_catalog_header(header, "FITS_LDAC")
+        header, table, cattype = open_fits_catalog(self.test_ldacfilename)
+        header_items = get_catalog_header(header, cattype)
         catalog_items = get_catalog_items(header_items, self.ldac_table_firstitem, "FITS_LDAC")
 
 
@@ -1744,6 +1913,14 @@ class TestDetermineFilenames(TestCase):
 
     def test_catalog_to_image(self):
 
+        expected_product = 'cpt1m013-kb76-20160222-0110-e90.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e90_cat.fits')
+
+        self.assertEqual(expected_product, filename)
+
+    def test_ql_catalog_to_image(self):
+
         expected_product = 'cpt1m013-kb76-20160222-0110-e10.fits'
 
         filename = determine_filenames('cpt1m013-kb76-20160222-0110-e10_cat.fits')
@@ -1767,6 +1944,14 @@ class TestDetermineFilenames(TestCase):
 
         self.assertEqual(expected_product, filename)
 
+    def test_ql_image_to_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e10_cat.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e10.fits')
+
+        self.assertEqual(expected_product, filename)
+
     def test_catalog_wrong_format(self):
 
         expected_product = None
@@ -1775,6 +1960,21 @@ class TestDetermineFilenames(TestCase):
 
         self.assertEqual(expected_product, filename)
 
+    def test_banzai_image_to_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e91.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e91.fits')
+
+        self.assertEqual(expected_product, filename)
+
+    def test_banzai_ql_image_to_catalog(self):
+
+        expected_product = 'cpt1m013-kb76-20160222-0110-e11.fits'
+
+        filename = determine_filenames('cpt1m013-kb76-20160222-0110-e11.fits')
+
+        self.assertEqual(expected_product, filename)
 
 class TestIncrementRedLevel(TestCase):
 
@@ -2075,8 +2275,9 @@ class MakeSEXTFileTest(FITSUnitTest):
                          }
 
         cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
+        catalog_type = 'FITS_LDAC'
 
-        sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename)
+        sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename, catalog_type)
 
         self.assertEqual(sext_dict_list[0]['number'], test_dict_first['number'])
         self.assertAlmostEqual(sext_dict_list[0]['obs_x'], test_dict_first['obs_x'], 3)
@@ -2156,8 +2357,9 @@ class TestMakeSEXTFile(ExternalCodeUnitTest):
         expected_second_line = '        98      6.019   1641.004  19.9684  -84.8       1.005      0.58   0  4.16         1273.2     0 218.25739   9.68169'
 
         cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
+        catalog_type = 'FITS_LDAC'
 
-        fits_filename = make_sext_file(self.test_dir, cat_ldacfilename)
+        fits_filename = make_sext_file(self.test_dir, cat_ldacfilename, catalog_type)
 
         sext_file = os.path.join(self.test_dir, fits_filename.replace('.fits', '.sext'))
         self.assertTrue(os.path.exists(sext_file))

@@ -236,10 +236,17 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
     # header keyword of L1FILTER and set the value to FILTER. This prevents
     # SCAMP false matching on the first FITS keyword starting with FILTER
     if catalog_type == 'FITS_LDAC':
-        add_l1filter(fits_file)
+        root_fits_file = fits_file
+        if '[SCI]' in fits_file:
+            # Banzai format, strip off extension
+            root_fits_file = fits_file.replace('[SCI]', '')
+        add_l1filter(root_fits_file)
 
     sextractor_config_file = default_sextractor_config_files(catalog_type)[0]
-    options = determine_sext_options(fits_file)
+    if '[SCI]' in fits_file:
+        options = determine_sext_options(root_fits_file)
+    else:
+        options = determine_sext_options(fits_file)
     cmdline = "%s %s -c %s %s" % ( binary, fits_file, sextractor_config_file, options )
     cmdline = cmdline.rstrip()
 
@@ -297,7 +304,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     return retcode_or_cmdline
 
 @timeit
-def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file, pa_rate_dict, binary=None, catalog_type='ASCII', dbg=False):
+def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file, pa_rate_dict, catfile_type, binary=None, catalog_type='ASCII', dbg=False):
     '''Run MTDLINK (using either the binary specified by [binary] or by
     looking for 'mtdlink' in the PATH) on the passed <fits_files> with the results
     and any temporary files created in <dest_dir>. <source_dir> is the path
@@ -323,11 +330,12 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
         fits_file = os.path.basename(f)
         if fits_file != f:
             fits_file = os.path.join(dest_dir, fits_file)
-            # If the file exists and is a link (or a broken link), then remove it
-            if os.path.lexists(fits_file) and os.path.islink(fits_file):
-                os.unlink(fits_file)
-            if not os.path.exists(fits_file):
-                os.symlink(f, fits_file)
+            if not 'BANZAI' in catfile_type:
+                # If the file exists and is a link (or a broken link), then remove it
+                if os.path.lexists(fits_file) and os.path.islink(fits_file):
+                    os.unlink(fits_file)
+                if not os.path.exists(fits_file):
+                    os.symlink(f, fits_file)
         symlink_fits_files.append(fits_file)
 
     linked_fits_files = ' '.join(symlink_fits_files)

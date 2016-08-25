@@ -7,7 +7,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 
 from core.views import check_catalog_and_refit, store_detections
-from photometrics.catalog_subs import store_catalog_sources, make_sext_file
+from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 #from core.models import CatalogSources
 
@@ -19,10 +19,10 @@ class Command(BaseCommand):
         parser.add_argument('datadir', help='Path to the data to ingest')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary dir')
         parser.add_argument('--temp-dir', dest='temp_dir', action="store", help='Name of the temporary directory to use')
-        parser.add_argument('--pa', action="store", help='Target angle of motion')
-        parser.add_argument('--deltapa', action="store", help='Target angle of motion range')
-        parser.add_argument('--minrate', action="store", help='Target minimum rate of motion (arcsec/min)')
-        parser.add_argument('--maxrate', action="store", help='Target maximum rate of motion (arcsec/min)')
+        parser.add_argument('pa', action="store", help='Target angle of motion')
+        parser.add_argument('deltapa', action="store", help='Target angle of motion range')
+        parser.add_argument('minrate', action="store", help='Target minimum rate of motion (arcsec/min)')
+        parser.add_argument('maxrate', action="store", help='Target maximum rate of motion (arcsec/min)')
 
     def determine_images_and_catalogs(self, datadir, output=True):
 
@@ -31,6 +31,12 @@ class Command(BaseCommand):
         if os.path.exists(datadir) and os.path.isdir(datadir):
             fits_files = sorted(glob(datadir + '*e??.fits'))
             fits_catalogs = sorted(glob(datadir + '*e??_cat.fits'))
+            banzai_files = sorted(glob(datadir + '*e91.fits*'))
+            banzai_ql_files = sorted(glob(datadir + '*e11.fits*'))
+            if len(banzai_files) > 0:
+                fits_files = fits_catalogs = banzai_files
+            elif len(banzai_ql_files) > 0:
+                fits_files = fits_catalogs = banzai_ql_files
             if len(fits_files) == 0 and len(fits_catalogs) == 0:
                 self.stdout.write("No FITS files and catalogs found in directory %s" % datadir)
                 fits_files, fits_catalogs = None, None
@@ -43,9 +49,14 @@ class Command(BaseCommand):
         return fits_files, fits_catalogs
 
     def handle(self, *args, **options):
+
+        # set tolerance for determining the zeropoint and catalog to use (should be cmdline options)
+        std_zeropoint_tolerance = 0.10
+
         self.stdout.write("==== Pipeline processing astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
-        datadir = os.path.join(os.path.abspath(options['datadir']), '')
+        datadir = os.path.expanduser(options['datadir'])
+        datadir = os.path.join(datadir, '')
         self.stdout.write("datapath=%s" % (datadir))
 
         # Get lists of images and catalogs
@@ -57,6 +68,7 @@ class Command(BaseCommand):
         # directory, otherwise create a random directory in /tmp
         if options['temp_dir']:
             temp_dir = options['temp_dir']
+            temp_dir = os.path.expanduser(temp_dir)
             if os.path.exists(temp_dir) == False:
                 os.makedirs(temp_dir)
         else:
@@ -83,22 +95,30 @@ class Command(BaseCommand):
                     exit(-3)
                 new_catalog = catalog
                 catalog_type = 'LCOGT'
+                if 'e91' in catalog or 'e11' in catalog:
+                    catalog_type = 'BANZAI'
             except ValueError:
                 new_catalog = new_catalog_or_status
                 catalog_type = 'FITS_LDAC'
+                if 'e91' in catalog or 'e11' in catalog:
+                    catalog_type = 'BANZAI_LDAC'
 
             # Step 2: Check for good zeropoint and redetermine if needed. Ingest
             # results into CatalogSources
             self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
-            # set tolerance for determining the zeropoint
-            std_zeropoint_tolerance = 0.1
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, std_zeropoint_tolerance, catalog_type)
 
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, std_zeropoint_tolerance, catalog_type)
+            if num_sources_created >= 0 and num_in_catalog > 0:
+                self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog) )
+            else:
+                self.stdout.write("Error occured storing catalog sources (Error code= %d, %d)" % (num_sources_created, num_in_catalog))
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
             self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))
-            fits_filename = make_sext_file(temp_dir, new_catalog)
+            fits_filename = make_sext_file(temp_dir, new_catalog, catalog_type)
 
+            if 'BANZAI' in catalog_type:
+                fits_filename = extract_sci_image(catalog, new_catalog)
             fits_file_list.append(fits_filename)
 
         # Step 4: Run MTDLINK to find moving objects
@@ -107,7 +127,7 @@ class Command(BaseCommand):
         #May change this to get pa and rate from compute_ephem later
         pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
 
-        retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict)
+        retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
 
         # Step 5: Read MTDLINK output file and create candidates in NEOexchange
         if len(fits_file_list) > 0:

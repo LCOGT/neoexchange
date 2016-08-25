@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+import numpy as np
 from datetime import datetime, timedelta
 from math import sqrt, log10, log
 from collections import OrderedDict
@@ -28,6 +29,7 @@ from astroquery.vizier import Vizier
 import astropy.units as u
 import astropy.coordinates as coord
 from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 from core.models import CatalogSources, Frame
@@ -62,7 +64,10 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
 
         #resulting catalog table
-        if len(result) < 1:
+        #if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo the query; if the resulting catalog table is still empty, fill the table with zeros
+        if cat_name == "UCAC4": rmag = 'rmag'
+        else: rmag = 'r2mag'
+        if (len(result) < 1) or (np.sum(~result[0][rmag].mask)<1):
             if "PPMXL" in cat_name:
                 cat_name = "UCAC4"
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
@@ -81,6 +86,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
                     zeros_list = list(0.0 for i in range(0,100000))
                     zeros_int_list = list(0 for i in range(0,100000))
                     cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list], names=('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'))
+     #if the resulting table is neither empty nor missing columns values, set the cat_table
         else:
             cat_table = result[0]
 
@@ -205,6 +211,7 @@ def get_zeropoint(cross_match_table, std_zeropoint_tolerance):
     avg_zeropoint = 40.0
     std_zeropoint = 10.0
     num_iter = 0
+    num_in_calc = 0
     r_mag_diff_threshold = 40.0
 
     while num_iter < 800:
@@ -368,6 +375,105 @@ def fitsldac_catalog_mapping():
 
     return header_dict, table_dict
 
+def banzai_catalog_mapping():
+    '''Returns two dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for new pipeline (BANZAI) format catalog
+    files. Items in angle brackets (<FOO>) need to be derived (pixel scale)
+    or assumed as they are missing from the headers.'''
+
+    header_dict = { 'site_id'    : 'SITEID',
+                    'enc_id'     : 'ENCID',
+                    'tel_id'     : 'TELID',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'ORIGNAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : '<WCS>',
+                    'zeropoint'     : '<ZP>',
+                    'zeropoint_err' : '<ZP>',
+                    'zeropoint_src' : '<ZPSRC>',
+                    'fwhm'          : 'L1FWHM',
+                    'astrometric_fit_rms'    : '<WCSRDRES>',
+                    'astrometric_fit_status' : 'WCSERR',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
+                    'astrometric_catalog'    : '<ASTROMCAT>',
+                  }
+
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'XWIN'),
+                    ('ccd_y'         , 'YWIN'),
+                    ('obs_ra'        , 'RA'),
+                    ('obs_dec'       , 'DEC'),
+#                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+#                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'A'),
+                    ('minor_axis'    , 'B'),
+                    ('ccd_pa'        , 'THETA'),
+                    ('obs_mag'       , 'FLUX'),
+                    ('obs_mag_err'   , 'FLUXERR'),
+                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAG'),
+#                    ('flux_max'      , 'FLUX_MAX'),
+#                    ('threshold'     , 'MU_THRESHOLD'),
+                 ])
+
+    return header_dict, table_dict
+
+
+def banzai_ldac_catalog_mapping():
+    '''Returns two dictionaries of the mapping between the FITS header and table
+    items and CatalogItem quantities for FITS_LDAC catalogs extracted from the 
+    new pipeline (BANZAI) format files. Items in angle brackets (<FOO>) need to
+    be derived (pixel scale) or assumed as they are missing from the headers.'''
+
+    header_dict = { 'site_id'    : 'SITEID',
+                    'enc_id'     : 'ENCID',
+                    'tel_id'     : 'TELID',
+                    'instrument' : 'INSTRUME',
+                    'filter'     : 'FILTER',
+                    'framename'  : 'ORIGNAME',
+                    'exptime'    : 'EXPTIME',
+                    'obs_date'   : 'DATE-OBS',
+                    'field_center_ra' : 'RA',
+                    'field_center_dec' : 'DEC',
+                    'field_width' : 'NAXIS1',
+                    'field_height' : 'NAXIS2',
+                    'pixel_scale' : '<WCS>',
+                    'zeropoint'     : '<ZP>',
+                    'zeropoint_err' : '<ZP>',
+                    'zeropoint_src' : '<ZPSRC>',
+                    'fwhm'          : 'L1FWHM',
+                    'astrometric_fit_rms'    : '<WCSRDRES>',
+                    'astrometric_fit_status' : 'WCSERR',
+                    'astrometric_fit_nstars' : '<WCSMATCH>',
+                    'astrometric_catalog'    : '<ASTROMCAT>',
+                  }
+
+    table_dict = OrderedDict([
+                    ('ccd_x'         , 'XWIN_IMAGE'),
+                    ('ccd_y'         , 'YWIN_IMAGE'),
+                    ('obs_ra'        , 'ALPHA_J2000'),
+                    ('obs_dec'       , 'DELTA_J2000'),
+                    ('obs_ra_err'    , 'ERRX2_WORLD'),
+                    ('obs_dec_err'   , 'ERRY2_WORLD'),
+                    ('major_axis'    , 'AWIN_IMAGE'),
+                    ('minor_axis'    , 'BWIN_IMAGE'),
+                    ('ccd_pa'        , 'THETAWIN_IMAGE'),
+                    ('obs_mag'       , 'FLUX_AUTO'),
+                    ('obs_mag_err'   , 'FLUXERR_AUTO'),
+                    ('obs_sky_bkgd'  , 'BACKGROUND'),
+                    ('flags'         , 'FLAGS'),
+                    ('flux_max'      , 'FLUX_MAX'),
+                    ('threshold'     , 'MU_THRESHOLD'),
+                 ])
+
+    return header_dict, table_dict
+
 def convert_to_string_value(value):
     left_end = value.find("'")
     right_end = value.rfind("'")
@@ -419,34 +525,58 @@ def fits_ldac_to_header(header_array):
     return header
 
 def open_fits_catalog(catfile, header_only=False):
-    '''Opens a FITS source catalog specified by <catfile> and returns the header
-    and table data. If [header_only]= is True, only the header is returned.'''
+    '''Opens a FITS source catalog specified by <catfile> and returns the header,
+    table data and catalog type. If [header_only]= is True, only the header is 
+    returned, and <table> is set to an empty dictionary.'''
 
     header = {}
     table = {}
+    cattype = None
 
     try:
         hdulist = fits.open(catfile)
     except IOError as e:
         logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
-        return header, table
+        return header, table, cattype
 
     if len(hdulist) == 2:
         header = hdulist[0].header
+        cattype = 'LCOGT'
         if header_only == False:
             table = hdulist[1].data
     elif len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) == 'LDAC_IMHEAD':
         # This is a FITS_LDAC catalog produced by SExtractor for SCAMP
         if header_only == False:
             table = hdulist[2].data
+        cattype = 'FITS_LDAC'
+        if 'e92_ldac' in catfile or 'e12_ldac' in catfile:
+            cattype = 'BANZAI_LDAC'
         header_array = hdulist[1].data[0][0]
         header = fits_ldac_to_header(header_array)
+    elif len(hdulist) == 4 or (len(hdulist) == 3 and hdulist[1].header.get('EXTNAME', None) != 'LDAC_IMHEAD'):
+        # New BANZAI-format data
+        cattype = 'BANZAI'
+        try:
+            sci_index = hdulist.index_of('SCI')
+        except KeyError:
+            sci_index = -1
+        try:
+            cat_index = hdulist.index_of('CAT')
+        except KeyError:
+            cat_index = -1
+
+        if sci_index != -1 and cat_index != -1:
+            header = hdulist[sci_index].header
+            if header_only == False:
+                table = hdulist[cat_index].data
+        else:
+            logger.error("Could not find SCI and CAT HDUs in file")
     else:
         logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
 
     hdulist.close()
 
-    return header, table
+    return header, table, cattype
 
 def convert_value(keyword, value):
     '''Routine to perform domain-specific transformation of values read from the
@@ -520,18 +650,28 @@ def convert_value(keyword, value):
 def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     '''Look through the FITS catalog header for the concepts we want for which
     the keyword is given in the mapping specified for the [catalog_type]
-    (Currently the LCOGT ORAC-DR FITS Catalog is the only supported mapping
-    type)
+
     The required header items are returned in a dictionary. A FITSHdrException
     is raised if a required keyword is missing or the value of a keyword is
     'UNKNOWN'.
     '''
+
+    fixed_values_map = {'<ASTROMCAT>' : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
+                        '<ZP>'        : -99, # Hardwire zeropoint to -99.0 for BANZAI catalogs
+                        '<ZPSRC>'     : 'N/A', # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
+                        '<WCSRDRES>'  : 0.3, # Hardwire RMS to 0.3"
+                        '<WCSMATCH>'  : -4  # Hardwire no. of stars matched to 4 (1 quad)
+                        }
 
     header_items = {}
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
     elif catalog_type == 'FITS_LDAC':
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+    elif catalog_type == 'BANZAI':
+        hdr_mapping, tbl_mapping = banzai_catalog_mapping()
+    elif catalog_type == 'BANZAI_LDAC':
+        hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return header_items
@@ -551,6 +691,17 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 new_value = value
             header_item = { item: new_value }
             header_items.update(header_item)
+        elif fits_keyword[0] == '<' and fits_keyword[-1] == '>':
+            header_item = None
+            if fits_keyword == '<WCS>':
+                fits_wcs = WCS(catalog_header)
+                pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
+                header_item = { item: round(pixscale,5) }
+            if catalog_type == 'BANZAI' or catalog_type == 'BANZAI_LDAC':
+                if fits_keyword in fixed_values_map:
+                    header_item = { item: fixed_values_map[fits_keyword] }
+            if header_item:
+                header_items.update(header_item)
         else:
             raise FITSHdrException(fits_keyword)
 
@@ -596,6 +747,10 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
     elif catalog_type == 'FITS_LDAC':
         hdr_mapping, tbl_mapping = fitsldac_catalog_mapping()
+    elif catalog_type == 'BANZAI':
+        hdr_mapping, tbl_mapping = banzai_catalog_mapping()
+    elif catalog_type == 'BANZAI_LDAC':
+        hdr_mapping, tbl_mapping = banzai_ldac_catalog_mapping()
     else:
         logger.error("Unsupported catalog mapping: %s", catalog_type)
         return None
@@ -711,7 +866,7 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
     not be opened.'''
 
     header = table = None
-    fits_header, fits_table = open_fits_catalog(catfile)
+    fits_header, fits_table, cattype = open_fits_catalog(catfile)
 
     if fits_header != {} and fits_table != {}:
         header = get_catalog_header(fits_header, catalog_type)
@@ -764,14 +919,20 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
             fits_file = os.path.basename(catfile.replace('e10_cat.fits', 'e10.fits'))
         elif 'e11_ldac.fits' in os.path.basename(catfile):
             fits_file = os.path.basename(catfile.replace('e11_ldac.fits', 'e11.fits'))
+        elif 'e92_ldac.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e91.fits'))
+        elif 'e12_ldac.fits' in os.path.basename(catfile):
+            fits_file = os.path.basename(catfile.replace('e12_ldac.fits', 'e11.fits'))
+        else:
+            fits_file = os.path.basename(catfile)
         try:
             frame = Frame.objects.get(filename=fits_file, block__isnull=False)
         except Frame.MultipleObjectsReturned:
             logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file, frame))
-            return -3
+            return -3, -3
         except Frame.DoesNotExist:
             logger.error("Frame entry for fits file %s does not exist" % fits_file)
-            return -3
+            return -3, -3
 
         #if a Frame exists for the fits file with a non-null block
         #that has a bad zeropoint, update the zeropoint computed
@@ -871,7 +1032,7 @@ def make_sext_file_line(sext_params):
 
     return sext_line
 
-def make_sext_dict_list(new_catalog):
+def make_sext_dict_list(new_catalog, catalog_type):
     '''create a list of dictionary entries for
     creating the .sext files needed for mtdlink'''
 
@@ -885,7 +1046,8 @@ def make_sext_dict_list(new_catalog):
         real_fits_filename = os.path.basename(new_catalog).replace('_cat.fits', '.fits')
         fits_filename_path = new_catalog.replace('_cat.fits', '.fits')
     else:
-        real_fits_filename = new_catalog
+        real_fits_filename = os.path.basename(new_catalog)
+        fits_filename_path = new_catalog
 
     #May need to filter objects within 5 pixels of frame edge as does in cleansex.tcl
     sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0)
@@ -911,11 +1073,11 @@ def make_sext_line_list(sext_dict_list):
 
     return sext_line_list
 
-def make_sext_file(dest_dir, new_catalog):
+def make_sext_file(dest_dir, new_catalog, catalog_type):
     '''Synthesizes the .sext file needed for running
     mtdlink instead of running sextractor again'''
 
-    sext_dict_list, fits_filename_path = make_sext_dict_list(new_catalog)
+    sext_dict_list, fits_filename_path = make_sext_dict_list(new_catalog, catalog_type)
     sext_line_list = make_sext_line_list(sext_dict_list)
     sext_filename = open(os.path.join(dest_dir, os.path.basename(fits_filename_path).replace('.fits', '.sext')), 'w')
     for line in sext_line_list:
@@ -931,17 +1093,29 @@ def determine_filenames(product):
     '''
 
     new_product = None
+    full_path = product
     product = os.path.basename(product)
     if '_cat.fits' in product:
         new_product = product.replace('_cat', '', 1)
     elif '_ldac.fits' in product:
         new_product = product.replace('_ldac', '', 1)
     else:
-        file_bits =  product.split(os.extsep)
+        file_bits = product.split(os.extsep)
         if len(file_bits) == 2:
             filename_noext = file_bits[0]
-            if filename_noext[-2:].isdigit():
-                new_product = filename_noext + '_cat' + os.extsep + file_bits[1]
+            red_level = filename_noext[-2:]
+            if red_level.isdigit():
+                if int(red_level) == 90 or int(red_level) == 10:
+                    new_product = filename_noext + '_cat' + os.extsep + file_bits[1]
+                else:
+                    # Uncompressed BANZAI product - output is input
+                    new_product = file_bits[0] + os.extsep + file_bits[1]
+        elif len(file_bits) == 3:
+            # Fpacked BANZAI product - output is input
+            new_product = None
+            funpack_status = funpack_fits_file(full_path)
+            if funpack_status == 0:
+                new_product = file_bits[0] + os.extsep + file_bits[1]
     return new_product
 
 def increment_red_level(product):
@@ -967,3 +1141,46 @@ def increment_red_level(product):
             filename_noext = filename_noext[:-2] + red_level
             new_product = filename_noext + file_bits[1]
     return new_product
+
+def funpack_fits_file(fpack_file):
+    '''Calls 'funpack' on the passed <fpack_file> to uncompress it. A status
+    value of 0 is returned if the unpacked file already exists or the uncompress
+    was successful, -1 is returned otherwise'''
+
+    file_bits =  fpack_file.split(os.extsep)
+    if len(file_bits) != 3 and file_bits[-1].lower() != 'fz':
+        return -1
+    unpacked_file = file_bits[0] + os.extsep + file_bits[1]
+    if os.path.exists(unpacked_file):
+        return 0
+    hdulist = fits.open(fpack_file)
+    header = hdulist['SCI'].header
+    data = hdulist['SCI'].data
+    hdu = fits.PrimaryHDU(data, header)
+    hdu.writeto(unpacked_file, checksum=True)
+    hdulist.close()
+
+    return 0
+
+def extract_sci_image(file_path, catalog_path):
+    '''Extracts the science image out of the BANZAI multi-extension fits files.'''
+
+    fits_file = os.path.basename(file_path)
+    fits_filename_path = os.path.join(os.path.dirname(catalog_path), fits_file)
+
+    if os.path.exists(fits_filename_path):
+        return fits_filename_path
+
+    try:
+        hdulist = fits.open(file_path)
+    except IOError as e:
+        logger.error("Unable to open FITS catalog %s (Reason=%s)" % (catfile, e))
+
+    try:
+        sci_index = hdulist.index_of('SCI')
+        hdulist = hdulist[sci_index]
+        hdulist.writeto(fits_filename_path)
+    except KeyError:
+        sci_index = -1
+
+    return fits_filename_path

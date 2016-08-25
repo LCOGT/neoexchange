@@ -103,8 +103,10 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         pa_rate_dict = make_pa_rate_dict(pa=255.0, deltapa=10.0, minrate=0.95, maxrate=1.0)
 
+        catalog_type = 'LCOGT'
+
         expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
-        cmdline = run_mtdlink(self.source_dir, self.test_dir, [], 8, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
+        cmdline = run_mtdlink(self.source_dir, self.test_dir, [], 8, param_file, pa_rate_dict, catalog_type, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
 
@@ -114,8 +116,10 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         pa_rate_dict = make_pa_rate_dict(pa=255.0, deltapa=10.0, minrate=0.95, maxrate=1.0)
 
+        catalog_type = 'FITS_LDAC'
+
         expected_status = -43
-        status = run_mtdlink(self.source_dir, self.test_dir, ['foo.fits', 'foo2.fits', 'foo3.fits'], 3, param_file, pa_rate_dict, binary='mtdlink', dbg=True)
+        status = run_mtdlink(self.source_dir, self.test_dir, ['foo.fits', 'foo2.fits', 'foo3.fits'], 3, param_file, pa_rate_dict, catalog_type, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_status, status)
 
@@ -159,7 +163,9 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         pa_rate_dict = make_pa_rate_dict(pa=255.0, deltapa=10.0, minrate=0.95, maxrate=1.0)
 
-        status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 8, param_file, pa_rate_dict)
+        catalog_type = 'LCOGT'
+
+        status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 8, param_file, pa_rate_dict, catalog_type)
 
         self.assertEqual(expected_status, status)
 
@@ -259,7 +265,9 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         pa_rate_dict = make_pa_rate_dict(pa=345.0, deltapa=25.0, minrate=1.15, maxrate=1.25)
 
-        status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 6, param_file, pa_rate_dict)
+        catalog_type = 'LCOGT'
+
+        status = run_mtdlink(self.source_dir, self.test_dir, test_file_list, 6, param_file, pa_rate_dict, catalog_type)
 
         self.assertEqual(expected_status, status)
 
