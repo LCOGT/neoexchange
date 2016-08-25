@@ -16,15 +16,19 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
+from django.db import connection
 from django.db.utils import IntegrityError
 from numpy import array, arange
+from numpy.testing import assert_allclose
+from astropy.wcs import WCS
+from astropy.wcs.utils import proj_plane_pixel_scales
 from unittest import skipIf
 from mock import patch
 from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources, Candidate
+    CatalogSources, Candidate, WCSField
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -354,6 +358,15 @@ class TestFrame(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
+        # Hand-rolled WCS for pickling testing
+        self.naxis_header = {'NAXIS1' : 2028, 'NAXIS2' : 2038, 'NAXIS' :2}
+        self.w = WCS(self.naxis_header)
+        self.w.wcs.crpix = [ 1024.0, 1024.0]
+        self.pixel_scale = 0.469/3600.0
+        self.w.wcs.cd = array([[self.pixel_scale, 0.0], [0.0, -self.pixel_scale]])
+        self.w.wcs.crval = [150.0, -30.0]
+        self.w.wcs.ctype = ["RA---TAN", "DEC--TAN"]
+
     def test_create_LCOGT_K93_w_single(self):
         params = {  'sitecode'      : 'K93',
                     'instrument'    : 'kb75',
@@ -503,6 +516,91 @@ class TestFrame(TestCase):
         self.assertEqual(params['sitecode'], frame.sitecode)
         self.assertEqual(params['filter'], frame.filter)
         self.assertEqual(params['midpoint'], frame.midpoint)
+
+    def test_store_null_WCS_info(self):
+        null_wcs = WCS()
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : null_wcs
+                 }
+        frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
+
+        self.assertNotEqual(None, frame.wcs)
+
+        pix_coord = array([[512.0, 512.0]])
+        assert_allclose(null_wcs.wcs.pc, frame.wcs.wcs.cd, rtol=1e-8)
+        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[0], 10)
+        self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[1], 10)
+
+    def test_store_TAN_WCS_info(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : self.w
+                 }
+        frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
+
+        pix_coord = array([[512.0, 512.0]])
+        assert_allclose(self.w.wcs.cd, frame.wcs.wcs.cd, rtol=1e-8)
+        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[0], 10)
+        self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[1], 10)
+
+    def test_restore_WCS_naxis(self):
+        params = {  'sitecode'      : 'K93',
+                    'instrument'    : 'kb75',
+                    'filter'        : 'w',
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'exptime'       : 40.0,
+                    'midpoint'      : '2015-07-13 21:09:51',
+                    'block'         : self.test_block,
+                    'wcs'           : self.w
+                 }
+        frame = Frame.objects.create(**params)
+        frame.refresh_from_db()     # Ensure pickling happens
+
+        self.assertEqual(self.w.naxis, frame.wcs.naxis)
+        self.assertEqual(self.w._naxis1, frame.wcs._naxis1)
+        self.assertEqual(self.w._naxis2, frame.wcs._naxis2)
+
+class TestWCSField(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_deconstruct_editable_default(self):
+
+        instance_WCSField = WCSField()
+        name, path, args, kwargs = instance_WCSField.deconstruct()
+        new_instance = WCSField(*args, **kwargs)
+        self.assertEqual(instance_WCSField.editable, new_instance.editable)
+
+    def test_deconstruct_editable_force_true(self):
+
+        instance_WCSField = WCSField(editable=True)
+        name, path, args, kwargs = instance_WCSField.deconstruct()
+        new_instance = WCSField(*args, **kwargs)
+        self.assertEqual(instance_WCSField.editable, new_instance.editable)
+        self.assertFalse(instance_WCSField.editable)
+        self.assertFalse(new_instance.editable)
+
+    def test_db_parameters_respects_db_type(self):
+        f = WCSField()
+        self.assertEqual(f.db_parameters(connection)['type'], 'text')
 
 class TestSourceMeasurement(TestCase):
 

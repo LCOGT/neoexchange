@@ -20,9 +20,17 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
+from django.utils.encoding import force_text
 from django.forms.models import model_to_dict
 from astropy.time import Time
+from astropy.wcs import WCS
 from numpy import fromstring
+try:
+    # cpython 2.x
+    from cPickle import loads, dumps
+except ImportError:
+    from pickle import loads, dumps
+from base64 import b64decode, b64encode
 
 from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params
@@ -254,6 +262,89 @@ class Block(models.Model):
 
         return u'%s is %sactive' % (self.tracking_number,text)
 
+def unpickle_wcs(wcs_string):
+    '''Takes a pickled string and turns into an astropy WCS object'''
+    wcs_bytes = wcs_string.encode()     # encode str to bytes
+    wcs_bytes = b64decode(wcs_bytes)
+    wcs_header = loads(wcs_bytes)
+    return WCS(wcs_header)
+
+def pickle_wcs(wcs_object):
+    '''Turn out base64encoded string from astropy WCS object. This does
+    not use the inbuilt pickle/__reduce__ which loses needed information'''
+    pickle_protocol = 2
+
+    if wcs_object is not None and isinstance(wcs_object, WCS):
+        wcs_header = wcs_object.to_header()
+        # Add back missing NAXIS keywords, change back to CD matrix
+        wcs_header.insert(0, ("NAXIS", 2, "number of array dimensions"))
+        wcs_header.insert(1, ("NAXIS1", wcs_object._naxis1, ""))
+        wcs_header.insert(2, ("NAXIS2", wcs_object._naxis2, ""))
+        wcs_header.remove("CDELT1")
+        wcs_header.remove("CDELT2")
+        # Some of these may be missing depending on whether there was any rotation
+        num_missing = 0
+        for pc in ['PC1_1', 'PC1_2', 'PC2_1', 'PC2_2']:
+            if pc in wcs_header:
+                wcs_header.rename_keyword(pc, pc.replace("PC", "CD"))
+            else:
+                num_missing += 1
+        # Check if there was no PC matrix at all, insert a unity CD matrix
+        if num_missing == 4:
+            cd_comment = "Coordinate transformation matrix element"
+            wcs_header.insert("CRVAL2", ("CD1_1", 1.0, cd_comment), after=True)
+            wcs_header.insert( "CD1_1", ("CD1_2", 0.0, cd_comment), after=True)
+            wcs_header.insert( "CD1_2", ("CD2_1", 0.0, cd_comment), after=True)
+            wcs_header.insert( "CD2_1", ("CD2_2", 1.0, cd_comment), after=True)
+
+        value = dumps(wcs_header, protocol=pickle_protocol)
+        value = b64encode(value).decode()
+    else:
+        value = wcs_object
+    return value
+
+class WCSField(models.Field):
+
+    description = "Store astropy.wcs objects"
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('editable', False)
+        kwargs['editable'] = False
+        super(WCSField, self).__init__(*args, **kwargs)
+
+    def deconstruct(self):
+        name, path, args, kwargs = super(WCSField, self).deconstruct()
+        del kwargs["editable"]
+        return name, path, args, kwargs
+
+    def from_db_value(self, value, expression, connection, context):
+        if value is None:
+            return value
+        return unpickle_wcs(value)
+
+    def to_python(self, value):
+        if isinstance(value, WCS):
+            return value
+
+        if value is None:
+            return value
+
+        return unpickle_wcs(value)
+
+    def get_prep_value(self, value):
+        return pickle_wcs(value)
+
+    def get_db_prep_value(self, value, connection=None, prepared=False):
+        if value is not None:
+            value = force_text(pickle_wcs(value))
+        return value
+
+    def value_to_string(self, obj):
+        value = self.value_from_object(obj)
+        return self.get_db_prep_value(value)
+
+    def get_internal_type(self):
+        return 'TextField'
 
 class Frame(models.Model):
     ''' Model to represent (FITS) frames of data from observations successfully
@@ -288,8 +379,24 @@ class Frame(models.Model):
     nstars_in_fit  = models.FloatField('No. of stars used in astrometric fit', null=True, blank=True)
     time_uncertainty = models.FloatField('Time uncertainty (seconds)', null=True, blank=True)
     frameid     = models.IntegerField('Archive ID', null=True, blank=True)
-    x_size      = models.IntegerField('Size x pixels', null=True, blank=True)
-    y_size      = models.IntegerField('Size y pixels', null=True, blank=True)
+    wcs         = WCSField('WCS info', blank=True, null=True, editable=False)
+
+
+    def get_x_size(self):
+        x_size = None
+        try:
+            x_size = self.wcs._naxis1
+        except AttributeError:
+            pass
+        return x_size
+
+    def get_y_size(self):
+        y_size = None
+        try:
+            y_size = self.wcs._naxis2
+        except AttributeError:
+            pass
+        return y_size
 
     class Meta:
         verbose_name = _('Observed Frame')
