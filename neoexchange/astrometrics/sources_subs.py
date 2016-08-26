@@ -833,11 +833,35 @@ def fetch_arecibo_targets(page=None):
                 for row in rows[1:]:
                     items = row.find_all('td')
                     target_object = items[0].text
+                    target_object = target_object.strip()
                     # See if it is the form "(12345) 2008 FOO". If so, extract
                     # just the asteroid number
                     if '(' in target_object and ')' in target_object:
-                        target_object = target_object.split(')')[0].replace('(','')
-                    targets.append(target_object)
+                        # See if we have parentheses around the number or around the
+                        # temporary desigination.
+                        # If the first character in the string is a '(' we have the first
+                        # case and should split on the closing ')' and take the 0th chunk
+                        # If the first char is not a '(', then we have parentheses around
+                        # the temporary desigination and we should split on the '(', take
+                        # the 0th chunk and strip whitespace
+                        split_char = ')'
+                        if target_object[0] != '(':
+                            split_char = '('
+                        target_object = target_object.split(split_char)[0].replace('(','')
+                        target_object = target_object.strip()
+                    else:
+                        # No parentheses, either just a number or a number and name
+                        chunks = target_object.split(' ')
+                        if len(chunks) >= 2:
+                            if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                target_object = chunks[0]
+                            else:
+                                target_object = chunks[0] + " " + chunks[1]
+                        else:
+                            logger.warn("Unable to parse Arecibo target %s" % target_object)
+                            target_object = None
+                    if target_object:
+                        targets.append(target_object)
             else:
                 logger.warn("No targets found in Arecibo page")
     return targets
