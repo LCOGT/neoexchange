@@ -94,10 +94,16 @@ class TestGoldstoneChunkParser(TestCase):
 class TestFetchAreciboTargets(TestCase):
 
     def setUp(self):
-        # Read and make soup from the stored version of the Arecibo radar page
+        # Read and make soup from the stored version of the Arecibo radar pages
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page.html'), 'r')
         self.test_arecibo_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page_v2.html'), 'r')
+        self.test_arecibo_page_v2 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.maxDiff = None
 
     def test_basics(self):
         expected_length = 17
@@ -126,6 +132,55 @@ class TestFetchAreciboTargets(TestCase):
                              u'2009 DL46']
 
         targets = fetch_arecibo_targets(self.test_arecibo_page)
+
+        self.assertEqual(expected_targets, targets)
+
+    def test_basics_v2(self):
+        expected_length = 36
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page_v2)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_targets_v2(self):
+        expected_targets =  [u'4775',
+                             u'357024',
+                             u'250458',
+                             u'2009 ES',
+                             u'2100',
+                             u'162117',
+                             u'2011 DU',
+                             u'2014 UR',
+                             u'2012 UA34',
+                             u'467963',
+                             u'413260',
+                             u'164121',
+                             u'2004 KB',
+                             u'2005 TF',
+                             u'326302',
+                             u'68950',
+                             u'152685',
+                             u'162911',
+                             u'152391',
+                             u'433953',
+                             u'2009 TB8',
+                             u'369264',
+                             u'96590',
+                             u'5143',
+                             u'2007 VM184',
+                             u'2005 WS3',
+                             u'326683',
+                             u'2006 XD2',
+                             u'2008 UL90',
+                             u'418849',
+                             u'2014 EW24',
+                             u'2012 YK',
+                             u'4179',
+                             u'2102',
+                             u'7341',
+                             u'226514']
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page_v2)
 
         self.assertEqual(expected_targets, targets)
    

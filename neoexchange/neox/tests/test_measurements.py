@@ -164,9 +164,10 @@ class MeasurementsPageTests(FunctionalTest):
         self.check_for_row_in_table('id_targets', testlines[0])
         self.check_for_row_not_in_table('id_targets', testlines[1])
 
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
         link = self.browser.find_element_by_partial_link_text('N999r0q')
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, reverse('target',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
         with self.wait_for_page_load(timeout=10):
             link.click()
 
@@ -178,8 +179,9 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will show the measurements
         # available for this object.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = self.live_server_url + reverse('measurement',kwargs={'pk':1})
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, reverse('measurement',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks on the link and sees that he is taken to a page with details
         # on the source measurements for this object
@@ -218,8 +220,9 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will export the measurements
         # available for this object in MPC 80 char format.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks on the link and sees that he is taken to a page with details
         # on the source measurements for this object
@@ -232,8 +235,9 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He sees a link that says it will display the measurements in MPC format
         mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
-        mpc_target_url = "%s/target/%d/measurements/mpc/" % (self.live_server_url, 1)
-        self.assertIn(mpc_link.get_attribute('href'), mpc_target_url)
+        mpc_target_url = "{0}/target/{1}/measurements/mpc/".format(self.live_server_url, 1)
+        actual_url = mpc_link.get_attribute('href')
+        self.assertEqual(actual_url, mpc_target_url)
 
         # He clicks on the link and sees that he is taken to a page with the
         # source measurements for this object in MPC 80 char format
@@ -265,8 +269,9 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will show the source measurements
         # available for this object.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks on the link and sees that he is taken to a page with details
         # on the source measurements for this object
@@ -279,8 +284,9 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He sees a link that says it will display the measurements in MPC format
         mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
-        mpc_target_url = "%s/target/%d/measurements/mpc/" % (self.live_server_url, 1)
-        self.assertIn(mpc_link.get_attribute('href'), mpc_target_url)
+        mpc_target_url = "{0}/target/{1}/measurements/mpc/".format(self.live_server_url, 1)
+        actual_url = mpc_link.get_attribute('href')
+        self.assertEqual(actual_url, mpc_target_url)
 
         # He clicks on the link and sees that he is taken to a page with the
         # source measurements for this object in MPC 80 char format
@@ -314,8 +320,9 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will show the source measurements
         # available for this object.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks on the link and sees that he is taken to a page with details
         # on the source measurements for this object

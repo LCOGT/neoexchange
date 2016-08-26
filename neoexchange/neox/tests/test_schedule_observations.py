@@ -72,8 +72,9 @@ class ScheduleObservations(FunctionalTest):
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks the link to go to the Schedule Observations page
         with self.wait_for_page_load(timeout=10):
@@ -132,8 +133,9 @@ class ScheduleObservations(FunctionalTest):
             link.click()
 
         # self.wait_for_element_with_id('username')
-        new_url = self.browser.current_url
-        self.assertIn('login/', str(new_url))
+        actual_url = self.browser.current_url
+        target_url = '/login/'
+        self.assertIn(target_url, actual_url)
 
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
@@ -150,14 +152,15 @@ class ScheduleObservations(FunctionalTest):
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks the link to go to the Schedule Observations page
-        link.click()
-        self.browser.implicitly_wait(10)
+        with self.wait_for_page_load(timeout=10):
+            link.click()
         new_url = self.browser.current_url
-        self.assertIn(str(new_url), target_url)
+        self.assertEqual(new_url, actual_url)
 
 
         # He notices a new selection for the proposal and site code and
@@ -196,8 +199,6 @@ class ScheduleObservations(FunctionalTest):
         slot_length_box.clear()
         slot_length_box.send_keys('25.')
         self.browser.find_element_by_id("id_edit_button").click()
-        import time
-        time.sleep(10)
 
         # The page refreshes and we get correct slot length and the Schedule button again
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
@@ -220,8 +221,9 @@ class ScheduleObservations(FunctionalTest):
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = self.live_server_url + reverse('schedule-body',kwargs={'pk':1})
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks the link to go to the Schedule Observations page
         with self.wait_for_page_load(timeout=10):

@@ -9,8 +9,8 @@ class TargetsValidationTest(FunctionalTest):
 
         # She sees a link to TARGETS
         link = self.browser.find_element_by_link_text('TARGETS')
-        target_url = self.live_server_url + '/target/'
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, '/target/')
+        self.assertEqual(link.get_attribute('href'), target_url)
 
         # She clicks the link to go to the TARGETS page
         link.click()

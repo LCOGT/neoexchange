@@ -119,9 +119,6 @@ class NewVisitorTest(FunctionalTest):
         altlimitbox.clear()
         altlimitbox.send_keys('20')
 
-        import time
-        time.sleep(15)
-
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.

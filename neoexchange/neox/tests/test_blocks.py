@@ -10,14 +10,15 @@ class BlocksListValidationTest(FunctionalTest):
 
         # He sees a link to 'active blocks'
         link = self.browser.find_element_by_partial_link_text('active blocks')
-        target_url = self.live_server_url + '/block/list/'
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, '/block/list/')
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks the link to go to the blocks page
-        with self.wait_for_page_load(timeout=10):
+        with self.wait_for_page_load(timeout=20):
             link.click()
-        new_url = self.browser.current_url
-        self.assertIn(str(new_url), target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
 
         # He notices the page title has the name of the site and the header
         # mentions current targets
@@ -41,26 +42,28 @@ class BlockDetailValidationTest(FunctionalTest):
 
         # He sees a link to 'active blocks'
         link = self.browser.find_element_by_partial_link_text('active blocks')
-        target_url = self.live_server_url + '/block/list/'
-        self.assertIn(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, '/block/list/')
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks the link to go to the blocks page
-        with self.wait_for_page_load(timeout=10):
+        with self.wait_for_page_load(timeout=20):
             link.click()
-        new_url = self.browser.current_url
-        self.assertIn(str(new_url), target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
 
         # He sees links that will go to a more detailed block view and goes
         # to the first Block.
         link = self.browser.find_element_by_link_text('1')
-        block_url = self.live_server_url + reverse('block-view',kwargs={'pk':1})
-        self.assertIn(link.get_attribute('href'), block_url)
+        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks the link to go to the block details page
         with self.wait_for_page_load(timeout=10):
             link.click()
         new_url = self.browser.current_url
-        self.assertEqual(str(new_url), block_url)
+        self.assertEqual(new_url, target_url)
 
         # He notices the page title has the name of the site and the header
         # mentions block details
