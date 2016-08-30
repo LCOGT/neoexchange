@@ -861,7 +861,19 @@ class TestFetchMPCOrbit(TestCase):
 
         elements = parse_mpcorbit(self.test_mpcdb_page)
         self.assertEqual(expected_elements, elements)
-        
+
+    def test_badpage(self):
+
+        expected_elements = {}
+        elements = parse_mpcorbit(BeautifulSoup('<html></html>', 'html.parser'))
+        self.assertEqual(expected_elements, elements)
+
+    def test_badpage_with_empty_table(self):
+
+        expected_elements = {}
+        elements = parse_mpcorbit(BeautifulSoup('<html><table class="nb"><table></table></table></html>', 'html.parser'))
+        self.assertEqual(expected_elements, elements)
+
 class TestParseMPCObsFormat(TestCase):
 
     def setUp(self):

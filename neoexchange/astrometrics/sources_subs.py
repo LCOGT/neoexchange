@@ -602,8 +602,8 @@ def parse_mpcorbit(page, dbg=False):
     # Find the table of elements and then the subtables within it
     elements_table = page.find('table', {'class' : 'nb'})
     if elements_table == None:
-        if dbg: "No element tables found"
-        return None
+        if dbg: logger.debug("No element tables found")
+        return {}
     data_tables = elements_table.find_all('table')
     for table in data_tables:
         rows = table.find_all('tr')
