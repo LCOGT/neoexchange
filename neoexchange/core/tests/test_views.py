@@ -837,6 +837,14 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.maxDiff = None
 
+    def test_badresponse(self):
+
+        num_bodies_before = Body.objects.count()
+        status = update_MPC_orbit(BeautifulSoup('<html></html>', 'html.parser'), origin='M')
+        self.assertEqual(False, status)
+        num_bodies_after = Body.objects.count()
+        self.assertEqual(num_bodies_before, num_bodies_after)
+
     @patch('core.views.datetime', MockDateTime)
     def test_2014UR_MPC(self):
 

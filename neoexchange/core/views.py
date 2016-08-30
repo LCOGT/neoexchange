@@ -930,6 +930,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     object will parsed.
     '''
 
+    obj_id = None
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
         page = fetch_mpcdb_page(obj_id, dbg)
@@ -941,6 +942,10 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         page = obj_id_or_page
 
     elements = parse_mpcorbit(page, dbg)
+    if elements == {}:
+        logger.warn("Could not parse elements from page for %s" % obj_id)
+        return False
+
     if type(obj_id_or_page) == BeautifulSoup:
         obj_id = elements['obj_id']
         del elements['obj_id']
