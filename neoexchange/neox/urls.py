@@ -21,7 +21,7 @@ from django.core.urlresolvers import reverse_lazy
 from core.models import Body, Block, SourceMeasurement
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
-    UploadReport, BlockTimeSummary
+    UploadReport, BlockTimeSummary, plot_fwhm
 
 from django.contrib.auth.views import login, logout
 
@@ -29,7 +29,7 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
-    url(r'^plotfwhm/(?P<sem>)/$', plot_fwhm, name='plotfwhm'),
+    url(r'^plotfwhm/(?P<sem>\d+[A-B])/$', plot_fwhm, name='plotfwhm'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', BlockListView.as_view(model=Block, queryset=Block.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/report/$',BlockReport.as_view(), name='report-block'),

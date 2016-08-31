@@ -25,7 +25,7 @@ from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from httplib import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
@@ -1048,7 +1048,7 @@ def create_source_measurement(obs_lines, block=None):
 
     return measures
 
-def plot_fwhm(requests):
+def plot_fwhm(request, sem):
 
     import matplotlib
     matplotlib.use('Agg')
@@ -1057,13 +1057,16 @@ def plot_fwhm(requests):
 
     semester_start, semester_end = get_semester_dates(datetime.utcnow())
     semester_start = semester_start.date()
-    semester_end = date(semester_end + timedelta(days=1))
+    semester_end = (semester_end + timedelta(days=1)).date()
     fwhm = Frame.objects.filter(fwhm__gte=0.0, midpoint__range=(semester_start, semester_end)).values_list('fwhm')
 
-    fig = plt.Figure()
-    plt.hist(fwhm)
+    nbins = 20
+    plt.hist(fwhm, nbins)
+    title_string = "FWHM for %s -> %s (%d frames)" % (semester_start, semester_end, len(fwhm))
+    plt.title(title_string)
+
     buffer = io.BytesIO()
-    fig.save(buffer, format='png')
-    fig.save('fwhm.png', format='png')
+    plt.savefig(buffer, format='png')
+    plt.savefig('fwhm.png', format='png')
 
     return HttpResponse(buffer.getvalue(), content_type="Image/png")

@@ -72,7 +72,7 @@ class FrameAdmin(reversion.VersionAdmin):
             name = "%s@%s" % ( obj.midpoint, obj.sitecode.rstrip() )
         return name
 
-    list_display = ('id', 'block_groupid', 'quality', 'frametype', 'filename_or_midpoint', 'exptime', 'filter', 'sitecode')
+    list_display = ('id', 'block_groupid', 'quality', 'frametype', 'filename_or_midpoint', 'exptime', 'filter', 'sitecode', 'fwhm')
     list_filter = ('quality', 'frametype', 'midpoint', 'filter', 'sitecode', 'instrument')
 
     ordering = ('-midpoint',)
