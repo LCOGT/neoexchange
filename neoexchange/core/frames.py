@@ -136,15 +136,22 @@ def frame_params_from_log(params, block):
     return frame_params
 
 def ingest_frames(images, block):
+    '''
+
+    - Also find out how many scheduler blocks were used
+    '''
     archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
+    sched_blocks = []
     for image in images:
         image_header = lcogt_api_call(archive_headers, image.get('headers', None))
         if image_header:
             frame = create_frame(image_header['data'], block)
+            sched_blocks.append(image_header['data']['BLKUID'])
         else:
             logger.error("Could not obtain header for %s" % image)
     logger.debug("Ingested %s frames" % len(images))
-    return
+    block_ids = set(sched_blocks)
+    return block_ids
 
 def block_status(block_id):
     '''
@@ -192,16 +199,12 @@ def block_status(block_id):
                     block.when_observed = last_image
                 if block.block_end < datetime.utcnow():
                     block.active = False
-#                block.num_observed = exposure_count
-                # This is not correct either but better than it is currently working
-                # which is just setting # of times the block has been observed to the
-                # number of exposures in the block... XXX to fix
-                block.num_observed = int( ceil( len(images) / float(exposure_count) ) )
+                # Add frames and get list of scheduler block IDs used
+                block_ids = ingest_frames(images, block)
+                block.num_observed = len(block_ids)
                 block.save()
                 status = True
                 logger.debug("Block %s updated" % block)
-                # Add frames
-                resp = ingest_frames(images, block)
             else:
                 logger.debug("No update to block %s" % block)
     return status
