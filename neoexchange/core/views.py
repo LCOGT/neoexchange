@@ -1047,3 +1047,23 @@ def create_source_measurement(obs_lines, block=None):
                 measures = False
 
     return measures
+
+def plot_fwhm(requests):
+
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import io
+
+    semester_start, semester_end = get_semester_dates(datetime.utcnow())
+    semester_start = semester_start.date()
+    semester_end = date(semester_end + timedelta(days=1))
+    fwhm = Frame.objects.filter(fwhm__gte=0.0, midpoint__range=(semester_start, semester_end)).values_list('fwhm')
+
+    fig = plt.Figure()
+    plt.hist(fwhm)
+    buffer = io.BytesIO()
+    fig.save(buffer, format='png')
+    fig.save('fwhm.png', format='png')
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")

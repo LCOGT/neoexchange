@@ -29,6 +29,7 @@ admin.autodiscover()
 
 urlpatterns = [
     url(r'^$', home, name='home'),
+    url(r'^plotfwhm/(?P<sem>)/$', plot_fwhm, name='plotfwhm'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', BlockListView.as_view(model=Block, queryset=Block.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/report/$',BlockReport.as_view(), name='report-block'),
