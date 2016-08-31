@@ -567,6 +567,16 @@ class TestCheck_for_block(TestCase):
         resp = block_status(blockid)
         self.assertFalse(resp)
 
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.ingest_frames', mock_ingest_frames)
+    @patch('core.frames.lcogt_api_call', mock_check_for_images_no_millisecs)
+    def test_block_update_check_num_observed(self):
+        bid = 1
+        resp = block_status(block_id=bid)
+        blk = Block.objects.get(id=bid)
+        self.assertEqual(blk.num_observed,1)
+
 class TestSchedule_Check(TestCase):
 
     def setUp(self):
