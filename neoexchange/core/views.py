@@ -141,12 +141,6 @@ class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = Block
 
-    def get_context_data(self, **kwargs):
-        context = super(BlockDetailView, self).get_context_data(**kwargs)
-        context['images'] = fetch_observations(context['block'].tracking_number)
-        return context
-
-
 class BlockListView(ListView):
     model = Block
     template_name = 'core/block_list.html'
