@@ -1057,13 +1057,13 @@ def plot_fwhm(request, sem):
     semester_end = (semester_end + timedelta(days=1)).date()
     fwhm = Frame.objects.filter(fwhm__gt=0.0, midpoint__range=(semester_start, semester_end)).values_list('fwhm', flat=True)
     if len(fwhm) > 1:
-        nbins = 20
+        nbins = 30
         fwhm_lowerlimit = 0.0 # min(fwhm)
-        fwhm_upperlimit = min(max(fwhm), 6.0)
+        fwhm_upperlimit = max(fwhm)
         fwhm_upperlimit = (round(fwhm_upperlimit*2)+1)/2.0
         bin_size = (fwhm_upperlimit - fwhm_lowerlimit) / float(nbins)
 
-    #    ax = plt.subplot(1,1,1)
+        plt.subplot(2,1,1)
         plt.hist(fwhm, arange(fwhm_lowerlimit, fwhm_upperlimit+bin_size, bin_size),\
             align='mid', stacked=True, color='DodgerBlue')
         plt.xlim(fwhm_lowerlimit, fwhm_upperlimit+bin_size)
@@ -1077,12 +1077,30 @@ def plot_fwhm(request, sem):
         # Label plot
         title_string = "FWHM for %s (%s -> %s; %d frames)" % (sem, semester_start, semester_end, len(fwhm))
         plt.title(title_string)
+        plt.ylabel("Frequency")
+
+        # Second plot with fixed range
+        fwhm_upperlimit = 6.0
+        bin_size = (fwhm_upperlimit - fwhm_lowerlimit) / float(nbins)
+
+        plt.subplot(2,1,2)
+        plt.hist(fwhm, arange(fwhm_lowerlimit, fwhm_upperlimit+bin_size, bin_size),\
+            align='mid', stacked=True, color='DodgerBlue')
+        plt.xlim(fwhm_lowerlimit, fwhm_upperlimit+bin_size)
+        tick_spacing = (plt.xlim()[1] - plt.xlim()[0]) /10.0
+        print tick_spacing
+        tick_spacing = max(round(tick_spacing), 0.5)
+        if tick_spacing <= 1.0:
+            tick_spacing = 0.5
+        print tick_spacing
+        plt.xticks( arange(fwhm_lowerlimit, fwhm_upperlimit, tick_spacing))
         plt.xlabel("FWHM (arcsec)")
         plt.ylabel("Frequency")
 
         buffer = io.BytesIO()
         plt.savefig(buffer, format='png')
-        plt.savefig('fwhm.png', format='png')
+        plot_filename = 'NEOX_FWHM_%s.png' % sem
+        plt.savefig(plot_filename, format='png')
         plt.close()
 
         return HttpResponse(buffer.getvalue(), content_type="Image/png")
