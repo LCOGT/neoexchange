@@ -97,6 +97,8 @@ def frame_params_from_header(params, block):
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
                  }
+    if '.fits' not in frame_params['filename']:
+        frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
     return frame_params
 
 def frame_params_from_block(params, block):
