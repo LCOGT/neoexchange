@@ -1142,7 +1142,12 @@ def LCOGT_domes_to_site_codes(siteid, encid, telid):
                          'COJ-DOMA-1M0A' : 'Q63', 
                          'COJ-DOMB-1M0A' : 'Q64', 
                          'OGG-CLMA-2M0A' : 'F65', 
-                         'COJ-CLMA-2M0A' : 'E10' } 
+                         'COJ-CLMA-2M0A' : 'E10',
+                         'TFN-AQWA-0M4A' : 'Z21',
+                         'COJ-CLMA-0M4B' : 'Q59',
+                         'OGG-CLMA-0M4B' : 'T04',
+                         'LSC-AQWA-0M4A' : 'W89',
+                         'SQA-DOMA-0M8A' : 'G51'}
 
     instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
     return valid_site_codes.get(instance, 'XXX')
