@@ -61,7 +61,7 @@ def check_for_images(auth_header, request_id):
     data_url = settings.FRAMES_API_URL % request_id
     data = lcogt_api_call(auth_header, data_url)
     for datum in data:
-        if 'e91' in datum['filename']:
+        if 'e91' in datum['filename'] or 'e90.fits' in datum['filename']:
             reduced_data.append(datum)
     return reduced_data
 
@@ -77,7 +77,34 @@ def create_frame(params, block=None):
     else:
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
-    frame, frame_created = Frame.objects.get_or_create(**frame_params)
+    frame_created = False
+    try:
+        frame = Frame.objects.get(**frame_params)
+    except Frame.DoesNotExist:
+        print "No frame"
+        if 'filename' in frame_params:
+            if '.fits' not in frame_params['filename']:
+                frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
+                try:
+                    frame = Frame.objects.get(**frame_params)
+                except Frame.DoesNotExist:
+                    frame, frame_created = Frame.objects.get_or_create(**frame_params)
+                except Frame.MultipleObjectsReturned:
+                    del_frames = Frame.objects.filter(fwhm__isnull=False,**frame_params).delete()
+                    print del_frames
+                    frames = Frame.objects.filter(**frame_params)
+                    frame = frames[0]
+                    if len(frames) > 1:
+                        for bad_frame in frames[1:]:
+                            bad_frame.delete()
+                        print "Deleted",len(frames)-1, "frames"
+            else:
+                frame, frame_created = Frame.objects.get_or_create(**frame_params)
+    if params.get('GROUPID', None):
+        frame.fwhm = params.get('L1FWHM', None)
+        if '.fits' not in frame.filename:
+            frame.filename = frame_params['filename'].rstrip() + '.fits'
+        frame.save()
     if frame_created:
         msg = "created"
     else:
@@ -97,6 +124,8 @@ def frame_params_from_header(params, block):
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
                  }
+#    if '.fits' not in frame_params['filename']:
+#        frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
     return frame_params
 
 def frame_params_from_block(params, block):
