@@ -173,7 +173,7 @@ def block_status(block_id):
     logger.debug("Checking request status for %s" % block_id)
     data = check_request_status(headers, tracking_num)
     # data is a full LCOGT request dict for this tracking number.
-    if not data:
+    if not data or type(data) == dict:
         return False
     # Although this is a loop, we should only have a single request so it is executed once
     exposure_count = 0

@@ -21,7 +21,8 @@ from bs4 import BeautifulSoup
 import os
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
-    mock_check_request_status_null, mock_check_for_images_no_millisecs, \
+    mock_check_request_status_null, mock_check_request_status_notfound, \
+    mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header
 
 #Import module to test
@@ -576,6 +577,12 @@ class TestCheck_for_block(TestCase):
         resp = block_status(block_id=bid)
         blk = Block.objects.get(id=bid)
         self.assertEqual(blk.num_observed,1)
+
+    @patch('core.frames.check_request_status', mock_check_request_status_notfound)
+    def test_block_not_found(self):
+        bid = 1
+        resp = block_status(block_id=bid)
+        self.assertEqual(False, resp)
 
 class TestSchedule_Check(TestCase):
 
