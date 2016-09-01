@@ -52,6 +52,29 @@ def get_semester_dates(date):
     return start, end
 
 
+def semester_code_to_dates(semester_code):
+    '''Turns a LCOGT semester code e.g. 2016A into a pair of datetimes for the
+    start and end of the semester. Returns (None,None) if an invalid semester
+    is given.'''
+
+    semester_start = semester_end = None
+    semester_code = semester_code.strip()
+    semester_letter = semester_code[-1].upper()
+    if semester_letter == 'A' or semester_letter == 'B':
+        year = semester_code[0:4]
+        if year.isdigit():
+            month = 6
+            if semester_letter == 'B':
+                month = 11
+            date = datetime(int(year), month, 1)
+            semester_start, semester_end = get_semester_dates(date)
+        else:
+            print "Invalid semester year (%s)" % year
+    else:
+        print "Invalid semester letter code (%s)" % semester_code
+
+    return semester_start, semester_end
+
 def parse_neocp_date(neocp_datestr, dbg=False):
     '''Parse dates from the NEOCP (e.g. '(Nov. 16.81 UT)' ) into a datetime
     object and return this. Checking for the wrong number of days in the month
