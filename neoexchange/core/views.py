@@ -38,7 +38,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates
+    parse_neocp_decimal_date, get_semester_dates, semester_code_to_dates
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
 from core.frames import create_frame, fetch_observations, ingest_frames
 import logging
@@ -1048,19 +1048,35 @@ def plot_fwhm(request, sem):
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     import io
+    from numpy import arange
 
-    semester_start, semester_end = get_semester_dates(datetime.utcnow())
+    semester_start, semester_end = semester_code_to_dates(sem)
+    if semester_start == None or semester_end == None:
+        semester_start, semester_end = get_semester_dates(datetime.utcnow())
     semester_start = semester_start.date()
     semester_end = (semester_end + timedelta(days=1)).date()
-    fwhm = Frame.objects.filter(fwhm__gte=0.0, midpoint__range=(semester_start, semester_end)).values_list('fwhm')
+    fwhm = Frame.objects.filter(fwhm__gt=0.0, midpoint__range=(semester_start, semester_end)).values_list('fwhm', flat=True)
+    if len(fwhm) > 1:
+        nbins = 20
+        fwhm_lowerlimit = 0.0 # min(fwhm)
+        fwhm_upperlimit = max(fwhm)
+        fwhm_upperlimit = (round(fwhm_upperlimit*2)+1)/2.0
+        bin_size = (fwhm_upperlimit - fwhm_lowerlimit) / float(nbins)
 
-    nbins = 20
-    plt.hist(fwhm, nbins)
-    title_string = "FWHM for %s -> %s (%d frames)" % (semester_start, semester_end, len(fwhm))
-    plt.title(title_string)
+    #    ax = plt.subplot(1,1,1)
+        plt.hist(fwhm, arange(fwhm_lowerlimit, fwhm_upperlimit+bin_size, bin_size),\
+            align='mid', stacked=True, color='DodgerBlue')
+        plt.xticks( arange(fwhm_lowerlimit, fwhm_upperlimit, 0.5))
+        # Label plot
+        title_string = "FWHM for %s (%s -> %s; %d frames)" % (sem, semester_start, semester_end, len(fwhm))
+        plt.title(title_string)
+        plt.xlabel("FWHM (arcsec)")
+        plt.ylabel("Frequency")
 
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    plt.savefig('fwhm.png', format='png')
+        buffer = io.BytesIO()
+        plt.savefig(buffer, format='png')
+        plt.savefig('fwhm.png', format='png')
 
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+        return HttpResponse(buffer.getvalue(), content_type="Image/png")
+    else:
+        return HttpResponse("<html><title>FWHM plots</title>No images found between %s and %s (Semester=%s)</html>" % (semester_start, semester_end, sem))
