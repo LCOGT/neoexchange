@@ -218,12 +218,11 @@ SECRET_KEY = get_random_string(50, chars)
 DATABASES = {
     "default": {
         # Live DB
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": os.environ.get('NEOX_DB_NAME', 'neoexchange'),
-        "USER": os.environ.get('NEOX_DB_USER',''),
-        "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
-        "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'neoexchange',
+        'USER': 'egomez',
+        'HOST': 'db',
+        'PORT': 5432,
 
     }
 }
