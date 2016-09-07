@@ -96,6 +96,8 @@ def mock_check_request_status(headers, tracking_num):
 def mock_check_request_status_null(headers, tracking_num):
     return []
 
+def mock_check_request_status_notfound(headers, tracking_num):
+    return {u'detail': u'Not found.'}
 
 def mock_check_for_images_no_millisecs(auth_header, request_id):
     header = { "data": {
