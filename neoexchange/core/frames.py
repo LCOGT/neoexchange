@@ -61,7 +61,7 @@ def check_for_images(auth_header, request_id):
     data_url = settings.FRAMES_API_URL % request_id
     data = lcogt_api_call(auth_header, data_url)
     for datum in data:
-        if 'e91' in datum['filename']:
+        if 'e91' in datum['filename'] or 'e11' in datum['filename']:
             reduced_data.append(datum)
     return reduced_data
 
