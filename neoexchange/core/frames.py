@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import ceil
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
@@ -77,6 +77,7 @@ def create_frame(params, block=None):
     else:
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
+
     frame, frame_created = Frame.objects.get_or_create(**frame_params)
     if frame_created:
         msg = "created"
@@ -96,9 +97,20 @@ def frame_params_from_header(params, block):
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
+                     'fwhm'      : params.get('L1FWHM', None),
                  }
+    # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
+    # Correct midpoint for 1/2 the exposure time
+    if frame_params['midpoint'] and frame_params['exptime']:
+        try:
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:M:%S")
+
+        midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
+        frame_params['midpoint'] = midpoint
     return frame_params
 
 def frame_params_from_block(params, block):
@@ -116,6 +128,7 @@ def frame_params_from_block(params, block):
     return frame_params
 
 def frame_params_from_log(params, block):
+    # Called when parsing MPC NEOCP observations lines/logs
     our_site_codes = LCOGT_site_codes()
     # We are parsing observation logs
     sitecode = params.get('site_code', None)
