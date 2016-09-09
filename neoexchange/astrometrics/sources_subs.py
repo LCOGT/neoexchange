@@ -451,6 +451,9 @@ def fetch_mpcobs(asteroid, debug=False):
     return None
 
 def translate_catalog_code(code_or_name):
+    '''Mapping between the single character in column 72 of MPC records
+    and the astrometric reference catalog used.
+    Documentation at: http://www.minorplanetcenter.net/iau/info/CatalogueCodes.html'''
 
     catalog_codes = {
                   "a" : "USNO-A1",
@@ -465,7 +468,6 @@ def translate_catalog_code(code_or_name):
                   "j" : "GSC-1.2",
                   "k" : "GSC-2.2",
                   "l" : "ACT",
-                  "L" : "2MASS",
                   "m" : "GSC-ACT",
                   "n" : "TRC",
                   "o" : "USNO-B1",
@@ -479,7 +481,28 @@ def translate_catalog_code(code_or_name):
                   "w" : "CMC-14",
                   "x" : "HIP-2",
                   "z" : "GSC-1.x",
+                  "A" : "AC",
+                  "B" : "SAO 1984",
+                  "C" : "SAO",
+                  "D" : "AGK 3",
+                  "E" : "FK4",
+                  "F" : "ACRS",
+                  "G" : "Lick Gaspra Catalogue",
+                  "H" : "Ida93 Catalogue",
+                  "I" : "Perth 70",
+                  "J" : "COSMOS/UKST Southern Sky Catalogue",
+                  "K" : "Yale",
+                  "L" : "2MASS",
+                  "M" : "GSC-2.3",
                   "N" : "SDSS-DR7",
+                  "O" : "SST-RC1",
+                  "P" : "MPOSC3",
+                  "Q" : "CMC-15",
+                  "R" : "SST-RC4",
+                  "S" : "URAT-1",
+                  "T" : "URAT-2",
+                  "U" : "GAIA-DR1",
+                  "V" : "GAIA-DR2",
                   }
     catalog_or_code = ''
     if len(code_or_name) == 1:
