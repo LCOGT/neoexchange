@@ -31,7 +31,8 @@ from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
+    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
+    return_LCOGT_site_codes_mapping
 from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
@@ -1055,8 +1056,24 @@ def plot_fwhm(request, sem):
         semester_start, semester_end = get_semester_dates(datetime.utcnow())
     semester_start = semester_start.date()
     semester_end = (semester_end + timedelta(days=1)).date()
-    fwhm = Frame.objects.filter(fwhm__gt=0.0, midpoint__range=(semester_start, semester_end)).values_list('fwhm', flat=True)
+
+    site_codes = return_LCOGT_site_codes_mapping()
+    onem_codes = []
+    point4m_codes = []
+
+    for key in site_codes.keys():
+        if '1M0' in key:
+            onem_codes.append(site_codes[key])
+        elif '0M4' in key:
+            point4m_codes.append(site_codes[key])
+
+    fwhm = Frame.objects.filter(fwhm__gt=0.0, midpoint__range=(semester_start, semester_end))
+    onem_fwhm = fwhm.filter(sitecode__in=onem_codes).values_list('fwhm', flat=True)
+    point4m_fwhm = fwhm.filter(sitecode__in=point4m_codes).values_list('fwhm', flat=True)
+    fwhm = fwhm.values_list('fwhm', flat=True)
+
     if len(fwhm) > 1:
+        plot_labels = ['1m0 (%d frames)' % len(onem_fwhm), '0m4 (%d frames)' % len(point4m_fwhm)]
         nbins = 30
         fwhm_lowerlimit = 0.0 # min(fwhm)
         fwhm_upperlimit = max(fwhm)
@@ -1064,18 +1081,17 @@ def plot_fwhm(request, sem):
         bin_size = (fwhm_upperlimit - fwhm_lowerlimit) / float(nbins)
 
         plt.subplot(2,1,1)
-        plt.hist(fwhm, arange(fwhm_lowerlimit, fwhm_upperlimit+bin_size, bin_size),\
-            align='mid', stacked=True, color='DodgerBlue')
+        plt.hist([onem_fwhm, point4m_fwhm], arange(fwhm_lowerlimit, fwhm_upperlimit+bin_size, bin_size),\
+            align='mid', stacked=True, color=['DodgerBlue', 'red'], label=plot_labels)
         plt.xlim(fwhm_lowerlimit, fwhm_upperlimit+bin_size)
         tick_spacing = (plt.xlim()[1] - plt.xlim()[0]) /10.0
-        print tick_spacing
         tick_spacing = max(round(tick_spacing), 0.5)
         if tick_spacing <= 1.0:
             tick_spacing = 0.5
-        print tick_spacing
         plt.xticks( arange(fwhm_lowerlimit, fwhm_upperlimit, tick_spacing))
         # Label plot
         title_string = "FWHM for %s (%s -> %s; %d frames)" % (sem, semester_start, semester_end, len(fwhm))
+        plt.legend()
         plt.title(title_string)
         plt.ylabel("Frequency")
 
@@ -1084,16 +1100,15 @@ def plot_fwhm(request, sem):
         bin_size = (fwhm_upperlimit - fwhm_lowerlimit) / float(nbins)
 
         plt.subplot(2,1,2)
-        plt.hist(fwhm, arange(fwhm_lowerlimit, fwhm_upperlimit+bin_size, bin_size),\
-            align='mid', stacked=True, color='DodgerBlue')
+        plt.hist([onem_fwhm, point4m_fwhm], arange(fwhm_lowerlimit, fwhm_upperlimit+bin_size, bin_size),\
+            align='mid', stacked=True, color=['DodgerBlue', 'red'], label=plot_labels)
         plt.xlim(fwhm_lowerlimit, fwhm_upperlimit+bin_size)
         tick_spacing = (plt.xlim()[1] - plt.xlim()[0]) /10.0
-        print tick_spacing
         tick_spacing = max(round(tick_spacing), 0.5)
         if tick_spacing <= 1.0:
             tick_spacing = 0.5
-        print tick_spacing
         plt.xticks( arange(fwhm_lowerlimit, fwhm_upperlimit, tick_spacing))
+        plt.legend()
         plt.xlabel("FWHM (arcsec)")
         plt.ylabel("Frequency")
 
