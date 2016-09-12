@@ -15,11 +15,11 @@ class BodyDetailsTest(FunctionalTest):
         # detailed view.
         link = self.browser.find_element_by_link_text('N999r0q')
         body_url = self.live_server_url + reverse('target',kwargs={'pk':1})
-        self.assertEqual(link.get_attribute('href'), body_url)
+        self.assertIn(link.get_attribute('href'), body_url)
 
         # She clicks the link and is taken to a page with the targets' details.
-        link.click()
-        self.browser.implicitly_wait(3)
+        with self.wait_for_page_load(timeout=10):
+            link.click()
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), body_url)
 

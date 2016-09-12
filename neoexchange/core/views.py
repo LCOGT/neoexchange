@@ -127,10 +127,7 @@ class BodySearchView(ListView):
     model = Body
 
     def get_queryset(self):
-        try:
-            name = self.request.REQUEST.get("q")
-        except:
-            name = ''
+        name = self.request.GET.get("q","")
         if (name != ''):
             object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:

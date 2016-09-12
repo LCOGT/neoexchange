@@ -56,8 +56,8 @@ class NewVisitorTest(FunctionalTest):
 
         # he goes to the page from N999r0q and computes the ephemeris
         link = self.browser.find_element_by_link_text('N999r0q')
-        self.browser.implicitly_wait(3)
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He decides to using the the ephemeris formte
         inputbox = self.get_item_input_box()
@@ -68,7 +68,8 @@ class NewVisitorTest(FunctionalTest):
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        self.browser.find_element_by_id("id_submit").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -99,15 +100,16 @@ class NewVisitorTest(FunctionalTest):
         self.browser.get(self.live_server_url)
 
         link = self.browser.find_element_by_link_text('N999r0q')
-        self.browser.implicitly_wait(3)
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He notices a new selection for the site code and chooses FTN (F65)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
         self.assertIn('Maui, Hawaii (FTN - F65)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
+        # site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
+        site_choices.select_by_value("F65")
 
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
@@ -120,7 +122,8 @@ class NewVisitorTest(FunctionalTest):
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        self.browser.find_element_by_id("id_submit").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -150,8 +153,8 @@ class NewVisitorTest(FunctionalTest):
 
         # He is invited to enter a target to compute an ephemeris
         link = self.browser.find_element_by_link_text('N999r0q')
-        self.browser.implicitly_wait(3)
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
@@ -178,7 +181,8 @@ class NewVisitorTest(FunctionalTest):
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        self.browser.find_element_by_id("id_submit").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -242,7 +246,8 @@ class NewVisitorTest(FunctionalTest):
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        self.browser.find_element_by_id("id_submit").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
