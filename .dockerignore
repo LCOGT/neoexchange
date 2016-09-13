@@ -1,3 +1,6 @@
 */Diffs
 */neox.log
 */.coveragerc
+*/htmlcov
+*/comet
+*/*.db

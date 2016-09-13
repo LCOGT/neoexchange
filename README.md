@@ -4,14 +4,19 @@ Portal for scheduling observations of NEOs using LCOGT
 
 ## History
 
-### 1.4.7
+### 1.5.1
+
 Correct a long-running problem where we didn't correct the Frame midpoint for
 half of the exposure time for our own frames. Store FWHM in the Frame objects
 when creating.
 
+### 1.5.0
+
+Django 1.10 release
+
 ### 1.4.6
 Prevent creation of Bodies without orbital elements. Add 0.4m site codes for
-proper attribution when creating frames. Fix missing .fits extensions in archive
+proper attribution when creating frames. Fix missing `.fits` extensions in archive
 replies when creating Frames.
 
 ### 1.4.5
