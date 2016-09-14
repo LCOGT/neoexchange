@@ -19,12 +19,13 @@
 #### To deploy
 ### Use the docker-compose.yml from  github.com/LCOGT/docker/compose/neoexchange/
 ### On docknode06.lco.gtn
+### Change to the right place
+# cd /mnt/docker/compose-configurations/neox/
+### Pull in latest container
 # docker pull docker.lcogt.net/neoexchange:latest
 ### Stop and remove the running container
 # docker stop neox_web_1
 # docker rm neox_web_1
-### Change to the right place
-# cd bin/compose/neox
 ### Start the new container
 # docker-compose up -d
 #
@@ -49,9 +50,10 @@ ENV PREFIX /neoexchange
 # Install packages and update base system
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
-        && yum -y install supervisor libssl \
+        && yum -y install supervisor libssl libffi libffi-devel \
         && yum -y groupinstall "Development Tools" \
-        && yum -y update
+        && yum -y update \
+        && yum clean all
 
 # Setup our python env now so it can be cached
 COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt

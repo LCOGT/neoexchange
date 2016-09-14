@@ -24,6 +24,8 @@ from re import sub
 from math import degrees
 from datetime import datetime, timedelta
 from socket import error
+from random import randint
+from time import sleep
 
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
@@ -55,6 +57,24 @@ def download_file(url, file_to_save):
             else:
                 print "HTTP Error: %s" % (e.code,)
 
+def random_delay(lower_limit=10, upper_limit=20):
+    '''Waits a random number of integer seconds between [lower_limit; default 10]
+    and [upper_limit; default 20]. Useful for slowing down web requests to prevent
+    overloading remote systems. The executed delay is returned.'''
+
+    try:
+        lower_limit = max(int(lower_limit), 0)
+    except ValueError:
+        lower_limit = 10
+    try:
+        upper_limit = int(upper_limit)
+    except ValueError:
+        upper_limit = 20
+
+    delay = randint(lower_limit, upper_limit)
+    sleep(delay)
+
+    return delay
 
 def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
     '''Fetches the specified URL from <url> and parses it using BeautifulSoup.
@@ -431,6 +451,9 @@ def fetch_mpcobs(asteroid, debug=False):
     return None
 
 def translate_catalog_code(code_or_name):
+    '''Mapping between the single character in column 72 of MPC records
+    and the astrometric reference catalog used.
+    Documentation at: http://www.minorplanetcenter.net/iau/info/CatalogueCodes.html'''
 
     catalog_codes = {
                   "a" : "USNO-A1",
@@ -445,7 +468,6 @@ def translate_catalog_code(code_or_name):
                   "j" : "GSC-1.2",
                   "k" : "GSC-2.2",
                   "l" : "ACT",
-                  "L" : "2MASS",
                   "m" : "GSC-ACT",
                   "n" : "TRC",
                   "o" : "USNO-B1",
@@ -459,7 +481,28 @@ def translate_catalog_code(code_or_name):
                   "w" : "CMC-14",
                   "x" : "HIP-2",
                   "z" : "GSC-1.x",
+                  "A" : "AC",
+                  "B" : "SAO 1984",
+                  "C" : "SAO",
+                  "D" : "AGK 3",
+                  "E" : "FK4",
+                  "F" : "ACRS",
+                  "G" : "Lick Gaspra Catalogue",
+                  "H" : "Ida93 Catalogue",
+                  "I" : "Perth 70",
+                  "J" : "COSMOS/UKST Southern Sky Catalogue",
+                  "K" : "Yale",
+                  "L" : "2MASS",
+                  "M" : "GSC-2.3",
                   "N" : "SDSS-DR7",
+                  "O" : "SST-RC1",
+                  "P" : "MPOSC3",
+                  "Q" : "CMC-15",
+                  "R" : "SST-RC4",
+                  "S" : "URAT-1",
+                  "T" : "URAT-2",
+                  "U" : "GAIA-DR1",
+                  "V" : "GAIA-DR2",
                   }
     catalog_or_code = ''
     if len(code_or_name) == 1:
@@ -582,8 +625,8 @@ def parse_mpcorbit(page, dbg=False):
     # Find the table of elements and then the subtables within it
     elements_table = page.find('table', {'class' : 'nb'})
     if elements_table == None:
-        if dbg: "No element tables found"
-        return None
+        if dbg: logger.debug("No element tables found")
+        return {}
     data_tables = elements_table.find_all('table')
     for table in data_tables:
         rows = table.find_all('tr')
@@ -813,11 +856,35 @@ def fetch_arecibo_targets(page=None):
                 for row in rows[1:]:
                     items = row.find_all('td')
                     target_object = items[0].text
+                    target_object = target_object.strip()
                     # See if it is the form "(12345) 2008 FOO". If so, extract
                     # just the asteroid number
                     if '(' in target_object and ')' in target_object:
-                        target_object = target_object.split(')')[0].replace('(','')
-                    targets.append(target_object)
+                        # See if we have parentheses around the number or around the
+                        # temporary desigination.
+                        # If the first character in the string is a '(' we have the first
+                        # case and should split on the closing ')' and take the 0th chunk
+                        # If the first char is not a '(', then we have parentheses around
+                        # the temporary desigination and we should split on the '(', take
+                        # the 0th chunk and strip whitespace
+                        split_char = ')'
+                        if target_object[0] != '(':
+                            split_char = '('
+                        target_object = target_object.split(split_char)[0].replace('(','')
+                        target_object = target_object.strip()
+                    else:
+                        # No parentheses, either just a number or a number and name
+                        chunks = target_object.split(' ')
+                        if len(chunks) >= 2:
+                            if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                target_object = chunks[0]
+                            else:
+                                target_object = chunks[0] + " " + chunks[1]
+                        else:
+                            logger.warn("Unable to parse Arecibo target %s" % target_object)
+                            target_object = None
+                    if target_object:
+                        targets.append(target_object)
             else:
                 logger.warn("No targets found in Arecibo page")
     return targets
@@ -825,7 +892,7 @@ def fetch_arecibo_targets(page=None):
 def imap_login(username, password, server='imap.gmail.com'):
     '''Logs into the specified IMAP [server] (Google's gmail is assumed if not
     specified) with the provide username and password.
-    
+
     An imaplib.IMAP4_SSL connection instance is returned or None if the
     login failed'''
 
@@ -863,7 +930,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         # Look for messages to the mailing list but without specifying a charset
         status, msgnums = mailbox.search(None, 'TO', list_address,\
                                                'FROM', list_author)
-        # Messages numbers come back in a space-separated string inside a 
+        # Messages numbers come back in a space-separated string inside a
         # 1-element list in msgnums
         if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
 
@@ -880,7 +947,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
                         date_tuple = email.utils.parsedate_tz(msg['Date'])
                         msg_utc_date = datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
                         time_diff = datetime.utcnow() - msg_utc_date
-                        # See if the subject has the right prefix and suffix and is 
+                        # See if the subject has the right prefix and suffix and is
                         # within a day of 'now'
                         if list_prefix in msg_subject and list_suffix in msg_subject and \
                             time_diff <= timedelta(days=date_cutoff):
@@ -1012,6 +1079,7 @@ def configure_defaults(params):
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
                   'Q59' : 'COJ'}
+
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
@@ -1020,11 +1088,18 @@ def configure_defaults(params):
     params['filter'] = 'w'
 
     if params['site_code'] == 'W86' or params['site_code'] == 'W87':
+        # Force to Dome B (W86) as W87 is bad
         params['binning'] = 1
         params['observatory'] = 'domb'
         params['instrument'] = '1M0-SCICAM-SINISTRO'
+        if params['site_code'] == 'W87':
+            params['site_code'] = 'W86'
     elif params['site_code'] == 'V37':
         params['binning'] = 1
+        params['instrument'] = '1M0-SCICAM-SINISTRO'
+    elif params['site_code'] == 'K93':
+        params['binning'] = 1
+        params['observatory'] = 'domc'
         params['instrument'] = '1M0-SCICAM-SINISTRO'
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'

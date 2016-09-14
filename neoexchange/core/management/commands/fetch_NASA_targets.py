@@ -4,7 +4,7 @@ import os
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
-from astrometrics.sources_subs import imap_login, fetch_NASA_targets
+from astrometrics.sources_subs import imap_login, fetch_NASA_targets, random_delay
 from core.views import update_MPC_orbit
 
 class Command(BaseCommand):
@@ -21,5 +21,9 @@ class Command(BaseCommand):
                 for obj_id in NASA_targets:
                     self.stdout.write("Reading NASA/ARM target %s" % obj_id)
                     update_MPC_orbit(obj_id, origin='N')
+                    # Wait between 10 and 20 seconds
+                    delay = random_delay(10, 20)
+                    self.stdout.write("Slept for %d seconds" % delay)
+
                 mailbox.close()
                 mailbox.logout()

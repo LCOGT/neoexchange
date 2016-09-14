@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.5.0 (0.4m beta)'
+VERSION = '1.6.0 (0.4m beta)'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -20,7 +20,7 @@ PREFIX = os.environ.get('PREFIX', '')
 if PREFIX != '':
     FORCE_SCRIPT_NAME = '/neoexchange'
 
-BASE_DIR = os.path.dirname(CURRENT_PATH)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SESSION_COOKIE_NAME='neox.sessionid'
 
@@ -118,6 +118,21 @@ TEMPLATES = [
     },
 ]
 
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
 LOGIN_URL = PREFIX +'/accounts/login/'
 
 LOGIN_REDIRECT_URL = PREFIX + '/'
@@ -125,9 +140,6 @@ LOGIN_REDIRECT_URL = PREFIX + '/'
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
-    'suit',
-    'neox',
-    'core',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -136,6 +148,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.messages',
     'reversion',
+    'core.apps.CoreConfig',
     'opbeat.contrib.django',
 )
 
@@ -177,7 +190,7 @@ LOGGING = {
             'filters': ['require_debug_false']
         },
         'console': {
-            'level': 'ERROR',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         }
@@ -195,7 +208,7 @@ LOGGING = {
         },
         'core' : {
             'handlers' : ['file','console'],
-            'level'    : 'ERROR',
+            'level'    : 'DEBUG',
         },
         'astrometrics' : {
             'handlers' : ['file','console'],
@@ -231,7 +244,12 @@ DATABASES = {
 NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
-REQUEST_API_URL = 'https://lcogt.net/observe/service/request/get/userrequeststatus/'
+REQUEST_API_URL = 'https://lcogt.net/observe/api/user_requests/%s/requests/'
+FRAMES_API_URL = 'https://lcogt.net/observe/api/requests/%s/frames/'
+REQUEST_AUTH_API_URL = 'https://lcogt.net/observe/api/api-token-auth/'
+
+ARCHIVE_FRAMES_URL = 'https://archive-api.lcogt.net/frames/'
+REDUCED_DATA_SUFFIX = 'e90'
 
 #######################
 # Test Database setup #
@@ -266,6 +284,8 @@ CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
 RBAUTH_TOKEN_URL = 'https://lcogt.net/observe/o/token/'
 RBAUTH_PROFILE_API = 'https://lcogt.net/observe/api/profile/'
 RBAUTH_PROPOSAL_API = 'https://lcogt.net/observe/api/proposals/'
+ARCHIVE_API_URL = 'https://archive-api.lcogt.net'
+ARCHIVE_TOKEN_URL = 'https://archive-api.lcogt.net/api-token-auth/'
 
 ##################
 # LOCAL SETTINGS #
