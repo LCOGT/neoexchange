@@ -68,7 +68,7 @@ class NewVisitorTest(FunctionalTest):
         #He clicks on the top ranked NEO and is taken to a page that has more information on the object.
         link = self.browser.find_element_by_link_text('N999r0q')
         body_url = self.live_server_url + reverse('target',kwargs={'pk':1})
-        self.assertEqual(link.get_attribute('href'), body_url)
+        self.assertIn(link.get_attribute('href'), body_url)
 
         # He clicks the link and is taken to a page with the targets' details.
         link.click()

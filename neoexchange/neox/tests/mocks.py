@@ -96,6 +96,8 @@ def mock_check_request_status(headers, tracking_num):
 def mock_check_request_status_null(headers, tracking_num):
     return []
 
+def mock_check_request_status_notfound(headers, tracking_num):
+    return {u'detail': u'Not found.'}
 
 def mock_check_for_images_no_millisecs(auth_header, request_id):
     header = { "data": {
@@ -126,7 +128,7 @@ def mock_check_for_images_bad_date(auth_header, request_id):
     return header
 
 def mock_ingest_frames(images, block):
-    return None
+    return ['99999']
 
 def mock_rbauth_login(email, password, request=None):
     profile = {'username': 'bsimpson',
@@ -185,7 +187,8 @@ def mock_archive_frame_header(archive_headers, images):
                     "INSTRUME" : "kb27",
                     "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
                     "EXPTIME" : "200.0",
-                    "GROUPID" : "TEMP"
+                    "GROUPID" : "TEMP",
+                    "BLKUID"  : "999999"
             }
         }
     return header

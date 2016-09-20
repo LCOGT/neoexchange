@@ -51,6 +51,5 @@ class BlockSummaryTest(FunctionalTest):
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Observing Block Summary', header_text)
 
-        # He notices there is a plot with the number of blocks 
+        # He notices there is a plot with the number of blocks
         # "not observed / total requested" for each observing proposal.
-

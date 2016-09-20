@@ -29,7 +29,7 @@ from neox.tests.mocks import MockDateTime
 from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
-    fetch_NEOCP_observations, imap_login, fetch_NASA_targets
+    fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -94,10 +94,16 @@ class TestGoldstoneChunkParser(TestCase):
 class TestFetchAreciboTargets(TestCase):
 
     def setUp(self):
-        # Read and make soup from the stored version of the Arecibo radar page
+        # Read and make soup from the stored version of the Arecibo radar pages
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page.html'), 'r')
         self.test_arecibo_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page_v2.html'), 'r')
+        self.test_arecibo_page_v2 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.maxDiff = None
 
     def test_basics(self):
         expected_length = 17
@@ -126,6 +132,55 @@ class TestFetchAreciboTargets(TestCase):
                              u'2009 DL46']
 
         targets = fetch_arecibo_targets(self.test_arecibo_page)
+
+        self.assertEqual(expected_targets, targets)
+
+    def test_basics_v2(self):
+        expected_length = 36
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page_v2)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_targets_v2(self):
+        expected_targets =  [u'4775',
+                             u'357024',
+                             u'250458',
+                             u'2009 ES',
+                             u'2100',
+                             u'162117',
+                             u'2011 DU',
+                             u'2014 UR',
+                             u'2012 UA34',
+                             u'467963',
+                             u'413260',
+                             u'164121',
+                             u'2004 KB',
+                             u'2005 TF',
+                             u'326302',
+                             u'68950',
+                             u'152685',
+                             u'162911',
+                             u'152391',
+                             u'433953',
+                             u'2009 TB8',
+                             u'369264',
+                             u'96590',
+                             u'5143',
+                             u'2007 VM184',
+                             u'2005 WS3',
+                             u'326683',
+                             u'2006 XD2',
+                             u'2008 UL90',
+                             u'418849',
+                             u'2014 EW24',
+                             u'2012 YK',
+                             u'4179',
+                             u'2102',
+                             u'7341',
+                             u'226514']
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page_v2)
 
         self.assertEqual(expected_targets, targets)
    
@@ -191,7 +246,7 @@ class TestPreviousNEOCPParser(TestCase):
 
     def test_non_neo(self):
 
-        items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>').sub, u' = WQ39346(Aug. 19.79 UT)\n']
+        items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
         expected = [u'WQ39346', '2015 QF', '', u'(Aug. 19.79 UT)']
         
         crossmatch = parse_previous_NEOCP_id(items)
@@ -200,7 +255,7 @@ class TestPreviousNEOCPParser(TestCase):
 
     def test_neo(self):
 
-        items = [u' 2015 PK', BeautifulSoup('<sub>229</sub>').sub, u' = P10n00U (Aug. 17.98 UT)  [see ', BeautifulSoup('<a href="/mpec/K15/K15Q10.html"><i>MPEC</i> 2015-Q10</a>').a, u']\n']
+        items = [u' 2015 PK', BeautifulSoup('<sub>229</sub>', "html.parser").sub, u' = P10n00U (Aug. 17.98 UT)  [see ', BeautifulSoup('<a href="/mpec/K15/K15Q10.html"><i>MPEC</i> 2015-Q10</a>', "html.parser").a, u']\n']
         expected = [u'P10n00U', u'2015 PK229', u'MPEC 2015-Q10', u'(Aug. 17.98 UT)']
         
         crossmatch = parse_previous_NEOCP_id(items)
@@ -209,7 +264,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_good_comet(self):
 
         items = [u' Comet C/2015 Q1 = SW40sQ (Aug. 19.49 UT)  [see ',
-            BeautifulSoup('<a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>').a,
+            BeautifulSoup('<a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>', "html.parser").a,
             u']\n']
         expected = [u'SW40sQ', u'C/2015 Q1', u'IAUC 2015-', u'(Aug. 19.49 UT)']
         
@@ -219,7 +274,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_good_comet_cbet(self):
 
         items = [u' Comet C/2015 O1 = P10ms6N(July 21.99 UT)  [see ',
-            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>').a,
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser").a,
             u']\n']
 
         expected = [u'P10ms6N', u'C/2015 O1', u'CBET 4119', u'(July 21.99 UT)']
@@ -230,7 +285,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_bad_comet(self):
 
         items = [u' Comet C/2015 P3 = MAT01  (Aug. 11.23 UT)  [see ',
-            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004136.txt"><i>CBET</i> 4136</a>').a,
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004136.txt"><i>CBET</i> 4136</a>', "html.parser").a,
              u']\n']
         expected = [u'MAT01', u'C/2015 P3', u'CBET 4136', u'(Aug. 11.23 UT)']
         
@@ -240,7 +295,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_bad_comet2(self):
 
         items = [u' Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)  [see ', 
-            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>').a,
+            BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>', "html.parser").a,
              u']\n']
         expected = [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
         
@@ -250,7 +305,7 @@ class TestPreviousNEOCPParser(TestCase):
     def test_bad_comet3(self):
 
         items = [u' Comet C/2015 X8 = NM0015a (Dec. 18.63 UT)  [see ', 
-            BeautifulSoup(' <a href="/mpec/K15/K15Y20.html"><i>MPEC</i> 2015-Y20</a>').a,
+            BeautifulSoup(' <a href="/mpec/K15/K15Y20.html"><i>MPEC</i> 2015-Y20</a>', "html.parser").a,
              u']\n']
         expected = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Dec. 18.63 UT)']
         
@@ -390,7 +445,7 @@ class TestParseNEOCP(TestCase):
 
     def test_parse_neocp_no_objects(self):
 
-        obj_ids = parse_NEOCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+        obj_ids = parse_NEOCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser"))
 
         self.assertEqual(obj_ids, None)
 
@@ -435,7 +490,7 @@ class TestParseNEOCPExtraParams(TestCase):
 
     def test_parse_neocpep_no_objects(self):
 
-        obj_ids = parse_NEOCP_extra_params(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+        obj_ids = parse_NEOCP_extra_params(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser"))
 
         self.assertEqual(obj_ids, None)
 
@@ -454,7 +509,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td align="right">&nbsp;  0.06&nbsp;</td>
         <td align="right">&nbsp;31.0&nbsp;</td>
         <td align="right">&nbsp; 4.878&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'CAH024', {'score' : 99,
@@ -487,7 +542,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td></td>
         <td></td>
         <td></td><td></td></tr>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'WR0159E', {'score' : None,
@@ -518,7 +573,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td align="right">&nbsp;  0.86&nbsp;</td>
         <td align="right">&nbsp;20.5&nbsp;</td>
         <td align="right">&nbsp; 0.665&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'P10o4Gp', {'score' : 88,
@@ -549,7 +604,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td align="right">&nbsp;  1.16&nbsp;</td>
         <td align="right">&nbsp;24.4&nbsp;</td>
         <td align="right">&nbsp;17.455&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'P10nw2g', {'score' : 100,
@@ -592,7 +647,7 @@ class TestParseNEOCPExtraParams(TestCase):
         <td align="right">&nbsp;  1.16&nbsp;</td>
         <td align="right">&nbsp;24.4&nbsp;</td>
         <td align="right">&nbsp;17.455&nbsp;</td><tr>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = [(u'P10nI6D', {'score' : 60,
@@ -655,7 +710,7 @@ class TestParsePCCP(TestCase):
 
     def test_parse_pccp_no_objects(self):
 
-        obj_ids = parse_PCCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>'))
+        obj_ids = parse_PCCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser"))
 
         self.assertEqual(obj_ids, None)
 
@@ -675,7 +730,7 @@ class TestParsePCCP(TestCase):
         <td align="right">&nbsp; 15.44&nbsp;</td>
         <td align="right">&nbsp;14.4&nbsp;</td>
         <td align="right">&nbsp; 0.726&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_PCCP(html)
         expected_obj_ids = [(u'WR0159E', {'score' : 10,
@@ -722,7 +777,7 @@ class TestParsePCCP(TestCase):
         <td align="right">&nbsp; 15.44&nbsp;</td>
         <td align="right">&nbsp;14.4&nbsp;</td>
         <td align="right">&nbsp; 0.726&nbsp;</td>
-        ''' + self.table_footer)
+        ''' + self.table_footer, "html.parser")
 
         obj_ids = parse_PCCP(html)
         expected_obj_ids = [(u'WR0159E', {'score' : 10,
@@ -806,7 +861,19 @@ class TestFetchMPCOrbit(TestCase):
 
         elements = parse_mpcorbit(self.test_mpcdb_page)
         self.assertEqual(expected_elements, elements)
-        
+
+    def test_badpage(self):
+
+        expected_elements = {}
+        elements = parse_mpcorbit(BeautifulSoup('<html></html>', 'html.parser'))
+        self.assertEqual(expected_elements, elements)
+
+    def test_badpage_with_empty_table(self):
+
+        expected_elements = {}
+        elements = parse_mpcorbit(BeautifulSoup('<html><table class="nb"><table></table></table></html>', 'html.parser'))
+        self.assertEqual(expected_elements, elements)
+
 class TestParseMPCObsFormat(TestCase):
 
     def setUp(self):
@@ -1071,7 +1138,7 @@ class TestFetchNEOCPObservations(TestCase):
         self.maxDiff = None
 
     def test_removed_object(self):
-        page = BeautifulSoup('<html><body><pre>\nNone available at this time.\n</pre></body></html>')
+        page = BeautifulSoup('<html><body><pre>\nNone available at this time.\n</pre></body></html>', "html.parser")
         expected = None
 
         observations = fetch_NEOCP_observations(page)
@@ -1081,7 +1148,7 @@ class TestFetchNEOCPObservations(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'), 'r')
         obs_data = test_fh.read()
         test_fh.close()
-        page = BeautifulSoup(obs_data)
+        page = BeautifulSoup(obs_data, "html.parser")
 
         expected = [u'     P10pqB2  C2015 11 17.40000 03 44 26.153-07 26 22.40         20.8 wLNEOCPF51',
                     u'     P10pqB2  C2015 11 17.41166 03 44 24.591-07 26 51.93         20.9 wLNEOCPF51',
@@ -1296,3 +1363,136 @@ class TestIMAPLogin(TestCase):
         expected_targets = ['2016 BA14']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
+
+class TestConfigureDefaults(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_1m_sbig_cpt(self):
+        expected_params = { 'binning': 2,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SBIG',
+                            'observatory': '',
+                            'pondtelescope': '1m0',
+                            'site': 'CPT',
+                            'site_code': 'K92'}
+
+
+        params = { 'site_code' : 'K92' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sbig_lsc(self):
+        expected_params = { 'binning': 2,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SBIG',
+                            'observatory': '',
+                            'pondtelescope': '1m0',
+                            'site': 'LSC',
+                            'site_code': 'W85'}
+
+
+        params = { 'site_code' : 'W85' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sinistro_lsc(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': 'domb',
+                            'pondtelescope': '1m0',
+                            'site': 'LSC',
+                            'site_code': 'W86'}
+
+
+        params = { 'site_code' : 'W86' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sinistro_elp(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': '',
+                            'pondtelescope': '1m0',
+                            'site': 'ELP',
+                            'site_code': 'V37'}
+
+
+        params = { 'site_code' : 'V37' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sinistro_lsc_domec(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': 'domb',
+                            'pondtelescope': '1m0',
+                            'site': 'LSC',
+                            'site_code': 'W86'}
+
+
+        params = { 'site_code' : 'W87' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_1m_sinistro_cpt_domec(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': 'domc',
+                            'pondtelescope': '1m0',
+                            'site': 'CPT',
+                            'site_code': 'K93'}
+
+
+        params = { 'site_code' : 'K93' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_2m_ogg(self):
+        expected_params = { 'binning': 2,
+                            'filter': 'solar',
+                            'instrument': '2M0-SCICAM-SPECTRAL',
+                            'observatory': '',
+                            'pondtelescope': '2m0',
+                            'site': 'OGG',
+                            'site_code': 'F65'}
+
+
+        params = { 'site_code' : 'F65' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_2m_coj(self):
+        expected_params = { 'binning': 2,
+                            'filter': 'solar',
+                            'instrument': '2M0-SCICAM-SPECTRAL',
+                            'observatory': '',
+                            'pondtelescope': '2m0',
+                            'site': 'COJ',
+                            'site_code': 'E10'}
+
+
+        params = { 'site_code' : 'E10' }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)

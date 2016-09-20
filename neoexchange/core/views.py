@@ -45,9 +45,7 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
-from core.frames import block_status, frame_params_from_block, frame_params_from_log, \
-    ingest_frames, create_frame, check_for_images, check_request_status, fetch_observations
-
+from core.frames import create_frame, fetch_observations, ingest_frames
 import logging
 import reversion
 import json
@@ -135,10 +133,7 @@ class BodySearchView(ListView):
     model = Body
 
     def get_queryset(self):
-        try:
-            name = self.request.REQUEST.get("q")
-        except:
-            name = ''
+        name = self.request.GET.get("q","")
         if (name != ''):
             object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
@@ -483,7 +478,7 @@ def check_for_block(form_data, params, new_body):
         Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
 
         # XXX Code smell, duplicated from sources_subs.configure_defaults()
-        site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
+        site_list = { 'V37' : 'ELP' , 'K92' : 'CPT' , 'K93' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
 
         try:
             body_id = Body.objects.get(provisional_name=new_body.provisional_name)
@@ -945,6 +940,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     object will parsed.
     '''
 
+    obj_id = None
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
         page = fetch_mpcdb_page(obj_id, dbg)
@@ -956,6 +952,10 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         page = obj_id_or_page
 
     elements = parse_mpcorbit(page, dbg)
+    if elements == {}:
+        logger.warn("Could not parse elements from page for %s" % obj_id)
+        return False
+
     if type(obj_id_or_page) == BeautifulSoup:
         obj_id = elements['obj_id']
         del elements['obj_id']

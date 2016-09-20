@@ -14,7 +14,7 @@ GNU General Public License for more details.
 '''
 
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import skipIf
 import tempfile
 from glob import glob
@@ -26,7 +26,8 @@ from mock import patch
 from astropy.io import fits
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
-    mock_check_request_status_null, mock_check_for_images_no_millisecs, \
+    mock_check_request_status_null, mock_check_request_status_notfound, \
+    mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header
 
 #Import module to test
@@ -34,13 +35,11 @@ from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
-    create_source_measurement, block_status, clean_crossid, create_frame, \
-    frame_params_from_block, schedule_check, summarise_block_efficiency, \
+    create_source_measurement, clean_crossid, create_frame, \
+    schedule_check, summarise_block_efficiency, \
     check_catalog_and_refit, store_detections, update_crossids
-from core.frames import block_status
-
+from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
-
 from core.forms import EphemQuery
 
 
@@ -467,6 +466,20 @@ class TestCheck_for_block(TestCase):
 
         self.assertEqual(expected_state, block_state)
 
+    def test_body_with_no_provname1_no_blocks_sinistro(self):
+
+        new_body = self.body_no_provname1
+        params = { 'site_code' : 'K93'
+                 }
+        form_data = { 'proposal_code' : self.neo_proposal.code,
+                      'group_id' : self.body_no_provname1.current_name() + '_CPT-20150422'
+                    }
+        expected_state = 0
+
+        block_state = check_for_block(form_data, params, new_body)
+
+        self.assertEqual(expected_state, block_state)
+
     def test_body_with_no_provname1_one_block(self):
 
         new_body = self.body_no_provname1
@@ -559,6 +572,22 @@ class TestCheck_for_block(TestCase):
         blockid = self.test_block5.id
         resp = block_status(blockid)
         self.assertFalse(resp)
+
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.ingest_frames', mock_ingest_frames)
+    @patch('core.frames.lcogt_api_call', mock_check_for_images_no_millisecs)
+    def test_block_update_check_num_observed(self):
+        bid = 1
+        resp = block_status(block_id=bid)
+        blk = Block.objects.get(id=bid)
+        self.assertEqual(blk.num_observed,1)
+
+    @patch('core.frames.check_request_status', mock_check_request_status_notfound)
+    def test_block_not_found(self):
+        bid = 1
+        resp = block_status(block_id=bid)
+        self.assertEqual(False, resp)
 
 class TestSchedule_Check(TestCase):
 
@@ -829,6 +858,14 @@ class TestUpdate_MPC_orbit(TestCase):
                              }
 
         self.maxDiff = None
+
+    def test_badresponse(self):
+
+        num_bodies_before = Body.objects.count()
+        status = update_MPC_orbit(BeautifulSoup('<html></html>', 'html.parser'), origin='M')
+        self.assertEqual(False, status)
+        num_bodies_after = Body.objects.count()
+        self.assertEqual(num_bodies_before, num_bodies_after)
 
     @patch('core.views.datetime', MockDateTime)
     def test_2014UR_MPC(self):
@@ -1407,10 +1444,63 @@ class TestFrames(TestCase):
                         "EXPTIME" : "30",
                         "GROUPID"   : "TEMP"
                 }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME'])/2.0)
+
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
         self.assertEqual(1,frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, None)
+
+    def test_ingest_frames_block_no_fits_extn(self):
+        params = {
+                        "DATE_OBS": "2016-06-01T09:43:28.067",
+                        "ENCID": "doma",
+                        "SITEID":"cpt",
+                        "TELID":"1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00",
+                        "EXPTIME" : "30",
+                        "GROUPID"   : "TEMP"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME'])/2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].filename, params['ORIGNAME']+'.fits')
+        self.assertEqual(frames[0].midpoint, midpoint)
+
+    def test_ingest_frames_block_fwhm(self):
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID":"cpt",
+                        "TELID":"1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00.fits",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
 
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements

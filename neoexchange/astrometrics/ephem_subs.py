@@ -1124,14 +1124,9 @@ def get_mountlimits(site_code_or_name):
 
     return (ha_neg_limit, ha_pos_limit, alt_limit)
 
-def LCOGT_site_codes():
-    '''Return a list of LCOGT site codes'''
-    valid_site_codes = [ 'V37', 'W85', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64', 'F65', 'E10' ] 
-
-    return valid_site_codes
-
-def LCOGT_domes_to_site_codes(siteid, encid, telid):
+def return_LCOGT_site_codes_mapping():
     '''Return a mapping of LCOGT Site-Enclosure-Telescope to site codes'''
+
     valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
                          'LSC-DOMA-1M0A' : 'W85',
                          'LSC-DOMB-1M0A' : 'W86',
@@ -1142,7 +1137,26 @@ def LCOGT_domes_to_site_codes(siteid, encid, telid):
                          'COJ-DOMA-1M0A' : 'Q63',
                          'COJ-DOMB-1M0A' : 'Q64',
                          'OGG-CLMA-2M0A' : 'F65',
-                         'COJ-CLMA-2M0A' : 'E10' }
+                         'COJ-CLMA-2M0A' : 'E10',
+                         'TFN-AQWA-0M4A' : 'Z21',
+                         'COJ-CLMA-0M4B' : 'Q59',
+                         'OGG-CLMA-0M4B' : 'T04',
+                         'LSC-AQWA-0M4A' : 'W89',
+                         'SQA-DOMA-0M8A' : 'G51'}
+
+    return valid_site_codes
+
+def LCOGT_site_codes():
+    '''Return a list of LCOGT site codes'''
+
+    valid_site_codes = return_LCOGT_site_codes_mapping()
+
+    return valid_site_codes.values()
+
+def LCOGT_domes_to_site_codes(siteid, encid, telid):
+    '''Returns the mapped value of LCOGT Site-Enclosure-Telescope to site code'''
+
+    valid_site_codes = return_LCOGT_site_codes_mapping()
 
     instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
     return valid_site_codes.get(instance, 'XXX')
@@ -1193,7 +1207,7 @@ def get_sitecam_params(site):
         exp_overhead = onem_exp_overhead
         pixel_scale = onem_pixscale
         fov = arcmins_to_radians(onem_fov)
-        if 'W86' in site or 'W87' in site or 'V37' in site:
+        if 'W86' in site or 'W87' in site or 'V37' in site or 'K93' in site:
             pixel_scale = onem_sinistro_pixscale
             fov = arcmins_to_radians(onem_sinistro_fov)
             exp_overhead = sinistro_exp_overhead

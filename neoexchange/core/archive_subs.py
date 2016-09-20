@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 import os, sys
 from hashlib import md5
 from django.conf import settings
-from core.frames import get_lcogt_headers
+from core.urlsubs import get_lcogt_headers
 
 import requests
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings

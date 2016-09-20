@@ -1,7 +1,7 @@
 from core.models import Block
 from django.core.management.base import BaseCommand, CommandError
 from datetime import datetime, timedelta
-from core.views import block_status
+from core.frames import block_status
 
 class Command(BaseCommand):
     help = 'Update pending blocks if observation requests have been made'

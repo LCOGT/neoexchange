@@ -37,6 +37,7 @@ from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 
+
 OBJECT_TYPES = (
                 ('N','NEO'),
                 ('A','Asteroid'),
@@ -218,7 +219,6 @@ class Body(models.Model):
             and self.name != None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name,text)
-reversion.register(Body)
 
 
 class Block(models.Model):
