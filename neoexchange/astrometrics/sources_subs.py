@@ -796,6 +796,11 @@ def fetch_goldstone_targets(dbg=False):
                 # splitting.
                 if ', ' in line[0:40]:
                     line = line.replace(', ', '-', 1)
+                # Look for malformed space and hyphen-separated dates in the
+                # first part of the line and convert the first occurence to
+                # hyphens before splitting.
+                if '- ' in line[0:40] or ' -' in line[0:40]:
+                    line = line.replace('- ', '-', 1).replace(' -', '-', 1)
                 chunks = line.lstrip().split()
                 #if dbg: print line
                 # Check if the start of the stripped line is no longer the
