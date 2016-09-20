@@ -571,6 +571,18 @@ def open_fits_catalog(catfile, header_only=False):
                 table = hdulist[cat_index].data
         else:
             logger.error("Could not find SCI and CAT HDUs in file")
+    elif len(hdulist) == 1:
+        # BANZAI-format after extraction of image
+        cattype = 'BANZAI'
+        try:
+            sci_index = hdulist.index_of('SCI')
+        except KeyError:
+            sci_index = -1
+
+        if sci_index != -1:
+            header = hdulist[sci_index].header
+        else:
+            logger.error("Could not find SCI HDU in file")
     else:
         logger.error("Unexpected number of catalog HDUs (Expected 2, got %d)" % len(hdulist))
 
