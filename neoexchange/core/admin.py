@@ -110,7 +110,24 @@ class SourceMeasurementAdmin(admin.ModelAdmin):
     list_display = ('body_name', 'frame', 'flags', 'obs_ra_hms', 'obs_dec_dms', 'site_code')
     search_fields = ('body__name', 'body__provisional_name')
 
+class CatalogSourcesAdmin(admin.ModelAdmin):
+
+    def obs_x_rnd(self, obj):
+        return round(obj.obs_x, 3)
+
+    def obs_y_rnd(self, obj):
+        return round(obj.obs_y, 3)
+
+    def obs_ra_hms(self, obj):
+        return degreestohms(obj.obs_ra,' ')
+
+    def obs_dec_dms(self, obj):
+        return degreestodms(obj.obs_dec,' ')
+
+    list_display = ('id', 'frame', 'obs_x_rnd', 'obs_y_rnd', 'obs_ra', 'obs_dec', 'obs_ra_hms', 'obs_dec_dms', 'obs_mag')
+    search_fields = ('frame__filename', )
 
 admin.site.register(Proposal,ProposalAdmin)
 admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
+admin.site.register(CatalogSources,CatalogSourcesAdmin)
