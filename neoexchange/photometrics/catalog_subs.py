@@ -1197,7 +1197,7 @@ def extract_sci_image(file_path, catalog_path):
 
     return fits_filename_path
 
-def search_box(frame, ra, dec, box_halfwidth=3.0):
+def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     '''Search CatalogSources for the passed Frame object for sources within a 
     box of <box_halfwidth> centered on <ra>, <dec>.
     <ra>, <dec> are in radians, <box_halfwidth> is in arcseconds, default is 3.0"
@@ -1211,7 +1211,7 @@ def search_box(frame, ra, dec, box_halfwidth=3.0):
     box_dec_max = dec_deg + box_halfwidth_deg
     dec_min = min(box_dec_min, box_dec_max)
     dec_max = max(box_dec_min, box_dec_max)
-    print "Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max , frame.filename)
+    if dbg: print "Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max , frame.filename)
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
 
     return sources
