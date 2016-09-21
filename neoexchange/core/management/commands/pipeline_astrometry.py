@@ -23,6 +23,7 @@ class Command(BaseCommand):
         parser.add_argument('deltapa', action="store", help='Target angle of motion range')
         parser.add_argument('minrate', action="store", help='Target minimum rate of motion (arcsec/min)')
         parser.add_argument('maxrate', action="store", help='Target maximum rate of motion (arcsec/min)')
+        parser.add_argument('--skip-mtdlink', action="store_true", help='Whether to skip running mtdlink')
 
     def determine_images_and_catalogs(self, datadir, output=True):
 
@@ -121,21 +122,24 @@ class Command(BaseCommand):
                 fits_filename = extract_sci_image(catalog, new_catalog)
             fits_file_list.append(fits_filename)
 
-        # Step 4: Run MTDLINK to find moving objects
-        self.stdout.write("Running mtdlink on file(s) %s" % (fits_file_list))
-        param_file = os.path.abspath(os.path.join('photometrics', 'configs', 'mtdi.lcogt.param'))
-        #May change this to get pa and rate from compute_ephem later
-        pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
+        if options['skip_mtdlink'] == False:
+            # Step 4: Run MTDLINK to find moving objects
+            self.stdout.write("Running mtdlink on file(s) %s" % (fits_file_list))
+            param_file = os.path.abspath(os.path.join('photometrics', 'configs', 'mtdi.lcogt.param'))
+            #May change this to get pa and rate from compute_ephem later
+            pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
 
-        retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
+            retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
 
-        # Step 5: Read MTDLINK output file and create candidates in NEOexchange
-        if len(fits_file_list) > 0:
-            mtds_file = os.path.join(temp_dir, fits_file_list[0].replace('.fits', '.mtds'))
-            if os.path.exists(mtds_file):
-                store_detections(mtds_file,dbg=False)
-            else:
-                self.stdout.write("Cannot find the MTDS output file  %s" % mtds_file)
+            # Step 5: Read MTDLINK output file and create candidates in NEOexchange
+            if len(fits_file_list) > 0:
+                mtds_file = os.path.join(temp_dir, fits_file_list[0].replace('.fits', '.mtds'))
+                if os.path.exists(mtds_file):
+                    store_detections(mtds_file,dbg=False)
+                else:
+                    self.stdout.write("Cannot find the MTDS output file  %s" % mtds_file)
+        else:
+            self.stdout.write("Skipping running of mtdlink")
 
         # Tidy up
         if options['keep_temp_dir'] != True:
