@@ -1087,7 +1087,7 @@ def configure_defaults(params):
         params['instrument'] = '1M0-SCICAM-SINISTRO'
         if params['site_code'] == 'W87':
             params['site_code'] = 'W86'
-    elif params['site_code'] == 'V37':
+    elif params['site_code'] == 'V37' or params['site_code'] == 'Q63' or params['site_code'] == 'Q64':
         params['binning'] = 1
         params['instrument'] = '1M0-SCICAM-SINISTRO'
     elif params['site_code'] == 'K93':
