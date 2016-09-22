@@ -29,7 +29,7 @@ SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('W86','CTIO, Chile (LSC - W86; Sinistro)'),
          ('K92','Sutherland, S. Africa (CPT - K91-92; SBIG)'),
          ('K93','Sutherland, S. Africa (CPT - K93; Sinistro)'),
-         ('Q63','Siding Spring, Aust. (COJ - Q63-64)'))
+         ('Q63','Siding Spring, Aust. (COJ - Q63-64; Sinistro)'))
 
 
 class EphemQuery(forms.Form):
@@ -80,9 +80,7 @@ class ScheduleBlockForm(forms.Form):
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
-        logger.debug("cleaned_data=%s" % (self.cleaned_data))
         window_cutoff = datetime.utcnow() - timedelta(days=1)
-        logger.debug("In clean_start_time %s %s" % (start, window_cutoff))
         if start <= window_cutoff:
             raise forms.ValidationError("Window cannot start in the past")
         else:
