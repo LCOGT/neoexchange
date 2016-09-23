@@ -134,7 +134,7 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('Sutherland, S. Africa (CPT - K93; Sinistro)', form.as_p())
         self.assertIn('value="K93"', form.as_p())
-        self.assertIn('Siding Spring, Aust. (COJ - Q63-64)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
 
     def test_form_handles_save_with_long_name(self):
@@ -227,7 +227,7 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('Sutherland, S. Africa (CPT - K93; Sinistro)', form.as_p())
         self.assertIn('value="K93"', form.as_p())
-        self.assertIn('Siding Spring, Aust. (COJ - Q63-64)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):
