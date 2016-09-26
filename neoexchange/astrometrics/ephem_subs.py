@@ -835,6 +835,16 @@ def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
 def arcmins_to_radians(arcmin):
     return (arcmin/60.0)*(pi/180.0)
 
+def comp_sep(ra_cand_deg, dec_cand_deg, ra_ephem_rad, dec_ephem_rad):
+    '''Wrapper around SLALIB's sla_dsep to compute the separation between a
+    detected position specified by (ra_cand_deg, dec_cand_deg; in DEGREES) with
+    an ephemeris position (ra_ephem_rad, dec_ephem_rad; in RADIANS).
+    The computed separation is returned in arcseconds'''
+
+    sep = S.sla_dsep(radians(ra_cand_deg), radians(dec_cand_deg), ra_ephem_rad, dec_ephem_rad)
+    sep = degrees(sep)*3600.0
+    return sep
+
 def get_sitepos(site_code, dbg=False):
     '''Returns site name, geodetic longitude (East +ve), latitude (both in radians)
     and altitude (meters) for passed sitecode. This can be either a SLALIB site

@@ -33,7 +33,7 @@ except ImportError:
 from base64 import b64decode, b64encode
 
 from astrometrics.ast_subs import normal_to_packed
-from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params
+from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 
@@ -565,6 +565,23 @@ class Candidate(models.Model):
         dtypes = detections_array_dtypes()
         dets = fromstring(self.detections, dtype=dtypes)
         return dets
+
+    def compute_separation(self, body=None, time=None):
+        '''Computes the separation between the Candidate's avg_ra and avg_dec
+        and the RA, Dec of the body at a time of avg_midpoint'''
+        if body == None or type(body) != 'core.models.Body':
+            body = self.block.body
+        if time == None:
+            time = self.avg_midpoint
+
+        try:
+            elements = model_to_dict(body)
+            emp_line = compute_ephem(time, elements, self.block.site)
+            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line[1], emp_line[2])
+        except AttributeError:
+            separation = None
+
+        return separation
 
     class Meta:
         verbose_name = _('Candidate')
