@@ -249,6 +249,9 @@ class Block(models.Model):
                 url = url + self.tracking_number.lstrip('0') + '/'
         return url
 
+    def num_candidates(self):
+        return Candidate.objects.filter(block=self.id).count()
+
     class Meta:
         verbose_name = _('Observation Block')
         verbose_name_plural = _('Observation Blocks')
@@ -576,7 +579,7 @@ class Candidate(models.Model):
 
         try:
             elements = model_to_dict(body)
-            emp_line = compute_ephem(time, elements, self.block.site)
+            emp_line = compute_ephem(time, elements, self.block.site, perturb=False)
             separation = comp_sep(self.avg_ra, self.avg_dec, emp_line[1], emp_line[2])
         except AttributeError:
             separation = None

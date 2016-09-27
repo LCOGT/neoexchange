@@ -30,6 +30,9 @@
                             <span class="sortable" id="dec">Dec.</span>
                         </th>
                         <th>
+                            <span class="sortable" id="separation">Separation (")</span>
+                        </th>
+                        <th>
                             <span class="sortable" id="ccd_x">CCD X</span>
                         </th>
                         <th>
@@ -54,10 +57,11 @@
                         <td>{{line.avg_midpoint|dttodecimalday:False}}</td>
                         <td>{{line.avg_ra|degreestohms:":"}}</td>
                         <td>{{line.avg_dec|degreestodms:":"}}</td>
+                        <td>{{line.compute_separation|floatformat:1}}</td>
                         <td>{{line.avg_x|floatformat:3}}</td>
                         <td>{{line.avg_y|floatformat:3}}</td>
                         <td>{{line.avg_mag|floatformat:2}}</td>
-                        <td>{{line.convert_speed|floatformat:4}}</td>
+                        <td>{{line.convert_speed|floatformat:2}}</td>
                         <td>{{line.sky_motion_pa|floatformat:1}}</td>
                     </tr>
                 {% endfor %}
