@@ -10,6 +10,17 @@
 {% endblock%}
 {% block main-content %}
     <div id="main" class="fill-height">
+        <div class="four columns">
+            <h5 class="section-title">Details of the Block and Candidates</h5>
+            <table class="keyvalue-table" id="id_canddetail">
+                <tbody>
+                    <tr>
+                        <td class="kv-key">UTC midpoint: </td>
+                        <td class="kv-value">{{candidates.0.avg_midpoint|dttodecimalday:False}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <div class="fullwidth">
             <table class="datatable" id="id_candidates">
                 <thead>
@@ -20,9 +31,7 @@
                         <th class="list_project">
                             <span class="sortable" id="score">Score</span>
                         </th>
-                        <th>
-                            <span class="sortable" id="midpoint">UTC midpoint</span>
-                        </th>
+
                         <th>
                             <span class="sortable" id="ra">R.A.</span>
                         </th>
@@ -54,7 +63,6 @@
                     <tr>
                         <td>{{line.cand_id}}</td>
                         <td>{{line.score|floatformat:2}}</td>
-                        <td>{{line.avg_midpoint|dttodecimalday:False}}</td>
                         <td>{{line.avg_ra|degreestohms:":"}}</td>
                         <td>{{line.avg_dec|degreestodms:":"}}</td>
                         <td>{{line.compute_separation|floatformat:1}}</td>
