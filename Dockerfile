@@ -50,13 +50,14 @@ ENV PREFIX /neoexchange
 # Install packages and update base system
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
-        && yum -y install supervisor libssl libffi libffi-devel \
+        && yum -y install supervisor libssl libffi libffi-devel libplplot-devel \
         && yum -y groupinstall "Development Tools" \
         && yum -y install 'http://www.astromatic.net/download/sextractor/sextractor-2.19.5-1.x86_64.rpm' \
         && yum -y install 'http://www.astromatic.net/download/scamp/scamp-2.0.4-1.x86_64.rpm' \
-        && yum -y update
         && yum -y update \
         && yum clean all
+
+ENV PIP_TRUSTED_HOST buildsba.lco.gtn
 
 # Setup our python env now so it can be cached
 COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
@@ -64,9 +65,9 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # Install the LCOGT NEO exchange Python required packages
 # Then the LCOGT packages which have to be installed after the normal pip install
 RUN pip install uwsgi==2.0.8 \
-		&& pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
-		&& pip install pyslalib --trusted-host buildsba.lco.gtn --extra-index-url=http://buildsba.lco.gtn/python/ \
-		&& pip install rise_set --trusted-host buildsba.lco.gtn --extra-index-url=http://buildsba.lco.gtn/python/
+		&& pip install -r /var/www/apps/neoexchange/requirements.txt \
+		&& pip install pyslalib --extra-index-url=http://buildsba.lco.gtn/python/ \
+		&& pip install rise_set --extra-index-url=http://buildsba.lco.gtn/python/
 
 # Ensure crond will run on all host operating systems
 RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond

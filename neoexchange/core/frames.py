@@ -87,12 +87,18 @@ def check_for_images(auth_header, request_id):
     Filter out non-reduced frames
     '''
     reduced_data = []
+    quicklook_data = []
     data_url = settings.FRAMES_API_URL % request_id
     data = lcogt_api_call(auth_header, data_url)
     for datum in data:
-        if 'e91' in datum['filename'] or 'e11' in datum['filename']:
+        if 'e91' in datum['filename']:
             reduced_data.append(datum)
-    return reduced_data
+        elif 'e11' in datum['filename']:
+            quicklook_data.append(datum)
+    if len(reduced_data) >= len(quicklook_data):
+        return reduced_data
+    else:
+        return quicklook_data
 
 
 def create_frame(params, block=None, frameid=None):
@@ -102,12 +108,14 @@ def create_frame(params, block=None, frameid=None):
     our_site_codes = LCOGT_site_codes()
     if params.get('GROUPID', None):
     # In these cases we are parsing the FITS header
-        frame_params = frame_params_from_header(params, block, frameid)
+        frame_params = frame_params_from_header(params, block)
     else:
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
 
     frame, frame_created = Frame.objects.get_or_create(**frame_params)
+    frame.frameid = frameid
+    frame.save()
     if frame_created:
         msg = "created"
     else:
@@ -115,7 +123,7 @@ def create_frame(params, block=None, frameid=None):
     logger.debug("Frame %s %s" % (frame, msg))
     return frame
 
-def frame_params_from_header(params, block, frameid=None):
+def frame_params_from_header(params, block):
     # In these cases we are parsing the FITS header
     sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
 
@@ -128,7 +136,6 @@ def frame_params_from_header(params, block, frameid=None):
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
                      'fwhm'      : params.get('L1FWHM', None),
-                     'frameid'   : frameid
                  }
     # Try and create a WCS object from the header. If successful, add to frame
     # params
@@ -201,7 +208,7 @@ def ingest_frames(images, block):
     for image in images:
         image_header = lcogt_api_call(archive_headers, image.get('headers', None))
         if image_header:
-            frame = create_frame(image_header['data'], block)
+            frame = create_frame(image_header['data'], block, image['id'])
             sched_blocks.append(image_header['data']['BLKUID'])
         else:
             logger.error("Could not obtain header for %s" % image)

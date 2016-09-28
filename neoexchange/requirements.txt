@@ -4,7 +4,6 @@ MySQL-python
 astropy>=1.1.1
 astroquery
 beautifulsoup4
-django-suit==0.2.13
 django-reversion>=2.0
 html5lib==1.0b3
 ipython
