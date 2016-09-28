@@ -42,7 +42,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 class BlockFramesView(DetailView):
-    template_name = 'astrometer/lightmonitor.html'
+    template_name = 'analyser/lightmonitor.html'
     model = Block
 
     def get_context_data(self, **kwargs):

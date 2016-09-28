@@ -23,7 +23,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, plotframe, make_plot, CandidatesViewBlock
 
-from astrometer.views import BlockFramesView, fitsanalyse
+from analyser.views import BlockFramesView, fitsanalyse
 
 from django.contrib.auth.views import login, logout
 

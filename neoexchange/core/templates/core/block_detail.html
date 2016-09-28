@@ -81,7 +81,7 @@
                     <h5 class="section-title">Controls</h5>
                         {% if request.user.is_authenticated %}
                           {% if object.num_observed > 0 %}
-                            <a class="button button-primary" href="{% url 'block-ast' object.id %}">Astrometer</a><br/>
+                            <a class="button button-primary" href="{% url 'block-ast' object.id %}">Analyse Images</a><br/>
                             <a class="button button-primary" href="{% url 'report-block' object.id %}">Report</a><br/>
                             {% if object.num_candidates > 0 %}
                               <a class="button button-primary" href="{% url 'view-candidates' object.id %}">Candidates ({{object.num_candidates}})</a><br/>
