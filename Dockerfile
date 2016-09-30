@@ -10,8 +10,11 @@
 # just default to using the nginx port only (recommended). There is no
 # requirement to map all exposed container ports onto host ports.
 #
-# Starting from the checked-out neoexchange directory (containing this Dockerfile), build with
-# docker build -t docker.lcogt.net/neoexchange:latest .
+# Starting from the checked-out neoexchange directory (containing this Dockerfile):
+# Update the base image with:
+#   docker pull centos:centos7
+# Then build the image with:
+#   docker build -t docker.lcogt.net/neoexchange:latest .
 #
 # Push to docker registry with
 # docker push docker.lcogt.net/neoexchange:latest
@@ -50,17 +53,25 @@ ENV PREFIX /neoexchange
 # Install packages and update base system
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
-        && yum -y install supervisor libssl libffi libffi-devel libplplot-devel \
+        && yum -y install supervisor libffi libffi-devel \
+        && yum -y install wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
         && yum -y groupinstall "Development Tools" \
-        && yum -y install 'http://www.astromatic.net/download/sextractor/sextractor-2.19.5-1.x86_64.rpm' \
-        && yum -y install 'http://www.astromatic.net/download/scamp/scamp-2.0.4-1.x86_64.rpm' \
-        && yum -y update \
+        && yum -y update
+
+# Enable LCOGT repo and install extra packages
+COPY config/lcogt.repo /etc/yum.repos.d/
+RUN yum -y install lcogt-atlas-compat sextractor \
+# Uncomment once packages are approved and added to repo
+#        && yum -y install cdsclient scamp \
         && yum clean all
 
 ENV PIP_TRUSTED_HOST buildsba.lco.gtn
 
 # Setup our python env now so it can be cached
 COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
+
+# Upgrade pip
+RUN pip install --upgrade pip
 
 # Install the LCOGT NEO exchange Python required packages
 # Then the LCOGT packages which have to be installed after the normal pip install
