@@ -708,7 +708,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
             if fits_keyword == '<WCS>':
                 fits_wcs = WCS(catalog_header)
                 pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
-                header_item = { item: round(pixscale,5) }
+                header_item = { item: round(pixscale,5), 'wcs' : fits_wcs }
             if catalog_type == 'BANZAI' or catalog_type == 'BANZAI_LDAC':
                 if fits_keyword in fixed_values_map:
                     header_item = { item: fixed_values_map[fits_keyword] }

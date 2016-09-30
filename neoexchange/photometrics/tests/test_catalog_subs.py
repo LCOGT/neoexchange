@@ -24,10 +24,12 @@ import mock
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from astropy.io import fits
+from astropy.wcs import WCS
 from astropy.table import Table
 from astropy.coordinates import Angle
 import astropy.units as u
 from numpy import where, array
+from numpy.testing import assert_allclose
 
 from core.models import Body
 
@@ -1157,6 +1159,7 @@ class FITSUnitTest(TestCase):
         hdulist = fits.open(self.test_banzaifilename)
         self.test_banzaiheader = hdulist['SCI'].header
         self.test_banzaitable = hdulist['CAT'].data
+        self.test_banzaiwcs = WCS(self.test_banzaiheader)
         hdulist.close()
         self.banzai_table_firstitem = self.test_banzaitable[0:1]
 
@@ -1604,6 +1607,7 @@ class FITSReadHeader(FITSUnitTest):
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
                             'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs
                           }
         expected_cattype = "BANZAI"
 
@@ -1611,7 +1615,16 @@ class FITSReadHeader(FITSUnitTest):
         self.assertEqual(expected_cattype, cattype)
         frame_header = get_catalog_header(header, "BANZAI")
 
-        self.assertEqual(expected_params, frame_header)
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
 
 class FITSLDACToHeader(FITSUnitTest):
 

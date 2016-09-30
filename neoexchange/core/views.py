@@ -1220,6 +1220,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
                                     'frametype':Frame.SINGLE_FRAMETYPE,
                                     'rms_of_fit':header['astrometric_fit_rms'],
                                     'nstars_in_fit':header['astrometric_fit_nstars'],
+                                    'wcs' : header.get('wcs', None),
                                 }
 
                 frame, created = Frame.objects.get_or_create(**frame_params)
