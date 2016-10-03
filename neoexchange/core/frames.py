@@ -1,6 +1,7 @@
-import requests
 from datetime import datetime, timedelta
 from math import ceil
+import sys
+
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from astropy.wcs import WCS
@@ -10,6 +11,13 @@ from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from core.urlsubs import get_lcogt_headers
 from core.archive_subs import archive_login
 import logging
+import requests
+
+ssl_verify = True
+# Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
+if sys.version_info < (2,7,9):
+    requests.packages.urllib3.disable_warnings()
+    ssl_verify = False # Danger, danger !
 
 logger = logging.getLogger('core')
 
@@ -66,7 +74,7 @@ def candidates_by_block(blockid, num_frames):
 def lcogt_api_call(auth_header, url):
     data = None
     try:
-        resp = requests.get(url, headers=auth_header, timeout=20)
+        resp = requests.get(url, headers=auth_header, timeout=20, verify=ssl_verify)
         data = resp.json()
     except requests.exceptions.InvalidSchema, err:
         data = None
@@ -100,6 +108,41 @@ def check_for_images(auth_header, request_id):
     else:
         return quicklook_data
 
+def check_for_archive_images(auth_header, request_id=None, obstype='EXPOSE', limit=3000):
+    '''
+    Call Archive API to obtain all frames for request_id
+    Follow links to get all frames and filter out non-reduced frames and returns
+    fully-reduced data in preference to quicklook data
+    '''
+    reduced_data = []
+    quicklook_data = []
+
+    base_url = settings.ARCHIVE_FRAMES_URL
+    archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (base_url, limit, request_id, obstype)
+
+    frames = []
+    data = fetch_archive_frames(auth_header, archive_url, frames)
+    for datum in data:
+        headers_url = u'%s%d/headers' % (settings.ARCHIVE_FRAMES_URL, datum['id'])
+        datum[u'headers'] = headers_url
+        if datum['RLEVEL'] == 91:
+            reduced_data.append(datum)
+        elif datum['RLEVEL'] == 11:
+            quicklook_data.append(datum)
+    if len(reduced_data) >= len(quicklook_data):
+        return reduced_data
+    else:
+        return quicklook_data
+
+def fetch_archive_frames(auth_header, archive_url, frames):
+
+    data = lcogt_api_call(auth_header, archive_url)
+    if data.get('count', 0) > 0:
+        frames += data['results']
+        if data['next']:
+            fetch_archive_frames(auth_header, data['next'], frames)
+
+    return frames
 
 def create_frame(params, block=None, frameid=None):
     # Return None if params is just whitespace
@@ -240,14 +283,17 @@ def block_status(block_id):
         return False
     # Although this is a loop, we should only have a single request so it is executed once
     exposure_count = 0
+
+    # Get authentication token for Archive
+    archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
+
     for r in data:
-        images = check_for_images(headers, request_id=r['request_number'])
+        images = check_for_archive_images(archive_headers, request_id=r['request_number'])
         logger.debug('Request no. %s x %s images' % (r['request_number'],len(images)))
         if images:
             if len(images) >= 3:
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
-                archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
                 last_image_dict = images[0]
                 last_image_header = lcogt_api_call(archive_headers, last_image_dict.get('headers', None))
                 if last_image_header == None:
