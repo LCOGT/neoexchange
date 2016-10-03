@@ -60,9 +60,7 @@ RUN yum -y install epel-release \
 
 # Enable LCOGT repo and install extra packages
 COPY config/lcogt.repo /etc/yum.repos.d/
-RUN yum -y install lcogt-atlas-compat sextractor \
-# Uncomment once packages are approved and added to repo
-#        && yum -y install cdsclient scamp \
+RUN yum -y install sextractor cdsclient scamp \
         && yum clean all
 
 ENV PIP_TRUSTED_HOST buildsba.lco.gtn

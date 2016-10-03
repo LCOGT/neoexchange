@@ -13,6 +13,7 @@ numpy
 pytz
 six==1.9.0
 wsgiref
+pycparser==2.13
 requests[security]
 selenium>=2.53,<3.0
 reqdbclient==0.6.25
