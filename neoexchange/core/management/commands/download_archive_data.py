@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download')
-        parser.add_argument('--proposal', action="store", default="LCO2016A-021", help='Proposal code to query for data')
+        parser.add_argument('--proposal', action="store", default="LCO2016B-011", help='Proposal code to query for data')
 
 
     def handle(self, *args, **options):
