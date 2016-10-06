@@ -37,7 +37,11 @@ from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
-
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
 
 class TestClean_NEOCP_Object(TestCase):
 
@@ -626,7 +630,9 @@ class TestSchedule_Check(TestCase):
 
         self.maxDiff = None
 
+    @patch('core.views.datetime', MockDateTime)
     def test_mp_good(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
         data = { 'site_code' : 'Q63',
                  'utc_date' : datetime(2016, 4, 6),
@@ -1862,12 +1868,14 @@ class TestSummarise_Block_Efficiency(TestCase):
                        }
         test_block = Block.objects.create(**block_params)
 
-        expected_summary = [ { 'Not Observed': 1,
-                               'Observed': 1,
-                               'proposal': u'LCO2015A-009'},
+        expected_summary = [
                              { 'Not Observed': 1,
                                'Observed': 0,
-                               'proposal': u'LCO2015B-005'}
+                               'proposal': u'LCO2015B-005'},
+                            { 'Not Observed': 1,
+                               'Observed': 1,
+                               'proposal': u'LCO2015A-009'}
+
                            ]
 
         summary = summarise_block_efficiency()
