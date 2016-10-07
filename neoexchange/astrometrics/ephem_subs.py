@@ -1253,7 +1253,7 @@ def get_sitecam_params(site):
         exp_overhead = onem_exp_overhead
         pixel_scale = onem_pixscale
         fov = arcmins_to_radians(onem_fov)
-        if 'W86' in site or 'W87' in site or 'V37' in site or 'K93' in site:
+        if site in ['V37', 'W86', 'W87', 'K93', 'Q63', 'Q64']:
             pixel_scale = onem_sinistro_pixscale
             fov = arcmins_to_radians(onem_sinistro_fov)
             exp_overhead = sinistro_exp_overhead

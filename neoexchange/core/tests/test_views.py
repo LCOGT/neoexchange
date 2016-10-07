@@ -37,7 +37,11 @@ from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame
 from core.forms import EphemQuery
 
-
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
 
 class TestClean_NEOCP_Object(TestCase):
 
@@ -293,6 +297,12 @@ class TestCheck_for_block(TestCase):
                     }
         self.body_with_provname, created = Body.objects.get_or_create(**params)
 
+        params['provisional_name'] = 'N999R0Q'
+        self.body_with_uppername = Body.objects.create(**params)
+
+        params['provisional_name'] = 'N999R0q'
+        self.body_with_uppername2 = Body.objects.create(**params)
+
         params['provisional_name'] = ''
         params['name'] = '2014 UR'
         params['origin'] = 'G'
@@ -405,6 +415,32 @@ class TestCheck_for_block(TestCase):
                        }
         self.test_block6 = Block.objects.create(**block_params6)
 
+        block_params7 = { 'telclass' : '1m0',
+                         'site'     : 'CPT',
+                         'body'     : self.body_with_uppername,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_uppername.current_name() + '_CPT-20150420',
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-20 13:00:00',
+                         'tracking_number' : '00069',
+                         'num_exposures' : 5,
+                         'exp_length' : 130.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'reported' : True
+                       }
+        self.test_block2 = Block.objects.create(**block_params2)
+
+    def test_db_storage(self):
+        expected_body_count = 5 # Pew, pew, bang, bang...
+        expected_block_count = 7
+
+        body_count = Body.objects.count()
+        block_count =  Block.objects.count()
+
+        self.assertEqual(expected_body_count, body_count)
+        self.assertEqual(expected_block_count, block_count)
+
     def test_body_with_provname_no_blocks(self):
 
         new_body = self.body_with_provname
@@ -503,16 +539,15 @@ class TestCheck_for_block(TestCase):
 
         self.assertEqual(expected_state, block_state)
 
-    def test_body_does_not_exist(self):
-
-        new_body = self.body_no_provname2
-        new_body.provisional_name = 'Wibble'
-        params = { 'site_code' : 'V37'
+    def test_body_with_uppercase_name(self):
+        # This passes but shouldn't as SQlite goes string checks case-insensitively whatever you do
+        new_body = self.body_with_uppername2
+        params = { 'site_code' : 'K92'
                  }
         form_data = { 'proposal_code' : self.neo_proposal.code,
-                      'group_id' : self.body_no_provname1.current_name() + '_ELP-20141121'
+                      'group_id' : self.body_with_uppername2.current_name() + '_CPT-20150420'
                     }
-        expected_state = 3
+        expected_state = 0
 
         block_state = check_for_block(form_data, params, new_body)
 
@@ -626,7 +661,9 @@ class TestSchedule_Check(TestCase):
 
         self.maxDiff = None
 
+    @patch('core.views.datetime', MockDateTime)
     def test_mp_good(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
         data = { 'site_code' : 'Q63',
                  'utc_date' : datetime(2016, 4, 6),
@@ -638,8 +675,8 @@ class TestSchedule_Check(TestCase):
                         'magnitude': 19.099556975068584,
                         'speed': 2.901241169520825,
                         'slot_length': 20,
-                        'exp_count': 19,
-                        'exp_length': 40.0,
+                        'exp_count': 11,
+                        'exp_length': 50.0,
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
@@ -1862,12 +1899,14 @@ class TestSummarise_Block_Efficiency(TestCase):
                        }
         test_block = Block.objects.create(**block_params)
 
-        expected_summary = [ { 'Not Observed': 1,
-                               'Observed': 1,
-                               'proposal': u'LCO2015A-009'},
+        expected_summary = [
                              { 'Not Observed': 1,
                                'Observed': 0,
-                               'proposal': u'LCO2015B-005'}
+                               'proposal': u'LCO2015B-005'},
+                            { 'Not Observed': 1,
+                               'Observed': 1,
+                               'proposal': u'LCO2015A-009'}
+
                            ]
 
         summary = summarise_block_efficiency()

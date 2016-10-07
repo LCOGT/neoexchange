@@ -77,6 +77,7 @@ class Proposal(models.Model):
 
     class Meta:
         db_table = 'ingest_proposal'
+        ordering = ['-id',]
 
     def __unicode__(self):
         if len(self.title)>=10:

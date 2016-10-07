@@ -765,7 +765,7 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.twom_exp_overhead, exp_overhead)
 
     def test_1m_site_sbig(self):
-        site_code = 'Q63'
+        site_code = 'W85'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(0.464, pixel_scale)
@@ -838,7 +838,7 @@ class TestDetermineExpTimeCount(TestCase):
 
     def test_slow_1m(self):
         speed = 2.52
-        site_code = 'Q63'
+        site_code = 'W85'
         slot_len = 22.5
 
         expected_exptime = 50.0
