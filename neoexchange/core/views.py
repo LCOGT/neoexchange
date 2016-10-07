@@ -101,7 +101,7 @@ def summarise_block_efficiency():
     for proposal in proposals:
         blocks = Block.objects.filter(proposal=proposal)
         observed = blocks.filter(num_observed__isnull=False)
-        if len(blocks) > 0:
+        if len(blocks) > 10:
             proposal_summary = {
                                  'proposal':proposal.code,
                                  'Observed' : observed.count(),
