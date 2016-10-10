@@ -48,8 +48,11 @@ class BlockFramesView(DetailView):
     def get_context_data(self, **kwargs):
         img_list = []
         context = super(BlockFramesView, self).get_context_data(**kwargs)
-        context['images'] = find_images_for_block(context['block'].id)
-        print(context['images'])
+        images = find_images_for_block(context['block'].id)
+        if images:
+            context['images'] = images[0]
+            context['xaxis'] = images[1]
+            context['yaxis'] = images[2]
         return context
 
 def fitsanalyse(request):

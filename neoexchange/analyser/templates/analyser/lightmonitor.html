@@ -17,6 +17,7 @@
 	var img_holder;
 	var mini_img;
 	var frames = {{images|safe}}
+	var image_scale = {{xaxis|default:"1024"}}/600
 	var accepted = Array();
 	var data_url = 'https://thumbnails.lcogt.net/'
 	var img_params = '?width=1000&height=1000'
@@ -27,33 +28,35 @@
 		loadThumbnails(frames);
 
 		$('.candidate-select').click(function(){
-			var ind = $(this).data('id');
+			var ind = $(this).data('frameid');
+			stopBlink();
 		  startBlink(ind, false);
+			$('#candidate-list').hide();
 			$('.candidate-accept').show();
-			$(".cand-"+ind+"-accept").data('id', ind);
-			$(".cand-"+ind+"-reject").data('id', ind);
+
+			$("#cand-accept").data('frameid', ind);
+			$("#cand-reject").data('frameid', ind);
 		});
 
 		$('#blink-stop').click(function(){
-			stopBlink();
-			$('.candidate-accept').hide();
+			resetCandidateOptions();
 		})
 
 		$('#blink-start').click(function(){
 			startBlink(0,true);
+			$('#candidate-list').hide();
 		})
 
 		$('#cand-accept').click(function(){
-			console.log('clicked')
-			var cand_id = $(this).data('id');
+			var cand_id = $(this).data('frameid');
 			acceptCandidate(cand_id);
-			stopBlink();
+			resetCandidateOptions();
 		})
 
 		$('#cand-reject').click(function(){
-			var cand_id = $(this).data('id');
+			var cand_id = $(this).data('frameid');
 			rejectCandidate(cand_id);
-			stopBlink();
+			resetCandidateOptions();
 		})
 
 	});
@@ -106,30 +109,32 @@
 								<button id="next-img-btn" onclick="nextImage();"><i class="fa fa-arrow-circle-right fa-2x" aria-hidden="true"></i></button>
 							</div>
 							<div class="button-holder">
-								<ul id="candidate-list" class="candidate-controls">
+								<ul class="candidate-controls">
 									<li class='grey-dark blink-all-candidates'>
-								    <span class='candidate' id="blink-start">
+										<span class='candidate' id="blink-start">
 											<span class="block-status-item"><i class="fa fa-refresh"></i></span>
-									    <span class='block-status-item'>Blink all Candidates</span>
+											<span class='block-status-item'>Blink all Candidates</span>
 										</span>
 										<span class='candidate' id="blink-stop">
 											<span class="block-status-item"><i class="fa fa-stop-circle" aria-hidden="true"></i></span>
 											<span class='block-status-item'>Stop Blinking</span>
 										</span>
-							    </li>
+									</li>
+								</ul>
+								<ul id="candidate-list" class="candidate-controls">
 								</ul>
 								<ul class="candidate-controls candidate-accept" style="display:none;">
 									<li class='green'>
 										<span class="block-status-item" ><i class="fa fa-check"></i></span>
-										<span class='block-status-item' id="cand-accept" data-id="">Accept</span>
+										<span class='block-status-item' id="cand-accept" data-frameid="">Accept</span>
 								</li>
 								<li class='red'>
 									<span class="block-status-item" ><i class="fa fa-times"></i></span>
-									<span class='block-status-item' id="cand-reject" data-id="">Reject</span>
+									<span class='block-status-item' id="cand-reject" data-frameid="">Reject</span>
 							</li>
 						</ul>
 						<ul class="candidate-controls candidate-accept" style="display:none;">
-							<li class='green'>
+							<li class='blue'>
 								<span class="block-status-item" ><i class="fa fa-cloud-upload" aria-hidden="true"></i></span>
 								<span class='block-status-item' id="cand-submit">Upload Candidates</span>
 							</li>

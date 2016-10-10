@@ -48,6 +48,12 @@ table.datatable  tr.even, .even, .grey-light {
 }
 .red a {color: #D8000C;}
 
+.blue {
+  color:#778899;
+  background-color:#B0C4DE;
+}
+.blue a {color:#778899;}
+
 table.datatable  tr:hover {
     background-color: #ddd;
 }
@@ -818,7 +824,8 @@ div#show-messages-close:hover { color: #444; background-color: #eee; }
 .blink-all-candidates {display:block;}
 .candidate-select {display:table-cell;}
 ul.block-status, ul.candidate-control { margin: 0; padding: 0; list-style: none; }
-ul.block-status li, ul.candidate-controls li { padding: 8px 0; border-top: 1px solid white; list-style: none;}
+ul.block-status li, ul.candidate-controls li { padding: 8px 0; border-top: 1px solid white; list-style: none; display:block;cursor: pointer;}
+ul.candidate-controls li {width:100%;}
 .block-status-line, .candidate {display:block;cursor:pointer;}
 .block-status-item { display:table-cell; padding: 0 10px;}
 
