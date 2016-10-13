@@ -218,9 +218,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses CPT (K91)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('Sutherland, S. Africa (CPT - K91-92; SBIG)', [option.text for option in site_choices.options])
+        self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('Sutherland, S. Africa (CPT - K91-92; SBIG)')
+        site_choices.select_by_visible_text('Sutherland, S. Africa (CPT - K91-93; Sinistro)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date

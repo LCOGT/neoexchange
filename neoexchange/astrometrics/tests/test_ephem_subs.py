@@ -730,17 +730,17 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
 
-    def test_1m_cpt_site_sbig(self):
+    def test_1m_cpt_site_sinistro1(self):
         site_code = 'K92'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
-        self.assertEqual(0.464, pixel_scale)
-        self.assertEqual(self.onem_sbig_fov, ccd_fov)
+        self.assertEqual(0.389, pixel_scale)
+        self.assertEqual(self.onem_sinistro_fov, ccd_fov)
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
-        self.assertEqual(self.onem_exp_overhead, exp_overhead)
+        self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
 
-    def test_1m_cpt_site_sinistro(self):
+    def test_1m_cpt_site_sinistro2(self):
         site_code = 'K93'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
@@ -770,8 +770,8 @@ class TestDetermineExpTimeCount(TestCase):
         site_code = 'K91'
         slot_len = 20
 
-        expected_exptime = 5.5
-        expected_expcount = 51
+        expected_exptime = 6.5
+        expected_expcount = 19
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
 

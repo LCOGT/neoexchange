@@ -1082,8 +1082,8 @@ def configure_defaults(params):
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
-    params['binning'] = 2
-    params['instrument'] = '1M0-SCICAM-SBIG'
+    params['binning'] = 1
+    params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['filter'] = 'w'
 
     if params['site_code'] == 'W86' or params['site_code'] == 'W87':
@@ -1093,15 +1093,12 @@ def configure_defaults(params):
         params['instrument'] = '1M0-SCICAM-SINISTRO'
         if params['site_code'] == 'W87':
             params['site_code'] = 'W86'
-    elif params['site_code'] == 'V37' or params['site_code'] == 'Q63' or params['site_code'] == 'Q64':
-        params['binning'] = 1
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-    elif params['site_code'] == 'K93':
-        params['binning'] = 1
-        params['observatory'] = 'domc'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
+    elif params['site_code'] == 'W85':
+        params['binning'] = 2
+        params['instrument'] = '1M0-SCICAM-SBIG'
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
+        params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
 
@@ -1148,9 +1145,10 @@ def submit_block_to_scheduler(elements, params):
     proposal = make_proposal(params)
     user_request.set_proposal(proposal)
 
+    logger.debug("User Request=%s" % user_request)
 # Make an endpoint and submit the thing
     client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
-    response_data = client.submit(user_request)
+#    response_data = client.submit(user_request)
     client.print_submit_response()
     request_numbers =  response_data.get('request_numbers', '')
     tracking_number =  response_data.get('tracking_number', '')
