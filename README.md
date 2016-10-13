@@ -4,6 +4,12 @@ Portal for scheduling observations of NEOs using LCOGT
 
 ## History
 
+### 1.5.3
+
+Switch over 2 telescopes at South Africa (K91 & K92) to Sinistro. Filter out proposals with <10 blocks from the block efficiency plot.
+
+### 1.5.2
+
 ### 1.5.1
 
 Correct a long-running problem where we didn't correct the Frame midpoint for
