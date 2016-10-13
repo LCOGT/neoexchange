@@ -36,11 +36,19 @@ table.datatable  tr.even, .even, .grey-light {
     background-color: #f9f9f9;
 }
 
+.text-green {
+  color: #4F8A10;
+}
+
 .green {
   color: #4F8A10;
   background-color: #DFF2BF;
 }
 .green a{color: #4F8A10;}
+
+.text-red {
+  color: #D8000C;
+}
 
 .red {
   color: #D8000C;
@@ -49,10 +57,14 @@ table.datatable  tr.even, .even, .grey-light {
 .red a {color: #D8000C;}
 
 .blue {
-  color:#778899;
-  background-color:#B0C4DE;
+  color:#fff;
+  background-color:#87cefa;
 }
-.blue a {color:#778899;}
+.blue a {color:#fff;}
+.blue a:hover,
+.blue:hover {
+  color:#aaa;
+}
 
 table.datatable  tr:hover {
     background-color: #ddd;

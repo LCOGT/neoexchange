@@ -9,6 +9,7 @@ function setUp(){
     $('#number_images').text(frames.length);
     $('#blink-stop').hide();
   }
+  $("#cand-submit").hide();
   loadCandidates(frames);
 
 }
@@ -24,9 +25,19 @@ function resetCandidateOptions(){
 
 function updateStatus(){
   $(".block-status-icon").hide();
+  if (accepted.length>0) {
+    $("#cand-submit").show();
+  } else {
+    $("#cand-submit").hide();
+  }
+  $(".block-status-icon").hide();
   for (var i = 0, len = accepted.length; i < len; i++) {
     $("#cand-"+accepted[i]+"-accept").show();
+    $("#cand-"+accepted[i]+"-reject").hide();
   }
+  for (var i = 0, len = rejected.length; i < len; i++) {
+    $("#cand-"+rejected[i]+"-accept").hide();
+    $("#cand-"+rejected[i]+"-reject").show();  }
 }
 
 function nextImage() {
@@ -85,6 +96,12 @@ function acceptCandidate(cand_id){
   // Show the tick on the candidate line
   $("#cand-accept").show()
   $("#cand-reject").hide()
+  if (rejected.indexOf(cand_id) > -1){
+    var index = rejected.indexOf(cand_id);
+    if (index > -1) {
+      rejected.splice(index, 1);
+    }
+  }
   if (accepted.indexOf(cand_id) == -1){
     accepted.push(cand_id);
   }
@@ -95,11 +112,14 @@ function rejectCandidate(cand_id){
   // Show the X on the candidate line
   $("#cand-accept").hide()
   $("#cand-reject").show()
-  if (cand_id in accepted){
+  if (accepted.indexOf(cand_id) > -1){
     var index = accepted.indexOf(cand_id);
     if (index > -1) {
       accepted.splice(index, 1);
     }
+  }
+  if (rejected.indexOf(cand_id) == -1){
+    rejected.push(cand_id);
   }
 }
 
@@ -144,8 +164,8 @@ function loadCandidates(frames){
     cand_html +="<span data-frameid='"+i+"' class='candidate-select'>";
     cand_html +="<span class='block-status-item' ><i class='fa fa-refresh'></i></span>";
     cand_html += "<span class='block-status-item'>Blink Candidate "+(i+1)+"</span></span>";
-    cand_html +="<span class='block-status-item block-status-icon' id='cand-"+i+"-reject' style='display:none;'><i class='fa fa-times'></i></span>"
-    cand_html +="<span class='block-status-item block-status-icon green' id='cand-"+i+"-accept' style='display:none;'><i class='fa fa-check'></i></span>"
+    cand_html +="<span class='block-status-item block-status-icon text-red' id='cand-"+i+"-reject' style='display:none;'><i class='fa fa-times'></i></span>"
+    cand_html +="<span class='block-status-item block-status-icon text-green' id='cand-"+i+"-accept' style='display:none;'><i class='fa fa-check'></i></span>"
     cand_html +="</span>";
     cand_html += "</li>";
     $('#candidate-list').append(cand_html);
