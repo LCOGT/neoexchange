@@ -1148,7 +1148,7 @@ def submit_block_to_scheduler(elements, params):
     logger.debug("User Request=%s" % user_request)
 # Make an endpoint and submit the thing
     client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
-#    response_data = client.submit(user_request)
+    response_data = client.submit(user_request)
     client.print_submit_response()
     request_numbers =  response_data.get('request_numbers', '')
     tracking_number =  response_data.get('tracking_number', '')
