@@ -164,7 +164,7 @@ function loadCandidates(frames){
     cand_html +="<span data-frameid='"+i+"' class='candidate-select'>";
     cand_html +="<span class='block-status-item' ><i class='fa fa-refresh'></i></span>";
     cand_html += "<span class='block-status-item'>Blink Candidate "+(i+1)+"</span></span>";
-    cand_html +="<span class='block-status-item block-status-icon text-red' id='cand-"+i+"-reject' style='display:none;'><i class='fa fa-times'></i></span>"
+    cand_html +="<span class='block-status-item block-status-icon text-red' id='cand-"+i+"-reject' style='display:none;'><i class='fa fa-ban'></i></span>"
     cand_html +="<span class='block-status-item block-status-icon text-green' id='cand-"+i+"-accept' style='display:none;'><i class='fa fa-check'></i></span>"
     cand_html +="</span>";
     cand_html += "</li>";
