@@ -1369,7 +1369,6 @@ class TestConfigureDefaults(TestCase):
     def setUp(self):
         pass
 
-<<<<<<< HEAD
     def test_tfn_point4m(self):
         test_params = {
               'exp_count': 42,
@@ -1477,8 +1476,10 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : 'domb',
                             'site' : 'LSC',
                             'filter' : 'w',
-                            'binning' : 1}
-        expected_params.update(test_params)
+                            'binning' : 1,
+                            'site_code' : 'W86',
+                            'exp_count' : 42,
+                            'exp_time' : 42.0}
 
         params = configure_defaults(test_params)
 
