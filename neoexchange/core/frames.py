@@ -78,7 +78,14 @@ def create_frame(params, block=None):
         # We are parsing observation logs
         frame_params = frame_params_from_log(params, block)
 
-    frame, frame_created = Frame.objects.get_or_create(**frame_params)
+    try:
+        frame, frame_created = Frame.objects.get_or_create(**frame_params)
+    except Frame.MultipleObjectsReturned:
+        print "Duplicate frames:"
+        frames = Frame.objects.filter(**frame_params)
+        for frame in frames:
+            print frame.id
+        raise(Frame.MultipleObjectsReturned)
     if frame_created:
         msg = "created"
     else:

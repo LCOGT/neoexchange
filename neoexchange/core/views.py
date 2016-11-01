@@ -92,16 +92,16 @@ def home(request):
 class BlockTimeSummary(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
-        block_summary = summarise_block_efficiency()
+        block_summary = summarise_block_efficiency(block_filter=10)
         return render(request, 'core/block_time_summary.html', {'summary':json.dumps(block_summary)})
 
-def summarise_block_efficiency():
+def summarise_block_efficiency(block_filter=0):
     summary = []
     proposals = Proposal.objects.all()
     for proposal in proposals:
         blocks = Block.objects.filter(proposal=proposal)
         observed = blocks.filter(num_observed__isnull=False)
-        if len(blocks) > 10:
+        if len(blocks) > block_filter:
             proposal_summary = {
                                  'proposal':proposal.code,
                                  'Observed' : observed.count(),

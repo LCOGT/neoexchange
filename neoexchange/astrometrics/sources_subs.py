@@ -921,7 +921,8 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     [date_cutoff] days old (default is 1 day) will not be looked at.'''
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
-    list_author = '"paul.a.abell@nasa.gov"'
+    list_author  = '"paul.a.abell@nasa.gov"'
+    list_author2 = '"paul.w.chodas@jpl.nasa.gov"'
     list_prefix = '[' + list_address.replace('"','').split('@')[0] +']'
     list_suffix = 'Observations Requested'
 
@@ -935,6 +936,10 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         # Look for messages to the mailing list but without specifying a charset
         status, msgnums = mailbox.search(None, 'TO', list_address,\
                                                'FROM', list_author)
+        status2, msgnums2 = mailbox.search(None, 'TO', list_address,\
+                                               'FROM', list_author2)
+        if status2 == 'OK' and len(msgnums2) >0 and msgnums2[0] != '':
+            msgnums =[msgnums[0] + ' '+ msgnums2[0],]
         # Messages numbers come back in a space-separated string inside a
         # 1-element list in msgnums
         if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
@@ -957,7 +962,8 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
                         if list_prefix in msg_subject and list_suffix in msg_subject and \
                             time_diff <= timedelta(days=date_cutoff):
                             target = ' '.join(msg_subject.split()[TARGET_DESIGNATION])
-                            NASA_targets.append(target)
+                            if target not in NASA_targets:
+                                NASA_targets.append(target)
                 except:
                     logger.error("ERROR getting message %s", num)
                     return NASA_targets
@@ -1088,8 +1094,8 @@ def configure_defaults(params):
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
-    params['binning'] = 2
-    params['instrument'] = '1M0-SCICAM-SBIG'
+    params['binning'] = 1
+    params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['filter'] = 'w'
 
     if params['site_code'] == 'W86' or params['site_code'] == 'W87':
@@ -1099,15 +1105,12 @@ def configure_defaults(params):
         params['instrument'] = '1M0-SCICAM-SINISTRO'
         if params['site_code'] == 'W87':
             params['site_code'] = 'W86'
-    elif params['site_code'] == 'V37' or params['site_code'] == 'Q63' or params['site_code'] == 'Q64':
-        params['binning'] = 1
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-    elif params['site_code'] == 'K93':
-        params['binning'] = 1
-        params['observatory'] = 'domc'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
+    elif params['site_code'] == 'W85':
+        params['binning'] = 2
+        params['instrument'] = '1M0-SCICAM-SBIG'
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
+        params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
     elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q59':
@@ -1159,6 +1162,7 @@ def submit_block_to_scheduler(elements, params):
     proposal = make_proposal(params)
     user_request.set_proposal(proposal)
 
+    logger.debug("User Request=%s" % user_request)
 # Make an endpoint and submit the thing
     client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
     response_data = client.submit(user_request)

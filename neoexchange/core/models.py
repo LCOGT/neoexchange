@@ -229,7 +229,7 @@ class Block(models.Model):
         url = ''
         point_at_reqdb = False
         if self.tracking_number != None and self.tracking_number != '':
-            url = 'http://lcogt.net/observe/request/%s/' % (self.tracking_number)
+            url = 'http://lco.global/observe/request/%s/' % (self.tracking_number)
             if point_at_reqdb:
                 url = 'http://scheduler1.lco.gtn/requestdb/admin/requestdb/userrequests/'
 # Strip off leading zeros

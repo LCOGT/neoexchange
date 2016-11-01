@@ -130,10 +130,8 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="W85"', form.as_p())
         self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
-        self.assertIn('Sutherland, S. Africa (CPT - K91-92; SBIG)', form.as_p())
+        self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', form.as_p())
         self.assertIn('value="K92"', form.as_p())
-        self.assertIn('Sutherland, S. Africa (CPT - K93; Sinistro)', form.as_p())
-        self.assertIn('value="K93"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
@@ -213,8 +211,7 @@ class TestScheduleForm(TestCase):
     def test_form_has_cpt_fields(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('Sutherland, S. Africa (CPT - K91-92; SBIG)', form.as_p())
-        self.assertIn('Sutherland, S. Africa (CPT - K93; Sinistro)', form.as_p())
+        self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', form.as_p())
 
     def test_sched_form_has_all_sites(self):
         form = ScheduleForm()
@@ -229,10 +226,8 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="W85"', form.as_p())
         self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
-        self.assertIn('Sutherland, S. Africa (CPT - K91-92; SBIG)', form.as_p())
+        self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', form.as_p())
         self.assertIn('value="K92"', form.as_p())
-        self.assertIn('Sutherland, S. Africa (CPT - K93; Sinistro)', form.as_p())
-        self.assertIn('value="K93"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())

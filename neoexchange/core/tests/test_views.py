@@ -706,13 +706,12 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-03-31T17:40:00',
                         'end_time'   : '2016-03-31T23:59:59',
-                        'exp_count'  : 26,
-                        'exp_length' : 25.0,
+                        'exp_count'  : 13,
+                        'exp_length' : 30.0,
                         'mid_time': '2016-03-31T20:49:59.500000',
 
                         }
         resp = schedule_check(data, self.body_mp)
-#        self.assertEqual(expected_resp, resp)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
@@ -733,8 +732,8 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-01T00:00:00',
                         'end_time'   : '2016-04-01T03:40:00',
-                        'exp_count'  : 26,
-                        'exp_length' : 25.0,
+                        'exp_count'  : 13,
+                        'exp_length' : 30.0,
                         'mid_time': '2016-04-01T01:50:00',
 
                         }

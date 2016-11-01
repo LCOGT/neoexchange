@@ -26,12 +26,12 @@ class BlockSummaryTest(FunctionalTest):
         # A seasoned user comes along to the site.
         self.browser.get(self.live_server_url)
 
-	    # He sees a link to EFFICIENCY on the front page.
+	# He sees a link to EFFICIENCY on the front page.
         link = self.browser.find_element_by_link_text('EFFICIENCY')
         url = self.live_server_url + '/block/' + 'summary/'
         self.assertEqual(link.get_attribute('href'), url)
 
-	    # He clicks the link and is taken to a page with the efficiency
+	# He clicks the link and is taken to a page with the efficiency
         # details.
         link.click()
         self.browser.implicitly_wait(3)

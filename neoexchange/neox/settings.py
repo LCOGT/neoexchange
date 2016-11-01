@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.6.2 (0.4m beta)'
+VERSION = '1.6.3 (0.4m beta)'
 
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
@@ -246,11 +246,11 @@ DATABASES = {
 NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
-REQUEST_API_URL = 'https://lcogt.net/observe/api/user_requests/%s/requests/'
-FRAMES_API_URL = 'https://lcogt.net/observe/api/requests/%s/frames/'
-REQUEST_AUTH_API_URL = 'https://lcogt.net/observe/api/api-token-auth/'
+REQUEST_API_URL = 'https://lco.global/observe/api/user_requests/%s/requests/'
+FRAMES_API_URL = 'https://lco.global/observe/api/requests/%s/frames/'
+REQUEST_AUTH_API_URL = 'https://lco.global/observe/api/api-token-auth/'
 
-ARCHIVE_FRAMES_URL = 'https://archive-api.lcogt.net/frames/'
+ARCHIVE_FRAMES_URL = 'https://archive-api.lco.global/frames/'
 REDUCED_DATA_SUFFIX = 'e90'
 
 #######################
@@ -283,11 +283,11 @@ if 'test' in sys.argv:
 
 CLIENT_ID = os.environ.get('NEOX_RBAUTH_ID','')
 CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
-RBAUTH_TOKEN_URL = 'https://lcogt.net/observe/o/token/'
-RBAUTH_PROFILE_API = 'https://lcogt.net/observe/api/profile/'
-RBAUTH_PROPOSAL_API = 'https://lcogt.net/observe/api/proposals/'
-ARCHIVE_API_URL = 'https://archive-api.lcogt.net'
-ARCHIVE_TOKEN_URL = 'https://archive-api.lcogt.net/api-token-auth/'
+RBAUTH_TOKEN_URL = 'https://lco.global/observe/o/token/'
+RBAUTH_PROFILE_API = 'https://lco.global/observe/api/profile/'
+RBAUTH_PROPOSAL_API = 'https://lco.global/observe/api/proposals/'
+ARCHIVE_API_URL = 'https://archive-api.lco.global'
+ARCHIVE_TOKEN_URL = 'https://archive-api.lco.global/api-token-auth/'
 
 ##################
 # LOCAL SETTINGS #
