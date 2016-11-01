@@ -22,7 +22,7 @@ class BlocksListValidationTest(FunctionalTest):
 
         # He notices the page title has the name of the site and the header
         # mentions current targets
-        self.assertIn('Blocks | LCOGT NEOx', self.browser.title)
+        self.assertIn('Blocks | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Observing Blocks', header_text)
 

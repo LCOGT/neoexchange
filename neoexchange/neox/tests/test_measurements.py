@@ -143,7 +143,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He goes to the home page and performs a search for that object
         self.browser.get(self.live_server_url)
-        self.assertIn('Home | LCOGT NEOx', self.browser.title)
+        self.assertIn('Home | LCO NEOx', self.browser.title)
         inputbox = self.get_item_input_box("id_target_search")
         inputbox.send_keys('N999r0q')
         searchbutton = self.get_item_input_box("id_search_submit")
@@ -153,7 +153,7 @@ class MeasurementsPageTests(FunctionalTest):
         search_url = self.live_server_url + '/search/?q=' + \
             self.body.provisional_name
         self.assertEqual(self.browser.current_url, search_url)
-        self.assertIn('Targets | LCOGT NEOx', self.browser.title)
+        self.assertIn('Targets | LCO NEOx', self.browser.title)
 
         self.browser.implicitly_wait(5)
         # He sees that the target he wants is in the table and clicks on it
