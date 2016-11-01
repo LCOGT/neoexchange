@@ -43,7 +43,7 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices the page title has the name of the site and the header
         # mentions current targets
-        self.assertIn('Home | LCOGT NEOx', self.browser.title)
+        self.assertIn('Home | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_id('site-name').text
         self.assertIn('Minor planet follow-up portal', header_text)
 

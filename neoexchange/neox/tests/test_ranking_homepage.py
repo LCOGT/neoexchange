@@ -51,7 +51,7 @@ class NewVisitorTest(FunctionalTest):
 
         #He goes to the homepage for the website and expects to see this ranked list of NEOs.
         self.browser.get(self.live_server_url)
-        self.assertIn('Home | LCOGT NEOx', self.browser.title)
+        self.assertIn('Home | LCO NEOx', self.browser.title)
         self.check_for_header_in_table('id_neo_targets',\
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
@@ -78,6 +78,6 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices the page title has the name of the site and the header
         # mentions the current target
-        self.assertIn(self.body.current_name() + ' details | LCOGT NEOx', self.browser.title)
+        self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Object: ' + self.body.current_name(), header_text)

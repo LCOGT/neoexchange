@@ -1080,6 +1080,7 @@ def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
                   'K92' : 'CPT',
+                  'K93' : 'CPT',
                   'Q63' : 'COJ',
                   'W85' : 'LSC',
                   'W86' : 'LSC',

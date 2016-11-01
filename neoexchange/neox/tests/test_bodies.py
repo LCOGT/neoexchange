@@ -25,7 +25,7 @@ class BodyDetailsTest(FunctionalTest):
 
         # She notices the page title has the name of the site and the header
         # mentions the current target
-        self.assertIn(self.body.current_name() + ' details | LCOGT NEOx', self.browser.title)
+        self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Object: ' + self.body.current_name(), header_text)
 
