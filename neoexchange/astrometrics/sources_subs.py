@@ -929,9 +929,6 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
     NASA_targets = []
 
-    # Define a slice for the fields of the message we will want for the target.
-    TARGET_DESIGNATION = slice(1, 3)
-
     status, data = mailbox.select(folder)
     if status == "OK":
         msgnums = ['']
@@ -963,9 +960,27 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
                         # within a day of 'now'
                         if list_prefix in msg_subject and list_suffix in msg_subject and \
                             time_diff <= timedelta(days=date_cutoff):
-                            target = ' '.join(msg_subject.split()[TARGET_DESIGNATION])
-                            if target not in NASA_targets:
-                                NASA_targets.append(target)
+
+                            # Define a slice for the fields of the message we will want for
+                            # the target.
+                            end_slice = 3
+                            if list_suffix.split()[0] in msg_subject.split():
+                                end_slice = msg_subject.split().index(list_suffix.split()[0])
+
+                            TARGET_DESIGNATION = slice(1, end_slice)
+
+                            target = ' '.join(msg_subject.split()[TARGET_DESIGNATION]).strip()
+                            target = target.replace('-', '')
+                            target = target.strip()
+                            if ',' in target:
+                                targets = target.split(',')
+                                for target in targets:
+                                    target = target.strip()
+                                    if target not in NASA_targets:
+                                        NASA_targets.append(target)
+                            else:
+                                if target not in NASA_targets:
+                                    NASA_targets.append(target)
                 except:
                     logger.error("ERROR getting message %s", num)
                     return NASA_targets
@@ -1008,7 +1023,7 @@ def make_target(params):
 def make_moving_target(elements):
     '''Make a target dictionary for the request from an element set'''
 
-    print elements
+#    print elements
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],

@@ -1364,6 +1364,19 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
 
+    @mock.patch('astrometrics.sources_subs.imaplib')
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_accept_msg_multiple_targets(self, mockimaplib):
+        MockDateTime.change_datetime(2016, 10, 25,  3, 26, 5)
+        mailbox = mock.MagicMock()
+        mailbox.select.return_value = ("OK", ['1'])
+        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 TQ11, 2016 SR2, 2016 NP56,\r\n\t2016 ND1- Observations Requested\r\nDate: Mon, 24 Oct 2016 20:20:57 +0000\r\n')])
+
+        expected_targets = ['2016 TQ11', '2016 SR2', '2016 NP56', '2016 ND1']
+        targets = fetch_NASA_targets(mailbox, date_cutoff=2)
+        self.assertEqual(expected_targets, targets)
+
 class TestConfigureDefaults(TestCase):
 
     def setUp(self):
