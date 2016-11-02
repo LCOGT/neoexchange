@@ -921,8 +921,9 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     [date_cutoff] days old (default is 1 day) will not be looked at.'''
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
-    list_author  = '"paul.a.abell@nasa.gov"'
-    list_author2 = '"paul.w.chodas@jpl.nasa.gov"'
+    list_authors  = [ '"paul.a.abell@nasa.gov"',
+                      '"paul.w.chodas@jpl.nasa.gov"',
+                      '"brent.w.barbee@nasa.gov"']
     list_prefix = '[' + list_address.replace('"','').split('@')[0] +']'
     list_suffix = 'Observations Requested'
 
@@ -933,13 +934,14 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
     status, data = mailbox.select(folder)
     if status == "OK":
+        msgnums = ['']
+        for author in list_authors:
         # Look for messages to the mailing list but without specifying a charset
-        status, msgnums = mailbox.search(None, 'TO', list_address,\
-                                               'FROM', list_author)
-        status2, msgnums2 = mailbox.search(None, 'TO', list_address,\
-                                               'FROM', list_author2)
-        if status2 == 'OK' and len(msgnums2) >0 and msgnums2[0] != '':
-            msgnums =[msgnums[0] + ' '+ msgnums2[0],]
+            status, msgs = mailbox.search(None, 'TO', list_address,\
+                                                'FROM', author)
+
+            if status == 'OK' and len(msgs) > 0 and msgs[0] != '':
+                msgnums = [msgnums[0] + ' '+ msgs[0],]
         # Messages numbers come back in a space-separated string inside a
         # 1-element list in msgnums
         if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
