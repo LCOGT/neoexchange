@@ -1088,7 +1088,8 @@ def configure_defaults(params):
                   'W85' : 'LSC',
                   'W86' : 'LSC',
                   'W87' : 'LSC',
-                  'F65' : 'OGG'}
+                  'F65' : 'OGG',
+                  'E10' : 'COJ'}
 
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
