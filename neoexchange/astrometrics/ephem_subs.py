@@ -902,7 +902,7 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long # West of Greenwich !
         site_hgt = 2201.0
         site_name = 'LCOGT LSC Node 1m0 Dome C at Cerro Tololo'
-    elif site_code == 'LSC-AQWA-0M4A' or site_code == 'W85':
+    elif site_code == 'LSC-AQWA-0M4A' or site_code == 'W89':
 # Latitude, longitude from somewhere
         (site_lat, status)  =  S.sla_daf2r(30, 10, 3.79)
         site_lat = -site_lat   # Southern hemisphere !
@@ -1204,13 +1204,9 @@ def get_sitecam_params(site):
         alt_limit = twom_alt_limit
     elif site in valid_site_codes:
         setup_overhead = onem_setup_overhead
-        exp_overhead = onem_exp_overhead
-        pixel_scale = onem_pixscale
-        fov = arcmins_to_radians(onem_fov)
-        if site in ['V37', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64']:
-            pixel_scale = onem_sinistro_pixscale
-            fov = arcmins_to_radians(onem_sinistro_fov)
-            exp_overhead = sinistro_exp_overhead
+        pixel_scale = onem_sinistro_pixscale
+        fov = arcmins_to_radians(onem_sinistro_fov)
+        exp_overhead = sinistro_exp_overhead
         max_exp_length = 300.0
         alt_limit = normal_alt_limit
         site_code = site

@@ -1398,11 +1398,11 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(params, expected_params)
 
-    def test_1m_sbig_lsc(self):
-        expected_params = { 'binning': 2,
+    def test_1m_sinistro_lsc_doma(self):
+        expected_params = { 'binning': 1,
                             'filter': 'w',
-                            'instrument': '1M0-SCICAM-SBIG',
-                            'observatory': '',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': 'doma',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W85'}

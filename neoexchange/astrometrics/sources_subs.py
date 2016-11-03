@@ -1121,8 +1121,9 @@ def configure_defaults(params):
         if params['site_code'] == 'W87':
             params['site_code'] = 'W86'
     elif params['site_code'] == 'W85':
-        params['binning'] = 2
-        params['instrument'] = '1M0-SCICAM-SBIG'
+        params['binning'] = 1
+        params['observatory'] = 'doma'
+        params['instrument'] = '1M0-SCICAM-SINISTRO'
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2

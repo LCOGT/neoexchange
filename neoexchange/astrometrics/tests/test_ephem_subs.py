@@ -710,14 +710,14 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.twom_setup_overhead, setup_overhead)
         self.assertEqual(self.twom_exp_overhead, exp_overhead)
 
-    def test_1m_site_sbig(self):
+    def test_1m_site_sinistro_domea(self):
         site_code = 'W85'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
-        self.assertEqual(0.464, pixel_scale)
-        self.assertEqual(self.onem_sbig_fov, ccd_fov)
+        self.assertEqual(0.389, pixel_scale)
+        self.assertEqual(self.onem_sinistro_fov, ccd_fov)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
-        self.assertEqual(self.onem_exp_overhead, exp_overhead)
+        self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
         self.assertEqual(self.max_exp, max_exp_time)
 
     def test_1m_lsc_site_sinistro(self):
@@ -757,8 +757,8 @@ class TestDetermineExpTimeCount(TestCase):
         site_code = 'W85'
         slot_len = 22.5
 
-        expected_exptime = 50.0
-        expected_expcount = 18
+        expected_exptime = 60.0
+        expected_expcount = 11
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
 
@@ -783,7 +783,7 @@ class TestDetermineExpTimeCount(TestCase):
         site_code = 'W85'
         slot_len = 20
 
-        expected_exptime = 254.5
+        expected_exptime = 222.0
         expected_expcount = 4
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
