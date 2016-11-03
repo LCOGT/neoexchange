@@ -30,7 +30,7 @@ from time import sleep
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
 from bs4 import BeautifulSoup
-import slalib as S
+import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 

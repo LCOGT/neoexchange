@@ -4,6 +4,14 @@ Portal for scheduling observations of NEOs using LCOGT
 
 ## History
 
+### 1.5.5
+
+Switch over telescope at Cerro Tololo (W85) to Sinistro. Increase the InterProposal Priority (IPP) value for requests at McDonald (V37). Switch imports to newer pySLALIB module.
+
+### 1.5.4
+
+Update for LCO rebranding.
+
 ### 1.5.3
 
 Switch over 2 telescopes at South Africa (K91 & K92) to Sinistro. Filter out proposals with <10 blocks from the block efficiency plot.
