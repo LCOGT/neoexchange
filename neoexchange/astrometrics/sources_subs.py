@@ -1167,20 +1167,24 @@ def submit_block_to_scheduler(elements, params):
     request.set_constraints(constraints)
 
 # Add the Request to the outer User Request
-    user_request =  UserRequest(group_id=params['group_id'])
+# If site is ELP, increase IPP value
+    ipp_value = 1.05
+    if params['site_code'] == 'V37':
+        ipp_value = 1.25
+    user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
     user_request.add_request(request)
     user_request.operator = 'single'
+
     proposal = make_proposal(params)
     user_request.set_proposal(proposal)
 
-    logger.debug("User Request=%s" % user_request)
+    logger.info("User Request=%s" % user_request)
 # Make an endpoint and submit the thing
     client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
     response_data = client.submit(user_request)
     client.print_submit_response()
     request_numbers =  response_data.get('request_numbers', '')
     tracking_number =  response_data.get('tracking_number', '')
-#    request_numbers = (-42,)
     if not tracking_number or not request_numbers:
         logger.error("No Tracking/Request number received")
         return False, params
