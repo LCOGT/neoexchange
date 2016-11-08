@@ -18,6 +18,7 @@ h1, h2, h3, h4 { font-family: Century Gothic,sans-serif; font-weight: bold;}
 #login { margin: 0; padding: 0 0 0 0; display: inline; float: right; text-align: right; }
 #login, #lcogt-name { padding: 3px 8px; }
 #powered-by {float: right; position:relative; padding: 30px 0px 5px 0; }
+#powered-by img {max-width:200px}
 
 fieldset { margin: 0px; padding: 0px; }
 table { border-collapse: collapse; }

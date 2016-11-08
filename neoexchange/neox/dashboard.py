@@ -65,13 +65,13 @@ class CustomIndexDashboard(Dashboard):
             column=2,
             children=[
                 {
-                    'title': _('LCOGT main site'),
-                    'url': 'http://lcogt.net/',
+                    'title': _('LCO main site'),
+                    'url': 'http://lco.global/',
                     'external': True,
                 },
                 {
                     'title': _('Observing Portal'),
-                    'url': 'http://lcogt.net/observe/',
+                    'url': 'http://lco.global/observe/',
                     'external': True,
                 },
             ]

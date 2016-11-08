@@ -98,16 +98,16 @@ def home(request):
 class BlockTimeSummary(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
-        block_summary = summarise_block_efficiency()
+        block_summary = summarise_block_efficiency(block_filter=10)
         return render(request, 'core/block_time_summary.html', {'summary':json.dumps(block_summary)})
 
-def summarise_block_efficiency():
+def summarise_block_efficiency(block_filter=0):
     summary = []
     proposals = Proposal.objects.all()
     for proposal in proposals:
         blocks = Block.objects.filter(proposal=proposal)
         observed = blocks.filter(num_observed__isnull=False)
-        if len(blocks) > 0:
+        if len(blocks) > block_filter:
             proposal_summary = {
                                  'proposal':proposal.code,
                                  'Observed' : observed.count(),
@@ -481,15 +481,7 @@ def check_for_block(form_data, params, new_body):
         site_list = { 'V37' : 'ELP' , 'K92' : 'CPT' , 'K93' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
 
         try:
-            body_id = Body.objects.get(provisional_name=new_body.provisional_name)
-        except Body.MultipleObjectsReturned:
-            body_id = Body.objects.get(name=new_body.name)
-        except Body.DoesNotExist:
-            logger.warn("Body does not exist")
-            return 3
-
-        try:
-            block_id = Block.objects.get(body=body_id,
+            block_id = Block.objects.get(body=new_body.id,
                                          groupid__contains=form_data['group_id'],
                                          proposal=Proposal.objects.get(code=form_data['proposal_code']),
                                          site=site_list[params['site_code']])

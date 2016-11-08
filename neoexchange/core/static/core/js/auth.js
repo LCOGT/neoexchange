@@ -4,9 +4,15 @@ var profile = {
   username: ''
 };
 
-var apiRoot = 'https://archive-api.lcogt.net/';
+var apiRoot = 'https://archive-api.lco.global/';
 
 // rivets.bind($('#profile'), profile);
+
+$.ajaxPrefilter(function(options, originalOptions, jqXHR){
+  if(options.url.indexOf('lco.global/') >= 0 && localStorage.getItem('token')){
+    jqXHR.setRequestHeader('Authorization', 'Token ' + localStorage.getItem('token'));
+  }
+});
 
 function getProposals(){
   $.getJSON(apiRoot + 'profile/', function(data){

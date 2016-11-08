@@ -1369,10 +1369,10 @@ class TestConfigureDefaults(TestCase):
     def setUp(self):
         pass
 
-    def test_1m_sbig_cpt(self):
-        expected_params = { 'binning': 2,
+    def test_1m_sinistro_cpt(self):
+        expected_params = { 'binning': 1,
                             'filter': 'w',
-                            'instrument': '1M0-SCICAM-SBIG',
+                            'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
@@ -1453,7 +1453,7 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
-                            'observatory': 'domc',
+                            'observatory': '',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K93'}

@@ -233,7 +233,7 @@ function loadThumbnails(frames){
   for(var i in frames)
    {
      var frame = frames[i];
-     requests.push($.get("https://thumbnails.lcogt.net/" + frame.img +"/" +img_params));
+     requests.push($.get("https://thumbnails.lco.global/" + frame.img +"/" +img_params));
     }
   // Package and display the images once all the AJAX requests have finished
   var defer = $.when.apply($, requests);
@@ -253,7 +253,7 @@ function loadThumbnails(frames){
 }
 
 function fetch_thumbnail(frame, options=''){
-  var url = "https://thumbnails.lcogt.net/" + frame.img +"/" +options;
+  var url = "https://thumbnails.lco.global/" + frame.img +"/" +options;
   $.get(url, function(data){
       var resp = data.url;
       frame['url'] = resp;

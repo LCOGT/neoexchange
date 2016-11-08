@@ -14,14 +14,15 @@ GNU General Public License for more details.
 '''
 from sys import argv
 import os
+from datetime import datetime
+
+from django.core.management.base import BaseCommand, CommandError
 
 from core.models import Body
 from core.views import clean_NEOCP_object, save_and_make_revision
-from astrometrics.sources_subs import packed_to_normal
+from astrometrics.sources_subs import packed_to_normal, parse_mpcobs
 import logging
 
-from django.core.management.base import BaseCommand, CommandError
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,20 @@ class Command(BaseCommand):
             return
 
         orblines = orbfile_fh.readlines()
+        orbfile_fh.close()
+
+
+        obsfile = new_rock.replace('neocp', 'dat')
+
+        try:
+            obsfile_fh = open(obsfile, 'r')
+            obsline = obsfile_fh.readline()
+            obsfile_fh.close()
+            obs_params = parse_mpcobs(obsline)
+            discovery_date = obs_params.get('obs_date', None)
+        except IOError:
+            self.stdout.write("Unable to find matching observation file (%s)" % obsfile)
+            discovery_date = None
 
         orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
         dbg_msg = orblines[0]
@@ -58,8 +73,12 @@ class Command(BaseCommand):
                     kwargs['source_type'] = 'D'
             else:
                 obj_id = kwargs['provisional_name']
- 
-            body, created = Body.objects.get_or_create(provisional_name=obj_id)
+
+            # Add in discovery date from the observation file
+            kwargs['discovery_date'] = discovery_date
+            # Needs to be __contains to perform case-sensitive lookup on the
+            # provisional name.
+            body, created = Body.objects.get_or_create(provisional_name__contains=obj_id)
 
             if not created:
                 # Find out if the details have changed, if they have, save a
