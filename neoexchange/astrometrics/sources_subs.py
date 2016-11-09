@@ -29,6 +29,7 @@ from time import sleep
 
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
+from reqdb.utils.exceptions import InvalidArguments
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
@@ -1165,7 +1166,12 @@ def submit_block_to_scheduler(elements, params):
     request.add_window(window)
 # Create Molecule and add to Request
     molecule = make_molecule(params)
-    request.add_molecule(molecule) # add exposure to the request
+    try:
+        request.add_molecule(molecule) # add exposure to the request
+    except InvalidArguments as e:
+        logger.error("Unable to make a molecule for %s at %s" % (params['instrument'], params['site_code']))
+        logger.error("Message from endpoint: %s" % e.message)
+        return False, params
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
