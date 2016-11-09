@@ -30,7 +30,7 @@ from time import sleep
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
 from bs4 import BeautifulSoup
-import slalib as S
+import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 
@@ -921,25 +921,24 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     [date_cutoff] days old (default is 1 day) will not be looked at.'''
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
-    list_author  = '"paul.a.abell@nasa.gov"'
-    list_author2 = '"paul.w.chodas@jpl.nasa.gov"'
+    list_authors  = [ '"paul.a.abell@nasa.gov"',
+                      '"paul.w.chodas@jpl.nasa.gov"',
+                      '"brent.w.barbee@nasa.gov"']
     list_prefix = '[' + list_address.replace('"','').split('@')[0] +']'
     list_suffix = 'Observations Requested'
 
     NASA_targets = []
 
-    # Define a slice for the fields of the message we will want for the target.
-    TARGET_DESIGNATION = slice(1, 3)
-
     status, data = mailbox.select(folder)
     if status == "OK":
+        msgnums = ['']
+        for author in list_authors:
         # Look for messages to the mailing list but without specifying a charset
-        status, msgnums = mailbox.search(None, 'TO', list_address,\
-                                               'FROM', list_author)
-        status2, msgnums2 = mailbox.search(None, 'TO', list_address,\
-                                               'FROM', list_author2)
-        if status2 == 'OK' and len(msgnums2) >0 and msgnums2[0] != '':
-            msgnums =[msgnums[0] + ' '+ msgnums2[0],]
+            status, msgs = mailbox.search(None, 'TO', list_address,\
+                                                'FROM', author)
+
+            if status == 'OK' and len(msgs) > 0 and msgs[0] != '':
+                msgnums = [msgnums[0] + ' '+ msgs[0],]
         # Messages numbers come back in a space-separated string inside a
         # 1-element list in msgnums
         if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
@@ -961,9 +960,27 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
                         # within a day of 'now'
                         if list_prefix in msg_subject and list_suffix in msg_subject and \
                             time_diff <= timedelta(days=date_cutoff):
-                            target = ' '.join(msg_subject.split()[TARGET_DESIGNATION])
-                            if target not in NASA_targets:
-                                NASA_targets.append(target)
+
+                            # Define a slice for the fields of the message we will want for
+                            # the target.
+                            end_slice = 3
+                            if list_suffix.split()[0] in msg_subject.split():
+                                end_slice = msg_subject.split().index(list_suffix.split()[0])
+
+                            TARGET_DESIGNATION = slice(1, end_slice)
+
+                            target = ' '.join(msg_subject.split()[TARGET_DESIGNATION]).strip()
+                            target = target.replace('-', '')
+                            target = target.strip()
+                            if ',' in target:
+                                targets = target.split(',')
+                                for target in targets:
+                                    target = target.strip()
+                                    if target not in NASA_targets:
+                                        NASA_targets.append(target)
+                            else:
+                                if target not in NASA_targets:
+                                    NASA_targets.append(target)
                 except:
                     logger.error("ERROR getting message %s", num)
                     return NASA_targets
@@ -1006,7 +1023,7 @@ def make_target(params):
 def make_moving_target(elements):
     '''Make a target dictionary for the request from an element set'''
 
-    print elements
+#    print elements
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],
@@ -1078,6 +1095,7 @@ def make_constraints(params):
 
 def configure_defaults(params):
 
+
     site_list = { 'V37' : 'ELP',
                   'K92' : 'CPT',
                   'K93' : 'CPT',
@@ -1090,7 +1108,8 @@ def configure_defaults(params):
                   'E10' : 'COJ',
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
-                  'Q59' : 'COJ'}
+                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use 
+
 
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
@@ -1107,8 +1126,9 @@ def configure_defaults(params):
         if params['site_code'] == 'W87':
             params['site_code'] = 'W86'
     elif params['site_code'] == 'W85':
-        params['binning'] = 2
-        params['instrument'] = '1M0-SCICAM-SBIG'
+        params['binning'] = 1
+        params['observatory'] = 'doma'
+        params['instrument'] = '1M0-SCICAM-SINISTRO'
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
@@ -1157,20 +1177,24 @@ def submit_block_to_scheduler(elements, params):
     request.set_constraints(constraints)
 
 # Add the Request to the outer User Request
-    user_request =  UserRequest(group_id=params['group_id'])
+# If site is ELP, increase IPP value
+    ipp_value = 1.05
+    if params['site_code'] == 'V37':
+        ipp_value = 1.25
+    user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
     user_request.add_request(request)
     user_request.operator = 'single'
+
     proposal = make_proposal(params)
     user_request.set_proposal(proposal)
 
-    logger.debug("User Request=%s" % user_request)
+    logger.info("User Request=%s" % user_request)
 # Make an endpoint and submit the thing
     client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
     response_data = client.submit(user_request)
     client.print_submit_response()
     request_numbers =  response_data.get('request_numbers', '')
     tracking_number =  response_data.get('tracking_number', '')
-#    request_numbers = (-42,)
     if not tracking_number or not request_numbers:
         logger.error("No Tracking/Request number received")
         return False, params

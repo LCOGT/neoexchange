@@ -4,8 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.6.3 (0.4m beta)'
-
+VERSION = '1.6.4'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False

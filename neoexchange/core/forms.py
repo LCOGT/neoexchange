@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('F65','Maui, Hawaii (FTN - F65)'),
          ('E10','Siding Spring, Aust. (FTS - E10)'),
-         ('W85','CTIO, Chile (LSC - W85; SBIG)'),
+         ('W85','CTIO, Chile (LSC - W85; Sinistro)'),
          ('W86','CTIO, Chile (LSC - W86; Sinistro)'),
          ('K92','Sutherland, S. Africa (CPT - K91-93; Sinistro)'),
          ('Q63','Siding Spring, Aust. (COJ - Q63-64; Sinistro)'),

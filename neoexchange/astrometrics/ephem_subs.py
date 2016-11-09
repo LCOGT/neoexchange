@@ -19,7 +19,7 @@ import logging
 from datetime import datetime, timedelta, time
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10
 
-import slalib as S
+import pyslalib.slalib as S
 from numpy import array, concatenate, zeros
 
 # Local imports
@@ -1250,13 +1250,9 @@ def get_sitecam_params(site):
         alt_limit = point4m_alt_limit
     elif site in valid_site_codes:
         setup_overhead = onem_setup_overhead
-        exp_overhead = onem_exp_overhead
-        pixel_scale = onem_pixscale
-        fov = arcmins_to_radians(onem_fov)
-        if site in ['V37', 'W86', 'W87', 'K91', 'K92', 'K93', 'Q63', 'Q64']:
-            pixel_scale = onem_sinistro_pixscale
-            fov = arcmins_to_radians(onem_sinistro_fov)
-            exp_overhead = sinistro_exp_overhead
+        pixel_scale = onem_sinistro_pixscale
+        fov = arcmins_to_radians(onem_sinistro_fov)
+        exp_overhead = sinistro_exp_overhead
         max_exp_length = 300.0
         alt_limit = normal_alt_limit
         site_code = site
