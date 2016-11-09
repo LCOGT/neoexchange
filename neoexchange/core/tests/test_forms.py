@@ -134,8 +134,9 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
-        self.assertIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
-        self.assertIn('value="Q59"', form.as_p())
+# XXX No current valid code for the COJ 0.4m, remove the 'Not' when new code is obtained
+        self.assertNotIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
+        self.assertNotIn('value="Q59"', form.as_p())
         self.assertIn('Tenerife, Spain (TFN - Z21; 0.4m)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
         self.assertIn('Maui, Hawaii (OGG - T04; 0.4m)', form.as_p())
@@ -230,8 +231,9 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
-        self.assertIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
-        self.assertIn('value="Q59"', form.as_p())
+# XXX No current valid code for the COJ 0.4m, remove the 'Not' when new code is obtained
+        self.assertNotIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
+        self.assertNotIn('value="Q59"', form.as_p())
         self.assertIn('Tenerife, Spain (TFN - Z21; 0.4m)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
         self.assertIn('Maui, Hawaii (OGG - T04; 0.4m)', form.as_p())
