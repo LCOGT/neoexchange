@@ -25,7 +25,7 @@ class Command(BaseCommand):
             original = versions.first()
             for version in versions[1:]:
                 update = False
-                fields = ['slope', 'origin', 'epochofel', 'abs_mag', 'arc_length', 'orbinc', 'source_type', 'longascnode', 'eccentricity', 'argofperih', 'discovery_date', 'meandist', 'elements_type', 'meananom']
+                fields = ['slope', 'origin', 'epochofel', 'abs_mag', 'arc_length', 'orbinc', 'source_type', 'longascnode', 'eccentricity', 'argofperih', 'discovery_date', 'meandist', 'elements_type', 'meananom','name','provisional_name','provisional_packed']
                 vers_dict = version.field_dict
                 orig_dict = original.field_dict
                 # Check if the values in the original are the same as the revision
