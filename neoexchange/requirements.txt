@@ -16,7 +16,7 @@ wsgiref
 pycparser==2.13
 requests[security]
 selenium>=2.53,<3.0
-reqdbclient==0.6.25
+reqdbclient==0.6.34
 pytest-django
 mock==1.0.1
 opbeat

@@ -72,8 +72,8 @@ class RankingPageTest(FunctionalTest):
         #Sarah goes to the ranking page and expects to see the ranked list of NEOs with the FOM.
         ranking_page_url = self.live_server_url + '/ranking/'
         self.browser.get(ranking_page_url)
-        self.assertNotIn('Home | LCOGT NEOx', self.browser.title)
-        self.assertIn('Ranking Page | LCOGT NEOx', self.browser.title)
+        self.assertNotIn('Home | LCO NEOx', self.browser.title)
+        self.assertIn('Ranking Page | LCO NEOx', self.browser.title)
         self.check_for_header_in_table('id_ranked_targets',\
             'Rank FOM Target Name NEOCP Score Discovery Date R.A. Dec. South Polar Distance V Mag. Updated? Num. Obs. Arc H Mag. Not Seen (days) Observed? Reported?')
         # Position below computed for 2015-07-01 17:00:00

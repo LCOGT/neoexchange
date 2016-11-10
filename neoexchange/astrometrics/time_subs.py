@@ -18,7 +18,7 @@ from datetime import datetime,timedelta
 from math import degrees
 import time
 
-import slalib as S
+import pyslalib.slalib as S
 
 def get_semester_start(date):
 

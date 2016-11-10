@@ -47,7 +47,7 @@ class BlockSummaryTest(FunctionalTest):
 
         # He notices the page title has the name of the site and the header
         # states he is on the observing block summary page.
-        self.assertIn('Blocks summary | LCOGT NEOx', self.browser.title)
+        self.assertIn('Blocks summary | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Observing Block Summary', header_text)
 
