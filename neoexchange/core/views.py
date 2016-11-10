@@ -504,13 +504,15 @@ def save_and_make_revision(body, kwargs):
     '''
     Make a revision if any of the parameters have changed, but only do it once
     per ingest not for each parameter.
-    Converts current model instance into a dict and compares each element with
+    Converts current model instance into a dict and compares a subset of elements with
     incoming version. Incoming variables may be generically formatted as strings,
     so use the type of original to convert and then compare.
     '''
     update = False
+    fields = ['slope', 'origin', 'epochofel', 'abs_mag', 'updated', 'arc_length', 'orbinc', 'source_type', 'longascnode', 'eccentricity', 'argofperih', 'discovery_date', 'meandist', 'elements_type', 'meananom']
     body_dict = model_to_dict(body)
-    for k, v in kwargs.items():
+    for k in fields:
+        v = kwargs[k]
         param = body_dict[k]
         if type(body_dict[k]) == type(float()) and v is not None:
             v = float(v)
