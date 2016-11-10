@@ -511,20 +511,21 @@ def save_and_make_revision(body, kwargs):
     so use the type of original to convert and then compare.
     '''
     update = False
-    fields = ['slope', 'origin', 'epochofel', 'abs_mag', 'arc_length', 'orbinc', 'source_type', 'longascnode', 'eccentricity', 'argofperih', 'discovery_date', 'meandist', 'elements_type', 'meananom']
+    fields = ['slope', 'origin', 'epochofel', 'abs_mag', 'arc_length', 'orbinc', 'source_type', 'longascnode', 'eccentricity', 'argofperih', 'discovery_date', 'meandist', 'elements_type', 'meananom','name','provisional_name','provisional_packed']
     body_dict = model_to_dict(body)
     for k, v in kwargs.items():
-        if k not in fields:
-            continue
         param = body_dict.get(k,'')
         if type(param) == type(float()) and v is not None:
             v = float(v)
         if v != param:
             setattr(body, k, v)
-            update = True
+            if k in fields:
+                update = True
     if update:
         with reversion.create_revision():
             body.save()
+    else:
+        body.save()
     return update
 
 
