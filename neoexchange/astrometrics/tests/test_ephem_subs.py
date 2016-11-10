@@ -35,6 +35,10 @@ class TestGetMountLimits(TestCase):
             ha_pos_limit = 4.5 * 15.0
             ha_neg_limit = -4.5 * 15.0
             altitude_limit = 30.0
+        elif tel_class.lower() == '0.4m':
+            ha_pos_limit = 4.46 * 15.0
+            ha_neg_limit = -4.5 * 15.0
+            altitude_limit = 15.0
         else:
             self.Fail("Unknown telescope class:", tel_class)
         self.assertEqual(ha_pos_limit, pos_limit)
@@ -65,6 +69,41 @@ class TestGetMountLimits(TestCase):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('q63')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '1m')
 
+    def test_point4m_by_site(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('TFN-AQWA-0m4B')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site2(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('OGG-CLMA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site3(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('OGG-CLMA-0M4B')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site4(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('COJ-CLMA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site5(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('COJ-CLMA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z21')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code2(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('Q59')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code3(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('T04')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code_lowercase(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('z21')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
 class TestComputeEphem(TestCase):
 
@@ -689,6 +728,9 @@ class TestGetSiteCamParams(TestCase):
     onem_exp_overhead = 15.5
     sinistro_exp_overhead = 48.0
     onem_sinistro_fov = radians(26.4/60.0)
+    point4m_fov = radians(29.1/60.0)
+    point4m_exp_overhead = 13.0
+    point4m_setup_overhead = 120.0
     max_exp = 300.0
 
     def test_bad_site(self):
@@ -704,6 +746,18 @@ class TestGetSiteCamParams(TestCase):
         site_code = 'f65'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(0.304, pixel_scale)
+        self.assertEqual(self.twom_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.twom_setup_overhead, setup_overhead)
+        self.assertEqual(self.twom_exp_overhead, exp_overhead)
+
+    def test_2m_sitename(self):
+        site_code = 'F65'
+
+        site_string = 'OGG-CLMA-2M0A'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_string)
+        self.assertEqual(site_code, chk_site_code)
         self.assertEqual(0.304, pixel_scale)
         self.assertEqual(self.twom_fov, ccd_fov)
         self.assertEqual(self.max_exp, max_exp_time)
@@ -729,6 +783,36 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+
+    def test_point4m_site(self):
+        site_code = 'Z21'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site2(self):
+        site_code = 'T04'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site3(self):
+        site_code = 'Q59'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
 
     def test_1m_cpt_site_sinistro1(self):
         site_code = 'K92'
@@ -816,3 +900,118 @@ class TestDetermineExpTimeCount(TestCase):
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
+
+    def test_slow_point4m(self):
+        speed = 2.52
+        site_code = 'Z21'
+        slot_len = 22.5
+
+        expected_exptime = 20.0
+        expected_expcount = 37
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_fast_point4m(self):
+        speed = 23.5
+        site_code = 'Z21'
+        slot_len = 20
+
+        expected_exptime = 2.0
+        expected_expcount = 72
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+class TestGetSitePos(TestCase):
+
+    def test_tenerife_point4m_num1_by_code(self):
+        site_code = 'Z21'
+
+        expected_site_name = 'LCOGT TFN Node 0m4a Aqawan A at Tenerife'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_tenerife_point4m_num1_by_name(self):
+        site_code = 'TFN-AQWA-0M4A'
+
+        expected_site_name = 'LCOGT TFN Node 0m4a Aqawan A at Tenerife'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_tenerife_unknown_point4m_num2_by_name(self):
+        site_code = 'TFN-AQWA-0M4B'
+
+        expected_site_name = '?'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual('LCOGT TFN Node 0m4a Aqawan A at Tenerife', site_name)
+        self.assertNotEqual('LCOGT TFN Node 0m4b Aqawan A at Tenerife', site_name)
+        self.assertEqual(0.0, site_long)
+        self.assertEqual(0.0, site_lat)
+        self.assertEqual(0.0, site_hgt)
+
+    def test_maui_point4m_num2_by_code(self):
+        site_code = 'T04'
+
+        expected_site_name = 'LCOGT OGG Node 0m4b at Maui'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_maui_point4m_num2_by_name(self):
+        site_code = 'OGG-CLMA-0M4B'
+
+        expected_site_name = 'LCOGT OGG Node 0m4b at Maui'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual('Haleakala-Faulkes Telescope North (FTN)', site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_aust_point4m_num2_by_code(self):
+        site_code = 'Q59'
+
+        expected_site_name = 'LCOGT COJ Node 0m4b at Siding Spring'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertGreater(site_long, 0.0)
+        self.assertLess(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_aust_point4m_num2_by_name(self):
+        site_code = 'COJ-CLMA-0M4B'
+
+        expected_site_name = 'LCOGT COJ Node 0m4b at Siding Spring'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertGreater(site_long, 0.0)
+        self.assertLess(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)

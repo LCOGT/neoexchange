@@ -1382,6 +1382,176 @@ class TestConfigureDefaults(TestCase):
     def setUp(self):
         pass
 
+    def test_tfn_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'Z21',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'site' : 'TFN',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_ogg_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'T04',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'site' : 'OGG',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_coj_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'Q59',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'site' : 'COJ',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_1m_sinistro_lsc_doma(self):
+        expected_params = { 'binning': 1,
+                            'filter': 'w',
+                            'instrument': '1M0-SCICAM-SINISTRO',
+                            'observatory': 'doma',
+                            'pondtelescope': '1m0',
+                            'site': 'LSC',
+                            'site_code': 'W85'}
+
+
+        params = { 'site_code' : 'W85' }
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_lsc_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'W86',
+              }
+
+        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope' :'1m0',
+                            'observatory' : 'domb',
+                            'site' : 'LSC',
+                            'filter' : 'w',
+                            'binning' : 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_lsc_bad_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'W87',
+              }
+
+        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope' :'1m0',
+                            'observatory' : 'domb',
+                            'site' : 'LSC',
+                            'filter' : 'w',
+                            'binning' : 1,
+                            'site_code' : 'W86',
+                            'exp_count' : 42,
+                            'exp_time' : 42.0}
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_ftn(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'F65',
+              }
+
+        expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
+                            'pondtelescope' :'2m0',
+                            'observatory' : '',
+                            'site' : 'OGG',
+                            'filter' : 'solar',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_fts(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'E10',
+              }
+
+        expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
+                            'pondtelescope' :'2m0',
+                            'observatory' : '',
+                            'site' : 'COJ',
+                            'filter' : 'solar',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_elp_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'V37',
+              }
+
+        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope' :'1m0',
+                            'observatory' : '',
+                            'site' : 'ELP',
+                            'filter' : 'w',
+                            'binning' : 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
     def test_1m_sinistro_cpt(self):
         expected_params = { 'binning': 1,
                             'filter': 'w',

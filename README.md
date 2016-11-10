@@ -4,6 +4,18 @@ Portal for scheduling observations of NEOs using LCOGT
 
 ## History
 
+### 1.6.5
+
+Add fix and trap for a site which has no working telescopes.
+
+### 1.6.4
+
+Addition of 0.4m telescope support.
+
+### 1.6.0-1.6.3
+
+Internal version numbers during addition of 0.4m telescope support.
+
 ### 1.5.5
 
 Switch over telescope at Cerro Tololo (W85) to Sinistro. Increase the InterProposal Priority (IPP) value for requests at McDonald (V37). Switch imports to newer pySLALIB module.

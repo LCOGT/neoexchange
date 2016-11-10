@@ -29,6 +29,7 @@ from time import sleep
 
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest
+from reqdb.utils.exceptions import InvalidArguments
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
@@ -1103,8 +1104,13 @@ def configure_defaults(params):
                   'W85' : 'LSC',
                   'W86' : 'LSC',
                   'W87' : 'LSC',
+                  'W89' : 'LSC',
                   'F65' : 'OGG',
-                  'E10' : 'COJ'}
+                  'E10' : 'COJ',
+                  'Z21' : 'TFN',
+                  'T04' : 'OGG',
+                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use 
+
 
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
@@ -1129,6 +1135,11 @@ def configure_defaults(params):
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
+    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q59':
+        params['instrument'] =  '0M4-SCICAM-SBIG'
+        params['pondtelescope'] = '0m4'
+        params['filter'] = 'w'
+        params['binning'] = 2 # 1 is the Right Answer...
 
     return params
 
@@ -1155,7 +1166,12 @@ def submit_block_to_scheduler(elements, params):
     request.add_window(window)
 # Create Molecule and add to Request
     molecule = make_molecule(params)
-    request.add_molecule(molecule) # add exposure to the request
+    try:
+        request.add_molecule(molecule) # add exposure to the request
+    except InvalidArguments as e:
+        logger.error("Unable to make a molecule for %s at %s" % (params['instrument'], params['site_code']))
+        logger.error("Message from endpoint: %s" % e.message)
+        return False, params
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
