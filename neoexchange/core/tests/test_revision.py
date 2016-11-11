@@ -91,3 +91,31 @@ class TestReversion(TestCase):
 
         versions = Version.objects.get_for_object(body)
         self.assertEqual(1, len(versions))
+
+    def test_cleaner_findordb(self):
+        obs_page_list = [u'LSCTLGj 16.54  0.15 K16B8 258.25752   52.27105  101.57581   16.82829  0.0258753  0.17697056   3.1419699    FO 161108    11   1    3 days 0.09         NEOCPNomin 0000 LSCTLGj                     20161108',
+                         u'',
+                         u'']
+
+        first_kwargs = clean_NEOCP_object(obs_page_list)
+
+        body, created = Body.objects.get_or_create(provisional_name='LSCTLGj')
+        save_and_make_revision(body, first_kwargs)
+
+        body_count = Body.objects.count()
+        self.assertEqual(1, body_count)
+
+        versions = Version.objects.get_for_object(body)
+        self.assertEqual(1, len(versions))
+
+        # Create another revision with same params
+        second_kwargs = clean_NEOCP_object(obs_page_list)
+        self.assertNotEqual(first_kwargs, second_kwargs)
+        body = Body.objects.get(provisional_name='LSCTLGj')
+        save_and_make_revision(body, second_kwargs)
+
+        body_count = Body.objects.count()
+        self.assertEqual(1, body_count)
+
+        versions = Version.objects.get_for_object(body)
+        self.assertEqual(1, len(versions))
