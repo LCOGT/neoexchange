@@ -19,10 +19,13 @@ from django.test import TestCase
 import reversion
 from reversion.models import Version
 
-from core.views import clean_NEOCP_object
+from core.views import clean_NEOCP_object, save_and_make_revision
 from core.models import Body
 
 class TestReversion(TestCase):
+
+    def setUp(self):
+        self.maxDiff = None
 
     def test_save_unchanging(self):
 
@@ -68,8 +71,8 @@ class TestReversion(TestCase):
 
         first_kwargs = clean_NEOCP_object(obs_page_list)
 
-        with reversion.create_revision():
-            body, created = Body.objects.get_or_create(**first_kwargs)
+        body, created = Body.objects.get_or_create(provisional_name='N00ac38')
+        save_and_make_revision(body, first_kwargs)
 
         body_count = Body.objects.count()
         self.assertEqual(1, body_count)
@@ -79,12 +82,12 @@ class TestReversion(TestCase):
 
         # Create another revision with same params
         second_kwargs = clean_NEOCP_object(obs_page_list)
-        with reversion.create_revision():
-            body, created = Body.objects.get_or_create(**second_kwargs)
+        self.assertNotEqual(first_kwargs, second_kwargs)
+        body = Body.objects.get(provisional_name='N00ac38')
+        save_and_make_revision(body, second_kwargs)
 
         body_count = Body.objects.count()
         self.assertEqual(1, body_count)
-        self.assertFalse(created)
 
         versions = Version.objects.get_for_object(body)
         self.assertEqual(1, len(versions))
