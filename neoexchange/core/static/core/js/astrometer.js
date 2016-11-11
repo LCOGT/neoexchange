@@ -1,7 +1,37 @@
 // Astrometer for NEO exchange
 
+function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = jQuery.trim(cookies[i]);
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+var csrftoken = getCookie('csrftoken');
+
+function csrfSafeMethod(method) {
+    // these HTTP methods do not require CSRF protection
+    return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+}
+
 
 function setUp(){
+
+  $.ajaxSetup({
+      beforeSend: function(xhr, settings) {
+          if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+              xhr.setRequestHeader("X-CSRFToken", csrftoken);
+          }
+      }
+  });
 
   stage = new createjs.Stage("imgCanvas");
   ministage = new createjs.Stage("zoomCanvas");
@@ -10,7 +40,7 @@ function setUp(){
     $('#blink-stop').hide();
   }
   $("#cand-submit").hide();
-  loadCandidates(frames);
+  loadCandidates(candidates);
 
 }
 
@@ -156,16 +186,16 @@ function handleLoad(event) {
   stage.update();
 }
 
-function loadCandidates(frames){
-  var num_cands = frames[0].candidates.length;
-  for (var i=0;i< num_cands; i++){
+function loadCandidates(candidates){
+  for (var i=0;i< candidates.length; i++){
+    var cid = candidates[i]['id']
     var cand_html = "<li class='grey-dark'>";
     cand_html += "<span class='candidate'>";
-    cand_html +="<span data-frameid='"+i+"' class='candidate-select'>";
+    cand_html +="<span data-cand_id='"+cid+"' class='candidate-select'>";
     cand_html +="<span class='block-status-item' ><i class='fa fa-refresh'></i></span>";
     cand_html += "<span class='block-status-item'>Blink Candidate "+(i+1)+"</span></span>";
-    cand_html +="<span class='block-status-item block-status-icon text-red' id='cand-"+i+"-reject' style='display:none;'><i class='fa fa-ban'></i></span>"
-    cand_html +="<span class='block-status-item block-status-icon text-green' id='cand-"+i+"-accept' style='display:none;'><i class='fa fa-check'></i></span>"
+    cand_html +="<span class='block-status-item block-status-icon text-red' id='cand-"+cid+"-reject' style='display:none;'><i class='fa fa-ban'></i></span>"
+    cand_html +="<span class='block-status-item block-status-icon text-green' id='cand-"+cid+"-accept' style='display:none;'><i class='fa fa-check'></i></span>"
     cand_html +="</span>";
     cand_html += "</li>";
     $('#candidate-list').append(cand_html);
@@ -205,21 +235,15 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
   img_holder.scaleY = 0.6;
   stage.addChild(img_holder);
 
-  // Add background sources
-  // for (var i=0; i <frames[index].sources.length;i++) {
-  //   source = frames[index].sources[i];
-  //   name = "source_" + i;
-  //   addCircle(source.x, source.y, point_size, "#e74c3c", name, false);
-  // }
-  // Add targets
   if (allcandidates){
-    for (var i=0; i <frames[index].candidates.length;i++) {
-      target = frames[index].candidates[i];
+    for (var i=0; i <candidates.length;i++) {
+      target = candidates[i].coords[ind-1];
       name = "target_" + i;
       addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
     }
   }else{
-    target = frames[index].candidates[cand_index];
+    target = candidates[cand_index].coords[ind-1];
+    console.log(target.x/image_scale, target.y/image_scale)
     name = "target_" + cand_index;
     addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
     zoomImage(target.x/image_scale, target.y/image_scale);

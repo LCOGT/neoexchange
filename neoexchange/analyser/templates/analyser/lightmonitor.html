@@ -17,6 +17,7 @@
 	var img_holder;
 	var mini_img;
 	var frames = {{images|safe}}
+	var candidates = {{candidates|safe}}
 	var image_scale = {{xaxis|default:"1024"}}/600
 	var accepted = Array();
 	var rejected = Array();
@@ -29,14 +30,14 @@
 		loadThumbnails(frames);
 
 		$('.candidate-select').click(function(){
-			var ind = $(this).data('frameid');
+			var ind = $(this).data('cand_id');
 			stopBlink();
 		  startBlink(ind, false);
 			$('#candidate-list').hide();
 			$('.candidate-accept').show();
 
-			$("#cand-accept").data('frameid', ind);
-			$("#cand-reject").data('frameid', ind);
+			$("#cand-accept").data('cand_id', ind);
+			$("#cand-reject").data('cand_id', ind);
 		});
 
 		$('#blink-stop').click(function(){
@@ -49,16 +50,20 @@
 		})
 
 		$('#cand-accept').click(function(){
-			var cand_id = $(this).data('frameid');
+			var cand_id = $(this).data('cand_id');
 			acceptCandidate(cand_id);
 			resetCandidateOptions();
 		})
 
 		$('#cand-reject').click(function(){
-			var cand_id = $(this).data('frameid');
+			var cand_id = $(this).data('cand_id');
 			rejectCandidate(cand_id);
 			resetCandidateOptions();
 		})
+
+		$('#cand-submit').click(function(){
+			$.post('{% url 'submit-candidates' object.id %}', { 'objects': accepted });
+		});
 
 	});
 
@@ -133,11 +138,11 @@
 								<ul class="candidate-controls candidate-accept" style="display:none;">
 									<li class='green'>
 										<span class="block-status-item" ><i class="fa fa-check"></i></span>
-										<span class='block-status-item' id="cand-accept" data-frameid="">Accept</span>
+										<span class='block-status-item' id="cand-accept" data-cand_id="">Accept</span>
 								</li>
 								<li class='red'>
 									<span class="block-status-item" ><i class="fa fa-times"></i></span>
-									<span class='block-status-item' id="cand-reject" data-frameid="">Reject</span>
+									<span class='block-status-item' id="cand-reject" data-cand_id="">Reject</span>
 							</li>
 						</ul>
 					</div>
