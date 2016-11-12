@@ -1,10 +1,12 @@
-from core.models import Body
-from reversion.models import Version
+from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Count
 from django.forms.models import model_to_dict
-from datetime import datetime
+
+from core.views import return_fields_for_saving
+from core.models import Body
+from reversion.models import Version
 import logging
 
 logger = logging.getLogger(__name__)
@@ -25,7 +27,7 @@ class Command(BaseCommand):
             original = versions.first()
             for version in versions[1:]:
                 update = False
-                fields = ['slope', 'origin', 'epochofel', 'abs_mag', 'arc_length', 'orbinc', 'source_type', 'longascnode', 'eccentricity', 'argofperih', 'discovery_date', 'meandist', 'elements_type', 'meananom','name','provisional_name','provisional_packed']
+                fields = return_fields_for_saving()
                 vers_dict = version.field_dict
                 orig_dict = original.field_dict
                 # Check if the values in the original are the same as the revision
