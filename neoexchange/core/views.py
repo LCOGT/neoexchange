@@ -511,7 +511,9 @@ def save_and_make_revision(body, kwargs):
     so use the type of original to convert and then compare.
     '''
     update = False
-    fields = ['slope', 'origin', 'epochofel', 'abs_mag', 'arc_length', 'orbinc', 'source_type', 'longascnode', 'eccentricity', 'argofperih', 'discovery_date', 'meandist', 'elements_type', 'meananom','name','provisional_name','provisional_packed']
+    fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
+              'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'eccentricity', 'argofperih', 'meandist', 'meananom',
+              'score', 'discovery_date', 'num_obs', 'arc_length' ]
     body_dict = model_to_dict(body)
     for k, v in kwargs.items():
         param = body_dict.get(k,'')
