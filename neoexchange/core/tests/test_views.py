@@ -1984,7 +1984,6 @@ class TestUpdate_Crossids(TestCase):
         status = update_crossids(crossid_info, dbg=False)
 
         body = Body.objects.get(provisional_name=self.body.provisional_name)
-        print(body.__dict__)
 
         self.assertEqual(True, status)
         self.assertEqual(True, body.active)
