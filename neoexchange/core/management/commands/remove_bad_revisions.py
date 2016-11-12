@@ -3,6 +3,7 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Count
 from django.forms.models import model_to_dict
+from django.contrib.contenttypes.models import ContentType
 
 from core.views import return_fields_for_saving
 from core.models import Body
@@ -16,7 +17,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("==== Removing Bad Revisions %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-        bodies = Version.objects.filter(content_type=15).values('object_id').annotate(sum=Count('id')).order_by('-sum')
+        minorbody_ct = ContentType.objects.get(app_label='core', model='body')
+        self.stdout.write("==== Found content_type=%d for Body ====" % minorbody_ct.id)
+        bodies = Version.objects.filter(content_type=minorbody_ct.id).values('object_id').annotate(sum=Count('id')).order_by('-sum')
         num_d = 0
         num_s = 0
         for body in bodies:
