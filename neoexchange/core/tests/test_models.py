@@ -490,6 +490,75 @@ class TestFrame(TestCase):
         self.assertEqual(params['exptime'], frame.exptime)
         self.assertEqual(params['midpoint'], frame.midpoint)
 
+    def test_create_catalog(self):
+        params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'w',
+                    'filename'      : 'lsc1m009-fl03-20161108-0065-e91_ldac.fits',
+                    'exptime'       : 260.0,
+                    'midpoint'      : '2016-11-09T06:53:01.750',
+                    'block'         : self.test_block,
+                    'frametype'     : Frame.FITS_LDAC_CATALOG,
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(5, frame.frametype)
+        self.assertEqual(' ', frame.quality)
+        self.assertEqual(None, frame.extrainfo)
+        self.assertEqual(params['instrument'], frame.instrument)
+        self.assertEqual(params['filename'], frame.filename)
+        self.assertEqual(params['exptime'], frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+        self.assertTrue(frame.is_catalog())
+
+    def test_create_banzai_ql(self):
+        params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'w',
+                    'filename'      : 'lsc1m009-fl03-20161108-0065-e11.fits',
+                    'exptime'       : 260.0,
+                    'midpoint'      : '2016-11-09T06:53:01.750',
+                    'block'         : self.test_block,
+                    'frametype'     : Frame.BANZAI_QL_FRAMETYPE,
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(11, frame.frametype)
+        self.assertEqual(' ', frame.quality)
+        self.assertEqual(None, frame.extrainfo)
+        self.assertEqual(params['instrument'], frame.instrument)
+        self.assertEqual(params['filename'], frame.filename)
+        self.assertEqual(params['exptime'], frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+        self.assertTrue(frame.is_quicklook())
+        self.assertTrue(frame.is_processed())
+
+    def test_create_banzai_red(self):
+        params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'w',
+                    'filename'      : 'lsc1m009-fl03-20161108-0065-e91.fits',
+                    'exptime'       : 260.0,
+                    'midpoint'      : '2016-11-09T06:53:01.750',
+                    'block'         : self.test_block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(91, frame.frametype)
+        self.assertEqual(' ', frame.quality)
+        self.assertEqual(None, frame.extrainfo)
+        self.assertEqual(params['instrument'], frame.instrument)
+        self.assertEqual(params['filename'], frame.filename)
+        self.assertEqual(params['exptime'], frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+        self.assertFalse(frame.is_quicklook())
+        self.assertTrue(frame.is_reduced())
+        self.assertTrue(frame.is_processed())
+
 # For transactional reasons, these assertRaises need to be in their own test
 # blocks (see https://code.djangoproject.com/ticket/21540)
 
@@ -637,7 +706,8 @@ class TestSourceMeasurement(TestCase):
         self.body5, created = Body.objects.get_or_create(**params)
 
         params['name'] = 'C/2016 C2'
-        params['source_type'] = 'MPC_COMET'
+        params['elements_type'] = 'MPC_COMET'
+        params['source_type'] = 'C'
         self.body_confirmed, created = Body.objects.get_or_create(**params)
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
