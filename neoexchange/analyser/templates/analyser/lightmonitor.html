@@ -16,13 +16,14 @@
 	var blinker;
 	var img_holder;
 	var mini_img;
-	var frames = {{images|safe}}
-	var candidates = {{candidates|safe}}
-	var image_scale = {{xaxis|default:"1024"}}/600
+	var frames = {{images|safe}};
+	var candidates = {{candidates|safe}};
+	var image_scale = {{xaxis|default:"1024"}}/600;
 	var accepted = Array();
 	var rejected = Array();
-	var data_url = 'https://thumbnails.lco.global/'
-	var img_params = '?width=1000&height=1000'
+	var data_url = 'https://thumbnails.lco.global/';
+	var img_params = '?width=1000&height=1000';
+	var analysed = {% if analysed %}true{% else %}false{% endif %};
 
 	$(document).ready(function(){
 
@@ -62,7 +63,15 @@
 		})
 
 		$('#cand-submit').click(function(){
-			$.post('{% url 'submit-candidates' object.id %}', { 'objects': accepted });
+			$.post('{% url 'submit-candidates' object.id %}', { 'objects': accepted })
+			.done(function() {
+					window.location.replace('{% url 'view-report' object.id %}');
+				})
+			.fail(function() {
+				alert( "error" );
+			})
+
+			;
 		});
 
 	});
@@ -76,7 +85,7 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Light Monitor for block: <a href="{% url 'block-view' object.id  %}" class="objectspecific">#{{object.id}}</a></h1>
+        <h1>Analyser for block: <a href="{% url 'block-view' object.id  %}" class="objectspecific">#{{object.id}}</a></h1>
     </div>
 {% endblock%}
 
@@ -86,7 +95,7 @@
         <div class="row">
 					{% if images %}
             <div class="eight columns">
-                <h3 class="section-title">Looking for {{object.body.current_name}}</h3>
+                <h3 class="section-title">{% if analysed %}Measurements of{% else %}Looking for{% endif %} {{object.body.current_name}}</h3>
 {% if messages %}					<div id="message">
 						<ul class="messages">
 {% for message in messages %}{%ifchanged%}<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message|safe }}</li>{%endifchanged%}{% endfor %}

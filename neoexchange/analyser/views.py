@@ -36,11 +36,13 @@ class BlockFramesView(DetailView):
         img_list = []
         context = super(BlockFramesView, self).get_context_data(**kwargs)
         images = find_images_for_block(context['block'].id)
+        analysed = check_for_source_measurements(context['block'].id)
         if images:
             context['images'] = images[0]
             context['candidates'] = images[1]
             context['xaxis'] = images[2]
             context['yaxis'] = images[3]
+            context['analysed'] = analysed
         return context
 
 class ProcessCandidates(View):
@@ -62,8 +64,10 @@ def analyser_to_source_measurement(block, cand_ids):
     for cand_id in cand_ids:
         cand = Candidate.objects.get(block=block, cand_id=cand_id)
         detections = cand.unpack_dets()
+        if len(detections) != frames.count():
+            return False
         for det in detections:
-            frame = frames[int(det[1])]
+            frame = frames[int(det[1])-1]
             sm = SourceMeasurement()
             sm.body = body
             sm.frame = frame
@@ -73,3 +77,10 @@ def analyser_to_source_measurement(block, cand_ids):
             sm.aperture_size = det[14]
             sm.save()
     return True
+
+def check_for_source_measurements(blockid):
+    sources = SourceMeasurement.objects.filter(frame__block__id=blockid)
+    if sources.count() > 0:
+        return True
+    else:
+        return False

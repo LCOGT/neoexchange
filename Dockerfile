@@ -74,9 +74,9 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # numpy needs to be explicitly installed first otherwise pySLALIB (pulled in by newer reqdbclient) fails
 # with a missing numpy.distutils.core reference for...reasons...
 RUN pip install --upgrade pip \
-  && pip install uwsgi==2.0.8 \
-  && pip install numpy \
-  && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt
+    && pip install uwsgi==2.0.8 \
+    && pip install numpy \
+    && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt
 
 # Ensure crond will run on all host operating systems
 RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond

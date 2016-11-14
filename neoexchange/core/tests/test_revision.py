@@ -19,10 +19,13 @@ from django.test import TestCase
 import reversion
 from reversion.models import Version
 
-from core.views import clean_NEOCP_object
+from core.views import clean_NEOCP_object, save_and_make_revision
 from core.models import Body
 
 class TestReversion(TestCase):
+
+    def setUp(self):
+        self.maxDiff = None
 
     def test_save_unchanging(self):
 
@@ -68,8 +71,8 @@ class TestReversion(TestCase):
 
         first_kwargs = clean_NEOCP_object(obs_page_list)
 
-        with reversion.create_revision():
-            body, created = Body.objects.get_or_create(**first_kwargs)
+        body, created = Body.objects.get_or_create(provisional_name='N00ac38')
+        save_and_make_revision(body, first_kwargs)
 
         body_count = Body.objects.count()
         self.assertEqual(1, body_count)
@@ -79,12 +82,40 @@ class TestReversion(TestCase):
 
         # Create another revision with same params
         second_kwargs = clean_NEOCP_object(obs_page_list)
-        with reversion.create_revision():
-            body, created = Body.objects.get_or_create(**second_kwargs)
+        self.assertNotEqual(first_kwargs, second_kwargs)
+        body = Body.objects.get(provisional_name='N00ac38')
+        save_and_make_revision(body, second_kwargs)
 
         body_count = Body.objects.count()
         self.assertEqual(1, body_count)
-        self.assertFalse(created)
+
+        versions = Version.objects.get_for_object(body)
+        self.assertEqual(1, len(versions))
+
+    def test_cleaner_findordb(self):
+        obs_page_list = [u'LSCTLGj 16.54  0.15 K16B8 258.25752   52.27105  101.57581   16.82829  0.0258753  0.17697056   3.1419699    FO 161108    11   1    3 days 0.09         NEOCPNomin 0000 LSCTLGj                     20161108',
+                         u'',
+                         u'']
+
+        first_kwargs = clean_NEOCP_object(obs_page_list)
+
+        body, created = Body.objects.get_or_create(provisional_name='LSCTLGj')
+        save_and_make_revision(body, first_kwargs)
+
+        body_count = Body.objects.count()
+        self.assertEqual(1, body_count)
+
+        versions = Version.objects.get_for_object(body)
+        self.assertEqual(1, len(versions))
+
+        # Create another revision with same params
+        second_kwargs = clean_NEOCP_object(obs_page_list)
+        self.assertNotEqual(first_kwargs, second_kwargs)
+        body = Body.objects.get(provisional_name='LSCTLGj')
+        save_and_make_revision(body, second_kwargs)
+
+        body_count = Body.objects.count()
+        self.assertEqual(1, body_count)
 
         versions = Version.objects.get_for_object(body)
         self.assertEqual(1, len(versions))

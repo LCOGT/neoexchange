@@ -243,7 +243,6 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
     }
   }else{
     target = candidates[cand_index].coords[ind-1];
-    console.log(target.x/image_scale, target.y/image_scale)
     name = "target_" + cand_index;
     addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
     zoomImage(target.x/image_scale, target.y/image_scale);
