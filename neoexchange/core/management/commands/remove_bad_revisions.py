@@ -22,17 +22,26 @@ class Command(BaseCommand):
         bodies = Version.objects.filter(content_type=minorbody_ct.id).values('object_id').annotate(sum=Count('id')).order_by('-sum')
         num_d = 0
         num_s = 0
+        self.stdout.write("==== Found {} Bodies ====".format(bodies.count()))
         for body in bodies:
-            logger.debug('*** Inspecting Body ID {} ***'.format(body['object_id']))
-            versions = Version.objects.filter(object_id=body['object_id']).order_by('revision__date_created')
+            try:
+                logger.debug('*** Inspecting Body ID {} ***'.format(body['object_id']))
+                versions = Version.objects.filter(object_id=body['object_id']).order_by('revision__date_created')
+            except Exception, e:
+                logger.error("Problem with body: {}".format(e))
+                continue
             if versions.count() <= 2:
                 continue
             original = versions.first()
             for version in versions[1:]:
                 update = False
                 fields = return_fields_for_saving()
-                vers_dict = version.field_dict
-                orig_dict = original.field_dict
+                try:
+                    vers_dict = version.field_dict
+                    orig_dict = original.field_dict
+                except AttributeError, e:
+                    logger.error("Problem with body: {}".format(e))
+                    continue
                 # Check if the values in the original are the same as the revision
                 for k in fields:
                     try:
