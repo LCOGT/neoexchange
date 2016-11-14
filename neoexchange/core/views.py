@@ -502,26 +502,44 @@ def record_block(tracking_number, params, form_data, body):
     else:
         return False
 
+def return_fields_for_saving():
+    '''Returns a list of fields that should be checked before saving a revision.
+    Split out from save_and_make_revision() so it can be consistently used by the
+    remove_bad_revisions management command.'''
+
+    fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
+              'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'eccentricity', 'argofperih', 'meandist', 'meananom',
+              'score', 'discovery_date', 'num_obs', 'arc_length' ]
+
+    return fields
+
 def save_and_make_revision(body, kwargs):
     '''
     Make a revision if any of the parameters have changed, but only do it once
     per ingest not for each parameter.
-    Converts current model instance into a dict and compares each element with
+    Converts current model instance into a dict and compares a subset of elements with
     incoming version. Incoming variables may be generically formatted as strings,
     so use the type of original to convert and then compare.
     '''
+
+    fields = return_fields_for_saving()
+
     update = False
+
     body_dict = model_to_dict(body)
     for k, v in kwargs.items():
-        param = body_dict[k]
-        if type(body_dict[k]) == type(float()) and v is not None:
+        param = body_dict.get(k,'')
+        if type(param) == type(float()) and v is not None:
             v = float(v)
         if v != param:
             setattr(body, k, v)
-            update = True
+            if k in fields:
+                update = True
     if update:
         with reversion.create_revision():
             body.save()
+    else:
+        body.save()
     return update
 
 
