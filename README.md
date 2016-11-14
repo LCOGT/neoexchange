@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using LCOGT
 
 ## History
 
+### 1.6.6
+
+Fix for incorrect revisions being created and clean up script
+
 ### 1.6.5
 
 Add fix and trap for a site which has no working telescopes.
