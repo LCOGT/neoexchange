@@ -59,14 +59,14 @@ RUN yum -y install epel-release \
 COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 
 # Upgrade pip first
-RUN pip install --upgrade pip
-RUN pip install uwsgi==2.0.8
 # Install the LCOGT NEO exchange Python required packages
 # Then the LCOGT packages which have to be installed after the normal pip install
 # numpy needs to be explicitly installed first otherwise pySLALIB (pulled in by newer reqdbclient) fails
 # with a missing numpy.distutils.core reference for...reasons...
-RUN pip install numpy
-RUN pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt
+RUN pip install --upgrade pip \
+    && pip install uwsgi==2.0.8 \
+    && pip install numpy \
+    && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt
 
 # Ensure crond will run on all host operating systems
 RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
