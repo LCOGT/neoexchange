@@ -1,6 +1,7 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
 #--trusted-host buildsba.lco.gtn
 Django>=1.10,<1.11
+celery
 MySQL-python
 astropy>=1.1.1
 astroquery

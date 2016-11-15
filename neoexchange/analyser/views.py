@@ -75,6 +75,8 @@ def analyser_to_source_measurement(block, cand_ids):
             sm.obs_dec = det[5]
             sm.obs_mag = det[8]
             sm.aperture_size = det[14]
+            sm.astrometric_catalog = '2MASS'
+            sm.photometric_catalog = 'UCAC4'
             sm.save()
     return True
 
