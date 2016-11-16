@@ -19,7 +19,7 @@ class Command(BaseCommand):
         self.stdout.write("==== Removing Bad Revisions %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         minorbody_ct = ContentType.objects.get(app_label='core', model='body')
         self.stdout.write("==== Found content_type=%d for Body ====" % minorbody_ct.id)
-        bodies = Version.objects.filter(content_type=minorbody_ct.id).values('object_id').annotate(sum=Count('id')).order_by('-sum')
+        bodies = Version.objects.filter(content_type=minorbody_ct.id).values('object_id').annotate(sum=Count('id')).order_by('-sum')[0:400]
         num_d = 0
         num_s = 0
         self.stdout.write("==== Found {} Bodies ====".format(bodies.count()))
