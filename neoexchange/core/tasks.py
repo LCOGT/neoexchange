@@ -1,6 +1,8 @@
 # Create your tasks here
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
+from celery.schedules import crontab
+from celery.decorators import periodic_task
 
 import os
 from datetime import datetime
@@ -16,11 +18,13 @@ from core.views import update_NEOCP_orbit, update_NEOCP_observations, check_cata
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
+
 import logging
 
 logger = logging.getLogger(__name__)
 
-@shared_task
+
+@periodic_task(run_every=(crontab(minute='*/10')))
 def update_neocp_data():
     #Check NEOCP for objects in need of follow up
     logger.debug("==== Fetching NEOCP targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
