@@ -1036,8 +1036,6 @@ def create_source_measurement(obs_lines, block=None):
                                         'obs_ra'  : params['obs_ra'],
                                         'obs_dec' : params['obs_dec'],
                                         'obs_mag' : params['obs_mag'],
-                                        'astrometric_catalog' : params['astrometric_catalog'],
-                                        'photometric_catalog' : params['astrometric_catalog'],
                                         'flags'   : params['flags']
                                      }
                     measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
