@@ -212,7 +212,7 @@ def frame_params_from_header(params, block):
     return frame_params
 
 def frame_params_from_block(params, block):
-    # In these cases we are parsing the FITS header
+    # In these cases we are parsing the Block info
     sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
     frame_params = { 'midpoint' : params.get('date_obs', None),
                      'sitecode' : sitecode,

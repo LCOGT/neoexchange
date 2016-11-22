@@ -427,7 +427,7 @@ def banzai_catalog_mapping():
 
 def banzai_ldac_catalog_mapping():
     '''Returns two dictionaries of the mapping between the FITS header and table
-    items and CatalogItem quantities for FITS_LDAC catalogs extracted from the 
+    items and CatalogItem quantities for FITS_LDAC catalogs extracted from the
     new pipeline (BANZAI) format files. Items in angle brackets (<FOO>) need to
     be derived (pixel scale) or assumed as they are missing from the headers.'''
 
@@ -526,7 +526,7 @@ def fits_ldac_to_header(header_array):
 
 def open_fits_catalog(catfile, header_only=False):
     '''Opens a FITS source catalog specified by <catfile> and returns the header,
-    table data and catalog type. If [header_only]= is True, only the header is 
+    table data and catalog type. If [header_only]= is True, only the header is
     returned, and <table> is set to an empty dictionary.'''
 
     header = {}
@@ -900,6 +900,9 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
 def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'):
 
+    phot_cat_name = "UCAC4"
+    ast_cat_name= "2MASS"
+
     num_new_frames_created = 0
     num_sources_created = 0
     num_in_table = 0
@@ -912,15 +915,15 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
         #check for good zeropoints
         if header.get('zeropoint',-99) == -99 or header.get('zeropoint_err',-99) == -99:
             #if bad, determine new zeropoint
-            print "Refitting zeropoint, tolerance set to ", std_zeropoint_tolerance
+            logger.debug("Refitting zeropoint, tolerance set to {}".format(std_zeropoint_tolerance))
             header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
-            print "New zp=", avg_zeropoint, std_zeropoint, count, num_in_calc
+            logger.debug("New zp={} {} {} {}".format(avg_zeropoint, std_zeropoint, count, num_in_calc))
             #if crossmatch is good, update new zeropoint
             if std_zeropoint < std_zeropoint_tolerance:
-                print "Got good zeropoint - updating header"
+                logger.debug("Got good zeropoint - updating header")
                 header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
             else:
-                print "Didn't get good zeropoint - not updating header"
+                logger.debug("Didn't get good zeropoint - not updating header")
 
         #get the fits filename from the catfile in order to get the Block from the Frame
         if 'e90_cat.fits' in os.path.basename(catfile):
@@ -984,6 +987,9 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
                 frame, created = Frame.objects.get_or_create(**frame_params)
                 if created == True:
                     num_new_frames_created += 1
+                    frame.astrometric_catalog = ast_cat_name
+                    frame.photometric_catalog = phot_cat_name
+                    frame.save()
 
         for source in table:
             source_params = {   'frame':frame,
@@ -1198,7 +1204,7 @@ def extract_sci_image(file_path, catalog_path):
     return fits_filename_path
 
 def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
-    '''Search CatalogSources for the passed Frame object for sources within a 
+    '''Search CatalogSources for the passed Frame object for sources within a
     box of <box_halfwidth> centered on <ra>, <dec>.
     <ra>, <dec> are in radians, <box_halfwidth> is in arcseconds, default is 3.0"
     '''
