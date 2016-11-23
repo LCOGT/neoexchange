@@ -39,7 +39,7 @@ class Command(BaseCommand):
                 try:
                     vers_dict = version.field_dict
                     orig_dict = original.field_dict
-                except AttributeError, e:
+                except Exception, e:
                     logger.error("Problem with body: {}".format(e))
                     continue
                 # Check if the values in the original are the same as the revision

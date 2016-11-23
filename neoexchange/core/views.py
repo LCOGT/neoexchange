@@ -1043,9 +1043,9 @@ def create_source_measurement(obs_lines, block=None):
                             # updated version
                             measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:
-                        logger.warn("Matching satellite frame for %s from %s on %s does not exist" % params['body'], params['obs_date'],params['site_code'])
+                        logger.warn("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'],params['site_code']))
                     except Frame.MultipleObjectsReturned:
-                        logger.warn("Multiple matching satellite frames for %s from %s on %s found" % params['body'], params['obs_date'],params['site_code'])
+                        logger.warn("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'],params['site_code']))
                 else:
                     # Otherwise, make a new Frame and SourceMeasurement
                     frame = create_frame(params, block)
