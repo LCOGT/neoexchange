@@ -166,6 +166,14 @@ def create_frame(params, block=None, frameid=None):
             logger.error(frame.id)
         raise(Frame.MultipleObjectsReturned)
 
+    # Update catalogue information if we have it
+    if params.get('astrometric_catalog',None):
+        frame.astrometric_catalog = params.get('astrometric_catalog')
+        frame.save()
+    if params.get('photometric_catalog',None):
+        frame.photometric_catalog = params.get('photometric_catalog')
+        frame.save()
+
     if frame_created:
         msg = "created"
     else:

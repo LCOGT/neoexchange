@@ -193,6 +193,9 @@ def mock_archive_frame_header(archive_headers, images):
         }
     return header
 
+def mock_odin_login(username, password):
+    return {}
+
 def mock_fetch_observations(tracking_num):
     images = ['1','2','3']
     return images

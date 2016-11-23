@@ -28,7 +28,8 @@ from astropy.io import fits
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
-    mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header
+    mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
+    mock_odin_login
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
@@ -559,22 +560,23 @@ class TestCheck_for_block(TestCase):
         self.assertEqual(expected_state, block_state)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
+    @patch('core.frames.odin_login', mock_odin_login)
     def test_block_update_active(self):
         resp = block_status(1)
         self.assertTrue(resp)
 
     @skipIf(True, "Edward needs to fix...")
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_not_active(self):
         resp = block_status(2)
         self.assertFalse(resp)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.views.ingest_frames', mock_ingest_frames)
     @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_check_status_change(self):
@@ -584,7 +586,7 @@ class TestCheck_for_block(TestCase):
         self.assertFalse(myblock.active)
 
     @patch('core.frames.check_request_status', mock_check_request_status_null)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_check_no_obs(self):
         blockid = self.test_block6.id
@@ -592,7 +594,7 @@ class TestCheck_for_block(TestCase):
         self.assertFalse(resp)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.ingest_frames', mock_ingest_frames)
     @patch('core.frames.lcogt_api_call', mock_check_for_images_no_millisecs)
     def test_block_update_no_millisecs(self):
@@ -601,7 +603,7 @@ class TestCheck_for_block(TestCase):
         self.assertTrue(resp)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lcogt_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
         blockid = self.test_block5.id
@@ -609,7 +611,7 @@ class TestCheck_for_block(TestCase):
         self.assertFalse(resp)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.ingest_frames', mock_ingest_frames)
     @patch('core.frames.lcogt_api_call', mock_check_for_images_no_millisecs)
     def test_block_update_check_num_observed(self):
@@ -1184,8 +1186,7 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_nonLCO_nocat(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1212,8 +1213,7 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_nonLCO_nomag(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1240,8 +1240,7 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_nonLCO_flags(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1268,8 +1267,7 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_blankline(self):
 
@@ -1302,8 +1300,7 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_LCO_flagI(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1330,8 +1327,7 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_satellite(self):
         expected_params = { 'body'  : 'N009ags',
@@ -1360,8 +1356,7 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
+        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
         self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
 
     def test_create_non_existant_body(self):

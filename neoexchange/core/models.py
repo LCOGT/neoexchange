@@ -397,8 +397,8 @@ class Frame(models.Model):
     time_uncertainty = models.FloatField('Time uncertainty (seconds)', null=True, blank=True)
     frameid     = models.IntegerField('Archive ID', null=True, blank=True)
     wcs         = WCSField('WCS info', blank=True, null=True, editable=False)
-    astrometric_catalog = models.CharField('Astrometric catalog used', max_length=40, default='2MASS')
-    photometric_catalog = models.CharField('Photometric catalog used', max_length=40, default='UCAC4')
+    astrometric_catalog = models.CharField('Astrometric catalog used', max_length=40, default='',blank=True, null=True)
+    photometric_catalog = models.CharField('Photometric catalog used', max_length=40, default='',blank=True, null=True)
 
 
     def get_x_size(self):
