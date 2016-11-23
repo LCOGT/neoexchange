@@ -267,21 +267,13 @@ RABBIT_HOSTNAME = os.environ.get('RABBIT_PORT_5672_TCP', 'rabbit')
 if RABBIT_HOSTNAME.startswith('tcp://'):
     RABBIT_HOSTNAME = RABBIT_HOSTNAME.split('//')[1]
 
-# BROKER_URL = os.environ.get('BROKER_URL',
-#                             '')
-# if not BROKER_URL:
-#     BROKER_URL = 'amqp://{user}:{password}@{hostname}/{vhost}/'.format(
-#         user=os.environ.get('RABBIT_ENV_USER', 'admin'),
-#         password=os.environ.get('RABBIT_ENV_RABBITMQ_PASS', 'mypass'),
-#         hostname=RABBIT_HOSTNAME,
-#         vhost=os.environ.get('RABBIT_ENV_VHOST', ''))
+CELERY_BROKER_URL = os.environ.get('BROKER_URL','')
 
-BROKER_URL = "amqp://myuser:mypassword@127.0.0.1:5672/vhost/"
 
 # We don't want to have dead connections stored on rabbitmq, so we have to negotiate using heartbeats
 BROKER_HEARTBEAT = '?heartbeat=30'
-if not BROKER_URL.endswith(BROKER_HEARTBEAT):
-    BROKER_URL += BROKER_HEARTBEAT
+if not CELERY_BROKER_URL.endswith(BROKER_HEARTBEAT):
+    CELERY_BROKER_URL += BROKER_HEARTBEAT
 
 BROKER_POOL_LIMIT = 1
 BROKER_CONNECTION_TIMEOUT = 10

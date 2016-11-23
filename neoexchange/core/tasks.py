@@ -14,8 +14,9 @@ from photometrics.catalog_subs import store_catalog_sources, make_sext_file, ext
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 from astrometrics.sources_subs import fetch_NEOCP, parse_NEOCP_extra_params
 from core.views import update_NEOCP_orbit, update_NEOCP_observations, check_catalog_and_refit, store_detections
+from core.models import Block
+from core.frames import block_status
 
-from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
 
@@ -24,7 +25,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-@periodic_task(run_every=(crontab(minute='*/10')))
+@periodic_task(run_every=(crontab(minute='20,50')))
 def update_neocp_data():
     #Check NEOCP for objects in need of follow up
     logger.debug("==== Fetching NEOCP targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
@@ -41,6 +42,20 @@ def update_neocp_data():
         resp = update_NEOCP_observations(str(obj_name), obj_extra_params)
         if resp:
             logger.debug(resp)
+
+@periodic_task(run_every=(crontab(minute='*/30')))
+def update_blocks():
+    blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__lte=datetime.now())
+    logger.info("==== %s Completed Blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
+    for block in blocks:
+        block_status(block.id)
+    blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__gte=datetime.now())
+    logger.info("==== %s Currently Executing Blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
+    for block in blocks:
+        block_status(block.id)
+    inconsistent_blocks = Block.objects.filter(active=True, block_end__lt=datetime.utcnow()-timedelta(minutes=120))
+    logger.info("==== Clean up %s blocks ====" % inconsistent_blocks.count())
+    inconsistent_blocks.update(active=False)
 
 @shared_task
 def pipeline_astrometry(datadir, temp_dir, keep_temp_dir, skip_mtdlink, pa, deltapa):

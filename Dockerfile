@@ -52,7 +52,7 @@ ENV PREFIX /neoexchange
 
 # Install packages and update base system
 RUN yum -y install epel-release \
-        && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
+        && yum -y install libjpeg-devel nginx python-pip mysql-devel python-devel \
         && yum -y install supervisor libffi libffi-devel \
         && yum -y install wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
         && yum -y groupinstall "Development Tools" \
@@ -78,14 +78,10 @@ RUN pip install --upgrade pip \
     && pip install numpy \
     && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt
 
-# Ensure crond will run on all host operating systems
-RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
-
 # Copy configuration files
 COPY config/uwsgi.ini /etc/uwsgi.ini
 COPY config/nginx/* /etc/nginx/
 COPY config/processes.ini /etc/supervisord.d/processes.ini
-COPY config/crontab.root /var/spool/cron/root
 
 # Copy configuration files
 COPY config/init /init
