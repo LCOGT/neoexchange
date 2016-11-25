@@ -13,6 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 import os
+import uwsgi
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "neox.settings")
 
@@ -21,7 +22,3 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "neox.settings")
 # setting points here.
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
-
-# Apply WSGI middleware here.
-# from helloworld.wsgi import HelloWorldApplication
-# application = HelloWorldApplication(application)
