@@ -79,8 +79,7 @@ RUN pip install --upgrade pip \
     && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt
 
 # Copy configuration files
-COPY config/uwsgi.ini /etc/uwsgi.ini 
-COPY config/uwsgi_socket.ini /etc/uwsgi_socket.ini
+COPY config/uwsgi.ini /etc/uwsgi.ini
 COPY config/nginx/* /etc/nginx/
 COPY config/processes.ini /etc/supervisord.d/processes.ini
 
