@@ -302,7 +302,10 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 else:
                     messages.warning(self.request, "Record not created")
             else:
-                messages.warning(self.request,"It was not possible to submit your request to the scheduler")
+                msg = "It was not possible to submit your request to the scheduler."
+                if sched_params.get('error_msg', None):
+                    msg += "\nAdditional information:" + sched_params['error_msg']
+                messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(form)
 
     def get_success_url(self):
