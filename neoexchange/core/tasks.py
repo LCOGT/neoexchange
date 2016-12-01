@@ -1,8 +1,17 @@
-# Create your tasks here
 from __future__ import absolute_import, unicode_literals
 from celery import shared_task
 from celery.schedules import crontab
 from celery.decorators import periodic_task
+
+from astrometrics.sources_subs import imap_login, fetch_NASA_targets, fetch_arecibo_targets, \
+    fetch_goldstone_targets, random_delay
+from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
+from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
+from core.views import update_MPC_orbit
+from core.models import Block
+from core.frames import block_status
+
+from django.db.models import Q
 
 import os
 from datetime import datetime
@@ -10,20 +19,24 @@ from glob import glob
 from sys import exit
 import tempfile
 
-from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
-from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
-from astrometrics.sources_subs import fetch_NEOCP, parse_NEOCP_extra_params
-from core.views import update_NEOCP_orbit, update_NEOCP_observations, check_catalog_and_refit, store_detections
-from core.models import Block
-from core.frames import block_status
-
-from django.db.models import Q
-
-
 import logging
 
 logger = logging.getLogger(__name__)
 
+
+@periodic_task(run_every=(crontab(minute='*/30')))
+def update_blocks():
+    blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__lte=datetime.now())
+    logger.info("==== %s Completed Blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
+    for block in blocks:
+        block_status(block.id)
+    blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__gte=datetime.now())
+    logger.info("==== %s Currently Executing Blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
+    for block in blocks:
+        block_status(block.id)
+    inconsistent_blocks = Block.objects.filter(active=True, block_end__lt=datetime.utcnow()-timedelta(minutes=120))
+    logger.info("==== Clean up %s blocks ====" % inconsistent_blocks.count())
+    inconsistent_blocks.update(active=False)
 
 @periodic_task(run_every=(crontab(minute='20,50')))
 def update_neocp_data():
@@ -43,19 +56,58 @@ def update_neocp_data():
         if resp:
             logger.debug(resp)
 
-@periodic_task(run_every=(crontab(minute='*/30')))
-def update_blocks():
-    blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__lte=datetime.now())
-    logger.info("==== %s Completed Blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
-    for block in blocks:
-        block_status(block.id)
-    blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__gte=datetime.now())
-    logger.info("==== %s Currently Executing Blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
-    for block in blocks:
-        block_status(block.id)
-    inconsistent_blocks = Block.objects.filter(active=True, block_end__lt=datetime.utcnow()-timedelta(minutes=120))
-    logger.info("==== Clean up %s blocks ====" % inconsistent_blocks.count())
-    inconsistent_blocks.update(active=False)
+@periodic_task(run_every=(crontab(minute=27, hour=5)))
+def fetch_arecibo_targets():
+    # Fetch Arecibo target list for the current year
+    logger.debug("==== Fetching Arecibo targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+    radar_targets = fetch_arecibo_targets()
+    for obj_id in radar_targets:
+        logger.debug("Reading Arecibo target %s" % obj_id)
+        update_MPC_orbit(obj_id, origin='A')
+        # Wait between 10 and 20 seconds
+        delay = random_delay(10, 20)
+        logger.debug("Slept for %d seconds" % delay)
+
+@periodic_task(run_every=(crontab(hour=5,minute=2)))
+def fetch_goldstone_targets():
+    logger.debug("==== Fetching Goldstone targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+    radar_targets = fetch_goldstone_targets()
+    for obj_id in radar_targets:
+        logger.debug("Reading Goldstone target %s" % obj_id)
+        update_MPC_orbit(obj_id, origin='G')
+        # Wait between 10 and 20 seconds
+        delay = random_delay(10, 20)
+        logger.debug("Slept for %d seconds" % delay)
+
+@periodic_task(run_every=(crontab(minute=42, hour='5,16')))
+def fetch_NASA_targets():
+    username = os.environ.get('NEOX_EMAIL_USERNAME','')
+    password = os.environ.get('NEOX_EMAIL_PASSWORD','')
+    if username != '' and password != '':
+        logger.debug("==== Fetching NASA/ARM targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+        mailbox = imap_login(username, password)
+        if mailbox:
+            NASA_targets = fetch_NASA_targets(mailbox, folder="NASA-ARM")
+            for obj_id in NASA_targets:
+                logger.debug("Reading NASA/ARM target %s" % obj_id)
+                update_MPC_orbit(obj_id, origin='N')
+                # Wait between 10 and 20 seconds
+                delay = random_delay(10, 20)
+                logger.debug("Slept for %d seconds" % delay)
+
+            mailbox.close()
+            mailbox.logout()
+
+@periodic_task(run_every=(crontab(minute=30, hour='0,4,8,12,16,20')))
+def update_crossids():
+    logger.debug("==== Updating Cross-IDs %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+    objects = fetch_previous_NEOCP_desigs()
+    for obj_id in objects:
+        resp = update_crossids(obj_id, dbg=False)
+        if resp:
+            msg = "Updated crossid for %s" % obj_id
+            logger.debug(msg)
+
 
 @shared_task
 def pipeline_astrometry(datadir, temp_dir, keep_temp_dir, skip_mtdlink, pa, deltapa):

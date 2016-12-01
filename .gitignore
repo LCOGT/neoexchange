@@ -69,7 +69,7 @@ ingest/static/ingest/css/admin.css
 ingest/static/ingest/css/dashboard.css
 neoexchange/neox/local_settings.py
 *.db
-docker-compose.yml
+*.yml
 
 # Mac OS
 .DS_Store
