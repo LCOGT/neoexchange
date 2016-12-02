@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using LCOGT
 
 ## History
 
+### 1.6.7
+
+Trap the submission of objects that have no visibility windows.
+
 ### 1.6.6
 
 Fix for incorrect revisions being created and clean up script
