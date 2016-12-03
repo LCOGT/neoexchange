@@ -1073,7 +1073,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_len_cross_match_table = 19
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
@@ -1096,7 +1096,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_len_cross_match_table = 16
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile)
 
@@ -1119,7 +1119,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_len_cross_match_table = 8
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
         header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
