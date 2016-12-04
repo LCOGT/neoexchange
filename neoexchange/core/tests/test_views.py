@@ -1533,6 +1533,58 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
 
+    def test_ingest_frames_banzai_ql(self):
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID":"cpt",
+                        "TELID":"1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e11.fits",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 11,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_QL_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].filename, params['ORIGNAME'])
+
+    def test_ingest_frames_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID":"cpt",
+                        "TELID":"1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
         # if the sources are in the same frame

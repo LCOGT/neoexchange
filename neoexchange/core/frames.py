@@ -188,7 +188,7 @@ def frame_params_from_header(params, block):
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
-                     'frametype': Frame.SINGLE_FRAMETYPE,
+                     'frametype': params.get('RLEVEL', 0),
                      'block'    : block,
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
@@ -208,6 +208,9 @@ def frame_params_from_header(params, block):
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
+    rlevel = params.get('RLEVEL', '00')
+    frame_extn = str(rlevel) + '.fits'
+    frame_params['filename'] = frame_params['filename'].replace('00.fits', frame_extn)
     # Correct midpoint for 1/2 the exposure time
     if frame_params['midpoint'] and frame_params['exptime']:
         try:
