@@ -1080,36 +1080,35 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
 def find_matching_image_file(catfile):
     '''Find the matching image file for the passed <catfile>. Returns None if it
     can't be found or opened'''
-#        fits_file = determine_filenames(catfile)
-#
-#                fits_file = os.path.join(os.path.dirname(catfile), fits_file)
-#                if os.path.exists(fits_file) == False or os.path.isfile(fits_file) == False:
-#                    logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
-#                    return -1, num_new_frames_created
-#                fits_file_for_sext = fits_file + "[SCI]"
 
-    return None
+    if os.path.exists(catfile) == False or os.path.isfile(catfile) == False:
+        logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
+        return None
+    fits_file_for_sext = catfile + "[SCI]"
 
-def run_sextractor_make_catalog(fits_file):
-    '''XXX Run SExtractor, rename output to new filename which is returned'''
-#                logger.debug("Running SExtractor on BANZAI file: %s" % fits_file_for_sext)
-#                sext_status = run_sextractor(configs_dir, dest_dir, fits_file_for_sext, catalog_type='FITS_LDAC')
-#                if sext_status == 0:
-#                    fits_ldac_catalog ='test_ldac.fits'
-#                    fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
-#                    fits_file_output = os.path.basename(fits_file)
-#                    fits_file_output = os.path.join(dest_dir, fits_file_output)
-#
-#                    # Rename catalog to permanent name
-#                    new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
-#                    logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
-#                    os.rename(fits_ldac_catalog_path, new_ldac_catalog)
-#
-#                else:
-#                    logger.error("Execution of SExtractor failed")
-#                    return -4, 0
+    return fits_file_for_sext
 
-    return -1, None
+def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
+    '''Run SExtractor, rename output to new filename which is returned'''
+
+    logger.debug("Running SExtractor on BANZAI file: %s" % fits_file)
+    sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type='FITS_LDAC')
+    if sext_status == 0:
+        fits_ldac_catalog ='test_ldac.fits'
+        fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
+        fits_file_output = os.path.basename(fits_file)
+        fits_file_output = os.path.join(dest_dir, fits_file_output)
+
+        # Rename catalog to permanent name
+        new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
+        logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
+        os.rename(fits_ldac_catalog_path, new_ldac_catalog)
+
+    else:
+        logger.error("Execution of SExtractor failed")
+        return sext_status, -4
+
+    return sext_status, new_ldac_catalog
 
 def make_new_catalog_entry(new_ldac_catalog, header):
 
@@ -1169,6 +1168,11 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Unable to process non-BANZAI data at this time")
         return -1, num_new_frames_created
 
+    # Check for matching catalog
+    catalog_frames = Frame.objects.filter(filename=catfile, frametype__in=('BANZAI QL frame', 'BANZAI reduced frame'))
+    if len(catalog_frames) !=0:
+        return catfile, 0
+
     # Find image file for this catalog
     fits_file = find_matching_image_file(catfile)
     if fits_file == None:
@@ -1176,7 +1180,7 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
         return -1, num_new_frames_created
 
     # Make a new FITS_LDAC catalog from the frame
-    status, new_ldac_catalog = run_sextractor_make_catalog(fits_file)
+    status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file)
     if status !=0:
         logger.error("Execution of SExtractor failed")
         return -4, 0
@@ -1185,7 +1189,7 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
 
     num_new_frames_created += 1
 
-    return num_new_frames_created, new_ldac_catalog
+    return new_ldac_catalog, num_new_frames_created
 
 def check_catalog_and_refit_old(configs_dir, dest_dir, catfile, dbg=False):
     '''Checks the astrometric fit status of <catfile> and performs a source
