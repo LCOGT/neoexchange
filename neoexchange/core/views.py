@@ -1110,45 +1110,37 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 
     return sext_status, new_ldac_catalog
 
-def make_new_catalog_entry(new_ldac_catalog, header):
+def make_new_catalog_entry(new_ldac_catalog, header, fits_header_rlevel):
 
-#            #if a Frame does not exist for the catalog file with a non-null block
-#            #create one with the fits filename
-#            if len(Frame.objects.filter(filename=os.path.basename(new_ldac_catalog), block__isnull=False)) < 1:
-# XXX Following not needed now we store catalog filename?
-##                #create a new Frame even if WCS fit is good in order to have the real fits filename in the Frame
-##                fits_file_orig = determine_original_name(fits_file)
-##                try:
-##                    frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
-##                except Frame.MultipleObjectsReturned:
-##                    logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file_orig, frames_with_blocks))
-##                    return -3, num_new_frames_created
-##                except Frame.DoesNotExist:
-##                    logger.error("Frame entry for fits file %s does not exist" % fits_file_orig)
-##                    return -3, num_new_frames_created
-#
-#                #Create a new Frame entry for new fits_file_output name
-#                frame_params = {    'sitecode':header['site_code'],
-#                                    'instrument':header['instrument'],
-#                                    'filter':header['filter'],
-#                                    'filename': new_ldac_catalog,
-#                                    'exptime':header['exptime'],
-#                                    'midpoint':header['obs_midpoint'],
-#                                    'block':frame.block,
-#                                    'zeropoint':header['zeropoint'],
-#                                    'zeropoint_err':header['zeropoint_err'],
-#                                    'fwhm':header['fwhm'],
-#                                    'frametype':Frame.SINGLE_FRAMETYPE,
-#                                    'rms_of_fit':header['astrometric_fit_rms'],
-#                                    'nstars_in_fit':header['astrometric_fit_nstars'],
-#                                    'wcs' : header.get('wcs', None),
-#                                }
-#
-#                frame, created = Frame.objects.get_or_create(**frame_params)
-#                if created == True:
-#                    num_new_frames_created += 1
+    #if a Frame does not exist for the catalog file with a non-null block
+    #create one with the fits filename
+    if len(Frame.objects.filter(filename=os.path.basename(new_ldac_catalog), block__isnull=False)) < 1:
 
-    return -1
+        #Create a new Frame entry for new fits_file_output name
+        frame_params = {    'sitecode':header['site_code'],
+                          'instrument':header['instrument'],
+                              'filter':header['filter'],
+                            'filename':new_ldac_catalog,
+                             'exptime':header['exptime'],
+                            'midpoint':header['obs_midpoint'],
+                               'block':frame.block,
+                           'zeropoint':header['zeropoint'],
+                       'zeropoint_err':header['zeropoint_err'],
+                                'fwhm':header['fwhm'],
+                           'frametype':fits_header_rlevel,
+                          'rms_of_fit':header['astrometric_fit_rms'],
+                       'nstars_in_fit':header['astrometric_fit_nstars'],
+                                'wcs' :header.get('wcs', None),
+                        }
+
+        frame, created = Frame.objects.get_or_create(**frame_params)
+        if created == True:
+            num_new_frames_created += 1
+
+    else:
+        return 0
+
+    return num_new_frames_created
 
 def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
 
@@ -1169,7 +1161,7 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
         return -1, num_new_frames_created
 
     # Check for matching catalog
-    catalog_frames = Frame.objects.filter(filename=catfile, frametype__in=('BANZAI QL frame', 'BANZAI reduced frame'))
+    catalog_frames = Frame.objects.filter(filename=catfile, frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
     if len(catalog_frames) !=0:
         return catfile, 0
 
@@ -1184,10 +1176,12 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
     if status !=0:
         logger.error("Execution of SExtractor failed")
         return -4, 0
-    # Create a new Frame entry for the new_ldac_catalog
-    status = make_new_catalog_entry(new_ldac_catalog)
 
-    num_new_frames_created += 1
+    # Get header 'RLEVEL' to use as Frame frametype for new catalog
+    fits_header_rlevel = fits_header['RLEVEL']
+
+    # Create a new Frame entry for the new_ldac_catalog
+    num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, fits_header_rlevel)
 
     return new_ldac_catalog, num_new_frames_created
 
