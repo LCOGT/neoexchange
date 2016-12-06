@@ -1096,11 +1096,11 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
     if sext_status == 0:
         fits_ldac_catalog ='test_ldac.fits'
         fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
-        fits_file_output = os.path.basename(fits_file)
-        fits_file_output = os.path.join(dest_dir, fits_file_output)
 
         # Rename catalog to permanent name
-        new_ldac_catalog = os.path.join(dest_dir, fits_file_output.replace('.fits', '_ldac.fits'))
+        fits_file_output = os.path.basename(fits_file)
+        fits_file_output = fits_file_output.replace('[SCI]', '').replace('.fits', '_ldac.fits')
+        new_ldac_catalog = os.path.join(dest_dir, fits_file_output)
         logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
         os.rename(fits_ldac_catalog_path, new_ldac_catalog)
 
@@ -1110,24 +1110,53 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 
     return sext_status, new_ldac_catalog
 
-def make_new_catalog_entry(new_ldac_catalog, header):
+def find_block_for_frame(catfile):
+    '''Try and find a Block for the original passed <catfile> filename (new style with
+    filename directly stored in the DB. If that fails, try and determine the filename
+    that would have been stored with the ORIGNAME.
+    Returns the Block if found, None otherwise.'''
+
+    #try and find Frame does for the fits catfile with a non-null block
+    try:
+        frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
+    except Frame.MultipleObjectsReturned:
+        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file_orig, frames_with_blocks))
+        return None
+    except Frame.DoesNotExist:
+        # Try and find the Frame under the original name (old-style)
+        fits_file_orig = determine_original_name(catfile)
+        try:
+            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
+        except Frame.MultipleObjectsReturned:
+            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file_orig, frames_with_blocks))
+            return None
+        except Frame.DoesNotExist:
+            logger.error("Frame entry for fits file %s does not exist" % fits_file_orig)
+            return None
+    return frame.block
+
+def make_new_catalog_entry(new_ldac_catalog, header, block):
+
+    num_new_frames_created = 0
 
     #if a Frame does not exist for the catalog file with a non-null block
     #create one with the fits filename
-    if len(Frame.objects.filter(filename=os.path.basename(new_ldac_catalog), block__isnull=False)) < 1:
+    catfilename = os.path.basename(new_ldac_catalog)
+    if len(Frame.objects.filter(filename=catfilename, block__isnull=False)) < 1:
 
         #Create a new Frame entry for new fits_file_output name
         frame_params = {    'sitecode':header['site_code'],
                           'instrument':header['instrument'],
                               'filter':header['filter'],
-                            'filename':new_ldac_catalog,
+                            'filename':catfilename,
                              'exptime':header['exptime'],
                             'midpoint':header['obs_midpoint'],
-                               'block':frame.block,
+                               'block':block,
                            'zeropoint':header['zeropoint'],
                        'zeropoint_err':header['zeropoint_err'],
                                 'fwhm':header['fwhm'],
-                           'frametype':header['reduction_level'],
+                           'frametype':Frame.BANZAI_LDAC_CATALOG,
+                           'astrometric_catalog' : header.get('astrometric_catalog', None),
                           'rms_of_fit':header['astrometric_fit_rms'],
                        'nstars_in_fit':header['astrometric_fit_nstars'],
                                 'wcs' :header.get('wcs', None),
@@ -1135,10 +1164,8 @@ def make_new_catalog_entry(new_ldac_catalog, header):
 
         frame, created = Frame.objects.get_or_create(**frame_params)
         if created == True:
+            logger.debug("Created new Frame id#%d", frame.id)
             num_new_frames_created += 1
-
-    else:
-        return 0
 
     return num_new_frames_created
 
@@ -1177,8 +1204,14 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Execution of SExtractor failed")
         return -4, 0
 
+    # Find Block for original frame
+    block = find_block_for_frame(catfile)
+    if block == None:
+        logger.error("Could not find block for fits frame %s" %  (catfile, ))
+        return -3, num_new_frames_created
+
     # Create a new Frame entry for the new_ldac_catalog
-    num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, fits_header_rlevel)
+    num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)
 
     return new_ldac_catalog, num_new_frames_created
 
