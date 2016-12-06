@@ -402,6 +402,7 @@ def banzai_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<ASTROMCAT>',
+                    'reduction_level'        : 'RLEVEL'
                   }
 
     table_dict = OrderedDict([
@@ -452,6 +453,7 @@ def banzai_ldac_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<ASTROMCAT>',
+                    'reduction_level'        : 'RLEVEL'
                   }
 
     table_dict = OrderedDict([

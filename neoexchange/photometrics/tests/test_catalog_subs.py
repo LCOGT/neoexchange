@@ -1607,7 +1607,8 @@ class FITSReadHeader(FITSUnitTest):
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
                             'zeropoint_src' : 'N/A',
-                            'wcs'           : self.test_banzaiwcs
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
                           }
         expected_cattype = "BANZAI"
 
