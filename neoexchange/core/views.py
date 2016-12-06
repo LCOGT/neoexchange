@@ -1188,7 +1188,8 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
         return -1, num_new_frames_created
 
     # Check for matching catalog
-    catalog_frames = Frame.objects.filter(filename=catfile, frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
+    catfilename = os.path.basename(catfile).replace('.fits', '_ldac.fits')
+    catalog_frames = Frame.objects.filter(filename=catfilename, frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
     if len(catalog_frames) !=0:
         return catfile, 0
 
