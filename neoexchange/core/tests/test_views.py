@@ -38,7 +38,8 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement, clean_crossid, create_frame, \
     schedule_check, summarise_block_efficiency, \
-    check_catalog_and_refit, store_detections, update_crossids
+    check_catalog_and_refit, store_detections, update_crossids, \
+    check_catalog_and_refit_new
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
 from core.forms import EphemQuery
@@ -2136,6 +2137,110 @@ class TestCheckCatalogAndRefit(TestCase):
         self.assertTrue(os.path.exists(expected_file))
         self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
 
+class TestCheckCatalogAndRefitNew(TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
+        self.configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
+
+        self.debug_print = False
+
+        self.test_banzai_fits = os.path.join(os.environ['HOME'], 'Asteroids', '20160801_P10w5z5_test', 'cpt1m013-kb76-20160801-0248-e91.fits')
+        self.test_cat_bad_wcs = os.path.join(os.environ['HOME'], 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
+        self.test_cat_good_wcs_not_BANZAI = os.path.join(os.environ['HOME'], 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0207-e10_cat.fits')
+
+        body_params = {     'provisional_name': 'P10w5z5',
+                            'origin': 'M',
+                            'source_type': 'U',
+                            'elements_type': 'MPC Minor Planet',
+                            'active': False,
+                            'epochofel': '2016-07-11 00:00:00',
+                            'orbinc': 6.35992,
+                            'longascnode': 108.82267,
+                            'argofperih': 202.15361,
+                            'eccentricity': 0.384586,
+                            'meandist': 2.3057577,
+                            'meananom': 352.55523,
+                            'abs_mag': 21.3,
+                            'slope': 0.15,
+                        }
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        proposal_params = { 'code': 'test',
+                            'title': 'test',
+                            'pi':'sgreenstreet@lcogt.net',
+                            'tag': 'LCOGT',
+                            'active': True
+                          }
+        self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        block_params = {    'telclass': '1m0',
+                            'site': 'K92',
+                            'body': self.test_body,
+                            'proposal': self.test_proposal,
+                            'groupid': 'P10w5z5_cpt_20160801',
+                            'block_start': datetime(2016, 8, 1, 17),
+                            'block_end': datetime(2016, 8, 2, 4),
+                            'tracking_number': '0013',
+                            'num_exposures': 5,
+                            'exp_length': 225.0,
+                            'num_observed': 1,
+                            'when_observed': datetime(2016, 8, 2, 2, 15, 0),
+                            'active': False,
+                            'reported': True,
+                            'when_reported': datetime(2016, 8, 2, 4, 44, 0)
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {    'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'cpt1m013-kb76-20160801-0248-e91.fits',
+                            'exptime':225.0,
+                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.390,
+                            'frametype':0,
+                            'rms_of_fit':0.3,
+                            'nstars_in_fit':-4,
+                        }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print "Error removing files in temporary test directory", self.temp_dir
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print: print "Removed", self.temp_dir
+            except OSError:
+                print "Error removing temporary test directory", self.temp_dir
+
+    def test_bad_astrometric_fit(self):
+
+        expected_status_and_num_frames = (-1, 0)
+
+        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_cat_bad_wcs)
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+    def test_cattype_not_BANZAI(self):
+
+        expected_status_and_num_frames = (-1, 0)
+
+        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_cat_good_wcs_not_BANZAI)
+
+        self.assertEqual(expected_status_and_num_frames, status)
 
 class TestUpdate_Crossids(TestCase):
 
