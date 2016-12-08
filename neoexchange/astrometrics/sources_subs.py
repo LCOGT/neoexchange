@@ -853,10 +853,10 @@ def fetch_arecibo_targets(page=None):
     if type(page) == BeautifulSoup:
         # Find the tables, we want the second one
         tables = page.find_all('table')
-        if len(tables) != 2:
-            logger.warn("Unexpected number of tables found in Arecibo page")
+        if len(tables) != 2 and len(tables) != 3 :
+            logger.warn("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
         else:
-            targets_table = tables[1]
+            targets_table = tables[-1]
             rows = targets_table.find_all('tr')
             if len(rows) > 1:
                 for row in rows[1:]:
