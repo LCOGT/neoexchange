@@ -1082,7 +1082,7 @@ def find_matching_image_file(catfile):
     can't be found or opened'''
 
     if os.path.exists(catfile) == False or os.path.isfile(catfile) == False:
-        logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
+        logger.error("Could not open matching image for catalog %s" % catfile)
         return None
     fits_file_for_sext = catfile + "[SCI]"
 
@@ -1120,7 +1120,7 @@ def find_block_for_frame(catfile):
     try:
         frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
     except Frame.MultipleObjectsReturned:
-        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file_orig, frames_with_blocks))
+        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
         return None
     except Frame.DoesNotExist:
         # Try and find the Frame under the original name (old-style)
@@ -1128,7 +1128,7 @@ def find_block_for_frame(catfile):
         try:
             frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
         except Frame.MultipleObjectsReturned:
-            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file_orig, frames_with_blocks))
+            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
             return None
         except Frame.DoesNotExist:
             logger.error("Frame entry for fits file %s does not exist" % fits_file_orig)
@@ -1208,7 +1208,7 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
     # Find Block for original frame
     block = find_block_for_frame(catfile)
     if block == None:
-        logger.error("Could not find block for fits frame %s" %  (catfile, ))
+        logger.error("Could not find block for fits frame %s" % catfile)
         return -3, num_new_frames_created
 
     # Create a new Frame entry for the new_ldac_catalog
