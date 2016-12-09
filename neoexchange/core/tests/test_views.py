@@ -29,7 +29,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
-    mock_odin_login
+    mock_odin_login, mock_run_sextractor_make_catalog
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
@@ -2453,6 +2453,15 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_num_new_frames, num_new_frames)
 
+    @patch('core.views.run_sextractor_make_catalog', mock_run_sextractor_make_catalog)
+    def test_cannot_run_sextractor(self):
+    
+        expected_num_new_frames_created = 0 
+        status, num_new_frames_created = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+
+        self.assertEqual(-4, status)
+        self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
+        
 class TestUpdate_Crossids(TestCase):
 
     def setUp(self):
