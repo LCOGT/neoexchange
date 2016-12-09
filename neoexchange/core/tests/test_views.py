@@ -2316,6 +2316,16 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_status_and_catalog, (status, new_ldac_catalog))
 
+    @patch('core.views.run_sextractor_make_catalog', mock_run_sextractor_make_catalog)
+    def test_cannot_run_sextractor(self):
+
+        expected_num_new_frames_created = 0
+
+        status, num_new_frames_created = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+
+        self.assertEqual(-4, status)
+        self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
+
     def test_find_block_for_frame_good(self):
 
         expected_block = self.test_block
@@ -2396,6 +2406,17 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_block, block)
 
+    def test_find_block_for_frame_check_catalog_and_refit_new(self):
+
+        expected_status_and_num_frames = (-3, 0)
+
+        block = Block.objects.last()
+        block.delete()
+
+        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
     def test_make_new_catalog_entry_good(self):
 
         expected_num_new_frames = 1
@@ -2436,8 +2457,6 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_num_new_frames, num_new_frames)
 
-        self.assertEqual(expected_num_new_frames, num_new_frames)
-
     def test_make_new_catalog_entry_not_needed(self):
 
         expected_num_new_frames = 0
@@ -2452,15 +2471,6 @@ class TestCheckCatalogAndRefitNew(TestCase):
         num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
 
         self.assertEqual(expected_num_new_frames, num_new_frames)
-
-    @patch('core.views.run_sextractor_make_catalog', mock_run_sextractor_make_catalog)
-    def test_cannot_run_sextractor(self):
-    
-        expected_num_new_frames_created = 0 
-        status, num_new_frames_created = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
-
-        self.assertEqual(-4, status)
-        self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
         
 class TestUpdate_Crossids(TestCase):
 
