@@ -998,7 +998,7 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
             if frame.zeropoint == None and frame.zeropoint_err == None:
                 frame.zeropoint=header['zeropoint']
                 frame.zeropoint_err=header['zeropoint_err']
-            frame.photometric_catalog=phot_cat_name
+                frame.photometric_catalog=phot_cat_name
                 frame.save()
         except Frame.MultipleObjectsReturned:
             logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % (fits_file))
