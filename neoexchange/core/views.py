@@ -1191,7 +1191,7 @@ def check_catalog_and_refit_new(configs_dir, dest_dir, catfile, dbg=False):
     catfilename = os.path.basename(catfile).replace('.fits', '_ldac.fits')
     catalog_frames = Frame.objects.filter(filename=catfilename, frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
     if len(catalog_frames) !=0:
-        return catfile, 0
+        return os.path.abspath(os.path.join(dest_dir, os.path.basename(catfile.replace('.fits', '_ldac.fits')))), 0
 
     # Find image file for this catalog
     fits_file = find_matching_image_file(catfile)

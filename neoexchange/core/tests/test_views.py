@@ -2256,7 +2256,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
     def test_BANZAI_catalog_found(self):
 
-        expected_status_and_num_frames = (os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits')), 0)
+        expected_status_and_num_frames = (os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'.replace('.fits', '_ldac.fits'))), 0)
 
         status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
 

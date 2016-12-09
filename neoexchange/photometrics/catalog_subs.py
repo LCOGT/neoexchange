@@ -52,7 +52,7 @@ def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance = 0.1, cat_n
 
     avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance)
 
-    return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc
+    return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name
 
 def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4", set_row_limit = 10000, rmag_limit = "<=15.0"):
     '''Pulls a catalog from Vizier'''
@@ -900,10 +900,57 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     return header, table
 
-def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'):
+def update_frame_zeropoint(header, phot_cat_name, frame_filename, frame_type):
+    '''update the Frame zeropoint and photometric catalog used'''
 
-    phot_cat_name = "UCAC4"
-    ast_cat_name= "2MASS"
+    #if a Frame exists for the file that has a bad zeropoint,
+    #update the zeropoint and photometric catalog in the Frame
+    try:
+        frame = Frame.objects.get(filename=frame_filename, block__isnull=False, zeropoint__lt=0)
+        if frame.zeropoint < 0 and frame.zeropoint_err < 0:
+            frame.zeropoint=header['zeropoint']
+            frame.zeropoint_err=header['zeropoint_err']
+            frame.photometric_catalog=phot_cat_name
+            frame.save()
+    except Frame.MultipleObjectsReturned:
+        pass
+    except Frame.DoesNotExist:
+        #if a Frame exists for the file that has a good but old zeropoint,
+        #update the zeropoint and photometric catalog in the Frame
+        try:
+            frame = Frame.objects.get(filename=frame_filename, block__isnull=False, zeropoint__gt=0)
+            if frame.zeropoint > 0 and frame.zeropoint_err > 0:
+                frame.zeropoint=header['zeropoint']
+                frame.zeropoint_err=header['zeropoint_err']
+                frame.photometric_catalog=phot_cat_name
+                frame.save()
+        except Frame.DoesNotExist:
+            #store sources in neoexchange(CatalogSources table)
+            frame_params = {    'sitecode':header['site_code'],
+                                'instrument':header['instrument'],
+                                'filter':header['filter'],
+                                'filename':frame_filename,
+                                'exptime':header['exptime'],
+                                'midpoint':header['obs_midpoint'],
+                                'block':frame.block,
+                                'zeropoint':header['zeropoint'],
+                                'zeropoint_err':header['zeropoint_err'],
+                                'fwhm':header['fwhm'],
+                                'frametype':frame_type,
+                                'rms_of_fit':header['astrometric_fit_rms'],
+                                'nstars_in_fit':header['astrometric_fit_nstars'],
+                            }
+
+            frame, created = Frame.objects.get_or_create(**frame_params)
+            if created == True:
+                num_new_frames_created += 1
+                frame.astrometric_catalog = ast_cat_name
+                frame.photometric_catalog = phot_cat_name
+                frame.save()
+
+    return frame
+
+def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name = "UCAC4", ast_cat_name="2MASS"):
 
     num_new_frames_created = 0
     num_sources_created = 0
@@ -918,7 +965,7 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
         if header.get('zeropoint',-99) == -99 or header.get('zeropoint_err',-99) == -99:
             #if bad, determine new zeropoint
             logger.debug("Refitting zeropoint, tolerance set to {}".format(std_zeropoint_tolerance))
-            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
+            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
             logger.debug("New zp={} {} {} {}".format(avg_zeropoint, std_zeropoint, count, num_in_calc))
             #if crossmatch is good, update new zeropoint
             if std_zeropoint < std_zeropoint_tolerance:
@@ -942,56 +989,29 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
             fits_file = os.path.basename(catfile.replace('e12_ldac.fits', 'e11.fits'))
         else:
             fits_file = os.path.basename(catfile)
+
+        #if a Frame exists for the FITS file with a non-null block
+        #that has a no zeropoint, update the zeropoint computed
+        #above in the Frame
         try:
             frame = Frame.objects.get(filename=fits_file, block__isnull=False)
+            if frame.zeropoint == None and frame.zeropoint_err == None:
+                frame.zeropoint=header['zeropoint']
+                frame.zeropoint_err=header['zeropoint_err']
+            frame.photometric_catalog=phot_cat_name
+                frame.save()
         except Frame.MultipleObjectsReturned:
-            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file, frame))
+            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % (fits_file))
             return -3, -3
         except Frame.DoesNotExist:
             logger.error("Frame entry for fits file %s does not exist" % fits_file)
             return -3, -3
 
-        #if a Frame exists for the fits file with a non-null block
-        #that has a bad zeropoint, update the zeropoint computed
-        #above in the Frame
-        try:
-            frame = Frame.objects.get(filename=fits_file, block__isnull=False, zeropoint__lt=0)
-            if frame.zeropoint < 0 and frame.zeropoint_err < 0:
-                frame.zeropoint=header['zeropoint']
-                frame.zeropoint_err=header['zeropoint_err']
-                frame.save()
-        except Frame.MultipleObjectsReturned:
-            pass
-        except Frame.DoesNotExist:
-            try:
-                frame = Frame.objects.get(filename=fits_file, block__isnull=False, zeropoint__gt=0)
-                if frame.zeropoint > 0 and frame.zeropoint_err > 0:
-                    frame.zeropoint=header['zeropoint']
-                    frame.zeropoint_err=header['zeropoint_err']
-                    frame.save()
-            except Frame.DoesNotExist:
-                #store sources in neoexchange(CatalogSources table)
-                frame_params = {    'sitecode':header['site_code'],
-                                    'instrument':header['instrument'],
-                                    'filter':header['filter'],
-                                    'filename':determine_filenames(catfile),
-                                    'exptime':header['exptime'],
-                                    'midpoint':header['obs_midpoint'],
-                                    'block':frame.block,
-                                    'zeropoint':header['zeropoint'],
-                                    'zeropoint_err':header['zeropoint_err'],
-                                    'fwhm':header['fwhm'],
-                                    'frametype':Frame.SINGLE_FRAMETYPE,
-                                    'rms_of_fit':header['astrometric_fit_rms'],
-                                    'nstars_in_fit':header['astrometric_fit_nstars'],
-                                }
+        #update the zeropoint computed above in the FITS file Frame
+        frame = update_frame_zeropoint(header, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
 
-                frame, created = Frame.objects.get_or_create(**frame_params)
-                if created == True:
-                    num_new_frames_created += 1
-                    frame.astrometric_catalog = ast_cat_name
-                    frame.photometric_catalog = phot_cat_name
-                    frame.save()
+        #update the zeropoint computed above in the CATALOG file Frame
+        frame_cat = update_frame_zeropoint(header, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
 
         for source in table:
             source_params = {   'frame':frame,
