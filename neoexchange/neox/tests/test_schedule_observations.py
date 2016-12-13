@@ -42,7 +42,7 @@ class ScheduleObservations(FunctionalTest):
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
         with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_xpath('//input[@value="login"]').click()
+            self.browser.find_element_by_xpath('//button[@id="login-btn"]').click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
