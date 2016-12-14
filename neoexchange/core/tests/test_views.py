@@ -39,8 +39,8 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement, clean_crossid, create_frame, \
     schedule_check, summarise_block_efficiency, \
-    check_catalog_and_refit, store_detections, update_crossids, \
-    check_catalog_and_refit_new, find_matching_image_file, \
+    store_detections, update_crossids, \
+    check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
     make_new_catalog_entry
 from core.frames import block_status, create_frame, frame_params_from_block
@@ -1980,158 +1980,6 @@ class TestSummarise_Block_Efficiency(TestCase):
 
         self.assertEqual(expected_summary, summary)
 
-class TestCheckCatalogAndRefit(TestCase):
-
-    def setUp(self):
-        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
-
-        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
-        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
-        self.configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
-
-        self.debug_print = False
-
-        self.test_cat_good_wcs = os.path.join(os.environ['HOME'], 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0207-e10_cat.fits')
-
-        body_params = {     'provisional_name': '2016 DX',
-                            'origin': 'M',
-                            'source_type': 'U',
-                            'elements_type': 'MPC Minor Planet',
-                            'active': False,
-                            'epochofel': '2016-07-31 00:00:00',
-                            'orbinc': 27.93004,
-                            'longascnode': 124.91942,
-                            'argofperih': 82.05117,
-                            'eccentricity': 0.3916546,
-                            'meandist': 2.6852071,
-                            'meananom': 12.96218,
-                            'perihdist': 1.6335335,
-                            'abs_mag': 17.7,
-                            'slope': 0.15,
-                        }
-        self.test_body, created = Body.objects.get_or_create(**body_params)
-
-        proposal_params = { 'code': 'test',
-                            'title': 'test',
-                            'pi':'sgreenstreet@lcogt.net',
-                            'tag': 'LCOGT',
-                            'active': True
-                          }
-        self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
-
-        block_params = {    'telclass': '1m0',
-                            'site': 'K92',
-                            'body': self.test_body,
-                            'proposal': self.test_proposal,
-                            'groupid': None,
-                            'block_start': datetime(2016, 5, 5,19),
-                            'block_end': datetime(2016, 5, 5, 21),
-                            'tracking_number': '0009',
-                            'num_exposures': 6,
-                            'exp_length': 60.0,
-                            'num_observed': 1,
-                            'when_observed': datetime(2016, 5, 5, 20, 12, 44),
-                            'active': False,
-                            'reported': False,
-                            'when_reported':None
-                        }
-        self.test_block, created = Block.objects.get_or_create(**block_params)
-
-        frame_params = {    'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'cpt1m013-kb76-20160505-0207-e00.fits',
-                            'exptime':60.0,
-                            'midpoint':datetime(2016, 5, 5, 20, 4, 45),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.825,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':3.0,
-                        }
-        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
-
-        self.test_cat_bad_wcs = os.path.join(os.environ['HOME'], 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
-        self.test_fits_bad_wcs = os.path.join(os.environ['HOME'], 'Asteroids', '20160505', '2016GS2', 'cpt1m013-kb76-20160505-0205-e10.fits')
-
-        frame_params2 = {    'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'cpt1m013-kb76-20160505-0205-e00.fits',
-                            'exptime':60.0,
-                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.825,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':3.0,
-                        }
-        self.test_frame2, created = Frame.objects.get_or_create(**frame_params2)
-
-    def tearDown(self):
-        remove = True
-        if remove:
-            try:
-                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
-                for file_to_rm in files_to_remove:
-                    os.remove(file_to_rm)
-            except OSError:
-                print "Error removing files in temporary test directory", self.temp_dir
-            try:
-                os.rmdir(self.temp_dir)
-                if self.debug_print: print "Removed", self.temp_dir
-            except OSError:
-                print "Error removing temporary test directory", self.temp_dir
-
-    def test_good_catalog_nofit_needed(self):
-
-        expected_status_and_num_frames = (0, 1)
-
-#        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_catalog_good_wcs)
-        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_cat_good_wcs)
-
-        self.assertEqual(expected_status_and_num_frames, status)
-
-    def test_bad_catalog_name(self):
-
-        expected_status = (-1, 0)
-
-        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_catalog)
-
-        self.assertEqual(expected_status, status)
-
-    def test_no_matching_image(self):
-
-        expected_status = (-1, 0)
-
-        # Symlink catalog to temp dir with valid name
-        temp_test_catalog = os.path.join(self.temp_dir, 'oracdr_test_e08_cat.fits')
-        os.symlink(self.test_catalog, temp_test_catalog)
-
-        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, temp_test_catalog)
-
-        self.assertEqual(expected_status, status)
-
-    def test_good_catalog_refit(self):
-
-        expected_file = os.path.join(self.temp_dir, 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
-        expected_num_new_frames_created = 1
-
-        # Symlink catalog and image to temp dir with valid name
-        temp_test_catalog = os.path.join(self.temp_dir, 'cpt1m013-kb76-20160505-0205-e10_cat.fits')
-        os.symlink(self.test_cat_bad_wcs, temp_test_catalog)
-        temp_test_image = os.path.join(self.temp_dir, 'cpt1m013-kb76-20160505-0205-e10.fits')
-        os.symlink(self.test_fits_bad_wcs, temp_test_image)
-
-        status, num_new_frames_created = check_catalog_and_refit(self.configs_dir, self.temp_dir, temp_test_catalog)
-
-        self.assertEqual(expected_file, status)
-        self.assertTrue(os.path.exists(expected_file))
-        self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
 
 class TestCheckCatalogAndRefitNew(TestCase):
 
@@ -2227,7 +2075,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_status_and_num_frames = (os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame_ldac.fits')), 1)
 
-        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
 
         self.assertEqual(expected_status_and_num_frames, status)
 
@@ -2235,15 +2083,15 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_status_and_num_frames = (-1, 0)
 
-        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_cat_bad_wcs)
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_cat_bad_wcs)
 
         self.assertEqual(expected_status_and_num_frames, status)
 
     def test_cattype_not_BANZAI(self):
 
-        expected_status_and_num_frames = (-1, 0)
+        expected_status_and_num_frames = (-99, 0)
 
-        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_cat_good_wcs_not_BANZAI)
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_cat_good_wcs_not_BANZAI)
 
         self.assertEqual(expected_status_and_num_frames, status)
 
@@ -2251,9 +2099,9 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_status_and_num_frames = (os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'.replace('.fits', '_ldac.fits'))), 0)
 
-        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
 
-        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
 
         self.assertEqual(expected_status_and_num_frames, status)
 
@@ -2283,13 +2131,13 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_status_and_num_frames = (-1, 0)
 
-        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('photometrics', 'photometric'))
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('photometrics', 'photometric'))
 
         self.assertEqual(expected_status_and_num_frames, status)
 
         expected_status_and_num_frames = (-1, 0)
 
-        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('frame.fits', 'frames.fits'))
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('frame.fits', 'frames.fits'))
 
         self.assertEqual(expected_status_and_num_frames, status)
 
@@ -2314,7 +2162,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_num_new_frames_created = 0
 
-        status, num_new_frames_created = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+        status, num_new_frames_created = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
 
         self.assertEqual(-4, status)
         self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
@@ -2391,7 +2239,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_block, block)
 
-    def test_find_block_for_frame_DNE_DNE(self):
+    def test_find_block_for_frame_DNE(self):
 
         expected_block = None
 
@@ -2406,7 +2254,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
         block = Block.objects.last()
         block.delete()
 
-        status = check_catalog_and_refit_new(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
 
         self.assertEqual(expected_status_and_num_frames, status)
 
