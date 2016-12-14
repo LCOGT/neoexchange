@@ -1190,7 +1190,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_nonLCO_nocat(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1217,7 +1216,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_nonLCO_nomag(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1244,7 +1242,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_nonLCO_flags(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1271,7 +1268,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_blankline(self):
 
@@ -1304,7 +1300,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_LCO_flagI(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1331,7 +1326,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
 
     def test_create_satellite(self):
         expected_params = { 'body'  : 'N009ags',
@@ -1360,7 +1354,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.frame.astrometric_catalog)
         self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
 
     def test_create_non_existant_body(self):
