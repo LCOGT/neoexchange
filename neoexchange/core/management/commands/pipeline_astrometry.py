@@ -6,7 +6,7 @@ import tempfile
 
 from django.core.management.base import BaseCommand, CommandError
 
-from core.views import check_catalog_and_refit, store_detections
+from core.views import check_catalog_and_refit_new, store_detections
 from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 #from core.models import CatalogSources
@@ -51,9 +51,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        # set tolerance for determining the zeropoint and catalog to use (should be cmdline options)
-        std_zeropoint_tolerance = 0.10
-
         self.stdout.write("==== Pipeline processing astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         datadir = os.path.expanduser(options['datadir'])
@@ -87,7 +84,7 @@ class Command(BaseCommand):
             # Step 1: Determine if astrometric fit in catalog is good and
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
-            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog)
+            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit_new(configs_dir, temp_dir, catalog)
 
             try:
                 int(new_catalog_or_status)
@@ -108,7 +105,7 @@ class Command(BaseCommand):
             # results into CatalogSources
             self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
 
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, std_zeropoint_tolerance, catalog_type)
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type, std_zeropoint_tolerance=0.1)
             if num_sources_created >= 0 and num_in_catalog > 0:
                 self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog) )
             else:

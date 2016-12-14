@@ -31,7 +31,7 @@ import astropy.units as u
 from numpy import where, array
 from numpy.testing import assert_allclose
 
-from core.models import Body
+from core.models import Body, Proposal, Block, Frame
 
 #Import module to test
 from photometrics.catalog_subs import *
@@ -1026,16 +1026,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 12
 
+	expected_cat_name = "PPMXL"
+
         expected_len_cross_match_table = 21
 
         catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_cross_match_and_zeropoint_with_UCAC4(self):
@@ -1048,16 +1051,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 26
 
+	expected_cat_name = "UCAC4"
+
         expected_len_cross_match_table = 56
 
         catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile)
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_force_to_UCAC4(self):
@@ -1071,16 +1077,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 9
 
+	expected_cat_name = "UCAC4"
+
         expected_len_cross_match_table = 19
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_UCAC4(self):
@@ -1094,16 +1103,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 8
 
+	expected_cat_name = "UCAC4"
+
         expected_len_cross_match_table = 16
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile)
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_PPMXL(self):
@@ -1117,16 +1129,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 5
 
+	expected_cat_name = "PPMXL"
+
         expected_len_cross_match_table = 8
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     @skipIf(True, "write test for no internet")
@@ -1607,7 +1622,8 @@ class FITSReadHeader(FITSUnitTest):
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
                             'zeropoint_src' : 'N/A',
-                            'wcs'           : self.test_banzaiwcs
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
                           }
         expected_cattype = "BANZAI"
 

@@ -359,17 +359,30 @@ class Frame(models.Model):
     NONLCO_FRAMETYPE = 2
     SATELLITE_FRAMETYPE = 3
     SPECTRUM_FRAMETYPE = 4
+    FITS_LDAC_CATALOG = 5
+    BANZAI_LDAC_CATALOG = 6
+    ORACDR_QL_FRAMETYPE = 10
+    BANZAI_QL_FRAMETYPE = 11
+    ORACDR_RED_FRAMETYPE = 90
+    BANZAI_RED_FRAMETYPE = 91
     FRAMETYPE_CHOICES = (
                         (SINGLE_FRAMETYPE, 'Single frame'),
                         (STACK_FRAMETYPE, 'Stack of frames'),
                         (NONLCO_FRAMETYPE, 'Non-LCOGT data'),
                         (SATELLITE_FRAMETYPE, 'Satellite data'),
-                        (SPECTRUM_FRAMETYPE, 'Spectrum')
+                        (SPECTRUM_FRAMETYPE, 'Spectrum'),
+                        (FITS_LDAC_CATALOG,    'FITS LDAC catalog'),
+                        (BANZAI_LDAC_CATALOG,  'BANZAI LDAC catalog'),
+                        (ORACDR_QL_FRAMETYPE,  'ORACDR QL frame'),
+                        (BANZAI_QL_FRAMETYPE,  'BANZAI QL frame'),
+                        (ORACDR_RED_FRAMETYPE, 'ORACDR reduced frame'),
+                        (BANZAI_RED_FRAMETYPE, 'BANZAI reduced frame'),
+
                     )
     sitecode    = models.CharField('MPC site code', max_length=4, blank=False)
     instrument  = models.CharField('instrument code', max_length=4, blank=True, null=True)
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
-    filename    = models.CharField('FITS filename', max_length=40, blank=True, null=True)
+    filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
     block       = models.ForeignKey(Block, null=True, blank=True)
@@ -384,6 +397,8 @@ class Frame(models.Model):
     time_uncertainty = models.FloatField('Time uncertainty (seconds)', null=True, blank=True)
     frameid     = models.IntegerField('Archive ID', null=True, blank=True)
     wcs         = WCSField('WCS info', blank=True, null=True, editable=False)
+    astrometric_catalog = models.CharField('Astrometric catalog used', max_length=40, default=' ')
+    photometric_catalog = models.CharField('Photometric catalog used', max_length=40, default=' ')
 
 
     def get_x_size(self):
@@ -401,6 +416,30 @@ class Frame(models.Model):
         except AttributeError:
             pass
         return y_size
+
+    def is_catalog(self):
+        is_catalog = False
+        if self.frametype == self.FITS_LDAC_CATALOG or self.frametype == self.BANZAI_LDAC_CATALOG:
+            is_catalog = True
+        return is_catalog
+
+    def is_quicklook(self):
+        is_quicklook = False
+        if self.frametype == self.ORACDR_QL_FRAMETYPE or self.frametype == self.BANZAI_QL_FRAMETYPE:
+            is_quicklook = True
+        return is_quicklook
+
+    def is_reduced(self):
+        is_reduced = False
+        if self.frametype == self.ORACDR_RED_FRAMETYPE or self.frametype == self.BANZAI_RED_FRAMETYPE:
+            is_reduced = True
+        return is_reduced
+
+    def is_processed(self):
+        is_processed = False
+        if self.is_quicklook() or self.is_reduced():
+            is_processed = True
+        return is_processed
 
     class Meta:
         verbose_name = _('Observed Frame')

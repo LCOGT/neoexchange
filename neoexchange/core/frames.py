@@ -166,6 +166,14 @@ def create_frame(params, block=None, frameid=None):
             logger.error(frame.id)
         raise(Frame.MultipleObjectsReturned)
 
+    # Update catalogue information if we have it
+    if params.get('astrometric_catalog',None):
+        frame.astrometric_catalog = params.get('astrometric_catalog')
+        frame.save()
+    if params.get('photometric_catalog',None):
+        frame.photometric_catalog = params.get('photometric_catalog')
+        frame.save()
+
     if frame_created:
         msg = "created"
     else:
@@ -180,7 +188,7 @@ def frame_params_from_header(params, block):
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
-                     'frametype': Frame.SINGLE_FRAMETYPE,
+                     'frametype': params.get('RLEVEL', 0),
                      'block'    : block,
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
@@ -200,6 +208,9 @@ def frame_params_from_header(params, block):
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
+    rlevel = params.get('RLEVEL', '00')
+    frame_extn = str(rlevel) + '.fits'
+    frame_params['filename'] = frame_params['filename'].replace('00.fits', frame_extn)
     # Correct midpoint for 1/2 the exposure time
     if frame_params['midpoint'] and frame_params['exptime']:
         try:
@@ -212,7 +223,7 @@ def frame_params_from_header(params, block):
     return frame_params
 
 def frame_params_from_block(params, block):
-    # In these cases we are parsing the FITS header
+    # In these cases we are parsing the Block info
     sitecode = LCOGT_domes_to_site_codes(params.get('siteid', None), params.get('encid', None), params.get('telid', None))
     frame_params = { 'midpoint' : params.get('date_obs', None),
                      'sitecode' : sitecode,
