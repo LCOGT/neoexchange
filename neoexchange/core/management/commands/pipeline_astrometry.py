@@ -6,7 +6,7 @@ import tempfile
 
 from django.core.management.base import BaseCommand, CommandError
 
-from core.views import check_catalog_and_refit_new, store_detections
+from core.views import check_catalog_and_refit, store_detections
 from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 #from core.models import CatalogSources
