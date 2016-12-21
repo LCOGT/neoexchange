@@ -32,8 +32,8 @@ class Command(BaseCommand):
         if os.path.exists(datadir) and os.path.isdir(datadir):
             fits_files = sorted(glob(datadir + '*e??.fits'))
             fits_catalogs = sorted(glob(datadir + '*e??_cat.fits'))
-            banzai_files = sorted(glob(datadir + '*e91.fits*'))
-            banzai_ql_files = sorted(glob(datadir + '*e11.fits*'))
+            banzai_files = sorted(glob(datadir + '*e91.fits'))
+            banzai_ql_files = sorted(glob(datadir + '*e11.fits'))
             if len(banzai_files) > 0:
                 fits_files = fits_catalogs = banzai_files
             elif len(banzai_ql_files) > 0:
