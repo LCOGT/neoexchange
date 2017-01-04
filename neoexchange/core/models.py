@@ -463,8 +463,8 @@ class SourceMeasurement(models.Model):
 
     body = models.ForeignKey(Body)
     frame = models.ForeignKey(Frame)
-    obs_ra = models.FloatField('Observed RA')
-    obs_dec = models.FloatField('Observed Dec')
+    obs_ra = models.FloatField('Observed RA', blank=True, null=True)
+    obs_dec = models.FloatField('Observed Dec', blank=True, null=True)
     obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
     err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
     err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)

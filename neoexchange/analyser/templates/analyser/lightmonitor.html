@@ -65,7 +65,7 @@
 		$('#cand-submit').click(function(){
 			$.post('{% url 'submit-candidates' object.id %}', { 'objects': accepted })
 			.done(function() {
-					window.location.replace('{% url 'view-report' object.id %}');
+					window.location.replace('{% url 'block-report' object.id %}');
 				})
 			.fail(function() {
 				alert( "error" );

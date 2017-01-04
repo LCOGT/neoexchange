@@ -168,6 +168,24 @@ class BlockReport(LoginRequiredMixin, View):
         block.save()
         return redirect(reverse('blocklist'))
 
+class BlockReportMPC(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        block = Block.objects.get(pk=kwargs['pk'])
+        if block.reported == True:
+            messages.error(request,'Block has already been reported')
+            return HttpResponseRedirect(reverse('block-report-mpc', {'pk':kwargs['pk']}))
+        mpc_resp = report_to_mpc(blockid=kwargs['pk'])
+        if mpc_resp
+            block.active = False
+            block.reported = True
+            block.when_reported = datetime.utcnow()
+            block.save()
+            return redirect(reverse('blocklist'))
+        else:
+            messages.error(request,'It was not possible to email report to MPC')
+            return HttpResponseRedirect(reverse('block-report-mpc', {'pk':kwargs['pk']}))
+
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'
     success_url = reverse_lazy('blocklist')
@@ -192,15 +210,17 @@ class UploadReport(LoginRequiredMixin, FormView):
             messages.warning(self.request, 'Unable to add source measurements for %s' % form.cleaned_data['block'])
         return super(UploadReport, self).form_valid(form)
 
-
+def measurements_from_block(blockid):
+    block = Block.objects.get(pk=blockid)
+    frames = Frame.objects.filter(block=block).values_list('id',flat=True)
+    measures = SourceMeasurement.objects.filter(frame__in=frames)
+    return {'body':block.body,'measures':measures,'slot':block}
 
 class MeasurementViewBlock(LoginRequiredMixin, View):
     template = 'core/measurements.html'
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
-        frames = Frame.objects.filter(block=block).values_list('id',flat=True)
-        measures = SourceMeasurement.objects.filter(frame__in=frames)
-        return render(request, self.template, {'body':block.body,'measures':measures,'slot':block})
+        data = measurements_from_block(blockid=kwargs['pk'])
+        return render(request, self.template, data)
 
 class MeasurementViewBody(View):
     template = 'core/measurements.html'

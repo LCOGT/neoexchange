@@ -68,9 +68,11 @@ def analyser_to_source_measurement(block, cand_ids):
             return False
         for det in detections:
             frame = frames[int(det[1])-1]
-            sm = SourceMeasurement()
-            sm.body = body
-            sm.frame = frame
+            params = {
+                'body' :body,
+                'frame' : frame
+            }
+            sm, created = SourceMeasurement.objects.get_or_create(**params)
             sm.obs_ra = det[4]
             sm.obs_dec = det[5]
             sm.obs_mag = det[8]

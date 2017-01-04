@@ -1,0 +1,4 @@
+{% load staticfiles basic_tags %}
+
+{% for line in measures %}
+{{line.format_mpc_line}}{% endfor %}

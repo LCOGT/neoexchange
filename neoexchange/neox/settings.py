@@ -243,6 +243,22 @@ DATABASES = {
     }
 }
 
+##################
+# Email settings #
+##################
+
+EMAIL_USE_TLS       = True
+EMAIL_HOST          = 'smtp.gmail.com'
+EMAIL_PORT          =  587
+DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
+EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
+EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
+
+
+####################
+# LCO Api settings #
+####################
+
 NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
