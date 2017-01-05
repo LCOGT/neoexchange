@@ -993,6 +993,18 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         return []
     return NASA_targets
 
+def fetch_yarkovsky_targets(yark_targets):
+    '''Fetches yarkovsky targets from command line and returns a list of targets'''
+
+    yark_target_list = []
+
+    for obj_id in yark_targets:
+        if '_' in obj_id:
+            obj_id = str(obj_id).replace('_', ' ')
+        yark_target_list.append(obj_id)
+
+    return yark_target_list
+
 def make_location(params):
     location = {
         'telescope_class' : params['pondtelescope'][0:3],
