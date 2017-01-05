@@ -19,7 +19,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
-from django.http import Http404, HttpResponse, HttpResponseServerError
+from django.http import Http404, HttpResponse, HttpResponseServerError, HttpResponseRedirect
 
 from core.models import Frame, Block, Candidate, SourceMeasurement
 from core.frames import find_images_for_block
@@ -44,6 +44,16 @@ class BlockFramesView(DetailView):
             context['yaxis'] = images[3]
             context['analysed'] = analysed
         return context
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        context = self.get_context_data(object=self.object)
+        if context.get('images', False):
+            return self.render_to_response(context)
+        else:
+            messages.error(request, 'There are no frame IDs for Block {}'.format(self.object.pk))
+            return HttpResponseRedirect(reverse('block-view', kwargs={'pk':kwargs['pk']}))
+
 
 class ProcessCandidates(View):
 

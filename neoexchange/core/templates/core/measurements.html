@@ -11,7 +11,11 @@
 {% block main-content %}
 			<div id="main" class="fill-height">
 				<div class="row">
-					<p><a href="{% url 'measurement-mpc' body.id %}">[View in MPC format]</a></p>
+					<p>
+					{% if slot %}
+					<a class="button button-primary" href="{% url 'block-submit-mpc' slot.id %}">Report to MPC</a>
+					{% endif %}
+					<a class="button button-primary" href="{% url 'measurement-mpc' body.id %}">View in MPC format</a></p>
 				</div>
 				<div class="fullwidth">
 					<table class="datatable" id="id_measurements">

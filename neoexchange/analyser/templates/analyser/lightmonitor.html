@@ -62,6 +62,7 @@
 			resetCandidateOptions();
 		})
 
+{% if not object.reported %}
 		$('#cand-submit').click(function(){
 			$.post('{% url 'submit-candidates' object.id %}', { 'objects': accepted })
 			.done(function() {
@@ -69,10 +70,9 @@
 				})
 			.fail(function() {
 				alert( "error" );
-			})
-
-			;
+			});
 		});
+{% endif %}
 
 	});
 
@@ -96,21 +96,21 @@
 					{% if images %}
             <div class="eight columns">
                 <h3 class="section-title">{% if analysed %}Measurements of{% else %}Looking for{% endif %} {{object.body.current_name}}</h3>
-{% if messages %}					<div id="message">
-						<ul class="messages">
-{% for message in messages %}{%ifchanged%}<li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message|safe }}</li>{%endifchanged%}{% endfor %}
-						</ul>
-					</div>{% endif %}
+								{% if object.reported %}
+								<div class="blue">
+									Block already reported to MPC
+								</div>
+								{% endif %}
 
-					<div id="middle">
-						<div id="image-loading">
-							<i class="fa fa-refresh fa-spin fa-fw fa-4x"></i>
-							<p>Loading Image...</p>
-						</div>
-						<div id="wrapper">
-							<canvas id="imgCanvas" width="600" height="600" src=""><p>Image has failed to load.</p></canvas>
-						</div>
-					</div>
+								<div id="middle">
+									<div id="image-loading">
+										<i class="fa fa-refresh fa-spin fa-fw fa-4x"></i>
+										<p>Loading Image...</p>
+									</div>
+									<div id="wrapper">
+										<canvas id="imgCanvas" width="600" height="600" src=""><p>Image has failed to load.</p></canvas>
+									</div>
+								</div>
 				</div>
 
         <div class="four columns">
@@ -135,12 +135,14 @@
 											<span class='block-status-item'>Stop Blinking</span>
 										</span>
 									</li>
+									{% if not object.reported %}
 									<li class='blue' id="cand-submit">
 										<span class="candidate">
 											<span class="block-status-item" ><i class="fa fa-cloud-upload" aria-hidden="true"></i></span>
 											<span class='block-status-item'>Submit Candidates</span>
 										</span>
 									</li>
+									{% endif %}
 								</ul>
 								<ul id="candidate-list" class="candidate-controls">
 								</ul>

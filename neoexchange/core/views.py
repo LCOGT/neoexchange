@@ -26,7 +26,7 @@ from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from httplib import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
@@ -45,7 +45,8 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
-from core.frames import create_frame, fetch_observations, ingest_frames
+from core.frames import create_frame, fetch_observations, ingest_frames, measurements_from_block
+from core.mpc_submit import email_report_to_mpc
 import logging
 import reversion
 import json
@@ -174,9 +175,9 @@ class BlockReportMPC(LoginRequiredMixin, View):
         block = Block.objects.get(pk=kwargs['pk'])
         if block.reported == True:
             messages.error(request,'Block has already been reported')
-            return HttpResponseRedirect(reverse('block-report-mpc', {'pk':kwargs['pk']}))
-        mpc_resp = report_to_mpc(blockid=kwargs['pk'])
-        if mpc_resp
+            return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
+        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'])
+        if mpc_resp:
             block.active = False
             block.reported = True
             block.when_reported = datetime.utcnow()
@@ -184,7 +185,7 @@ class BlockReportMPC(LoginRequiredMixin, View):
             return redirect(reverse('blocklist'))
         else:
             messages.error(request,'It was not possible to email report to MPC')
-            return HttpResponseRedirect(reverse('block-report-mpc', {'pk':kwargs['pk']}))
+            return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
 
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'
@@ -210,11 +211,6 @@ class UploadReport(LoginRequiredMixin, FormView):
             messages.warning(self.request, 'Unable to add source measurements for %s' % form.cleaned_data['block'])
         return super(UploadReport, self).form_valid(form)
 
-def measurements_from_block(blockid):
-    block = Block.objects.get(pk=blockid)
-    frames = Frame.objects.filter(block=block).values_list('id',flat=True)
-    measures = SourceMeasurement.objects.filter(frame__in=frames)
-    return {'body':block.body,'measures':measures,'slot':block}
 
 class MeasurementViewBlock(LoginRequiredMixin, View):
     template = 'core/measurements.html'

@@ -16,6 +16,11 @@
     <div class="container">
         <div id="main">
             <div class="row">
+
+              {% if slot %}
+              <a class="button button-primary" href="{% url 'block-submit-mpc' slot.id %}">Report to MPC</a>
+              {% endif %}
+
               {% if measures %}
               <p><a href="{% url 'measurement' body.id %}">[View in HTML format]</a></p>
 {% comment %} Do not fiddle with/adjust the "incorrect" indentation below. The

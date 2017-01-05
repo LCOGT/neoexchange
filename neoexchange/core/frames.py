@@ -6,7 +6,7 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from astropy.wcs import WCS
 
-from core.models import Block, Frame, Candidate
+from core.models import Block, Frame, Candidate, SourceMeasurement
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from core.urlsubs import get_lcogt_headers
 from core.archive_subs import archive_login
@@ -30,6 +30,11 @@ def odin_login(username, password):
 
     return get_lcogt_headers(auth_url,username, password)
 
+def measurements_from_block(blockid):
+    block = Block.objects.get(pk=blockid)
+    frames = Frame.objects.filter(block=block).values_list('id',flat=True)
+    measures = SourceMeasurement.objects.filter(frame__in=frames)
+    return {'body':block.body,'measures':measures,'slot':block}
 
 def fetch_observations(tracking_num):
     image_list = []
@@ -54,6 +59,8 @@ def find_images_for_block(blockid):
         return False
     x_size = frames[0].wcs._naxis1
     y_size = frames[0].wcs._naxis2
+    if not frames[0].frameid:
+        return False
     frames_list = [{'img':str(f.frameid)} for f in frames]
     return frames_list, candidates, x_size, y_size
 
