@@ -204,6 +204,10 @@ def mock_archive_frame_header(archive_headers, images):
         }
     return header
 
+def mock_find_images_for_block(blockid):
+    data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
+    return data
+
 def mock_odin_login(username, password):
     return {}
 
