@@ -8,7 +8,6 @@ from neox.tests.mocks import MockDateTime, mock_rbauth_login, mock_find_images_f
 from core.models import Frame, SourceMeasurement
 import time
 
-@override_settings(DEBUG=True)
 class AnalyserTest(FunctionalTest):
     def setUp(self):
 
