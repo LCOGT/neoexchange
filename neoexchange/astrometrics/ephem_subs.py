@@ -1293,3 +1293,85 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(orbelems))
             logger.error(str(emp_line))
     return FOM
+
+def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow(), date_range=30, ephem_step_size='5 m', slot_length=20):
+    '''Determine when it's best to observe Yarkovsky & radar/ARM
+    targets in the future'''
+
+    first_day_visible = None
+    last_day_visible = None
+    delta_date = 0
+    while delta_date <= date_range:
+
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        emp = call_compute_ephem(orbelems, dark_start, dark_end, site_code, ephem_step_size)
+
+        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+
+        if emp_dark_and_up == []:
+            return first_day_visible, last_day_visible
+
+        obj_mag = float(emp_dark_and_up[0][3])
+
+        moon_alt_start = int(emp_dark_and_up[0][8])
+        moon_alt_end = int(emp_dark_and_up[-1][8])
+        moon_up = False
+        if (moon_alt_start or moon_alt_end) > 30:
+            moon_up = True
+
+        moon_phase = float(emp_dark_and_up[0][6])
+
+        moon_dist = int(emp_dark_and_up[0][7])
+
+        if dark_and_up_time>3.0 and obj_mag<=21.5:
+            if moon_up == True and moon_phase<=0.85:
+                if first_day_visible == None:
+                    first_day_visible = emp_dark_and_up[0][0][0:10]
+            else:
+                last_day_visible = emp_dark_and_up[0][0][0:10]
+                return first_day_visible, last_day_visible
+
+        if last_day_visible == None:
+            last_day_visible = emp_dark_and_up[0][0][0:10]
+
+        utc_date += timedelta(days=1)
+        delta_date += 1
+
+    return first_day_visible, last_day_visible
+
+def compute_dark_and_up_time(emp):
+    '''Computes the dark and up time from emp as output on
+    NEOexchange's ephemeris page (i.e., for ha not past the
+    limits and Moon alt >30 deg)'''
+
+    if emp != []:
+        end, emp_dark_and_up = compute_end_emp_dark_and_up_time(emp)
+        if end == None:
+            return end, emp_dark_and_up
+
+        dark_and_up_time_start = datetime(int(emp[0][0][0:4]), int(emp[0][0][5:7]), int(emp[0][0][8:10]), int(emp[0][0][11:13]), int(emp[0][0][14:16]))
+        dark_and_up_time_end = datetime(int(end[0:4]), int(end[5:7]), int(end[8:10]), int(end[11:13]), int(end[14:16]))
+        dark_and_up_time = dark_and_up_time_end - dark_and_up_time_start
+        dark_and_up_time = dark_and_up_time.seconds/3600.0 #in hrs
+    else:
+        dark_and_up_time = None
+
+    return dark_and_up_time, emp_dark_and_up
+
+def compute_end_emp_dark_and_up_time(emp):
+    '''Computes the end of dark and up time from emp as output
+    on NEOexchange's ephemeris page (i.e., for ha not past the
+    limits and Moon alt >30 deg)'''
+
+    emp_end_time = None
+    emp_dark_and_up = []
+
+    if emp != []:
+        for x in emp:
+            if 'L' not in x[10] and int(x[5])>30.0:
+                emp_end_time = x[0]
+                emp_dark_and_up.append(x)
+            else:
+                return emp_end_time, emp_dark_and_up
+
+    return emp_end_time, emp_dark_and_up

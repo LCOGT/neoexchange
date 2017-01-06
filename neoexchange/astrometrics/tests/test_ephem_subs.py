@@ -483,6 +483,98 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+class TestLongTermScheduling(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : '2001 SQ263',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2017-02-16 00:00:00',
+                    'meananom'      : 324.47087,
+                    'argofperih'    : 262.49786,
+                    'longascnode'   : 327.13827,
+                    'orbinc'        : 3.94116,
+                    'eccentricity'  : 0.4914435,
+                    'meandist'      : 0.9474511,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'Y',
+                    'not_seen'      : 45.02,
+                    'arc_length'    : 5538.0,
+                    'score'         : None,
+                    'abs_mag'       : 22.4
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params = {  'provisional_name' : '192559',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2017-02-16 00:00:00',
+                    'meananom'      : 48.13538,
+                    'argofperih'    : 75.95569,
+                    'longascnode'   : 228.17879,
+                    'orbinc'        : 10.06115,
+                    'eccentricity'  : 0.2265235,
+                    'meandist'      : 1.0745542,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'Y',
+                    'not_seen'      : 2981.02,
+                    'arc_length'    : 3650.0,
+                    'score'         : None,
+                    'abs_mag'       : 20.4
+                    }
+        self.body2, created = Body.objects.get_or_create(**params)
+
+    def test_LongTermScheduling_with_body(self):
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body)
+
+        expected_returned_params = ('2017 01 06', '2017 01 10')
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 6, 0, 0, 00), date_range=26)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_LongTermScheduling_with_body_no_emp(self):
+        site_code = 'K92'
+        body_elements = model_to_dict(self.body)
+
+        expected_returned_params = (None, None)
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 6, 0, 0, 00), date_range=26)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_dark_and_up_time_body_never_above_horizon(self):
+        site_code = 'K92'
+        body_elements = model_to_dict(self.body)
+
+        expected_dark_and_up_time = None
+        expected_emp_dark_and_up = []
+
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m')
+        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+
+        self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
+        self.assertEqual(expected_emp_dark_and_up, emp_dark_and_up)
+
+    def test_dark_and_up_time_body_above_horizon(self):
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body)
+
+        expected_dark_and_up_time = 5.25
+        expected_emp_dark_and_up_first_line = ['2017 01 06 01:20', '02 13 50.14', '+31 54 14.0', '21.0', ' 4.69', '+79', '0.52', ' 31', '+62', '+059', '-00:47']
+
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m')
+        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+
+        self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
+        self.assertEqual(expected_emp_dark_and_up_first_line, emp_dark_and_up[0])
+
+
 class TestDetermineSlotLength(TestCase):
 
     def test_bad_site_code(self):
