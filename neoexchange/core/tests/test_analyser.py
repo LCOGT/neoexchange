@@ -13,11 +13,9 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from datetime import datetime, timedelta
-from unittest import skipIf
-
 from mock import patch
 from django.test import TestCase
+from django.core.urlresolvers import reverse
 
 from neox.tests.mocks import MockCandidate
 #Import module to test
@@ -91,3 +89,39 @@ class Test_Analyser(TestCase):
         self.assertTrue(resp)
         sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block).count()
         self.assertEqual(sources2,2)
+
+    @patch('analyser.views.Candidate.objects.get', MockCandidate)
+    def test_source_meas_updated(self):
+        params1 = {
+            'body'   : self.body,
+            'frame'  : self.frame1,
+            'obs_ra' : 10.1,
+            'obs_dec': 10.2,
+            'aperture_size' : 1
+        }
+        sm1 = SourceMeasurement.objects.create(**params1)
+        params2 = {
+            'body'   : self.body,
+            'frame'  : self.frame2,
+            'obs_ra' : 10.15,
+            'obs_dec': 10.25,
+            'aperture_size' : 1
+        }
+        sm2 = SourceMeasurement.objects.create(**params2)
+
+        sources1 = SourceMeasurement.objects.filter(frame__block=self.test_block)
+        self.assertEqual(sources1.count(),2)
+        self.assertEqual(sources1[0].obs_ra, 10.1)
+        resp = analyser_to_source_measurement(self.test_block, [1,2])
+        self.assertTrue(resp)
+        sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block)
+        self.assertEqual(sources2.count(),2)
+        self.assertEqual(sources2[0].obs_ra, 22.753496)
+
+    def test_url_reverses(self):
+        submit_url = reverse('block-submit-mpc', kwargs={'pk':self.test_block.pk})
+        analyser_url = reverse('block-ast', kwargs={'pk':self.test_block.pk})
+        analyser_submit_url = reverse('submit-candidates', kwargs={'pk':self.test_block.pk})
+        self.assertEqual(submit_url,'/block/1/report/submit/')
+        self.assertEqual(analyser_url,'/block/1/analyser/')
+        self.assertEqual(analyser_submit_url,'/block/1/analyser/submit/')
