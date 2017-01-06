@@ -4,11 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-<<<<<<< HEAD
 VERSION = '1.7.0'
-=======
-VERSION = '1.6.7'
->>>>>>> master
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
