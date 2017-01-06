@@ -28,7 +28,7 @@ from random import randint
 from time import sleep
 
 from reqdb.client import SchedulerClient
-from reqdb.requests import Request, UserRequest
+from reqdb.requests import Request, UserRequest, NoRiseSetWindowsException
 from reqdb.utils.exceptions import InvalidArguments
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
@@ -853,10 +853,10 @@ def fetch_arecibo_targets(page=None):
     if type(page) == BeautifulSoup:
         # Find the tables, we want the second one
         tables = page.find_all('table')
-        if len(tables) != 2:
-            logger.warn("Unexpected number of tables found in Arecibo page")
+        if len(tables) != 2 and len(tables) != 3 :
+            logger.warn("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
         else:
-            targets_table = tables[1]
+            targets_table = tables[-1]
             rows = targets_table.find_all('tr')
             if len(rows) > 1:
                 for row in rows[1:]:
@@ -1197,12 +1197,21 @@ def submit_block_to_scheduler(elements, params):
     logger.info("User Request=%s" % user_request)
 # Make an endpoint and submit the thing
     client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
-    response_data = client.submit(user_request)
+    try:
+        response_data = client.submit(user_request)
+    except NoRiseSetWindowsException:
+        response_data = {}
+        msg = "Object does not have any visibility"
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
     client.print_submit_response()
     request_numbers =  response_data.get('request_numbers', '')
     tracking_number =  response_data.get('tracking_number', '')
     if not tracking_number or not request_numbers:
-        logger.error("No Tracking/Request number received")
+        msg = "No Tracking/Request number received"
+        logger.error(msg)
+        params['error_msg'] = msg
         return False, params
     request_number = request_numbers[0]
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))

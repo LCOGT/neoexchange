@@ -337,7 +337,10 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 else:
                     messages.warning(self.request, "Record not created")
             else:
-                messages.warning(self.request,"It was not possible to submit your request to the scheduler")
+                msg = "It was not possible to submit your request to the scheduler."
+                if sched_params.get('error_msg', None):
+                    msg += "\nAdditional information:" + sched_params['error_msg']
+                messages.warning(self.request, msg)
             return super(ScheduleSubmit, self).form_valid(form)
 
     def get_success_url(self):
@@ -1059,9 +1062,9 @@ def create_source_measurement(obs_lines, block=None):
                             # updated version
                             measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:
-                        logger.warn("Matching satellite frame for %s from %s on %s does not exist" % params['body'], params['obs_date'],params['site_code'])
+                        logger.warn("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'],params['site_code']))
                     except Frame.MultipleObjectsReturned:
-                        logger.warn("Multiple matching satellite frames for %s from %s on %s found" % params['body'], params['obs_date'],params['site_code'])
+                        logger.warn("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'],params['site_code']))
                 else:
                     # Otherwise, make a new Frame and SourceMeasurement
                     frame = create_frame(params, block)
