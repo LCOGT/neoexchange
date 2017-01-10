@@ -1300,6 +1300,8 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
 
     visible_dates = []
     emp_visible_dates = []
+    dark_and_up_time_all = []
+    max_alt_all = []
     delta_date = 0
     while delta_date <= date_range:
 
@@ -1322,17 +1324,23 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
 
             moon_dist = int(emp_dark_and_up[0][7])
 
+            max_alt = compute_max_altitude(emp_dark_and_up)
+
             if dark_and_up_time>3.0 and obj_mag<=21.5 and moon_up == True and moon_phase<=0.85:
                 visible_dates.append(emp_dark_and_up[0][0][0:10])
                 emp_visible_dates.append(emp_dark_and_up[0])
+                dark_and_up_time_all.append(dark_and_up_time)
+                max_alt_all.append(max_alt)
             elif dark_and_up_time>=3.0 and obj_mag<=21.5 and moon_up == False:
                 visible_dates.append(emp_dark_and_up[0][0][0:10])
                 emp_visible_dates.append(emp_dark_and_up[0])
+                dark_and_up_time_all.append(dark_and_up_time)
+                max_alt_all.append(max_alt)
 
         utc_date += timedelta(days=1)
         delta_date += 1
 
-    return visible_dates, emp_visible_dates
+    return visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all
 
 def compute_dark_and_up_time(emp):
     '''Computes the dark and up time from emp as output on
@@ -1369,3 +1377,18 @@ def compute_end_emp_dark_and_up_time(emp):
                 emp_dark_and_up.append(x)
 
     return emp_end_time, emp_dark_and_up
+
+def compute_max_altitude(emp_dark_and_up):
+    '''Computes the maximum altitude a target
+    reaches on a given night'''
+
+    max_alt = 0
+    prev_max_alt = 0
+
+    for line in emp_dark_and_up:
+        alt = int(line[5])
+        if alt > prev_max_alt:
+            max_alt = alt
+        prev_max_alt = max_alt
+
+    return max_alt
