@@ -11,8 +11,8 @@ class Command(BaseCommand):
     help = 'Download data from the LCOGT Archive'
 
     def add_arguments(self, parser):
-        parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download')
-        parser.add_argument('--proposal', action="store", default="LCO2016B-011", help='Proposal code to query for data')
+        parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
+        parser.add_argument('--proposal', action="store", default="LCO2016B-011", help='Proposal code to query for data (e.g. LCO2016B-011)')
 
 
     def handle(self, *args, **options):

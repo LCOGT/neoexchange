@@ -62,7 +62,7 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
         search_url = archive_url + '&RLEVEL='+ reduction_lvl
 #        print "search_url=%s" % search_url
         response = requests.get(search_url, headers=auth_header).json()
-        frames_for_red_lvl = { reduction_lvl : response['results'] }
+        frames_for_red_lvl = { reduction_lvl : response.get('results', []) }
         frames.update(frames_for_red_lvl)
 
     return frames
