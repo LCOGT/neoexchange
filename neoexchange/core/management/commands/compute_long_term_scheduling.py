@@ -15,13 +15,15 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('site_code', help='MPC site code')
         parser.add_argument('targets', nargs='+', help='Targets to schedule')
+        parser.add_argument('--start_date', default=datetime.utcnow().strftime('%Y-%m-%d'), help='Date to start ephemeris search in %Y-%m-%d format')
+        parser.add_argument('--date_range', type=int, default=30, help='Date range ephemeris search in days')
 
     def handle(self, *args, **options):
         self.stdout.write("==== Computing scheduling dates %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         target_list = fetch_yarkovsky_targets(options['targets'])
         for obj_id in target_list:
             orbelems = model_to_dict(Body.objects.get(name=obj_id))
-            visible_dates, emp_visible_dates = monitor_long_term_scheduling(options['site_code'], orbelems)
+            visible_dates, emp_visible_dates = monitor_long_term_scheduling(options['site_code'], orbelems, datetime.strptime(options['start_date'], '%Y-%m-%d'), options['date_range'])
             self.stdout.write("Reading target %s" % obj_id)
             self.stdout.write("Visible dates:")
             for date in visible_dates:
