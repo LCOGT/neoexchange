@@ -592,7 +592,7 @@ class TestLongTermScheduling(TestCase):
         site_code = 'V37'
         body_elements = model_to_dict(self.body)
 
-        expected_returned_params = (['2017 01 06', '2017 01 07', '2017 01 08', '2017 01 09'], [['2017 01 06 01:20', '02 13 50.14', '+31 54 14.0', '21.0', ' 4.69', '+79', '0.52', ' 31', '+62', '+059', '-00:47'], ['2017 01 07 01:20', '02 06 33.78', '+30 58 16.2', '21.0', ' 4.64', '+82', '0.64', ' 22', '+65', '-999', '-00:36'], ['2017 01 08 01:20', '01 59 32.36', '+30 01 16.6', '21.1', ' 4.58', '+84', '0.75', ' 23', '+61', '-999', '-00:25'], ['2017 01 09 01:20', '01 52 45.62', '+29 03 29.1', '21.2', ' 4.51', '+86', '0.84', ' 33', '+53', '+069', '-00:14']], [5.25, 5.0, 4.833333333333333, 4.666666666666667], [88, 89, 89, 88])
+        expected_returned_params = (['2017 01 06', '2017 01 07', '2017 01 08', '2017 01 09'], [['2017 01 06 01:20', '02 13 50.14', '+31 54 14.0', '21.0', ' 4.69', '+79', '0.52', ' 31', '+62', '+059', '-00:47'], ['2017 01 07 01:20', '02 06 33.78', '+30 58 16.2', '21.0', ' 4.64', '+82', '0.64', ' 22', '+65', '-999', '-00:36'], ['2017 01 08 01:20', '01 59 32.36', '+30 01 16.6', '21.1', ' 4.58', '+84', '0.75', ' 23', '+61', '-999', '-00:25'], ['2017 01 09 01:20', '01 52 45.62', '+29 03 29.1', '21.2', ' 4.51', '+86', '0.84', ' 33', '+53', '+069', '-00:14']], [5.5, 5.25, 5.0, 4.833333333333333], [88, 89, 89, 88])
 
         returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 6, 0, 0, 00), date_range=26)
 
@@ -638,7 +638,7 @@ class TestLongTermScheduling(TestCase):
         site_code = 'V37'
         body_elements = model_to_dict(self.body3)
 
-        expected_returned_params = (['2017 01 18', '2017 01 19', '2017 01 20', '2017 01 21', '2017 01 22', '2017 01 23', '2017 01 24', '2017 01 25', '2017 01 26', '2017 01 27', '2017 01 28', '2017 01 29', '2017 01 30', '2017 01 31', '2017 02 01'], [['2017 01 18 09:15', '14 03 19.11', '+06 01 50.1', '18.4', ' 9.73', '+30', '0.64', ' 20', '+40', '-999', '-03:53'], ['2017 01 19 08:55', '13 52 25.69', '+08 33 39.1', '18.3', ' 9.46', '+30', '0.55', ' 15', '+25', '-999', '-03:58'], ['2017 01 20 08:35', '13 41 43.96', '+10 59 30.8', '18.2', ' 9.15', '+30', '0.45', ' 22', '+11', '-999', '-04:03'], ['2017 01 21 08:15', '13 31 15.01', '+13 18 31.1', '18.2', ' 8.80', '+30', '0.36', ' 35', '-03', '+031', '-04:09'], ['2017 01 22 07:55', '13 20 59.76', '+15 30 00.5', '18.1', ' 8.43', '+30', '0.27', ' 48', '-17', '+036', '-04:15'], ['2017 01 23 07:40', '13 10 56.80', '+17 33 59.8', '18.1', ' 8.04', '+30', '0.20', ' 62', '-31', '+041', '-04:16'], ['2017 01 24 07:20', '13 01 11.14', '+19 29 22.9', '18.0', ' 7.65', '+30', '0.13', ' 76', '-45', '+045', '-04:22'], ['2017 01 25 07:05', '12 51 39.02', '+21 16 57.8', '18.0', ' 7.25', '+30', '0.07', ' 89', '-58', '+050', '-04:24'], ['2017 01 26 06:50', '12 42 22.99', '+22 56 25.1', '18.0', ' 6.87', '+31', '0.03', '103', '-70', '+054', '-04:26'], ['2017 01 27 06:35', '12 33 23.36', '+24 27 57.9', '18.0', ' 6.49', '+31', '0.01', '116', '-76', '+056', '-04:28'], ['2017 01 28 06:25', '12 24 38.51', '+25 52 11.8', '18.0', ' 6.13', '+32', '0.00', '129', '-70', '+055', '-04:25'], ['2017 01 29 06:10', '12 16 12.37', '+27 08 51.3', '18.0', ' 5.78', '+32', '0.02', '141', '-57', '+051', '-04:28'], ['2017 01 30 06:00', '12 08 01.37', '+28 18 53.6', '18.0', ' 5.46', '+33', '0.05', '151', '-44', '+047', '-04:26'], ['2017 01 31 05:45', '12 00 09.11', '+29 22 12.6', '18.0', ' 5.14', '+32', '0.11', '154', '-29', '+042', '-04:29'], ['2017 02 01 05:35', '11 52 32.14', '+30 19 41.3', '18.1', ' 4.84', '+33', '0.19', '150', '-15', '+038', '-04:28']], [3.3333333333333335, 3.6666666666666665, 4.0, 4.333333333333333, 4.666666666666667, 4.916666666666667, 5.25, 5.5, 5.75, 6.0, 6.166666666666667, 6.416666666666667, 6.583333333333333, 6.666666666666667, 6.833333333333333], [64, 67, 70, 73, 75, 77, 79, 80, 82, 84, 85, 86, 87, 88, 89])
+        expected_returned_params = (['2017 01 18', '2017 01 19', '2017 01 20', '2017 01 21', '2017 01 22', '2017 01 23', '2017 01 24', '2017 01 25', '2017 01 26', '2017 01 27', '2017 01 28', '2017 01 29', '2017 01 30', '2017 01 31', '2017 02 01'], [['2017 01 18 09:15', '14 03 19.11', '+06 01 50.1', '18.4', ' 9.73', '+30', '0.64', ' 20', '+40', '-999', '-03:53'], ['2017 01 19 08:55', '13 52 25.69', '+08 33 39.1', '18.3', ' 9.46', '+30', '0.55', ' 15', '+25', '-999', '-03:58'], ['2017 01 20 08:35', '13 41 43.96', '+10 59 30.8', '18.2', ' 9.15', '+30', '0.45', ' 22', '+11', '-999', '-04:03'], ['2017 01 21 08:15', '13 31 15.01', '+13 18 31.1', '18.2', ' 8.80', '+30', '0.36', ' 35', '-03', '+031', '-04:09'], ['2017 01 22 07:55', '13 20 59.76', '+15 30 00.5', '18.1', ' 8.43', '+30', '0.27', ' 48', '-17', '+036', '-04:15'], ['2017 01 23 07:40', '13 10 56.80', '+17 33 59.8', '18.1', ' 8.04', '+30', '0.20', ' 62', '-31', '+041', '-04:16'], ['2017 01 24 07:20', '13 01 11.14', '+19 29 22.9', '18.0', ' 7.65', '+30', '0.13', ' 76', '-45', '+045', '-04:22'], ['2017 01 25 07:05', '12 51 39.02', '+21 16 57.8', '18.0', ' 7.25', '+30', '0.07', ' 89', '-58', '+050', '-04:24'], ['2017 01 26 06:45', '12 42 24.97', '+22 56 04.3', '18.0', ' 6.86', '+30', '0.03', '103', '-71', '+053', 'Limits'], ['2017 01 27 06:30', '12 33 25.28', '+24 27 38.7', '18.0', ' 6.49', '+30', '0.01', '116', '-76', '+055', 'Limits'], ['2017 01 28 06:15', '12 24 42.23', '+25 51 36.5', '18.0', ' 6.13', '+30', '0.00', '129', '-69', '+053', 'Limits'], ['2017 01 29 06:00', '12 16 15.96', '+27 08 19.0', '18.0', ' 5.78', '+30', '0.02', '141', '-56', '+048', 'Limits'], ['2017 01 30 05:50', '12 08 04.84', '+28 18 24.1', '18.0', ' 5.45', '+30', '0.05', '151', '-42', '+045', 'Limits'], ['2017 01 31 05:35', '12 00 12.45', '+29 21 45.7', '18.0', ' 5.13', '+30', '0.11', '154', '-27', '+039', 'Limits'], ['2017 02 01 05:20', '11 52 36.98', '+30 19 04.7', '18.1', ' 4.83', '+30', '0.18', '150', '-12', '+034', 'Limits']], [3.3333333333333335, 3.6666666666666665, 4.0, 4.333333333333333, 4.666666666666667, 4.916666666666667, 5.25, 5.5, 5.833333333333333, 6.083333333333333, 6.333333333333333, 6.583333333333333, 6.75, 6.833333333333333, 7.083333333333333], [64, 67, 70, 73, 75, 77, 79, 80, 82, 84, 85, 86, 87, 88, 89])
 
         returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 6, 0, 0, 00), date_range=26)
 
@@ -674,28 +674,24 @@ class TestLongTermScheduling(TestCase):
         body_elements = model_to_dict(self.body)
 
         expected_dark_and_up_time = None
-        expected_emp_dark_and_up = []
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m')
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        dark_and_up_time = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
-        self.assertEqual(expected_emp_dark_and_up, emp_dark_and_up)
 
     def test_dark_and_up_time_body_above_horizon(self):
         site_code = 'V37'
         body_elements = model_to_dict(self.body)
 
-        expected_dark_and_up_time = 5.25
-        expected_emp_dark_and_up_first_line = ['2017 01 06 01:20', '02 13 50.14', '+31 54 14.0', '21.0', ' 4.69', '+79', '0.52', ' 31', '+62', '+059', '-00:47']
+        expected_dark_and_up_time = 5.5
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m')
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        dark_and_up_time = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
-        self.assertEqual(expected_emp_dark_and_up_first_line, emp_dark_and_up[0])
 
     def test_compute_max_altitude(self):
         site_code = 'V37'
@@ -704,10 +700,10 @@ class TestLongTermScheduling(TestCase):
         expected_max_alt = 88
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m')
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        dark_and_up_time = compute_dark_and_up_time(emp)
 
-        max_alt = compute_max_altitude(emp_dark_and_up)
+        max_alt = compute_max_altitude(emp)
 
         self.assertEqual(expected_max_alt, max_alt)
 
@@ -718,10 +714,10 @@ class TestLongTermScheduling(TestCase):
         expected_max_alt = 0
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m')
-        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        dark_and_up_time = compute_dark_and_up_time(emp)
 
-        max_alt = compute_max_altitude(emp_dark_and_up)
+        max_alt = compute_max_altitude(emp)
 
         self.assertEqual(expected_max_alt, max_alt)
 
