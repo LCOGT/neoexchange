@@ -14,6 +14,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('site_code', help='MPC site code')
+        parser.add_argument('dark_and_up_time_limit', type=float, help='Amount of time sky must be dark and target is above the horizon')
         parser.add_argument('targets', nargs='+', help='Targets to schedule')
         parser.add_argument('--start_date', default=datetime.utcnow().strftime('%Y-%m-%d'), help='Date to start ephemeris search in %Y-%m-%d format')
         parser.add_argument('--date_range', type=int, default=30, help='Date range ephemeris search in days')
@@ -24,7 +25,7 @@ class Command(BaseCommand):
         target_list = fetch_yarkovsky_targets(options['targets'])
         for obj_id in target_list:
             orbelems = model_to_dict(Body.objects.get(name=obj_id))
-            visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all = monitor_long_term_scheduling(options['site_code'], orbelems, datetime.strptime(options['start_date'], '%Y-%m-%d'), options['date_range'])
+            visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all = monitor_long_term_scheduling(options['site_code'], orbelems, datetime.strptime(options['start_date'], '%Y-%m-%d'), options['date_range'], options['dark_and_up_time_limit'])
             self.stdout.write("Reading target %s" % obj_id)
             self.stdout.write("Visible dates:")
             for date in visible_dates:

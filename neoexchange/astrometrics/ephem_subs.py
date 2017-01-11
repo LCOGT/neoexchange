@@ -1294,7 +1294,7 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(emp_line))
     return FOM
 
-def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow(), date_range=30, ephem_step_size='5 m', slot_length=20):
+def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow(), date_range=30, dark_and_up_time_limit=3.0, slot_length=20, ephem_step_size='5 m'):
     '''Determine when it's best to observe Yarkovsky & radar/ARM
     targets in the future'''
 
@@ -1326,12 +1326,12 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
 
             max_alt = compute_max_altitude(emp)
 
-            if dark_and_up_time>3.0 and obj_mag<=21.5 and moon_up == True and moon_phase<=0.85:
+            if dark_and_up_time>=dark_and_up_time_limit and obj_mag<=21.5 and moon_up == True and moon_phase<=0.85:
                 visible_dates.append(emp[0][0][0:10])
                 emp_visible_dates.append(emp[0])
                 dark_and_up_time_all.append(dark_and_up_time)
                 max_alt_all.append(max_alt)
-            elif dark_and_up_time>=3.0 and obj_mag<=21.5 and moon_up == False:
+            elif dark_and_up_time>=dark_and_up_time_limit and obj_mag<=21.5 and moon_up == False:
                 visible_dates.append(emp[0][0][0:10])
                 emp_visible_dates.append(emp[0])
                 dark_and_up_time_all.append(dark_and_up_time)
