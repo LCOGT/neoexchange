@@ -89,7 +89,7 @@ def get_catalog_data(frames, auth_header='', dbg=False):
 
     return catalogs
 
-def check_for_existing_file(filename, archive_md5=None, dbg=False):
+def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False):
     '''Tries to determine whether a higher reduction level of the file exists. If it does, True is
     returned otherwise False is returned'''
 
@@ -113,29 +113,29 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False):
                 new_path2 = os.path.join(path, new_filename2)
                 uncomp_filepath2 = os.path.splitext(new_path2)[0]
                 if os.path.exists(new_path) or os.path.exists(new_path2):
-                    print "Higher level reduction file exists"
+                    if verbose: print "Higher level reduction file exists"
                     return True
                 if os.path.exists(uncomp_filepath2):
-                    print "Uncompressed higher level reduction file exists"
+                    if verbose: print "Uncompressed higher level reduction file exists"
                     return True
                 if os.path.exists(uncomp_filepath):
-                    print "Uncompressed reduction file exists"
+                    if verbose: print "Uncompressed reduction file exists"
                     return True
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
                     if dbg: print filename, md5sum, archive_md5
                     if md5sum == archive_md5:
-                        print "File exists with correct MD5 sum"
+                        if verbose: print "File exists with correct MD5 sum"
                         return True
             else:
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
                     if dbg: print filename, md5sum, archive_md5
                     if md5sum == archive_md5:
-                        print "-91 level reduction file already exists with correct MD5 sum."
+                        if verbose: print "-91 level reduction file already exists with correct MD5 sum."
                         return True
                 if os.path.exists(uncomp_filepath):
-                    print "Uncompressed -91 level reduction file already exists."
+                    if verbose: print "Uncompressed -91 level reduction file already exists."
                     return True
 
     return False
@@ -173,9 +173,9 @@ def download_files(frames, output_path, verbose=False, dbg=False):
             if dbg: print frame['filename']
             filename = os.path.join(output_path, frame['filename'])
             archive_md5 = frame['version_set'][-1]['md5']
-            if check_for_existing_file(filename, archive_md5, dbg) or \
+            if check_for_existing_file(filename, archive_md5, dbg, verbose) or \
                 check_for_bad_file(filename):
-                print "Skipping existing file", frame['filename']
+                if dbg or verbose: print "Skipping existing file", frame['filename']
             else:
                 if dbg or verbose: print "Writing file to",filename
                 downloaded_frames.append(filename)
