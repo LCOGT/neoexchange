@@ -3,6 +3,19 @@
 
 {% block bodyclass %}page{% endblock %}
 
+{% block script-content %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    $('#cadence-switch').hide();
+    $('#cadence_request').hide();
+    $('a.mode-switch').click(function(event){
+      $('.mode-switch').toggle();
+      $('.mode-container').toggle();
+    });
+
+  });
+</script>
+{% endblock %}
 
 {% block extramenu %}
     <div class="headingleft">
@@ -16,10 +29,12 @@
             {% if body.id  and form %}
             <h5 class="section-title">Parameters for: {{body.current_name}}</h5>
             <div class="section-title">
+              <a class="button mode-switch" href="#" id="single-switch">Switch to cadence observations</a>
+              <a class="button mode-switch" href="#" id="cadence-switch">Switch to single observation</a>
             <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
             {% csrf_token %}
-            <div class="row">
-              <div class="inline-fields">
+            <div class="row" id="single_request">
+              <div class="inline-fields mode-container">
                 <div class="compact-field">
                 {{ form.utc_date }}<label for="id_utc_date">UTC date</label>
                 </div>
@@ -30,6 +45,27 @@
                   {{ form.proposal_code }}<label for="id_proposal_code">Proposal</label>
                 </div>
               </div>
+
+                <div class="inline-fields mode-container" id="cadence_request">
+                  <div class="compact-field">
+                  <input type="text" /><label for="id_utc_date">UTC Start date</label>
+                  </div>
+                  <div class="compact-field">
+                  <input type="text" /><label for="id_utc_date">UTC End date</label>
+                  </div>
+                  <div class="compact-field">
+                  <input type="text" /><label for="id_utc_date">Jitter (hours)</label>
+                  </div>
+                  <div class="compact-field">
+                  <input type="text" /><label for="id_utc_date">Period (hours)</label>
+                  </div>
+                  <div class="compact-field">
+                  {{ form.site_code }}<label for="id_site_code">Site</label>
+                  </div>
+                  <div class="compact-field">
+                    {{ form.proposal_code }}<label for="id_proposal_code">Proposal</label>
+                  </div>
+                </div>
 
             {% for key, error in form.errors.items %}
                 <div class="messages error">
