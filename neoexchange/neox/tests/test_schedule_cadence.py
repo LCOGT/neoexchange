@@ -67,13 +67,63 @@ class ScheduleCadence(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest)
+        start_url = reverse('target',kwargs={'pk':1})
+        self.browser.get(self.live_server_url + start_url)
 
-        # He sees a Schedule Cadence button (?)
+        # He sees a Schedule Observations button
+        link = self.browser.find_element_by_id('schedule-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
-        # He clicks the link to go to the Schedule Cadence page (?)
+        # He clicks the link to go to the Schedule Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), target_url)
 
-        # He notices a new selection for the proposal and site code and
-        # chooses the NEO Follow-up Network and ELP (V37)
+        #He sees a Switch to Cadence Observations button
+        link = self.browser.find_element_by_id('single-switch')
+        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}), '#')
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to Switch to Cadence Observations
+        link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), target_url)
+
+        # He notices a new selection for the proposal, site code,
+        # UTC start date, UTC end date, period, and jitter and
+        # chooses the NEO Follow-up Network, ELP (V37), period=2 hrs,
+        # and jitter=0.25 hrs
+        proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
+        self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
+
+        proposal_choices.select_by_visible_text(self.neo_proposal.title)
+
+        site_choices = Select(self.browser.find_element_by_id('id_site_code'))
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+
+        MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
+        datebox = self.get_item_input_box('id_utc_start_date')
+        datebox.clear()
+        datebox.send_keys('2015-04-21 01:30')
+
+        MockDateTime.change_datetime(2015, 4, 20, 7, 30, 00)
+        datebox = self.get_item_input_box('id_utc_end_date')
+        datebox.clear()
+        datebox.send_keys('2015-04-21 07:30')
+
+        jitterbox = self.get_item_input_box('id_jitter')
+        jitterbox.clear()
+        jitterbox.send_keys('0.25')
+
+        periodbox = self.get_item_input_box('id_period')
+        periodbox.clear()
+        periodbox.send_keys('2.0')
 
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear

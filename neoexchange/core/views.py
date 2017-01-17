@@ -358,6 +358,10 @@ def schedule_check(data, body, ok_to_schedule=True):
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
+    # Get period and jitter for cadence
+    period = data.get('period')
+    jitter = data.get('jitter')
+
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
@@ -374,7 +378,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'end_time': dark_end.isoformat(),
         'mid_time': dark_midpoint.isoformat(),
         'ra_midpoint': emp[1],
-        'dec_midpoint': emp[2]
+        'dec_midpoint': emp[2],
+        'period' : period,
+        'jitter' : jitter
     }
     return resp
 
@@ -405,7 +411,9 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'group_id': data['group_id']
+              'group_id': data['group_id'],
+              'period' : data['period'],
+              'jitter' : data['jitter']
               }
     # Check for pre-existing block
     tracking_number = None

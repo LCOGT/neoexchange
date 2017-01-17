@@ -57,6 +57,10 @@ class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
+    utc_start_date = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S',], initial=datetime.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC start date is required')})
+    utc_end_date = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S',], initial=datetime.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC end date is required')})
+    period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Period is required')})
+    jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Jitter is required')})
 
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
@@ -81,6 +85,8 @@ class ScheduleBlockForm(forms.Form):
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
+    jitter = forms.FloatField(widget=forms.HiddenInput())
+    period = forms.FloatField(widget=forms.HiddenInput())
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']

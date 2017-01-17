@@ -1072,6 +1072,22 @@ def make_window(params):
 
     return window
 
+def make_cadence(params):
+    '''Make a cadence. This is set to the start and end time from
+    params (i.e. the picked time with the best score plus the block length),
+    formatted into a string. This also includes a period and jitter.
+    Hopefully this will prevent rescheduling at a different time as the
+    co-ords will be wrong in that case...
+    The cadence also includes a period and jitter.'''
+    cadence = {
+              'start' : params['start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+              'end'   : params['end_time'].strftime('%Y-%m-%dT%H:%M:%S'),
+              'period': params['period'], #Default is 2.0
+              'jitter': params['jitter'] #Default 0.25
+             }
+
+    return cadence
+
 def make_molecule(params):
     molecule = {
                 'exposure_count'  : params['exp_count'],

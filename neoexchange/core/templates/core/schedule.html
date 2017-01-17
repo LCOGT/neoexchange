@@ -48,16 +48,16 @@
 
                 <div class="inline-fields mode-container" id="cadence_request">
                   <div class="compact-field">
-                  <input type="text" /><label for="id_utc_date">UTC Start date</label>
+                  {{ form.utc_start_date }}<label for="id_utc_start_date">UTC Start date</label>
                   </div>
                   <div class="compact-field">
-                  <input type="text" /><label for="id_utc_date">UTC End date</label>
+                  {{ form.utc_end_date }}<label for="id_utc_end_date">UTC End date</label>
                   </div>
                   <div class="compact-field">
-                  <input type="text" /><label for="id_utc_date">Jitter (hours)</label>
+                  {{ form.jitter }}<label for="id_jitter">Jitter (hours)</label>
                   </div>
                   <div class="compact-field">
-                  <input type="text" /><label for="id_utc_date">Period (hours)</label>
+                  {{ form.period }}<label for="id_period">Period (hours)</label>
                   </div>
                   <div class="compact-field">
                   {{ form.site_code }}<label for="id_site_code">Site</label>
