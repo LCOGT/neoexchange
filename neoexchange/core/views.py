@@ -32,7 +32,7 @@ import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
-from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
+from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
@@ -240,7 +240,8 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def get(self, request, *args, **kwargs):
         form = self.get_form()
-        return self.render_to_response(self.get_context_data(form=form, body=self.body))
+        cadence_form = ScheduleCadenceForm()
+        return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
@@ -262,6 +263,26 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
+
+class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
+    '''
+    Creates a suggested observation request, including time window and molecules
+    '''
+    template_name = 'core/schedule.html'
+    form_class = ScheduleCadenceForm
+    ok_to_schedule = False
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form,request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
 
 

@@ -21,7 +21,7 @@ from django.core.urlresolvers import reverse_lazy
 from core.models import Body, Block, SourceMeasurement
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
-    UploadReport, BlockTimeSummary
+    UploadReport, BlockTimeSummary, ScheduleParametersCadence
 
 from django.contrib.auth.views import login, logout
 
@@ -45,6 +45,7 @@ urlpatterns = [
     url(r'^ranking/$', ranking, name='ranking'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
+    url(r'^schedule/(?P<pk>\d+)/cadence/$', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout' ),
     url(r'^admin/', include(admin.site.urls)),

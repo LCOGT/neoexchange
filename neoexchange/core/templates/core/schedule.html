@@ -6,11 +6,14 @@
 {% block script-content %}
 <script type="text/javascript">
   $(document).ready(function(){
+    // Initially hide the cadence form
     $('#cadence-switch').hide();
     $('#cadence_request').hide();
+
     $('a.mode-switch').click(function(event){
       $('.mode-switch').toggle();
       $('.mode-container').toggle();
+      $('input[type=radio][name=form-mode]').val($('input[type=radio][name=form-mode]').val() == 'single' ? 'cadence' : 'single');
     });
 
   });
@@ -31,10 +34,11 @@
             <div class="section-title">
               <a class="button mode-switch" href="#" id="single-switch">Switch to cadence observations</a>
               <a class="button mode-switch" href="#" id="cadence-switch">Switch to single observation</a>
-            <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
-            {% csrf_token %}
-            <div class="row" id="single_request">
-              <div class="inline-fields mode-container">
+            <div  id="single_request" class="mode-container">
+            <div class="row">
+              <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
+              {% csrf_token %}
+              <div class="inline-fields">
                 <div class="compact-field">
                 {{ form.utc_date }}<label for="id_utc_date">UTC date</label>
                 </div>
@@ -45,39 +49,53 @@
                   {{ form.proposal_code }}<label for="id_proposal_code">Proposal</label>
                 </div>
               </div>
-
-                <div class="inline-fields mode-container" id="cadence_request">
-                  <div class="compact-field">
-                  {{ form.utc_start_date }}<label for="id_utc_start_date">UTC Start date</label>
+              {% for key, error in form.errors.items %}
+                  <div class="messages error">
+                      {{ error }}
                   </div>
-                  <div class="compact-field">
-                  {{ form.utc_end_date }}<label for="id_utc_end_date">UTC End date</label>
-                  </div>
-                  <div class="compact-field">
-                  {{ form.jitter }}<label for="id_jitter">Jitter (hours)</label>
-                  </div>
-                  <div class="compact-field">
-                  {{ form.period }}<label for="id_period">Period (hours)</label>
-                  </div>
-                  <div class="compact-field">
-                  {{ form.site_code }}<label for="id_site_code">Site</label>
-                  </div>
-                  <div class="compact-field">
-                    {{ form.proposal_code }}<label for="id_proposal_code">Proposal</label>
-                  </div>
-                </div>
-
-            {% for key, error in form.errors.items %}
-                <div class="messages error">
-                    {{ error }}
-                </div>
-           {% endfor %}
+             {% endfor %}
+              </div>
+              <div class="row">
+                  <input type="submit" class="button button-primary" value="Verify before Scheduling">
+              </div>
+              </form>
             </div>
-            <div class="row">
+
+            <div id="cadence_request" class="mode-container">
+                <div class="inline-fields">
+                <div class="row">
+                  <form action="{% url 'schedule-body-cadence' body.id %}" method="POST" style="display:inline-block;">
+                  {% csrf_token %}
+                  <div class="compact-field">
+                  {{cad_form.utc_start_date}}<label for="id_utc_start">UTC Start date</label>
+                  </div>
+                  <div class="compact-field">
+                  {{cad_form.utc_end_date}}<label for="id_utc_end">UTC End date</label>
+                  </div>
+                  <div class="compact-field">
+                  {{cad_form.jitter}}<label for="id_jitter">Jitter (hours)</label>
+                  </div>
+                  <div class="compact-field">
+                  {{cad_form.period}}<label for="id_period">Period (hours)</label>
+                  </div>
+                  <div class="compact-field">
+                  {{ cad_form.site_code }}<label for="id_site_code">Site</label>
+                  </div>
+                  <div class="compact-field">
+                    {{ cad_form.proposal_code }}<label for="id_proposal_code">Proposal</label>
+                  </div>
+                </div>
+                {% for key, error in form.errors.items %}
+                    <div class="messages error">
+                        {{ error }}
+                    </div>
+               {% endfor %}
+                </div>
+                <div class="row">
                     <input type="submit" class="button button-primary" value="Verify before Scheduling">
-            </div>
-            </form>
-            </div>
+                </div>
+                </form>
+              </div>
             {% endif %}
             </div>
         </div>
