@@ -77,6 +77,18 @@
                         <td class="kv-key">Window (UTC)</td>
                         <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
                     </tr>
+                    {% if data.jitter %}
+                    <tr id="id_jitter">
+                        <td class="kv-key">Jitter (hours)</td>
+                        <td class="kv-value">{{ data.jitter }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if data.period %}
+                    <tr id="id_period">
+                        <td class="kv-key">Period (hours)</td>
+                        <td class="kv-value">{{ data.period }}</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         {% endif %}
