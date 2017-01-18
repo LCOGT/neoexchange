@@ -273,7 +273,7 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     ok_to_schedule = False
 
     def post(self, request, *args, **kwargs):
-        form = self.get_form()
+        form = ScheduleCadenceForm(request.POST)
         if form.is_valid():
             return self.form_valid(form,request)
         else:
@@ -380,8 +380,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         ok_to_schedule = False
 
     # Get period and jitter for cadence
-    period = data.get('period')
-    jitter = data.get('jitter')
+    period = data.get('period','')
+    jitter = data.get('jitter','')
 
     resp = {
         'target_name': body.current_name(),

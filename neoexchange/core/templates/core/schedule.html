@@ -35,8 +35,8 @@
               <a class="button mode-switch" href="#" id="single-switch">Switch to cadence observations</a>
               <a class="button mode-switch" href="#" id="cadence-switch">Switch to single observation</a>
             <div  id="single_request" class="mode-container">
+            <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
             <div class="row">
-              <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
               {% csrf_token %}
               <div class="inline-fields">
                 <div class="compact-field">
@@ -56,21 +56,21 @@
              {% endfor %}
               </div>
               <div class="row">
-                  <input type="submit" class="button button-primary" value="Verify before Scheduling">
+                  <button type="submit" name="action" value="verify_single" class="button button-primary">Verify before Scheduling</button>
               </div>
               </form>
             </div>
 
             <div id="cadence_request" class="mode-container">
-                <div class="inline-fields">
+              <form action="{% url 'schedule-body-cadence' body.id %}" method="POST" style="display:inline-block;">
                 <div class="row">
-                  <form action="{% url 'schedule-body-cadence' body.id %}" method="POST" style="display:inline-block;">
+                  <div class="inline-fields">
                   {% csrf_token %}
                   <div class="compact-field">
-                  {{cad_form.utc_start_date}}<label for="id_utc_start">UTC Start date</label>
+                  {{cad_form.start_time}}<label for="id_start_date">UTC Start date</label>
                   </div>
                   <div class="compact-field">
-                  {{cad_form.utc_end_date}}<label for="id_utc_end">UTC End date</label>
+                  {{cad_form.end_time}}<label for="id_end_date">UTC End date</label>
                   </div>
                   <div class="compact-field">
                   {{cad_form.jitter}}<label for="id_jitter">Jitter (hours)</label>
@@ -85,14 +85,14 @@
                     {{ cad_form.proposal_code }}<label for="id_proposal_code">Proposal</label>
                   </div>
                 </div>
-                {% for key, error in form.errors.items %}
+                {% for key, error in cad_form.errors.items %}
                     <div class="messages error">
                         {{ error }}
                     </div>
                {% endfor %}
                 </div>
                 <div class="row">
-                    <input type="submit" class="button button-primary" value="Verify before Scheduling">
+                  <button type="submit" name="action" value="verify_cadence" class="button button-primary">Verify before Scheduling</button>
                 </div>
                 </form>
               </div>
