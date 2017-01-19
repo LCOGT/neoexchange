@@ -13,7 +13,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default="LCO2016B-011", help='Proposal code to query for data (e.g. LCO2016B-011)')
-
+        out_path = os.path.join(os.environ.get('HOME'), 'Asteroids')
+        parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
@@ -47,7 +48,7 @@ class Command(BaseCommand):
             for red_lvl in frames.keys():
                 self.stdout.write("Found %d frames for reduction level: %s" % ( len(frames[red_lvl]), red_lvl ))
             daydir = start_date.strftime('%Y%m%d')
-            out_path = os.path.join(os.environ.get('HOME'), 'Asteroids', daydir)
+            out_path = os.path.join(options['datadir'], daydir)
             if not os.path.exists(out_path):
                 try:
                     os.makedirs(out_path)
