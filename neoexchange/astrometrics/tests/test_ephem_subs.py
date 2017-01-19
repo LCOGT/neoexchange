@@ -204,14 +204,17 @@ class TestComputeEphem(TestCase):
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
         expected_alt =  -58.658929026981895
+        expected_spd = 119.94694444444444
         emp_line = compute_ephem(d, self.elements, '?', dbg=False, perturb=True, display=False)
         self.assertEqual(d, emp_line[0])
         precision = 11
+        self.assertEqual(7, len(emp_line))
         self.assertAlmostEqual(expected_ra, emp_line[1], precision)
         self.assertAlmostEqual(expected_dec, emp_line[2], precision)
         self.assertAlmostEqual(expected_mag, emp_line[3], precision)
         self.assertAlmostEqual(expected_motion, emp_line[4], precision)
         self.assertAlmostEqual(expected_alt, emp_line[5], precision)
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -220,15 +223,18 @@ class TestComputeEphem(TestCase):
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
         expected_alt =  -58.658929026981895
+        expected_spd = 119.94694444444444
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
         self.assertEqual(d, emp_line[0])
         precision = 11
+        self.assertEqual(7, len(emp_line))
         self.assertAlmostEqual(expected_ra, emp_line[1], precision)
         self.assertAlmostEqual(expected_dec, emp_line[2], precision)
         self.assertAlmostEqual(expected_mag, emp_line[3], precision)
         self.assertAlmostEqual(expected_motion, emp_line[4], precision)
         self.assertAlmostEqual(expected_alt, emp_line[5], precision)
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
         
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
