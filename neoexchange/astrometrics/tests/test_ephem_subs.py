@@ -175,6 +175,8 @@ class TestComputeEphem(TestCase):
                          'type': 'MPC_MINOR_PLANET',
                          'uncertainty': 'U'}
 
+        self.length_emp_line = 8
+
     def test_body_is_correct_class(self):
         tbody = Body.objects.get(provisional_name='N999r0q')
         self.assertIsInstance(tbody, Body)
@@ -204,7 +206,12 @@ class TestComputeEphem(TestCase):
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
         expected_alt =  -58.658929026981895
+        expected_spd = 119.94694444444444
+        expected_pa = 91.35793788996334
+
         emp_line = compute_ephem(d, self.elements, '?', dbg=False, perturb=True, display=False)
+
+        self.assertEqual(self.length_emp_line, len(emp_line))
         self.assertEqual(d, emp_line[0])
         precision = 11
         self.assertAlmostEqual(expected_ra, emp_line[1], precision)
@@ -212,6 +219,8 @@ class TestComputeEphem(TestCase):
         self.assertAlmostEqual(expected_mag, emp_line[3], precision)
         self.assertAlmostEqual(expected_motion, emp_line[4], precision)
         self.assertAlmostEqual(expected_alt, emp_line[5], precision)
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        self.assertAlmostEqual(expected_pa,  emp_line[7], precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -220,8 +229,13 @@ class TestComputeEphem(TestCase):
         expected_mag = 20.408525362626005
         expected_motion = 2.4825093417658186
         expected_alt =  -58.658929026981895
+        expected_spd = 119.94694444444444
+        expected_pa  = 91.35793788996334
+
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+
+        self.assertEqual(self.length_emp_line, len(emp_line))
         self.assertEqual(d, emp_line[0])
         precision = 11
         self.assertAlmostEqual(expected_ra, emp_line[1], precision)
@@ -229,6 +243,8 @@ class TestComputeEphem(TestCase):
         self.assertAlmostEqual(expected_mag, emp_line[3], precision)
         self.assertAlmostEqual(expected_motion, emp_line[4], precision)
         self.assertAlmostEqual(expected_alt, emp_line[5], precision)
+        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        self.assertAlmostEqual(expected_pa,  emp_line[7], precision)
         
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -266,8 +282,8 @@ class TestComputeEphem(TestCase):
         site_code = 'V37'
         step_size = 300
         body_elements = model_to_dict(self.body)
-        expected_ephem_lines = [['2015 04 21 08:45', '20 10 05.99', '+29 56 57.5', '20.4', ' 2.43', '+33', '0.09', '107', '-42', '+047', '-04:25'],
-                                ['2015 04 21 08:50', '20 10 06.92', '+29 56 57.7', '20.4', ' 2.42', '+34', '0.09', '107', '-42', '+048', '-04:20']]
+        expected_ephem_lines = [['2015 04 21 08:45', '20 10 05.99', '+29 56 57.5', '20.4', ' 2.43', ' 89.2', '+33', '0.09', '107', '-42', '+047', '-04:25'],
+                                ['2015 04 21 08:50', '20 10 06.92', '+29 56 57.7', '20.4', ' 2.42', ' 89.2', '+34', '0.09', '107', '-42', '+048', '-04:20']]
         ephem_lines = call_compute_ephem(body_elements, start, end, site_code, step_size)
         line = 0
         self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
@@ -281,8 +297,8 @@ class TestComputeEphem(TestCase):
         site_code = 'F65'
         step_size = 300
         body_elements = model_to_dict(self.body)
-        expected_ephem_lines = [['2015 04 21 11:30', '20 10 38.15', '+29 56 52.1', '20.4', ' 2.45', '+20', '0.09', '108', '-47', '-999', '-05:09'],
-                                ['2015 04 21 11:35', '20 10 39.09', '+29 56 52.4', '20.4', ' 2.45', '+21', '0.09', '108', '-48', '-999', '-05:04']]
+        expected_ephem_lines = [['2015 04 21 11:30', '20 10 38.15', '+29 56 52.1', '20.4', ' 2.45', ' 89.0', '+20', '0.09', '108', '-47', '-999', '-05:09'],
+                                ['2015 04 21 11:35', '20 10 39.09', '+29 56 52.4', '20.4', ' 2.45', ' 89.0', '+21', '0.09', '108', '-48', '-999', '-05:04']]
 
         ephem_lines = call_compute_ephem(body_elements, start, end, site_code, step_size)
         line = 0
@@ -297,8 +313,8 @@ class TestComputeEphem(TestCase):
         site_code = 'V37'
         step_size = 300
         body_elements = model_to_dict(self.body)
-        expected_ephem_lines = [['2015 04 28 10:20', '20 40 36.53', '+29 36 33.1', '20.6', ' 2.08', '+52', '0.72', '136', '-15', '+058', '-02:53'],
-                                ['2015 04 28 10:25', '20 40 37.32', '+29 36 32.5', '20.6', ' 2.08', '+54', '0.72', '136', '-16', '+059', '-02:48']]
+        expected_ephem_lines = [['2015 04 28 10:20', '20 40 36.53', '+29 36 33.1', '20.6', ' 2.08', ' 93.4', '+52', '0.72', '136', '-15', '+058', '-02:53'],
+                                ['2015 04 28 10:25', '20 40 37.32', '+29 36 32.5', '20.6', ' 2.08', ' 93.4', '+54', '0.72', '136', '-16', '+059', '-02:48']]
 
         ephem_lines = call_compute_ephem(body_elements, start, end, site_code, step_size)
         line = 0
@@ -314,8 +330,8 @@ class TestComputeEphem(TestCase):
         step_size = 300
         alt_limit = 30.0
         body_elements = model_to_dict(self.body)
-        expected_ephem_lines = [['2015 09 01 19:45', '23 56 43.16', '-11 31 02.4', '19.3', ' 1.91', '+30', '0.86', ' 29', '+01', '+029', '-04:06'],
-                                ['2015 09 01 19:50', '23 56 42.81', '-11 31 10.5', '19.3', ' 1.91', '+31', '0.86', ' 29', '+02', '+030', '-04:01']]
+        expected_ephem_lines = [['2015 09 01 19:45', '23 56 43.16', '-11 31 02.4', '19.3', ' 1.91', '212.2', '+30', '0.86', ' 29', '+01', '+029', '-04:06'],
+                                ['2015 09 01 19:50', '23 56 42.81', '-11 31 10.5', '19.3', ' 1.91', '212.2', '+31', '0.86', ' 29', '+02', '+030', '-04:01']]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -332,7 +348,7 @@ class TestComputeEphem(TestCase):
         step_size = 60
         alt_limit = 0
         body_elements = model_to_dict(self.body)
-        expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'],]
+        expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20',  '121.1', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'],]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -349,7 +365,7 @@ class TestComputeEphem(TestCase):
         step_size = 600
         alt_limit = 0
         body_elements = model_to_dict(self.comet)
-        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '14.7', ' 1.44', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '14.7', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -368,7 +384,7 @@ class TestComputeEphem(TestCase):
         body_elements = model_to_dict(self.comet)
         body_elements['abs_mag'] = None
         body_elements['slope'] = None
-        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '-99.0', ' 1.44', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '-99.0', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
