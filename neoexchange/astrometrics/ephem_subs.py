@@ -446,17 +446,18 @@ def format_emp_line(emp_line, site_code):
 
     if str(site_code) == '500':
 # Geocentric position, so no altitude. moon parameters, score or hour angle
-        geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|N/A|N/A|N/A|N/A|N/A|N/A"
+        geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|N/A|N/A|N/A|N/A|N/A|N/A"
 
         formatted_line = geo_row_format % (emp_time, ra_string, dec_string, \
-            emp_line[3], emp_line[4])
+            emp_line[3], emp_line[4], emp_line[7])
 
     else:
 # Get site and mount parameters
         (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
         (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(site_code)
 
-        blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
+#                         Date  RA Dec Mag   Motion P.A  Alt Mphase Msep Malt   Score HA
+        blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
 # Compute apparent RA, Dec of the Moon
         (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt)
@@ -487,7 +488,7 @@ def format_emp_line(emp_line, site_code):
 #    num_fov = int(pointings_sep/ccd_fov)
 
         formatted_line = blk_row_format % (emp_time, ra_string, dec_string, \
-            emp_line[3], emp_line[4], emp_line[5],\
+            emp_line[3], emp_line[4],  emp_line[7], emp_line[5],\
             moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
 
     line_as_list = formatted_line.split('|')
