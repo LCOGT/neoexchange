@@ -266,7 +266,7 @@ class NewVisitorTest(FunctionalTest):
 
         # Check the values are correct for K92
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 03 19:35 23 53 33.81 -12 45 53.8 19.3 1.87 213.6 +30 0.67 57 -26 +039 -04:05'
+            '2015 09 03 19:35 23 53 33.81 -12 45 53.8 19.3 1.87 213.7 +30 0.67 57 -26 +039 -04:05'
         )
         self.check_for_row_in_table('id_ephemeris_table',
             '2015 09 03 19:40 23 53 33.46 -12 46 01.6 19.3 1.87 213.7 +32 0.67 58 -25 +040 -04:00'
