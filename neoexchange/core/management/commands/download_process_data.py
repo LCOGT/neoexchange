@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.core.management import call_command
 
 from core.management.commands import download_archive_data
+from photometrics.catalog_subs import get_fits_files, sort_rocks
 
 class Command(BaseCommand):
 
@@ -50,9 +51,18 @@ class Command(BaseCommand):
         self.stdout.write("Download data for %s from %s" % ( obs_date, proposal ))
         call_command('download_archive_data', '--date', obs_date, '--proposal', proposal, '--datadir', datadir )
 
+        # Append date to the data directory
+        datadir = os.path.join(datadir, obs_date)
+
 # Step 2: Sort data into directories per-object
 
+        fits_files = get_fits_files(datadir)
+        self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir) )
+        objects = sort_rocks(fits_files)
+
 # Step 3: For each object:
+        for rock in objects:
+            self.stdout.write('Processing target %s' % rock)
 
 # Step 3a: Check data is in DB
 

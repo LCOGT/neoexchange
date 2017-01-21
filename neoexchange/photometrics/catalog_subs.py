@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+from glob import glob
 import numpy as np
 from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
@@ -1243,3 +1244,51 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
 
     return sources
+
+def get_fits_files(fits_path):
+    '''Look through a directory, uncompressing any fpacked files and return a 
+    list of all the .fits files'''
+
+    sorted_fits_files = []
+    fits_path = os.path.join(fits_path, '')
+    if os.path.isdir(fits_path):
+    
+        fpacked_files = sorted(glob(fits_path + '*e91.fits.fz') + glob(fits_path + '*e11.fits.fz'))
+        for fpack_file in fpacked_files:
+            funpack_fits_file(fpack_file)
+
+        sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
+    
+    else:
+    	logger.error("Not a directory")
+
+    return sorted_fits_files
+
+def sort_rocks(fits_files):
+    '''Takes a list of FITS files and creates directories for each asteroid 
+    object and unique block number (i.e. if an object is observed more than
+    once, it will get a separate directory). The input fits files are then 
+    symlinked into the appropriate directory.
+    A list of the directory names is return, with the entries being of the form
+    <object name>_<block id #>'''
+
+    objects = []
+    for fits_filepath in fits_files:
+        fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+        object_name = fits_header.get('OBJECT', None)
+        block_id = fits_header.get('BLKUID', '')
+        if object_name:
+            object_directory = object_name.replace(' ', '')
+            if block_id != '':
+                object_directory = object_directory + '_' + str(block_id)
+            if object_directory not in objects:
+                objects.append(object_directory)
+            object_directory = os.path.join(os.path.dirname(fits_filepath), object_directory)
+            if not os.path.exists(object_directory):
+                os.makedirs(object_directory)
+            dest_filepath = os.path.join(object_directory, os.path.basename(fits_filepath))
+            if not os.path.exists(dest_filepath):
+                os.symlink(fits_filepath, dest_filepath)
+    return objects
+
+                
