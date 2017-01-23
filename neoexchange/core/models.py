@@ -177,6 +177,25 @@ class Body(models.Model):
         else:
             return None
 
+    def compute_q(self):
+        '''Compute, q, the perihelion distance. For those Body's that have it
+        populated, just return it, otherwise calculate it'''
+
+        if self.perihdist:
+            q = self.perihdist
+        else:
+            q = (1.0 - self.eccentricity) * self.meandist
+
+        return q
+
+    def is_neo(self):
+    
+        q = self.compute_q()
+        if q < 1.3 and self.source_type != 'C':
+            return True
+            
+        return False
+
     def get_block_info(self):
         blocks = Block.objects.filter(body=self.id)
         num_blocks = blocks.count()

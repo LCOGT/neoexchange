@@ -296,6 +296,108 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+class TestBodyComputations(TestCase):
+
+    def setUp(self):
+
+        self.neo_params = {  'provisional_name': u'THBN71',
+                    'abs_mag': 20.2,
+                    'active': True,
+                    'arc_length': 0.64,
+                    'argofperih': 137.29928,
+                    'discovery_date': datetime(2017, 1, 23, 0, 0),
+                    'eccentricity': 0.3535242,
+                    'elements_type': u'MPC_MINOR_PLANET',
+                    'epochofel': datetime(2017, 1, 7, 0, 0),
+                    'epochofperih': None,
+                    'fast_moving': False,
+                    'ingest': datetime(2017, 1, 23, 3, 50, 6),
+                    'longascnode': 116.86006,
+                    'meananom': 222.44732,
+                    'meandist': 0.9385356,
+                    'name': None,
+                    'not_seen': 0.021,
+                    'num_obs': 12L,
+                    'orbinc': 31.80439,
+                    'origin': u'M',
+                    'perihdist': None,
+                    'provisional_packed': None,
+                    'score': 98L,
+                    'slope': 0.15,
+                    'source_type': u'U',
+                    'update_time': datetime(2017, 1, 23, 18, 18, 39),
+                    'updated': True,
+                    'urgency': None}
+        self.neo_body, created = Body.objects.get_or_create(**self.neo_params)
+
+        self.comet_params = { 'provisional_name': u'A101Bap',
+                         'abs_mag': 17.6,
+                         'active': False,
+                         'arc_length': 2.95,
+                         'argofperih': 11.08533,
+                         'discovery_date': datetime(2017, 1, 4, 12, 0),
+                         'eccentricity': 0.944578,
+                         'elements_type': u'MPC_COMET',
+                         'epochofel': datetime(2016, 12, 18, 0, 0),
+                         'epochofperih': datetime(2016, 11, 19, 12, 3, 36),
+                         'fast_moving': False,
+                         'ingest': datetime(2017, 1, 4, 18, 50, 7),
+                         'longascnode': 323.91924,
+                         'meananom': None,
+                         'meandist': 2.3670763,
+                         'name': u'2017 AF5',
+                         'not_seen': 0.044,
+                         'num_obs': 71L,
+                         'orbinc': 19.9285,
+                         'origin': u'M',
+                         'perihdist': 0.1311881026986,
+                         'provisional_packed': None,
+                         'score': 78L,
+                         'slope': 4.0,
+                         'source_type': u'N',
+                         'update_time': datetime(2017, 1, 7, 13, 56, 23),
+                         'updated': True,
+                         'urgency': None}
+        self.comet_body, created = Body.objects.get_or_create(**self.comet_params)
+
+        self.precision = 11
+
+    def test_neo_returns_q(self):
+
+        expected_q = (1.0 - self.neo_params['eccentricity']) * self.neo_params['meandist']
+
+        q = self.neo_body.compute_q()
+
+        self.assertAlmostEqual(expected_q, q, self.precision)
+
+    def test_comet_returns_exact_q(self):
+
+        expected_q = self.comet_params['perihdist']
+
+        q = self.comet_body.compute_q()
+
+        self.assertEqual(expected_q, q)
+
+    def test_body_is_neo(self):
+
+        result = self.neo_body.is_neo()
+
+        self.assertTrue(result)
+
+    def test_comet_orbit_is_a_neo(self):
+
+        result = self.comet_body.is_neo()
+
+        self.assertTrue(result)
+
+    def test_comet_type_is_not_a_neo(self):
+
+        # Set type to 'C'omet which are not NEOs (despite potentially small 
+        # perihelion distance)
+        self.comet_body.source_type = 'C'
+        result = self.comet_body.is_neo()
+
+        self.assertFalse(result)
 
 class TestFrame(TestCase):
 
