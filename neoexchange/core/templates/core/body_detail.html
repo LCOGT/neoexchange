@@ -114,6 +114,12 @@
 										<td class="kv-key">Mean Anomaly (deg)</td>
 										<td class="kv-value">{{body.meananom}}</td>
 									</tr>
+                                                                        {% if body.source_type == 'U' %}
+									<tr>
+										<td class="kv-key">Perihelion distance (AU)</td>
+										<td class="kv-value">{% if body.is_neo %}<span class="warning msgpadded">{% else %}<span class="">{% endif %}{{body.compute_q|floatformat:6}}</span></td>
+									</tr>
+                                                                        {% endif %}
 									{% else %}
 									<tr>
 										<td class="kv-key">Perihelion distance (AU)</td>
