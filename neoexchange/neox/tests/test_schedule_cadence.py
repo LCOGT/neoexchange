@@ -11,6 +11,8 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 
+import time
+
 class ScheduleCadence(FunctionalTest):
 
     def setUp(self):
@@ -46,7 +48,7 @@ class ScheduleCadence(FunctionalTest):
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
-    def test_logout(self):
+    def _logout(self):
         self.test_login()
         logout_link = self.browser.find_element_by_partial_link_text('Logout')
         with self.wait_for_page_load(timeout=10):
@@ -97,23 +99,23 @@ class ScheduleCadence(FunctionalTest):
         # UTC start date, UTC end date, period, and jitter and
         # chooses the NEO Follow-up Network, ELP (V37), period=2 hrs,
         # and jitter=0.25 hrs
-        proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
+        proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code_cad'))
         self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
 
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
-        site_choices = Select(self.browser.find_element_by_id('id_site_code'))
+        site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
         self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
 
         site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
 
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
-        datebox = self.get_item_input_box('id_utc_start_date')
+        datebox = self.get_item_input_box('id_start_time')
         datebox.clear()
         datebox.send_keys('2015-04-21 01:30')
 
         MockDateTime.change_datetime(2015, 4, 20, 7, 30, 00)
-        datebox = self.get_item_input_box('id_utc_end_date')
+        datebox = self.get_item_input_box('id_end_time')
         datebox.clear()
         datebox.send_keys('2015-04-21 07:30')
 

@@ -73,8 +73,8 @@ class ScheduleForm(forms.Form):
 
 
 class ScheduleCadenceForm(forms.Form):
-    proposal_code = forms.ChoiceField(required=True)
-    site_code = forms.ChoiceField(required=True, choices=SITES)
+    proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad',}))
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad',}))
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'], initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'], initial=datetime.today, required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Period is required')})
