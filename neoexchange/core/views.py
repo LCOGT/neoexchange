@@ -432,10 +432,11 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'group_id': data['group_id'],
-              'period' : data['period'],
-              'jitter' : data['jitter']
+              'group_id': data['group_id']
               }
+    if data.period or data.jitter:
+        params['period'] = data['period']
+        params['jitter'] = data['jitter']
     # Check for pre-existing block
     tracking_number = None
     resp_params = None

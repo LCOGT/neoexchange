@@ -112,12 +112,12 @@ class ScheduleCadence(FunctionalTest):
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
         datebox.clear()
-        datebox.send_keys('2015-04-21 01:30')
+        datebox.send_keys('2015-04-21 01:30:00')
 
         MockDateTime.change_datetime(2015, 4, 20, 7, 30, 00)
         datebox = self.get_item_input_box('id_end_time')
         datebox.clear()
-        datebox.send_keys('2015-04-21 07:30')
+        datebox.send_keys('2015-04-21 07:30:00')
 
         jitterbox = self.get_item_input_box('id_jitter')
         jitterbox.clear()
@@ -126,8 +126,30 @@ class ScheduleCadence(FunctionalTest):
         periodbox = self.get_item_input_box('id_period')
         periodbox.clear()
         periodbox.send_keys('2.0')
+        periodbox.send_keys(Keys.ENTER)
 
-        # The page refreshes and a series of values for magnitude, speed, slot
+        #The page refreshes and he reaches the schedule cadence page
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence',kwargs={'pk':1}))
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), target_url)
+
+        # He notices that a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear
+        magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
+        self.assertIn('20.39', magnitude)
+        speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
+        self.assertIn("2.63 '/min", speed)
+        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        self.assertIn('22.5', slot_length)
+        num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
+        self.assertIn('11', num_exp)
+        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
+        self.assertIn('55.0 secs', exp_length)
+        jitter = self.browser.find_element_by_id('id_jitter').find_element_by_class_name('kv-value').text
+        self.assertIn('0.25', jitter)
+        period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
+        self.assertIn('2.0', period)
 
         # At this point, a 'Schedule this object' button appears
+        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
+        self.assertIn('Schedule this Object',submit)

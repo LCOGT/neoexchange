@@ -1192,6 +1192,10 @@ def submit_block_to_scheduler(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
     request.add_window(window)
+#Create Cadence and add to Request
+    cadence = make_cadence(params)
+    logger.debug("Cadence=%s" % cadence)
+    request.add_cadence(cadence)
 # Create Molecule and add to Request
     molecule = make_molecule(params)
     try:
