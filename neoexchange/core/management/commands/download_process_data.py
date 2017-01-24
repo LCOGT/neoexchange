@@ -64,7 +64,7 @@ class Command(BaseCommand):
         objects = sort_rocks(fits_files)
 
 # Step 3: For each object:
-        for rock in objects[0:1]:
+        for rock in objects:
             datadir = os.path.join(dataroot, rock)
             self.stdout.write('Processing target %s in %s' % (rock, datadir))
 
