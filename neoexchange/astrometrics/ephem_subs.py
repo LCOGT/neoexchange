@@ -530,6 +530,25 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 
     return emp
 
+def determine_rates_pa(start_time, end_time, elements, site_code):
+    first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=True, display=True)
+    first_frame_speed = first_frame_emp[4]
+    first_frame_pa = first_frame_emp[7]
+
+    last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=True, display=True)
+    last_frame_speed = last_frame_emp[4]
+    last_frame_pa = last_frame_emp[7]
+
+    logger.debug("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
+    min_rate = min(first_frame_speed, last_frame_speed) - 0.01
+    max_rate = max(first_frame_speed, last_frame_speed) + 0.01
+    # This will probably go squirelly when close to 360.0...
+    pa = (first_frame_pa + last_frame_pa) / 2.0
+    deltapa = max(first_frame_pa,last_frame_pa) - min(first_frame_pa,last_frame_pa)
+    deltapa = max(10.0, deltapa)
+
+    return min_rate, max_rate, pa, deltapa
+
 def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False):
     '''Determine the times of darkness at the site specified by <site_code>
     for the date of [utc_date] (which defaults to UTC now if not given).

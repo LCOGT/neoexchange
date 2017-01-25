@@ -499,6 +499,76 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+class TestDetermineRatesAndPA(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+        self.body_elements = model_to_dict(self.body)
+
+        comet_params = { 'abs_mag': 11.1,
+                         'active': False,
+                         'arc_length': None,
+                         'argofperih': 12.796,
+                         'discovery_date': None,
+                         'eccentricity': 0.640872,
+                         'elements_type': u'MPC_COMET',
+                         'epochofel': datetime(2015, 8, 6, 0, 0),
+                         'epochofperih': datetime(2015, 8, 13, 2, 1, 19),
+                         'fast_moving': False,
+                         'ingest': datetime(2015, 10, 30, 20, 17, 53),
+                         'longascnode': 50.1355,
+                         'meananom': None,
+                         'meandist': 3.461895,
+                         'name': u'67P',
+                         'not_seen': None,
+                         'num_obs': None,
+                         'orbinc': 7.0402,
+                         'origin': u'M',
+                         'perihdist': 1.2432627,
+                         'provisional_name': u'',
+                         'provisional_packed': u'',
+                         'score': None,
+                         'slope': 4.8,
+                         'source_type': u'C',
+                         'update_time': None,
+                         'updated': False,
+                         'urgency': None}
+        self.comet, created = Body.objects.get_or_create(**comet_params)
+        self.comet_elements = model_to_dict(self.comet)
+
+        self.precision = 4
+
+    def test_neo_Q64(self):
+        expected_minrate = 2.531733441262908-0.01
+        expected_maxrate = 2.5546060130918056+0.01 
+        expected_pa = (92.46770128867529+92.49478201324034)/2.0
+        expected_deltapa = 10.0
+
+        start_time = datetime(2015, 4, 20, 1, 30, 0)
+        end_time = datetime(2015, 4, 20, 2, 00, 0)
+        site_code = 'Q64'
+        minrate, maxrate, pa, deltapa = determine_rates_pa(start_time, end_time, self.body_elements, site_code)
+
+        self.assertAlmostEqual(expected_minrate, minrate, self.precision)
+        self.assertAlmostEqual(expected_maxrate, maxrate, self.precision)
+        self.assertAlmostEqual(expected_pa, pa, self.precision)
+        self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
+
 class TestDetermineSlotLength(TestCase):
 
     def test_bad_site_code(self):

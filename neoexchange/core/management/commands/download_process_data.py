@@ -8,7 +8,7 @@ from django.forms import model_to_dict
 
 from core.models import Frame
 from core.management.commands import download_archive_data, pipeline_astrometry
-from astrometrics.ephem_subs import compute_ephem
+from astrometrics.ephem_subs import determine_rates_pa
 from photometrics.catalog_subs import get_fits_files, sort_rocks
 
 class Command(BaseCommand):
@@ -94,22 +94,7 @@ class Command(BaseCommand):
                 body = first_frame.block.body
                 if body.epochofel:
                     elements = model_to_dict(body)
-
-                    first_frame_emp = compute_ephem(first_frame.midpoint, elements, first_frame.sitecode, dbg=False, perturb=True, display=True)
-                    first_frame_speed = first_frame_emp[4]
-                    first_frame_pa = first_frame_emp[7]
-
-                    last_frame_emp = compute_ephem(last_frame.midpoint, elements, first_frame.sitecode, dbg=False, perturb=True, display=True)
-                    last_frame_speed = last_frame_emp[4]
-                    last_frame_pa = last_frame_emp[7]
-
-                    self.stdout.write("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
-                    min_rate = min(first_frame_speed, last_frame_speed) - 0.01
-                    max_rate = max(first_frame_speed, last_frame_speed) + 0.01
-                    # This will probably go squirelly when close to 360.0...
-                    pa = (first_frame_pa + last_frame_pa) / 2.0
-                    deltapa = max(first_frame_pa,last_frame_pa) - min(first_frame_pa,last_frame_pa)
-                    deltapa = max(10.0, deltapa)
+                    min_rate, max_rate, pa, deltapa = determine_rates_pa(first_frame.midpoint, last_frame.midpoint, elements, first_frame.sitecode)
 
 # Step 3c: Run pipeline_astrometry
                     mtdlink_options = ""
