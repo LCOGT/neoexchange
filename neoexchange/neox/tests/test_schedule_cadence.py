@@ -271,6 +271,10 @@ class ScheduleCadence(FunctionalTest):
         # The page refreshes and we get correct slot length and the Schedule button again
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('25.', slot_length)
+        jitter = self.browser.find_element_by_id('id_jitter').find_element_by_class_name('kv-value').text
+        self.assertIn('0.5', jitter)
+        period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
+        self.assertIn('3.0', period)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object',submit)
 
