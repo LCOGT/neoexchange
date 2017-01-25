@@ -551,6 +551,29 @@ class TestDetermineRatesAndPA(TestCase):
         self.comet, created = Body.objects.get_or_create(**comet_params)
         self.comet_elements = model_to_dict(self.comet)
 
+        close_params = { 'abs_mag': 25.8,
+                         'active': True,
+                         'arc_length': 0.03,
+                         'argofperih': 11.00531,
+                         'discovery_date': datetime(2017, 1, 24, 4, 48),
+                         'eccentricity': 0.5070757,
+                         'elements_type': u'MPC_MINOR_PLANET',
+                         'epochofel': datetime(2017, 1, 7, 0, 0),
+                         'epochofperih': None,
+                         'longascnode': 126.11232,
+                         'meananom': 349.70053,
+                         'meandist': 2.0242057,
+                         'orbinc': 12.91839,
+                         'origin': u'M',
+                         'perihdist': None,
+                         'provisional_name': u'P10yMB1',
+                         'slope': 0.15,
+                         'source_type': u'U',
+                         'updated': True,
+                         'urgency': None}
+        self.close, created = Body.objects.get_or_create(**close_params)
+        self.close_elements = model_to_dict(self.close)
+
         self.precision = 4
 
     def test_neo_Q64(self):
@@ -563,6 +586,22 @@ class TestDetermineRatesAndPA(TestCase):
         end_time = datetime(2015, 4, 20, 2, 00, 0)
         site_code = 'Q64'
         minrate, maxrate, pa, deltapa = determine_rates_pa(start_time, end_time, self.body_elements, site_code)
+
+        self.assertAlmostEqual(expected_minrate, minrate, self.precision)
+        self.assertAlmostEqual(expected_maxrate, maxrate, self.precision)
+        self.assertAlmostEqual(expected_pa, pa, self.precision)
+        self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
+
+    def test_close_neo_W86(self):
+        expected_minrate = 11.168352251337911 - 0.01
+        expected_maxrate = 11.235951320053525 + 0.01 
+        expected_pa = (359.4874655767052+(0.26203084523351095+360.0))/2.0
+        expected_deltapa = 10.0
+
+        start_time = datetime(2017, 1, 25, 7, 00, 0)
+        end_time = datetime(2017, 1, 25, 7, 50, 0)
+        site_code = 'W86'
+        minrate, maxrate, pa, deltapa = determine_rates_pa(start_time, end_time, self.close_elements, site_code)
 
         self.assertAlmostEqual(expected_minrate, minrate, self.precision)
         self.assertAlmostEqual(expected_maxrate, maxrate, self.precision)

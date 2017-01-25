@@ -542,8 +542,13 @@ def determine_rates_pa(start_time, end_time, elements, site_code):
     logger.debug("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
     min_rate = min(first_frame_speed, last_frame_speed) - 0.01
     max_rate = max(first_frame_speed, last_frame_speed) + 0.01
-    # This will probably go squirelly when close to 360.0...
+    # This will go squirelly when close to 360.0...
     pa = (first_frame_pa + last_frame_pa) / 2.0
+    # Check if mid point is between the extremes, otherwise a wrap at 360.0 has occurred
+    if pa < first_frame_pa and pa >= last_frame_pa:
+        logger.debug("Wrap has occurred")
+        last_frame_pa += 360.0
+        pa = (first_frame_pa + last_frame_pa) / 2.0
     deltapa = max(first_frame_pa,last_frame_pa) - min(first_frame_pa,last_frame_pa)
     deltapa = max(10.0, deltapa)
 
