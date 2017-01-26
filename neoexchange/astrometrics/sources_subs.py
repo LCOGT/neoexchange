@@ -30,6 +30,7 @@ from time import sleep
 from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest, NoRiseSetWindowsException
 from reqdb.utils.exceptions import InvalidArguments
+from reqdb.cadence import CadenceFactory
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
@@ -1072,22 +1073,6 @@ def make_window(params):
 
     return window
 
-def make_cadence(params):
-    '''Make a cadence. This is set to the start and end time from
-    params (i.e. the picked time with the best score plus the block length),
-    formatted into a string. This also includes a period and jitter.
-    Hopefully this will prevent rescheduling at a different time as the
-    co-ords will be wrong in that case...
-    The cadence also includes a period and jitter.'''
-    cadence = {
-              'start' : params['start_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-              'end'   : params['end_time'].strftime('%Y-%m-%dT%H:%M:%S'),
-              'period': params['period'], #Default is 2.0
-              'jitter': params['jitter'] #Default 0.25
-             }
-
-    return cadence
-
 def make_molecule(params):
     molecule = {
                 'exposure_count'  : params['exp_count'],
@@ -1122,8 +1107,46 @@ def make_constraints(params):
                     }
     return constraints
 
-def configure_defaults(params):
+def make_single(params, ipp_value, request):
+    '''Create a user_request for a single observation'''
 
+    user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
+    user_request.add_request(request)
+    user_request.operator = 'single'
+
+    proposal = make_proposal(params)
+    user_request.set_proposal(proposal)
+
+    return user_request
+
+def make_cadence(elements, params, ipp_value):
+    '''Create a user_request for a cadence observation'''
+
+    if len(elements) > 0:
+        logger.debug("Making a moving object")
+        target = make_moving_target(elements)
+    else:
+        logger.debug("Making a static object")
+        target = make_target(params)
+
+    factory = CadenceFactory()
+    factory.name = params['group_id']
+    factory.start = params['start_time'].strftime('%Y-%m-%d %H:%M:%S')
+    factory.end = params['end_time'].strftime('%Y-%m-%d %H:%M:%S')
+    factory.period = timedelta(seconds=params['period']*3600.0) # Interval between scheduled starts
+    factory.target = target
+    factory.proposal = make_proposal(params)
+    factory.add_molecule(make_molecule(params)) # You can add many molecules this way
+    factory.jitter = timedelta(seconds=params['jitter']*3600.0) #1hr of jitter is 30 min either side. defaults is 0
+    factory.location = make_location(params) # default is any 1m0 telescope
+    factory.constraints = make_constraints(params) # default has no constraints
+    factory.ipp_value = ipp_value
+
+    user_request = factory.build()
+
+    return user_request
+
+def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
                   'K92' : 'CPT',
@@ -1192,10 +1215,6 @@ def submit_block_to_scheduler(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
     request.add_window(window)
-#Create Cadence and add to Request
-    cadence = make_cadence(params)
-    logger.debug("Cadence=%s" % cadence)
-    request.add_cadence(cadence)
 # Create Molecule and add to Request
     molecule = make_molecule(params)
     try:
@@ -1214,17 +1233,16 @@ def submit_block_to_scheduler(elements, params):
     constraints = make_constraints(params)
     request.set_constraints(constraints)
 
-# Add the Request to the outer User Request
 # If site is ELP, increase IPP value
     ipp_value = 1.05
     if params['site_code'] == 'V37':
         ipp_value = 1.25
-    user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
-    user_request.add_request(request)
-    user_request.operator = 'single'
 
-    proposal = make_proposal(params)
-    user_request.set_proposal(proposal)
+# Add the Request to the outer User Request
+    if 'period' in params.keys() or 'jitter' in params.keys():
+        user_request = make_cadence(elements, params, ipp_value)
+    else:
+        user_request = make_single(params, ipp_value, request)
 
     logger.info("User Request=%s" % user_request)
 # Make an endpoint and submit the thing

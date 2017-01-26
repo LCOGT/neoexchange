@@ -149,6 +149,8 @@ class ScheduleCadence(FunctionalTest):
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
         self.assertIn('3.0', period)
+        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('kv-value').text
+        self.assertIn('2 / 0.75', cadence_cost)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
@@ -261,6 +263,8 @@ class ScheduleCadence(FunctionalTest):
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
         self.assertIn('3.0', period)
+        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('kv-value').text
+        self.assertIn('2 / 0.75', cadence_cost)
 
         # Bart wants to change the slot length and recalculate the number of exposures
         slot_length_box = self.browser.find_element_by_name('slot_length')
@@ -367,6 +371,8 @@ class ScheduleCadence(FunctionalTest):
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
         self.assertIn('3.0', period)
+        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('kv-value').text
+        self.assertIn('2 / 0.75', cadence_cost)
 
         # Bart wants to change the slot length so it is very short and recalculate the number of exposures
         slot_length_box = self.browser.find_element_by_name('slot_length')

@@ -14,6 +14,7 @@ GNU General Public License for more details.
 '''
 
 from datetime import datetime, timedelta
+from math import floor
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
@@ -383,6 +384,25 @@ def schedule_check(data, body, ok_to_schedule=True):
     period = data.get('period','')
     jitter = data.get('jitter','')
 
+    if period and jitter:
+        '''Number of times the cadence request will run between start and end date'''
+        cadence_start = data['start_time']
+        cadence_end = data['end_time']
+        total_run_time = cadence_end - cadence_start
+        cadence_period = timedelta(seconds=data['period']*3600.0)
+        total_requests = 1 + int(floor(total_run_time.total_seconds() / cadence_period.total_seconds()))
+        # Remove the last start if the request would run past the cadence end
+        if cadence_start + total_requests * cadence_period + timedelta(seconds=slot_length*60.0) > cadence_end:
+            total_requests -= 1
+
+        '''Total hours of time used by all cadence requests'''
+        total_time = timedelta(seconds=slot_length*60.0) * total_requests
+        total_time = total_time.total_seconds()/3600.0
+
+    suffix = datetime.strftime(utc_date, '%Y%m%d')
+    if period != '' and jitter != '':
+        suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
@@ -393,7 +413,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'schedule_ok': ok_to_schedule,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + suffix,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
@@ -403,6 +423,11 @@ def schedule_check(data, body, ok_to_schedule=True):
         'period' : period,
         'jitter' : jitter
     }
+
+    if period and jitter:
+        resp['num_times'] = total_requests
+        resp['total_time'] = total_time
+
     return resp
 
 
@@ -434,7 +459,7 @@ def schedule_submit(data, body, username):
               'end_time': data['end_time'],
               'group_id': data['group_id']
               }
-    if data.period or data.jitter:
+    if data['period'] or data['jitter']:
         params['period'] = data['period']
         params['jitter'] = data['jitter']
     # Check for pre-existing block

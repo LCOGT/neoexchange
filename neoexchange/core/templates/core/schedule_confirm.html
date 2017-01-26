@@ -89,6 +89,12 @@
                         <td class="kv-value">{{ data.period }}</td>
                     </tr>
                     {% endif %}
+                    {% if data.num_times and data.total_time %}
+                    <tr id="id_cadence_cost">
+                        <td class="kv-key">No. of repeats / Total time (hours)</td>
+                        <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         {% endif %}
