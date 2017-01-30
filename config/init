@@ -32,4 +32,5 @@ python /var/www/apps/neoexchange/manage.py migrate --noinput
 python /var/www/apps/neoexchange/manage.py collectstatic --noinput
 
 # Run under supervisord
-exec /usr/bin/supervisord -n -c /etc/supervisord.conf
+mkdir -p /var/log/supervisor/
+exec /usr/bin/supervisord -u root -n -c /etc/supervisord.conf
