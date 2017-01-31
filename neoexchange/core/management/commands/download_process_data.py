@@ -20,6 +20,7 @@ class Command(BaseCommand):
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default="LCO2016B-011", help='Proposal code to query for data (e.g. LCO2016B-011)')
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
+        parser.add_argument('--mtdlink_file_limit', action="store", default=8, help='Maximum number of images for running mtdlink')
 
 
     def handle(self, *args, **options):
@@ -99,7 +100,7 @@ class Command(BaseCommand):
 # Step 3c: Run pipeline_astrometry
                     mtdlink_options = ""
                     mtdlink_args = "datadir=%s pa=%03d deltapa=%03d minrate=%.3f maxrate=%.3f" % (datadir, pa, deltapa, min_rate, max_rate)
-                    if len(fits_files) > 8:
+                    if len(fits_files) > options['mtdlink_file_limit']:
                         self.stdout.write("Too many frames to run mtd_link")
                         mtdlink_options += "--skip-mtdlink"
                     self.stdout.write("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_options))
