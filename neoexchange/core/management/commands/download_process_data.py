@@ -21,6 +21,7 @@ class Command(BaseCommand):
         parser.add_argument('--proposal', action="store", default="LCO2016B-011", help='Proposal code to query for data (e.g. LCO2016B-011)')
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
         parser.add_argument('--mtdlink_file_limit', action="store", default=8, help='Maximum number of images for running mtdlink')
+        parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
 
 
     def handle(self, *args, **options):
@@ -103,6 +104,8 @@ class Command(BaseCommand):
                     if len(fits_files) > options['mtdlink_file_limit']:
                         self.stdout.write("Too many frames to run mtd_link")
                         mtdlink_options += "--skip-mtdlink"
+                    if options['keep_temp_dir']:
+                        mtdlink_options += " --keep-temp-dir"
                     self.stdout.write("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_options))
                     call_command('pipeline_astrometry', datadir, pa, deltapa, min_rate, max_rate, "--temp-dir", os.path.join(datadir, 'Temp'))
 
