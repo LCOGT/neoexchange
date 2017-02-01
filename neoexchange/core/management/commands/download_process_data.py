@@ -99,15 +99,26 @@ class Command(BaseCommand):
                     min_rate, max_rate, pa, deltapa = determine_rates_pa(first_frame.midpoint, last_frame.midpoint, elements, first_frame.sitecode)
 
 # Step 3c: Run pipeline_astrometry
-                    mtdlink_options = ""
                     mtdlink_args = "datadir=%s pa=%03d deltapa=%03d minrate=%.3f maxrate=%.3f" % (datadir, pa, deltapa, min_rate, max_rate)
+                    skip_mtdlink = False
+                    keep_temp_dir = False
                     if len(fits_files) > options['mtdlink_file_limit']:
                         self.stdout.write("Too many frames to run mtd_link")
-                        mtdlink_options += "--skip-mtdlink"
+                        skip_mtdlink= True
                     if options['keep_temp_dir']:
-                        mtdlink_options += " --keep-temp-dir"
-                    self.stdout.write("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_options))
-                    call_command('pipeline_astrometry', datadir, pa, deltapa, min_rate, max_rate, "--temp-dir", os.path.join(datadir, 'Temp'))
+                        keep_temp_dir = True
+# Compulsory arguments need to go here as a list
+                    mtdlink_args = [datadir, pa, deltapa, min_rate, max_rate]
+
+# Optional arguments go here, minus the leading double minus signs and with
+# hyphens replaced by underscores for...reasons.
+# e.g. '--keep-temp-dir' becomes 'temp_dir'
+                    mtdlink_kwargs = {  'temp_dir' : os.path.join(datadir, 'Temp'),
+                                        'skip_mtdlink' : skip_mtdlink,
+                                        'keep_temp_dir' : keep_temp_dir
+                                     }
+                    self.stdout.write("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_kwargs))
+                    call_command('pipeline_astrometry', *mtdlink_args , **mtdlink_kwargs)
 
                 else:
                     self.stderr.write("Object %s does not have updated elements" % body.current_name() )
