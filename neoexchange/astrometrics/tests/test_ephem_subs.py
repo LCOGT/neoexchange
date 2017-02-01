@@ -574,6 +574,37 @@ class TestDetermineRatesAndPA(TestCase):
         self.close, created = Body.objects.get_or_create(**close_params)
         self.close_elements = model_to_dict(self.close)
 
+        yark_params = {  'abs_mag': 24.7,
+                         'active': True,
+                         'arc_length': 2148.0,
+                         'argofperih': 169.66953,
+                         'discovery_date': datetime(2011, 3, 12, 0, 0),
+                         'eccentricity': 0.3077038,
+                         'elements_type': u'MPC_MINOR_PLANET',
+                         'epochofel': datetime(2017, 2, 16, 0, 0),
+                         'epochofperih': None,
+                         'fast_moving': False,
+                         'ingest': datetime(2017, 1, 31, 22, 52, 33, 38551),
+                         'longascnode': 160.05822,
+                         'meananom': 171.81857,
+                         'meandist': 0.8280978,
+                         'name': u'2011 EP51',
+                         'not_seen': 4.95316023288194,
+                         'num_obs': 34L,
+                         'orbinc': 3.4119,
+                         'origin': u'M',
+                         'perihdist': None,
+                         'provisional_name': None,
+                         'provisional_packed': None,
+                         'score': None,
+                         'slope': 0.15,
+                         'source_type': u'N',
+                         'update_time': datetime(2017, 1, 27, 0, 0),
+                         'updated': True,
+                         'urgency': None}
+        self.yark_target, created = Body.objects.get_or_create(**yark_params)
+        self.yark_elements = model_to_dict(self.yark_target)
+
         self.precision = 4
 
     def test_neo_Q64(self):
@@ -602,6 +633,22 @@ class TestDetermineRatesAndPA(TestCase):
         end_time = datetime(2017, 1, 25, 7, 50, 0)
         site_code = 'W86'
         minrate, maxrate, pa, deltapa = determine_rates_pa(start_time, end_time, self.close_elements, site_code)
+
+        self.assertAlmostEqual(expected_minrate, minrate, self.precision)
+        self.assertAlmostEqual(expected_maxrate, maxrate, self.precision)
+        self.assertAlmostEqual(expected_pa, pa, self.precision)
+        self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
+
+    def test_yark_target_bad_pa(self):
+        expected_minrate = 5.048257569072863  - 0.01
+        expected_maxrate = 5.072223332592448  + 0.01 
+        expected_pa = (295.5850631246814+295.56445469665186)/2.0
+        expected_deltapa = 10.0
+
+        start_time = datetime(2017, 1, 27, 13, 57, 0)
+        end_time =   datetime(2017, 1, 27, 14, 21, 0)
+        site_code = 'Q63'
+        minrate, maxrate, pa, deltapa = determine_rates_pa(start_time, end_time, self.yark_elements, site_code)
 
         self.assertAlmostEqual(expected_minrate, minrate, self.precision)
         self.assertAlmostEqual(expected_maxrate, maxrate, self.precision)

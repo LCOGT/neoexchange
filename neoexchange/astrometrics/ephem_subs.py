@@ -530,7 +530,30 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 
     return emp
 
+def make_unit_vector(angle):
+    '''Make a unit vector from the passed angle (in degrees).
+    The result is returned in a numpy array'''
+
+    return array([cos(radians(angle)), sin(radians(angle))])
+
+def average_angles(angle1, angle2):
+    '''Average two angles <angle1> <angle2> (in degrees) correctly.
+    The result is returned in degrees.'''
+
+    v1 = make_unit_vector(angle1)
+    v2 = make_unit_vector(angle2)
+    v = v1 + v2
+    average = degrees(atan2(v[1], v[0]))
+    if average < 0.0:
+        average += 360.0
+    return average
+
 def determine_rates_pa(start_time, end_time, elements, site_code):
+    '''Determine the minimum and maximum rates (in "/min) and the average
+    position angle (PA) and range of PA (delta PA) during the time
+    from <start_time> -> <end_time> for the body represented by <elements>
+    from the <site_code>'''
+
     first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=True, display=True)
     first_frame_speed = first_frame_emp[4]
     first_frame_pa = first_frame_emp[7]
@@ -542,14 +565,10 @@ def determine_rates_pa(start_time, end_time, elements, site_code):
     logger.debug("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
     min_rate = min(first_frame_speed, last_frame_speed) - 0.01
     max_rate = max(first_frame_speed, last_frame_speed) + 0.01
-    # This will go squirelly when close to 360.0...
-    pa = (first_frame_pa + last_frame_pa) / 2.0
-    # Check if mid point is between the extremes, otherwise a wrap at 360.0 has occurred
-    if pa < first_frame_pa and pa >= last_frame_pa:
-        logger.debug("Wrap has occurred")
-        last_frame_pa += 360.0
-        pa = (first_frame_pa + last_frame_pa) / 2.0
+    pa = average_angles(first_frame_pa, last_frame_pa)
     deltapa = max(first_frame_pa,last_frame_pa) - min(first_frame_pa,last_frame_pa)
+    if deltapa > 180.0:
+        deltapa = 360.0 - deltapa
     deltapa = max(10.0, deltapa)
 
     return min_rate, max_rate, pa, deltapa
