@@ -554,12 +554,16 @@ class CatalogSources(models.Model):
 
     def make_mu_max(self):
         pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
-        mu_max = (-2.5*log10(self.flux_max/pixel_scale**2))+self.frame.zeropoint
+        mu_max = 0.0
+        if self.flux_max > 0.0:
+            mu_max = (-2.5*log10(self.flux_max/pixel_scale**2))+self.frame.zeropoint
         return mu_max
 
     def make_mu_threshold(self):
         pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
-        mu_threshold = (-2.5*log10(self.threshold/pixel_scale**2))+self.frame.zeropoint
+        mu_threshold = 0.0
+        if self.threshold > 0.0:
+            mu_threshold = (-2.5*log10(self.threshold/pixel_scale**2))+self.frame.zeropoint
         return mu_threshold
 
     def make_flux(self):
