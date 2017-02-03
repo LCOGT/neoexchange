@@ -21,6 +21,7 @@ class Command(BaseCommand):
         parser.add_argument('blocknum', type=int, help='Block number to analyze')
         parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Boxwidth in arcsec to search')
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
+        parser.add_argument('--title', type=str, default=None, help='plot title')
 
     def plot_timeseries(self, times, mags, mag_errs, colors='r', title=''):
         fig, ax = plt.subplots()
@@ -89,5 +90,8 @@ class Command(BaseCommand):
                     mags.append(best_source.obs_mag)
                     mag_errs.append(best_source.err_obs_mag)
   
-            plot_title = '%s from %s (%s) on %s' % (block.body.current_name(), block.site.upper(), frame.sitecode, block.when_observed.strftime("%Y-%m-%d"))
+            if options['title'] == None:
+                plot_title = '%s from %s (%s) on %s' % (block.body.current_name(), block.site.upper(), frame.sitecode, block.when_observed.strftime("%Y-%m-%d"))
+            else:
+                plot_title = options['title']
             self.plot_timeseries(times, mags, mag_errs, title=plot_title)
