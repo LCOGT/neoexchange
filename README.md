@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using LCOGT
 
 ## History
 
+### 1.6.7.1
+
+Lower the default IPP values. Round arc and not-seen values on the home page.
+
 ### 1.6.7
 
 Trap the submission of objects that have no visibility windows.
