@@ -90,8 +90,8 @@
                     <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
                     <td data-label="Mag">{{body.v_mag|floatformat:1 }}</td>
                     <td data-label="Num Obs">{{body.num_obs}}</td>
-                    <td data-label="Arc">{{body.arc_length}}</td>
-                    <td data-label="Not seen">{{body.not_seen}}</td>
+                    <td data-label="Arc">{{body.arc_length|floatformat:2}}</td>
+                    <td data-label="Not seen">{{body.not_seen|floatformat:3}}</td>
                     <td data-label="NEOCP Score">{{body.score}}</td>
                     <td data-label="Updated?">
                     {% if body.updated %}

@@ -41,6 +41,37 @@ class NewVisitorTest(FunctionalTest):
                     }
         self.body2, created = Body.objects.get_or_create(pk=2, **params)
 
+    def insert_local_test_body(self):
+        params = { 'abs_mag': 17.78,
+                   'active': True,
+                   'arc_length': 1.07083333333333,
+                   'argofperih': 171.83095,
+                   'discovery_date': datetime(2017, 2, 1, 4, 19, 24),
+                   'eccentricity': 0.1401049,
+                   'elements_type': u'MPC_MINOR_PLANET',
+                   'epochofel': datetime(2017, 2, 2, 0, 0),
+                   'epochofperih': None,
+                   'ingest': datetime(2017, 2, 1, 5, 52, 58),
+                   'longascnode': 292.00508,
+                   'meananom': 27.74632,
+                   'meandist': 3.0862545,
+                   'name': u'',
+                   'not_seen': 0.918786862824074,
+                   'num_obs': 16L,
+                   'orbinc': 15.46491,
+                   'origin': u'L',
+                   'perihdist': None,
+                   'provisional_name': u'LSCTLGm',
+                   'provisional_packed': u'',
+                   'score': 2L,
+                   'slope': 0.15,
+                   'source_type': u'U',
+                   'update_time': datetime(2017, 2, 2, 22, 3, 3),
+                   'updated': True,
+                   'urgency': None}
+
+        self.body3, created = Body.objects.get_or_create(pk=3, **params)
+
     @patch('core.models.datetime', MockDateTime)
     def test_homepage_has_ranking(self):
 
@@ -81,3 +112,43 @@ class NewVisitorTest(FunctionalTest):
         self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Object: ' + self.body.current_name(), header_text)
+
+    @patch('core.models.datetime', MockDateTime)
+    def test_homepage_rounds_arc_notseen(self):
+
+        MockDateTime.change_datetime(2017, 2, 1, 17, 0, 0)
+        self.insert_local_test_body()
+        self.insert_extra_test_body()
+
+        #Matt has heard about a new website that provides a ranked list of NEOs for follow-up.
+
+        #He goes to the homepage for the website and expects to see this ranked list of NEOs.
+        self.browser.get(self.live_server_url)
+        self.assertIn('Home | LCO NEOx', self.browser.title)
+        self.check_for_header_in_table('id_neo_targets',\
+            'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
+        # Position below computed for 2017-02-01 17:00:00
+        testlines =[u'1 LSCTLGm Candidate 09 27 30.78 +03 05 24.6 21.6 16 1.07 0.919 2',]
+        self.check_for_row_in_table('id_neo_targets', testlines[0])
+        # Because we can't find the Updated icon with a simple text search
+        # we look for the data-label for 'Updated?'
+        updated_statuses = ['true',]
+        data_label = 'Updated?'
+        self.check_icon_status_elements('id_neo_targets', data_label, updated_statuses)
+
+        #He clicks on the top ranked NEO and is taken to a page that has more information on the object.
+        link = self.browser.find_element_by_link_text('LSCTLGm')
+        body_url = self.live_server_url + reverse('target',kwargs={'pk': self.body3.pk})
+        self.assertIn(link.get_attribute('href'), body_url)
+
+        # He clicks the link and is taken to a page with the targets' details.
+        link.click()
+        self.browser.implicitly_wait(3)
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), body_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions the current target
+        self.assertIn(self.body3.current_name() + ' details | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Object: ' + self.body3.current_name(), header_text)
