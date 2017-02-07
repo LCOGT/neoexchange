@@ -1,6 +1,6 @@
 ################################################################################
 #
-# Runs the LCOGT Python Django NEO Exchange webapp using nginx + uwsgi
+# Runs the LCO Python Django NEO Exchange webapp using nginx + uwsgi
 #
 # The decision to run both nginx and uwsgi in the same container was made because
 # it avoids duplicating all of the Python code and static files in two containers.
@@ -31,7 +31,7 @@
 #
 ################################################################################
 FROM centos:centos7
-MAINTAINER LCOGT <webmaster@lcogt.net>
+MAINTAINER LCOGT <webmaster@lco.global>
 
 # nginx runs on port 80, uwsgi is linked in the nginx conf
 EXPOSE 80
@@ -50,7 +50,7 @@ ENV PREFIX /neoexchange
 # Install packages and update base system
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
-        && yum -y install supervisor libssl libffi libffi-devel \
+        && yum -y install supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
         && yum -y groupinstall "Development Tools" \
         && yum -y update \
         && yum clean all
@@ -58,13 +58,13 @@ RUN yum -y install epel-release \
 # Setup our python env now so it can be cached
 COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 
+# Install the LCO NEO exchange Python required packages
 # Upgrade pip first
-# Install the LCOGT NEO exchange Python required packages
-# Then the LCOGT packages which have to be installed after the normal pip install
-# numpy needs to be explicitly installed first otherwise pySLALIB (pulled in by newer reqdbclient) fails
-# with a missing numpy.distutils.core reference for...reasons...
+# Then the LCO packages which have to be installed after the normal pip install
+# numpy needs to be explicitly installed first otherwise pySLALIB (pulled in by 
+# newer reqdbclient) fails with a missing numpy.distutils.core reference 
+# for...reasons...
 RUN pip install --upgrade pip \
-    && pip install uwsgi==2.0.8 \
     && pip install numpy \
     && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt
 
@@ -80,5 +80,5 @@ COPY config/crontab.root /var/spool/cron/root
 # Copy configuration files
 COPY config/init /init
 
-# Copy the LCOGT NEOexchange webapp files
+# Copy the LCO NEOexchange webapp files
 COPY neoexchange /var/www/apps/neoexchange

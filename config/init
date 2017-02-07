@@ -28,9 +28,9 @@ EOF
 chmod +x /var/www/apps/neoexchange/cronwrapper
 
 # Setup the LCOGT NEOx webapp
+chown -R uwsgi:uwsgi /var/www/apps/neoexchange
 python /var/www/apps/neoexchange/manage.py migrate --noinput
 python /var/www/apps/neoexchange/manage.py collectstatic --noinput
 
 # Run under supervisord
-mkdir -p /var/log/supervisor/
-exec /usr/bin/supervisord -u root -n -c /etc/supervisord.conf
+exec /usr/bin/supervisord -n -c /etc/supervisord.conf
