@@ -45,7 +45,7 @@ class EphemQuery(forms.Form):
 
     def clean_target(self):
         name = self.cleaned_data['target']
-        body = Body.objects.filter(Q(provisional_name__contains = name )|Q(provisional_packed__contains = name)|Q(name__contains = name))
+        body = Body.objects.filter(Q(provisional_name__startswith = name )|Q(provisional_packed__startswith = name)|Q(name__startswith = name))
         if body.count() == 1 :
             return body[0]
         elif body.count() == 0:
