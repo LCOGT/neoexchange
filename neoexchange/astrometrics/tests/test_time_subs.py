@@ -21,7 +21,7 @@ from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from astrometrics.time_subs import jd_utc2datetime, dttodecimalday, \
-    degreestohms, parse_neocp_date, get_semester_dates
+    degreestohms, parse_neocp_date, get_semester_dates, get_semester_code
 
 class TestJD2datetime(TestCase):
 
@@ -261,3 +261,13 @@ class TestGetSemesterDates(TestCase):
 
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
+
+class TestGetSemesterCode(TestCase):
+
+    def test_2015A(self):
+        date = datetime(2015, 7, 1, 17, 0, 0)
+        expected_code = '2015A'
+
+        semester_code = get_semester_code(date)
+
+        self.assertEqual(expected_code, semester_code)

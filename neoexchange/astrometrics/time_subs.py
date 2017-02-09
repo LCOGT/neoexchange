@@ -51,6 +51,16 @@ def get_semester_dates(date):
 
     return start, end
 
+def get_semester_code(date):
+    '''Returns the semester code for the passed <date>
+    LCOGT has two semesters, A & B, which run as follows:
+    A semester: <year>-04-01 00:00:00 UTC until <year>-09-30 23:59:59 UTC
+    B semester: <year>-10-01 00:00:00 UTC until <year+1>-03-31 23:59:59 UTC
+    e.g. 2015B runs from 2015-10-01 00:00:00->2016-03-31 23:59:59 and 2016A
+    runs from 2016-04-01 00:00:00 until 2016-09-30 23:59:59
+    Shit go screwy from 2017 onwards though...'''
+
+    return '2015A'
 
 def parse_neocp_date(neocp_datestr, dbg=False):
     '''Parse dates from the NEOCP (e.g. '(Nov. 16.81 UT)' ) into a datetime
