@@ -38,7 +38,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates
+    parse_neocp_decimal_date, get_semester_dates, get_semester_code
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
 from core.frames import create_frame, fetch_observations, ingest_frames
 import logging
@@ -88,6 +88,21 @@ def home(request):
     params = build_unranked_list_params()
     return render(request, 'core/home.html', params)
 
+
+class FollowupSummary(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        followup_summary = summarise_followup()
+        return render(request, 'core/followup_summary.html', {'current_semester' : followup_summary })
+
+def summarise_followup(time = datetime.utcnow()):
+
+    semester_code = get_semester_code(time)
+    semester_start, semester_end = get_semester_dates(time)
+    
+    semester_summary = { 'semester_code' : semester_code, 
+                       }
+    return semester_summary
 
 class BlockTimeSummary(LoginRequiredMixin, View):
 

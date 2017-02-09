@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block header %}Followup Summary{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Followup Summary</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <!-- Main body -->
+    <div class="container" id="main">
+            <div class="row">
+                <div class="eight columns">
+                    <h5 class="section-title">Followup Summary for the current and previous semesters</h5>
+                    <table class="keyvalue-table" id="id_currentsemester">
+                        <thead>
+                            <th>Followup for {{current_semester.semester_code}}</th>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="kv-key">Number of candidates</td>
+                                <td class="kv-value">{{current_semester.num_cands}}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Site</td>
+                                <td class="kv-value">{{current_semester.site|upper}}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Proposal</td>
+                                <td class="kv-value">{{current_semester.proposal.title}} ({{current_semester.proposal.code}})</td>
+                            </tr>
+                      </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+{% endblock %}
