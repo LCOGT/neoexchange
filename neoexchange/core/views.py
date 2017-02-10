@@ -99,8 +99,17 @@ def summarise_followup(time = datetime.utcnow()):
 
     semester_code = get_semester_code(time)
     semester_start, semester_end = get_semester_dates(time)
+
+    bodies = Body.objects.filter(ingest__range=(semester_start, semester_end), origin='M')
+    asteroids = bodies.filter(source_type = 'A')
+    neos = bodies.filter(source_type = 'N')
+    didnotexist = bodies.filter(source_type = 'X')
     
-    semester_summary = { 'semester_code' : semester_code, 
+    semester_summary = { 'semester_code' : semester_code,
+                         'num_cands' : bodies.count(),
+                         'num_asts' : asteroids.count(),
+                         'num_neos' : neos.count(),
+                         'num_didnotexist' : didnotexist.count(),
                        }
     return semester_summary
 
