@@ -128,7 +128,9 @@ class FollowUpSummaryTest(FunctionalTest):
         # He notices that there is a table of values for the current semester
         self.check_for_header_in_table('id_currentsemester', 'Followup for 2015A')
         
-        testlines = [u'NUMBER OF CANDIDATES ' + str(self.num_cands),
+        testlines = [u'PROPOSAL '+ unicode(self.neo_proposal.title),
+                     u'PROPOSAL CODE ' + unicode(self.neo_proposal.code),
+                     u'NUMBER OF CANDIDATES ' + str(self.num_cands),
                      u'NUMBER OF ASTEROIDS ' + str(self.num_asts),
                      u'NUMBER OF NEOS '  + str(self.num_neos),
                      u'NUMBER THAT DID NOT EXIST '  + str(self.num_dne)]

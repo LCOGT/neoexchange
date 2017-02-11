@@ -23,6 +23,14 @@
                         </thead>
                         <tbody>
                             <tr>
+                                <td class="kv-key">Proposal</td>
+                                <td class="kv-value">{{current_semester.proposal.title}}</td>
+                            </tr>
+                            <tr>
+                                <td class="kv-key">Proposal code</td>
+                                <td class="kv-value">{{current_semester.proposal.code}}</td>
+                            </tr>
+                            <tr>
                                 <td class="kv-key">Number of candidates</td>
                                 <td class="kv-value">{{current_semester.num_cands}}</td>
                             </tr>
@@ -37,10 +45,6 @@
                             <tr>
                                 <td class="kv-key">Number that did not exist</td>
                                 <td class="kv-value">{{current_semester.num_didnotexist}}</td>
-                            </tr>
-                            <tr>
-                                <td class="kv-key">Proposal</td>
-                                <td class="kv-value">{{current_semester.proposal.title}} ({{current_semester.proposal.code}})</td>
                             </tr>
                       </tbody>
                     </table>
