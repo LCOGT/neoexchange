@@ -271,3 +271,11 @@ class TestGetSemesterCode(TestCase):
         semester_code = get_semester_code(date)
 
         self.assertEqual(expected_code, semester_code)
+
+    def test_2016B(self):
+        date = datetime(2017, 2, 1, 17, 0, 0)
+        expected_code = '2016B'
+
+        semester_code = get_semester_code(date)
+
+        self.assertEqual(expected_code, semester_code)

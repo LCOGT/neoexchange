@@ -60,7 +60,11 @@ def get_semester_code(date):
     runs from 2016-04-01 00:00:00 until 2016-09-30 23:59:59
     Shit go screwy from 2017 onwards though...'''
 
-    return '2015A'
+    semester = 'A'
+    if date.month >= 10 or date.month < 4:
+        date = date - timedelta(days=365)
+        semester = 'B'    
+    return str(date.year) + semester
 
 def parse_neocp_date(neocp_datestr, dbg=False):
     '''Parse dates from the NEOCP (e.g. '(Nov. 16.81 UT)' ) into a datetime
