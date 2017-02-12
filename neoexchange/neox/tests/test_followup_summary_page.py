@@ -148,6 +148,6 @@ class FollowUpSummaryTest(FunctionalTest):
                      u'NUMBER OF BLOCKS OBSERVED '  + unicode(self.num_blocks_obs),
                      u'NUMBER OF BLOCKS REPORTED '  + unicode(self.num_blocks_reported),
                      u'NUMBER OF BLOCKS DUPLICATED ' + unicode(self.num_blocks_duplicated),
-                     u'AVERAGE TIME TO BLOCKS REPORTED ' + unicode(self.avg_lag)]
+                     u'AVERAGE TIME TO BLOCKS REPORTED ' + unicode(self.avg_lag) + u' hours']
         for line in testlines:
             self.check_for_row_in_table('id_currentsemester', line)
