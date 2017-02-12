@@ -132,8 +132,11 @@ def summarise_followup(time = datetime.utcnow()):
     num_blocks = blocks.count()
     num_blocks_obs = blocks.filter(num_observed__gte=1).count()
     num_blocks_duplicated = blocks.filter(num_observed__gte=2).count()
-    num_blocks_reported = blocks.filter(reported=True).count()
+    num_blocks_reported = blocks.filter(num_observed__gte=1, reported=True).count()
 
+    neo_blocks = blocks.filter(body__source_type='N')
+    num_neo_blocks_obs = neo_blocks.filter(num_observed__gte=1).count()
+    num_neo_blocks_reported = neo_blocks.filter(num_observed__gte=1, reported=True).count()
 
     semester_summary = { 'semester_code' : semester_code,
                          'proposal' : proposal[0],
@@ -145,7 +148,9 @@ def summarise_followup(time = datetime.utcnow()):
                          'num_blocks_observed' : num_blocks_obs,
                          'num_blocks_reported' : num_blocks_reported,
                          'num_blocks_duplicated' : num_blocks_duplicated,
-                         'avg_lag' : lag_summary['lag_average']
+                         'avg_lag' : lag_summary['lag_average'],
+                         'num_neo_blocks_observed' : num_neo_blocks_obs,
+                         'num_neo_blocks_reported' : num_neo_blocks_reported,
                        }
     return semester_summary
 

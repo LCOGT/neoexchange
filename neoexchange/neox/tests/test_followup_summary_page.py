@@ -70,11 +70,13 @@ class FollowUpSummaryTest(FunctionalTest):
         self.blocks = Block.objects.filter(block_start__range=(semester_start, semester_end),\
             block_end__range=(semester_start, semester_end), body__origin='M')
         self.num_blocks = self.blocks.count()
-        self.num_blocks_obs = self.blocks.filter(num_observed__gte=1).count()
+        self.blocks_obs = self.blocks.filter(num_observed__gte=1)
+        self.num_blocks_obs = self.blocks_obs.count()
+        self.num_blocks_reported = self.blocks_obs.filter(reported=True).count()
         self.num_blocks_duplicated = self.blocks.filter(num_observed__gte=2).count()
-        self.num_blocks_reported = self.blocks.filter(reported=True).count()
         self.avg_lag = 12.3
-
+        self.num_neo_blocks_obs = self.blocks_obs.filter(body__source_type='N').count()
+        self.num_neo_blocks_reported = self.blocks_obs.filter(body__source_type='N', reported=True).count()
         print "Blocks=", self.num_blocks, self.num_blocks_obs, self.num_blocks_duplicated, self.num_blocks_reported
 
 # The test proposal and blocks are for 2015A so we need to mock and wind back 
@@ -148,6 +150,8 @@ class FollowUpSummaryTest(FunctionalTest):
                      u'NUMBER OF BLOCKS OBSERVED '  + unicode(self.num_blocks_obs),
                      u'NUMBER OF BLOCKS REPORTED '  + unicode(self.num_blocks_reported),
                      u'NUMBER OF BLOCKS DUPLICATED ' + unicode(self.num_blocks_duplicated),
-                     u'AVERAGE TIME TO BLOCKS REPORTED ' + unicode(self.avg_lag) + u' hours']
+                     u'AVERAGE TIME TO BLOCKS REPORTED ' + unicode(self.avg_lag) + u' hours',
+                     u'NUMBER OF NEO BLOCKS OBSERVED '  + unicode(self.num_neo_blocks_obs),
+                     u'NUMBER OF NEO BLOCKS REPORTED '  + unicode(self.num_neo_blocks_reported)]
         for line in testlines:
             self.check_for_row_in_table('id_currentsemester', line)
