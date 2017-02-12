@@ -14,7 +14,7 @@ GNU General Public License for more details.
 '''
 
 from datetime import datetime, timedelta
-from django.db.models import Q
+from django.db.models import Q, ExpressionWrapper, F, fields, Avg, Min, Max
 from django.forms.models import model_to_dict
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -95,6 +95,26 @@ class FollowupSummary(LoginRequiredMixin, View):
         followup_summary = summarise_followup()
         return render(request, 'core/followup_summary.html', {'current_semester' : followup_summary })
 
+def calculate_report_lag(blocks):
+    '''Calculates the minimum, maximum and average lag time between when a Block
+    was observed and when it was reported. Takes a QuerySet of Blocks and returns
+    a dictionary of the minimum, maximum and average lag time (in hours by
+    default).'''
+
+    # Produce a new lag Field of DurationField (timedelta) type by subtracting
+    # the two other fields
+    lag = ExpressionWrapper(F('when_reported') - F('when_observed'), output_field=fields.DurationField())
+    # Filter out any Blocks from the passed QS what haven't been observed or
+    # reported and then annotate with the new lag field and perform the
+    # aggregations.
+    lag_stats = blocks.filter(when_observed__isnull=False, reported=True).annotate(lag=lag).aggregate(Avg('lag'), Min('lag'), Max('lag'))
+    units = 3600.0 # Results in hours
+    lag_summary = { 'lag_average' : lag_stats['lag__avg'].total_seconds() / units,
+                    'lag_min'     : lag_stats['lag__min'].total_seconds() / units,
+                    'lag_max'     : lag_stats['lag__max'].total_seconds() / units
+                  }
+    return lag_summary
+
 def summarise_followup(time = datetime.utcnow()):
 
     semester_code = get_semester_code(time)
@@ -105,13 +125,27 @@ def summarise_followup(time = datetime.utcnow()):
     asteroids = bodies.filter(source_type = 'A')
     neos = bodies.filter(source_type = 'N')
     didnotexist = bodies.filter(source_type = 'X')
-    
+
+    blocks = Block.objects.filter(block_start__range=(semester_start, semester_end),\
+       block_end__range=(semester_start, semester_end), body__origin='M')
+    lag_summary = calculate_report_lag(blocks)
+    num_blocks = blocks.count()
+    num_blocks_obs = blocks.filter(num_observed__gte=1).count()
+    num_blocks_duplicated = blocks.filter(num_observed__gte=2).count()
+    num_blocks_reported = blocks.filter(reported=True).count()
+
+
     semester_summary = { 'semester_code' : semester_code,
                          'proposal' : proposal[0],
                          'num_cands' : bodies.count(),
                          'num_asts' : asteroids.count(),
                          'num_neos' : neos.count(),
                          'num_didnotexist' : didnotexist.count(),
+                         'num_blocks' : num_blocks,
+                         'num_blocks_observed' : num_blocks_obs,
+                         'num_blocks_reported' : num_blocks_reported,
+                         'num_blocks_duplicated' : num_blocks_duplicated,
+                         'avg_lag' : lag_summary['lag_average']
                        }
     return semester_summary
 

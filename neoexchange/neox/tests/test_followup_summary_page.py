@@ -8,7 +8,7 @@ from selenium import webdriver
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_rbauth_login
 from astrometrics.time_subs import get_semester_dates
-from core.models import Body
+from core.models import Body, Block
 
 class FollowUpSummaryTest(FunctionalTest):
 
@@ -65,12 +65,22 @@ class FollowUpSummaryTest(FunctionalTest):
         self.num_dne = self.bodies.filter(source_type='X').count()
         self.assertEqual(0, self.num_dne)
 
-        print self.num_cands, self.num_asts, self.num_neos, self.num_dne
+        print "Cands=", self.num_cands, self.num_asts, self.num_neos, self.num_dne
+
+        self.blocks = Block.objects.filter(block_start__range=(semester_start, semester_end),\
+            block_end__range=(semester_start, semester_end), body__origin='M')
+        self.num_blocks = self.blocks.count()
+        self.num_blocks_obs = self.blocks.filter(num_observed__gte=1).count()
+        self.num_blocks_duplicated = self.blocks.filter(num_observed__gte=2).count()
+        self.num_blocks_reported = self.blocks.filter(reported=True).count()
+        self.avg_lag = 12.3
+
+        print "Blocks=", self.num_blocks, self.num_blocks_obs, self.num_blocks_duplicated, self.num_blocks_reported
 
 # The test proposal and blocks are for 2015A so we need to mock and wind back 
 # time to have the correct semester code come out.
     @patch('core.models.datetime', MockDateTime)
-    def test_can_view_block_summary(self):
+    def test_can_view_followup_summary(self):
 
         MockDateTime.change_datetime(self.summary_date.year, self.summary_date.month,
             self.summary_date.day, self.summary_date.hour, self.summary_date.minute,
@@ -130,9 +140,14 @@ class FollowUpSummaryTest(FunctionalTest):
         
         testlines = [u'PROPOSAL '+ unicode(self.neo_proposal.title),
                      u'PROPOSAL CODE ' + unicode(self.neo_proposal.code),
-                     u'NUMBER OF CANDIDATES ' + str(self.num_cands),
-                     u'NUMBER OF ASTEROIDS ' + str(self.num_asts),
-                     u'NUMBER OF NEOS '  + str(self.num_neos),
-                     u'NUMBER THAT DID NOT EXIST '  + str(self.num_dne)]
+                     u'NUMBER OF CANDIDATES ' + unicode(self.num_cands),
+                     u'NUMBER OF ASTEROIDS ' + unicode(self.num_asts),
+                     u'NUMBER OF NEOS '  + unicode(self.num_neos),
+                     u'NUMBER THAT DID NOT EXIST '  + unicode(self.num_dne),
+                     u'NUMBER OF BLOCKS REQUESTED ' + unicode(self.num_blocks),
+                     u'NUMBER OF BLOCKS OBSERVED '  + unicode(self.num_blocks_obs),
+                     u'NUMBER OF BLOCKS REPORTED '  + unicode(self.num_blocks_reported),
+                     u'NUMBER OF BLOCKS DUPLICATED ' + unicode(self.num_blocks_duplicated),
+                     u'AVERAGE TIME TO BLOCKS REPORTED ' + unicode(self.avg_lag)]
         for line in testlines:
             self.check_for_row_in_table('id_currentsemester', line)
