@@ -125,6 +125,7 @@ def summarise_followup(time = datetime.utcnow()):
     asteroids = bodies.filter(source_type = 'A')
     neos = bodies.filter(source_type = 'N')
     didnotexist = bodies.filter(source_type = 'X')
+    discoveries = Body.objects.filter(ingest__range=(semester_start, semester_end), origin='L', source_type='D')
 
     blocks = Block.objects.filter(block_start__range=(semester_start, semester_end),\
        block_end__range=(semester_start, semester_end), body__origin='M')
@@ -144,6 +145,7 @@ def summarise_followup(time = datetime.utcnow()):
                          'num_asts' : asteroids.count(),
                          'num_neos' : neos.count(),
                          'num_didnotexist' : didnotexist.count(),
+                         'num_discoveries' : discoveries.count(),
                          'num_blocks' : num_blocks,
                          'num_blocks_observed' : num_blocks_obs,
                          'num_blocks_reported' : num_blocks_reported,

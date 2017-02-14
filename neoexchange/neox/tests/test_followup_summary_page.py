@@ -64,6 +64,8 @@ class FollowUpSummaryTest(FunctionalTest):
         self.assertEqual(1, self.num_neos)
         self.num_dne = self.bodies.filter(source_type='X').count()
         self.assertEqual(0, self.num_dne)
+        self.discoveries = Body.objects.filter(ingest__range=(semester_start, semester_end), origin='L',source_type='D')
+        self.num_discovery = self.discoveries.count()
 
         print "Cands=", self.num_cands, self.num_asts, self.num_neos, self.num_dne
 
@@ -146,6 +148,7 @@ class FollowUpSummaryTest(FunctionalTest):
                      u'NUMBER OF ASTEROIDS ' + unicode(self.num_asts),
                      u'NUMBER OF NEOS '  + unicode(self.num_neos),
                      u'NUMBER THAT DID NOT EXIST '  + unicode(self.num_dne),
+                     u'NUMBER OF DISCOVERIES '      + unicode(self.num_discovery),
                      u'NUMBER OF BLOCKS REQUESTED ' + unicode(self.num_blocks),
                      u'NUMBER OF BLOCKS OBSERVED '  + unicode(self.num_blocks_obs),
                      u'NUMBER OF BLOCKS REPORTED '  + unicode(self.num_blocks_reported),
