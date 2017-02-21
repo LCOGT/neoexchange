@@ -22,12 +22,14 @@ class Command(BaseCommand):
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
         parser.add_argument('--mtdlink_file_limit', action="store", default=8, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
+        parser.add_argument('--object', action="store", help="Which object to analyze")
 
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --data-dir [path]" % ( argv[1] )
 
 
+        print options
         if type(options['date']) != datetime:
             try:
                 obs_date = datetime.strptime(options['date'], '%Y%m%d')
@@ -67,6 +69,8 @@ class Command(BaseCommand):
 
 # Step 3: For each object:
         for rock in objects:
+            if options['object'] not in rock:
+                continue
             datadir = os.path.join(dataroot, rock)
             self.stdout.write('Processing target %s in %s' % (rock, datadir))
 
