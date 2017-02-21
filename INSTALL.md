@@ -64,7 +64,7 @@ Docker
 ------
 If you are building a Docker container use the following syntax:
 ```bash
-docker build -t docker.lcogt.net/neoexchange:latest .
+docker build --pull -t docker.lcogt.net/neoexchange:latest .
 ```
 This will build a Docker image which will need to be pushed into a Docker registry with:
 ```bash
