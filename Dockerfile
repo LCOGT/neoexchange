@@ -49,9 +49,9 @@ ENV PREFIX /neoexchange
 
 # Install packages and update base system
 RUN yum -y install epel-release \
-        && yum -y install cronie libjpeg-devel nginx python-pip mysql-devel python-devel \
-        && yum -y install supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
-        && yum -y groupinstall "Development Tools" \
+        && yum -y install cronie libjpeg-devel nginx python-pip python-devel \
+                supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
+                MySQL-python gcc gcc-gfortran openssl-devel \
         && yum -y update \
         && yum clean all
 
