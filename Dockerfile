@@ -30,7 +30,7 @@
 # docker-compose up -d
 #
 ################################################################################
-FROM centos:centos7
+FROM centos:7
 MAINTAINER LCOGT <webmaster@lco.global>
 
 # nginx runs on port 80, uwsgi is linked in the nginx conf
