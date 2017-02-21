@@ -1249,6 +1249,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
 
 def store_detections(mtdsfile, dbg=False):
 
+    num_candidates = 0
     moving_objects = read_mtds_file(mtdsfile)
     if moving_objects != {} and len(moving_objects.get('detections', [])) > 0:
         det_frame = moving_objects['frames'][0]
@@ -1307,8 +1308,10 @@ def store_detections(mtdsfile, dbg=False):
                 if dbg: print params
                 cand, created = Candidate.objects.get_or_create(**params)
                 if dbg: print cand, created
+                if created:
+                    num_candidates += 1
 
-    return
+    return num_candidates
 
 def make_plot(request):
 

@@ -132,7 +132,9 @@ class Command(BaseCommand):
             if len(fits_file_list) > 0:
                 mtds_file = os.path.join(temp_dir, fits_file_list[0].replace('.fits', '.mtds'))
                 if os.path.exists(mtds_file):
-                    store_detections(mtds_file,dbg=False)
+                    num_cands_or_status = store_detections(mtds_file,dbg=False)
+                    if num_cands_or_status:
+                        self.stdout.write("Created %d Candidates" % num_cands_or_status)
                 else:
                     self.stdout.write("Cannot find the MTDS output file  %s" % mtds_file)
         else:
