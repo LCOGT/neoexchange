@@ -33,6 +33,7 @@ from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
+from astrometrics.time_subs import timeit
 from core.models import CatalogSources, Frame
 
 logger = logging.getLogger(__name__)
@@ -951,6 +952,7 @@ def update_frame_zeropoint(header, phot_cat_name, frame_filename, frame_type):
 
     return frame
 
+@timeit
 def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name = "UCAC4", ast_cat_name="2MASS"):
 
     num_new_frames_created = 0
