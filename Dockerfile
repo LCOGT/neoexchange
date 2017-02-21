@@ -71,14 +71,8 @@ RUN pip install --upgrade pip \
 # Ensure crond will run on all host operating systems
 RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
 
-# Copy configuration files
-COPY config/uwsgi.ini /etc/uwsgi.ini
-COPY config/nginx/* /etc/nginx/
-COPY config/processes.ini /etc/supervisord.d/processes.ini
-COPY config/crontab.root /var/spool/cron/root
-
-# Copy configuration files
-COPY config/init /init
+# Copy operating system configuration files
+COPY docker/ /
 
 # Copy the LCO NEOexchange webapp files
 COPY neoexchange /var/www/apps/neoexchange
