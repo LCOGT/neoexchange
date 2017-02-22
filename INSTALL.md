@@ -64,11 +64,11 @@ Docker
 ------
 If you are building a Docker container use the following syntax:
 ```bash
-docker build --pull -t docker.lcogt.net/neoexchange:latest .
+docker build --pull -t docker.lco.global/neoexchange:latest .
 ```
 This will build a Docker image which will need to be pushed into a Docker registry with:
 ```bash
-docker push docker.lcogt.net/neoexchange:latest
+docker push docker.lco.global/neoexchange:latest
 ```
 Starting a Docker container from this image can be done with a `docker run` command or using `docker-compose`.
 
