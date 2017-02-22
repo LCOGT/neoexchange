@@ -29,7 +29,7 @@ class Command(BaseCommand):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --data-dir [path]" % ( argv[1] )
 
 
-        print options
+        print(options)
         if type(options['date']) != datetime:
             try:
                 obs_date = datetime.strptime(options['date'], '%Y%m%d')
@@ -54,7 +54,7 @@ class Command(BaseCommand):
                 raise CommandError(msg)
 
 # Step 1: Download data
-            
+
         self.stdout.write("Download data for %s from %s" % ( obs_date, proposal ))
         call_command('download_archive_data', '--date', obs_date, '--proposal', proposal, '--datadir', dataroot )
 
@@ -66,6 +66,7 @@ class Command(BaseCommand):
         fits_files = get_fits_files(dataroot)
         self.stdout.write("Found %d FITS files in %s" % (len(fits_files), dataroot) )
         objects = sort_rocks(fits_files)
+        print(objects)
 
 # Step 3: For each object:
         for rock in objects:
