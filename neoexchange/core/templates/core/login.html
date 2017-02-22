@@ -45,14 +45,22 @@ $(document).ready(function(){
 					<form action="{% url 'auth_login' %}" method="post"  id="login-form" class="customForm" >
 						{% csrf_token %}
 						<div class="row">
-							<label for="username">Username/Email Address:</label>
-							<input type="text" name="username" value="{% if form.username.value %}{{ form.username.value }}{% endif %}" id="email">
-							<div class="red">{{form.username.errors.as_text}}</div>
+							<div class="four columns">
+								<label for="username">Username/Email Address:</label>
+							</div>
+							<div class="eight columns">
+								<input type="text" name="username" value="{% if form.username.value %}{{ form.username.value }}{% endif %}" id="email">
+								<div class="red">{{form.username.errors.as_text}}</div>
+							</div>
 						</div>
 						<div class="row">
+							<div class="four columns">
 							<label for="password">Password:</label>
+						</div>
+						<div class="eight columns">
 							<input type="password" name="password" value="" id="password">
 							<div class="red">{{form.password.errors.as_text}}</div>
+						</div>
 						</div>
 						<input type="hidden" name="next" value="{{ next }}">
 						<div class="row">

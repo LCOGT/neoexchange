@@ -52,8 +52,8 @@ def find_images_for_block(blockid):
     Look up Frames and Candidates in Block.
     Output all candidates coords for each frame for Light Monitor to display
     '''
-    frames = Frame.objects.filter(block__id=blockid, filename__isnull=False).order_by('midpoint')
-    candidates = candidates_by_block(blockid,frames.count())
+    frames = Frame.objects.filter(block__id=blockid, filename__isnull=False, frameid__isnull=False).order_by('midpoint')
+    candidates = candidates_by_block(blockid)
     img_list = []
     if not frames:
         return False
@@ -64,7 +64,7 @@ def find_images_for_block(blockid):
     frames_list = [{'img':str(f.frameid)} for f in frames]
     return frames_list, candidates, x_size, y_size
 
-def candidates_by_block(blockid, num_frames):
+def candidates_by_block(blockid):
     targets = []
     cands = Candidate.objects.filter(block__id=blockid).order_by('score')
     for cand in cands:
