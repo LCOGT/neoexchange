@@ -69,11 +69,14 @@ def candidates_by_block(blockid):
     cands = Candidate.objects.filter(block__id=blockid).order_by('score')
     for cand in cands:
         coords = []
+        sky_coords = []
         dets = cand.unpack_dets()
-        d_zip = zip(dets['frame_number'], dets['x'], dets['y'])
+        d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'], dets['mag'])
         for a in d_zip:
             coords.append({'x':a[1], 'y':a[2]})
-        targets.append({'id': str(cand.id), 'coords':coords})
+            sky_coords.append({'ra':a[3], 'dec':a[4], 'mag':a[5]})
+        motion = {'speed' : cand.convert_speed(), 'speed_raw' : cand.speed, 'pos_angle' : cand.sky_motion_pa}
+        targets.append({'id': str(cand.id), 'coords':coords, 'sky_coords':sky_coords, 'motion':motion})
     return targets
 
 
