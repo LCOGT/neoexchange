@@ -32,6 +32,9 @@ function setUp(){
           }
       }
   });
+  for (var i = 0; i < candidates.length; i++) {
+    candids.push(candidates[i]['id']);
+  }
 
   stage = new createjs.Stage("imgCanvas");
   ministage = new createjs.Stage("zoomCanvas");
@@ -242,7 +245,8 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
       addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
     }
   }else{
-    target = candidates[cand_index].coords[ind-1];
+    var id = candids.indexOf(String(cand_index))
+    target = candidates[id].coords[ind-1];
     name = "target_" + cand_index;
     addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
     zoomImage(target.x/image_scale, target.y/image_scale);

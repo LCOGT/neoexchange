@@ -72,7 +72,7 @@ def analyser_to_source_measurement(block, cand_ids):
     if not frames:
         return False
     for cand_id in cand_ids:
-        cand = Candidate.objects.get(block=block, cand_id=cand_id)
+        cand = Candidate.objects.get(pk=cand_id)
         detections = cand.unpack_dets()
         if len(detections) != frames.count():
             return False
