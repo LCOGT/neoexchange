@@ -868,11 +868,11 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
 
     # Write out new catalog file
     new_fits_catalog = fits_catalog
-    to_clobber = True
+    to_overwrite = True
     if overwrite != True:
         new_fits_catalog = new_fits_catalog + '.new'
-        to_clobber = False
-    hdulist.writeto(new_fits_catalog, checksum=True, clobber=to_clobber)
+        to_overwrite = False
+    hdulist.writeto(new_fits_catalog, checksum=True, overwrite=to_overwrite)
     return status
 
 def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):

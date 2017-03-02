@@ -348,7 +348,7 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
             if 'MJD' not in header :
                 mjd = header['MJD-OBS'] + (0.5*header['exptime']/86400.0)
                 header.insert('MJD-OBS', ('MJD', mjd, '[UTC days] Start date/time (Modified Julian Dat'), after=True)
-                fits.writeto(f, data, header, clobber=True, checksum=True)
+                fits.writeto(f, data, header, overwrite=True, checksum=True)
         else:
             logger.error("Could not find fits file in PATH")
             return -43
@@ -491,7 +491,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
         header.insert('CUNIT1', ('CUNIT2', cunit2, 'Unit of 2nd axis'), after=True)
 
     # Need to force the CHECKSUM to be recomputed. Trap for young players..
-    fits.writeto(fits_file_output, data, header, clobber=True, checksum=True)
+    fits.writeto(fits_file_output, data, header, overwrite=True, checksum=True)
 
     return 0
 
