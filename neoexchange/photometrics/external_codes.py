@@ -22,7 +22,7 @@ import warnings
 
 from astropy.io import fits
 from astropy.io.votable import parse
-from numpy import loadtxt, split
+from numpy import loadtxt, split, empty
 
 from core.models import detections_array_dtypes
 from astrometrics.time_subs import timeit
@@ -536,7 +536,13 @@ def read_mtds_file(mtdsfile, dbg=False):
 
     dtypes = detections_array_dtypes()
 
-    dets_array = loadtxt(mtds_fh, dtype=dtypes)
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', UserWarning)
+        try:
+            dets_array = loadtxt(mtds_fh, dtype=dtypes)
+        except Exception as e:
+            logger.warn("Didn't find any detections in file %s (Reason %s)" % (mtdsfile, e))
+            dets_array = empty( shape=(0, 0) )
 
     # Check for correct number of entries
     if dbg: print dets_array.shape
