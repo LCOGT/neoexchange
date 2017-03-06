@@ -106,7 +106,7 @@ function drag(evt) {
     evt.target.x = evt.stageX;
     evt.target.y = evt.stageY;
     stage.update();
-    updateTarget(evt.currentTarget.name, evt.currentTarget.x, evt.currentTarget.y);
+    // updateTarget(evt.currentTarget.name, evt.currentTarget.x, evt.currentTarget.y);
     zoomImage(evt.currentTarget.x, evt.currentTarget.y);
 }
 
@@ -119,6 +119,7 @@ function updateTarget(name, x, y) {
   } else {
     target_id = target_name[1];
   }
+  console.log(target_id)
   var target = frames[index].candidates[target_id];
   target.x = x;
   target.y = y;
