@@ -151,13 +151,28 @@
 									<li class='green'>
 										<span class="block-status-item" ><i class="fa fa-check"></i></span>
 										<span class='block-status-item' id="cand-accept" data-cand_id="">Accept</span>
-								</li>
-								<li class='red'>
-									<span class="block-status-item" ><i class="fa fa-times"></i></span>
-									<span class='block-status-item' id="cand-reject" data-cand_id="">Reject</span>
-							</li>
-						</ul>
-					</div>
+									</li>
+									<li class='red'>
+										<span class="block-status-item" ><i class="fa fa-times"></i></span>
+										<span class='block-status-item' id="cand-reject" data-cand_id="">Reject</span>
+									</li>
+								</ul>
+
+								<div id="candidate-info" style="display:none;">
+									<table class="keyvalue-table">
+										<tbody>
+											<tr>
+												<td class="kv-key"></td>
+												<td class="kv-value"></td>
+											</tr>
+											<tr>
+												<td class="kv-key"></td>
+												<td class="kv-value"></td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
         </div>
 				{% else %}
 				<h3 class="section-title">Looking for {{object.body.current_name}}</h3>

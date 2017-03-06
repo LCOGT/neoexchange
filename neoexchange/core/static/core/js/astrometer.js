@@ -76,14 +76,14 @@ function updateStatus(){
 function nextImage() {
   var next_i = index +1;
   if (next_i <= frames.length){
-    changeImage(next_i);
+    changeImage(next_i, allcandidates=true);
   }
 }
 
 function prevImage() {
   var prev_i = index -1;
   if (prev_i >= 0){
-    changeImage(prev_i);
+    changeImage(prev_i, allcandidates=true);
   }
 }
 
@@ -106,7 +106,7 @@ function drag(evt) {
     evt.target.x = evt.stageX;
     evt.target.y = evt.stageY;
     stage.update();
-    updateTarget(evt.currentTarget.name, evt.currentTarget.x, evt.currentTarget.y);
+    // updateTarget(evt.currentTarget.name, evt.currentTarget.x, evt.currentTarget.y);
     zoomImage(evt.currentTarget.x, evt.currentTarget.y);
 }
 
@@ -156,10 +156,11 @@ function rejectCandidate(cand_id){
   }
 }
 
-function startBlink(cand_index=0, allcandidates=false) {
+function startBlink(candid, allcandidates=false) {
+  var index=0;
   blinker = setInterval(function() {
     index++;
-    changeImage (index, cand_index, allcandidates);
+    changeImage (index, cand_index=candid, allcandidates);
   }, 500);
   $('#blink-stop').show();
   $('#blink-start').hide();
@@ -240,13 +241,13 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
 
   if (allcandidates){
     for (var i=0; i <candidates.length;i++) {
-      target = candidates[i].coords[ind-1];
+      target = candidates[i].coords[index];
       name = "target_" + i;
       addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
     }
   }else{
     var id = candids.indexOf(String(cand_index))
-    target = candidates[id].coords[ind-1];
+    target = candidates[id].coords[index];
     name = "target_" + cand_index;
     addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
     zoomImage(target.x/image_scale, target.y/image_scale);
@@ -274,7 +275,7 @@ function loadThumbnails(frames){
       image.src = resp;
     });
     // Once all URLs are stored change to the first image
-    changeImage(0);
+    changeImage(0, candids[0]);
   });
   return
 }
