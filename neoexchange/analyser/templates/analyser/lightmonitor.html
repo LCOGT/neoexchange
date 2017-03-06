@@ -23,7 +23,7 @@
 	var accepted = Array();
 	var rejected = Array();
 	var data_url = 'https://thumbnails.lco.global/';
-	var img_params = '?width=1000&height=1000';
+	var img_params = '?width=1000&height=1000&median=true&percentile=98';
 	var analysed = {% if analysed %}true{% else %}false{% endif %};
 
 	$(document).ready(function(){

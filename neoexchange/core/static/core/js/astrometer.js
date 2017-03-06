@@ -119,6 +119,7 @@ function updateTarget(name, x, y) {
   } else {
     target_id = target_name[1];
   }
+  console.log(target_id)
   var target = frames[index].candidates[target_id];
   target.x = x;
   target.y = y;

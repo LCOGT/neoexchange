@@ -868,11 +868,11 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
 
     # Write out new catalog file
     new_fits_catalog = fits_catalog
-    to_clobber = True
+    to_overwrite = True
     if overwrite != True:
         new_fits_catalog = new_fits_catalog + '.new'
-        to_clobber = False
-    hdulist.writeto(new_fits_catalog, checksum=True, clobber=to_clobber)
+        to_overwrite = False
+    hdulist.writeto(new_fits_catalog, checksum=True, overwrite=to_overwrite)
     return status
 
 def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
@@ -1075,7 +1075,7 @@ def make_sext_file_line(sext_params):
 
     return sext_line
 
-def make_sext_dict_list(new_catalog, catalog_type):
+def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
     '''create a list of dictionary entries for
     creating the .sext files needed for mtdlink'''
 
@@ -1093,13 +1093,34 @@ def make_sext_dict_list(new_catalog, catalog_type):
         fits_filename_path = new_catalog
 
     #May need to filter objects within 5 pixels of frame edge as does in cleansex.tcl
-    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0)
+    try:
+        frame = Frame.objects.get(filename=real_fits_filename)
+        edge_trim_limit, num_x_pixels, num_y_pixels = get_trim_limit(frame, edge_trim_limit)
+    except Frame.MultipleObjectsReturned:
+        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % (fits_file))
+        return -3, -3
+    except Frame.DoesNotExist:
+        logger.error("Frame entry for fits file %s does not exist" % fits_file)
+        return -3, -3
+    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0, obs_x__gt=edge_trim_limit, obs_x__lt=num_x_pixels-edge_trim_limit, obs_y__gt=edge_trim_limit, obs_y__lt=num_y_pixels-edge_trim_limit)
     num_iter = 1
     for source in sources:
         sext_dict_list.append(make_sext_dict(source, num_iter))
         num_iter += 1
 
     return sext_dict_list, fits_filename_path
+
+def get_trim_limit(frame, edge_trim_limit):
+    '''determine if the image is a square 1-m image and trim
+    or if the image is a non-square 0.4-m image and don't trim'''
+
+    num_x_pixels = frame.get_x_size()
+    num_y_pixels = frame.get_y_size()
+    if abs(num_x_pixels-num_y_pixels) < 10.0:
+        edge_trim_limit = edge_trim_limit
+    else:
+        edge_trim_limit = 0.0
+    return edge_trim_limit, num_x_pixels, num_y_pixels
 
 def make_sext_line_list(sext_dict_list):
     '''sort the list of dictionary entries and

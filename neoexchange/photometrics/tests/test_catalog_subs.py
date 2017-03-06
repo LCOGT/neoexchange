@@ -2116,6 +2116,10 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def setUp(self):
 
+        # Hand-rolled WCS for pickling testing
+        self.naxis_header = {'NAXIS1' : 4096, 'NAXIS2' : 4096, 'NAXIS' :2}
+        self.w = WCS(self.naxis_header)
+
         frame_params = {    'sitecode':'V37',
                             'instrument':'fl05',
                             'filter':'w',
@@ -2129,6 +2133,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'frametype':0,
                             'rms_of_fit':None,
                             'nstars_in_fit':10.0,
+                            'wcs':self.w
                         }
 
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
@@ -2167,6 +2172,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'frametype':0,
                             'rms_of_fit':None,
                             'nstars_in_fit':3.0,
+                            'wcs':self.w
                         }
 
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params)
@@ -2193,6 +2199,48 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.test_cat_src_2, created = CatalogSources.objects.get_or_create(**source_params)
 
         source_params = {   'frame':self.test_frame_2,
+                            'obs_x': 886.244640655,
+                            'obs_y': 4078.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_3, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_2,
+                            'obs_x': 4086.244640655,
+                            'obs_y': 178.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_4, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_2,
                             'obs_x': 708.002750723,
                             'obs_y': 1960.00075651,
                             'obs_ra': 218.164206491,
@@ -2211,7 +2259,113 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'flux_max': 4937.96289062,
                             'threshold': 28.2903823853
                         }
-        self.test_cat_src_3, created = CatalogSources.objects.get_or_create(**source_params)
+        self.test_cat_src_5, created = CatalogSources.objects.get_or_create(**source_params)
+
+        # Hand-rolled WCS for pickling testing
+        self.naxis_header2 = {'NAXIS1' : 1500, 'NAXIS2' : 2000, 'NAXIS' :2}
+        self.w2 = WCS(self.naxis_header2)
+
+        frame_params = {    'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'ldac_test_catalog.fits',
+                            'exptime':115.0,
+                            'midpoint':datetime(2016, 4, 28, 20, 11, 54),
+                            'block':None,
+                            'zeropoint':27.7305864552,
+                            'zeropoint_err':0.0776317342309,
+                            'fwhm':2.886,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':3.0,
+                            'wcs':self.w2
+                        }
+
+        self.test_frame_3, created = Frame.objects.get_or_create(**frame_params)
+
+        source_params = {   'frame':self.test_frame_3,
+                            'obs_x': 886.244640655,
+                            'obs_y': 18.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_6, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_3,
+                            'obs_x': 886.244640655,
+                            'obs_y': 1078.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_7, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_3,
+                            'obs_x': 1086.244640655,
+                            'obs_y': 178.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_8, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_3,
+                            'obs_x': 708.002750723,
+                            'obs_y': 1960.00075651,
+                            'obs_ra': 218.164206491,
+                            'obs_dec': 9.64089784636,
+                            'obs_mag': 18.4867630005,
+                            'err_obs_ra': 0.0000016381997233,
+                            'err_obs_dec': 0.0000016349852456,
+                            'err_obs_mag': 0.00311457808129,
+                            'background': 43.1037330627,
+                            'major_axis': 0.651648461819,
+                            'minor_axis': 0.648237645626,
+                            'position_angle': 7.21760177612,
+                            'ellipticity': 0.00523412227631,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 4937.96289062,
+                            'threshold': 28.2903823853
+                        }
+        self.test_cat_src_9, created = CatalogSources.objects.get_or_create(**source_params)
 
     def test_dictionary_creation(self):
 
@@ -2271,24 +2425,9 @@ class MakeSEXTFileTest(FITSUnitTest):
 
         self.assertEqual(sext_line, test_line)
 
-    def test_multiple_sources_sext_dict(self):
+    def test_multiple_sources_sext_dict_trimmed(self):
 
         test_dict_first = { 'number':1,
-                            'obs_x':886.245,
-                            'obs_y':18.211,
-                            'obs_mag':16.2081,
-                            'theta':-77.62,
-                            'elongation':1.00,
-                            'fwhm':3.34,
-                            'flags':0,
-                            'deltamu':3.9049,
-                            'flux':40643.1,
-                            'area':8.7652,
-                            'ra':218.14304,
-                            'dec':9.89449
-                          }
-
-        test_dict_last = {  'number':2,
                             'obs_x':708.003,
                             'obs_y':1960.001,
                             'obs_mag':18.4868,
@@ -2308,6 +2447,8 @@ class MakeSEXTFileTest(FITSUnitTest):
 
         sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename, catalog_type)
 
+        self.assertEqual(len(sext_dict_list), 1)
+
         self.assertEqual(sext_dict_list[0]['number'], test_dict_first['number'])
         self.assertAlmostEqual(sext_dict_list[0]['obs_x'], test_dict_first['obs_x'], 3)
         self.assertAlmostEqual(sext_dict_list[0]['obs_y'], test_dict_first['obs_y'], 3)
@@ -2322,6 +2463,117 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_dict_list[0]['ra'], test_dict_first['ra'], 5)
         self.assertAlmostEqual(sext_dict_list[0]['dec'], test_dict_first['dec'], 5)
 
+    def test_multiple_sources_sext_dict_untrimmed(self):
+
+        test_dict_first = { 'number':1,
+                            'obs_x':886.245,
+                            'obs_y':18.211,
+                            'obs_mag':16.2081,
+                            'theta':-77.62,
+                            'elongation':1.00,
+                            'fwhm':3.34,
+                            'flags':0,
+                            'deltamu':3.9049,
+                            'flux':40643.1,
+                            'area':8.7652,
+                            'ra':218.14304,
+                            'dec':9.89449
+                          }
+
+        test_dict_middle1 = { 'number':2,
+                              'obs_x':886.245,
+                              'obs_y':1078.211,
+                              'obs_mag':16.2081,
+                              'theta':-77.62,
+                              'elongation':1.00,
+                              'fwhm':3.34,
+                              'flags':0,
+                              'deltamu':3.9049,
+                              'flux':40643.1,
+                              'area':8.7652,
+                              'ra':218.14304,
+                              'dec':9.89449
+                           }
+
+        test_dict_middle2 = { 'number':3,
+                              'obs_x':1086.245,
+                              'obs_y':178.211,
+                              'obs_mag':16.2081,
+                              'theta':-77.62,
+                              'elongation':1.00,
+                              'fwhm':3.34,
+                              'flags':0,
+                              'deltamu':3.9049,
+                              'flux':40643.1,
+                              'area':8.7652,
+                              'ra':218.14304,
+                              'dec':9.89449
+                           }
+
+        test_dict_last = {  'number':4,
+                            'obs_x':708.003,
+                            'obs_y':1960.001,
+                            'obs_mag':18.4868,
+                            'theta':7.218,
+                            'elongation':1.005,
+                            'fwhm':1.30,
+                            'flags':0,
+                            'deltamu':5.605,
+                            'flux':4983.4,
+                            'area':1.3271,
+                            'ra':218.16421,
+                            'dec':9.64090
+                         }
+
+        cat_ldacfilename = os.path.join(os.path.sep, 'photometrics', 'tests', 'ldac_test_catalog.fits')
+        catalog_type = 'FITS_LDAC'
+
+        sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename, catalog_type)
+
+        self.assertEqual(len(sext_dict_list), 4)
+
+        self.assertEqual(sext_dict_list[0]['number'], test_dict_first['number'])
+        self.assertAlmostEqual(sext_dict_list[0]['obs_x'], test_dict_first['obs_x'], 3)
+        self.assertAlmostEqual(sext_dict_list[0]['obs_y'], test_dict_first['obs_y'], 3)
+        self.assertAlmostEqual(sext_dict_list[0]['obs_mag'], test_dict_first['obs_mag'], 4)
+        self.assertAlmostEqual(sext_dict_list[0]['theta'], test_dict_first['theta'], 1)
+        self.assertAlmostEqual(sext_dict_list[0]['elongation'], test_dict_first['elongation'], 3)
+        self.assertAlmostEqual(sext_dict_list[0]['fwhm'], test_dict_first['fwhm'], 2)
+        self.assertEqual(sext_dict_list[0]['flags'], test_dict_first['flags'])
+        self.assertAlmostEqual(sext_dict_list[0]['deltamu'], test_dict_first['deltamu'], 3)
+        self.assertAlmostEqual(sext_dict_list[0]['flux'], test_dict_first['flux'], 1)
+        self.assertAlmostEqual(sext_dict_list[0]['area'], test_dict_first['area'], 4)
+        self.assertAlmostEqual(sext_dict_list[0]['ra'], test_dict_first['ra'], 5)
+        self.assertAlmostEqual(sext_dict_list[0]['dec'], test_dict_first['dec'], 5)
+
+        self.assertEqual(sext_dict_list[1]['number'], test_dict_middle1['number'])
+        self.assertAlmostEqual(sext_dict_list[1]['obs_x'], test_dict_middle1['obs_x'], 3)
+        self.assertAlmostEqual(sext_dict_list[1]['obs_y'], test_dict_middle1['obs_y'], 3)
+        self.assertAlmostEqual(sext_dict_list[1]['obs_mag'], test_dict_middle1['obs_mag'], 4)
+        self.assertAlmostEqual(sext_dict_list[1]['theta'], test_dict_middle1['theta'], 1)
+        self.assertAlmostEqual(sext_dict_list[1]['elongation'], test_dict_middle1['elongation'], 3)
+        self.assertAlmostEqual(sext_dict_list[1]['fwhm'], test_dict_middle1['fwhm'], 2)
+        self.assertEqual(sext_dict_list[1]['flags'], test_dict_middle1['flags'])
+        self.assertAlmostEqual(sext_dict_list[1]['deltamu'], test_dict_middle1['deltamu'], 3)
+        self.assertAlmostEqual(sext_dict_list[1]['flux'], test_dict_middle1['flux'], 1)
+        self.assertAlmostEqual(sext_dict_list[1]['area'], test_dict_middle1['area'], 4)
+        self.assertAlmostEqual(sext_dict_list[1]['ra'], test_dict_middle1['ra'], 5)
+        self.assertAlmostEqual(sext_dict_list[1]['dec'], test_dict_middle1['dec'], 5)
+
+        self.assertEqual(sext_dict_list[2]['number'], test_dict_middle2['number'])
+        self.assertAlmostEqual(sext_dict_list[2]['obs_x'], test_dict_middle2['obs_x'], 3)
+        self.assertAlmostEqual(sext_dict_list[2]['obs_y'], test_dict_middle2['obs_y'], 3)
+        self.assertAlmostEqual(sext_dict_list[2]['obs_mag'], test_dict_middle2['obs_mag'], 4)
+        self.assertAlmostEqual(sext_dict_list[2]['theta'], test_dict_middle2['theta'], 1)
+        self.assertAlmostEqual(sext_dict_list[2]['elongation'], test_dict_middle2['elongation'], 3)
+        self.assertAlmostEqual(sext_dict_list[2]['fwhm'], test_dict_middle2['fwhm'], 2)
+        self.assertEqual(sext_dict_list[2]['flags'], test_dict_middle2['flags'])
+        self.assertAlmostEqual(sext_dict_list[2]['deltamu'], test_dict_middle2['deltamu'], 3)
+        self.assertAlmostEqual(sext_dict_list[2]['flux'], test_dict_middle2['flux'], 1)
+        self.assertAlmostEqual(sext_dict_list[2]['area'], test_dict_middle2['area'], 4)
+        self.assertAlmostEqual(sext_dict_list[2]['ra'], test_dict_middle2['ra'], 5)
+        self.assertAlmostEqual(sext_dict_list[2]['dec'], test_dict_middle2['dec'], 5)
+
         self.assertEqual(sext_dict_list[-1]['number'], test_dict_last['number'])
         self.assertAlmostEqual(sext_dict_list[-1]['obs_x'], test_dict_last['obs_x'], 3)
         self.assertAlmostEqual(sext_dict_list[-1]['obs_y'], test_dict_last['obs_y'], 3)
@@ -2335,8 +2587,6 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_dict_list[-1]['area'], test_dict_last['area'], 4)
         self.assertAlmostEqual(sext_dict_list[-1]['ra'], test_dict_last['ra'], 5)
         self.assertAlmostEqual(sext_dict_list[-1]['dec'], test_dict_last['dec'], 5)
-
-        self.assertEqual(len(sext_dict_list), 2)
 
     def test_make_sext_line_list(self):
 
@@ -2376,26 +2626,3 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertEqual(len(sext_line_list), 2)
         self.assertEqual(sext_line_list[0], test_line_list[0])
         self.assertEqual(sext_line_list[-1], test_line_list[1])
-
-
-class TestMakeSEXTFile(ExternalCodeUnitTest):
-
-    def test_make_sext_file(self):
-
-        expected_first_line =  '       405      5.959    800.006  20.7902  -89.1       1.070      0.63   0  2.82          597.2     0 218.25847   9.79143'
-        expected_second_line = '        98      6.019   1641.004  19.9684  -84.8       1.005      0.58   0  4.16         1273.2     0 218.25739   9.68169'
-
-        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
-        catalog_type = 'FITS_LDAC'
-
-        fits_filename = make_sext_file(self.test_dir, cat_ldacfilename, catalog_type)
-
-        sext_file = os.path.join(self.test_dir, fits_filename.replace('.fits', '.sext'))
-        self.assertTrue(os.path.exists(sext_file))
-        test_file = open(sext_file, 'r')
-        test_lines = test_file.readlines()
-        test_file.close()
-
-        self.assertEqual(692, len(test_lines))
-        self.assertEqual(expected_first_line, test_lines[0].rstrip())
-        self.assertEqual(expected_second_line, test_lines[1].rstrip())

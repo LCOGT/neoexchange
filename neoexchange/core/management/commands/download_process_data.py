@@ -70,8 +70,10 @@ class Command(BaseCommand):
 
 # Step 3: For each object:
         for rock in objects:
-            if options['object'] not in rock:
-                continue
+# Skip if a specific object was specified on the commandline and this isn't it
+            if options['object'] != None:
+                if options['object'] not in rock:
+                    continue
             datadir = os.path.join(dataroot, rock)
             self.stdout.write('Processing target %s in %s' % (rock, datadir))
 
