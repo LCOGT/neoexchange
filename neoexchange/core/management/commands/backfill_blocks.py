@@ -11,7 +11,7 @@ from core.frames import block_status
 
 class Command(BaseCommand):
 
-    help = 'Download and pipeline process data from the LCO Archive'
+    help = 'Hacky command to create Body, Block and Frames for downloaded data'
 
     def add_arguments(self, parser):
         default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
@@ -74,5 +74,11 @@ class Command(BaseCommand):
                         block_status(new_block.id)
                     else:
                         self.stdout.write("Could not find Body from FITS data (OBJECT=%s)" % name)
+                elif len(blocks) == 1:
+                    old_block = blocks[0]
+                    frames = Frame.objects.filter(block=old_block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
+                    if len(fits_files) > frames.count():
+                        self.stdout.write("Updating status of Block #%d (found %d FITS files, know of %d Frames in DB" % (old_block.id,len(fits_files), frames.count()))
+                        block_status(old_block.id)
             else:
                 self.stdout.write("Could not obtain tracking number (did this bypass the scheduler!?")
