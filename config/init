@@ -27,7 +27,13 @@ EOF
 # Make cron wrapper executable
 chmod +x /var/www/apps/neoexchange/cronwrapper
 
+# Setup locations for AstroPy's config and caches
+mkdir -p /var/www/apps/astropyconfig/astropy
+mkdir -p /var/www/apps/astropycache/astropy
+chown -R uwsgi:uwsgi /var/www/apps/astropy*
+
 # Setup the LCOGT NEOx webapp
+chown -R uwsgi:uwsgi /var/www/apps/neoexchange
 python /var/www/apps/neoexchange/manage.py migrate --noinput
 python /var/www/apps/neoexchange/manage.py collectstatic --noinput
 

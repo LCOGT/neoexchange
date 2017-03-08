@@ -14,6 +14,19 @@ GNU General Public License for more details.
 '''
 import os
 
+# Astropy needs to write config and cache files into its home directory. When
+# running under uwsgi and the uwsgi user, it doesn't have a home (aaah). Need
+# to set environment variables to give these files somewhere to go.
+
+try:
+    envvars = {    
+        'XDG_CONFIG_HOME': '/var/www/apps/astropyconfig',
+        'XDG_CACHE_HOME' : '/var/www/apps/astropycache'
+    }
+    os.environ.update(envvars)
+except:
+    pass
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "neox.settings")
 
 # This application object is used by any WSGI server configured to use this

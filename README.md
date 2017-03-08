@@ -1,12 +1,16 @@
 # NEO Exchange
 
-Portal for scheduling observations of NEOs using LCOGT
+Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
 ### 1.7.0
 
 Astrometry in the browser
+
+### 1.6.7.1
+
+Lower the default IPP values. Round arc and not-seen values on the home page.
 
 ### 1.6.7
 

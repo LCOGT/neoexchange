@@ -1184,9 +1184,9 @@ def submit_block_to_scheduler(elements, params):
 
 # Add the Request to the outer User Request
 # If site is ELP, increase IPP value
-    ipp_value = 1.05
+    ipp_value = 1.00
     if params['site_code'] == 'V37':
-        ipp_value = 1.25
+        ipp_value = 1.00
     user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
     user_request.add_request(request)
     user_request.operator = 'single'
