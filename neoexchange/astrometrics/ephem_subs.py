@@ -563,8 +563,8 @@ def determine_rates_pa(start_time, end_time, elements, site_code):
     last_frame_pa = last_frame_emp[7]
 
     logger.debug("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
-    min_rate = min(first_frame_speed, last_frame_speed) - 0.01
-    max_rate = max(first_frame_speed, last_frame_speed) + 0.01
+    min_rate = min(first_frame_speed, last_frame_speed) - (0.01*min(first_frame_speed, last_frame_speed))
+    max_rate = max(first_frame_speed, last_frame_speed) + (0.01*max(first_frame_speed, last_frame_speed))
     pa = average_angles(first_frame_pa, last_frame_pa)
     deltapa = max(first_frame_pa,last_frame_pa) - min(first_frame_pa,last_frame_pa)
     if deltapa > 180.0:

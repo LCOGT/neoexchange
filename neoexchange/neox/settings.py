@@ -209,7 +209,7 @@ LOGGING = {
         },
         'core' : {
             'handlers' : ['file','console'],
-            'level'    : 'DEBUG',
+            'level'    : 'INFO',
         },
         'astrometrics' : {
             'handlers' : ['file','console'],
@@ -318,3 +318,5 @@ if not CURRENT_PATH.startswith('/var/www'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
+
+print DATABASES

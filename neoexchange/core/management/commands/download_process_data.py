@@ -9,7 +9,7 @@ from django.forms import model_to_dict
 from core.models import Frame
 from core.management.commands import download_archive_data, pipeline_astrometry
 from astrometrics.ephem_subs import determine_rates_pa
-from photometrics.catalog_subs import get_fits_files, sort_rocks
+from photometrics.catalog_subs import get_fits_files, sort_rocks, find_first_last_frames
 
 class Command(BaseCommand):
 
@@ -20,7 +20,7 @@ class Command(BaseCommand):
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default="LCO2016B-011", help='Proposal code to query for data (e.g. LCO2016B-011)')
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
-        parser.add_argument('--mtdlink_file_limit', action="store", default=8, help='Maximum number of images for running mtdlink')
+        parser.add_argument('--mtdlink_file_limit', action="store", default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
         parser.add_argument('--object', action="store", help="Which object to analyze")
 
@@ -80,23 +80,10 @@ class Command(BaseCommand):
 # Step 3a: Check data is in DB
             fits_files = get_fits_files(datadir)
             self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir) )
-            first_frame = Frame(midpoint=datetime.max)
-            last_frame = Frame(midpoint=datetime.min)
-            for fits_filepath in fits_files:
-                fits_file = os.path.basename(fits_filepath)
-                try:
-                    frame = Frame.objects.get(filename=fits_file, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
-                except Frame.DoesNotExist:
-                    self.stderr.write("Cannot find Frame DB entry for %s" % fits_file)
-                    break
-                except Frame.MultipleObjectsReturned:
-                    self.stderr.write("Found multiple entries in DB for %s" % fits_file)
-                    break
-                if frame.midpoint < first_frame.midpoint:
-                    first_frame = frame
-                if frame.midpoint > last_frame.midpoint:
-                    last_frame = frame
-
+            first_frame, last_frame = find_first_last_frames(fits_files)
+            if first_frame == None or last_frame == None:
+                self.stderr.write("Couldn't determine first and last frames, skipping target")
+                continue
             self.stdout.write("Timespan %s->%s" % ( first_frame.midpoint, last_frame.midpoint))
 # Step 3b: Calculate mean PA and speed
             if first_frame.block:

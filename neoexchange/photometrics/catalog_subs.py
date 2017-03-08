@@ -1314,4 +1314,30 @@ def sort_rocks(fits_files):
                 os.symlink(fits_filepath, dest_filepath)
     return objects
 
-                
+def find_first_last_frames(fits_files):
+    '''Determines the first and last reduced frames in the DB for a list of
+    passed <fits_files> (which may have paths).
+    The Frame objects for the earliest and latest frames are returned if all
+    are found, otherwise None is returned.
+    '''
+
+    first_frame = Frame(midpoint=datetime.max)
+    last_frame = Frame(midpoint=datetime.min)
+    for fits_filepath in fits_files:
+        fits_file = os.path.basename(fits_filepath)
+        try:
+            frame = Frame.objects.get(filename=fits_file, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
+        except Frame.DoesNotExist:
+            logger.error("Cannot find Frame DB entry for %s" % fits_file)
+            first_frame = last_frame = None
+            break
+        except Frame.MultipleObjectsReturned:
+            logger.error("Found multiple entries in DB for %s" % fits_file)
+            first_frame = last_frame = None
+            break
+        if frame.midpoint < first_frame.midpoint:
+            first_frame = frame
+        if frame.midpoint > last_frame.midpoint:
+            last_frame = frame
+    return first_frame, last_frame
+   

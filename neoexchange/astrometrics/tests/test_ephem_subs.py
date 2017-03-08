@@ -608,8 +608,8 @@ class TestDetermineRatesAndPA(TestCase):
         self.precision = 4
 
     def test_neo_Q64(self):
-        expected_minrate = 2.531733441262908-0.01
-        expected_maxrate = 2.5546060130918056+0.01 
+        expected_minrate = 2.531733441262908 - (0.01*2.531733441262908)
+        expected_maxrate = 2.5546060130918056 + (0.01*2.5546060130918056)
         expected_pa = (92.46770128867529+92.49478201324034)/2.0
         expected_deltapa = 10.0
 
@@ -624,8 +624,8 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
     def test_close_neo_W86(self):
-        expected_minrate = 11.168352251337911 - 0.01
-        expected_maxrate = 11.235951320053525 + 0.01 
+        expected_minrate = 11.168352251337911 - (0.01*11.168352251337911)
+        expected_maxrate = 11.235951320053525 + (0.01*11.235951320053525)
         expected_pa = (359.4874655767052+(0.26203084523351095+360.0))/2.0
         expected_deltapa = 10.0
 
@@ -640,8 +640,8 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
     def test_yark_target_bad_pa(self):
-        expected_minrate = 5.048257569072863  - 0.01
-        expected_maxrate = 5.072223332592448  + 0.01 
+        expected_minrate = 5.048257569072863  - (0.01*5.048257569072863)
+        expected_maxrate = 5.072223332592448  + (0.01*5.072223332592448)
         expected_pa = (295.5850631246814+295.56445469665186)/2.0
         expected_deltapa = 10.0
 
