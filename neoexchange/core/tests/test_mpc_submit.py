@@ -153,7 +153,15 @@ class Test_Generate_Message(TestCase):
                             u'COM LCO CPT Node 1m0 Dome C at Sutherland, South Africa\n'
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET UCAC-4\n'
-                            u'BND R\n')
+                            u'BND R\n'
+                            u'     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 wq     K93\n')
         message = generate_message(self.test_block.id)
+
+        i = 0
+        expected_lines = expected_message.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
 
         self.assertEqual(expected_message, message)
