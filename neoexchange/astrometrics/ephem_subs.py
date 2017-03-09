@@ -1293,3 +1293,24 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(orbelems))
             logger.error(str(emp_line))
     return FOM
+
+def determine_sites_to_schedule(sched_date = datetime.utcnow()):
+    '''Determines which sites should be attempted for scheduling based on the
+    time of day.
+    Returns a dictionary with keys of 'north' and 'south', each of which will 
+    have two keys of '0m4' and '1m0' which will contain a list of sites (or an 
+    empty list) that can be scheduled.'''
+
+    N_point4m_sites = N_onem_sites = S_point4m_sites = S_onem_sites = []
+
+    if sched_date.hour >= 18 and sched_date.hour < 23:
+        N_point4m_sites = ['Z21', ]
+        N_onem_sites = ['V37', ]
+        S_point4m_sites = []
+        S_onem_sites = ['K92',]
+
+    sites = {   'north' : { '0m4' : N_point4m_sites, '1m0' : N_onem_sites},
+                'south' : { '0m4' : S_point4m_sites, '1m0' : S_onem_sites},
+            }
+
+    return sites

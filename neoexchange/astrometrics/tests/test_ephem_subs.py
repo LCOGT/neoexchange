@@ -14,10 +14,14 @@ GNU General Public License for more details.
 '''
 
 from datetime import datetime
+from math import radians
+import mock
+
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from rise_set.angle import Angle
-from math import radians
+
+from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from astrometrics.ephem_subs import *
@@ -1015,3 +1019,20 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_long, 0.0)
         self.assertLess(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
+
+@mock.patch('astrometrics.ephem_subs.datetime', MockDateTime)
+class TestDetermineSitesToSchedule(TestCase):
+
+    def test__CA_morning(self):
+        '''Morning in CA so CPT and TFN should be open, ELP should be 
+        schedulable for Northern targets'''
+        MockDateTime.change_datetime(2017, 3,  9,  19, 27, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['Z21',], '1m0' : ['V37',] },
+                           'south' : { '0m4' : [ ]     , '1m0' : ['K92',] }
+                         }
+
+        sites = determine_sites_to_schedule()
+
+        self.assertEqual(expected_sites, sites)
+
