@@ -203,25 +203,25 @@ LOGGING = {
             'propagate': True,
         },
         'django': {
-            'handlers':['file'],
+            'handlers':['console'],
             'propagate': True,
             'level':'ERROR',
         },
         'core' : {
-            'handlers' : ['file','console'],
+            'handlers' : ['console'],
             'level'    : 'INFO',
         },
         'astrometrics' : {
-            'handlers' : ['file','console'],
+            'handlers' : ['console'],
             'level'    : 'ERROR',
         },
         'photometrics' : {
-            'handlers' : ['file','console'],
+            'handlers' : ['console'],
             'level'    : 'ERROR',
         },
         'neox': {
-            'handlers':['file','console'],
-            'level' : 'ERROR'
+            'handlers':['console'],
+            'level' : 'DEBUG'
         }
     }
 }
@@ -268,6 +268,10 @@ REQUEST_AUTH_API_URL = 'https://lco.global/observe/api/api-token-auth/'
 
 ARCHIVE_FRAMES_URL = 'https://archive-api.lco.global/frames/'
 REDUCED_DATA_SUFFIX = 'e90'
+
+ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN','')
+
+THUMBNAIL_URL = 'https://thumbnails.lco.global/'
 
 #######################
 # Test Database setup #
@@ -318,5 +322,3 @@ if not CURRENT_PATH.startswith('/var/www'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
-
-print DATABASES

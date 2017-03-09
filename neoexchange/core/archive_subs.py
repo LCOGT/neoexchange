@@ -20,6 +20,11 @@ import os, sys
 from hashlib import md5
 from django.conf import settings
 from core.urlsubs import get_lcogt_headers
+from core.models import Frame
+import glob
+import logging
+
+logger = logging.getLogger('neox')
 
 import requests
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings
@@ -182,3 +187,57 @@ def download_files(frames, output_path, verbose=False, dbg=False):
                 with open(filename, 'wb') as f:
                     f.write(requests.get(frame['url']).content)
     return downloaded_frames
+
+def find_images_block(blockid):
+    '''
+    user_reqs: Full User Request dict, or list of dictionaries, containing individual observation requests
+    header: provide auth token from the request API so we don't need to get it twice
+    '''
+    images, candidates, x, y = find_images_for_block(blockid)
+    headers = {'Authorization': 'Token ' + settings.ARCHIVE_TOKEN}
+    frame_urls = []
+    logger.debug("Found {} Frames".format(frames.count()))
+    for frame in images:
+        thumbnail_url = "{}{}/?width=1000&height=1000&median=true&percentile=98".format(settings.THUMBNAIL_URL, frame['img'])
+        try:
+            resp = requests.get(thumbnail_url, headers=headers)
+            frame_info = {'id':frame['img'], 'url':resp.json()['url']}
+            frame_urls.append(frame_info)
+            logger.debug("Found {}".format(resp.json()['url']))
+        except ValueError:
+            logger.error("Failed to get thumbnail URL for %s - %s" % (frame, resp.status_code))
+    logger.debug("Total frames=%s" % (len(frame_urls)))
+    return frame_urls, candidates
+
+def download_images_block(blockid, frames, download_dir):
+    current_files = glob.glob(download_dir+"*.jpg")
+    for frame in frames:
+        filename = download_image(frame, current_files, download_dir, blockid)
+        if filename:
+            manifest = create_manifest(filename,frame)
+
+
+def download_image(frame, current_files, download_dir, blockid):
+    frame_date = frame['date_obs'].strftime("%Y%m%d%H%M%S")
+    file_name = 'block_%s_%s_%s.jpg' % (blockid, frame['img'], frame_date)
+    full_filename = os.path.join(download_dir, file_name)
+    if full_filename in current_files:
+        logger.debug("Frame {} already present".format(file_name))
+        return False
+    with open(full_filename, "wb") as f:
+        logger.debug("Downloading %s" % file_name)
+        response = requests.get(frame['url'], stream=True)
+        logger.debug(frame['url'])
+        if response.status_code != 200:
+            logger.debug('Failed to download: %s' % response.status_code)
+            return False
+        total_length = response.headers.get('content-length')
+
+        if total_length is None:
+            f.write(response.content)
+        else:
+            for data in response.iter_content():
+                f.write(data)
+    f.close()
+
+    return filename
