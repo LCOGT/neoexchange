@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta
+
+from django.core.management.base import BaseCommand, CommandError
+
 from core.models import Body, Block
 from core.views import schedule_check, schedule_submit, record_block
 from astrometrics.ephem_subs import format_emp_line
@@ -45,24 +48,46 @@ def schedule_target_list(bodies_list, form_details, username):
             num_scheduled += 1
     return num_scheduled
 
-scheduling_date = datetime.utcnow()
-latest = Body.objects.filter(active=True).latest('ingest')
-max_dt = latest.ingest
-min_dt = max_dt - timedelta(days=5)
-newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
-bodies = newest.filter(not_seen__lte=2.5, source_type='U', updated=False)
-print "Found %d newest bodies, %d available for scheduling" % (newest.count(), bodies.count())
 
-north_list, south_list = filter_bodies(bodies, obs_date=scheduling_date)
+class Command(BaseCommand):
+    help = 'Fetch Goldstone target list for the current year'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--date', default=datetime.utcnow(), help='Date to schedule for (YYYYMMDD)')
+        parser.add_argument('--user', default='tlister@lcogt.net', help="Username to schedule as e.g. 'tlister@lcogt.net'")
+        parser.add_argument('--run', action="store_true", help="Whether to execute the scheduling")
+
+    def handle(self, *args, **options):
+        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --user [tlister@lcogt.net]"
+        if type(options['date']) != datetime:
+            try:
+                scheduling_date = datetime.strptime(options['date'], '%Y%m%d')
+            except ValueError:
+                raise CommandError(usage)
+        else:
+            scheduling_date = options['date']
+
+        username = options['user']
+        self.stdout.write("==== Runnning for date %s , submitting as %s" % (scheduling_date.date(), username))
+        latest = Body.objects.filter(active=True).latest('ingest')
+        max_dt = latest.ingest
+        min_dt = max_dt - timedelta(days=5)
+        newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
+        bodies = newest.filter(not_seen__lte=2.5, source_type='U', updated=False)
+        self.stdout.write("Found %d newest bodies, %d available for scheduling" % (newest.count(), bodies.count()))
+
+        north_list, south_list = filter_bodies(bodies, obs_date=scheduling_date)
 
 
-print "Found %d for the North, %d for the South" % (len(north_list), len(south_list))
-username = 'tlister@lcogt.net'
-north_form = {'site_code': 'V37', 'utc_date' : scheduling_date.date(), 'proposal_code': 'LCO2016B-011'}
-south_form = {'site_code': 'W85', 'utc_date' : scheduling_date.date(), 'proposal_code': 'LCO2016B-011'}
+        self.stdout.write("Found %d for the North, %d for the South" % (len(north_list), len(south_list)))
 
-num_scheduled = schedule_target_list(north_list, north_form, username)
-print "Scheduled %d in the North" % num_scheduled
-num_scheduled = schedule_target_list(south_list, south_form, username)
-print "Scheduled %d in the South" % num_scheduled
+        north_form = {'site_code': 'V37', 'utc_date' : scheduling_date.date(), 'proposal_code': 'LCO2016B-011'}
+        south_form = {'site_code': 'W85', 'utc_date' : scheduling_date.date(), 'proposal_code': 'LCO2016B-011'}
 
+        if options['run']:
+            num_scheduled = schedule_target_list(north_list, north_form, username)
+            self.stdout.write("Scheduled %d in the North" % num_scheduled)
+            num_scheduled = schedule_target_list(south_list, south_form, username)
+            self.stdout.write("Scheduled %d in the South" % num_scheduled)
+        else:
+            self.stdout.write("Simulating scheduling")
