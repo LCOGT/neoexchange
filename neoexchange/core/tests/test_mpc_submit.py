@@ -116,7 +116,7 @@ class Test_Generate_Message(TestCase):
                     'filter'        : 'R',
                     'frametype'     : Frame.STACK_FRAMETYPE,
                     'midpoint'      : datetime(2015,12,05,01,10,49,int(0.9*1e6)),
-                    'block'         : self.test_block,
+                    'block'         : self.test_block2,
                  }
         self.test_frame_stack = Frame.objects.create(**frame_params)
 
@@ -139,9 +139,15 @@ class Test_Generate_Message(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
 
+        measure_params['body'] = self.body2
+        measure_params['frame'] = self.test_frame_stack
+        measure_params['flags'] = 'K'
+        measure_params['obs_dec'] = +0.66
+        measure = SourceMeasurement.objects.create(**measure_params)
+
         self.maxDiff = None
 
-    def test1(self):
+    def test_K93(self):
 
         expected_message = (u'COD K93\n'
                             u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
@@ -156,6 +162,31 @@ class Test_Generate_Message(TestCase):
                             u'BND R\n'
                             u'     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 wq     K93\n')
         message = generate_message(self.test_block.id)
+
+        i = 0
+        expected_lines = expected_message.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_W86(self):
+
+        expected_message = (u'COD W86\n'
+                            u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                            u'CON [tlister@lco.global]\n'
+                            u'OBS T. Lister, S. Greenstreet, E. Gomez\n'
+                            u'MEA T. Lister\n'
+                            u'TEL 1.0-m f/8 Ritchey-Chretien + CCD\n'
+                            u'ACK 2015 XS54_W86_fl03\n'
+                            u'COM LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile\n'
+                            u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
+                            u'NET UCAC-4\n'
+                            u'BND R\n'
+                            u'     K15X54S KC2015 12 05.04918910 30 00.00 +00 39 36.0          21.5 Rq     W86\n')
+        message = generate_message(self.test_block2.id)
 
         i = 0
         expected_lines = expected_message.split('\n')

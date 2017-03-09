@@ -441,6 +441,31 @@ class Frame(models.Model):
             is_processed = True
         return is_processed
 
+    def reduced_frames(include_oracdr=False):
+        frametypes = (BANZAI_QL_FRAMETYPE, BANZAI_RED_FRAMETYPE)
+        if include_oracdr:
+            frametypes = (BANZAI_QL_FRAMETYPE, BANZAI_RED_FRAMETYPE, ORACDR_QL_FRAMETYPE, ORACDR_RED_FRAMETYPE)
+
+        return frametypes
+
+    def return_site_string(self):
+        site_strings = {
+                        'K91' : 'LCO CPT Node 1m0 Dome A at Sutherland, South Africa',
+                        'K92' : 'LCO CPT Node 1m0 Dome B at Sutherland, South Africa',
+                        'K93' : 'LCO CPT Node 1m0 Dome C at Sutherland, South Africa',
+                        'W85' : 'LCO LSC Node 1m0 Dome A at Cerro Tololo, Chile',
+                        'W86' : 'LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile',
+                        'W87' : 'LCO LSC Node 1m0 Dome C at Cerro Tololo, Chile',
+                        'V37' : 'LCO Node at McDonald Observatory, Texas',
+                        'Z21' : 'LCO Aqawan A 0m4a at Tenerife, Spain',
+                        'Q63' : 'LCO COJ Node 1m0 Dome A at Siding Spring, Australia',
+                        'Q64' : 'LCO COJ Node 1m0 Dome B at Siding Spring, Australia',
+                        'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
+                        'F65' : 'LCO OGG Node 2m0 FTN at Haleakla, Maui',
+                        'T04' : 'LCO 0m4b at Haleakala, Maui'
+                        }
+        return site_strings.get(self.sitecode, 'Unknown LCO site')
+
     class Meta:
         verbose_name = _('Observed Frame')
         verbose_name_plural = _('Observed Frames')
