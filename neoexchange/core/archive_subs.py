@@ -208,36 +208,3 @@ def find_images_block(blockid):
             logger.error("Failed to get thumbnail URL for %s - %s" % (frame, resp.status_code))
     logger.debug("Total frames=%s" % (len(frame_urls)))
     return frame_urls, candidates
-
-def download_images_block(blockid, frames, download_dir):
-    current_files = glob.glob(download_dir+"*.jpg")
-    for frame in frames:
-        filename = download_image(frame, current_files, download_dir, blockid)
-        if filename:
-            manifest = create_manifest(filename,frame)
-
-
-def download_image(frame, current_files, download_dir, blockid):
-    frame_date = frame['date_obs'].strftime("%Y%m%d%H%M%S")
-    file_name = 'block_%s_%s_%s.jpg' % (blockid, frame['img'], frame_date)
-    full_filename = os.path.join(download_dir, file_name)
-    if full_filename in current_files:
-        logger.debug("Frame {} already present".format(file_name))
-        return False
-    with open(full_filename, "wb") as f:
-        logger.debug("Downloading %s" % file_name)
-        response = requests.get(frame['url'], stream=True)
-        logger.debug(frame['url'])
-        if response.status_code != 200:
-            logger.debug('Failed to download: %s' % response.status_code)
-            return False
-        total_length = response.headers.get('content-length')
-
-        if total_length is None:
-            f.write(response.content)
-        else:
-            for data in response.iter_content():
-                f.write(data)
-    f.close()
-
-    return filename
