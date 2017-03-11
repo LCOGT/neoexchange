@@ -6,7 +6,7 @@ from core.models import Body, Block
 from core.views import schedule_check, schedule_submit, record_block
 from astrometrics.ephem_subs import format_emp_line, determine_sites_to_schedule
 
-def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 20.59):
+def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0):
     north_list=[] 
     south_list=[] 
 
@@ -87,13 +87,21 @@ class Command(BaseCommand):
 
         self.stdout.write("\nSites for scheduling:\nNorth: %s\nSouth: %s\n\n" % (sites['north'], sites['south']))
 
-        north_form = {'site_code': sites['north']['1m0'][0], 'utc_date' : scheduling_date.date(), 'proposal_code': 'LCO2016B-011'}
-        south_form = {'site_code': sites['south']['1m0'][0], 'utc_date' : scheduling_date.date(), 'proposal_code': 'LCO2016B-011'}
+        do_north = False
+        if len(sites['north']['1m0']) > 0:
+            do_north = True
+            north_form = {'site_code': sites['north']['1m0'][0], 'utc_date' : scheduling_date.date(), 'proposal_code': 'LCO2016B-011'}
+        do_south = False
+        if len(sites['south']['1m0']) > 0:
+            do_south = True
+            south_form = {'site_code': sites['south']['1m0'][0], 'utc_date' : scheduling_date.date(), 'proposal_code': 'LCO2016B-011'}
 
         if options['run']:
-            num_scheduled = schedule_target_list(north_list, north_form, username)
-            self.stdout.write("Scheduled %d in the North at %s" % (num_scheduled, north_form['site_code']))
-            num_scheduled = schedule_target_list(south_list, south_form, username)
-            self.stdout.write("Scheduled %d in the South at %s" % (num_scheduled, south_form['site_code']))
+            if do_north:
+                num_scheduled = schedule_target_list(north_list, north_form, username)
+                self.stdout.write("Scheduled %d in the North at %s" % (num_scheduled, north_form['site_code']))
+            if do_south:
+                num_scheduled = schedule_target_list(south_list, south_form, username)
+                self.stdout.write("Scheduled %d in the South at %s" % (num_scheduled, south_form['site_code']))
         else:
-            self.stdout.write("Simulating scheduling at %s and %s" % (north_form['site_code'], south_form['site_code']) )
+            self.stdout.write("Simulating scheduling at %s and %s" % (sites['north'], sites['south']) )
