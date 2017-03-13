@@ -117,6 +117,22 @@ class Test_Generate_Message(TestCase):
                        }
         self.test_block3 = Block.objects.create(**block_params)
 
+        block_params = { 'telclass' : '2m0',
+                         'site'     : 'ogg',
+                         'body'     : self.body2,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-12-25 05:40:00',
+                         'block_end'   : '2015-12-04 14:10:00',
+                         'tracking_number' : '0000117783',
+                         'num_exposures' :  5,
+                         'exp_length' : 120.0,
+                         'active'   : False,
+                         'num_observed' : 1,
+                         'when_observed' : '2015-12-25 10:03:00',
+                         'reported' : False
+                       }
+        self.test_block4 = Block.objects.create(**block_params)
+
         frame_params = {  'sitecode'      : 'K93',
                     'instrument'    : 'kb75',
                     'filter'        : 'w',
@@ -144,6 +160,15 @@ class Test_Generate_Message(TestCase):
                     'block'         : self.test_block3,
                  }
         self.test_frame_point4m = Frame.objects.create(**frame_params)
+
+        frame_params = {  'sitecode'      : 'F65',
+                    'instrument'    : 'fs02',
+                    'filter'        : 'solar',
+                    'frametype'     : Frame.SINGLE_FRAMETYPE,
+                    'midpoint'      : datetime(2015,12,05,9,50,49),
+                    'block'         : self.test_block4,
+                 }
+        self.test_frame_twom = Frame.objects.create(**frame_params)
 
         frame_params = {  'sitecode'      : 'C51',
                     'filter'        : 'R',
@@ -176,6 +201,16 @@ class Test_Generate_Message(TestCase):
                             'obs_dec' : 32.755,
                             'obs_mag' : 20.5,
                             'astrometric_catalog' : "2MASS",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
+        measure_params = {  'body' : self.body2,
+                            'frame' : self.test_frame_twom,
+                            'obs_ra' : 7.6,
+                            'obs_dec' : 32.755,
+                            'obs_mag' : 20.7,
+                            'astrometric_catalog' : "PPMXL",
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
@@ -247,6 +282,31 @@ class Test_Generate_Message(TestCase):
                             u'BND R\n'
                             u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 wL     Z21\n')
         message = generate_message(self.test_block3.id)
+
+        i = 0
+        expected_lines = expected_message.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_F65(self):
+
+        expected_message = (u'COD F65\n'
+                            u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                            u'CON [tlister@lco.global]\n'
+                            u'OBS T. Lister, S. Greenstreet, E. Gomez\n'
+                            u'MEA T. Lister\n'
+                            u'TEL 2.0-m f/10 Ritchey-Chretien + CCD\n'
+                            u'ACK 2015 XS54_F65_fs02\n'
+                            u'COM LCO OGG Node 2m0 FTN at Haleakala, Maui\n'
+                            u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
+                            u'NET PPMXL\n'
+                            u'BND R\n'
+                            u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 Rt     F65\n')
+        message = generate_message(self.test_block4.id)
 
         i = 0
         expected_lines = expected_message.split('\n')

@@ -461,7 +461,7 @@ class Frame(models.Model):
                         'Q63' : 'LCO COJ Node 1m0 Dome A at Siding Spring, Australia',
                         'Q64' : 'LCO COJ Node 1m0 Dome B at Siding Spring, Australia',
                         'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
-                        'F65' : 'LCO OGG Node 2m0 FTN at Haleakla, Maui',
+                        'F65' : 'LCO OGG Node 2m0 FTN at Haleakala, Maui',
                         'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui'
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
@@ -489,6 +489,14 @@ class Frame(models.Model):
                         }
         return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
 
+    def map_filter(self):
+        '''Maps somewhat odd observed filters (e.g. 'solar') into the filter
+        (e.g. 'R') that would be used for the photometric calibration'''
+
+        new_filter = self.filter
+        if self.filter == 'solar':
+            new_filter = 'R'
+        return new_filter
 
     class Meta:
         verbose_name = _('Observed Frame')
@@ -546,7 +554,7 @@ class SourceMeasurement(models.Model):
         mpc_line = "%12s %1s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
             self.flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
-            mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+            mag, self.frame.map_filter(), translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
             if self.body.name:
