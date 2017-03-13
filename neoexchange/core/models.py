@@ -456,15 +456,39 @@ class Frame(models.Model):
                         'W85' : 'LCO LSC Node 1m0 Dome A at Cerro Tololo, Chile',
                         'W86' : 'LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile',
                         'W87' : 'LCO LSC Node 1m0 Dome C at Cerro Tololo, Chile',
-                        'V37' : 'LCO Node at McDonald Observatory, Texas',
-                        'Z21' : 'LCO Aqawan A 0m4a at Tenerife, Spain',
+                        'V37' : 'LCO ELP Node at McDonald Observatory, Texas',
+                        'Z21' : 'LCO TFN Node Aqawan A 0m4a at Tenerife, Spain',
                         'Q63' : 'LCO COJ Node 1m0 Dome A at Siding Spring, Australia',
                         'Q64' : 'LCO COJ Node 1m0 Dome B at Siding Spring, Australia',
                         'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
                         'F65' : 'LCO OGG Node 2m0 FTN at Haleakla, Maui',
-                        'T04' : 'LCO 0m4b at Haleakala, Maui'
+                        'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui'
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
+
+    def return_tel_string(self):
+
+        point4m_string = '0.4-m f/8 Schmidt-Cassegrain + CCD'
+        onem_string = '1.0-m f/8 Ritchey-Chretien + CCD'
+        twom_string = '2.0-m f/10 Ritchey-Chretien + CCD'
+
+        tels_strings = {
+                        'K91' : onem_string,
+                        'K92' : onem_string,
+                        'K93' : onem_string,
+                        'W85' : onem_string,
+                        'W86' : onem_string,
+                        'W87' : onem_string,
+                        'V37' : onem_string,
+                        'Z21' : point4m_string,
+                        'Q63' : onem_string,
+                        'Q64' : onem_string,
+                        'E10' : twom_string,
+                        'F65' : twom_string,
+                        'T04' : point4m_string
+                        }
+        return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
+
 
     class Meta:
         verbose_name = _('Observed Frame')
