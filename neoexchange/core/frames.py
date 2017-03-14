@@ -32,9 +32,9 @@ def odin_login(username, password):
 
 def measurements_from_block(blockid):
     block = Block.objects.get(pk=blockid)
-    frames = Frame.objects.filter(block=block).values_list('id',flat=True)
-    measures = SourceMeasurement.objects.filter(frame__in=frames)
-    return {'body':block.body,'measures':measures,'slot':block}
+    frames = Frame.objects.filter(block=block, frametype=Frame.BANZAI_RED_FRAMETYPE).values_list('id',flat=True)
+    measures = SourceMeasurement.objects.filter(frame__in=frames, obs_mag__gt=0.0).order_by('frame__midpoint')
+    return {'body' : block.body, 'measures' : measures, 'slot' : block}
 
 def fetch_observations(tracking_num):
     image_list = []
