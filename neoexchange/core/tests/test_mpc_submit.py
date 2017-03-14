@@ -255,7 +255,7 @@ class Test_Generate_Message(TestCase):
                             u'ACK 2015 XS54_W86_fl03\n'
                             u'COM LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile\n'
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
-                            u'NET UCAC-4\n'
+                            u'NET 2MASS\n'
                             u'BND R\n'
                             u'     K15X54S KC2015 12 05.04918910 30 00.00 +00 39 36.0          21.5 R      W86\n')
         message = generate_message(self.test_block2.id)
