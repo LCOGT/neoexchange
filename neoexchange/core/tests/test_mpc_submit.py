@@ -141,6 +141,7 @@ class Test_Generate_Message(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : datetime(2015,07,13,21,9,51),
                     'block'         : self.test_block,
+                    'astrometric_catalog' : "UCAC-4"
                  }
         self.test_frame = Frame.objects.create(**frame_params)
 
@@ -150,6 +151,7 @@ class Test_Generate_Message(TestCase):
                     'frametype'     : Frame.STACK_FRAMETYPE,
                     'midpoint'      : datetime(2015,12,05,01,10,49,int(0.9*1e6)),
                     'block'         : self.test_block2,
+                    'astrometric_catalog' : "2MASS",
                  }
         self.test_frame_stack = Frame.objects.create(**frame_params)
 
@@ -159,6 +161,7 @@ class Test_Generate_Message(TestCase):
                     'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'midpoint'      : datetime(2015,12,05,01,10,49,int(0.9*1e6)),
                     'block'         : self.test_block3,
+                    'astrometric_catalog' : "2MASS",
                  }
         self.test_frame_point4m = Frame.objects.create(**frame_params)
 
@@ -168,6 +171,7 @@ class Test_Generate_Message(TestCase):
                     'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'midpoint'      : datetime(2015,12,05,9,50,49),
                     'block'         : self.test_block4,
+                    'astrometric_catalog' : "PPMXL",
                  }
         self.test_frame_twom = Frame.objects.create(**frame_params)
 
@@ -185,7 +189,6 @@ class Test_Generate_Message(TestCase):
                             'obs_ra' : 157.5,
                             'obs_dec' : -32.75,
                             'obs_mag' : 21.5,
-                            'astrometric_catalog' : "UCAC-4",
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
@@ -201,7 +204,6 @@ class Test_Generate_Message(TestCase):
                             'obs_ra' : 7.6,
                             'obs_dec' : 32.755,
                             'obs_mag' : 20.5,
-                            'astrometric_catalog' : "2MASS",
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
@@ -211,7 +213,6 @@ class Test_Generate_Message(TestCase):
                             'obs_ra' : 7.6,
                             'obs_dec' : 32.755,
                             'obs_mag' : 20.7,
-                            'astrometric_catalog' : "PPMXL",
                          }
 
         measure = SourceMeasurement.objects.create(**measure_params)
@@ -231,7 +232,7 @@ class Test_Generate_Message(TestCase):
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET UCAC-4\n'
                             u'BND R\n'
-                            u'     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 wq     K93\n')
+                            u'     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 w      K93\n')
         message = generate_message(self.test_block.id)
 
         i = 0
@@ -256,7 +257,7 @@ class Test_Generate_Message(TestCase):
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET UCAC-4\n'
                             u'BND R\n'
-                            u'     K15X54S KC2015 12 05.04918910 30 00.00 +00 39 36.0          21.5 Rq     W86\n')
+                            u'     K15X54S KC2015 12 05.04918910 30 00.00 +00 39 36.0          21.5 R      W86\n')
         message = generate_message(self.test_block2.id)
 
         i = 0
@@ -281,7 +282,7 @@ class Test_Generate_Message(TestCase):
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET 2MASS\n'
                             u'BND R\n'
-                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 wL     Z21\n')
+                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 w      Z21\n')
         message = generate_message(self.test_block3.id)
 
         i = 0
@@ -306,7 +307,7 @@ class Test_Generate_Message(TestCase):
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET PPMXL\n'
                             u'BND R\n'
-                            u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 Rt     F65\n')
+                            u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 R      F65\n')
         message = generate_message(self.test_block4.id)
 
         i = 0

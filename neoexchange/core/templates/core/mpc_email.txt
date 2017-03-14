@@ -7,7 +7,7 @@ TEL {{measures.0.frame.return_tel_string}}
 ACK {{body.current_name}}_{{measures.0.frame.sitecode}}_{{measures.0.frame.instrument}}
 COM {{measures.0.frame.return_site_string}}
 AC2 tlister@lco.global,sgreenstreet@lco.global
-NET {{measures.0.astrometric_catalog}}
+NET {{measures.0.frame.astrometric_catalog}}
 BND R
 {% for line in measures %}{{line.format_mpc_line}}
 {% endfor %}
