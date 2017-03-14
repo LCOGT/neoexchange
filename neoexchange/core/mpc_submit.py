@@ -12,16 +12,19 @@ def generate_message(blockid):
 
     return message
 
-def email_report_to_mpc(blockid):
+def email_report_to_mpc(blockid, email_sender=None, receipients=['egomez@lco.global']):
 
-    message = generate_message(blockid)
+    mpc_report = generate_message(blockid)
+    if email_sender == None:
+        email_sender = settings.DEFAULT_FROM_EMAIL
+# Do we need to test if the email_sender is in the recipient_list to prevent mail loops?
     try:
         send_mail(
-            'MPC submission test',
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            ['egomez@lco.global'],
-            fail_silently=False,
+            subject = 'MPC submission test',
+            message = mpc_report,
+            from_email = email_sender,
+            recipient_list = receipients,
+            fail_silently = False,
         )
     except Exception, e:
         print(e)

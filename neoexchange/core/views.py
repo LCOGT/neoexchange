@@ -176,7 +176,11 @@ class BlockReportMPC(LoginRequiredMixin, View):
         if block.reported == True:
             messages.error(request,'Block has already been reported')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
-        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'])
+        if request.user.is_authenticated:
+            email = request.user.email
+        else:
+            email = None
+        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'], email)
         if mpc_resp:
             block.active = False
             block.reported = True
