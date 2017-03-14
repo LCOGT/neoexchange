@@ -136,7 +136,8 @@ class Test_Generate_Message(TestCase):
         frame_params = {  'sitecode'      : 'K93',
                     'instrument'    : 'kb75',
                     'filter'        : 'w',
-                    'filename'      : 'cpt1m012-kb75-20150713-0130-e10.fits',
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
+                    'filename'      : 'cpt1m012-kb75-20150713-0130-e91.fits',
                     'exptime'       : 40.0,
                     'midpoint'      : datetime(2015,07,13,21,9,51),
                     'block'         : self.test_block,
@@ -155,7 +156,7 @@ class Test_Generate_Message(TestCase):
         frame_params = {  'sitecode'      : 'Z21',
                     'instrument'    : 'kb29',
                     'filter'        : 'w',
-                    'frametype'     : Frame.SINGLE_FRAMETYPE,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'midpoint'      : datetime(2015,12,05,01,10,49,int(0.9*1e6)),
                     'block'         : self.test_block3,
                  }
@@ -164,7 +165,7 @@ class Test_Generate_Message(TestCase):
         frame_params = {  'sitecode'      : 'F65',
                     'instrument'    : 'fs02',
                     'filter'        : 'solar',
-                    'frametype'     : Frame.SINGLE_FRAMETYPE,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'midpoint'      : datetime(2015,12,05,9,50,49),
                     'block'         : self.test_block4,
                  }
