@@ -10,7 +10,8 @@ def generate_message(blockid):
     data = measurements_from_block(blockid)
     message = t.render(Context(data))
 
-    return message
+    # Strip off last double newline but put one back again
+    return message.rstrip() + '\n'
 
 def email_report_to_mpc(blockid, email_sender=None, receipients=['egomez@lco.global']):
 

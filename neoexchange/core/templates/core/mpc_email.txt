@@ -9,4 +9,5 @@ COM {{measures.0.frame.return_site_string}}
 AC2 tlister@lco.global,sgreenstreet@lco.global
 NET {{measures.0.astrometric_catalog}}
 BND R
-{% for line in measures %}{{line.format_mpc_line}}{% endfor %}
+{% for line in measures %}{{line.format_mpc_line}}
+{% endfor %}
