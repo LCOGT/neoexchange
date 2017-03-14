@@ -6,7 +6,7 @@ from core.models import Body, Block
 from core.views import schedule_check, schedule_submit, record_block
 from astrometrics.ephem_subs import format_emp_line, determine_sites_to_schedule
 
-def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0):
+def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0):
     north_list=[] 
     south_list=[] 
 
@@ -27,7 +27,7 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
         if num_not_found >= 2:
             print "Tried twice already and not found"
             continue
-        if emp_line[3] > 95:
+        if emp_line[3] > spd_south_cut:
             north_list.append(body)
         else:
             south_list.append(body)
