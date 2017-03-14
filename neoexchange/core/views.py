@@ -180,7 +180,7 @@ class BlockReportMPC(LoginRequiredMixin, View):
             email = request.user.email
         else:
             email = None
-        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'], email)
+        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'], email_sender=email)
         if mpc_resp:
             block.active = False
             block.reported = True
