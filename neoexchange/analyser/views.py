@@ -83,7 +83,9 @@ def analyser_to_source_measurement(block, cand_ids):
                 'frame' : frame
             }
             sm, created = SourceMeasurement.objects.get_or_create(**params)
-            sm.obs_ra = det[4]
+            # Convert the detections RA's (in decimal hours) into decimal degrees
+            # before storing
+            sm.obs_ra = det[4] * 15.0
             sm.obs_dec = det[5]
             sm.obs_mag = det[8]
             sm.aperture_size = det[14]
