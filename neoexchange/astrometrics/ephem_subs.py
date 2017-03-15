@@ -1303,7 +1303,7 @@ def determine_sites_to_schedule(sched_date = datetime.utcnow()):
 
     N_point4m_sites = N_onem_sites = S_point4m_sites = S_onem_sites = []
 
-    if sched_date.hour >= 18 and sched_date.hour < 23:
+    if sched_date.hour >= 17 and sched_date.hour < 23:
         N_point4m_sites = ['Z21', ]
         N_onem_sites = ['V37', ]
         S_point4m_sites = []
@@ -1318,7 +1318,7 @@ def determine_sites_to_schedule(sched_date = datetime.utcnow()):
         N_onem_sites = [ ]
         S_point4m_sites = []
         S_onem_sites = ['Q63', 'Q64']
-    elif sched_date.hour >= 12 and sched_date.hour < 18:
+    elif sched_date.hour >= 12 and sched_date.hour < 17:
         N_point4m_sites = [ ]
         N_onem_sites = [ ]
         S_point4m_sites = []
