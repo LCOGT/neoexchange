@@ -109,7 +109,11 @@ class Command(BaseCommand):
         north_list, south_list = filter_bodies(bodies, scheduling_date, options['bright_limit'], options['faint_limit'], \
              options['spd_cutoff'])
 
-        self.stdout.write("\nTargets for scheduling:\nNorth: %s\nSouth: %s\n" % (north_list, south_list))
+        # Dictionary *and* list comprehensions, super swank...
+        north_targets = {tel_class : [str(x.current_name()) for x in north_list[tel_class]] for tel_class in north_list.keys()}
+        south_targets = {tel_class : [str(x.current_name()) for x in south_list[tel_class]] for tel_class in south_list.keys()}
+
+        self.stdout.write("\nTargets for scheduling:\nNorth: %s\nSouth: %s\n" % (north_targets, south_targets))
         num_north_targets = len(north_list['0m4']) + len(north_list['1m0'])
         num_south_targets = len(south_list['0m4']) + len(south_list['1m0'])
         self.stdout.write("Found %d for the North, %d for the South" % (num_north_targets, num_south_targets))
