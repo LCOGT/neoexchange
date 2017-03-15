@@ -91,7 +91,7 @@ class Command(BaseCommand):
         max_dt = latest.ingest
         min_dt = max_dt - timedelta(days=5)
         newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
-        bodies = newest.filter(not_seen__lte=2.5, source_type='U', updated=False)
+        bodies = newest.filter(not_seen__lte=options['not_seen'], source_type='U', updated=False)
         self.stdout.write("Found %d newest bodies, %d available for scheduling" % (newest.count(), bodies.count()))
 
         north_list, south_list = filter_bodies(bodies, scheduling_date, options['bright_limit'], options['faint_limit'], \
