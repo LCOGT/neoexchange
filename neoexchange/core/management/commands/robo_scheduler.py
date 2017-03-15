@@ -50,7 +50,7 @@ def schedule_target_list(bodies_list, form_details, username):
 
 
 class Command(BaseCommand):
-    help = 'Fetch Goldstone target list for the current year'
+    help = 'Determine what to schedule robotically for the given time'
 
     def add_arguments(self, parser):
         bright_default = 19.0
