@@ -53,12 +53,21 @@ class Command(BaseCommand):
     help = 'Fetch Goldstone target list for the current year'
 
     def add_arguments(self, parser):
+        bright_default = 19.0
+        faint_default = 22.0
+        spd_default = 95.0
+        not_seen_default = 2.5
         parser.add_argument('--date', default=datetime.utcnow(), help='Date to schedule for (YYYYMMDD)')
         parser.add_argument('--user', default='tlister@lcogt.net', help="Username to schedule as e.g. 'tlister@lcogt.net'")
         parser.add_argument('--run', action="store_true", help="Whether to execute the scheduling")
+        parser.add_argument('--bright_limit', default=bright_default, type=float, help="Bright magnitude limit ("+str(bright_default)+")")
+        parser.add_argument('--faint_limit', default=faint_default, type=float, help="Faint magnitude limit ("+str(faint_default)+")")
+        spd_help = "South Polar Distance cutoff for S. Hemisphere (%.1f=%+.1f Dec)" % (spd_default, spd_default-90.0)
+        parser.add_argument('--spd_cutoff', default=spd_default, type=float, help=spd_help)
+        parser.add_argument('--not_seen', default=not_seen_default, help="Cutoff since object was seen ("+str(not_seen_default)+" days)")
 
     def handle(self, *args, **options):
-        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --user [tlister@lcogt.net]"
+        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --user [tlister@lcogt.net] --run"
         if type(options['date']) != datetime:
             try:
                 scheduling_date = datetime.strptime(options['date'], '%Y%m%d')
@@ -69,8 +78,15 @@ class Command(BaseCommand):
             if scheduling_date.hour > 17:
                 scheduling_date += timedelta(days=1)
 
+        if options['spd_cutoff'] < 0.0 or options['spd_cutoff'] >= 180.0:
+            raise CommandError("South Polar Distance cutoff must be in the range 0..180")
+
         username = options['user']
         self.stdout.write("==== Runnning for date %s , submitting as %s" % (scheduling_date.date(), username))
+        self.stdout.write("==== Cutoffs: Bright= %.1f, Faint = %.1f, SPD= %.1f(=%+.1f Dec)" % \
+            (options['bright_limit'], options['faint_limit'], \
+             options['spd_cutoff'], options['spd_cutoff'] - 90.0))
+
         latest = Body.objects.filter(active=True).latest('ingest')
         max_dt = latest.ingest
         min_dt = max_dt - timedelta(days=5)
@@ -78,7 +94,8 @@ class Command(BaseCommand):
         bodies = newest.filter(not_seen__lte=2.5, source_type='U', updated=False)
         self.stdout.write("Found %d newest bodies, %d available for scheduling" % (newest.count(), bodies.count()))
 
-        north_list, south_list = filter_bodies(bodies, obs_date=scheduling_date)
+        north_list, south_list = filter_bodies(bodies, scheduling_date, options['bright_limit'], options['faint_limit'], \
+             options['spd_cutoff'])
 
 
         self.stdout.write("Found %d for the North, %d for the South" % (len(north_list), len(south_list)))
