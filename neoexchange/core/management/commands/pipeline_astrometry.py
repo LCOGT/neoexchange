@@ -55,7 +55,7 @@ class Command(BaseCommand):
 
         datadir = os.path.expanduser(options['datadir'])
         datadir = os.path.join(datadir, '')
-        self.stdout.write("datapath=%s" % (datadir))
+        self.stdout.write("datapath= %s" % (datadir))
 
         # Get lists of images and catalogs
         fits_files, fits_catalogs = self.determine_images_and_catalogs(datadir)
