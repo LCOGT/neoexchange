@@ -84,6 +84,8 @@ class Test_Generate_Message(TestCase):
                          'reported' : False
                        }
         self.test_block = Block.objects.create(**block_params)
+        block_params['tracking_number'] = '00043'
+        self.test_block_gaia = Block.objects.create(**block_params)
 
         block_params = { 'telclass' : '1m0',
                          'site'     : 'lsc',
@@ -144,6 +146,11 @@ class Test_Generate_Message(TestCase):
                     'astrometric_catalog' : "UCAC-4"
                  }
         self.test_frame = Frame.objects.create(**frame_params)
+
+        frame_params['block'] = self.test_block_gaia
+        frame_params['astrometric_catalog'] = 'GAIA-DR1'
+        frame_params['photometric_catalog'] = 'GAIA-DR1'
+        self.test_frame_gaia = Frame.objects.create(**frame_params)
 
         frame_params = {  'sitecode'      : 'W86',
                     'instrument'    : 'fl03',
@@ -217,6 +224,15 @@ class Test_Generate_Message(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
 
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_gaia,
+                            'obs_ra' : 15.5,
+                            'obs_dec' : -3.75,
+                            'obs_mag' : 21.57,
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+
         self.maxDiff = None
 
     def test_K93(self):
@@ -232,7 +248,7 @@ class Test_Generate_Message(TestCase):
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET UCAC-4\n'
                             u'BND R\n'
-                            u'     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 w      K93\n')
+                            u'     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 R      K93\n')
         message = generate_message(self.test_block.id)
 
         i = 0
@@ -282,7 +298,7 @@ class Test_Generate_Message(TestCase):
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET 2MASS\n'
                             u'BND R\n'
-                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 w      Z21\n')
+                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 R      Z21\n')
         message = generate_message(self.test_block3.id)
 
         i = 0
@@ -309,6 +325,31 @@ class Test_Generate_Message(TestCase):
                             u'BND R\n'
                             u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 R      F65\n')
         message = generate_message(self.test_block4.id)
+
+        i = 0
+        expected_lines = expected_message.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_K93_gaia(self):
+
+        expected_message = (u'COD K93\n'
+                            u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                            u'CON [tlister@lco.global]\n'
+                            u'OBS T. Lister, S. Greenstreet, E. Gomez\n'
+                            u'MEA T. Lister\n'
+                            u'TEL 1.0-m f/8 Ritchey-Chretien + CCD\n'
+                            u'ACK N999r0q_K93_kb75\n'
+                            u'COM LCO CPT Node 1m0 Dome C at Sutherland, South Africa\n'
+                            u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
+                            u'NET GAIA-DR1\n'
+                            u'BND G\n'
+                            u'     N999r0q  C2015 07 13.88184001 02 00.00 -03 45 00.0          21.6 G      K93\n')
+        message = generate_message(self.test_block_gaia.id)
 
         i = 0
         expected_lines = expected_message.split('\n')

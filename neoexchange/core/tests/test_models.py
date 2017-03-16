@@ -776,6 +776,24 @@ class TestSourceMeasurement(TestCase):
                  }
         self.test_frame_satellite = Frame.objects.create(**frame_params)
 
+        frame_params = { 'sitecode': u'F51',
+                         'block': None,
+                         'exptime': None,
+                         'extrainfo': None,
+                         'filename': None,
+                         'filter': u'w',
+                         'frametype': Frame.NONLCO_FRAMETYPE,
+                         'fwhm': None,
+                         'instrument': None,
+                         'midpoint': datetime(2017, 3, 7, 15, 29, 0, 960000),
+                         'nstars_in_fit': None,
+                         'quality': u' ',
+                         'rms_of_fit': None,
+                         'time_uncertainty': None,
+                         'zeropoint': None,
+                         'zeropoint_err': None}
+        self.test_frame_nonLCO_F51 = Frame.objects.create(**frame_params)
+
     def test_mpc_1(self):
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame,
@@ -786,7 +804,7 @@ class TestSourceMeasurement(TestCase):
                          }
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 wq     K93'
+        expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
 
@@ -800,7 +818,21 @@ class TestSourceMeasurement(TestCase):
                          }
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 wq     K93'
+        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_F51_no_filter_mapping(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_nonLCO_F51,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "2MASS",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2017 03 07.64515000 30 00.00 -00 30 00.0          21.5 wL     F51'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
 
@@ -815,7 +847,7 @@ class TestSourceMeasurement(TestCase):
                          }
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 wt     K93'
+        expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 Rt     K93'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
 

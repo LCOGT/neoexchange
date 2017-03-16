@@ -494,8 +494,12 @@ class Frame(models.Model):
         (e.g. 'R') that would be used for the photometric calibration'''
 
         new_filter = self.filter
-        if self.filter == 'solar':
-            new_filter = 'R'
+        # Don't perform any mapping if it's not LCO data
+        if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
+            if self.filter == 'solar' or self.filter == 'w':
+                new_filter = 'R'
+            if self.photometric_catalog == 'GAIA-DR1':
+                new_filter = 'G'
         return new_filter
 
     class Meta:
