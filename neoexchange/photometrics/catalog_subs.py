@@ -993,30 +993,34 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
         #update the zeropoint computed above in the CATALOG file Frame
         frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
 
-        for source in table:
-            source_params = {   'frame':frame,
-                                'obs_x': source['ccd_x'],
-                                'obs_y': source['ccd_y'],
-                                'obs_ra': source['obs_ra'],
-                                'obs_dec': source['obs_dec'],
-                                'obs_mag': source['obs_mag'],
-                                'err_obs_ra': source['obs_ra_err'],
-                                'err_obs_dec': source['obs_dec_err'],
-                                'err_obs_mag': source['obs_mag_err'],
-                                'background': source['obs_sky_bkgd'],
-                                'major_axis': source['major_axis'],
-                                'minor_axis': source['minor_axis'],
-                                'position_angle': source['ccd_pa'],
-                                'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
-                                'aperture_size': 3.0,
-                                'flags': source['flags'],
-                                'flux_max': source['flux_max'],
-                                'threshold': source['threshold']
-                            }
-            cat_src, created = CatalogSources.objects.get_or_create(**source_params)
-            if created == True:
-                num_sources_created += 1
         num_in_table = len(table)
+        num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+        if num_in_table != num_cat_sources:
+            for source in table:
+                source_params = {   'frame':frame,
+                                    'obs_x': source['ccd_x'],
+                                    'obs_y': source['ccd_y'],
+                                    'obs_ra': source['obs_ra'],
+                                    'obs_dec': source['obs_dec'],
+                                    'obs_mag': source['obs_mag'],
+                                    'err_obs_ra': source['obs_ra_err'],
+                                    'err_obs_dec': source['obs_dec_err'],
+                                    'err_obs_mag': source['obs_mag_err'],
+                                    'background': source['obs_sky_bkgd'],
+                                    'major_axis': source['major_axis'],
+                                    'minor_axis': source['minor_axis'],
+                                    'position_angle': source['ccd_pa'],
+                                    'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
+                                    'aperture_size': 3.0,
+                                    'flags': source['flags'],
+                                    'flux_max': source['flux_max'],
+                                    'threshold': source['threshold']
+                                }
+                cat_src, created = CatalogSources.objects.get_or_create(**source_params)
+                if created == True:
+                    num_sources_created += 1
+        else:
+            logger.info("Number of sources in catalog match number in DB; skipping")
     else:
         logger.warn("Could not open %s" % catfile)
 
