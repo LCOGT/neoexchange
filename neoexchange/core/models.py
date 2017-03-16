@@ -250,6 +250,9 @@ class Block(models.Model):
                 url = url + self.tracking_number.lstrip('0') + '/'
         return url
 
+    def num_frames(self):
+        return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
+
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
 
@@ -441,10 +444,10 @@ class Frame(models.Model):
             is_processed = True
         return is_processed
 
-    def reduced_frames(include_oracdr=False):
-        frametypes = (BANZAI_QL_FRAMETYPE, BANZAI_RED_FRAMETYPE)
+    def reduced_frames(self, include_oracdr=False):
+        frametypes = (self.BANZAI_QL_FRAMETYPE, self.BANZAI_RED_FRAMETYPE)
         if include_oracdr:
-            frametypes = (BANZAI_QL_FRAMETYPE, BANZAI_RED_FRAMETYPE, ORACDR_QL_FRAMETYPE, ORACDR_RED_FRAMETYPE)
+            frametypes = (self.BANZAI_QL_FRAMETYPE, self.BANZAI_RED_FRAMETYPE, self.ORACDR_QL_FRAMETYPE, self.ORACDR_RED_FRAMETYPE)
 
         return frametypes
 
