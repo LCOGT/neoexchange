@@ -13,7 +13,7 @@ def generate_message(blockid):
     # Strip off last double newline but put one back again
     return message.rstrip() + '\n'
 
-def email_report_to_mpc(blockid, email_sender=None, receipients=['egomez@lco.global']):
+def email_report_to_mpc(blockid, email_sender=None, receipients=['egomez@lco.global', 'tlister@lco.global']):
 
     mpc_report = generate_message(blockid)
     if email_sender == None:
