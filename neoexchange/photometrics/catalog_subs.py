@@ -884,7 +884,7 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
     header = table = None
     fits_header, fits_table, cattype = open_fits_catalog(catfile)
 
-    if fits_header != {} and fits_table != {}:
+    if len(fits_header) != 0 and len(fits_table) != 0:
         header = get_catalog_header(fits_header, catalog_type)
         table = get_catalog_items(header, fits_table, catalog_type, flag_filter)
 
