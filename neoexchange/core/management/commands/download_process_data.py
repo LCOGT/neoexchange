@@ -29,6 +29,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --data-dir [path]" % ( argv[1] )
 
+        self.stdout.write("==== Download and process astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         if type(options['date']) != datetime:
             try:

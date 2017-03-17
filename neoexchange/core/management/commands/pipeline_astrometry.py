@@ -112,8 +112,11 @@ class Command(BaseCommand):
                 self.stdout.write("Error occured storing catalog sources (Error code= %d, %d)" % (num_sources_created, num_in_catalog))
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
-            self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))
-            fits_filename = make_sext_file(temp_dir, new_catalog, catalog_type)
+            if options['skip_mtdlink'] == False:
+                self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))
+                fits_filename = make_sext_file(temp_dir, new_catalog, catalog_type)
+            else:
+                self.stdout.write("Skipping creation of .sext files for skipped mtdlink")
 
             if 'BANZAI' in catalog_type:
                 fits_filename = extract_sci_image(catalog, new_catalog)
