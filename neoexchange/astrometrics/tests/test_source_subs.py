@@ -909,6 +909,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_ C_le' : u'     K13R33T  C2013 09 13.18561323 15 20.53 -10 21 52.6          20.4 V      W86\r\n',
                             'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
                             'p_ x_l' :  u'g0232K10F41B* x2010 03 19.91359 06 26 37.29 +35 47 01.3                L~0FUhC51',
+                            'cp_!C_h':  u'0315PK13V060 !C2013 11 06.14604623 28 19.756-24 20 45.77         21.6 Tt90966705'
 
                           }
         self.maxDiff = None
@@ -1130,6 +1131,23 @@ class TestParseMPCObsFormat(TestCase):
         params = parse_mpcobs(self.test_lines['p_ C_f'])
 
         self.compare_dict(expected_params, params)
+
+    def test_cp_plingC_h(self):
+        expected_params = { 'body'  : '0315P',
+                            'flags' : '!',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2013, 11,  6, 3, 30, 18, int(0.3744*1e6)),
+                            'obs_ra'    : 352.08231666666667,
+                            'obs_dec'   : -24.346047222222222,
+                            'obs_mag'   : 21.6,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'PPMXL',
+                            'site_code' : '705'
+                          }
+        params = parse_mpcobs(self.test_lines['cp_!C_h'])
+
+        self.compare_dict(expected_params, params)
+
 
 class TestFetchNEOCPObservations(TestCase):
 
