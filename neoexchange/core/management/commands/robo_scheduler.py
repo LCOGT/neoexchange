@@ -12,6 +12,8 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
     south_1m0_list = []
     south_0m4_list = []
 
+    run_datetime = datetime.utcnow()
+
     for body in bodies:
         emp_line = body.compute_position()
         vmag = emp_line[2]
@@ -23,8 +25,8 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
         if vmag > faint_limit or vmag < bright_limit:
             continue
     # Find number of active and inactive but unreported Blocks
-        num_active = Block.objects.filter(body=body, active=True).count()
-        num_not_found = Block.objects.filter(body=body, active=False, reported=False).count()
+        num_active = Block.objects.filter(body=body, active=True, block_end__gte=run_datetime-timedelta(seconds=35*60)).count()
+        num_not_found = Block.objects.filter(body=body, active=False, num_observed__gte=1, reported=False).count()
         if num_active >= 1:
             print "Already active"
             continue
