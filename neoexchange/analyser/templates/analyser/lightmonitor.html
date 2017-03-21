@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load staticfiles %}
+{% load staticfiles basic_tags %}
 
 {% block bodyclass %}page lightmonitor{%endblock%}
 
@@ -175,15 +176,15 @@
 		<tbody>
 			<tr>
 				<td class="kv-key">Position Angle</td>
-				<td class="kv-value">{{c.motion.pos_angle|floatformat:"2"}}</td>
+				<td class="kv-value">{{c.motion.pos_angle|floatformat:"1"}}</td>
 			</tr>
 			<tr>
 				<td class="kv-key">Speed</td>
-				<td class="kv-value">{{c.motion.speed|floatformat:"2"}}</td>
+				<td class="kv-value">{{c.motion.speed|floatformat:"2"}} "/min</td>
 			</tr>
 			<tr>
 				<td class="kv-key">Speed (raw)</td>
-				<td class="kv-value">{{c.motion.speed_raw|floatformat:"2"}}</td>
+				<td class="kv-value">{{c.motion.speed_raw|floatformat:"2"}} deg/day</td>
 			</tr>
 		</tbody>
 	</table>
@@ -194,11 +195,11 @@
 		<tbody>
 			<tr>
 				<td class="kv-key">RA</td>
-				<td class="kv-value">{{sc.ra|floatformat:"2"}}</td>
+				<td class="kv-value">{{sc.ra|degreestohms:" "}}</td>
 			</tr>
 			<tr>
 				<td class="kv-key">Dec</td>
-				<td class="kv-value">{{sc.dec|floatformat:"2"}}</td>
+				<td class="kv-value">{{sc.dec|degreestodms:" "}}</td>
 			</tr>
 			<tr>
 				<td class="kv-key">Mag</td>
