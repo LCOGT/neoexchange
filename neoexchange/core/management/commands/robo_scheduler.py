@@ -131,29 +131,43 @@ class Command(BaseCommand):
             north_list['1m0'] = north_list['1m0'].append(north_list['0m4'])
 
         self.stdout.write("Site Available?\n===============")
+        site_statuses = []
         for hemisphere in sites.keys():
             for tel_class in north_list.keys():
                 for site in sites[hemisphere][tel_class]:
                     site_available, reason = get_site_status(site)
+                    site_statuses.append((site, (site_available, reason)))
                     self.stdout.write("%4s %5s (%s)" % (site, site_available, reason))
+
+        site_status = dict(site_statuses)
 
         if options['run']:
 
             for tel_class in north_list.keys():
                 do_north = False
                 if len(sites['north'][tel_class]) > 0:
-                    do_north = True
-                    north_form = {'site_code': sites['north'][tel_class][0], 'utc_date' : scheduling_date.date(), 'proposal_code': options['proposal']}
+                    for site in sites['north'][tel_class]:
+                        if site_status[site][0] == True:
+                            do_north = True
+                            north_form = {'site_code': sites['north'][tel_class][0], 'utc_date' : scheduling_date.date(), 'proposal_code': options['proposal']}
+                            break
                 do_south = False
                 if len(sites['south'][tel_class]) > 0:
-                    do_south = True
-                    south_form = {'site_code': sites['south'][tel_class][0], 'utc_date' : scheduling_date.date(), 'proposal_code': options['proposal']}
+                    for site in sites['south'][tel_class]:
+                        if site_status[site][0] == True:
+                            do_south = True
+                            south_form = {'site_code': sites['south'][tel_class][0], 'utc_date' : scheduling_date.date(), 'proposal_code': options['proposal']}
+                            break
 
                 if do_north:
                     num_scheduled = schedule_target_list(north_list[tel_class], north_form, username)
                     self.stdout.write("Scheduled %d in the North at %s" % (num_scheduled, north_form['site_code']))
+                else:
+                    self.stdout.write("No sites in the North available for scheduling")
                 if do_south:
                     num_scheduled = schedule_target_list(south_list[tel_class], south_form, username)
                     self.stdout.write("Scheduled %d in the South at %s" % (num_scheduled, south_form['site_code']))
+                else:
+                    self.stdout.write("No sites in the South available for scheduling")
         else:
             self.stdout.write("Simulating scheduling at %s and %s" % (sites['north'], sites['south']) )
