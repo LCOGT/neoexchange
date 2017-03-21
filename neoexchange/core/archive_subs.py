@@ -188,17 +188,15 @@ def download_files(frames, output_path, verbose=False, dbg=False):
                     f.write(requests.get(frame['url']).content)
     return downloaded_frames
 
-def find_images_block(blockid):
+def archive_lookup_images(images):
     '''
     user_reqs: Full User Request dict, or list of dictionaries, containing individual observation requests
     header: provide auth token from the request API so we don't need to get it twice
     '''
-    images, candidates, x, y = find_images_for_block(blockid)
     headers = {'Authorization': 'Token ' + settings.ARCHIVE_TOKEN}
     frame_urls = []
-    logger.debug("Found {} Frames".format(frames.count()))
     for frame in images:
-        thumbnail_url = "{}{}/?width=1000&height=1000&median=true&percentile=98".format(settings.THUMBNAIL_URL, frame['img'])
+        thumbnail_url = "{}{}/?width=1200&height=1200&median=true&percentile=98".format(settings.THUMBNAIL_URL, frame['img'])
         try:
             resp = requests.get(thumbnail_url, headers=headers)
             frame_info = {'id':frame['img'], 'url':resp.json()['url']}
@@ -207,4 +205,4 @@ def find_images_block(blockid):
         except ValueError:
             logger.error("Failed to get thumbnail URL for %s - %s" % (frame, resp.status_code))
     logger.debug("Total frames=%s" % (len(frame_urls)))
-    return frame_urls, candidates
+    return frame_urls
