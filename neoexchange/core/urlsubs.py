@@ -1,4 +1,5 @@
 import requests
+from simplejson import JSONDecodeError
 
 def get_lcogt_headers(auth_url, username, password):
     #  Get the authentication token
@@ -17,3 +18,12 @@ def get_lcogt_headers(auth_url, username, password):
         headers = None
 
     return headers
+
+def get_telescope_states(telstates_url='http://valhalla.lco.gtn/api/telescope_states/'):
+
+    try:
+        response = requests.get(telstates_url).json()
+    except JSONDecodeError:
+        response = {}
+
+    return response

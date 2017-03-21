@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from core.models import Body, Block
 from core.views import schedule_check, schedule_submit, record_block
 from astrometrics.ephem_subs import format_emp_line, determine_sites_to_schedule
+from astrometrics.sources_subs import get_site_status
 
 def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0):
     north_1m0_list = []
@@ -128,6 +129,13 @@ class Command(BaseCommand):
         if len(sites['north']['0m4']) == 0 and len(sites['north']['1m0']) > 0:
             self.stdout.warn("No 0.4m telescopes available, transferring targets to 1m0 telescopes")
             north_list['1m0'] = north_list['1m0'].append(north_list['0m4'])
+
+        self.stdout.write("Site Available?\n===============")
+        for hemisphere in sites.keys():
+            for tel_class in north_list.keys():
+                for site in sites[hemisphere][tel_class]:
+                    site_available = get_site_status(site)
+                    self.stdout.write("%4s %s" % (site, site_available))
 
         if options['run']:
 

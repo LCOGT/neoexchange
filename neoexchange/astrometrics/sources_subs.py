@@ -34,6 +34,8 @@ from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from astrometrics.ephem_subs import return_LCOGT_site_codes_mapping
+from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
 
@@ -995,6 +997,33 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         logger.error("Could not open folder/label %s on %s" % (folder, mailbox.host))
         return []
     return NASA_targets
+
+def get_site_status(site_code):
+    '''Queries the Valhalla telescope states end point to determine if the
+    passed <site_code> is available for scheduling.
+    Returns True if the site/telescope is available for scheduling and
+    assumed True if the status can't be determined. Otherwise if the
+    last event for the telescope can be found and it does not show
+    'AVAILABLE', then the good_to_schedule status is set to False.'''
+
+    good_to_schedule = True
+
+# Get dictionary mapping LCO code (site-enclosure-telescope) to MPC site code
+# and reverse it
+    site_codes = return_LCOGT_site_codes_mapping()
+    lco_codes = {mpc_code:lco_code.lower().replace('-', '.') for lco_code,mpc_code in site_codes.iteritems()}
+
+    response = get_telescope_states()
+
+    if len(response) > 0:
+        key = lco_codes.get(site_code, None)
+        status = response.get(key, None)
+        if status:
+            current_status = status[-1]
+            logger.debug("State for %s:\n%s" % (site_code, current_status))
+            good_to_schedule = 'AVAILABLE' in current_status.get('event_type', '')
+
+    return good_to_schedule
 
 def make_location(params):
     location = {
