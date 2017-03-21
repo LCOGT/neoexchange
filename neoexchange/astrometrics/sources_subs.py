@@ -1022,6 +1022,8 @@ def get_site_status(site_code):
             current_status = status[-1]
             logger.debug("State for %s:\n%s" % (site_code, current_status))
             good_to_schedule = 'AVAILABLE' in current_status.get('event_type', '')
+        else:
+            good_to_schedule = False
 
     return good_to_schedule
 
