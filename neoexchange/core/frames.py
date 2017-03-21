@@ -8,6 +8,7 @@ from astropy.wcs import WCS
 
 from core.models import Block, Frame, Candidate, SourceMeasurement
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
+from astrometrics.time_subs import jd_utc2datetime
 from core.urlsubs import get_lcogt_headers
 from core.archive_subs import archive_login
 import logging
@@ -76,9 +77,10 @@ def candidates_by_block(blockid):
         coords = []
         sky_coords = []
         dets = cand.unpack_dets()
-        d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'], dets['mag'])
+        times = [jd_utc2datetime(x).strftime("%Y-%m-%d %H:%M:%S") for x in dets['jd_obs']]
+        d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'], dets['mag'], times )
         for a in d_zip:
-            coords.append({'x':a[1], 'y':a[2]})
+            coords.append({'x':a[1], 'y':a[2], 'time':a[6]})
             sky_coords.append({'ra':a[3], 'dec':a[4], 'mag':a[5]})
         motion = {'speed' : cand.convert_speed(), 'speed_raw' : cand.speed, 'pos_angle' : cand.sky_motion_pa}
         targets.append({'id': str(cand.id), 'coords':coords, 'sky_coords':sky_coords, 'motion':motion})

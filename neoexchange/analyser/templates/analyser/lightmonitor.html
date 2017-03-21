@@ -19,7 +19,7 @@
 	var mini_img;
 	var frames = {{images|safe}};
 	var candidates = {{candidates|safe}};
-  var candids = Array();
+        var candids = Array();
 	var image_scale = {{xaxis|default:"1024"}}/600;
 	var accepted = Array();
 	var rejected = Array();
@@ -221,6 +221,10 @@
 				<td class="kv-key">Y</td>
 				<td class="kv-value">{{cc.y|floatformat:"2"}}</td>
 			</tr>
+                        <tr>
+                            <td class="kv-key">Time</td>
+			    <td class="kv-value">{{cc.time}}</td>
+                        </tr>
 		</tbody>
 	</table>
 	{% endfor %}
