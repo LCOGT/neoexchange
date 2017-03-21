@@ -118,7 +118,6 @@
 					<h3 class="section-title">Zoom Region</h3>
 					<canvas id="zoomCanvas" width="200" height="200"><p>Image has failed to load.</p></canvas>
 
-          <h3 class="section-title">Controls</h3>
 							<div class="button-holder">
 								<button id="prev-img-btn" onclick="prevImage();"><i class="fa fa-arrow-circle-left fa-2x" aria-hidden="true"></i></button>
 								<span id="current_image_index"></span> of <span id="number_images"></span>
@@ -157,21 +156,6 @@
 										<span class='block-status-item' id="cand-reject" data-cand_id="">Reject</span>
 									</li>
 								</ul>
-
-								<div id="candidate-info" style="display:none;">
-									<table class="keyvalue-table">
-										<tbody>
-											<tr>
-												<td class="kv-key"></td>
-												<td class="kv-value"></td>
-											</tr>
-											<tr>
-												<td class="kv-key"></td>
-												<td class="kv-value"></td>
-											</tr>
-										</tbody>
-									</table>
-								</div>
 							</div>
         </div>
 				{% else %}
@@ -180,4 +164,68 @@
 				{% endif %}
       </div>
     </div>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+	{% for c in candidates %}
+	<div class="row candidate-row" id="candidate-{{forloop.counter0}}"   style="display:none;">
+	<div class="four columns">
+	<table class="keyvalue-table motion-info">
+		<tbody>
+			<tr>
+				<td class="kv-key">Position Angle</td>
+				<td class="kv-value">{{c.motion.pos_angle|floatformat:"2"}}</td>
+			</tr>
+			<tr>
+				<td class="kv-key">Speed</td>
+				<td class="kv-value">{{c.motion.speed|floatformat:"2"}}</td>
+			</tr>
+			<tr>
+				<td class="kv-key">Speed (raw)</td>
+				<td class="kv-value">{{c.motion.speed_raw|floatformat:"2"}}</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div class="four columns">
+	{% for sc in c.sky_coords %}
+	<table class="keyvalue-table" id="skycoords-{{forloop.counter0}}" style="display:none;">
+		<tbody>
+			<tr>
+				<td class="kv-key">RA</td>
+				<td class="kv-value">{{sc.ra|floatformat:"2"}}</td>
+			</tr>
+			<tr>
+				<td class="kv-key">Dec</td>
+				<td class="kv-value">{{sc.dec|floatformat:"2"}}</td>
+			</tr>
+			<tr>
+				<td class="kv-key">Mag</td>
+				<td class="kv-value">{{sc.mag|floatformat:"2"}}</td>
+			</tr>
+		</tbody>
+	</table>
+	{% endfor %}
+</div>
+<div class="four columns">
+	{% for cc in c.coords %}
+	<table class="keyvalue-table"  id="coords-{{forloop.counter0}}"  style="display:none;">
+		<tbody>
+			<tr>
+				<td class="kv-key">X</td>
+				<td class="kv-value">{{cc.x|floatformat:"2"}}</td>
+			</tr>
+			<tr>
+				<td class="kv-key">Y</td>
+				<td class="kv-value">{{cc.y|floatformat:"2"}}</td>
+			</tr>
+		</tbody>
+	</table>
+	{% endfor %}
+	</div>
+</div>
+{% endfor %}
+</div>
+
 {% endblock %}

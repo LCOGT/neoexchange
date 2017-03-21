@@ -207,14 +207,27 @@ function loadCandidates(candidates){
   }
 }
 
+function display_info_panel(cindex, index) {
+  // Hide all info tables to start
+  $('.keyvalue-table').hide();
+  $('.candidate-row').hide();
+  $('.motion-info').show();
+  // Only show info tables for current index
+  $('#candidate-'+cindex).show();
+  $('#skycoords-'+index).show();
+  $('#coords-'+index).show();
+}
+
 function changeImage(ind, cand_index=0, allcandidates=false) {
-  //
-  //
+
+  var index;
+
   if (typeof(ind) == 'undefined') {
     index = 0;
   } else {
     index = ind % frames.length;
   }
+
   // Remove everything already on the stage
   stage.removeAllChildren();
 
@@ -252,6 +265,8 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
     name = "target_" + cand_index;
     addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
     zoomImage(target.x/image_scale, target.y/image_scale);
+    // Show the candidate information
+    display_info_panel(id, index);
   }
   stage.update();
 

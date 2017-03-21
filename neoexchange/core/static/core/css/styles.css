@@ -71,6 +71,8 @@ table.datatable  tr:hover {
     background-color: #ddd;
 }
 
+.keyvalue-table { width:100%;}
+
 .keyvalue-table>tbody>tr>td {
   vertical-align: middle;
   padding-top: 11px;
