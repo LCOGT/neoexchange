@@ -1007,6 +1007,7 @@ def get_site_status(site_code):
     'AVAILABLE', then the good_to_schedule status is set to False.'''
 
     good_to_schedule = True
+    reason = ''
 
 # Get dictionary mapping LCO code (site-enclosure-telescope) to MPC site code
 # and reverse it
@@ -1022,10 +1023,12 @@ def get_site_status(site_code):
             current_status = status[-1]
             logger.debug("State for %s:\n%s" % (site_code, current_status))
             good_to_schedule = 'AVAILABLE' in current_status.get('event_type', '')
+            reason = current_status.get('event_reason', '')
         else:
             good_to_schedule = False
+            reason = 'Not available for scheduling'
 
-    return good_to_schedule
+    return (good_to_schedule, reason)
 
 def make_location(params):
     location = {

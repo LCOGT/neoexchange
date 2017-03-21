@@ -134,8 +134,8 @@ class Command(BaseCommand):
         for hemisphere in sites.keys():
             for tel_class in north_list.keys():
                 for site in sites[hemisphere][tel_class]:
-                    site_available = get_site_status(site)
-                    self.stdout.write("%4s %s" % (site, site_available))
+                    site_available, reason = get_site_status(site)
+                    self.stdout.write("%4s %5s (%s)" % (site, site_available, reason))
 
         if options['run']:
 
