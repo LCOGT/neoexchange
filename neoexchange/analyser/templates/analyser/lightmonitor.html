@@ -7,25 +7,25 @@
 {%block header %}Light Monitor for block {{object.id}}{%endblock%}
 
 {% block script-content %}
-<script src="https://code.createjs.com/createjs-2015.11.26.min.js"  type="text/javascript" ></script>
+<script src="{% static "core/js/createjs-2015.11.26.min.js" %}"  type="text/javascript" ></script>
 <script src="{% static "core/js/astrometer.js" %}"  type="text/javascript" ></script>
 <script>
-	var stage;
-	var ministage;
-	var index = 0;
-	var point_size = 10;
-	var blinker;
-	var img_holder;
-	var mini_img;
-	var frames = {{images|safe}};
-	var candidates = {{candidates|safe}};
-        var candids = Array();
-	var image_scale = {{xaxis|default:"1024"}}/600;
-	var accepted = Array();
-	var rejected = Array();
-	var data_url = 'https://thumbnails.lco.global/';
-	var img_params = '?width=1000&height=1000&median=true&percentile=98';
-	var analysed = {% if analysed %}true{% else %}false{% endif %};
+var stage;
+var ministage;
+var index = 0;
+var point_size = 10;
+var blinker;
+var img_holder;
+var mini_img;
+var frames = {{images|safe}};
+var candidates = {{candidates|safe}};
+var candids = Array();
+var image_scale = {{xaxis|default:"1024"}}/600;
+var accepted = Array();
+var rejected = Array();
+var data_url = 'https://thumbnails.lco.global/';
+var img_params = '?width=1000&height=1000&median=true&percentile=98';
+var analysed = {% if analysed %}true{% else %}false{% endif %};
 
 	$(document).ready(function(){
 
@@ -35,7 +35,7 @@
 		$('.candidate-select').click(function(){
 			var ind = $(this).data('cand_id');
 			stopBlink();
-		  startBlink(ind, false);
+			startBlink(ind, false);
 			$('#candidate-list').hide();
 			$('.candidate-accept').show();
 
@@ -86,18 +86,17 @@
 {%endblock%}
 
 {% block extramenu %}
-    <div class="headingleft">
-        <h1>Analyser for block: <a href="{% url 'block-view' object.id  %}" class="objectspecific">#{{object.id}}</a></h1>
-    </div>
+		<div class="headingleft">
+				<h1>Analyser for block: <a href="{% url 'block-view' object.id  %}" class="objectspecific">#{{object.id}}</a></h1>
+		</div>
 {% endblock%}
 
 {% block main-content %}
 <!-- Main body -->
-<div class="container" id="main">
-        <div class="row">
+<div class="container u-full-width" id="main">
+				<div class="row">
 					{% if images %}
-            <div class="eight columns">
-                <h3 class="section-title">{% if analysed %}Measurements of{% else %}Looking for{% endif %} {{object.body.current_name}}</h3>
+						<div class="eight columns">
 								{% if object.reported %}
 								<div class="blue">
 									Block already reported to MPC
@@ -115,8 +114,7 @@
 								</div>
 				</div>
 
-        <div class="four columns">
-					<h3 class="section-title">Zoom Region</h3>
+				<div class="four columns">
 					<canvas id="zoomCanvas" width="200" height="200"><p>Image has failed to load.</p></canvas>
 
 							<div class="button-holder">
@@ -158,40 +156,39 @@
 									</li>
 								</ul>
 							</div>
-        </div>
+				</div>
 				{% else %}
 				<h3 class="section-title">Looking for {{object.body.current_name}}</h3>
 				<p>There are currently no images or candidates available to measure.</p>
 				{% endif %}
-      </div>
-    </div>
+			</div>
+		</div>
 {% endblock %}
 
 {% block content %}
 <div class="container">
 	{% for c in candidates %}
-	<div class="row candidate-row" id="candidate-{{forloop.counter0}}"   style="display:none;">
-	<div class="four columns">
-	<table class="keyvalue-table motion-info">
-		<tbody>
-			<tr>
-				<td class="kv-key">Position Angle</td>
-				<td class="kv-value">{{c.motion.pos_angle|floatformat:"1"}}</td>
-			</tr>
-			<tr>
-				<td class="kv-key">Speed</td>
-				<td class="kv-value">{{c.motion.speed|floatformat:"2"}} "/min</td>
-			</tr>
-			<tr>
-				<td class="kv-key">Speed (raw)</td>
-				<td class="kv-value">{{c.motion.speed_raw|floatformat:"2"}} deg/day</td>
-			</tr>
-		</tbody>
-	</table>
-</div>
-<div class="four columns">
+	<div class="row candidate-row candidate-{{forloop.counter0}}"  style="display:none;">
+		<div class="eight columns">
+		<table class="keyvalue-table-minimal">
+			<tbody>
+				<tr>
+					<td class="kv-key">Position Angle</td>
+					<td class="kv-value">{{c.motion.pos_angle|floatformat:"1"}}</td>
+					<td class="kv-key">Speed</td>
+					<td class="kv-value">{{c.motion.speed|floatformat:"2"}} "/min</td>
+					<td class="kv-key">Speed (raw)</td>
+					<td class="kv-value">{{c.motion.speed_raw|floatformat:"2"}} deg/day</td>
+				</tr>
+			</tbody>
+			</table>
+		</div>
+	</div>
+
+	<div class="row candidate-row candidate-{{forloop.counter0}}">
+		<div class="four columns">
 	{% for sc in c.sky_coords %}
-	<table class="keyvalue-table" id="skycoords-{{forloop.counter0}}" style="display:none;">
+	<table class="keyvalue-table coords-table" id="img-skycoords-{{forloop.counter0}}" style="display:none;">
 		<tbody>
 			<tr>
 				<td class="kv-key">RA</td>
@@ -209,9 +206,9 @@
 	</table>
 	{% endfor %}
 </div>
-<div class="four columns">
+	<div class="four columns">
 	{% for cc in c.coords %}
-	<table class="keyvalue-table"  id="coords-{{forloop.counter0}}"  style="display:none;">
+	<table class="keyvalue-table coords-table"  id="img-coords-{{forloop.counter0}}" style="display:none;">
 		<tbody>
 			<tr>
 				<td class="kv-key">X</td>
@@ -221,10 +218,10 @@
 				<td class="kv-key">Y</td>
 				<td class="kv-value">{{cc.y|floatformat:"2"}}</td>
 			</tr>
-                        <tr>
-                            <td class="kv-key">Time</td>
-			    <td class="kv-value">{{cc.time}}</td>
-                        </tr>
+			<tr>
+				<td class="kv-key">Time</td>
+				<td class="kv-value">{{cc.time}}</td>
+			</tr>
 		</tbody>
 	</table>
 	{% endfor %}

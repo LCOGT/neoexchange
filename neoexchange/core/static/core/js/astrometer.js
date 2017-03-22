@@ -209,13 +209,12 @@ function loadCandidates(candidates){
 
 function display_info_panel(cindex, index) {
   // Hide all info tables to start
-  $('.keyvalue-table').hide();
+  $('.coords-table').hide();
   $('.candidate-row').hide();
-  $('.motion-info').show();
   // Only show info tables for current index
-  $('#candidate-'+cindex).show();
-  $('#skycoords-'+index).show();
-  $('#coords-'+index).show();
+  $('.candidate-'+cindex).show();
+  $('.candidate-'+cindex +' '+'#img-coords-'+index).show();
+  $('.candidate-'+cindex +' '+'#img-skycoords-'+index).show();
 }
 
 function changeImage(ind, cand_index=0, allcandidates=false) {
