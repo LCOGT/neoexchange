@@ -1055,7 +1055,7 @@ class TestDetermineSitesToSchedule(TestCase):
         d = datetime(2017, 3, 10,  00, 2, 5)
 
         expected_sites = { 'north' : { '0m4' : ['T04',], '1m0' : ['V37',] },
-                           'south' : { '0m4' : [ ]     , '1m0' : ['W85', 'W86'] }
+                           'south' : { '0m4' : [ ]     , '1m0' : ['W86', 'W85'] }
                          }
 
         sites = determine_sites_to_schedule(d)
