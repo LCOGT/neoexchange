@@ -4,6 +4,7 @@ import requests
 import logging
 import csv
 import subprocess
+from PIL import Image, ImageDraw
 
 logger = logging.getLogger('neox')
 
@@ -69,9 +70,9 @@ def download_image(frame, current_files, download_dir, blockid):
 
     return file_name
 
-def add_markers_to_image(coordinates, filename):
-    r = 10
+def add_markers_to_image(coords, filename, radius=10):
     image = Image.open(filename)
     draw = ImageDraw.Draw(image, 'RGBA')
-    draw.ellipse((x-r, y-r, x+r, y+r), fill=(0,255,0,128))
+    draw.ellipse((coords[0]-r, coords[1]-r, coords[0]+r, coords[1]+r), fill=(0,255,0,128))
     image.save(filename, 'jpeg')
+    return 
