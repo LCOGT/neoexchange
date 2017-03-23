@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using LCOGT
 
 ## History
 
+### 1.6.8
+
+Cleanups for leaner docker containers.
+
 ### 1.6.7.1
 
 Lower the default IPP values. Round arc and not-seen values on the home page.
