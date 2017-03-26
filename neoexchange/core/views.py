@@ -358,6 +358,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
+    group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d')
+    if data.get('too_mode', False) == True:
+        group_id = group_id + '_ToO'
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
@@ -366,9 +369,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
+        'too_mode' : data.get('too_mode', False),
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+        'group_id': group_id,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
@@ -405,7 +409,8 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'group_id': data['group_id']
+              'group_id': data['group_id'],
+              'too_mode' : data.get('too_mode', False)
               }
     # Check for pre-existing block
     tracking_number = None

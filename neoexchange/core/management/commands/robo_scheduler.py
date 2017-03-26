@@ -80,6 +80,7 @@ class Command(BaseCommand):
         spd_help = "South Polar Distance cutoff for S. Hemisphere (%.1f=%+.1f Dec)" % (spd_default, spd_default-90.0)
         parser.add_argument('--spd_cutoff', default=spd_default, type=float, help=spd_help)
         parser.add_argument('--not_seen', default=not_seen_default, help="Cutoff since object was seen ("+str(not_seen_default)+" days)")
+        parser.add_argument('--too', action="store_true", help="Whether to execute as disruptive ToO")
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --user [tlister@lcogt.net] --run"
@@ -149,14 +150,20 @@ class Command(BaseCommand):
                     for site in sites['north'][tel_class]:
                         if site_status[site][0] == True:
                             do_north = True
-                            north_form = {'site_code': sites['north'][tel_class][0], 'utc_date' : scheduling_date.date(), 'proposal_code': options['proposal']}
+                            north_form = {'site_code': sites['north'][tel_class][0],
+                                          'utc_date' : scheduling_date.date(),
+                                          'proposal_code': options['proposal'],
+                                          'too_mode' : options['too']}
                             break
                 do_south = False
                 if len(sites['south'][tel_class]) > 0:
                     for site in sites['south'][tel_class]:
                         if site_status[site][0] == True:
                             do_south = True
-                            south_form = {'site_code': sites['south'][tel_class][0], 'utc_date' : scheduling_date.date(), 'proposal_code': options['proposal']}
+                            south_form = {'site_code': sites['south'][tel_class][0],
+                                          'utc_date' : scheduling_date.date(),
+                                          'proposal_code': options['proposal'],
+                                          'too_mode' : options['too']}
                             break
 
                 if do_north:

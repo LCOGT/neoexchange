@@ -1129,6 +1129,7 @@ def make_constraints(params):
                        'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
 #                      'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
 #                      'max_airmass' : 2.37,    # 25 deg altitude (The maximum airmass you are willing to accept)
+                      'min_lunar_distance' : 30.0,
                     }
     return constraints
 
@@ -1219,6 +1220,10 @@ def submit_block_to_scheduler(elements, params):
 
     constraints = make_constraints(params)
     request.set_constraints(constraints)
+
+# If the ToO mode is set, change the observation_type
+    if params['too_mode'] == True:
+        request.observation_type = 'TARGET_OF_OPPORTUNITY'
 
 # Add the Request to the outer User Request
 # If site is ELP, increase IPP value
