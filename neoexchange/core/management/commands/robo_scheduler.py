@@ -7,7 +7,7 @@ from core.views import schedule_check, schedule_submit, record_block
 from astrometrics.ephem_subs import format_emp_line, determine_sites_to_schedule
 from astrometrics.sources_subs import get_site_status
 
-def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0):
+def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0, speed_cutoff=5.0):
     north_1m0_list = []
     north_0m4_list = []
     south_1m0_list = []
@@ -15,17 +15,23 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
 
     run_datetime = datetime.utcnow()
 
+    print(" Object     RA           Dec       Mag.   Speed")
+    print("------------------------------------------------")
+
     for body in bodies:
         emp_line = body.compute_position()
         vmag = emp_line[2]
         spd = emp_line[3]
+        sky_motion = emp_line[-1]
         if not emp_line:
             continue
-        line_bits = format_emp_line((obs_date, emp_line[0], emp_line[1], vmag, spd), '500')
-        print body.current_name(), line_bits[1:4]
+        line_bits = format_emp_line((obs_date, emp_line[0], emp_line[1], vmag, sky_motion, spd), '500')
+        print("%7s %s %s  V=%s  %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4]))
         if vmag > faint_limit or vmag < bright_limit:
             continue
-    # Find number of active and inactive but unreported Blocks
+        if sky_motion > speed_cutoff:
+            continue
+        # Find number of active and inactive but unreported Blocks
         num_active = Block.objects.filter(body=body, active=True, block_end__gte=run_datetime-timedelta(seconds=35*60)).count()
         num_not_found = Block.objects.filter(body=body, active=False, num_observed__gte=1, reported=False).count()
         if num_active >= 1:
@@ -71,6 +77,7 @@ class Command(BaseCommand):
         spd_default = 95.0
         not_seen_default = 2.5
         proposal_default = 'LCO2016B-011'
+        speed_limit_default = 5.0
         parser.add_argument('--date', default=datetime.utcnow(), help='Date to schedule for (YYYYMMDD)')
         parser.add_argument('--user', default='tlister@lcogt.net', help="Username to schedule as e.g. 'tlister@lcogt.net'")
         parser.add_argument('--proposal', default=proposal_default, help='Proposal code to use ('+proposal_default+')')
@@ -79,6 +86,7 @@ class Command(BaseCommand):
         parser.add_argument('--faint_limit', default=faint_default, type=float, help="Faint magnitude limit ("+str(faint_default)+")")
         spd_help = "South Polar Distance cutoff for S. Hemisphere (%.1f=%+.1f Dec)" % (spd_default, spd_default-90.0)
         parser.add_argument('--spd_cutoff', default=spd_default, type=float, help=spd_help)
+        parser.add_argument('--speed_limit', default=speed_limit_default, type=float, help="Rate of motion limit ("+str(speed_limit_default)+")")
         parser.add_argument('--not_seen', default=not_seen_default, help="Cutoff since object was seen ("+str(not_seen_default)+" days)")
         parser.add_argument('--too', action="store_true", help="Whether to execute as disruptive ToO")
 
@@ -99,9 +107,9 @@ class Command(BaseCommand):
 
         username = options['user']
         self.stdout.write("==== Runnning for date %s , submitting as %s" % (scheduling_date.date(), username))
-        self.stdout.write("==== Cutoffs: Bright= %.1f, Faint = %.1f, SPD= %.1f(=%+.1f Dec)" % \
+        self.stdout.write('==== Cutoffs: Bright= %.1f, Faint = %.1f, SPD= %.1f(=%+.1f Dec), Motion= %.1f "/min' % \
             (options['bright_limit'], options['faint_limit'], \
-             options['spd_cutoff'], options['spd_cutoff'] - 90.0))
+             options['spd_cutoff'], options['spd_cutoff'] - 90.0, options['speed_limit']))
 
         latest = Body.objects.filter(active=True).latest('ingest')
         max_dt = latest.ingest
@@ -111,7 +119,7 @@ class Command(BaseCommand):
         self.stdout.write("Found %d newest bodies, %d available for scheduling" % (newest.count(), bodies.count()))
 
         north_list, south_list = filter_bodies(bodies, scheduling_date, options['bright_limit'], options['faint_limit'], \
-             options['spd_cutoff'])
+             options['spd_cutoff'], options['speed_limit'])
 
         # Dictionary *and* list comprehensions, super swank...
         north_targets = {tel_class : [str(x.current_name()) for x in north_list[tel_class]] for tel_class in north_list.keys()}
