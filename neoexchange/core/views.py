@@ -108,11 +108,17 @@ def calculate_report_lag(blocks):
     # reported and then annotate with the new lag field and perform the
     # aggregations.
     lag_stats = blocks.filter(when_observed__isnull=False, reported=True).annotate(lag=lag).aggregate(Avg('lag'), Min('lag'), Max('lag'))
+
     units = 3600.0 # Results in hours
-    lag_summary = { 'lag_average' : lag_stats['lag__avg'].total_seconds() / units,
-                    'lag_min'     : lag_stats['lag__min'].total_seconds() / units,
-                    'lag_max'     : lag_stats['lag__max'].total_seconds() / units
-                  }
+    lags_list = []
+    for lag_type in ['lag_avg', 'lag_min', 'lag_max']:
+        dict_key = lag_type.replace('_', '__')
+        value = None
+        if lag_stats[dict_key]:
+            value = lag_stats[dict_key].total_seconds() / units
+        lags_list.append((lag_type, value))
+
+    lag_summary = dict(lags_list)
     return lag_summary
 
 def summarise_followup(time = datetime.utcnow()):
@@ -150,7 +156,7 @@ def summarise_followup(time = datetime.utcnow()):
                          'num_blocks_observed' : num_blocks_obs,
                          'num_blocks_reported' : num_blocks_reported,
                          'num_blocks_duplicated' : num_blocks_duplicated,
-                         'avg_lag' : lag_summary['lag_average'],
+                         'avg_lag' : lag_summary['lag_avg'],
                          'num_neo_blocks_observed' : num_neo_blocks_obs,
                          'num_neo_blocks_reported' : num_neo_blocks_reported,
                        }

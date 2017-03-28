@@ -122,14 +122,14 @@ class FollowUpSummaryTest(FunctionalTest):
         # that have been followed
 
         link = self.browser.find_element_by_link_text('PER SEMESTER FOLLOW-UP SUMMARY')
-        url = self.live_server_url + '/followup/' + 'summary/'
+        url = self.live_server_url + '/followup/summary/'
         self.assertEqual(link.get_attribute('href'), url)
 
 	# He clicks the link and is taken to a page with the follow-up
         # details.
         link.click()
-        self.browser.implicitly_wait(3)
-        new_url = self.live_server_url + '/followup/' + 'summary/'
+        self.browser.implicitly_wait(10)
+        new_url = self.live_server_url + '/followup/summary/'
         self.wait_for_element_with_id('page')
         self.assertEqual(str(new_url), url)
 
