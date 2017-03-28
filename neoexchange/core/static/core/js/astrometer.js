@@ -35,6 +35,7 @@ function setUp(){
   for (var i = 0; i < candidates.length; i++) {
     candids.push(candidates[i]['id']);
   }
+  blockcandidate = candids[0];
 
   stage = new createjs.Stage("imgCanvas");
   ministage = new createjs.Stage("zoomCanvas");
@@ -54,6 +55,35 @@ function resetCandidateOptions(){
   $('.candidate-accept').hide();
   $('#candidate-list').show();
   updateStatus();
+  enableBlockCandidateSelector();
+}
+
+function enableBlockCandidateSelector(){
+  if (accepted.length == 1){
+    blockcandidate = accepted[0];
+  }else if (accepted.length >1){
+    $('#block-candidate').show();
+  }else{
+    $('#block-candidate').hide();
+  }
+}
+
+function updateBlockCandidate(){
+  /* Add select element populated with accepted candidates */
+  $('#block-candidate select').html('');
+  var cid;
+  for (var i = 0, len = accepted.length; i < len; i++) {
+    cid = candids.indexOf(String(accepted[i]+1))
+    $('#block-candidate select').append('<option value="'+accepted[i]+'">Candidate '+cid+'</option>');
+  }
+  /* Add a change event to the select elements */
+  $('#block-candidate select')
+    .change(function () {
+    $( "select option:selected" ).each(function() {
+      blockcandidate = $( this ).val();
+    });
+  })
+  .change();
 }
 
 function updateStatus(){
@@ -71,6 +101,7 @@ function updateStatus(){
   for (var i = 0, len = rejected.length; i < len; i++) {
     $("#cand-"+rejected[i]+"-accept").hide();
     $("#cand-"+rejected[i]+"-reject").show();  }
+  updateBlockCandidate();
 }
 
 function nextImage() {
@@ -119,7 +150,6 @@ function updateTarget(name, x, y) {
   } else {
     target_id = target_name[1];
   }
-  console.log(target_id)
   var target = frames[index].candidates[target_id];
   target.x = x;
   target.y = y;

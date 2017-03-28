@@ -60,13 +60,14 @@ class ProcessCandidates(View):
     def post(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
         cand_ids = request.POST.getlist('objects[]','')
-        resp = analyser_to_source_measurement(block, cand_ids)
+        blockcandidate = request.POST.get('blockcandidate','')
+        resp = analyser_to_source_measurement(block, cand_ids, blockcandidate)
         if resp:
             return HttpResponse("ok", content_type="text/plain")
         else:
             return HttpResponseServerError("There was a problem", content_type="text/plain")
 
-def analyser_to_source_measurement(block, cand_ids):
+def analyser_to_source_measurement(block, cand_ids, blockcandidate):
     body = block.body
     frames = Frame.objects.filter(block=block, frameid__isnull=False).order_by('midpoint')
     if not frames:

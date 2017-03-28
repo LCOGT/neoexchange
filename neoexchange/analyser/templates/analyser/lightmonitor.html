@@ -26,6 +26,7 @@ var rejected = Array();
 var data_url = 'https://thumbnails.lco.global/';
 var img_params = '?width=1000&height=1000&median=true&percentile=98';
 var analysed = {% if analysed %}true{% else %}false{% endif %};
+var blockcandidate;
 
 	$(document).ready(function(){
 
@@ -66,7 +67,7 @@ var analysed = {% if analysed %}true{% else %}false{% endif %};
 
 {% if not object.reported %}
 		$('#cand-submit').click(function(){
-			$.post('{% url 'submit-candidates' object.id %}', { 'objects': accepted })
+			$.post('{% url 'submit-candidates' object.id %}', { 'objects': accepted,'blockcandidate':blockcandidate })
 			.done(function() {
 					window.location.replace('{% url 'block-report' object.id %}');
 				})
@@ -122,8 +123,17 @@ var analysed = {% if analysed %}true{% else %}false{% endif %};
 								<span id="current_image_index"></span> of <span id="number_images"></span>
 								<button id="next-img-btn" onclick="nextImage();"><i class="fa fa-arrow-circle-right fa-2x" aria-hidden="true"></i></button>
 							</div>
+
 							<div class="button-holder">
 								<ul class="candidate-controls">
+									<li style="display:none;" id="block-candidate">
+										<span class='block-status-item'>{{object.body.current_name}} is </span>
+										<span class='block-status-item'>
+											<select>
+											<option>Not selected</option>
+											</select
+										</span>
+									</li>
 									<li class='grey-dark blink-all-candidates'>
 										<span class='candidate' id="blink-start">
 											<span class="block-status-item"><i class="fa fa-refresh"></i></span>
