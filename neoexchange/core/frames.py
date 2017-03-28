@@ -81,7 +81,7 @@ def candidates_by_block(blockid):
         d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'], dets['mag'], times )
         for a in d_zip:
             coords.append({'x':a[1], 'y':a[2], 'time':a[6]})
-            sky_coords.append({'ra':a[3], 'dec':a[4], 'mag':a[5]})
+            sky_coords.append({'ra':a[3] * 15.0, 'dec':a[4], 'mag':a[5]})
         motion = {'speed' : cand.convert_speed(), 'speed_raw' : cand.speed, 'pos_angle' : cand.sky_motion_pa}
         targets.append({'id': str(cand.id), 'coords':coords, 'sky_coords':sky_coords, 'motion':motion})
     return targets
