@@ -1214,8 +1214,8 @@ def get_sitecam_params(site):
     point4m_alt_limit = 15.0
 
     onem_exp_overhead = 15.5
-    sinistro_exp_overhead = 48.0
-    onem_setup_overhead = 120.0
+    sinistro_exp_overhead = 38.0
+    onem_setup_overhead = 110.0
     twom_setup_overhead = 180.0
     twom_exp_overhead = 22.5
     point4m_exp_overhead = 13.0
