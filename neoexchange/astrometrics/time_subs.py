@@ -60,10 +60,25 @@ def get_semester_code(date):
     runs from 2016-04-01 00:00:00 until 2016-09-30 23:59:59
     Shit go screwy from 2017 onwards though...'''
 
-    semester = 'A'
-    if date.month >= 10 or date.month < 4:
-        date = date - timedelta(days=365)
-        semester = 'B'    
+    if date.year == 2017:
+        if date.month < 4:
+            return '2016B'
+        if date.month >= 4 and date.month <= 11:
+            return '2017AB'
+        if date.month >= 12:
+            return '2018A'
+    if date.year >= 2018:
+
+        semester = 'B'
+        if date.month >= 12 or date.month <= 5:
+            if date.month >= 12:
+                date = date + timedelta(days=365)
+            semester = 'A'
+    else:
+        semester = 'A'
+        if date.month >= 10 or date.month < 4:
+            date = date - timedelta(days=365)
+            semester = 'B'
     return str(date.year) + semester
 
 def parse_neocp_date(neocp_datestr, dbg=False):

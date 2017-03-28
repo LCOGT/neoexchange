@@ -279,3 +279,51 @@ class TestGetSemesterCode(TestCase):
         semester_code = get_semester_code(date)
 
         self.assertEqual(expected_code, semester_code)
+
+    def test_2017AB(self):
+        date = datetime(2017, 4, 1, 17, 0, 0)
+        expected_code = '2017AB'
+
+        semester_code = get_semester_code(date)
+
+        self.assertEqual(expected_code, semester_code)
+
+    def test_2017AB_end(self):
+        date = datetime(2017, 11, 30, 23, 59, 59)
+        expected_code = '2017AB'
+
+        semester_code = get_semester_code(date)
+
+        self.assertEqual(expected_code, semester_code)
+
+    def test_2018A_start(self):
+        date = datetime(2017, 12, 1, 00, 00,  1)
+        expected_code = '2018A'
+
+        semester_code = get_semester_code(date)
+
+        self.assertEqual(expected_code, semester_code)
+
+    def test_2018A_end(self):
+        date = datetime(2018, 5, 31, 23, 59, 59)
+        expected_code = '2018A'
+
+        semester_code = get_semester_code(date)
+
+        self.assertEqual(expected_code, semester_code)
+
+    def test_2018B_start(self):
+        date = datetime(2018,  6, 1, 00, 00,  1)
+        expected_code = '2018B'
+
+        semester_code = get_semester_code(date)
+
+        self.assertEqual(expected_code, semester_code)
+
+    def test_2018B_end(self):
+        date = datetime(2018, 11, 30, 23, 59, 59)
+        expected_code = '2018B'
+
+        semester_code = get_semester_code(date)
+
+        self.assertEqual(expected_code, semester_code)
