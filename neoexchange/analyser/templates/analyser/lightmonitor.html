@@ -17,10 +17,13 @@ var point_size = 10;
 var blinker;
 var img_holder;
 var mini_img;
+var zoom_origin=[0,0];
 var frames = {{images|safe}};
 var candidates = {{candidates|safe}};
 var candids = Array();
-var image_scale = {{xaxis|default:"1024"}}/600;
+var zoomLevel=1.0;
+var default_image_scale = {{xaxis|default:"1024"}}/600;
+var image_scale = default_image_scale/zoomLevel;
 var accepted = Array();
 var rejected = Array();
 var data_url = 'https://thumbnails.lco.global/';
@@ -111,6 +114,12 @@ var blockcandidate;
 									</div>
 									<div id="wrapper">
 										<canvas id="imgCanvas" width="600" height="600" src=""><p>Image has failed to load.</p></canvas>
+										<div class="button-holder">
+											<button id="zoom-img-btn" onclick="addCrossHairs();"><i class="fa fa-crosshairs fa-2x" aria-hidden="true"></i></button>
+											<button id="zoom-img-btn" onclick="mainImageZoomLevel('add');"><i class="fa fa-plus fa-2x" aria-hidden="true"></i></button>
+											<button id="zoom-img-btn" onclick="mainImageZoomLevel('minus');"><i class="fa fa-minus fa-2x" aria-hidden="true"></i></button>
+											<button id="zoom-img-btn" onclick="mainImageZoomLevel('revert');"><i class="fa fa-rotate-left fa-2x" aria-hidden="true"></i></button>
+										</div>
 									</div>
 								</div>
 				</div>
