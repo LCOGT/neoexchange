@@ -256,27 +256,32 @@ def generate_new_candidate_id(prefix='LNX'):
             logger.warn("Unable to decode last discoveries' id (id=%s)" % last_body_id)
     return new_id
 
-def generate_new_candidate(cand_data, prefix='LNX'):
+def generate_new_candidate(cand_frame_data, prefix='LNX'):
 
     new_body = None
     new_id = generate_new_candidate_id(prefix)
+    first_frame = cand_frame_data.order_by('midpoint')[0]
+    last_frame = cand_frame_data.latest('midpoint')
     if new_id:
         try:
-            time_span = cand_data[-1].midpoint - cand_data[0].midpoint
+            time_span = last_frame.midpoint - first_frame.midpoint
             arc_length = time_span.total_seconds() / 86400.0
         except:
             arc_length = None
 
         params = {  'provisional_name' : new_id,
                     'origin' : 'L',
-                    'discovery_date' : cand_data[0].midpoint,
-                    'num_obs' : len(cand_data),
+                    'source_type' : 'U',
+                    'discovery_date' : first_frame.midpoint,
+                    'num_obs' : cand_frame_data.count(),
                     'arc_length' : arc_length
                  }
         new_body, created = Body.objects.get_or_create(**params)
         if created:
-            new_body.not_seen = datetime.utcnow() - cand_data[-1].midpoint
-            body.save()
+            not_seen = datetime.utcnow() - last_frame.midpoint
+            not_seen_days = not_seen.total_seconds() / 86400.0
+            new_body.not_seen = not_seen_days
+            new_body.save()
     else:
         logger.warn("Could not determine a new id for the new object")
 

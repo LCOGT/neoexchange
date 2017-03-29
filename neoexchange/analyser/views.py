@@ -23,6 +23,7 @@ from django.http import Http404, HttpResponse, HttpResponseServerError, HttpResp
 
 from core.models import Frame, Block, Candidate, SourceMeasurement
 from core.frames import find_images_for_block
+from core.views import generate_new_candidate
 
 import logging
 
@@ -68,19 +69,32 @@ class ProcessCandidates(View):
             return HttpResponseServerError("There was a problem", content_type="text/plain")
 
 def analyser_to_source_measurement(block, cand_ids, blockcandidate):
-    body = block.body
-    frames = Frame.objects.filter(block=block, frameid__isnull=False).order_by('midpoint')
+
+    red_frames = Frame.objects.filter(block=block, frameid__isnull=False, frametype=Frame.BANZAI_RED_FRAMETYPE).order_by('midpoint')
+    ql_frames = Frame.objects.filter(block=block, frameid__isnull=False, frametype=Frame.BANZAI_QL_FRAMETYPE).order_by('midpoint')
+    if red_frames.count() >= ql_frames.count():
+        frames = red_frames
+    else:
+        frames = ql_frames
     if not frames:
         return False
     for cand_id in cand_ids:
         cand = Candidate.objects.get(pk=cand_id)
+        # If this candidate (cand_id) is the intended target of the Block, use
+        # that. Otherwise generate a new Body/asteroid candidate
+        if str(cand_id) == str(blockcandidate):
+            body = block.body
+        else:
+            body = generate_new_candidate(frames)
+        if not body:
+            return False
         detections = cand.unpack_dets()
         if len(detections) != frames.count():
             return False
         for det in detections:
             frame = frames[int(det[1])-1]
             params = {
-                'body' :body,
+                'body'  : body,
                 'frame' : frame
             }
             sm, created = SourceMeasurement.objects.get_or_create(**params)
