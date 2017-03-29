@@ -34,7 +34,7 @@ def odin_login(username, password):
 def measurements_from_block(blockid):
     block = Block.objects.get(pk=blockid)
     frames = Frame.objects.filter(block=block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE, Frame.STACK_FRAMETYPE)).values_list('id',flat=True)
-    measures = SourceMeasurement.objects.filter(frame__in=frames, obs_mag__gt=0.0).order_by('frame__midpoint')
+    measures = SourceMeasurement.objects.filter(frame__in=frames, obs_mag__gt=0.0).order_by('-body','frame__midpoint')
     return {'body' : block.body, 'measures' : measures, 'slot' : block}
 
 def fetch_observations(tracking_num):
