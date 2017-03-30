@@ -71,6 +71,8 @@ table.datatable  tr:hover {
     background-color: #ddd;
 }
 
+.keyvalue-table, .keyvalue-table-minimal { width:100%;}
+
 .keyvalue-table>tbody>tr>td {
   vertical-align: middle;
   padding-top: 11px;
@@ -79,15 +81,34 @@ table.datatable  tr:hover {
   border-bottom: 1px solid #ddd;
 }
 
-.kv-key {
+.keyvalue-table .kv-key {
   color: #555;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
 }
 
-.kv-value {
+.keyvalue-table .kv-value {
   font-size: 18px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.keyvalue-table-minimal>tbody>tr>td {
+  vertical-align: middle;
+  padding: 11px;
+  border-top: none;
+  border-bottom: 1px solid #ddd;
+}
+
+.keyvalue-table-minimal .kv-key {
+  color: #555;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.keyvalue-table-minimal .kv-value {
+  font-size: 12px;
   font-weight: 600;
   text-align: right;
 }

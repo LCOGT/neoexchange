@@ -48,6 +48,8 @@ class Command(BaseCommand):
             self.stdout.write('Processing target %s in %s' % (rock, datadir))
             fits_files = get_fits_files(datadir)
             self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir) )
+            if len(fits_files) == 0:
+                continue
             first_file = fits_files[0]
             header, dummy_table, cattype = open_fits_catalog(first_file, header_only=True)
             tracking_num = header.get('tracknum', None)

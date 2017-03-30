@@ -203,44 +203,44 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 	self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
 	self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
 
-    def test_store_catalog_sources_multiple_frames(self):
+#    def test_store_catalog_sources_multiple_frames(self):
 
-        frame_params3 = {   'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'ldac_test_catalog.fits',
-                            'exptime':60.0,
-                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
-                            'block':self.test_block,
-                            'zeropoint':None,
-                            'zeropoint_err':None,
-                            'fwhm':2.825,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':3.0,
-                        }
-        self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
+#        frame_params3 = {   'sitecode':'K92',
+#                            'instrument':'kb76',
+#                            'filter':'w',
+#                            'filename':'ldac_test_catalog.fits',
+#                            'exptime':60.0,
+#                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
+#                            'block':self.test_block,
+#                            'zeropoint':None,
+#                            'zeropoint_err':None,
+#                            'fwhm':2.825,
+#                            'frametype':0,
+#                            'rms_of_fit':None,
+#                            'nstars_in_fit':3.0,
+#                        }
+#        self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
 
-        expected_num_sources_created = -3
-        expected_num_in_table = -3
+#        expected_num_sources_created = -3
+#        expected_num_in_table = -3
 
-        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
+#        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
-        self.assertEqual(expected_num_sources_created, num_sources_created)
-        self.assertEqual(expected_num_in_table, num_in_table)
+#        self.assertEqual(expected_num_sources_created, num_sources_created)
+#        self.assertEqual(expected_num_in_table, num_in_table)
 
-    def test_store_catalog_sources_frame_DNE(self):
+#    def test_store_catalog_sources_frame_DNE(self):
 
-	frame = Frame.objects.last()
-	frame.delete()
+#	frame = Frame.objects.last()
+#	frame.delete()
 
-        expected_num_sources_created = -3
-        expected_num_in_table = -3
+#        expected_num_sources_created = -3
+#        expected_num_in_table = -3
 
-        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
+#        num_sources_created, num_in_table = store_catalog_sources(self.test_ldacfilename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
-        self.assertEqual(expected_num_sources_created, num_sources_created)
-        self.assertEqual(expected_num_in_table, num_in_table)
+#        self.assertEqual(expected_num_sources_created, num_sources_created)
+#        self.assertEqual(expected_num_in_table, num_in_table)
 
     def test_store_catalog_sources_update_frames_zeropoint_lt0(self):
 

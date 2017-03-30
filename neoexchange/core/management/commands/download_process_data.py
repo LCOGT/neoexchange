@@ -23,13 +23,14 @@ class Command(BaseCommand):
         parser.add_argument('--mtdlink_file_limit', action="store", default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
         parser.add_argument('--object', action="store", help="Which object to analyze")
+        parser.add_argument('--skip-download', action="store_true", help='Whether to skip downloading data')
 
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --data-dir [path]" % ( argv[1] )
 
+        self.stdout.write("==== Download and process astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
-        print(options)
         if type(options['date']) != datetime:
             try:
                 obs_date = datetime.strptime(options['date'], '%Y%m%d')
@@ -55,8 +56,12 @@ class Command(BaseCommand):
 
 # Step 1: Download data
 
-        self.stdout.write("Download data for %s from %s" % ( obs_date, proposal ))
-        call_command('download_archive_data', '--date', obs_date, '--proposal', proposal, '--datadir', dataroot )
+        if options['skip_download']:
+            self.stdout.write("Skipping download data for %s from %s" % ( obs_date, proposal ))
+        else:
+            self.stdout.write("Download data for %s from %s" % ( obs_date, proposal ))
+            call_command('download_archive_data', '--date', obs_date, '--proposal', proposal, '--datadir', dataroot )
+
 
         # Append date to the data directory
         dataroot = os.path.join(dataroot, obs_date)

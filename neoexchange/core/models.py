@@ -250,6 +250,9 @@ class Block(models.Model):
                 url = url + self.tracking_number.lstrip('0') + '/'
         return url
 
+    def num_frames(self):
+        return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
+
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
 
@@ -441,6 +444,67 @@ class Frame(models.Model):
             is_processed = True
         return is_processed
 
+    def reduced_frames(self, include_oracdr=False):
+        frametypes = (self.BANZAI_QL_FRAMETYPE, self.BANZAI_RED_FRAMETYPE)
+        if include_oracdr:
+            frametypes = (self.BANZAI_QL_FRAMETYPE, self.BANZAI_RED_FRAMETYPE, self.ORACDR_QL_FRAMETYPE, self.ORACDR_RED_FRAMETYPE)
+
+        return frametypes
+
+    def return_site_string(self):
+        site_strings = {
+                        'K91' : 'LCO CPT Node 1m0 Dome A at Sutherland, South Africa',
+                        'K92' : 'LCO CPT Node 1m0 Dome B at Sutherland, South Africa',
+                        'K93' : 'LCO CPT Node 1m0 Dome C at Sutherland, South Africa',
+                        'W85' : 'LCO LSC Node 1m0 Dome A at Cerro Tololo, Chile',
+                        'W86' : 'LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile',
+                        'W87' : 'LCO LSC Node 1m0 Dome C at Cerro Tololo, Chile',
+                        'V37' : 'LCO ELP Node at McDonald Observatory, Texas',
+                        'Z21' : 'LCO TFN Node Aqawan A 0m4a at Tenerife, Spain',
+                        'Q63' : 'LCO COJ Node 1m0 Dome A at Siding Spring, Australia',
+                        'Q64' : 'LCO COJ Node 1m0 Dome B at Siding Spring, Australia',
+                        'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
+                        'F65' : 'LCO OGG Node 2m0 FTN at Haleakala, Maui',
+                        'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui'
+                        }
+        return site_strings.get(self.sitecode, 'Unknown LCO site')
+
+    def return_tel_string(self):
+
+        point4m_string = '0.4-m f/8 Schmidt-Cassegrain + CCD'
+        onem_string = '1.0-m f/8 Ritchey-Chretien + CCD'
+        twom_string = '2.0-m f/10 Ritchey-Chretien + CCD'
+
+        tels_strings = {
+                        'K91' : onem_string,
+                        'K92' : onem_string,
+                        'K93' : onem_string,
+                        'W85' : onem_string,
+                        'W86' : onem_string,
+                        'W87' : onem_string,
+                        'V37' : onem_string,
+                        'Z21' : point4m_string,
+                        'Q63' : onem_string,
+                        'Q64' : onem_string,
+                        'E10' : twom_string,
+                        'F65' : twom_string,
+                        'T04' : point4m_string
+                        }
+        return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
+
+    def map_filter(self):
+        '''Maps somewhat odd observed filters (e.g. 'solar') into the filter
+        (e.g. 'R') that would be used for the photometric calibration'''
+
+        new_filter = self.filter
+        # Don't perform any mapping if it's not LCO data
+        if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
+            if self.filter == 'solar' or self.filter == 'w':
+                new_filter = 'R'
+            if self.photometric_catalog == 'GAIA-DR1':
+                new_filter = 'G'
+        return new_filter
+
     class Meta:
         verbose_name = _('Observed Frame')
         verbose_name_plural = _('Observed Frames')
@@ -497,7 +561,7 @@ class SourceMeasurement(models.Model):
         mpc_line = "%12s %1s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
             self.flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
-            mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+            mag, self.frame.map_filter(), translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
             if self.body.name:

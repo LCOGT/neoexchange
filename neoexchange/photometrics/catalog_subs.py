@@ -884,7 +884,7 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
     header = table = None
     fits_header, fits_table, cattype = open_fits_catalog(catfile)
 
-    if fits_header != {} and fits_table != {}:
+    if len(fits_header) != 0 and len(fits_table) != 0:
         header = get_catalog_header(fits_header, catalog_type)
         table = get_catalog_items(header, fits_table, catalog_type, flag_filter)
 
@@ -902,53 +902,47 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     return header, table
 
-def update_frame_zeropoint(header, phot_cat_name, frame_filename, frame_type):
-    '''update the Frame zeropoint and photometric catalog used'''
+def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
+    '''update the Frame zeropoint, astrometric fit, astrometric catalog
+    and photometric catalog used'''
 
-    #if a Frame exists for the file that has a bad zeropoint,
-    #update the zeropoint and photometric catalog in the Frame
+    #if a Frame exists for the file, update the zeropoint,
+    #astrometric catalog, rms_of_fit, nstars_in_fit, and
+    #photometric catalog in the Frame
     try:
-        frame = Frame.objects.get(filename=frame_filename, block__isnull=False, zeropoint__lt=0)
-        if frame.zeropoint < 0 and frame.zeropoint_err < 0:
-            frame.zeropoint=header['zeropoint']
-            frame.zeropoint_err=header['zeropoint_err']
-            frame.photometric_catalog=phot_cat_name
-            frame.save()
+        frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
+        frame.zeropoint=header['zeropoint']
+        frame.zeropoint_err=header['zeropoint_err']
+        frame.rms_of_fit=header['astrometric_fit_rms']
+        frame.nstars_in_fit=header['astrometric_fit_nstars']
+        frame.astrometric_catalog=ast_cat_name
+        frame.photometric_catalog=phot_cat_name
+        frame.save()
     except Frame.MultipleObjectsReturned:
         pass
-    except Frame.DoesNotExist:
-        #if a Frame exists for the file that has a good but old zeropoint,
-        #update the zeropoint and photometric catalog in the Frame
-        try:
-            frame = Frame.objects.get(filename=frame_filename, block__isnull=False, zeropoint__gt=0)
-            if frame.zeropoint > 0 and frame.zeropoint_err > 0:
-                frame.zeropoint=header['zeropoint']
-                frame.zeropoint_err=header['zeropoint_err']
-                frame.photometric_catalog=phot_cat_name
-                frame.save()
-        except Frame.DoesNotExist:
-            #store sources in neoexchange(CatalogSources table)
-            frame_params = {    'sitecode':header['site_code'],
-                                'instrument':header['instrument'],
-                                'filter':header['filter'],
-                                'filename':frame_filename,
-                                'exptime':header['exptime'],
-                                'midpoint':header['obs_midpoint'],
-                                'block':frame.block,
-                                'zeropoint':header['zeropoint'],
-                                'zeropoint_err':header['zeropoint_err'],
-                                'fwhm':header['fwhm'],
-                                'frametype':frame_type,
-                                'rms_of_fit':header['astrometric_fit_rms'],
-                                'nstars_in_fit':header['astrometric_fit_nstars'],
-                            }
+#    except Frame.DoesNotExist:
+        #store sources in neoexchange(CatalogSources table)
+#        frame_params = {    'sitecode':header['site_code'],
+#                            'instrument':header['instrument'],
+#                            'filter':header['filter'],
+#                            'filename':frame_filename,
+#                            'exptime':header['exptime'],
+#                            'midpoint':header['obs_midpoint'],
+#                            'block':frame.block,
+#                            'zeropoint':header['zeropoint'],
+#                            'zeropoint_err':header['zeropoint_err'],
+#                            'fwhm':header['fwhm'],
+#                            'frametype':frame_type,
+#                            'rms_of_fit':header['astrometric_fit_rms'],
+#                            'nstars_in_fit':header['astrometric_fit_nstars'],
+#                        }
 
-            frame, created = Frame.objects.get_or_create(**frame_params)
-            if created == True:
-                num_new_frames_created += 1
-                frame.astrometric_catalog = ast_cat_name
-                frame.photometric_catalog = phot_cat_name
-                frame.save()
+#        frame, created = Frame.objects.get_or_create(**frame_params)
+#        if created == True:
+#            num_new_frames_created += 1
+#            frame.astrometric_catalog = ast_cat_name
+#            frame.photometric_catalog = phot_cat_name
+#            frame.save()
 
     return frame
 
@@ -993,53 +987,40 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
         else:
             fits_file = os.path.basename(catfile)
 
-        #if a Frame exists for the FITS file with a non-null block
-        #that has a no zeropoint, update the zeropoint computed
-        #above in the Frame
-        try:
-            frame = Frame.objects.get(filename=fits_file, block__isnull=False)
-            if frame.zeropoint == None and frame.zeropoint_err == None:
-                frame.zeropoint=header['zeropoint']
-                frame.zeropoint_err=header['zeropoint_err']
-                frame.photometric_catalog=phot_cat_name
-                frame.save()
-        except Frame.MultipleObjectsReturned:
-            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % (fits_file))
-            return -3, -3
-        except Frame.DoesNotExist:
-            logger.error("Frame entry for fits file %s does not exist" % fits_file)
-            return -3, -3
-
         #update the zeropoint computed above in the FITS file Frame
-        frame = update_frame_zeropoint(header, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
+        frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
 
         #update the zeropoint computed above in the CATALOG file Frame
-        frame_cat = update_frame_zeropoint(header, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
+        frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
 
-        for source in table:
-            source_params = {   'frame':frame,
-                                'obs_x': source['ccd_x'],
-                                'obs_y': source['ccd_y'],
-                                'obs_ra': source['obs_ra'],
-                                'obs_dec': source['obs_dec'],
-                                'obs_mag': source['obs_mag'],
-                                'err_obs_ra': source['obs_ra_err'],
-                                'err_obs_dec': source['obs_dec_err'],
-                                'err_obs_mag': source['obs_mag_err'],
-                                'background': source['obs_sky_bkgd'],
-                                'major_axis': source['major_axis'],
-                                'minor_axis': source['minor_axis'],
-                                'position_angle': source['ccd_pa'],
-                                'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
-                                'aperture_size': 3.0,
-                                'flags': source['flags'],
-                                'flux_max': source['flux_max'],
-                                'threshold': source['threshold']
-                            }
-            cat_src, created = CatalogSources.objects.get_or_create(**source_params)
-            if created == True:
-                num_sources_created += 1
         num_in_table = len(table)
+        num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+        if num_in_table != num_cat_sources:
+            for source in table:
+                source_params = {   'frame':frame,
+                                    'obs_x': source['ccd_x'],
+                                    'obs_y': source['ccd_y'],
+                                    'obs_ra': source['obs_ra'],
+                                    'obs_dec': source['obs_dec'],
+                                    'obs_mag': source['obs_mag'],
+                                    'err_obs_ra': source['obs_ra_err'],
+                                    'err_obs_dec': source['obs_dec_err'],
+                                    'err_obs_mag': source['obs_mag_err'],
+                                    'background': source['obs_sky_bkgd'],
+                                    'major_axis': source['major_axis'],
+                                    'minor_axis': source['minor_axis'],
+                                    'position_angle': source['ccd_pa'],
+                                    'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
+                                    'aperture_size': 3.0,
+                                    'flags': source['flags'],
+                                    'flux_max': source['flux_max'],
+                                    'threshold': source['threshold']
+                                }
+                cat_src, created = CatalogSources.objects.get_or_create(**source_params)
+                if created == True:
+                    num_sources_created += 1
+        else:
+            logger.info("Number of sources in catalog match number in DB; skipping")
     else:
         logger.warn("Could not open %s" % catfile)
 

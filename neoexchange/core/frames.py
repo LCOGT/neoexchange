@@ -6,8 +6,9 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from astropy.wcs import WCS
 
-from core.models import Block, Frame, Candidate, SourceMeasurement
+from core.models import Block, Frame, Candidate, SourceMeasurement, Body
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
+from astrometrics.time_subs import jd_utc2datetime
 from core.urlsubs import get_lcogt_headers
 from core.archive_subs import archive_login
 import logging
@@ -30,11 +31,15 @@ def odin_login(username, password):
 
     return get_lcogt_headers(auth_url,username, password)
 
-def measurements_from_block(blockid):
+def measurements_from_block(blockid, bodyid=None):
     block = Block.objects.get(pk=blockid)
-    frames = Frame.objects.filter(block=block).values_list('id',flat=True)
-    measures = SourceMeasurement.objects.filter(frame__in=frames)
-    return {'body':block.body,'measures':measures,'slot':block}
+    frames = Frame.objects.filter(block=block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE, Frame.STACK_FRAMETYPE)).values_list('id',flat=True)
+    measures = SourceMeasurement.objects.filter(frame__in=frames, obs_mag__gt=0.0).order_by('-body','frame__midpoint')
+    if bodyid:
+        measures = measures.filter(body__id=bodyid)
+    bodies = measures.values_list('body', flat=True).distinct()
+    extra_bodies = Body.objects.filter(id__in=bodies)
+    return {'body' : block.body, 'measures' : measures, 'slot' : block,'extra_bodies':extra_bodies}
 
 def fetch_observations(tracking_num):
     image_list = []
@@ -76,10 +81,11 @@ def candidates_by_block(blockid):
         coords = []
         sky_coords = []
         dets = cand.unpack_dets()
-        d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'], dets['mag'])
+        times = [jd_utc2datetime(x).strftime("%Y-%m-%d %H:%M:%S") for x in dets['jd_obs']]
+        d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'], dets['mag'], times )
         for a in d_zip:
-            coords.append({'x':a[1], 'y':a[2]})
-            sky_coords.append({'ra':a[3], 'dec':a[4], 'mag':a[5]})
+            coords.append({'x':a[1], 'y':a[2], 'time':a[6]})
+            sky_coords.append({'ra':a[3] * 15.0, 'dec':a[4], 'mag':a[5]})
         motion = {'speed' : cand.convert_speed(), 'speed_raw' : cand.speed, 'pos_angle' : cand.sky_motion_pa}
         targets.append({'id': str(cand.id), 'coords':coords, 'sky_coords':sky_coords, 'motion':motion})
     return targets

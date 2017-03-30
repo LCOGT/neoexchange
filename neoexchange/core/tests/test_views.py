@@ -42,7 +42,7 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry
+    make_new_catalog_entry, generate_new_candidate_id
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
 from core.forms import EphemQuery
@@ -2497,3 +2497,78 @@ class TestStoreDetections(TestCase):
 
         cands = Candidate.objects.all()
         self.assertEqual(expected_num_cands, len(cands))
+
+class Test_Generate_New_Candidate_Id_Blank(TestCase):
+
+    def test_no_discoveries(self):
+        expected_id = 'LNX0001'
+
+        new_id = generate_new_candidate_id()
+
+        self.assertEqual(expected_id, new_id)
+
+    def test_no_discoveries_with_prefix(self):
+        expected_id = 'NEOX001'
+
+        new_id = generate_new_candidate_id('NEOX')
+
+        self.assertEqual(expected_id, new_id)
+
+    def test_no_discoveries_other_bodies(self):
+
+        params = {  'provisional_name' : 'LCOTL01',
+                    'origin' : 'L'
+                 }
+        body = Body.objects.create(**params)
+
+        expected_id = 'LNX0001'
+
+        new_id = generate_new_candidate_id()
+
+        self.assertEqual(expected_id, new_id)
+
+class Test_Generate_New_Candidate_Id(TestCase):
+
+    def setUp(self):
+
+        params = { 'provisional_name' : 'LNX0001',
+                   'origin' : 'L',
+                   'ingest' : datetime(2017, 1, 1)
+                 }
+        body = Body.objects.create(**params)
+
+    def test_one_body(self):
+        expected_id = 'LNX0002'
+
+        new_id = generate_new_candidate_id()
+
+        self.assertEqual(expected_id, new_id)
+
+    def test_one_body_new_prefix(self):
+        expected_id = 'LCOTL01'
+
+        new_id = generate_new_candidate_id('LCOTL')
+
+        self.assertEqual(expected_id, new_id)
+
+    def test_three_body(self):
+        params = { 'provisional_name' : 'LNX0002',
+                   'origin' : 'L',
+                   'ingest' : datetime(2017, 1, 2)
+                 }
+
+        body = Body.objects.create(**params)
+
+        params = { 'provisional_name' : 'LNX0003',
+                   'origin' : 'L',
+                   'ingest' : datetime(2017, 1, 1, 12)
+                 }
+
+        body = Body.objects.create(**params)
+
+        expected_id = 'LNX0004'
+
+        new_id = generate_new_candidate_id()
+
+        self.assertEqual(expected_id, new_id)
+        self.assertEqual(3, Body.objects.count())

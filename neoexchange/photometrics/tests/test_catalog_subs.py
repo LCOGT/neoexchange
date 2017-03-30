@@ -2112,6 +2112,141 @@ class ExternalCodeUnitTest(TestCase):
                 print "Error removing temporary test directory", self.test_dir
 
 
+class UpdateFrameZeropointTest(FITSUnitTest):
+
+    def setUp(self):
+
+        # Create test body
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body_with_provname, created = Body.objects.get_or_create(**params)
+
+        # Create test proposal
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test block
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
+                         'block_start' : '2017-03-08 05:05:00',
+                         'block_end'   : '2017-03-08 05:22:36',
+                         'tracking_number' : '0000358587',
+                         'num_exposures' : 6L,
+                         'exp_length' : 120.0,
+                         'active'   : False
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        self.test_header = { 'astrometric_catalog': '2MASS',
+                        'astrometric_fit_nstars': -4,
+                        'astrometric_fit_rms': 0.3,
+                        'astrometric_fit_status': 0,
+                        'exptime': 120.0,
+                        'field_center_dec': -28.85420305555556,
+                        'field_center_ra': 131.64724583333333,
+                        'field_height': '26.5940m',
+                        'field_width': '26.5940m',
+                        'filter': 'w',
+                        'framename': 'lsc1m005-fl15-20170307-0121-e00.fits',
+                        'fwhm': 1.908032083525876,
+                        'instrument': 'fl15',
+                        'obs_date': datetime(2017, 3, 8, 5, 5, 40, 100000),
+                        'obs_midpoint': datetime(2017, 3, 8, 5, 6, 40, 100000),
+                        'pixel_scale': 0.38956,
+                        'reduction_level': 91,
+                        'site_code': 'W85',
+                        'zeropoint': 29.6113857745,
+                        'zeropoint_err': 0.0414642608048,
+                        'zeropoint_src': 'N/A'
+                      }
+
+        # Create test frame
+        frame_params = {    'sitecode':'W85',
+                            'instrument':'fl15',
+                            'filter':'w',
+                            'filename':'lsc1m005-fl15-20170307-0121-e91.fits',
+                            'exptime':120.0,
+                            'midpoint':datetime(2017, 3, 8, 5, 6, 40),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':1.9080,
+                            'frametype':91,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':None,
+                            'astrometric_catalog':' ',
+                            'photometric_catalog': ' '
+                        }
+
+        self.test_frame1, created = Frame.objects.get_or_create(**frame_params)
+
+        frame_params = {    'sitecode':'W85',
+                            'instrument':'fl15',
+                            'filter':'w',
+                            'filename':'lsc1m005-fl15-20170307-0121-e91_ldac.fits',
+                            'exptime':120.0,
+                            'midpoint':datetime(2017, 3, 8, 5, 6, 40),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':1.9080,
+                            'frametype':6,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':None,
+                            'astrometric_catalog':' ',
+                            'photometric_catalog': ' '
+                        }
+
+        self.test_frame2, created = Frame.objects.get_or_create(**frame_params)
+
+    def test_update_SINGLE_frame_zeropoint(self):
+
+        ast_cat_name = "2MASS"
+        phot_cat_name = "UCAC4"
+        fits_file = 'lsc1m005-fl15-20170307-0121-e91.fits'
+
+        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=self.test_frame1.frametype)
+
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+        self.assertEqual(frame.zeropoint_err, 0.0414642608048)
+        self.assertEqual(frame.rms_of_fit, 0.3)
+        self.assertEqual(frame.nstars_in_fit, -4)
+        self.assertEqual(frame.astrometric_catalog, '2MASS')
+        self.assertEqual(frame.photometric_catalog, 'UCAC4')
+
+    def test_update_BANZAI_LDAC_frame_zeropoint(self):
+
+        ast_cat_name = "2MASS"
+        phot_cat_name = "UCAC4"
+        fits_file = 'lsc1m005-fl15-20170307-0121-e91_ldac.fits'
+
+        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=self.test_frame2.frametype)
+
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+        self.assertEqual(frame.zeropoint_err, 0.0414642608048)
+        self.assertEqual(frame.rms_of_fit, 0.3)
+        self.assertEqual(frame.nstars_in_fit, -4)
+        self.assertEqual(frame.astrometric_catalog, '2MASS')
+        self.assertEqual(frame.photometric_catalog, 'UCAC4')
+
 class MakeSEXTFileTest(FITSUnitTest):
 
     def setUp(self):

@@ -176,7 +176,11 @@ class BlockReportMPC(LoginRequiredMixin, View):
         if block.reported == True:
             messages.error(request,'Block has already been reported')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
-        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'])
+        if request.user.is_authenticated:
+            email = request.user.email
+        else:
+            email = None
+        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'], bodyid=kwargs.get('source',None), email_sender=email)
         if mpc_resp:
             block.active = False
             block.reported = True
@@ -231,6 +235,57 @@ class CandidatesViewBlock(LoginRequiredMixin, View):
        block = Block.objects.get(pk=kwargs['pk'])
        candidates = Candidate.objects.filter(block=block).order_by('score')
        return render(request, self.template, {'body':block.body,'candidates':candidates,'slot':block})
+
+def generate_new_candidate_id(prefix='LNX'):
+
+    new_id = None
+    qs = Body.objects.filter(origin='L', provisional_name__contains=prefix).order_by('provisional_name')
+
+    if qs.count() == 0:
+        # No discoveries so far, sad face
+        num_zeros = 7 - len(prefix)
+        new_id = "%s%0.*d" % (prefix, num_zeros, 1)
+    else:
+        last_body_id = qs.last().provisional_name
+        try:
+            last_body_num = int(last_body_id.replace(prefix, ''))
+            new_id_num = last_body_num + 1
+            num_zeros = 7 - len(prefix)
+            new_id = "%s%0.*d" % (prefix, num_zeros, new_id_num)
+        except ValueError:
+            logger.warn("Unable to decode last discoveries' id (id=%s)" % last_body_id)
+    return new_id
+
+def generate_new_candidate(cand_frame_data, prefix='LNX'):
+
+    new_body = None
+    new_id = generate_new_candidate_id(prefix)
+    first_frame = cand_frame_data.order_by('midpoint')[0]
+    last_frame = cand_frame_data.latest('midpoint')
+    if new_id:
+        try:
+            time_span = last_frame.midpoint - first_frame.midpoint
+            arc_length = time_span.total_seconds() / 86400.0
+        except:
+            arc_length = None
+
+        params = {  'provisional_name' : new_id,
+                    'origin' : 'L',
+                    'source_type' : 'U',
+                    'discovery_date' : first_frame.midpoint,
+                    'num_obs' : cand_frame_data.count(),
+                    'arc_length' : arc_length
+                 }
+        new_body, created = Body.objects.get_or_create(**params)
+        if created:
+            not_seen = datetime.utcnow() - last_frame.midpoint
+            not_seen_days = not_seen.total_seconds() / 86400.0
+            new_body.not_seen = not_seen_days
+            new_body.save()
+    else:
+        logger.warn("Could not determine a new id for the new object")
+
+    return new_body
 
 def ephemeris(request):
 
