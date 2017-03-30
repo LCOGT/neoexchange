@@ -83,7 +83,7 @@
                           {% if object.num_observed > 0 and object.num_frames < 10 and object.num_candidates > 0 %}
                             <a class="button button-primary" href="{% url 'block-ast' object.id %}" id="analyse-btn">Analyse Images</a><br/>
                             {% if not object.reported %}
-                            <a class="button button-primary" href="{% url 'report-block' object.id %}">Report</a><br/>
+                            <a class="button button-primary" href="{% url 'block-report' object.id %}">Report</a><br/>
                             {% endif %}
                             {% if object.num_candidates > 0 %}
                               <a class="button button-primary" href="{% url 'view-candidates' object.id %}">Candidates ({{object.num_candidates}})</a><br/>
