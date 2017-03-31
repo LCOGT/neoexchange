@@ -823,6 +823,53 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
     @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_schedule_for_B_at_A_semester_end(self):
+        MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
+
+        data = { 'site_code' : 'K92',
+                 'utc_date' : datetime(2017,  4, 2),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-04-01T17:40:00',
+                        'end_time'   : '2017-04-02T03:40:00',
+                        'mid_time': '2017-04-01T22:40:00',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+#        self.assertEqual(expected_resp, resp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_schedule_for_B_at_A_semester_end2(self):
+
+        data = { 'site_code' : 'K92',
+                 'utc_date' : datetime(2017,  4, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-04-01T00:00:00',
+                        'end_time'   : '2017-04-01T03:40:00',
+                        'mid_time': '2017-04-01T01:40:00',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+#        self.assertEqual(expected_resp, resp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_start_B_semester(self):
         MockDateTime.change_datetime(2016, 10, 1, 0, 0, 1)
 
