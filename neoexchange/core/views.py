@@ -332,10 +332,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         utc_date = data['utc_date']
     # Determine the semester boundaries for the current time and truncate the dark time and
     # therefore the windows appropriately.
-    semester_date = max(datetime.utcnow(), datetime.combine(data['utc_date'], datetime.min.time()))
+    semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
     semester_start, semester_end = get_semester_dates(semester_date)
     if dark_start.day != dark_end.day and semester_start < dark_start:
-        semester_date = max(datetime.utcnow(), datetime.combine(data['utc_date'], datetime.min.time()) - timedelta(days=1))
+        semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()) - timedelta(days=1))
         semester_start, semester_end = get_semester_dates(semester_date)
     dark_start = max(dark_start, semester_start)
     dark_end = min(dark_end, semester_end)
