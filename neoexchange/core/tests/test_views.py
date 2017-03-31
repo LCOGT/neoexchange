@@ -675,7 +675,7 @@ class TestSchedule_Check(TestCase):
                         'magnitude': 19.099556975068584,
                         'speed': 2.901241169520825,
                         'slot_length': 20,
-                        'exp_count': 11,
+                        'exp_count': 12,
                         'exp_length': 50.0,
                         'schedule_ok': True,
                         'site_code': data['site_code'],
@@ -706,7 +706,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-03-31T17:40:00',
                         'end_time'   : '2016-03-31T23:59:59',
-                        'exp_count'  : 13,
+                        'exp_count'  : 16,
                         'exp_length' : 30.0,
                         'mid_time': '2016-03-31T20:49:59.500000',
 
@@ -732,7 +732,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-01T00:00:00',
                         'end_time'   : '2016-04-01T03:40:00',
-                        'exp_count'  : 13,
+                        'exp_count'  : 16,
                         'exp_length' : 30.0,
                         'mid_time': '2016-04-01T01:50:00',
 
