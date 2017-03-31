@@ -1,8 +1,12 @@
 # NEO Exchange
 
-Portal for scheduling observations of NEOs using LCOGT
+Portal for scheduling observations of NEOs using LCO
 
 ## History
+
+### 1.6.9
+
+Change overheads for Sinisto observations. Handle scheduling problems at semester changover at CPT.
 
 ### 1.6.8
 
