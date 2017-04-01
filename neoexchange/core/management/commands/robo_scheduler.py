@@ -76,7 +76,7 @@ class Command(BaseCommand):
         faint_default = 22.0
         spd_default = 95.0
         not_seen_default = 2.5
-        proposal_default = 'LCO2016B-011'
+        proposal_default = 'LCO2017AB-016'
         speed_limit_default = 5.0
         parser.add_argument('--date', default=datetime.utcnow(), help='Date to schedule for (YYYYMMDD)')
         parser.add_argument('--user', default='tlister@lcogt.net', help="Username to schedule as e.g. 'tlister@lcogt.net'")
