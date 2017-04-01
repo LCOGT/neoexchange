@@ -12,6 +12,7 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
     north_0m4_list = []
     south_1m0_list = []
     south_0m4_list = []
+    point4m_mag_cut = 20.5
 
     run_datetime = datetime.utcnow()
 
@@ -41,12 +42,15 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
             print "Tried twice already and not found"
             continue
         if spd > spd_south_cut:
-            if vmag < 20.5:
+            if vmag < point4m_mag_cut:
                 north_0m4_list.append(body)
             else:
                 north_1m0_list.append(body)
         else:
-            south_1m0_list.append(body)
+            if vmag < point4m_mag_cut:
+                south_0m4_list.append(body)
+            else:
+                south_1m0_list.append(body)
     north_list = { '0m4' : north_0m4_list, '1m0' : north_1m0_list }
     south_list = { '0m4' : south_0m4_list, '1m0' : south_1m0_list }
 
@@ -54,17 +58,18 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
 
 def schedule_target_list(bodies_list, form_details, username):
     num_scheduled = 0
-    for target in bodies_list:
-        data = schedule_check(form_details, target)
+    if bodies_list:
+        for target in bodies_list:
+            data = schedule_check(form_details, target)
 
-        data['start_time'] = datetime.strptime(data['start_time'],'%Y-%m-%dT%H:%M:%S')
-        data['end_time'] = datetime.strptime(data['end_time'],'%Y-%m-%dT%H:%M:%S')
+            data['start_time'] = datetime.strptime(data['start_time'],'%Y-%m-%dT%H:%M:%S')
+            data['end_time'] = datetime.strptime(data['end_time'],'%Y-%m-%dT%H:%M:%S')
 
-        tracking_num, sched_params = schedule_submit(data, target, username)
-        block_resp = record_block(tracking_num, sched_params, data, target)
+            tracking_num, sched_params = schedule_submit(data, target, username)
+            block_resp = record_block(tracking_num, sched_params, data, target)
 
-        if block_resp:
-            num_scheduled += 1
+            if block_resp:
+                num_scheduled += 1
     return num_scheduled
 
 
@@ -136,10 +141,13 @@ class Command(BaseCommand):
 
 # If no 0.4m's are available, transfer targets to 1m list
         if len(sites['north']['0m4']) == 0 and len(sites['north']['1m0']) > 0:
-            self.stdout.warn("No 0.4m telescopes available, transferring targets to 1m0 telescopes")
-            north_list['1m0'] = north_list['1m0'].append(north_list['0m4'])
+            self.stdout.write("No 0.4m telescopes available, transferring targets to 1m0 telescopes")
+            north_list['1m0'] = north_list['1m0'] + north_list['0m4']
+        if len(sites['south']['0m4']) == 0 and len(sites['south']['1m0']) > 0:
+            self.stdout.write("No 0.4m telescopes available, transferring targets to 1m0 telescopes")
+            south_list['1m0'] = south_list['1m0'] + south_list['0m4']
 
-        self.stdout.write("Site Available?\n===============")
+        self.stdout.write("\nSite Available?\n===============")
         site_statuses = []
         for hemisphere in sites.keys():
             for tel_class in north_list.keys():
@@ -178,11 +186,11 @@ class Command(BaseCommand):
                     num_scheduled = schedule_target_list(north_list[tel_class], north_form, username)
                     self.stdout.write("Scheduled %d in the North at %s" % (num_scheduled, north_form['site_code']))
                 else:
-                    self.stdout.write("No sites in the North available for scheduling")
+                    self.stdout.write("No %s sites in the North available for scheduling" % tel_class)
                 if do_south:
                     num_scheduled = schedule_target_list(south_list[tel_class], south_form, username)
                     self.stdout.write("Scheduled %d in the South at %s" % (num_scheduled, south_form['site_code']))
                 else:
-                    self.stdout.write("No sites in the South available for scheduling")
+                    self.stdout.write("No %s sites in the South available for scheduling" % tel_class)
         else:
             self.stdout.write("Simulating scheduling at %s and %s" % (sites['north'], sites['south']) )

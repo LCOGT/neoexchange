@@ -1041,7 +1041,7 @@ class TestDetermineSitesToSchedule(TestCase):
         d = datetime(2017, 3,  9,  23, 27, 5)
 
         expected_sites = { 'north' : { '0m4' : ['T04',], '1m0' : ['V37',] },
-                           'south' : { '0m4' : [ ]     , '1m0' : ['W85', 'W86'] }
+                           'south' : { '0m4' : [ ]     , '1m0' : ['W86', 'W85'] }
                          }
 
         sites = determine_sites_to_schedule(d)
@@ -1079,8 +1079,8 @@ class TestDetermineSitesToSchedule(TestCase):
         OGG 0.4m is available'''
         d = datetime(2017, 3,  10, 12,  0, 1)
 
-        expected_sites = { 'north' : { '0m4' : [ ], '1m0' : [ ] },
-                           'south' : { '0m4' : [ ]     , '1m0' : ['Q63', 'Q64'] }
+        expected_sites = { 'north' : { '0m4' : [ ],         '1m0' : [ ] },
+                           'south' : { '0m4' : [ 'Q59', ] , '1m0' : ['Q63', 'Q64'] }
                          }
 
         sites = determine_sites_to_schedule(d)
