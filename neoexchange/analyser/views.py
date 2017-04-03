@@ -82,10 +82,12 @@ def analyser_to_source_measurement(block, cand_ids, blockcandidate):
         cand = Candidate.objects.get(pk=cand_id)
         # If this candidate (cand_id) is the intended target of the Block, use
         # that. Otherwise generate a new Body/asteroid candidate
+        discovery = False
         if str(cand_id) == str(blockcandidate):
             body = block.body
         else:
             body = generate_new_candidate(frames)
+            discovery = True
         if not body:
             return False
         detections = cand.unpack_dets()
@@ -104,6 +106,10 @@ def analyser_to_source_measurement(block, cand_ids, blockcandidate):
             sm.obs_dec = det[5]
             sm.obs_mag = det[8]
             sm.aperture_size = det[14]
+            if discovery:
+                # Add discovery asterisk to the first detection
+                sm.flags = '*'
+                discovery = False
             sm.save()
     return True
 

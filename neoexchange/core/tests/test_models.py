@@ -927,6 +927,36 @@ class TestSourceMeasurement(TestCase):
         mpc_lines = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_lines)
 
+    def test_discovery(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : '*',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q* C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_on_stacked(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : '*K',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
 class TestCatalogSources(TestCase):
 
     def setUp(self):

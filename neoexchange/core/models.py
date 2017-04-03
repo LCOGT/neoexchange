@@ -558,8 +558,19 @@ class SourceMeasurement(models.Model):
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             obs_type = 'S'
             microday = False
-        mpc_line = "%12s %1s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
-            self.flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
+        flags = self.flags
+        if len(self.flags) == 1:
+            if self.flags == '*':
+                # Discovery asterisk needs to go into column 12
+                flags = '* '
+            else:
+                flags = ' ' + self.flags
+        elif len(self.flags) > 2:
+            logger.warn("Flags longer than will fit into field - needs mapper")
+            flags = self.flags[0:2]
+
+        mpc_line = "%12s%2s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
+            flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
             mag, self.frame.map_filter(), translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
