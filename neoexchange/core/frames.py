@@ -71,7 +71,7 @@ def find_images_for_block(blockid):
     y_size = frames[0].wcs._naxis2
     if not frames[0].frameid:
         return False
-    frames_list = [{'img':str(f.frameid), 'date_obs':f.midpoint} for f in frames]
+    frames_list = [{'img':str(f.frameid), 'date_obs':f.midpoint.isoformat('T')} for f in frames]
     return frames_list, candidates, x_size, y_size
 
 def candidates_by_block(blockid):
