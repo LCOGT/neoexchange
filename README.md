@@ -1,8 +1,13 @@
 # NEO Exchange
 
-Portal for scheduling observations of NEOs using LCO
+Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
+
+
+### 1.7.0
+
+Astrometry in the browser
 
 ### 1.6.9
 

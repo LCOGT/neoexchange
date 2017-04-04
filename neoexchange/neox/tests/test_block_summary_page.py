@@ -40,7 +40,7 @@ class BlockSummaryTest(FunctionalTest):
         username_input.send_keys(self.username)
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
-        self.browser.find_element_by_xpath('//input[@value="login"]').click()
+        self.browser.find_element_by_xpath('//button[@id="login-btn"]').click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
         self.assertEqual(str(new_url), url)

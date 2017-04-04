@@ -10,9 +10,18 @@
 {% endblock%}
 {% block main-content %}
 			<div id="main" class="fill-height">
+				<div class="container">
 				<div class="row">
-					<p><a href="{% url 'measurement-mpc' body.id %}">[View in MPC format]</a></p>
+					<p>
+					{% if slot %}
+					<h5>Report to MPC</h5>
+					{% for b in extra_bodies %} <a class="button button-primary" href="{% url 'block-submit-mpc' slot.id b.id %}">{{b.current_name}}</a>{% endfor%}
+					{% endif %}
 				</div>
+				<div class="row">
+					<a href="{% url 'block-report-mpc' slot.id %}">[ View in MPC format ]</a></p>
+				</div>
+			</div>
 				<div class="fullwidth">
 					<table class="datatable" id="id_measurements">
 						<thead>
