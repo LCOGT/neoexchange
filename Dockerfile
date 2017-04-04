@@ -35,10 +35,10 @@ RUN yum -y install epel-release \
                 supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
                 MySQL-python gcc gcc-gfortran openssl-devel \
                 wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
-        && yum -y update \
+        && yum -y update 
 
 # Enable LCO repo and install extra packages
-COPY config/lcogt.repo /etc/yum.repos.d/
+COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
 RUN yum -y install sextractor cdsclient scamp \
         && yum clean all
 
