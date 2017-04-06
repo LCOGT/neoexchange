@@ -4,9 +4,18 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+
 ### 1.7.0
 
 Astrometry in the browser
+
+### 1.6.9
+
+Change overheads for Sinisto observations. Handle scheduling problems at semester changover at CPT.
+
+### 1.6.8
+
+Cleanups for leaner docker containers.
 
 ### 1.6.7.1
 

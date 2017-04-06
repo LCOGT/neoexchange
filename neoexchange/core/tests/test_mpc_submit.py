@@ -271,7 +271,7 @@ class Test_Generate_Message(TestCase):
                             u'NET UCAC-4\n'
                             u'BND R\n'
                             u'     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 R      K93\n')
-        message = generate_message(self.test_block.id)
+        message = generate_message(self.test_block.id, self.test_block.body.id)
 
         i = 0
         expected_lines = expected_message.split('\n')
@@ -296,7 +296,7 @@ class Test_Generate_Message(TestCase):
                             u'NET 2MASS\n'
                             u'BND R\n'
                             u'     K15X54S KC2015 12 05.04918910 30 00.00 +00 39 36.0          21.5 R      W86\n')
-        message = generate_message(self.test_block2.id)
+        message = generate_message(self.test_block2.id, self.test_block2.body.id)
 
         i = 0
         expected_lines = expected_message.split('\n')
@@ -321,7 +321,7 @@ class Test_Generate_Message(TestCase):
                             u'NET 2MASS\n'
                             u'BND R\n'
                             u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 R      Z21\n')
-        message = generate_message(self.test_block3.id)
+        message = generate_message(self.test_block3.id, self.test_block3.body.id)
 
         i = 0
         expected_lines = expected_message.split('\n')
@@ -346,7 +346,7 @@ class Test_Generate_Message(TestCase):
                             u'NET PPMXL\n'
                             u'BND R\n'
                             u'     K15X54S  C2015 12 05.41028900 30 24.00 +32 45 18.0          20.7 R      F65\n')
-        message = generate_message(self.test_block4.id)
+        message = generate_message(self.test_block4.id, self.test_block4.body.id)
 
         i = 0
         expected_lines = expected_message.split('\n')
@@ -371,7 +371,7 @@ class Test_Generate_Message(TestCase):
                             u'NET GAIA-DR1\n'
                             u'BND G\n'
                             u'     N999r0q  C2015 07 13.88184001 02 00.00 -03 45 00.0          21.6 G      K93\n')
-        message = generate_message(self.test_block_gaia.id)
+        message = generate_message(self.test_block_gaia.id, self.test_block_gaia.body.id)
 
         i = 0
         expected_lines = expected_message.split('\n')
@@ -397,7 +397,37 @@ class Test_Generate_Message(TestCase):
                             u'NET 2MASS\n'
                             u'BND V\n'
                             u'     K15X54S  C2015 12 05.04918901 02 00.00 -03 45 00.0          21.6 V      W86\n')
-        message = generate_message(self.test_block2ql.id)
+        message = generate_message(self.test_block2ql.id, self.test_block2ql.body.id)
+
+        i = 0
+        expected_lines = expected_message.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_K93_discovery(self):
+
+        # Add discovery flag to the SourceMeasurement and make a copy without
+        sm = SourceMeasurement.objects.get(frame=self.test_frame)
+        sm.flags = '*'
+        sm.save()
+
+        expected_message = (u'COD K93\n'
+                            u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                            u'CON [tlister@lco.global]\n'
+                            u'OBS T. Lister, S. Greenstreet, E. Gomez\n'
+                            u'MEA T. Lister\n'
+                            u'TEL 1.0-m f/8 Ritchey-Chretien + CCD\n'
+                            u'ACK NEOx_N999r0q_K93_kb75\n'
+                            u'COM LCO CPT Node 1m0 Dome C at Sutherland, South Africa\n'
+                            u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
+                            u'NET UCAC-4\n'
+                            u'BND R\n'
+                            u'     N999r0q* C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 R      K93\n')
+        message = generate_message(self.test_block.id, self.test_block.body.id)
 
         i = 0
         expected_lines = expected_message.split('\n')

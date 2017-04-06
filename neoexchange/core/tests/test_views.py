@@ -686,7 +686,7 @@ class TestSchedule_Check(TestCase):
                         'magnitude': 19.099556975068584,
                         'speed': 2.901241169520825,
                         'slot_length': 20,
-                        'exp_count': 11,
+                        'exp_count': 12,
                         'exp_length': 50.0,
                         'schedule_ok': True,
                         'site_code': data['site_code'],
@@ -717,7 +717,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-03-31T17:40:00',
                         'end_time'   : '2016-03-31T23:59:59',
-                        'exp_count'  : 13,
+                        'exp_count'  : 16,
                         'exp_length' : 30.0,
                         'mid_time': '2016-03-31T20:49:59.500000',
 
@@ -743,7 +743,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-01T00:00:00',
                         'end_time'   : '2016-04-01T03:40:00',
-                        'exp_count'  : 13,
+                        'exp_count'  : 16,
                         'exp_length' : 30.0,
                         'mid_time': '2016-04-01T01:50:00',
 
@@ -824,6 +824,53 @@ class TestSchedule_Check(TestCase):
                         'start_time' : '2016-09-30T17:40:00',
                         'end_time'   : '2016-09-30T23:59:59',
                         'mid_time': '2016-09-30T20:49:59.500000',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+#        self.assertEqual(expected_resp, resp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_schedule_for_B_at_A_semester_end(self):
+        MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
+
+        data = { 'site_code' : 'K92',
+                 'utc_date' : datetime(2017,  4, 2),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-04-01T17:40:00',
+                        'end_time'   : '2017-04-02T03:40:00',
+                        'mid_time': '2017-04-01T22:40:00',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+#        self.assertEqual(expected_resp, resp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_schedule_for_B_at_A_semester_end2(self):
+
+        data = { 'site_code' : 'K92',
+                 'utc_date' : datetime(2017,  4, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-04-01T00:00:00',
+                        'end_time'   : '2017-04-01T03:40:00',
+                        'mid_time': '2017-04-01T01:40:00',
 
                         }
         resp = schedule_check(data, self.body_mp)

@@ -896,13 +896,13 @@ class TestGetSiteCamParams(TestCase):
     twom_exp_overhead = 22.5
     twom_fov = radians(10.0/60.0)
     onem_sbig_fov = radians(15.5/60.0)
-    onem_setup_overhead = 120.0
+    onem_setup_overhead = 110.0
     onem_exp_overhead = 15.5
-    sinistro_exp_overhead = 48.0
+    sinistro_exp_overhead = 38.0
     onem_sinistro_fov = radians(26.4/60.0)
     point4m_fov = radians(29.1/60.0)
     point4m_exp_overhead = 13.0
-    point4m_setup_overhead = 120.0
+    point4m_setup_overhead = 110.0
     max_exp = 300.0
 
     def test_bad_site(self):
@@ -1014,7 +1014,7 @@ class TestDetermineExpTimeCount(TestCase):
         slot_len = 22.5
 
         expected_exptime = 60.0
-        expected_expcount = 11
+        expected_expcount = 12
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
 
@@ -1027,7 +1027,7 @@ class TestDetermineExpTimeCount(TestCase):
         slot_len = 20
 
         expected_exptime = 6.5
-        expected_expcount = 19
+        expected_expcount = 24
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
 
@@ -1039,7 +1039,7 @@ class TestDetermineExpTimeCount(TestCase):
         site_code = 'W85'
         slot_len = 20
 
-        expected_exptime = 222.0
+        expected_exptime = 234.5
         expected_expcount = 4
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
