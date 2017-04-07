@@ -5,7 +5,7 @@
 {% block bodyclass %}page{% endblock %}
 {% block extramenu %}
 					<div class="headingleft">
-						<h1>Source Measurements for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+						<h1>Source Measurements: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
 					</div>
 {% endblock%}
 {% block main-content %}
@@ -19,7 +19,7 @@
 					{% endif %}
 				</div>
 				<div class="row">
-					<a href="{% url 'block-report-mpc' slot.id %}">[ View in MPC format ]</a></p>
+					<a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a></p>
 				</div>
 			</div>
 				<div class="fullwidth">
@@ -60,6 +60,10 @@
                 <td>{{line.frame.filter}}</td>
                 <td>{{line.frame.sitecode}}</td>
 							</tr>
+              {% empty %}
+              <tr>
+                <td colspan=7>No measurements have been made yet</td>
+              </tr>
 						{% endfor %}
 						</tbody>
 					</table>
