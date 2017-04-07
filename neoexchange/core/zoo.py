@@ -22,7 +22,7 @@ def create_manifest_file(blockid, candidates,  num_segments, download_dir):
         for i, frame in enumerate(filenames):
             index = i % 3
             row = [frame]
-            print(candidates, index)
+            logger.debug(candidates, index)
             row.append(candidates[index]['time'])
             wr.writerow(row)
     f.close()
@@ -39,9 +39,14 @@ def reorder_candidates(candidates):
         for j in range(0, num_candidates):
             cands_by_img.append(candidates[j]['coords'][i])
         new_cands.append(cands_by_img)
+    print(new_cands)
     return new_cands
 
 def download_images_block(blockid, frames, candidates, scale, download_dir):
+    '''
+    Finds all thumbnails for frames list, downloads them, adds markers for candidates,
+    creates a mosaic of each frame see we can see more detail.
+    '''
     current_files = glob.glob(download_dir+"*.jpg")
     mosaic_files = []
     for i, frame in enumerate(frames):
@@ -51,7 +56,7 @@ def download_images_block(blockid, frames, candidates, scale, download_dir):
             logger.debug('Download problem with {}'.format(frame))
         else:
             files = create_mosaic(filename, frame['id'], download_dir)
-        files = [{'img':f, 'date':, 'id':frame['id']} for f in files]
+        files = [{'img':f, 'date': frame['time'], 'id':frame['id']} for f in files]
         mosaic_files += files
     return mosaic_files
 
@@ -65,7 +70,7 @@ def create_mosaic(filename, frameid, download_dir):
     return files
 
 def download_image(frame, current_files, download_dir, blockid):
-    # frame_date = frame['date_obs'].strftime("%Y%m%d%H%M%S")
+    # Download thumbnail images only if they do not exist
     file_name = 'block_%s_%s.jpg' % (blockid, frame['id'])
     full_filename = os.path.join(download_dir, file_name)
     if full_filename in current_files:

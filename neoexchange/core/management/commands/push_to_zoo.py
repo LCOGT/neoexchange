@@ -34,8 +34,12 @@ class Command(BaseCommand):
             blocks = blocks.filter(pk=options['blockid'])
         logger.debug("==== %s x Zoo blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
         for block in blocks:
-            logger.debug("Finding thumbnails for {}".format(block))
-            image_list, candidates, xmax, ymax = find_images_for_block(block.id)
+            logger.debug("Finding thumbnails for Block {}".format(block.id))
+            try:
+                image_list, candidates, xmax, ymax = find_images_for_block(block.id)
+            except TypeError:
+                logger.debug("Problem encountered")
+                continue
             images = archive_lookup_images(image_list)
             if images and candidates:
                 scale = xmax/1200.
