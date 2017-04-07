@@ -5,10 +5,11 @@ import logging
 import csv
 import subprocess
 from PIL import Image, ImageDraw
+from core.models import Frame
 
-logger = logging.getLogger('neox')
+logger = logging.getLogger(__name__)
 
-def create_manifest_file(blockid, candidates,  num_segments, download_dir):
+def create_manifest_file(blockid, frames, num_segments, download_dir):
     # The manifest file for Zooniverse will have one row per segment of
     # 3 x 3 grid from original image.
     file_name = 'manifest_{}.csv'.format(blockid)
@@ -17,13 +18,13 @@ def create_manifest_file(blockid, candidates,  num_segments, download_dir):
     filenames= [f.replace(download_dir,'') for f in files]
     with open(full_filename, "wb") as f:
         wr = csv.writer(f, delimiter=',', escapechar='\\', quotechar='"', quoting=csv.QUOTE_NONE)
-        row = ['filename','date']
+        file_headers = [ "file{}".format(i) for i in range(0, len(frames))]
+        row = ['subject'] + file_headers
         wr.writerow(row)
-        for i, frame in enumerate(filenames):
-            index = i % 3
-            row = [frame]
-            logger.debug(candidates, index)
-            row.append(candidates[index]['time'])
+        for index in range(0, num_segments):
+            subject_files = [fn for fn in filenames if "-{}.jpg".format(index) in fn]
+            row = [index] + subject_files
+            logger.debug(row)
             wr.writerow(row)
     f.close()
 
@@ -39,7 +40,6 @@ def reorder_candidates(candidates):
         for j in range(0, num_candidates):
             cands_by_img.append(candidates[j]['coords'][i])
         new_cands.append(cands_by_img)
-    print(new_cands)
     return new_cands
 
 def download_images_block(blockid, frames, candidates, scale, download_dir):
@@ -56,9 +56,8 @@ def download_images_block(blockid, frames, candidates, scale, download_dir):
             logger.debug('Download problem with {}'.format(frame))
         else:
             files = create_mosaic(filename, frame['id'], download_dir)
-        files = [{'img':f, 'date': frame['time'], 'id':frame['id']} for f in files]
-        mosaic_files += files
-    return mosaic_files
+
+    return True
 
 def create_mosaic(filename, frameid, download_dir):
     # Create a 3 x 3 mosaic of the image so we get better detail of where the moving object is
@@ -66,7 +65,7 @@ def create_mosaic(filename, frameid, download_dir):
     mosaic_options = "convert {} -crop 400x400 {}frame-{}-%d.jpg".format(full_filename,download_dir,frameid)
     logger.debug(mosaic_options)
     subprocess.call(mosaic_options, shell=True)
-    files = ['frame-{}-%d.jpg'.format(frameid,i) for i in range(0,9)]
+    files = ['frame-{}-{}.jpg'.format(frameid,i) for i in range(0,9)]
     return files
 
 def download_image(frame, current_files, download_dir, blockid):

@@ -45,7 +45,7 @@ class Command(BaseCommand):
                 scale = xmax/1200.
                 cand_per_image = reorder_candidates(candidates)
                 files = download_images_block(block.id, images, cand_per_image, scale, download_dir)
-                manifest = create_manifest_file(block.id, candidates=cand_per_image, num_segments=9, download_dir=download_dir)
+                manifest = create_manifest_file(block.id, images, num_segments=9, download_dir=download_dir)
             if not candidates:
                 logger.debug('Block {} had no candidates'.format(block))
             if not images:
