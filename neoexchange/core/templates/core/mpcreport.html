@@ -22,7 +22,7 @@
               {% endif %}
 
               {% if measures %}
-              <p><a href="{% url 'block-report' slot.id %}">[View in HTML format]</a></p>
+              <p><a href="{% if slot %}{% url 'block-report' slot.id %}{% else %}{% url 'measurement' body.id %}{%endif%}">[View in HTML format]</a></p>
 {% comment %} Do not fiddle with/adjust the "incorrect" indentation below. The
 MPC report is in a strictly defined 80 character format and stray spaces/blank
 lines matter. A Lot.
