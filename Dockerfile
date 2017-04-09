@@ -33,8 +33,8 @@ ENV PREFIX /neoexchange
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip python-devel \
                 supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
-                MySQL-python gcc gcc-gfortran openssl-devel \
-                wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
+                MySQL-python gcc gcc-gfortran gcc-c++ openssl-devel cfitsio-devel\
+                wget tcsh plplot plplot-libs plplot-devel numpy-f2py git \
         && yum -y update 
 
 # Enable LCO repo and install extra packages
@@ -66,3 +66,17 @@ COPY docker/ /
 
 # Copy the LCO NEOexchange webapp files
 COPY neoexchange /var/www/apps/neoexchange
+
+# Clone, build and install mtdlink
+ARG OAUTH_TOKEN
+ENV OAUTH_TOKEN ${OAUTH_TOKEN:-}
+RUN mkdir CSS_MOPS \
+    && cd CSS_MOPS \
+    && git init \
+    && git pull https://${OAUTH_TOKEN}:x-oauth-basic@github.com/LCOGT/CSS_MOPS.git
+
+RUN cd CSS_MOPS/srclcogt/libwcs/ \
+    && make \ 
+    && cd ../mtdlink \
+    && make \
+    && cp mtdlink /usr/local/bin/
