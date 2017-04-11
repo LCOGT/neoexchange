@@ -39,7 +39,7 @@ RUN yum -y install epel-release \
 
 # Enable LCO repo and install extra packages
 COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
-RUN yum -y install sextractor cdsclient scamp \
+RUN yum -y install sextractor cdsclient scamp mtdlink\
         && yum clean all
 
 ENV PIP_TRUSTED_HOST buildsba.lco.gtn
