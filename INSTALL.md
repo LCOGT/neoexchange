@@ -64,11 +64,8 @@ Docker
 ------
 If you are building a Docker container use the following syntax:
 ```bash
-docker build --build-arg OAUTH-TOKEN=<token> --pull -t docker.lco.global/neoexchange:latest .
+docker build --pull -t docker.lco.global/neoexchange:latest .
 ```
-This requires an OAuth token to be setup in github (under `Settings->Personal
-access tokens`
-
 This will build a Docker image which will need to be pushed into a Docker registry with:
 ```bash
 docker push docker.lco.global/neoexchange:latest
