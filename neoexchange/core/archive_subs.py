@@ -196,7 +196,7 @@ def archive_lookup_images(images):
     headers = {'Authorization': 'Token ' + settings.ARCHIVE_TOKEN}
     frame_urls = []
     for frame in images:
-        thumbnail_url = "{}{}/?width=1200&height=1200&median=true&percentile=98".format(settings.THUMBNAIL_URL, frame['img'])
+        thumbnail_url = "{}{}/?width=1920&height=1920&median=true&percentile=98".format(settings.THUMBNAIL_URL, frame['img'])
         try:
             resp = requests.get(thumbnail_url, headers=headers)
             frame_info = {'id':frame['img'], 'url':resp.json()['url']}

@@ -723,3 +723,19 @@ class ProposalPermission(models.Model):
 
     def __unicode__(self):
         return "%s is a member of %s" % (self.user, self.proposal)
+
+class PanoptesReport(models.Model):
+    '''
+    Status of block
+    '''
+    block = models.ForeignKey(Block)
+    when_submitted = models.DateTimeField('Date sent to Zooniverse')
+    last_check = models.DateTimeField()
+    active = models.BooleanField(default=False)
+    set_id = models.IntegerField('Subject Set ID')
+
+    class Meta:
+        verbose_name = _('Zooniverse Report')
+
+    def __unicode__(self):
+        return "Block {} is Subject Set {}".format(self.blockid, self.set_id)

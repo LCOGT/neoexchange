@@ -1,7 +1,7 @@
 from core.models import Block
 from django.core.management.base import BaseCommand, CommandError
 from datetime import datetime, timedelta
-from core.zoo import download_images_block, create_manifest_file, reorder_candidates
+from core.zoo import download_images_block, create_manifest_file, reorder_candidates, push_set_to_panoptes
 from core.archive_subs import archive_lookup_images
 from core.frames import find_images_for_block
 from django.conf import settings
@@ -22,18 +22,19 @@ class Command(BaseCommand):
         parser.add_argument(
             '-d',
             dest='download_dir',
-            default=settings.MEDIA_ROOT,
+            default=False,
             help='Where to download the images',
         )
 
     def handle(self, *args, **options):
-        updated_reqs = []
         blocks = Block.objects.all() #filter(active=True, block_start__lte=datetime.now(), block_end__gte=datetime.now())
         download_dir = options['download_dir']
         if options['blockid']:
             blocks = blocks.filter(pk=options['blockid'])
         logger.debug("==== %s x Zoo blocks %s ====" % (blocks.count(), datetime.now().strftime('%Y-%m-%d %H:%M')))
         for block in blocks:
+            files = None
+            cand_per_image = None
             logger.debug("Finding thumbnails for Block {}".format(block.id))
             try:
                 image_list, candidates, xmax, ymax = find_images_for_block(block.id)
@@ -42,11 +43,20 @@ class Command(BaseCommand):
                 continue
             images = archive_lookup_images(image_list)
             if images and candidates:
-                scale = xmax/1200.
+                scale = xmax/1920.
                 cand_per_image = reorder_candidates(candidates)
-                files = download_images_block(block.id, images, cand_per_image, scale, download_dir)
-                manifest = create_manifest_file(block.id, images, num_segments=9, download_dir=download_dir)
             if not candidates:
                 logger.debug('Block {} had no candidates'.format(block))
+                continue
             if not images:
                 logger.debug('Block {} had no images'.format(block))
+                continue
+            if files:
+                if not download_dir:
+                    download_dir = tempfile.mkdtemp()
+                files = download_images_block(block.id, images, cand_per_image, scale, download_dir)
+                manifest = push_set_to_panoptes(files, num_segments=12, blockid=block.id, download_dir=download_dir)
+                if not options['download_dir']:
+                    shutil.rmtree(download_dir)
+            else:
+                logger.debug('Failed to download images')

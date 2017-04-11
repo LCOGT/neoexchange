@@ -273,6 +273,9 @@ ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN','')
 
 THUMBNAIL_URL = 'https://thumbnails.lco.global/'
 
+ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER','')
+ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD','')
+
 #######################
 # Test Database setup #
 #######################
