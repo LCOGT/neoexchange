@@ -9,6 +9,7 @@ from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES
 from django.conf import settings
 
 from panoptes_client import SubjectSet, Subject, Panoptes, Project
+from panoptes_client.panoptes import PanoptesAPIException
 
 logger = logging.getLogger('neox')
 
@@ -21,7 +22,10 @@ def push_set_to_panoptes(files, num_segments, blockid, download_dir):
     subject_set = SubjectSet()
     subject_set.links.project = project
     subject_set.display_name = 'block_{}'.format(blockid)
-    subject_set.save()
+    try:
+        subject_set.save()
+    except PanoptesAPIException:
+        return False
 
     subject_list = []
     telescope = dict(TELESCOPE_CHOICES)
@@ -48,7 +52,7 @@ def push_set_to_panoptes(files, num_segments, blockid, download_dir):
                  json={'subject_sets': [subject_set.id]}
              )
 
-    return
+    return True
 
 def reorder_candidates(candidates):
     # Change candidates list from by candidate to by image

@@ -51,10 +51,10 @@ class Command(BaseCommand):
             if not images:
                 logger.debug('Block {} had no images'.format(block))
                 continue
+            files = download_images_block(block.id, images, cand_per_image, scale, download_dir)
             if files:
                 if not download_dir:
                     download_dir = tempfile.mkdtemp()
-                files = download_images_block(block.id, images, cand_per_image, scale, download_dir)
                 manifest = push_set_to_panoptes(files, num_segments=12, blockid=block.id, download_dir=download_dir)
                 if not options['download_dir']:
                     shutil.rmtree(download_dir)
