@@ -75,6 +75,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
         if (len(result) < 1) or (np.sum(~result[0][rmag].mask)<1):
             if "PPMXL" in cat_name:
                 cat_name = "UCAC4"
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
@@ -84,6 +85,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
                     cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list, zeros_int_list], names=('RAJ2000', 'DEJ2000', 'rmag', 'flags', 'e_rmag'))
             else:
                 cat_name = "PPMXL"
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
