@@ -374,7 +374,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     else:
         spd = None
 
-    emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd)
+    emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
 
     return emp_line
 
@@ -446,17 +446,18 @@ def format_emp_line(emp_line, site_code):
 
     if str(site_code) == '500':
 # Geocentric position, so no altitude. moon parameters, score or hour angle
-        geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|N/A|N/A|N/A|N/A|N/A|N/A"
+        geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|N/A|N/A|N/A|N/A|N/A|N/A"
 
         formatted_line = geo_row_format % (emp_time, ra_string, dec_string, \
-            emp_line[3], emp_line[4])
+            emp_line[3], emp_line[4], emp_line[7])
 
     else:
 # Get site and mount parameters
         (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
         (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(site_code)
 
-        blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
+#                         Date  RA Dec Mag   Motion P.A  Alt Mphase Msep Malt   Score HA
+        blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
 # Compute apparent RA, Dec of the Moon
         (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt)
@@ -487,7 +488,7 @@ def format_emp_line(emp_line, site_code):
 #    num_fov = int(pointings_sep/ccd_fov)
 
         formatted_line = blk_row_format % (emp_time, ra_string, dec_string, \
-            emp_line[3], emp_line[4], emp_line[5],\
+            emp_line[3], emp_line[4],  emp_line[7], emp_line[5],\
             moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
 
     line_as_list = formatted_line.split('|')
@@ -528,6 +529,49 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
         emp.append(format_emp_line(line, site_code))
 
     return emp
+
+def make_unit_vector(angle):
+    '''Make a unit vector from the passed angle (in degrees).
+    The result is returned in a numpy array'''
+
+    return array([cos(radians(angle)), sin(radians(angle))])
+
+def average_angles(angle1, angle2):
+    '''Average two angles <angle1> <angle2> (in degrees) correctly.
+    The result is returned in degrees.'''
+
+    v1 = make_unit_vector(angle1)
+    v2 = make_unit_vector(angle2)
+    v = v1 + v2
+    average = degrees(atan2(v[1], v[0]))
+    if average < 0.0:
+        average += 360.0
+    return average
+
+def determine_rates_pa(start_time, end_time, elements, site_code):
+    '''Determine the minimum and maximum rates (in "/min) and the average
+    position angle (PA) and range of PA (delta PA) during the time
+    from <start_time> -> <end_time> for the body represented by <elements>
+    from the <site_code>'''
+
+    first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=True, display=True)
+    first_frame_speed = first_frame_emp[4]
+    first_frame_pa = first_frame_emp[7]
+
+    last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=True, display=True)
+    last_frame_speed = last_frame_emp[4]
+    last_frame_pa = last_frame_emp[7]
+
+    logger.debug("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
+    min_rate = min(first_frame_speed, last_frame_speed) - (0.01*min(first_frame_speed, last_frame_speed))
+    max_rate = max(first_frame_speed, last_frame_speed) + (0.01*max(first_frame_speed, last_frame_speed))
+    pa = average_angles(first_frame_pa, last_frame_pa)
+    deltapa = max(first_frame_pa,last_frame_pa) - min(first_frame_pa,last_frame_pa)
+    if deltapa > 180.0:
+        deltapa = 360.0 - deltapa
+    deltapa = max(10.0, deltapa)
+
+    return min_rate, max_rate, pa, deltapa
 
 def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False):
     '''Determine the times of darkness at the site specified by <site_code>
@@ -846,6 +890,16 @@ def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
 
 def arcmins_to_radians(arcmin):
     return (arcmin/60.0)*(pi/180.0)
+
+def comp_sep(ra_cand_deg, dec_cand_deg, ra_ephem_rad, dec_ephem_rad):
+    '''Wrapper around SLALIB's sla_dsep to compute the separation between a
+    detected position specified by (ra_cand_deg, dec_cand_deg; in DEGREES) with
+    an ephemeris position (ra_ephem_rad, dec_ephem_rad; in RADIANS).
+    The computed separation is returned in arcseconds'''
+
+    sep = S.sla_dsep(radians(ra_cand_deg), radians(dec_cand_deg), ra_ephem_rad, dec_ephem_rad)
+    sep = degrees(sep)*3600.0
+    return sep
 
 def get_sitepos(site_code, dbg=False):
     '''Returns site name, geodetic longitude (East +ve), latitude (both in radians)
@@ -1214,8 +1268,8 @@ def get_sitecam_params(site):
     point4m_alt_limit = 15.0
 
     onem_exp_overhead = 15.5
-    sinistro_exp_overhead = 48.0
-    onem_setup_overhead = 120.0
+    sinistro_exp_overhead = 38.0
+    onem_setup_overhead = 110.0
     twom_setup_overhead = 180.0
     twom_exp_overhead = 22.5
     point4m_exp_overhead = 13.0

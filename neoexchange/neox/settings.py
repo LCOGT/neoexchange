@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.6.7.2'
+VERSION = '1.7.0'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -149,6 +149,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'reversion',
     'core.apps.CoreConfig',
+    'analyser.apps.AstrometerConfig',
     'opbeat.contrib.django',
 )
 
@@ -208,7 +209,7 @@ LOGGING = {
         },
         'core' : {
             'handlers' : ['file','console'],
-            'level'    : 'DEBUG',
+            'level'    : 'INFO',
         },
         'astrometrics' : {
             'handlers' : ['file','console'],
@@ -241,6 +242,22 @@ DATABASES = {
 
     }
 }
+
+##################
+# Email settings #
+##################
+
+EMAIL_USE_TLS       = True
+EMAIL_HOST          = 'smtp.gmail.com'
+EMAIL_PORT          =  587
+DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
+EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
+EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
+
+
+####################
+# LCO Api settings #
+####################
 
 NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')

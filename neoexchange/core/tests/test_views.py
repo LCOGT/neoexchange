@@ -13,28 +13,38 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
+import os
 from datetime import datetime, timedelta
+from unittest import skipIf
+import tempfile
+from glob import glob
+
 from django.test import TestCase
 from django.forms.models import model_to_dict
-from unittest import skipIf
 from bs4 import BeautifulSoup
-import os
 from mock import patch
+from astropy.io import fits
+
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
-    mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header
+    mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
+    mock_odin_login, mock_run_sextractor_make_catalog
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
+from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
-    create_source_measurement,  clean_crossid, schedule_check, \
-    summarise_block_efficiency, update_crossids
+    create_source_measurement, clean_crossid, create_frame, \
+    schedule_check, summarise_block_efficiency, \
+    store_detections, update_crossids, \
+    check_catalog_and_refit, find_matching_image_file, \
+    run_sextractor_make_catalog, find_block_for_frame, \
+    make_new_catalog_entry, generate_new_candidate_id
 from core.frames import block_status, create_frame, frame_params_from_block
-
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
 from core.forms import EphemQuery
 
 # Disable logging during testing
@@ -554,22 +564,23 @@ class TestCheck_for_block(TestCase):
         self.assertEqual(expected_state, block_state)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
+    @patch('core.frames.odin_login', mock_odin_login)
     def test_block_update_active(self):
         resp = block_status(1)
         self.assertTrue(resp)
 
     @skipIf(True, "Edward needs to fix...")
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_not_active(self):
         resp = block_status(2)
         self.assertFalse(resp)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.views.ingest_frames', mock_ingest_frames)
     @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_check_status_change(self):
@@ -579,7 +590,7 @@ class TestCheck_for_block(TestCase):
         self.assertFalse(myblock.active)
 
     @patch('core.frames.check_request_status', mock_check_request_status_null)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lcogt_api_call', mock_archive_frame_header)
     def test_block_update_check_no_obs(self):
         blockid = self.test_block6.id
@@ -587,7 +598,7 @@ class TestCheck_for_block(TestCase):
         self.assertFalse(resp)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.ingest_frames', mock_ingest_frames)
     @patch('core.frames.lcogt_api_call', mock_check_for_images_no_millisecs)
     def test_block_update_no_millisecs(self):
@@ -596,7 +607,7 @@ class TestCheck_for_block(TestCase):
         self.assertTrue(resp)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lcogt_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
         blockid = self.test_block5.id
@@ -604,7 +615,7 @@ class TestCheck_for_block(TestCase):
         self.assertFalse(resp)
 
     @patch('core.frames.check_request_status', mock_check_request_status)
-    @patch('core.frames.check_for_images', mock_check_for_images)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.ingest_frames', mock_ingest_frames)
     @patch('core.frames.lcogt_api_call', mock_check_for_images_no_millisecs)
     def test_block_update_check_num_observed(self):
@@ -675,7 +686,7 @@ class TestSchedule_Check(TestCase):
                         'magnitude': 19.099556975068584,
                         'speed': 2.901241169520825,
                         'slot_length': 20,
-                        'exp_count': 11,
+                        'exp_count': 12,
                         'exp_length': 50.0,
                         'schedule_ok': True,
                         'site_code': data['site_code'],
@@ -706,7 +717,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-03-31T17:40:00',
                         'end_time'   : '2016-03-31T23:59:59',
-                        'exp_count'  : 13,
+                        'exp_count'  : 16,
                         'exp_length' : 30.0,
                         'mid_time': '2016-03-31T20:49:59.500000',
 
@@ -732,7 +743,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2016-04-01T00:00:00',
                         'end_time'   : '2016-04-01T03:40:00',
-                        'exp_count'  : 13,
+                        'exp_count'  : 16,
                         'exp_length' : 30.0,
                         'mid_time': '2016-04-01T01:50:00',
 
@@ -813,6 +824,53 @@ class TestSchedule_Check(TestCase):
                         'start_time' : '2016-09-30T17:40:00',
                         'end_time'   : '2016-09-30T23:59:59',
                         'mid_time': '2016-09-30T20:49:59.500000',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+#        self.assertEqual(expected_resp, resp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_schedule_for_B_at_A_semester_end(self):
+        MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
+
+        data = { 'site_code' : 'K92',
+                 'utc_date' : datetime(2017,  4, 2),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-04-01T17:40:00',
+                        'end_time'   : '2017-04-02T03:40:00',
+                        'mid_time': '2017-04-01T22:40:00',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+#        self.assertEqual(expected_resp, resp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_schedule_for_B_at_A_semester_end2(self):
+
+        data = { 'site_code' : 'K92',
+                 'utc_date' : datetime(2017,  4, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        MockDateTime.change_datetime(2017, 3, 31, 23, 0, 0)
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-04-01T00:00:00',
+                        'end_time'   : '2017-04-01T03:40:00',
+                        'mid_time': '2017-04-01T01:40:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1179,8 +1237,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
 
     def test_create_nonLCO_nocat(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1207,8 +1263,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
 
     def test_create_nonLCO_nomag(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1235,8 +1289,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
 
     def test_create_nonLCO_flags(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1263,8 +1315,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
 
     def test_create_blankline(self):
 
@@ -1297,8 +1347,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
 
     def test_create_LCO_flagI(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1325,8 +1373,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
 
     def test_create_satellite(self):
         expected_params = { 'body'  : 'N009ags',
@@ -1355,8 +1401,6 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.astrometric_catalog)
-        self.assertEqual(expected_params['astrometric_catalog'], source_measure.photometric_catalog)
         self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
 
     def test_create_non_existant_body(self):
@@ -1532,6 +1576,58 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+
+    def test_ingest_frames_banzai_ql(self):
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID":"cpt",
+                        "TELID":"1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e11.fits",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 11,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_QL_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].filename, params['ORIGNAME'])
+
+    def test_ingest_frames_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2015-12-31T23:59:28.067",
+                        "ENCID": "doma",
+                        "SITEID":"cpt",
+                        "TELID":"1m0a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb70",
+                        "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block)
+        frames = Frame.objects.filter(sitecode='K91')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
 
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
@@ -1931,6 +2027,339 @@ class TestSummarise_Block_Efficiency(TestCase):
 
         self.assertEqual(expected_summary, summary)
 
+
+class TestCheckCatalogAndRefitNew(TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
+        self.configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
+
+        self.debug_print = False
+
+        self.test_banzai_fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        self.test_cat_bad_wcs = os.path.abspath(os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits'))
+        self.test_cat_good_wcs_not_BANZAI = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
+        self.test_fits_e10 = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+
+        body_params = {     'provisional_name': 'P10w5z5',
+                            'origin': 'M',
+                            'source_type': 'U',
+                            'elements_type': 'MPC Minor Planet',
+                            'active': False,
+                            'epochofel': '2016-07-11 00:00:00',
+                            'orbinc': 6.35992,
+                            'longascnode': 108.82267,
+                            'argofperih': 202.15361,
+                            'eccentricity': 0.384586,
+                            'meandist': 2.3057577,
+                            'meananom': 352.55523,
+                            'abs_mag': 21.3,
+                            'slope': 0.15,
+                        }
+        self.test_body, created = Body.objects.get_or_create(**body_params)
+
+        proposal_params = { 'code': 'test',
+                            'title': 'test',
+                            'pi':'sgreenstreet@lcogt.net',
+                            'tag': 'LCOGT',
+                            'active': True
+                          }
+        self.test_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+        block_params = {    'telclass': '1m0',
+                            'site': 'K92',
+                            'body': self.test_body,
+                            'proposal': self.test_proposal,
+                            'groupid': 'P10w5z5_cpt_20160801',
+                            'block_start': datetime(2016, 8, 1, 17),
+                            'block_end': datetime(2016, 8, 2, 4),
+                            'tracking_number': '0013',
+                            'num_exposures': 5,
+                            'exp_length': 225.0,
+                            'num_observed': 1,
+                            'when_observed': datetime(2016, 8, 2, 2, 15, 0),
+                            'active': False,
+                            'reported': True,
+                            'when_reported': datetime(2016, 8, 2, 4, 44, 0)
+                        }
+        self.test_block, created = Block.objects.get_or_create(**block_params)
+
+        frame_params = {    'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'banzai_test_frame.fits',
+                            'exptime':225.0,
+                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.390,
+                            'frametype':0,
+                            'rms_of_fit':0.3,
+                            'nstars_in_fit':-4,
+                        }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print "Error removing files in temporary test directory", self.temp_dir
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print: print "Removed", self.temp_dir
+            except OSError:
+                print "Error removing temporary test directory", self.temp_dir
+
+    def test_check_catalog_and_refit_new_good(self):
+
+        expected_status_and_num_frames = (os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame_ldac.fits')), 1)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+    def test_bad_astrometric_fit(self):
+
+        expected_status_and_num_frames = (-1, 0)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_cat_bad_wcs)
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+    def test_cattype_not_BANZAI(self):
+
+        expected_status_and_num_frames = (-99, 0)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_cat_good_wcs_not_BANZAI)
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+    def test_BANZAI_catalog_found(self):
+
+        expected_status_and_num_frames = (os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'.replace('.fits', '_ldac.fits'))), 0)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+    def test_matching_image_file_found(self):
+
+        expected_fits_file = self.test_banzai_fits.replace('.fits', '.fits[SCI]')
+
+        fits_file = find_matching_image_file(self.test_banzai_fits)
+
+        self.assertEqual(expected_fits_file, fits_file)
+
+    def test_matching_image_file_not_found(self):
+
+        expected_fits_file = None
+
+        fits_file = find_matching_image_file(self.test_banzai_fits.replace('photometrics', 'photometric'))
+
+        self.assertEqual(expected_fits_file, fits_file)
+
+        expected_fits_file = None
+
+        fits_file = find_matching_image_file(self.test_banzai_fits.replace('frame.fits', 'frames.fits'))
+
+        self.assertEqual(expected_fits_file, fits_file)
+
+    def test_matching_image_file_not_found_check_catalog_and_refit_new(self):
+
+        expected_status_and_num_frames = (-1, 0)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('photometrics', 'photometric'))
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+        expected_status_and_num_frames = (-1, 0)
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('frame.fits', 'frames.fits'))
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+    def test_run_sextractor_good(self):
+
+        expected_status_and_catalog = (0, os.path.join(self.temp_dir, os.path.basename(self.test_banzai_fits).replace('.fits', '_ldac.fits')))
+
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        self.assertEqual(expected_status_and_catalog, (status, new_ldac_catalog))
+
+    def test_run_sextractor_bad(self):
+
+        expected_status_and_catalog = (1, -4)
+
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_cat_bad_wcs)
+
+        self.assertEqual(expected_status_and_catalog, (status, new_ldac_catalog))
+
+    @patch('core.views.run_sextractor_make_catalog', mock_run_sextractor_make_catalog)
+    def test_cannot_run_sextractor(self):
+
+        expected_num_new_frames_created = 0
+
+        status, num_new_frames_created = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+
+        self.assertEqual(-4, status)
+        self.assertEqual(expected_num_new_frames_created, num_new_frames_created)
+
+    def test_find_block_for_frame_good(self):
+
+        expected_block = self.test_block
+
+        block = find_block_for_frame(self.test_banzai_fits)
+
+        self.assertEqual(expected_block, block)
+
+    def test_find_block_for_frame_multiple_frames(self):
+
+        frame_params_2 = {  'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'banzai_test_frame.fits',
+                            'exptime':225.0,
+                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.380,
+                            'frametype':0,
+                            'rms_of_fit':0.3,
+                            'nstars_in_fit':-4,
+                        }
+        self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
+
+        expected_block = None
+
+        block = find_block_for_frame(self.test_banzai_fits)
+
+        self.assertEqual(expected_block, block)
+
+    def test_find_block_for_frame_DNE_multiple_frames(self):
+
+        frame_params = {  'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'example-sbig-e00.fits',
+                            'exptime':225.0,
+                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.390,
+                            'frametype':0,
+                            'rms_of_fit':0.3,
+                            'nstars_in_fit':-4,
+                        }
+        self.test_frame, created = Frame.objects.get_or_create(**frame_params)
+
+        frame_params_2 = {  'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'example-sbig-e00.fits',
+                            'exptime':225.0,
+                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.380,
+                            'frametype':0,
+                            'rms_of_fit':0.3,
+                            'nstars_in_fit':-4,
+                        }
+        self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
+
+        expected_block = None
+
+        block = find_block_for_frame(self.test_fits_e10)
+
+        self.assertEqual(expected_block, block)
+
+    def test_find_block_for_frame_DNE(self):
+
+        expected_block = None
+
+        block = find_block_for_frame(self.test_fits_e10)
+
+        self.assertEqual(expected_block, block)
+
+    def test_find_block_for_frame_check_catalog_and_refit_new(self):
+
+        expected_status_and_num_frames = (-3, 0)
+
+        block = Block.objects.last()
+        block.delete()
+
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits)
+
+        self.assertEqual(expected_status_and_num_frames, status)
+
+    def test_make_new_catalog_entry_good(self):
+
+        expected_num_new_frames = 1
+
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        header = get_catalog_header(fits_header, cattype)
+
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+    def test_make_new_catalog_entry_multiple_frames(self):
+
+        frame_params_2 = {  'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'banzai_test_frame_ldac.fits',
+                            'exptime':225.0,
+                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':2.380,
+                            'frametype':0,
+                            'rms_of_fit':0.3,
+                            'nstars_in_fit':-4,
+                        }
+        self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
+
+        expected_num_new_frames = 0
+
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        header = get_catalog_header(fits_header, cattype)
+
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        self.assertEqual(expected_num_new_frames, num_new_frames)
+
+    def test_make_new_catalog_entry_not_needed(self):
+
+        expected_num_new_frames = 0
+
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        header = get_catalog_header(fits_header, cattype)
+
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        self.assertEqual(expected_num_new_frames, num_new_frames)
+        
 class TestUpdate_Crossids(TestCase):
 
     def setUp(self):
@@ -2053,3 +2482,140 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('N', body.source_type)
         self.assertEqual('M', body.origin)
         self.assertEqual('2016 JD18', body.name)
+
+class TestStoreDetections(TestCase):
+
+    def setUp(self):
+
+        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+        self.test_mtds = os.path.join(self.phot_tests_dir, 'elp1m008-fl05-20160225-0095-e90.mtds')
+        # Initialise with three test bodies a test proposal and several blocks.
+        # The first body has a provisional name (e.g. a NEO candidate), the
+        # other 2 do not (e.g. Goldstone targets)
+        params = {  'provisional_name' : 'P10sSA6',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body_with_provname, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015B-005',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'ELP',
+                         'body'     : self.body_with_provname,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
+                         'block_start' : '2016-02-26 03:00:00',
+                         'block_end'   : '2016-02-26 13:00:00',
+                         'tracking_number' : '00042',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        frame_params = { 'block'    : self.test_block,
+                         'filename' : 'elp1m008-fl05-20160225-0095-e90.fits',
+                         'sitecode' : 'V37',
+                         'midpoint' : datetime(2016, 2, 26, 3, 44, 42)
+                       }
+
+        self.test_frame = Frame.objects.create(**frame_params)
+
+    def test_store_detections(self):
+        expected_num_cands = 23
+
+        store_detections(self.test_mtds)
+
+        cands = Candidate.objects.all()
+        self.assertEqual(expected_num_cands, len(cands))
+
+class Test_Generate_New_Candidate_Id_Blank(TestCase):
+
+    def test_no_discoveries(self):
+        expected_id = 'LNX0001'
+
+        new_id = generate_new_candidate_id()
+
+        self.assertEqual(expected_id, new_id)
+
+    def test_no_discoveries_with_prefix(self):
+        expected_id = 'NEOX001'
+
+        new_id = generate_new_candidate_id('NEOX')
+
+        self.assertEqual(expected_id, new_id)
+
+    def test_no_discoveries_other_bodies(self):
+
+        params = {  'provisional_name' : 'LCOTL01',
+                    'origin' : 'L'
+                 }
+        body = Body.objects.create(**params)
+
+        expected_id = 'LNX0001'
+
+        new_id = generate_new_candidate_id()
+
+        self.assertEqual(expected_id, new_id)
+
+class Test_Generate_New_Candidate_Id(TestCase):
+
+    def setUp(self):
+
+        params = { 'provisional_name' : 'LNX0001',
+                   'origin' : 'L',
+                   'ingest' : datetime(2017, 1, 1)
+                 }
+        body = Body.objects.create(**params)
+
+    def test_one_body(self):
+        expected_id = 'LNX0002'
+
+        new_id = generate_new_candidate_id()
+
+        self.assertEqual(expected_id, new_id)
+
+    def test_one_body_new_prefix(self):
+        expected_id = 'LCOTL01'
+
+        new_id = generate_new_candidate_id('LCOTL')
+
+        self.assertEqual(expected_id, new_id)
+
+    def test_three_body(self):
+        params = { 'provisional_name' : 'LNX0002',
+                   'origin' : 'L',
+                   'ingest' : datetime(2017, 1, 2)
+                 }
+
+        body = Body.objects.create(**params)
+
+        params = { 'provisional_name' : 'LNX0003',
+                   'origin' : 'L',
+                   'ingest' : datetime(2017, 1, 1, 12)
+                 }
+
+        body = Body.objects.create(**params)
+
+        expected_id = 'LNX0004'
+
+        new_id = generate_new_candidate_id()
+
+        self.assertEqual(expected_id, new_id)
+        self.assertEqual(3, Body.objects.count())

@@ -234,7 +234,7 @@ class MeasurementsPageTests(FunctionalTest):
         self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
 
         # He sees a link that says it will display the measurements in MPC format
-        mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
+        mpc_link = self.browser.find_element_by_partial_link_text('VIEW IN MPC FORMAT')
         mpc_target_url = "{0}/target/{1}/measurements/mpc/".format(self.live_server_url, 1)
         actual_url = mpc_link.get_attribute('href')
         self.assertEqual(actual_url, mpc_target_url)
@@ -283,7 +283,7 @@ class MeasurementsPageTests(FunctionalTest):
         self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
 
         # He sees a link that says it will display the measurements in MPC format
-        mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
+        mpc_link = self.browser.find_element_by_partial_link_text('VIEW IN MPC FORMAT')
         mpc_target_url = "{0}/target/{1}/measurements/mpc/".format(self.live_server_url, 1)
         actual_url = mpc_link.get_attribute('href')
         self.assertEqual(actual_url, mpc_target_url)

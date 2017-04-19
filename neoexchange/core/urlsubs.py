@@ -1,4 +1,11 @@
 import requests
+import sys
+
+ssl_verify = True
+# Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
+if sys.version_info < (2,7,9):
+    requests.packages.urllib3.disable_warnings()
+    ssl_verify = False # Danger, danger !
 
 def get_lcogt_headers(auth_url, username, password):
     #  Get the authentication token
@@ -6,7 +13,7 @@ def get_lcogt_headers(auth_url, username, password):
         data = {
                 'username': username,
                 'password': password
-               }).json()
+               }, verify=ssl_verify).json()
 
     try:
         token = response.get('token')

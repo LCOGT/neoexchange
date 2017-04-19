@@ -4,33 +4,6 @@
 {% block header %}Block details{% endblock %}
 
 {% block script-content %}
-<script type="text/javascript">
-$(document).ready(function(){
-
-var frame_ids = {{images|safe}};
-
-for (i=0;i<frame_ids.length;i++){
-  var frame = frame_ids[i];
-  $.ajax({
-     url: 'https://thumbnails.lco.global/'+ frame+'/',
-     data: {
-        format: 'json',
-     },
-     error: function() {
-        $('#observations').html('<p>An error has occurred</p>');
-     },
-     dataType: 'jsonp',
-     success: function(data) {
-        var $item = $('<li class="thumb">').html('<img src="'+ data.url +'"/>');
-        $('#observations').append($item)
-     },
-     type: 'GET'
-  });
-}
-});
-
-</script>
-
 {% endblock %}
 
 {% block bodyclass %}page{% endblock %}
@@ -105,27 +78,27 @@ for (i=0;i<frame_ids.length;i++){
                     </table>
                 </div>
                 <div class="four columns">
-                    <h5 class="section-title">Actions</h5>
+                    <h5 class="section-title">Controls</h5>
                         {% if request.user.is_authenticated %}
-                          {% if not object.reported and object.num_observed > 0 %}
-{% comment "Needs astrometry branch merging" %}
-                            <a class="button button-primary" href="{% url 'block-ast' object.id %}">Astrometer</a><br/>
-{% endcomment %}
-                            <a class="button button-primary" href="{% url 'report-block' object.id %}">Report</a><br/>
+                          {% if object.num_observed > 0 and object.num_frames < 10 and object.num_candidates > 0 %}
+                            <a class="button button-primary" href="{% url 'block-ast' object.id %}" id="analyse-btn">Analyse Images</a><br/>
+                            {% if not object.reported %}
+                            <a class="button button-primary" href="{% url 'block-report' object.id %}">Report</a><br/>
+                            {% endif %}
+                            {% if object.num_candidates > 0 %}
+                              <a class="button button-primary" href="{% url 'view-candidates' object.id %}">Candidates ({{object.num_candidates}})</a><br/>
+                            {% endif %}
                           {% elif object.reported %}
-                            <a class="button button-primary" href="{% url 'view-report' object.id %}">View report in MPC format</a><br/>
+                            <a class="button button-primary" href="{% url 'block-report-mpc' object.id %}">View report in MPC format</a><br/>
                             <a class="button button-primary" href="{% url 'upload-report' object.id %}">Upload MPC format</a>
+                          {% elif not object.reported %}
+                          <a class="button button-primary" href="{% url 'report-block' object.id %}">Mark as Reported</a><br/>
                           {%else%}
                           No actions available
                           {% endif %}
                         {% else %}
                         <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
                         {% endif %}
-                    {% if request.user.is_authenticated %}
-                    <h5 class="section-title">Observations</h5>
-                        <ul id="observations">
-                        </ul>
-                    {% endif %}
                 </div>
             </div>
         </div>

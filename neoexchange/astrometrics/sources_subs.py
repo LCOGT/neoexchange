@@ -115,15 +115,20 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
 def parse_previous_NEOCP_id(items, dbg=False):
     crossmatch = ['', '', '', '']
     if len(items) == 1:
-# Is of the form "<foo> does not exist" or "<foo> was not confirmed"
+# Is of the form "<foo> does not exist" or "<foo> was not confirmed". But can
+# now apparently include comets...
         chunks = items[0].split()
         none_id = ''
+        body = chunks[0]
         if chunks[1].find('does') >= 0:
             none_id = 'doesnotexist'
         elif chunks[1].find('was') >= 0:
             none_id = 'wasnotconfirmed'
+        elif chunks[0].find('Comet') >=0:
+            body = chunks[4]
+            none_id = chunks[1] + ' ' + chunks[2]
 
-        crossmatch = [chunks[0], none_id, '', ' '.join(chunks[-3:])]
+        crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
 # Is of the form "<foo> = <bar>(<date> UT)"
         if items[0].find('Comet') != 1:

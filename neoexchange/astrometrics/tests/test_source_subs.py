@@ -244,6 +244,14 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_was_not_interesting(self):
+
+        items = [u' OG12993 is not interesting (Jan. 26.10 UT)\n']
+        expected = [u'OG12993', '', '', u'(Jan. 26.10 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
     def test_non_neo(self):
 
         items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
@@ -309,6 +317,14 @@ class TestPreviousNEOCPParser(TestCase):
              u']\n']
         expected = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Dec. 18.63 UT)']
         
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_bad_comet4(self):
+
+        items = [u' Comet C/2016 C1 = P10ABXd (Mar. 30.47 UT)\n']
+        expected = [u'P10ABXd', u'C/2016 C1', u'', u'(Mar. 30.47 UT)']
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 

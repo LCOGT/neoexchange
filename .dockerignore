@@ -1,6 +1,10 @@
+.svn
+.git
 */Diffs
 */neox.log
 */.coveragerc
 */htmlcov
 */comet
 */*.db
+*.pyc
+*.pyo
