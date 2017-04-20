@@ -20,13 +20,14 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
     print("------------------------------------------------")
 
     for body in bodies:
-        emp_line = body.compute_position()
-        vmag = emp_line[2]
-        spd = emp_line[3]
-        sky_motion = emp_line[-1]
-        if not emp_line:
+        body_line = body.compute_position()
+        vmag = body_line[2]
+        spd = body_line[3]
+        sky_motion = body_line[-2]
+        sky_motion_pa = body_line[-1]
+        if not body_line:
             continue
-        line_bits = format_emp_line((obs_date, emp_line[0], emp_line[1], vmag, sky_motion, spd), '500')
+        line_bits = format_emp_line((obs_date, body_line[0], body_line[1], vmag, sky_motion, -99, spd, sky_motion_pa), '500')
         print("%7s %s %s  V=%s  %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4]))
         if vmag > faint_limit or vmag < bright_limit:
             continue
