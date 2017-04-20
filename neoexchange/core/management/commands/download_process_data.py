@@ -117,7 +117,7 @@ class Command(BaseCommand):
                                         'keep_temp_dir' : keep_temp_dir
                                      }
                     self.stdout.write("Calling pipeline_astrometry with: %s %s" % (mtdlink_args, mtdlink_kwargs))
-                    call_command('pipeline_astrometry', *mtdlink_args , **mtdlink_kwargs)
+                    status = call_command('pipeline_astrometry', *mtdlink_args , **mtdlink_kwargs)
                     self.stderr.write("\n")
                 else:
                     self.stderr.write("Object %s does not have updated elements" % body.current_name() )
