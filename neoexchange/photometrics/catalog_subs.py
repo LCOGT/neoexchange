@@ -62,7 +62,10 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
     #query Vizier on a region of the sky with ra and dec coordinates of a specified catalog
     while set_row_limit < 100000:
 
-        query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
+        if "UCAC4" in cat_name:
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
+        else:
+		    query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
 
         #resulting catalog table
@@ -72,22 +75,24 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
         if (len(result) < 1) or (np.sum(~result[0][rmag].mask)<1):
             if "PPMXL" in cat_name:
                 cat_name = "UCAC4"
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
                 else:
                     zeros_list = list(0.0 for i in range(0,100000))
                     zeros_int_list = list(0 for i in range(0,100000))
-                    cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list, zeros_int_list], names=('_RAJ2000', '_DEJ2000', 'rmag', 'flags', 'e_rmag'))
+                    cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list, zeros_int_list], names=('RAJ2000', 'DEJ2000', 'rmag', 'flags', 'e_rmag'))
             else:
                 cat_name = "PPMXL"
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
                 else:
                     zeros_list = list(0.0 for i in range(0,100000))
                     zeros_int_list = list(0 for i in range(0,100000))
-                    cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list], names=('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'))
+                    cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list], names=('RAJ2000', 'DEJ2000', 'r2mag', 'fl'))
      #if the resulting table is neither empty nor missing columns values, set the cat_table
         else:
             cat_table = result[0]
@@ -95,7 +100,10 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
         #if didn't get all of the table, try again with a larger row limit
         if len(cat_table) == set_row_limit:
             set_row_limit += 10000
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
+            if "UCAC4" in cat_name:
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
+            else:
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=[cat_name])
 
             #resulting catalog table
@@ -124,21 +132,21 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
         table_1 = cat_table
         table_2 = FITS_table
         if "PPMXL" in cat_name:
-            RA_table_1 = table_1['_RAJ2000']
-            Dec_table_1 = table_1['_DEJ2000']
+            RA_table_1 = table_1['RAJ2000']
+            Dec_table_1 = table_1['DEJ2000']
             rmag_table_1 = table_1['r2mag']
             flags_table_1 = table_1['fl']
-            rmag_err_table_1 = table_1['_RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
+            rmag_err_table_1 = table_1['RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
             RA_table_2 = table_2['obs_ra']
             Dec_table_2 = table_2['obs_dec']
             rmag_table_2 = table_2['obs_mag']
             flags_table_2 = table_2['flags']
             rmag_err_table_2 = 'nan'
         else:
-            RA_table_1 = table_1['_RAJ2000']
-            Dec_table_1 = table_1['_DEJ2000']
+            RA_table_1 = table_1['RAJ2000']
+            Dec_table_1 = table_1['DEJ2000']
             rmag_table_1 = table_1['rmag']
-            flags_table_1 = table_1['_RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
+            flags_table_1 = table_1['RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
             rmag_err_table_1 = table_1['e_rmag']
             RA_table_2 = table_2['obs_ra']
             Dec_table_2 = table_2['obs_dec']
@@ -154,21 +162,21 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
             rmag_table_1 = table_1['obs_mag']
             flags_table_1 = table_1['flags']
             rmag_err_table_1 = 'nan'
-            RA_table_2 = table_2['_RAJ2000']
-            Dec_table_2 = table_2['_DEJ2000']
+            RA_table_2 = table_2['RAJ2000']
+            Dec_table_2 = table_2['DEJ2000']
             rmag_table_2 = table_2['r2mag']
             flags_table_2 = table_2['fl']
-            rmag_err_table_2 = table_2['_RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
+            rmag_err_table_2 = table_2['RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
         else:
             RA_table_1 = table_1['obs_ra']
             Dec_table_1 = table_1['obs_dec']
             rmag_table_1 = table_1['obs_mag']
             flags_table_1 = table_1['flags']
             rmag_err_table_1 = 'nan'
-            RA_table_2 = table_2['_RAJ2000']
-            Dec_table_2 = table_2['_DEJ2000']
+            RA_table_2 = table_2['RAJ2000']
+            Dec_table_2 = table_2['DEJ2000']
             rmag_table_2 = table_2['rmag']
-            flags_table_2 = table_2['_RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
+            flags_table_2 = table_2['RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
             rmag_err_table_2 = table_2['e_rmag']
 
     y = 0

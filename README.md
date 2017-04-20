@@ -5,6 +5,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 ## History
 
 
+### 1.7.1
+
+Bug fixes in zeropoint determination for newer versions of astroquery. Deploy mtdlink into the container.
+
 ### 1.7.0
 
 Astrometry in the browser
