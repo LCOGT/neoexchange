@@ -76,6 +76,7 @@ class Command(BaseCommand):
     #                    print "%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag)
                     elif len(sources) > 1:
                         min_sep = options['boxwidth'] * options['boxwidth']
+                        best_source = None
                         for source in sources:
                             sep = S.sla_dsep(ra, dec, radians(source.obs_ra), radians(source.obs_dec))
                             sep = degrees(sep) * 3600.0
@@ -86,12 +87,16 @@ class Command(BaseCommand):
                                 min_sep = sep
                                 best_source = source
 
-                    times.append(frame.midpoint)
-                    mags.append(best_source.obs_mag)
-                    mag_errs.append(best_source.err_obs_mag)
+                    if best_source:
+                        times.append(frame.midpoint)
+                        mags.append(best_source.obs_mag)
+                        mag_errs.append(best_source.err_obs_mag)
   
             if options['title'] == None:
                 plot_title = '%s from %s (%s) on %s' % (block.body.current_name(), block.site.upper(), frame.sitecode, block.when_observed.strftime("%Y-%m-%d"))
             else:
                 plot_title = options['title']
-            self.plot_timeseries(times, mags, mag_errs, title=plot_title)
+            if len(times) > 0 and len(mags) > 0:
+                self.plot_timeseries(times, mags, mag_errs, title=plot_title)
+            else:
+                self.stdout.write("No sources matched.")
