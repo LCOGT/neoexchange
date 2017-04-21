@@ -66,6 +66,7 @@ class Test_Analyser(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : '2017-01-01 21:09:51',
                     'block'         : self.test_block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'frameid'       : 1
                  }
         self.frame1 = Frame.objects.create(**params)
@@ -76,6 +77,7 @@ class Test_Analyser(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : '2017-01-01 21:20:00',
                     'block'         : self.test_block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'frameid'       : 2
                  }
         self.frame2 = Frame.objects.create(**params)
@@ -85,7 +87,7 @@ class Test_Analyser(TestCase):
     def test_source_meas_created(self):
         sources1 = SourceMeasurement.objects.filter(frame__block=self.test_block).count()
         self.assertEqual(sources1,0)
-        resp = analyser_to_source_measurement(self.test_block, [1,2])
+        resp = analyser_to_source_measurement(self.test_block, [1,2], 2)
         self.assertTrue(resp)
         sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block).count()
         self.assertEqual(sources2,2)
@@ -112,7 +114,7 @@ class Test_Analyser(TestCase):
         sources1 = SourceMeasurement.objects.filter(frame__block=self.test_block)
         self.assertEqual(sources1.count(),2)
         self.assertEqual(sources1[0].obs_ra, 10.1)
-        resp = analyser_to_source_measurement(self.test_block, [1,2])
+        resp = analyser_to_source_measurement(self.test_block, [1,2], 1)
         self.assertTrue(resp)
         sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block)
         self.assertEqual(sources2.count(),2)
