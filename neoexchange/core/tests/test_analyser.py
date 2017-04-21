@@ -121,9 +121,9 @@ class Test_Analyser(TestCase):
         self.assertEqual(sources2[0].obs_ra, 22.753496)
 
     def test_url_reverses(self):
-        submit_url = reverse('block-submit-mpc', kwargs={'pk':self.test_block.pk})
+        submit_url = reverse('block-submit-mpc', kwargs={'pk':self.test_block.pk, 'source':2})
         analyser_url = reverse('block-ast', kwargs={'pk':self.test_block.pk})
         analyser_submit_url = reverse('submit-candidates', kwargs={'pk':self.test_block.pk})
-        self.assertEqual(submit_url,'/block/1/report/submit/')
+        self.assertEqual(submit_url,'/block/1/source/2/report/submit/')
         self.assertEqual(analyser_url,'/block/1/analyser/')
         self.assertEqual(analyser_submit_url,'/block/1/analyser/submit/')
