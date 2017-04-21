@@ -1347,6 +1347,8 @@ def compute_dark_and_up_time(emp):
     sky is dark from emp'''
 
     dark_and_up_time = None
+    dark_and_up_time_start = None
+    dark_and_up_time_end = None
     emp_dark_and_up = []
     start = None
 
@@ -1360,8 +1362,9 @@ def compute_dark_and_up_time(emp):
             elif 'Limits' not in line[10]:
                 dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
                 emp_dark_and_up.append(line)
-        dark_and_up_time = dark_and_up_time_end - dark_and_up_time_start
-        dark_and_up_time = dark_and_up_time.seconds/3600.0 #in hrs
+        if dark_and_up_time_start != None and dark_and_up_time_end != None:
+            dark_and_up_time = dark_and_up_time_end - dark_and_up_time_start
+            dark_and_up_time = dark_and_up_time.seconds/3600.0 #in hrs
 
     return dark_and_up_time, emp_dark_and_up
 
