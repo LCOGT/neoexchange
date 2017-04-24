@@ -11,6 +11,7 @@ from matplotlib.dates import HourLocator, DateFormatter
 
 from core.models import Block, Frame
 from astrometrics.ephem_subs import compute_ephem, radec2strings
+from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box
 
 class Command(BaseCommand):
@@ -91,6 +92,16 @@ class Command(BaseCommand):
                         times.append(frame.midpoint)
                         mags.append(best_source.obs_mag)
                         mag_errs.append(best_source.err_obs_mag)
+
+            i=0
+            lightcurve_file = open('lightcurve_data.txt', 'w')
+            for time in times:
+                time_jd = datetime2mjd_utc(time)
+                time_jd_truncated = time_jd - int(time_jd)
+                self.stdout.write( "%7.5lf %6.3lf %5.3lf" % ( time_jd_truncated, mags[i], mag_errs[i] ) )
+                lightcurve_file.write( "%7.5lf %6.3lf %5.3lf\n" % ( time_jd_truncated, mags[i], mag_errs[i] ) )
+                i += 1
+            lightcurve_file.close()
   
             if options['title'] == None:
                 plot_title = '%s from %s (%s) on %s' % (block.body.current_name(), block.site.upper(), frame.sitecode, block.when_observed.strftime("%Y-%m-%d"))
