@@ -98,7 +98,6 @@ class Command(BaseCommand):
             for time in times:
                 time_jd = datetime2mjd_utc(time)
                 time_jd_truncated = time_jd - int(time_jd)
-                self.stdout.write( "%7.5lf %6.3lf %5.3lf" % ( time_jd_truncated, mags[i], mag_errs[i] ) )
                 lightcurve_file.write( "%7.5lf %6.3lf %5.3lf\n" % ( time_jd_truncated, mags[i], mag_errs[i] ) )
                 i += 1
             lightcurve_file.close()
