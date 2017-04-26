@@ -59,6 +59,7 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
 
 def schedule_target_list(bodies_list, form_details, username):
     num_scheduled = 0
+    objects_scheduled = []
     if bodies_list:
         for target in bodies_list:
             data = schedule_check(form_details, target)
@@ -66,12 +67,14 @@ def schedule_target_list(bodies_list, form_details, username):
             data['start_time'] = datetime.strptime(data['start_time'],'%Y-%m-%dT%H:%M:%S')
             data['end_time'] = datetime.strptime(data['end_time'],'%Y-%m-%dT%H:%M:%S')
 
+            print "%s@%s for %s->%s" % (target.current_name(), data['site_code'], data['start_time'], data['end_time'])
             tracking_num, sched_params = schedule_submit(data, target, username)
             block_resp = record_block(tracking_num, sched_params, data, target)
 
             if block_resp:
                 num_scheduled += 1
-    return num_scheduled
+                objects_scheduled.append(str(target.current_name()))
+    return num_scheduled, objects_scheduled
 
 
 class Command(BaseCommand):
@@ -97,12 +100,15 @@ class Command(BaseCommand):
         parser.add_argument('--too', action="store_true", help="Whether to execute as disruptive ToO")
 
     def handle(self, *args, **options):
-        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --user [tlister@lcogt.net] --run"
+        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD[-HH]] --user [tlister@lcogt.net] --run"
         if type(options['date']) != datetime:
             try:
-                scheduling_date = datetime.strptime(options['date'], '%Y%m%d')
+                scheduling_date = datetime.strptime(options['date'], '%Y%m%d-%H')
             except ValueError:
-                raise CommandError(usage)
+                try:
+                    scheduling_date = datetime.strptime(options['date'], '%Y%m%d')
+                except ValueError:
+                    raise CommandError(usage)
         else:
             scheduling_date = options['date']
             if scheduling_date.hour > 17:
@@ -142,10 +148,10 @@ class Command(BaseCommand):
 
 # If no 0.4m's are available, transfer targets to 1m list
         if len(sites['north']['0m4']) == 0 and len(sites['north']['1m0']) > 0:
-            self.stdout.write("No 0.4m telescopes available, transferring targets to 1m0 telescopes")
+            self.stdout.write("No 0.4m telescopes available in the North, transferring targets to 1m0 telescopes")
             north_list['1m0'] = north_list['1m0'] + north_list['0m4']
         if len(sites['south']['0m4']) == 0 and len(sites['south']['1m0']) > 0:
-            self.stdout.write("No 0.4m telescopes available, transferring targets to 1m0 telescopes")
+            self.stdout.write("No 0.4m telescopes available in the South, transferring targets to 1m0 telescopes")
             south_list['1m0'] = south_list['1m0'] + south_list['0m4']
 
         self.stdout.write("\nSite Available?\n===============")
@@ -171,7 +177,9 @@ class Command(BaseCommand):
                                           'utc_date' : scheduling_date.date(),
                                           'proposal_code': options['proposal'],
                                           'too_mode' : options['too']}
-                            break
+#                            if 'Z21' in north_form['site_code'] and datetime.utcnow().hour > 16:
+#                                north_form['utc_date'] = north_form['utc_date'] + timedelta(days=1)
+#                            break
                 do_south = False
                 if len(sites['south'][tel_class]) > 0:
                     for site in sites['south'][tel_class]:
@@ -181,16 +189,18 @@ class Command(BaseCommand):
                                           'utc_date' : scheduling_date.date(),
                                           'proposal_code': options['proposal'],
                                           'too_mode' : options['too']}
-                            break
+#                            if 'K92' in south_form['site_code'] and datetime.utcnow().hour > 16:
+#                                south_form['utc_date'] = south_form['utc_date'] + timedelta(days=1)
+#                            break
 
                 if do_north:
-                    num_scheduled = schedule_target_list(north_list[tel_class], north_form, username)
-                    self.stdout.write("Scheduled %d in the North at %s" % (num_scheduled, north_form['site_code']))
+                    num_scheduled, objects_scheduled = schedule_target_list(north_list[tel_class], north_form, username)
+                    self.stdout.write("Scheduled %d (%s) in the North at %s" % (num_scheduled, objects_scheduled, north_form['site_code']))
                 else:
                     self.stdout.write("No %s sites in the North available for scheduling" % tel_class)
                 if do_south:
-                    num_scheduled = schedule_target_list(south_list[tel_class], south_form, username)
-                    self.stdout.write("Scheduled %d in the South at %s" % (num_scheduled, south_form['site_code']))
+                    num_scheduled, objects_scheduled = schedule_target_list(south_list[tel_class], south_form, username)
+                    self.stdout.write("Scheduled %d (%s) in the South at %s" % (num_scheduled,  objects_scheduled, south_form['site_code']))
                 else:
                     self.stdout.write("No %s sites in the South available for scheduling" % tel_class)
         else:
