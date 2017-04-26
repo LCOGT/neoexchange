@@ -53,7 +53,7 @@ class Command(BaseCommand):
         
         self.stdout.write("Analyzing Block# %d for %s" % (block.id, block.body.current_name()))
 
-        frames = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE])
+        frames = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
         self.stdout.write("Found %d frames for Block# %d with good ZPs" % (len(frames), block.id))
         self.stdout.write("Searching within %.1f arcseconds and +/-%.1f delta magnitudes" % (options['boxwidth'], options['deltamag']))
 
