@@ -3,13 +3,18 @@ import os
 import requests
 import logging
 import csv
+import json
 import subprocess
 from PIL import Image, ImageDraw
-from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES
+from datetime import datetime
+from astropy.coordinates import SkyCoord
+from numpy import mean, sqrt
 from django.conf import settings
 
 from panoptes_client import SubjectSet, Subject, Panoptes, Project
 from panoptes_client.panoptes import PanoptesAPIException
+
+from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES, PanoptesReport
 
 logger = logging.getLogger('neox')
 
@@ -28,31 +33,53 @@ def push_set_to_panoptes(files, num_segments, blockid, download_dir):
         return False
 
     subject_list = []
+    subject_ids = []
     telescope = dict(TELESCOPE_CHOICES)
     site = dict(SITE_CHOICES)
     for index in range(0, num_segments):
+        subject_files = [fn for fn in files if "-{}.jpg".format(index) in fn]
+        if not subject_files:
+            logger.debug('No files found matching -{}.jpg'.format(index))
+            continue
+
         subject = Subject()
         subject.links.project = project
-        subject_files = [fn for fn in files if "-{}.jpg".format(index) in fn]
-        for filename in subject_files:
+        for i, filename in enumerate(subject_files):
             subject.add_location(download_dir+filename)
-            # You can set whatever metadata you want, or none at all
+            subject.metadata["image_{}".format(i)] = filename
         subject.metadata['telescope'] = "{} at {}".format(telescope[bk.telclass], site[bk.site])
         subject.metadata['date'] = "{}".format(bk.when_observed.isoformat())
+        subject.metadata['quadrant'] = index
         subject.save()
+        subject_ids.append({'id':subject.id, 'quad':index})
         subject_list.append(subject)
 
     # add subjects to subject set
     subject_set.add(subject_list)
 
-    # Added these subjects to a Workflow
+    # Added these subjects to the 0th Workflow because thats all we have
     workflow = project.links.workflows[0]
     resp, error = workflow.http_post(
                  '{}/links/subject_sets'.format(workflow.id),
                  json={'subject_sets': [subject_set.id]}
              )
+    if not error:
+        return subject_ids
+    else:
+        return False
 
-    return True
+def create_panoptes_report(block, subject_ids):
+    now = datetime.now()
+    for subject in subject_ids:
+        pr = PanoptesReport()
+        pr.block = block
+        pr.when_submitted = now
+        pr.last_check = now
+        pr.active = True
+        pr.subject_id = int(subject['id'])
+        pr.quad = int(subject['quad'])
+        pr.save()
+    return
 
 def reorder_candidates(candidates):
     # Change candidates list from by candidate to by image
@@ -75,8 +102,8 @@ def download_images_block(blockid, frames, candidates, scale, download_dir):
     mosaic_files = []
     for i, frame in enumerate(frames):
         filename = download_image(frame, current_files, download_dir, blockid)
-        if candidates:
-            add_markers_to_image(filename, candidates[i], scale=scale, radius=10.)
+        # if candidates:
+        #     add_markers_to_image(filename, candidates[i], scale=scale, radius=10.)
         if not filename:
             logger.debug('Download problem with {}'.format(frame))
             return False
@@ -87,9 +114,11 @@ def download_images_block(blockid, frames, candidates, scale, download_dir):
     return mosaic_files
 
 def create_mosaic(filename, frameid, download_dir):
-    # Create a  3 x 4 mosaic of each image so we get better detail of where the moving object is
+    # Create a  3 x 3 mosaic of each image so we get better detail of where the moving object is
+    # WARNING 640x640 will only work with 1m and 2m data NOT 0m4 data
+    # 0m4 523x352
     full_filename =os.path.join(download_dir, filename)
-    mosaic_options = "convert {} -crop 640x480 {}frame-{}-%d.jpg".format(full_filename,download_dir,frameid)
+    mosaic_options = "convert {} -crop 640x640 {}frame-{}-%d.jpg".format(full_filename,download_dir,frameid)
     logger.debug("Creating mosaic for {}".format(frameid))
     subprocess.call(mosaic_options, shell=True)
     files = ['frame-{}-{}.jpg'.format(frameid,i) for i in range(0,9)]
@@ -128,24 +157,80 @@ def add_markers_to_image(filename, candidates, scale, radius):
     image.save(filename, 'jpeg')
     return
 
-def create_manifest_file(blockid, frames, num_segments, download_dir):
-    # The manifest file for Zooniverse will have one row per segment of
-    # 3 x 3 grid from original image.
-    # NOT USED when pushing directly to Panoptes via API/Client
-    file_name = 'manifest_{}.csv'.format(blockid)
-    full_filename = os.path.join(download_dir, file_name)
-    files = glob.glob("{}frame*.jpg".format(download_dir))
-    filenames= [f.replace(download_dir,'') for f in files]
-    with open(full_filename, "wb") as f:
-        wr = csv.writer(f, delimiter=',', escapechar='\\', quotechar='"', quoting=csv.QUOTE_NONE)
-        file_headers = [ "file{}".format(i) for i in range(0, len(frames))]
-        row = ['subject'] + file_headers
-        wr.writerow(row)
-        for index in range(0, num_segments):
-            subject_files = [fn for fn in filenames if "-{}.jpg".format(index) in fn]
-            row = [index] + subject_files
-            logger.debug(row)
-            wr.writerow(row)
-    f.close()
+def read_classification_report(filename):
+    '''
+    Read classificiation report from Zooniverse, extracting position information
+    for possible targets
+    :params: filename - full path to report file
+    '''
+    contents = []
+    with open(filename, 'rb') as csvfile:
+        report = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+        for row in report:
+            contents.append(row)
 
-    return full_filename
+    subjects = parse_classifications(contents)
+    retire_subjects(subjects)
+    return subjects
+
+def parse_classifications(contents):
+    '''
+    Take the parsed Zooniverse classification report, find all the retired subject sets
+    and match them to blocks and frames using PanoptesReport model
+    :params: contents - a list of the classification data
+    '''
+    active_subjects = PanoptesReport.objects.filter(active=True).values_list('subject_id', flat=True)
+    subjects = {str(a):[] for a in active_subjects}
+    for content in contents:
+        # Choose the 0th value because we only have 1 workflow
+        value = json.loads(content['annotations'])[0]['value']
+        if value and int(content['subject_ids']) in active_subjects:
+            subject_data = json.loads(content['subject_data'])
+            keys = subject_data.keys()
+            if subject_data[keys[0]]['retired']:
+                # Only send recently retired results
+                x = [v['x'] for v in value]
+                y = [v['y'] for v in value]
+                data = {'user'  : content['user_name'],
+                        'x'     : x,
+                        'y'     : y,
+                        'quad'  : subject_data[keys[0]]['quadrant']
+                        'frame' : subject_data[keys[0]]['image_0']
+                        }
+                subjects[keys[0]].append(data)
+    return subjects
+
+def retire_subjects(subjects):
+    for k,v in subjects.iteritems():
+        if v:
+            active_subjects = PanoptesReport.objects.filter(id=k)
+            active_subjects.update(active=False)
+            logger.debug('Retired {}'.format(active_subjects))
+    return
+
+def convert_image_to_sky(filename,x,y,quad,xscale,yscale):
+    '''
+    Takes coordinates from a quadranted image and converts them into RA and Dec
+    Requires matching with first Frame in a sequence, which is obtained from quadrant filename
+    :params: filename - filename of the first quadrant file in the sequence
+    :params: x,y - pixel positions in quadrant image
+    :params: quad - quadrant of full image
+    :params: xscale, yscale - dimensions of the quad image
+    '''
+    frameid = filename.split('-')[1]
+    frame = Frame.objects.get(frameid=frameid)
+    xf = x + quad%3 * xscale
+    yf = y + quad/3 * yscale
+    sc = SkyCoord.from_pixel(xf,yf,frame.wcs)
+    return sc.ra.degree, sc.dec.degree
+
+def filter_vals(vals):
+    '''
+    Filter list of vals to only those with
+    '''
+    output = [x for x in vals if sqrt(abs(x - mean(vals))) < 3.]
+    mean_val = mean(output)
+    return mean_val
+
+def find_zoo_candidates():
+    return

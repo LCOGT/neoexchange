@@ -6,6 +6,8 @@ from core.archive_subs import archive_lookup_images
 from core.frames import find_images_for_block
 from django.conf import settings
 import logging
+import tempfile
+import shutil
 
 logger = logging.getLogger('neox')
 
@@ -51,11 +53,13 @@ class Command(BaseCommand):
             if not images:
                 logger.debug('Block {} had no images'.format(block))
                 continue
+            if not download_dir:
+                download_dir = tempfile.mkdtemp()
             files = download_images_block(block.id, images, cand_per_image, scale, download_dir)
             if files:
-                if not download_dir:
-                    download_dir = tempfile.mkdtemp()
-                manifest = push_set_to_panoptes(files, num_segments=12, blockid=block.id, download_dir=download_dir)
+                subject_ids = push_set_to_panoptes(files, num_segments=9, blockid=block.id, download_dir=download_dir)
+                if subject_ids:
+                    create_panoptes_report(block, subject_ids)
                 if not options['download_dir']:
                     shutil.rmtree(download_dir)
             else:

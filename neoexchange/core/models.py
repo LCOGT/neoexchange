@@ -732,10 +732,11 @@ class PanoptesReport(models.Model):
     when_submitted = models.DateTimeField('Date sent to Zooniverse')
     last_check = models.DateTimeField()
     active = models.BooleanField(default=False)
-    set_id = models.IntegerField('Subject Set ID')
+    subject_id = models.IntegerField('Subject ID')
+    quad = models.IntegerField('Quadrant of image')
 
     class Meta:
         verbose_name = _('Zooniverse Report')
 
     def __unicode__(self):
-        return "Block {} is Subject Set {}".format(self.blockid, self.set_id)
+        return "Block {} Quad {} is Subject {}".format(self.block.id, self.quad, self.subject_id)
