@@ -14,7 +14,8 @@ from django.conf import settings
 from panoptes_client import SubjectSet, Subject, Panoptes, Project
 from panoptes_client.panoptes import PanoptesAPIException
 
-from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES, PanoptesReport
+from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES, PanoptesReport, \
+    CatalogSources
 
 logger = logging.getLogger('neox')
 
@@ -161,7 +162,7 @@ def read_classification_report(filename):
     '''
     Read classificiation report from Zooniverse, extracting position information
     for possible targets
-    :params: filename - full path to report file
+    :param filename: full path to report file
     '''
     contents = []
     with open(filename, 'rb') as csvfile:
@@ -171,13 +172,14 @@ def read_classification_report(filename):
 
     subjects = parse_classifications(contents)
     retire_subjects(subjects)
-    return subjects
+    sources = identify_sources(subjects)
+    return sources
 
 def parse_classifications(contents):
     '''
     Take the parsed Zooniverse classification report, find all the retired subject sets
     and match them to blocks and frames using PanoptesReport model
-    :params: contents - a list of the classification data
+    :param contents: a list of the classification data
     '''
     active_subjects = PanoptesReport.objects.filter(active=True).values_list('subject_id', flat=True)
     subjects = {str(a):[] for a in active_subjects}
@@ -189,20 +191,19 @@ def parse_classifications(contents):
             keys = subject_data.keys()
             if subject_data[keys[0]]['retired']:
                 # Only send recently retired results
-                x = [v['x'] for v in value]
-                y = [v['y'] for v in value]
-                data = {'user'  : content['user_name'],
-                        'x'     : x,
-                        'y'     : y,
-                        'quad'  : subject_data[keys[0]]['quadrant']
-                        'frame' : subject_data[keys[0]]['image_0']
-                        }
-                subjects[keys[0]].append(data)
+                for v in value:
+                    data = {'user'  : content['user_name'],
+                            'x'     : v['x'],
+                            'y'     : v['y'],
+                            'quad'  : subject_data[keys[0]]['quadrant'],
+                            'frame' : subject_data[keys[0]]['image_0']
+                            }
+                    subjects[keys[0]].append(data)
     return subjects
 
 def retire_subjects(subjects):
     for k,v in subjects.iteritems():
-        if v:
+        if v and k:
             active_subjects = PanoptesReport.objects.filter(id=k)
             active_subjects.update(active=False)
             logger.debug('Retired {}'.format(active_subjects))
@@ -210,12 +211,12 @@ def retire_subjects(subjects):
 
 def convert_image_to_sky(filename,x,y,quad,xscale,yscale):
     '''
-    Takes coordinates from a quadranted image and converts them into RA and Dec
+    Translate coordinates from a quadranted image to RA and Dec
     Requires matching with first Frame in a sequence, which is obtained from quadrant filename
-    :params: filename - filename of the first quadrant file in the sequence
-    :params: x,y - pixel positions in quadrant image
-    :params: quad - quadrant of full image
-    :params: xscale, yscale - dimensions of the quad image
+    :param filename: filename of the first quadrant file in the sequence
+    :param x,y: pixel positions in quadrant image
+    :param quad: quadrant of full image
+    :param xscale, yscale: dimensions of the quad image
     '''
     frameid = filename.split('-')[1]
     frame = Frame.objects.get(frameid=frameid)
@@ -224,13 +225,51 @@ def convert_image_to_sky(filename,x,y,quad,xscale,yscale):
     sc = SkyCoord.from_pixel(xf,yf,frame.wcs)
     return sc.ra.degree, sc.dec.degree
 
+def convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
+    '''
+    Takes coordinates from a quadranted image and converts them into Frame x/y
+    Requires matching with first Frame in a sequence, which is obtained from quadrant filename
+    :param filename: filename of the first quadrant file in the sequence
+    :param x,y: pixel positions in quadrant image
+    :param quad: quadrant of full image
+    :param xscale, yscale: dimensions of the quad image
+    '''
+    x = (x + quad%3 * xscale)*float(xsize)/xscale*3.
+    y = float(ysize) - (y + quad/3 * yscale)*float(ysize)/yscale*3.
+    x_min = x - 5
+    y_min = y - 5
+    x_max = x + 5
+    y_max = y + 5
+    return x_min, x_max, y_min, y_max
+
 def filter_vals(vals):
     '''
-    Filter list of vals to only those with
+    Filter list of vals to only those within 3 STD
     '''
     output = [x for x in vals if sqrt(abs(x - mean(vals))) < 3.]
     mean_val = mean(output)
     return mean_val
 
-def find_zoo_candidates():
-    return
+def identify_sources(subjects):
+    '''
+    Align Panoptes classification with CatalogSources
+    :param subject['frame']: Archive frame ID
+    :param subject['x']: x positions from Panoptes
+    :param subject['y']: y positions from Panoptes
+    :param subject['quad']: quadrant of full image
+    '''
+    sources = []
+    for subject_id, subject in subjects.iteritems():
+        frameid = subject[0]['frame'].split('-')[1]
+        try:
+            frame = Frame.objects.get(frameid=frameid)
+        except Frame.DoesNotExist:
+            logger.debug("Frame {} does not exist".format(frameid))
+            continue
+        for data in subject:
+            x_min, x_max, y_min, y_max = convert_coords(data['x'], data['y'], data['quad'], 640, 640, frame.get_x_size(), frame.get_y_size())
+            cs = CatalogSources.objects.filter(frame=frame, obs_x__gte=x_min, obs_x__lte=x_max, obs_y__gte=y_min, obs_y__lte=y_max)
+            sources += list(cs)
+    # Return the distribution of sources and numbers who found them
+    source_distrib = [(s,sources.count(s)) for s in set(sources)]
+    return source_distrib
