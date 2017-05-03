@@ -1304,8 +1304,9 @@ def sort_rocks(fits_files):
                 os.makedirs(object_directory)
             dest_filepath = os.path.join(object_directory, os.path.basename(fits_filepath))
             #if the file is an e91 and an e11 exists in the working directory, remove the link to the e11 and link the e91
-            if 'e91' in fits_filepath and os.path.exists(dest_filepath.replace('e91.fits', 'e11.fits')):
-                os.unlink(dest_filepath.replace('e91.fits', 'e11.fits'))
+            if 'e91' in fits_filepath:
+                if os.path.exists(dest_filepath.replace('e91.fits', 'e11.fits')):
+                    os.unlink(dest_filepath.replace('e91.fits', 'e11.fits'))
                 if not os.path.exists(dest_filepath):
                     os.symlink(fits_filepath, dest_filepath)
             #if the file is an e11 and an e91 doesn't exit in the working directory, create link to the e11
