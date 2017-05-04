@@ -1292,7 +1292,7 @@ def sort_rocks(fits_files):
     for fits_filepath in fits_files:
         fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
         object_name = fits_header.get('OBJECT', None)
-        block_id = fits_header.get('BLKUID', '')
+        block_id = fits_header.get('BLKUID', '').replace('/', '')
         if object_name:
             object_directory = object_name.replace(' ', '')
             if block_id != '':

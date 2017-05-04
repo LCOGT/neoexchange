@@ -123,3 +123,5 @@ class Command(BaseCommand):
                     self.stderr.write("Object %s does not have updated elements" % body.current_name() )
             else:
                 self.stderr.write("No Block found for the object")
+
+        self.stdout.write("\n==== Completed download and process astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))

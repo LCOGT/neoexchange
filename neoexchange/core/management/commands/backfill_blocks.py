@@ -57,6 +57,9 @@ class Command(BaseCommand):
                 blocks = Block.objects.filter(tracking_number=tracking_num)
                 if len(blocks) == 0:
                     name = header.get('object', None)
+                    if name:
+                        # Take out any parentheses e.g. (28484)
+                        name = name.replace('(', '').replace(')', '')
                     bodies = Body.objects.filter(Q(provisional_name__exact = name )|Q(provisional_packed__exact = name)|Q(name__exact = name))
                     if len(bodies) == 1:
                         body = bodies[0]
