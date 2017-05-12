@@ -1092,10 +1092,10 @@ def make_proposal(params):
 
 def make_constraints(params):
     constraints = {
-#                      'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
                        'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
-#                      'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
-#                      'max_airmass' : 2.37,    # 25 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
                        'min_lunar_distance': 30
                     }
     return constraints
