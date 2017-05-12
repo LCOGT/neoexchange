@@ -64,6 +64,7 @@ neox.db
 neox.log
 
 lightcurve.png
+lightcurve_data.txt
 
 ingest/static/ingest/css/admin.css
 ingest/static/ingest/css/dashboard.css
