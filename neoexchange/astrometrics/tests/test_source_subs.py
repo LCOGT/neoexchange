@@ -77,6 +77,12 @@ class TestGoldstoneChunkParser(TestCase):
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
+    def test_multimonth_split_provisional(self):
+        expected_objid = '2017 CS' # '2017 CS'
+        chunks = [u'2017', u'May', u'22-Jun', u'01', u'2017', u'CS', u'Yes', u'Yes', u'19.4', u'PHA', u'Target-of-opportunity']
+        obj_id = parse_goldstone_chunks(chunks, True)
+        self.assertEqual(expected_objid, obj_id)
+
     def test_periodic_comet(self):
         expected_objid = 'P/2016 BA14'
         chunks = [u'2016', u'Mar', u'17-23', u'P/2016', u'BA14', u'Pan-STARRS', u'No', u'Yes', u'Comet', u'DSS-13', u'and', u'Green', u'Bank.', u'Tests', u'at', u'DSS-14.', u'Target-of-opportunity.']
