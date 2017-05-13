@@ -749,8 +749,9 @@ def parse_goldstone_chunks(chunks, dbg=False):
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isalnum():
             # We have something that straddles months
             if dbg: print "In case 2b"
-            if chunks[5].isdigit():
-                # Of the form '2017 May 29-Jun 02 418094 2007 WV4'
+            if chunks[5].isdigit() or chunks[5][0:2].isupper() == False:
+                # Of the form '2017 May 29-Jun 02 418094 2007 WV4' or number and
+                # name e.g.  '2017 May 29-Jun 02 6063 Jason'
                 object_id = str(chunks[4])
             else:
                 # Of the form '2017 May 29-Jun 02 2017 CS'
