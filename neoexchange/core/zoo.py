@@ -11,7 +11,7 @@ from astropy.coordinates import SkyCoord
 from numpy import mean, sqrt
 from django.conf import settings
 
-from panoptes_client import SubjectSet, Subject, Panoptes, Project
+from panoptes_client import SubjectSet, Subject, Panoptes, Project, Workflow
 from panoptes_client.panoptes import PanoptesAPIException
 
 from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES, PanoptesReport, \
@@ -19,7 +19,7 @@ from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES, PanoptesR
 
 logger = logging.getLogger('neox')
 
-def push_set_to_panoptes(files, num_segments, blockid, download_dir):
+def panoptes_add_set(files, num_segments, blockid, download_dir):
     Panoptes.connect(username=settings.ZOONIVERSE_USER, password=settings.ZOONIVERSE_PASSWD)
     bk = Block.objects.get(pk=blockid)
 
@@ -72,13 +72,13 @@ def push_set_to_panoptes(files, num_segments, blockid, download_dir):
 def create_panoptes_report(block, subject_ids):
     now = datetime.now()
     for subject in subject_ids:
-        pr = PanoptesReport()
-        pr.block = block
+        pr, created = PanoptesReport.objects.get_or_create(block = block, quad = int(subject['quad']))
+        if not created:
+            continue
         pr.when_submitted = now
         pr.last_check = now
         pr.active = True
         pr.subject_id = int(subject['id'])
-        pr.quad = int(subject['quad'])
         pr.save()
     return
 
@@ -94,7 +94,7 @@ def reorder_candidates(candidates):
         new_cands.append(cands_by_img)
     return new_cands
 
-def download_images_block(blockid, frames, candidates, scale, download_dir):
+def download_images_block(blockid, frames, scale, download_dir):
     '''
     Finds all thumbnails for frames list, downloads them, adds markers for candidates,
     creates a mosaic of each frame see we can see more detail.
@@ -244,7 +244,7 @@ def convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
 
 def filter_vals(vals):
     '''
-    Filter list of vals to only those within 3 STD
+    Filter list of vals to only those within 3 STD of mean
     '''
     output = [x for x in vals if sqrt(abs(x - mean(vals))) < 3.]
     mean_val = mean(output)
