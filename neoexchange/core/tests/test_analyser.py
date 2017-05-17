@@ -66,6 +66,7 @@ class Test_Analyser(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : '2017-01-01 21:09:51',
                     'block'         : self.test_block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'frameid'       : 1
                  }
         self.frame1 = Frame.objects.create(**params)
@@ -76,6 +77,7 @@ class Test_Analyser(TestCase):
                     'exptime'       : 40.0,
                     'midpoint'      : '2017-01-01 21:20:00',
                     'block'         : self.test_block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'frameid'       : 2
                  }
         self.frame2 = Frame.objects.create(**params)
@@ -85,7 +87,7 @@ class Test_Analyser(TestCase):
     def test_source_meas_created(self):
         sources1 = SourceMeasurement.objects.filter(frame__block=self.test_block).count()
         self.assertEqual(sources1,0)
-        resp = analyser_to_source_measurement(self.test_block, [1,2])
+        resp = analyser_to_source_measurement(self.test_block, [1,2], 2)
         self.assertTrue(resp)
         sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block).count()
         self.assertEqual(sources2,2)
@@ -112,16 +114,16 @@ class Test_Analyser(TestCase):
         sources1 = SourceMeasurement.objects.filter(frame__block=self.test_block)
         self.assertEqual(sources1.count(),2)
         self.assertEqual(sources1[0].obs_ra, 10.1)
-        resp = analyser_to_source_measurement(self.test_block, [1,2])
+        resp = analyser_to_source_measurement(self.test_block, [1,2], 1)
         self.assertTrue(resp)
         sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block)
         self.assertEqual(sources2.count(),2)
         self.assertEqual(sources2[0].obs_ra, 22.753496)
 
     def test_url_reverses(self):
-        submit_url = reverse('block-submit-mpc', kwargs={'pk':self.test_block.pk})
+        submit_url = reverse('block-submit-mpc', kwargs={'pk':self.test_block.pk, 'source':2})
         analyser_url = reverse('block-ast', kwargs={'pk':self.test_block.pk})
         analyser_submit_url = reverse('submit-candidates', kwargs={'pk':self.test_block.pk})
-        self.assertEqual(submit_url,'/block/1/report/submit/')
+        self.assertEqual(submit_url,'/block/1/source/2/report/submit/')
         self.assertEqual(analyser_url,'/block/1/analyser/')
         self.assertEqual(analyser_submit_url,'/block/1/analyser/submit/')

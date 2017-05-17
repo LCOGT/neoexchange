@@ -71,14 +71,14 @@ class ZeropointUnitTest(TestCase):
 #        print cat_name
 #        print cat_table
 
-        ra_first_source = cat_table['_RAJ2000'][0]
+        ra_first_source = cat_table['RAJ2000'][0]
 
-        dec_first_source = cat_table['_DEJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
 
         rmag_third_source = cat_table['rmag'][2]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 6)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 6)
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
@@ -100,14 +100,14 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m")
 
-        ra_first_source = cat_table['_RAJ2000'][0]
+        ra_first_source = cat_table['RAJ2000'][0]
 
-        dec_first_source = cat_table['_DEJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
 
         rmag_third_source = cat_table['rmag'][2]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 6)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 6)
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
@@ -129,9 +129,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
 
-        ra_first_source = cat_table['_RAJ2000'][0]
+        ra_first_source = cat_table['RAJ2000'][0]
 
-        dec_first_source = cat_table['_DEJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
 
         rmag_first_source = cat_table['r2mag'][0]
 
@@ -158,9 +158,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5", cat_name = "PPMXL")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['r2mag'][-1]
 
@@ -187,9 +187,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40, cat_name = "PPMXL")
 
-        ra_first_source = cat_table['_RAJ2000'][0]
+        ra_first_source = cat_table['RAJ2000'][0]
 
-        dec_first_source = cat_table['_DEJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
 
         rmag_first_source = cat_table['r2mag'][0]
 
@@ -216,14 +216,14 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "15m", "15m")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_3rdlast_source = cat_table['rmag'][-3]
 
-        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
-        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 6)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 6)
         self.assertAlmostEqual(expected_rmag_3rdlast_source, rmag_3rdlast_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
@@ -245,9 +245,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(266.4168, -29.0078, "100m", "100m", "PPMXL")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['r2mag'][-1]
 
@@ -274,9 +274,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(298.590, 35.201, "0.5m", "0.5m", "PPMXL")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['rmag'][-1] #will replace cat_name with UCAC4 after failing with PPMXL
 
@@ -303,9 +303,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(298.590, 35.201, "0.5m", "0.5m")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
 
@@ -326,9 +326,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(306.6792, -26.6278, "15m", "15m")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
 
@@ -369,7 +369,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
@@ -489,7 +489,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
@@ -619,7 +619,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0),
                             (299.860871, 35.381474, 14.0799999237, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
@@ -749,7 +749,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "UCAC")
 
@@ -879,7 +879,7 @@ class ZeropointUnitTest(TestCase):
                             (299.31235, 35.07259, 14.8500003815, 0),
                             (299.362172, 35.351208, 14.2600002289, 1)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 

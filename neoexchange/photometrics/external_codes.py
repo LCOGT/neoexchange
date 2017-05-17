@@ -335,7 +335,14 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
                 if os.path.lexists(fits_file) and os.path.islink(fits_file):
                     os.unlink(fits_file)
                 if not os.path.exists(fits_file):
-                    os.symlink(f, fits_file)
+                    #if the file is an e91 and an e11 exists in the working directory, remove the link to the e11 and link the e91
+                    if 'e91' in fits_file:
+                        if os.path.exists(fits_file.replace('e91.fits', 'e11.fits')):
+                            os.unlink(fits_file.replace('e91.fits', 'e11.fits'))
+                        os.symlink(f, fits_file)
+                    #if the file is an e11 and an e91 doesn't exit in the working directory, create link to the e11
+                    elif 'e11' in fits_file and not os.path.exists(fits_file.replace('e11.fits', 'e91.fits')):
+                        os.symlink(f, fits_file)
         symlink_fits_files.append(fits_file)
 
     linked_fits_files = ' '.join(symlink_fits_files)

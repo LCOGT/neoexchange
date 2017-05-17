@@ -11,6 +11,7 @@ from matplotlib.dates import HourLocator, DateFormatter
 
 from core.models import Block, Frame
 from astrometrics.ephem_subs import compute_ephem, radec2strings
+from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box
 
 class Command(BaseCommand):
@@ -49,10 +50,10 @@ class Command(BaseCommand):
         except Block.DoesNotExist:
             self.stdout.write("Cannot find Block# %d" % options['blocknum'])
             exit(-1)
-        
+
         self.stdout.write("Analyzing Block# %d for %s" % (block.id, block.body.current_name()))
 
-        frames = Frame.objects.filter(block=block.id, zeropoint__isnull=False)
+        frames = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
         self.stdout.write("Found %d frames for Block# %d with good ZPs" % (len(frames), block.id))
         self.stdout.write("Searching within %.1f arcseconds and +/-%.1f delta magnitudes" % (options['boxwidth'], options['deltamag']))
 
@@ -76,6 +77,7 @@ class Command(BaseCommand):
     #                    print "%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag)
                     elif len(sources) > 1:
                         min_sep = options['boxwidth'] * options['boxwidth']
+                        best_source = None
                         for source in sources:
                             sep = S.sla_dsep(ra, dec, radians(source.obs_ra), radians(source.obs_dec))
                             sep = degrees(sep) * 3600.0
@@ -86,12 +88,34 @@ class Command(BaseCommand):
                                 min_sep = sep
                                 best_source = source
 
-                    times.append(frame.midpoint)
-                    mags.append(best_source.obs_mag)
-                    mag_errs.append(best_source.err_obs_mag)
-  
+                    if best_source:
+                        times.append(frame.midpoint)
+                        mags.append(best_source.obs_mag)
+                        mag_errs.append(best_source.err_obs_mag)
+
+            self.stdout.write("Found matches in %d of %d frames" % ( len(times), len(frames)))
+
+            # Write light curve data out in similar format to Make_lc.csh
+            i=0
+            lightcurve_file = open('lightcurve_data.txt', 'w')
+
+            # Calculate integer part of JD for first frame and use this as a
+            # constant in case of wrapover to the next day
+            mjd_offset = int(datetime2mjd_utc(times[0]))
+            for time in times:
+                time_jd = datetime2mjd_utc(time)
+                time_jd_truncated = time_jd - mjd_offset
+                if i == 0:
+                    lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % (mjd_offset))
+                lightcurve_file.write( "%7.5lf %6.3lf %5.3lf\n" % ( time_jd_truncated, mags[i], mag_errs[i] ) )
+                i += 1
+            lightcurve_file.close()
+
             if options['title'] == None:
                 plot_title = '%s from %s (%s) on %s' % (block.body.current_name(), block.site.upper(), frame.sitecode, block.when_observed.strftime("%Y-%m-%d"))
             else:
                 plot_title = options['title']
-            self.plot_timeseries(times, mags, mag_errs, title=plot_title)
+            if len(times) > 0 and len(mags) > 0:
+                self.plot_timeseries(times, mags, mag_errs, title=plot_title)
+            else:
+                self.stdout.write("No sources matched.")
