@@ -729,11 +729,11 @@ class PanoptesReport(models.Model):
     Status of block
     '''
     block = models.ForeignKey(Block)
-    when_submitted = models.DateTimeField('Date sent to Zooniverse')
-    last_check = models.DateTimeField()
+    when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
+    last_check = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
-    subject_id = models.IntegerField('Subject ID')
-    quad = models.IntegerField('Quadrant of image')
+    subject_id = models.IntegerField('Subject ID', blank=True, null=True)
+    quad = models.IntegerField('Quadrant of image', blank=True, null=True)
 
     class Meta:
         verbose_name = _('Zooniverse Report')

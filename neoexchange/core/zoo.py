@@ -10,6 +10,7 @@ from datetime import datetime
 from astropy.coordinates import SkyCoord
 from numpy import mean, sqrt
 from django.conf import settings
+import six
 
 from panoptes_client import SubjectSet, Subject, Panoptes, Project, Workflow
 from panoptes_client.panoptes import PanoptesAPIException
@@ -209,22 +210,22 @@ def retire_subjects(subjects):
             logger.debug('Retired {}'.format(active_subjects))
     return
 
-def convert_image_to_sky(filename,x,y,quad,xscale,yscale):
-    '''
-    Translate coordinates from a quadranted image to RA and Dec
-    Requires matching with first Frame in a sequence, which is obtained from quadrant filename
-    :param filename: filename of the first quadrant file in the sequence
-    :param x,y: pixel positions in quadrant image
-    :param quad: quadrant of full image
-    :param xscale, yscale: dimensions of the quad image
-    '''
-    frameid = filename.split('-')[1]
-    frame = Frame.objects.get(frameid=frameid)
-    xf = x + quad%3 * xscale
-    yf = y + quad/3 * yscale
-    sc = SkyCoord.from_pixel(xf,yf,frame.wcs)
-    return sc.ra.degree, sc.dec.degree
-
+# def convert_image_to_sky(filename,x,y,quad,xscale,yscale):
+#     '''
+#     Translate coordinates from a quadranted image to RA and Dec
+#     Requires matching with first Frame in a sequence, which is obtained from quadrant filename
+#     :param filename: filename of the first quadrant file in the sequence
+#     :param x,y: pixel positions in quadrant image
+#     :param quad: quadrant of full image
+#     :param xscale, yscale: dimensions of the quad image
+#     '''
+#     frameid = filename.split('-')[1]
+#     frame = Frame.objects.get(frameid=frameid)
+#     xf = x + quad%3 * xscale
+#     yf = y + quad/3 * yscale
+#     sc = SkyCoord.from_pixel(xf,yf,frame.wcs)
+#     return sc.ra.degree, sc.dec.degree
+#
 def convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
     '''
     Takes coordinates from a quadranted image and converts them into Frame x/y
@@ -234,32 +235,33 @@ def convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
     :param quad: quadrant of full image
     :param xscale, yscale: dimensions of the quad image
     '''
-    x = (x + quad%3 * xscale)*float(xsize)/xscale*3.
-    y = float(ysize) - (y + quad/3 * yscale)*float(ysize)/yscale*3.
+    x = (x + quad%3 * xscale)*float(xsize)/xscale
+    y = float(ysize) - (y + quad/3 * yscale)*float(ysize)/yscale
     x_min = x - 5
     y_min = y - 5
     x_max = x + 5
     y_max = y + 5
     return x_min, x_max, y_min, y_max
-
-def filter_vals(vals):
-    '''
-    Filter list of vals to only those within 3 STD of mean
-    '''
-    output = [x for x in vals if sqrt(abs(x - mean(vals))) < 3.]
-    mean_val = mean(output)
-    return mean_val
+#
+# def filter_vals(vals):
+#     '''
+#     Filter list of vals to only those within 3 STD of mean
+#     '''
+#     output = [x for x in vals if sqrt(abs(x - mean(vals))) < 3.]
+#     mean_val = mean(output)
+#     return mean_val
 
 def identify_sources(subjects):
     '''
     Align Panoptes classification with CatalogSources
+    :param subjects: dictionary where the key is the subject id, values listed below
     :param subject['frame']: Archive frame ID
     :param subject['x']: x positions from Panoptes
     :param subject['y']: y positions from Panoptes
     :param subject['quad']: quadrant of full image
     '''
     sources = []
-    for subject_id, subject in subjects.iteritems():
+    for subject_id, subject in subjects.items():
         frameid = subject[0]['frame'].split('-')[1]
         try:
             frame = Frame.objects.get(frameid=frameid)

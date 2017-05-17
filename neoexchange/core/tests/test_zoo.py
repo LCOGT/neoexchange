@@ -31,17 +31,16 @@ import requests
 
 from core.models import Frame, Block, PanoptesReport, CatalogSources, Proposal, Body
 from core.zoo import download_images_block, download_image, panoptes_add_set, \
-    create_panoptes_report
-
-# Disable logging during testing
-import logging
-logger = logging.getLogger(__name__)
+    create_panoptes_report, convert_coords, identify_sources
 
 def mock_download_image(frame, current_files, download_dir, blockid):
     return 'myfile.fits'
 
 def mock_create_mosaic(filename, frame_id, download_dir):
     return ['myfile1.jpg','myfile2.jpg']
+
+def mock_convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
+    return (195.0,205.0,340.,345.0)
 
 class Test_Panoptes(TestCase):
 
@@ -87,6 +86,32 @@ class Test_Panoptes(TestCase):
                          'active'   : True
                        }
         self.block = Block.objects.create(pk=1, **block_params)
+
+        frame_params = {'sitecode'  : 'F65',
+                        'filter'    : 'w',
+                        'midpoint'  : '2015-05-11 17:20:00',
+                        'frametype' : 91,
+                        'frameid'   : 99,
+                        'astrometric_catalog': 'Y',
+                        'photometric_catalog': 'X'
+                        }
+        self.frame = Frame.objects.create(pk=1, **frame_params)
+
+        catsource_params = {
+                            'frame' : self.frame,
+                            'obs_x' : 199.0,
+                            'obs_y' : 343.0,
+                            'obs_ra': 12.99,
+                            'obs_dec' : -20.2,
+                            'background' : 10.2,
+                            'major_axis' : 10.2,
+                            'minor_axis' : 10.2,
+                            'position_angle' : 10.2,
+                            'ellipticity' : 10.2
+                            }
+        self.catsource1 = CatalogSources.objects.create(pk=1, **catsource_params)
+        catsource_params['obs_y'] = 200.0
+        self.catsource2 = CatalogSources.objects.create(pk=2, **catsource_params)
         self.download_dir = '/my-downloads/'
         self.scale = 2.3
 
@@ -123,7 +148,7 @@ class Test_Panoptes(TestCase):
     @patch('core.zoo.Subject', Mock())
     @patch('core.zoo.SubjectSet', Mock())
     @patch('core.zoo.Project', autospec=True)
-    def _panoptes_add_set(self, mock_project):
+    def test_panoptes_add_set(self, mock_project):
         mock_project.list = Mock()
         mock_project.list.workspace = Mock(return_value=[{'id':1}])
         files = ['myfile-1.jpg','myfile2-1.jpg']
@@ -131,6 +156,13 @@ class Test_Panoptes(TestCase):
         subject_ids = panoptes_add_set(files, num_segments, self.block.id, self.download_dir)
         self.assertEqual(subject_ids, [])
         return
+
+    def test_convert_coords(self):
+
+        coord_range = convert_coords(200,300,0,640,640, 640,640)
+        coord_range_test = (195.0, 205.0, 335.0, 345.0)
+        self.assertEqual(coord_range, coord_range_test)
+
 
     def test_create_panoptes_report(self):
         subjects = [
@@ -143,3 +175,13 @@ class Test_Panoptes(TestCase):
         no_reports = PanoptesReport.objects.all().count()
         self.assertEqual(no_reports, 1)
         return
+
+    @patch('core.zoo.convert_coords',mock_convert_coords)
+    def test_identify_sources(self):
+        subjects = {
+            '1': [{'frame':'frame-99-x.fits','x':200,'y':200,'quad':3}],
+            '2': [{'frame':'frame-99-x.fits','x':200,'y':200,'quad':3}]
+        }
+        returns = identify_sources(subjects)
+        returns_test = [(self.catsource1,2)]
+        self.assertEqual(returns, returns_test)
