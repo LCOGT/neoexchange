@@ -63,6 +63,9 @@ def schedule_target_list(bodies_list, form_details, username):
     if bodies_list:
         for target in bodies_list:
             data = schedule_check(form_details, target)
+            if datetime.strptime(data['end_time'], '%Y-%m-%dT%H:%M:%S') <= datetime.utcnow():
+                form_details['utc_date'] += timedelta(days=1)
+                data = schedule_check(form_details, target)
 
             data['start_time'] = datetime.strptime(data['start_time'],'%Y-%m-%dT%H:%M:%S')
             data['end_time'] = datetime.strptime(data['end_time'],'%Y-%m-%dT%H:%M:%S')
