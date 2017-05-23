@@ -57,19 +57,6 @@ def find_images_for_block(blockid):
     frames_list = [{'img':str(f.frameid)} for f in frames]
     return frames_list, candidates, x_size, y_size
 
-def fetch_observations(tracking_num):
-    '''
-    Convert tracking number to a list of archive frames at the highest level of reduction
-    :param tracking_num: ID of the user request, containing all sub-requests
-    '''
-    headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
-    data = check_request_status(headers, tracking_num)
-    if type(data) != list and data.get('detail','') == 'Not found.':
-        return []
-    for r in data:
-        images = check_for_archive_images(request_id=r['request_number'])
-    return images
-
 def candidates_by_block(blockid):
     targets = []
     cands = Candidate.objects.filter(block__id=blockid).order_by('score')
@@ -85,6 +72,19 @@ def candidates_by_block(blockid):
         motion = {'speed' : cand.convert_speed(), 'speed_raw' : cand.speed, 'pos_angle' : cand.sky_motion_pa}
         targets.append({'id': str(cand.id), 'coords':coords, 'sky_coords':sky_coords, 'motion':motion})
     return targets
+
+def fetch_observations(tracking_num):
+    '''
+    Convert tracking number to a list of archive frames at the highest level of reduction
+    :param tracking_num: ID of the user request, containing all sub-requests
+    '''
+    headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
+    data = check_request_status(headers, tracking_num)
+    if type(data) != list and data.get('detail','') == 'Not found.':
+        return []
+    for r in data:
+        images = check_for_archive_images(request_id=r['request_number'])
+    return images
 
 def check_request_status(auth_header, tracking_num=None):
     data_url = settings.REQUEST_API_URL % tracking_num

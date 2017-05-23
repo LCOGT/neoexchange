@@ -169,7 +169,7 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                 new_lvl2 = "%s91%s" % (chunks[4][0], chunks[4][3:])
                 new_filename = "%s-%s-%s-%s-%s%s" % (chunks[0], chunks[1], chunks[2], chunks[3], new_lvl, extension)
                 new_filename2 = "%s-%s-%s-%s-%s%s" % (chunks[0], chunks[1], chunks[2], chunks[3], new_lvl2, extension)
-                logger.debug("new_filename=",new_filename, new_filename2)
+                logger.debug("new_filename=file {}, {}".format(new_filename, new_filename2))
                 new_path = os.path.join(path, new_filename)
                 new_path2 = os.path.join(path, new_filename2)
                 uncomp_filepath2 = os.path.splitext(new_path2)[0]
@@ -184,14 +184,14 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                     return True
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
-                    logger.debug(filename, md5sum, archive_md5)
+                    logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
                     if md5sum == archive_md5:
                         if verbose: print "File exists with correct MD5 sum"
                         return True
             else:
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
-                    logger.debug(filename, md5sum, archive_md5)
+                    logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
                     if md5sum == archive_md5:
                         if verbose: print "-91 level reduction file already exists with correct MD5 sum."
                         return True
@@ -209,7 +209,7 @@ def check_for_bad_file(filename, reject_dir='Bad'):
         frame = os.path.basename(filename)
         bad_frame = os.path.join(reject_dir_path, frame)
         if os.path.exists(bad_frame):
-            print "Skipping bad file", os.path.join(reject_dir, frame)
+            logger.debug("Skipping bad file {}".format(os.path.join(reject_dir, frame)))
             reject_file = True
     return reject_file
 
@@ -236,9 +236,9 @@ def download_files(frames, output_path, verbose=False, dbg=False):
             archive_md5 = frame['version_set'][-1]['md5']
             if check_for_existing_file(filename, archive_md5, dbg, verbose) or \
                 check_for_bad_file(filename):
-                logger.debug("Skipping existing file", frame['filename'])
+                logger.debug("Skipping existing file {}".format(frame['filename']))
             else:
-                logger.debug("Writing file to",filename)
+                logger.debug("Writing file to {}".format(filename))
                 downloaded_frames.append(filename)
                 with open(filename, 'wb') as f:
                     f.write(requests.get(frame['url']).content)
