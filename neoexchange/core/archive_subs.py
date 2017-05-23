@@ -23,13 +23,17 @@ from core.urlsubs import get_lcogt_headers
 from core.models import Frame
 import glob
 import logging
+import requests
 
 logger = logging.getLogger('neox')
 
-import requests
+
+ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings
 if sys.version_info < (2,7,9):
     requests.packages.urllib3.disable_warnings()
+    ssl_verify = False # Danger, danger !
+
 
 def archive_login(username, password):
     '''
@@ -37,6 +41,20 @@ def archive_login(username, password):
     '''
     archive_url = settings.ARCHIVE_TOKEN_URL
     return get_lcogt_headers(archive_url, username, password)
+
+def lcogt_api_call(auth_header, url):
+    data = None
+    try:
+        resp = requests.get(url, headers=auth_header, timeout=20, verify=ssl_verify)
+        data = resp.json()
+    except requests.exceptions.InvalidSchema, err:
+        data = None
+        logger.error("Request call to %s failed with: %s" % (url, err))
+    except ValueError, err:
+        logger.error("Request %s API did not return JSON: %s" % (url, resp.status_code))
+    except requests.exceptions.Timeout:
+        logger.error("Request API timed out")
+    return data
 
 def determine_archive_start_end(dt=None):
 
@@ -79,11 +97,11 @@ def get_catalog_data(frames, auth_header='', dbg=False):
 
     catalogs = {}
     for reduction_lvl in frames.keys():
-        if dbg: print reduction_lvl
+        logger.debug(reduction_lvl)
         frames_to_search = frames[reduction_lvl]
         catalogs_for_red_lvl = []
         for frame in frames_to_search:
-            if dbg: print frame['filename'], frame['id']
+            logger.debug(frame['filename'], frame['id'])
             catquery_url = "%s%d/related/" % ( base_url, frame['id'] )
             response = requests.get(catquery_url, headers=auth_header).json()
             if len(response) >= 1:
@@ -93,6 +111,44 @@ def get_catalog_data(frames, auth_header='', dbg=False):
         catalogs.update({ reduction_lvl : catalogs_for_red_lvl })
 
     return catalogs
+
+
+def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
+    '''
+    Call Archive API to obtain all frames for request_id
+    Follow links to get all frames and filter out non-reduced frames and returns
+    fully-reduced data in preference to quicklook data
+    '''
+    reduced_data = []
+    quicklook_data = []
+    auth_header = {'Authorization': 'Token {}'.format(settings.ARCHIVE_TOKEN)}
+
+    base_url = settings.ARCHIVE_FRAMES_URL
+    archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (base_url, limit, request_id, obstype)
+
+    frames = []
+    data = fetch_archive_frames(auth_header, archive_url, frames)
+    for datum in data:
+        headers_url = u'%s%d/headers' % (settings.ARCHIVE_FRAMES_URL, datum['id'])
+        datum[u'headers'] = headers_url
+        if datum['RLEVEL'] == 91:
+            reduced_data.append(datum)
+        elif datum['RLEVEL'] == 11:
+            quicklook_data.append(datum)
+    if len(reduced_data) >= len(quicklook_data):
+        return reduced_data
+    else:
+        return quicklook_data
+
+def fetch_archive_frames(auth_header, archive_url, frames):
+
+    data = lcogt_api_call(auth_header, archive_url)
+    if data.get('count', 0) > 0:
+        frames += data['results']
+        if data['next']:
+            fetch_archive_frames(auth_header, data['next'], frames)
+
+    return frames
 
 def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False):
     '''Tries to determine whether a higher reduction level of the file exists. If it does, True is
@@ -106,14 +162,14 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
         # LCOGT format files will have 4 hyphens
         chunks = output_file.split('-')
         red_lvl = chunks[4][1:3]
-        if dbg: print "red_lvl, digit?=", red_lvl, red_lvl.isdigit()
+        logger.debug("red_lvl={}, digit?={}".format(red_lvl, red_lvl.isdigit()))
         if red_lvl.isdigit():
             if int(red_lvl) < 91:
                 new_lvl = "%s90%s" % (chunks[4][0], chunks[4][3:])
                 new_lvl2 = "%s91%s" % (chunks[4][0], chunks[4][3:])
                 new_filename = "%s-%s-%s-%s-%s%s" % (chunks[0], chunks[1], chunks[2], chunks[3], new_lvl, extension)
                 new_filename2 = "%s-%s-%s-%s-%s%s" % (chunks[0], chunks[1], chunks[2], chunks[3], new_lvl2, extension)
-                if dbg: print "new_filename=",new_filename, new_filename2
+                logger.debug("new_filename=",new_filename, new_filename2)
                 new_path = os.path.join(path, new_filename)
                 new_path2 = os.path.join(path, new_filename2)
                 uncomp_filepath2 = os.path.splitext(new_path2)[0]
@@ -128,14 +184,14 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                     return True
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
-                    if dbg: print filename, md5sum, archive_md5
+                    logger.debug(filename, md5sum, archive_md5)
                     if md5sum == archive_md5:
                         if verbose: print "File exists with correct MD5 sum"
                         return True
             else:
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
-                    if dbg: print filename, md5sum, archive_md5
+                    logger.debug(filename, md5sum, archive_md5)
                     if md5sum == archive_md5:
                         if verbose: print "-91 level reduction file already exists with correct MD5 sum."
                         return True
@@ -172,17 +228,17 @@ def download_files(frames, output_path, verbose=False, dbg=False):
         os.makedirs(output_path)
     downloaded_frames = []
     for reduction_lvl in frames.keys():
-        if dbg: print reduction_lvl
+        logger.debug(reduction_lvl)
         frames_to_download = frames[reduction_lvl]
         for frame in frames_to_download:
-            if dbg: print frame['filename']
+            logger.debug(frame['filename'])
             filename = os.path.join(output_path, frame['filename'])
             archive_md5 = frame['version_set'][-1]['md5']
             if check_for_existing_file(filename, archive_md5, dbg, verbose) or \
                 check_for_bad_file(filename):
-                if dbg or verbose: print "Skipping existing file", frame['filename']
+                logger.debug("Skipping existing file", frame['filename'])
             else:
-                if dbg or verbose: print "Writing file to",filename
+                logger.debug("Writing file to",filename)
                 downloaded_frames.append(filename)
                 with open(filename, 'wb') as f:
                     f.write(requests.get(frame['url']).content)

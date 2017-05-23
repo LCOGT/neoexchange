@@ -147,7 +147,7 @@ class BlockDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(BlockDetailView, self).get_context_data(**kwargs)
-        context['images'] = [{'img': img} for img in fetch_observations(context['block'].tracking_number)]
+        context['images'] = [{'img': img['id']} for img in fetch_observations(context['block'].tracking_number)]
         return context
 
 

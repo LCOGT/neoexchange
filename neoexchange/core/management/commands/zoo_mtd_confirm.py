@@ -40,7 +40,7 @@ class Command(BaseCommand):
                 continue
             files = None
             cand_per_image = None
-            logger.debug("Finding thumbnails for Block {}".format(block.id))
+            logger.debug("Finding images for Block {}".format(block.id))
             try:
                 image_list, candidates, xmax, ymax = find_images_for_block(block.id)
             except TypeError:
