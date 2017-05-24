@@ -7,27 +7,33 @@ from astropy.modeling import models, fitting
 import random
 import math
 
+def albedo(f=0.253, bright=0.168, dark=0.03):
+    '''This function generates a single albedo. It takes a dark fraction(f),      
+     a dark peak(dark), and a bright peak(bright) and returns a value of albedo    
+     for the given numbers.
+     See Wright et al. The Astronomical Journal, 2016, 152, 79'''
+
+    x = random.random()
+    y = random.random() 
+
+    if x < f:
+        t = dark
+
+    else:
+        t = bright
+
+#this is the x and y numbers to be plot. the equation was two fractions so I typed out the numerators to make things easier later and the inside of the sqrt
+    inside = -2.0 * (math.log(1.0 - y)) 
+    a = t * math.sqrt(inside)
+    return a
+	
+	
 a_data = []
 #this will generate the x-axis number
 
-for i in range(0, 50000):   
-	x = random.random()
-	y = random.random()
-	
-	f = 0.253
-	bright = 0.168
-	dark = 0.03  
-
-	if x < f:
-		t = dark
-
-	else:
-		t = bright
-
-#this is the x and y numbers to be plot. the equation was two fractions so I typed out the numerators to make things easier later and the inside of the sqrt
-	inside = -2.0 * (math.log(1.0 - y)) 
-	a = t * math.sqrt(inside)
-	a_data.append(a)
+for i in range(0, 50000):
+    a = albedo()
+    a_data.append(a)
 
 
 #this should plot the points
