@@ -34,12 +34,13 @@ def albedo_distribution(f=0.253, bright=0.168, dark=0.03, a=albedo()):
     returns a value of albedo for the given numbers. Note that to use the default 
     you must also use the method 'albedo' which will generate a random albedo.
     See Wright et al. The Astronomical Journal, 2016, 152, 79'''
-    
-    top1 = a * math.exp((-a ** 2) / (2 * dark ** 2))
-    top2 = a * math.exp((-a ** 2) / (2 * bright **2))
-    prr = f * (top1 / dark ** 2) + (1 - f) * (top2 / bright ** 2)
-    return prr
-
+    if a >= 0.00 and a <= 1:
+        top1 = a * math.exp((-a ** 2) / (2 * dark ** 2))
+        top2 = a * math.exp((-a ** 2) / (2 * bright **2))
+        prr = f * (top1 / dark ** 2) + (1 - f) * (top2 / bright ** 2)
+        return prr
+    else: 
+        return 'Check your albedo!'
 
 def asteroid_diameter(a=albedo(), h=7):
     '''This function calculates the diameter of an asteroid. It takes an albedo(a) 
@@ -48,41 +49,41 @@ def asteroid_diameter(a=albedo(), h=7):
     returned is in kilometers. 
     See Wright et al. The Astronomical Journal, 2016, 152, 79'''
     
-    d = 1329 * math.sqrt(10 ** (-0.4 * h) / a)
-    return d
+    if a <= 0.00:
+        return 'You cannot have a negative albedo!'
+    else:
+        d = 1329 * math.sqrt(10 ** (-0.4 * h) / a)
+        return d
 
+if __name__ == 'main':
 #this is the x and y numbers to be plot. the equation was two fractions so I typed out the numerators to make things easier later and the inside of the sqrt	
 #this will generate the x-axis number
-a_data = []
-prr_data = []
-dia_data = []
-fig, ax = plt.subplots()
+    a_data = []
+    prr_data = []
+    dia_data = []
+    fig, ax = plt.subplots()
 
-for i in range(0, 5000):
-    a1 = albedo()
-    a_data.append(a1)
-    prr = albedo_distribution(a=a1)
-    prr_data.append(prr)
-    di = asteroid_diameter(a=a1, h=20)
-    dia_data.append(di)
-
-#this should plot the points
-num_bins = 100
-
-n, bins, patches = ax.hist(a_data, num_bins, normed=1)
-#n, bins, patches = ax.hist(dia_data, num_bins, normed=1)
-for i in range(0, 5000):
-    plt.plot(a_data[i], prr_data[i],'ko')
+    for i in range(0, 100000):
+        a1 = albedo()
+        a_data.append(a1)
+        prr = albedo_distribution(a=a1)
+        prr_data.append(prr)
+        #di = asteroid_diameter(a=a1, h=20)
+        #dia_data.append(di)
     
+    #this should plot the points
+    num_bins = 100
+    
+    n, bins, patches = ax.hist(a_data, num_bins, normed=1, label='Albedo Distribution')
+    plt.plot(a_data, prr_data,'k.', label='Albedo Distribution Best Fit')
+    #plt.plot(a_data, dia_data,'g.', label='Diameter based on Albedo')
+    
+    ax.set_xlabel('Pv')
+    ax.set_ylabel('P(Pv)')
+    ax.set_title(r'Near Earth Asteroid Albedo Distribution') 
+    ax.legend(loc='upper right')
 
-ax.set_xlabel('Pv')
-ax.set_ylabel('P(Pv)')
-ax.set_title(r'Near Earth Asteroid Albedo Distribution') 
+    fig.tight_layout()
+    plt.show()
 
-fig.tight_layout()
-plt.show()
-
-
-#dia = asteroid_diameter(h=20)
-#print dia 
 
