@@ -3,7 +3,6 @@ import logging
 import tempfile
 import shutil
 import os
-import subprocess
 import glob
 
 from django.conf import settings
@@ -11,7 +10,7 @@ from django.core.management.base import BaseCommand, CommandError
 from fits2image.conversions import fits_to_jpg
 
 from core.models import Block, PanoptesReport
-from core.zoo import download_images_block
+from core.zoo import download_images_block, make_cutouts, panoptes_add_set_mtd, create_panoptes_report
 from core.archive_subs import archive_lookup_images, download_files
 from core.frames import find_images_for_block, fetch_observations
 
@@ -50,6 +49,7 @@ class Command(BaseCommand):
             try:
                 image_list, candidates, xmax, ymax = find_images_for_block(block.id)
                 frameids = [_['img'] for _ in image_list]
+                logger.debug("Found {} candidates".format(len(candidates)))
             except TypeError:
                 logger.debug("Problem encountered")
                 continue
@@ -70,6 +70,10 @@ class Command(BaseCommand):
                 files = glob.glob(os.path.join(download_dir, "*.fz"))
             for frameid, filename in zip(frameids,files):
                 jpg_name = os.path.join(download_dir, frameid+ ".jpg")
+                if os.path.isfile(jpg_name):
+                    jpg_files.append(jpg_name)
+                    logger.debug('File exists: {}'.format(jpg_name))
+                    continue
                 logger.debug("Making JPG {}".format(jpg_name))
                 result = fits_to_jpg(path_to_fits=filename, path_to_jpg=jpg_name, width=xmax, height=ymax, quality=75, median=85)
                 if result:
@@ -78,20 +82,9 @@ class Command(BaseCommand):
                 logger.debug('Failed to download images')
 
             # Make the image cut-outs for the candidates
-            for candidate in candidates:
-                cutouts = []
-                for frameid, filename, coords in zip(frameids, jpg_files,candidate['coords']):
-                    outfile = os.path.join(download_dir, "frame-{}-{}-{}.jpg".format(block.id, candidate['id'], frameid))
-                    options = "convert {infile} -crop 300x300+{x}+{y} +repage {outfile}".format(infile=filename, x=coords['x'], y=coords['y'], outfile=outfile)
-                    logger.debug("Creating mosaic for {}".format(frameid))
-                    subprocess.call(options, shell=True)
-                    cutouts.append(outfile)
-                candidate['cutouts'] = cutouts
-            # if jpg_files:
-            #     subject_ids = panoptes_add_set(jpg_files, num_segments=9, blockid=block.id, download_dir=download_dir, workflow=workflow)
-            #     if subject_ids:
-            #         create_panoptes_report(block, subject_ids)
-            #     if not options['download_dir']:
-            #         shutil.rmtree(download_dir)
-            # else:
-            #     logger.debug('Failed to download images')
+            candidates = make_cutouts(candidates, frameids, jpg_files, block.id, download_dir)
+            subject_ids = panoptes_add_set_mtd(candidates=candidates, blockid=block.id)
+            if subject_ids:
+                create_panoptes_report(block, subject_ids)
+            if not options['download_dir']:
+                shutil.rmtree(download_dir)

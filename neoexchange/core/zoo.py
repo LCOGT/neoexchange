@@ -16,11 +16,11 @@ from panoptes_client import SubjectSet, Subject, Panoptes, Project, Workflow
 from panoptes_client.panoptes import PanoptesAPIException
 
 from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES, PanoptesReport, \
-    CatalogSources
+    CatalogSources, Candidate
 
 logger = logging.getLogger('neox')
 
-def panoptes_add_set(files, num_segments, blockid, download_dir):
+def panoptes_add_set_hunt(files, num_segments, blockid, download_dir):
     Panoptes.connect(username=settings.ZOONIVERSE_USER, password=settings.ZOONIVERSE_PASSWD)
     bk = Block.objects.get(pk=blockid)
 
@@ -60,20 +60,74 @@ def panoptes_add_set(files, num_segments, blockid, download_dir):
     subject_set.add(subject_list)
 
     # Added these subjects to the 0th Workflow because thats all we have
-    workflow = project.links.workflows[0]
-    resp, error = workflow.http_post(
-                 '{}/links/subject_sets'.format(workflow.id),
-                 json={'subject_sets': [subject_set.id]}
-             )
-    if not error:
-        return subject_ids
-    else:
+    workflow = Workflow.find(_id='3700')
+    workflow.add_subject_sets([subject_set])
+
+    return subject_ids
+
+
+def panoptes_add_set_mtd(candidates, blockid):
+    Panoptes.connect(username=settings.ZOONIVERSE_USER, password=settings.ZOONIVERSE_PASSWD)
+    bk = Block.objects.get(pk=blockid)
+
+    project = Project.find(slug='zemogle/agent-neo')
+
+    subject_set = SubjectSet()
+    subject_set.links.project = project
+    subject_set.display_name = 'block_{}'.format(blockid)
+    try:
+        subject_set.save()
+    except PanoptesAPIException:
+        logger.debug('Subject set {} already exists'.format(subject_set.display_name))
         return False
+
+    subject_list = []
+    subject_ids = []
+    telescope = dict(TELESCOPE_CHOICES)
+    site = dict(SITE_CHOICES)
+    for candidate in candidates:
+        subject = Subject()
+        subject.links.project = project
+        if not candidate['cutouts']:
+            logger.debug('No cut-out files for {}'.candidate['id'])
+            continue
+        for i, filename in enumerate(candidate['cutouts']):
+            subject.add_location(filename)
+            subject.metadata["image_{}".format(i)] = os.path.basename(filename)
+            logger.debug('adding {}'.format(filename))
+        subject.metadata['telescope'] = "{} at {}".format(telescope[bk.telclass], site[bk.site])
+        subject.metadata['date'] = "{}".format(bk.when_observed.isoformat())
+        subject.metadata['candidate_id'] = candidate['id']
+        subject.metadata['speed (arcsecs/minute)'] = str(candidate['motion']['speed'])
+        subject.metadata['magnitude'] = str(candidate['sky_coords'][0]['mag'])
+        try:
+            subject.save()
+        except AttributeError:
+            logger.error('Could not upload {}'.format(filename))
+            continue
+        except Exception, e:
+            logger.error(''.format(e))
+        logger.debug('saved subject {}'.format(subject.id))
+        subject_ids.append({'id':subject.id, 'candidate':candidate['id']})
+        subject_list.append(subject)
+
+    # add subjects to subject set
+    subject_set.add(subject_list)
+
+    # Added these subjects to the 1st Workflow because thats all we have
+    workflow = Workflow.find(_id='4154')
+    try:
+        workflow.add_subject_sets([subject_set])
+    except Exception, e:
+        logger.error('Manually attach {} to workflow: {}'.format(subject_set.display_name, e))
+
+    return subject_ids
 
 def create_panoptes_report(block, subject_ids):
     now = datetime.now()
     for subject in subject_ids:
-        pr, created = PanoptesReport.objects.get_or_create(block = block, quad = int(subject['quad']))
+        candidate = Candidate.objects.get(id = int(subject['candidate']))
+        pr, created = PanoptesReport.objects.get_or_create(block = block, candidate = candidate)
         if not created:
             continue
         pr.when_submitted = now
@@ -125,6 +179,22 @@ def create_mosaic(filename, frameid, download_dir):
     subprocess.call(mosaic_options, shell=True)
     files = ['frame-{}-{}.jpg'.format(frameid,i) for i in range(0,9)]
     return files
+
+def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir):
+    for candidate in candidates:
+        cutouts = []
+        for frameid, filename, coords in zip(frameids, jpg_files,candidate['coords']):
+            outfile = os.path.join(download_dir, "frame-{}-{}-{}.jpg".format(blockid, candidate['id'], frameid))
+            if os.path.isfile(outfile):
+                logger.debug("File exists: {}".format(outfile))
+                cutouts.append(outfile)
+                continue
+            options = "convert {infile} -crop 300x300+{x}+{y} +repage {outfile}".format(infile=filename, x=coords['x'], y=coords['y'], outfile=outfile)
+            logger.debug("Creating mosaic for {}".format(frameid))
+            subprocess.call(options, shell=True)
+            cutouts.append(outfile)
+        candidate['cutouts'] = cutouts
+    return candidates
 
 def download_image(frame, current_files, download_dir, blockid):
     # Download thumbnail images only if they do not exist
@@ -210,22 +280,7 @@ def retire_subjects(subjects):
             logger.debug('Retired {}'.format(active_subjects))
     return
 
-# def convert_image_to_sky(filename,x,y,quad,xscale,yscale):
-#     '''
-#     Translate coordinates from a quadranted image to RA and Dec
-#     Requires matching with first Frame in a sequence, which is obtained from quadrant filename
-#     :param filename: filename of the first quadrant file in the sequence
-#     :param x,y: pixel positions in quadrant image
-#     :param quad: quadrant of full image
-#     :param xscale, yscale: dimensions of the quad image
-#     '''
-#     frameid = filename.split('-')[1]
-#     frame = Frame.objects.get(frameid=frameid)
-#     xf = x + quad%3 * xscale
-#     yf = y + quad/3 * yscale
-#     sc = SkyCoord.from_pixel(xf,yf,frame.wcs)
-#     return sc.ra.degree, sc.dec.degree
-#
+
 def convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
     '''
     Takes coordinates from a quadranted image and converts them into Frame x/y
@@ -242,14 +297,7 @@ def convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
     x_max = x + 5
     y_max = y + 5
     return x_min, x_max, y_min, y_max
-#
-# def filter_vals(vals):
-#     '''
-#     Filter list of vals to only those within 3 STD of mean
-#     '''
-#     output = [x for x in vals if sqrt(abs(x - mean(vals))) < 3.]
-#     mean_val = mean(output)
-#     return mean_val
+
 
 def identify_sources(subjects):
     '''

@@ -733,10 +733,12 @@ class PanoptesReport(models.Model):
     last_check = models.DateTimeField(blank=True, null=True)
     active = models.BooleanField(default=False)
     subject_id = models.IntegerField('Subject ID', blank=True, null=True)
-    quad = models.IntegerField('Quadrant of image', blank=True, null=True)
+    candidate = models.ForeignKey(Candidate)
+    verifications = models.IntegerField(default=0)
+    classifiers = models.TextField(help_text='Volunteers usernames who found NEOs', blank=True, null=True)
 
     class Meta:
         verbose_name = _('Zooniverse Report')
 
     def __unicode__(self):
-        return "Block {} Quad {} is Subject {}".format(self.block.id, self.quad, self.subject_id)
+        return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
