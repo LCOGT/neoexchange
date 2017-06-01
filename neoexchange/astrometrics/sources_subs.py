@@ -1116,12 +1116,13 @@ def configure_defaults(params):
                   'W85' : 'LSC',
                   'W86' : 'LSC',
                   'W87' : 'LSC',
-                  'W89' : 'LSC',
+                  'W89' : 'LSC', # Code for 0m4a
                   'F65' : 'OGG',
                   'E10' : 'COJ',
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
-                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use 
+                  'Q58' : 'COJ', # Code for 0m4a
+                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use
 
 
     params['pondtelescope'] = '1m0'
@@ -1147,7 +1148,7 @@ def configure_defaults(params):
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
-    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q59':
+    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['filter'] = 'w'
