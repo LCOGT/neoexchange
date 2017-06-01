@@ -24,8 +24,8 @@ def albedo(f=0.253, bright=0.168, dark=0.03):
         t = bright
 
     inside = -2.0 * (math.log(1.0 - y)) 
-    a = t * math.sqrt(inside)
-    return a
+    albedo = t * math.sqrt(inside)
+    return albedo
 
 
 def albedo_distribution(f=0.253, bright=0.168, dark=0.03, a=albedo()):
@@ -52,8 +52,8 @@ def asteroid_diameter(a=albedo(), h=7):
     if a <= 0.00:
         return 'You cannot have a negative albedo!'
     else:
-        d = 1329 * math.sqrt(10 ** (-0.4 * h) / a)
-        return d
+        diameter = 1329 * math.sqrt(10 ** (-0.4 * h) / a)
+        return diameter
 
 if __name__ == '__main__':
 #this is the x and y numbers to be plot. the equation was two fractions so I typed out the numerators to make things easier later and the inside of the sqrt	
