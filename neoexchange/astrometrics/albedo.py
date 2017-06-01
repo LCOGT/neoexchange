@@ -55,7 +55,7 @@ def asteroid_diameter(a=albedo(), h=7):
         d = 1329 * math.sqrt(10 ** (-0.4 * h) / a)
         return d
 
-if __name__ == 'main':
+if __name__ == '__main__':
 #this is the x and y numbers to be plot. the equation was two fractions so I typed out the numerators to make things easier later and the inside of the sqrt	
 #this will generate the x-axis number
     a_data = []
