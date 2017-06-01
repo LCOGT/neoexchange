@@ -5,6 +5,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 ## History
 
 
+### 1.7.2
+
+New MPC site code (Q58) for the 0.4m telescope at Siding Spring.
+
 ### 1.7.1
 
 Bug fixes in zeropoint determination for newer versions of astroquery. Deploy mtdlink into the container.
