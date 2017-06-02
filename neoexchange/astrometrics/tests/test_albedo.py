@@ -23,7 +23,7 @@ class TestAsteroidDiameter(TestCase):
     '''Unit tests for asteroid_diameter'''
     
     def test_big_bright(self):
-        expected_diameter = 0.37500
+        expected_diameter = 375.0075
         
         albedo = 0.5
         H_mag = 18.5
@@ -33,7 +33,7 @@ class TestAsteroidDiameter(TestCase):
         
         
     def test_small_shiny(self):
-        expected_diameter = 0.08365       
+        expected_diameter = 83.6556       
         
         albedo = 0.4
         H_mag = 22.0
@@ -42,7 +42,7 @@ class TestAsteroidDiameter(TestCase):
         self.assertAlmostEqual(expected_diameter, diameter, 4)
         
     def test_large_dim(self):
-        expected_diameter = 4.8253
+        expected_diameter = 4825.3073
         
         albedo = 0.1
         H_mag = 14.7
@@ -51,7 +51,7 @@ class TestAsteroidDiameter(TestCase):
         self.assertAlmostEqual(expected_diameter, diameter, 4)
         
     def test_tiny_not_shiny(self):
-        expected_diameter = 0.05787
+        expected_diameter = 57.8755
         
         albedo = 0.04
         H_mag = 25.3
