@@ -657,7 +657,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
         return False
 
     try:
-        body, created = Body.objects.get_or_create(provisional_name=obj_id)
+        body, created = Body.objects.get_or_create(provisional_name__startswith=obj_id, defaults={'provisional_name' : obj_id})
     except:
         logger.debug("Multiple objects found called %s" % obj_id)
         return False
@@ -671,7 +671,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
         if not created:
             # Find out if the details have changed, if they have, save a
             # revision
-            check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
+            check_body = Body.objects.filter(provisional_name__startswith=obj_id, **kwargs)
             if check_body.count() == 0:
                 if save_and_make_revision(body, kwargs):
                     msg = "Updated %s" % obj_id
@@ -695,7 +695,7 @@ def update_NEOCP_observations(obj_id, extra_params={}):
     the number of Source Measurements for that Body'''
 
     try:
-        body = Body.objects.get(provisional_name=obj_id)
+        body = Body.objects.get(provisional_name__startswith=obj_id)
         num_measures = SourceMeasurement.objects.filter(body=body).count()
 
 # Check if the NEOCP has more measurements than we do
@@ -1092,7 +1092,7 @@ def create_source_measurement(obs_lines, block=None):
                     unpacked_name = packed_to_normal(params['body'])
                 except PackedError:
                     unpacked_name = 'ZZZZZZ'
-                obs_body = Body.objects.get(Q(provisional_name=params['body']) |
+                obs_body = Body.objects.get(Q(provisional_name__startswith=params['body']) |
                                             Q(name=params['body']) |
                                             Q(name=unpacked_name)
                                            )
