@@ -90,7 +90,7 @@ class Command(BaseCommand):
                 int(new_catalog_or_status)
                 if new_catalog_or_status != 0:
                     self.stdout.write("Error reprocessing %s (Error code= %s)" % (catalog, new_catalog_or_status))
-                    exit(-3)
+                    return "pipeline_astrometry completed with status=-3"
                 new_catalog = catalog
                 catalog_type = 'LCOGT'
                 if 'e91' in catalog or 'e11' in catalog:
