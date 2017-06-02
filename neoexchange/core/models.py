@@ -14,6 +14,7 @@ GNU General Public License for more details.
 '''
 from datetime import datetime
 from math import pi, log10
+import math
 import reversion
 
 from django.contrib.auth.models import User
@@ -36,6 +37,7 @@ from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
+from astrometrics.albedo import asteroid_albedo, asteroid_diameter
 
 
 OBJECT_TYPES = (
@@ -131,6 +133,29 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
 
+    def albedo(self): 
+        avg = 0.167
+        return avg 
+        
+    def albedo_range(self):
+        a_min = 0.01
+        a_max = 0.6
+        return a_min, a_max  
+ 
+    def diameter(self):        
+        m = self.abs_mag
+        avg = 0.167
+        d_avg = asteroid_diameter(avg, m)
+        return d_avg
+        
+    def diameter_range(self):
+        m = self.abs_mag
+        mn = 0.01
+        mx = 0.6       
+        d_max = asteroid_diameter(mn, m)
+        d_min = asteroid_diameter(mx, m)
+        return d_min, d_max
+        
     def epochofel_mjd(self):
         mjd = None
         try:
