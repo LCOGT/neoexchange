@@ -30,7 +30,7 @@ from mock import patch, Mock
 import requests
 
 from core.models import Frame, Block, PanoptesReport, CatalogSources, Proposal, Body
-from core.zoo import download_images_block, download_image, panoptes_add_set, \
+from core.zoo import download_images_block, download_image, panoptes_add_set_mtd, \
     create_panoptes_report, convert_coords, identify_sources
 
 def mock_download_image(frame, current_files, download_dir, blockid):
@@ -153,7 +153,7 @@ class Test_Panoptes(TestCase):
         mock_project.list.workspace = Mock(return_value=[{'id':1}])
         files = ['myfile-1.jpg','myfile2-1.jpg']
         num_segments = 1
-        subject_ids = panoptes_add_set(files, num_segments, self.block.id, self.download_dir)
+        subject_ids = panoptes_add_set_mtd(files, num_segments, self.block.id, self.download_dir)
         self.assertEqual(subject_ids, [])
         return
 
