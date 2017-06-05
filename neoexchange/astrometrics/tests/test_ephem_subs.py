@@ -1104,7 +1104,7 @@ class TestGetSitePos(TestCase):
     def test_tenerife_point4m_num1_by_code(self):
         site_code = 'Z21'
 
-        expected_site_name = 'LCOGT TFN Node 0m4a Aqawan A at Tenerife'
+        expected_site_name = 'LCO TFN Node 0m4a Aqawan A at Tenerife'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
@@ -1116,7 +1116,7 @@ class TestGetSitePos(TestCase):
     def test_tenerife_point4m_num1_by_name(self):
         site_code = 'TFN-AQWA-0M4A'
 
-        expected_site_name = 'LCOGT TFN Node 0m4a Aqawan A at Tenerife'
+        expected_site_name = 'LCO TFN Node 0m4a Aqawan A at Tenerife'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
@@ -1133,8 +1133,8 @@ class TestGetSitePos(TestCase):
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
         self.assertEqual(expected_site_name, site_name)
-        self.assertNotEqual('LCOGT TFN Node 0m4a Aqawan A at Tenerife', site_name)
-        self.assertNotEqual('LCOGT TFN Node 0m4b Aqawan A at Tenerife', site_name)
+        self.assertNotEqual('LCO TFN Node 0m4a Aqawan A at Tenerife', site_name)
+        self.assertNotEqual('LCO TFN Node 0m4b Aqawan A at Tenerife', site_name)
         self.assertEqual(0.0, site_long)
         self.assertEqual(0.0, site_lat)
         self.assertEqual(0.0, site_hgt)
@@ -1142,7 +1142,7 @@ class TestGetSitePos(TestCase):
     def test_maui_point4m_num2_by_code(self):
         site_code = 'T04'
 
-        expected_site_name = 'LCOGT OGG Node 0m4b at Maui'
+        expected_site_name = 'LCO OGG Node 0m4b at Maui'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
@@ -1154,7 +1154,7 @@ class TestGetSitePos(TestCase):
     def test_maui_point4m_num2_by_name(self):
         site_code = 'OGG-CLMA-0M4B'
 
-        expected_site_name = 'LCOGT OGG Node 0m4b at Maui'
+        expected_site_name = 'LCO OGG Node 0m4b at Maui'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
@@ -1164,10 +1164,34 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
 
+    def test_aust_point4m_num1_by_code(self):
+        site_code = 'Q58'
+
+        expected_site_name = 'LCO COJ Node 0m4a at Siding Spring'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertGreater(site_long, 0.0)
+        self.assertLess(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_aust_point4m_num1_by_name(self):
+        site_code = 'COJ-CLMA-0M4A'
+
+        expected_site_name = 'LCO COJ Node 0m4a at Siding Spring'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertGreater(site_long, 0.0)
+        self.assertLess(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
     def test_aust_point4m_num2_by_code(self):
         site_code = 'Q59'
 
-        expected_site_name = 'LCOGT COJ Node 0m4b at Siding Spring'
+        expected_site_name = 'LCO COJ Node 0m4b at Siding Spring'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
@@ -1179,7 +1203,7 @@ class TestGetSitePos(TestCase):
     def test_aust_point4m_num2_by_name(self):
         site_code = 'COJ-CLMA-0M4B'
 
-        expected_site_name = 'LCOGT COJ Node 0m4b at Siding Spring'
+        expected_site_name = 'LCO COJ Node 0m4b at Siding Spring'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
