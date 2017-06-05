@@ -94,7 +94,7 @@ def mock_check_request_status(headers, tracking_num):
 
 class MockCandidate(object):
 
-    def __init__(cls, block, cand_id):
+    def __init__(cls, id=None, block=None, cand_id=None):
         pass
 
     @classmethod

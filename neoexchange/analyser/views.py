@@ -79,7 +79,7 @@ def analyser_to_source_measurement(block, cand_ids, blockcandidate):
     if not frames:
         return False
     for cand_id in cand_ids:
-        cand = Candidate.objects.get(pk=cand_id)
+        cand = Candidate.objects.get(id=cand_id)
         # If this candidate (cand_id) is the intended target of the Block, use
         # that. Otherwise generate a new Body/asteroid candidate
         discovery = False
