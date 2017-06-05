@@ -749,7 +749,13 @@ def parse_goldstone_chunks(chunks, dbg=False):
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isalnum():
             # We have something that straddles months
             if dbg: print "In case 2b"
-            object_id = str(chunks[4])
+            if chunks[5].isdigit() or chunks[5][0:2].isupper() == False:
+                # Of the form '2017 May 29-Jun 02 418094 2007 WV4' or number and
+                # name e.g.  '2017 May 29-Jun 02 6063 Jason'
+                object_id = str(chunks[4])
+            else:
+                # Of the form '2017 May 29-Jun 02 2017 CS'
+                object_id = str(chunks[4]) + ' ' + chunks[5]
         elif astnum <= 31 and (chunks[3].isdigit() or chunks[3][0:2] == 'P/' \
         or chunks[3][0:2] == 'C/') and chunks[4].isalnum():
             # We have a date range e.g. '2016 Mar 17-23'
@@ -1092,10 +1098,11 @@ def make_proposal(params):
 
 def make_constraints(params):
     constraints = {
-#                      'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
                        'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
-#                      'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
-#                      'max_airmass' : 2.37,    # 25 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
+                       'min_lunar_distance': 30
                     }
     return constraints
 
@@ -1109,12 +1116,13 @@ def configure_defaults(params):
                   'W85' : 'LSC',
                   'W86' : 'LSC',
                   'W87' : 'LSC',
-                  'W89' : 'LSC',
+                  'W89' : 'LSC', # Code for 0m4a
                   'F65' : 'OGG',
                   'E10' : 'COJ',
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
-                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use 
+                  'Q58' : 'COJ', # Code for 0m4a
+                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use
 
 
     params['pondtelescope'] = '1m0'
@@ -1140,7 +1148,7 @@ def configure_defaults(params):
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
-    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q59':
+    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['filter'] = 'w'
