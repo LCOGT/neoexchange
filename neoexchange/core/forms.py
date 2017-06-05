@@ -50,7 +50,11 @@ class EphemQuery(forms.Form):
         elif body.count() == 0:
             raise forms.ValidationError("Object not found.")
         elif body.count() > 1:
-            raise forms.ValidationError("Multiple objects found.")
+            newbody = Body.objects.filter(Q(provisional_name__exact = name )|Q(provisional_packed__exact = name)|Q(name__exact = name))
+            if newbody.count() == 1:
+                return newbody[0]
+            else:
+                raise forms.ValidationError("Multiple objects found.")
 
 class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
