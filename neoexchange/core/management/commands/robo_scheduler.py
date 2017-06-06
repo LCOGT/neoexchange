@@ -90,7 +90,7 @@ class Command(BaseCommand):
         not_seen_default = 2.5
         proposal_default = 'LCO2017AB-016'
         speed_limit_default = 5.0
-        parser.add_argument('--date', default=datetime.utcnow(), help='Date to schedule for (YYYYMMDD)')
+        parser.add_argument('--date', default=datetime.utcnow(), help='Date to schedule for (YYYYMMDD-HH)')
         parser.add_argument('--user', default='tlister@lcogt.net', help="Username to schedule as e.g. 'tlister@lcogt.net'")
         parser.add_argument('--proposal', default=proposal_default, help='Proposal code to use ('+proposal_default+')')
         parser.add_argument('--run', action="store_true", help="Whether to execute the scheduling")
