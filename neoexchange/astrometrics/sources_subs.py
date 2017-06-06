@@ -18,6 +18,7 @@ GNU General Public License for more details.
 import logging
 import urllib2, os
 import imaplib
+import json
 import email
 from urlparse import urljoin
 from re import sub
@@ -1006,16 +1007,8 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
 def make_location(params):
     location = {
-        'telescope_class' : params['pondtelescope'][0:3],
-        'site'        : params['site'].lower(),
-        'observatory' : params['observatory'],
-        'telescope'   : '',
+        'telescope_class' : params['pondtelescope'][0:3]
     }
-
-# Check if the 'pondtelescope' is length 4 (1m0a) rather than length 3, and if
-# so, update the null string set above with a proper telescope
-    if len(params['pondtelescope']) == 4:
-        location['telescope'] = params['pondtelescope']
 
     return location
 
@@ -1222,29 +1215,40 @@ def submit_block_to_scheduler(elements, params):
     user_request = make_userrequest(elements, params)
 
 # Make an endpoint and submit the thing
-    resp = requests.post(
-        settings.PORTAL_REQUEST_API,
-        json=user_request,
-        headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)}
-     )
-    if resp.status_code != 201:
-        msg = "Authentication error"
+    try:
+        resp = requests.post(
+            settings.PORTAL_REQUEST_API,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
         logger.error(msg)
-        logger.debug(resp.json())
+        params['error_msg'] = msg
+        return False, params
+
+    if resp.status_code not in [200,201]:
+        msg = "Parsing error"
+        logger.error(msg)
+        logger.error(resp.json())
         params['error_msg'] = msg
         return False, params
     try:
-        response_data = resp.json()
+        response = resp.json()
     except NoRiseSetWindowsException:
         response_data = {}
         msg = "Object does not have any visibility"
         logger.error(msg)
         params['error_msg'] = msg
         return False, params
-    client.print_submit_response()
 
-    request_numbers =  response_data.get('request_numbers', '')
-    tracking_number =  response_data.get('tracking_number', '')
+    tracking_number =  response.get('id', '')
+
+    request_items = response.get('requests', '')
+
+    request_numbers =  [_['id'] for _ in request_items]
+
     if not tracking_number or not request_numbers:
         msg = "No Tracking/Request number received"
         logger.error(msg)
