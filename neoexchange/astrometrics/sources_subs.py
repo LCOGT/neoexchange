@@ -1007,9 +1007,12 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
 def make_location(params):
     location = {
+        'site'            : params['site'].lower(),
         'telescope_class' : params['pondtelescope'][0:3]
     }
-
+    if params['site_code'] == 'W85':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'doma'
     return location
 
 def make_target(params):
@@ -1078,17 +1081,6 @@ def make_molecule(params):
 
     }
     return molecule
-
-def make_proposal(params):
-    '''Construct needed proposal info'''
-
-    proposal = {
-                 'proposal_id'   : params['proposal_id'],
-                 'user_id'       : params['user_id'],
-                 'tag_id'        : params['tag_id'],
-                 'priority'      : params['priority'],
-               }
-    return proposal
 
 def make_constraints(params):
     constraints = {
@@ -1195,7 +1187,6 @@ def make_userrequest(elements, params):
     if params['site_code'] == 'V37':
         ipp_value = 1.00
 
-    proposal = make_proposal(params)
     user_request = {
         "submitter": params['user_id'],
         "requests": [request],
@@ -1235,6 +1226,7 @@ def submit_block_to_scheduler(elements, params):
         params['error_msg'] = msg
         return False, params
 
+    response = resp.json()
     tracking_number =  response.get('id', '')
 
     request_items = response.get('requests', '')
