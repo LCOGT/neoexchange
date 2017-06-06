@@ -5,25 +5,18 @@ import sys
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from astropy.wcs import WCS
+from urlparse import urljoin
 
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from astrometrics.time_subs import jd_utc2datetime
 from core.urlsubs import get_lcogt_headers
-from core.archive_subs import archive_login, check_for_archive_images, lcogt_api_call
+from core.archive_subs import archive_login, check_for_archive_images, lco_api_call
 import logging
 import requests
 
 logger = logging.getLogger('core')
 
-
-def odin_login(username, password):
-    '''
-    Wrapper function to get ODIN headers
-    '''
-    auth_url = settings.REQUEST_AUTH_API_URL
-
-    return get_lcogt_headers(auth_url,username, password)
 
 def measurements_from_block(blockid, bodyid=None):
     block = Block.objects.get(pk=blockid)
@@ -73,22 +66,9 @@ def candidates_by_block(blockid):
         targets.append({'id': str(cand.id), 'coords':coords, 'sky_coords':sky_coords, 'motion':motion})
     return targets
 
-def fetch_observations(tracking_num):
-    '''
-    Convert tracking number to a list of archive frames at the highest level of reduction
-    :param tracking_num: ID of the user request, containing all sub-requests
-    '''
-    headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
-    data = check_request_status(headers, tracking_num)
-    if type(data) != list and data.get('detail','') == 'Not found.':
-        return []
-    for r in data:
-        images = check_for_archive_images(request_id=r['request_number'])
-    return images
-
-def check_request_status(auth_header, tracking_num=None):
-    data_url = settings.REQUEST_API_URL % tracking_num
-    return lcogt_api_call(auth_header, data_url)
+def check_request_status(tracking_num=None):
+    data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
+    return lco_api_call(data_url)
 
 def create_frame(params, block=None, frameid=None):
     # Return None if params is just whitespace
@@ -211,10 +191,9 @@ def ingest_frames(images, block):
 
     - Also find out how many scheduler blocks were used
     '''
-    archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     sched_blocks = []
     for image in images:
-        image_header = lcogt_api_call(archive_headers, image.get('headers', None))
+        image_header = lco_api_call(image.get('headers', None))
         if image_header:
             frame = create_frame(image_header['data'], block, image['id'])
             sched_blocks.append(image_header['data']['BLKUID'])
@@ -240,17 +219,13 @@ def block_status(block_id):
         return False
 
     # Get authentication token for ODIN
-    headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     logger.debug("Checking request status for %s" % block_id)
-    data = check_request_status(headers, tracking_num)
+    data = check_request_status(tracking_num)
     # data is a full LCOGT request dict for this tracking number.
     if not data or type(data) == dict:
         return False
     # Although this is a loop, we should only have a single request so it is executed once
     exposure_count = 0
-
-    # Get authentication token for Archive
-    archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
 
     for r in data:
         images = check_for_archive_images(request_id=r['request_number'])
@@ -260,7 +235,7 @@ def block_status(block_id):
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
-                last_image_header = lcogt_api_call(archive_headers, last_image_dict.get('headers', None))
+                last_image_header = lco_api_call(last_image_dict.get('headers', None))
                 if last_image_header == None:
                     logger.error('Image header was not returned for %s' % last_image_dict)
                     return False
