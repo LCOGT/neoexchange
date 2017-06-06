@@ -265,6 +265,17 @@ NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 REQUEST_API_URL = 'https://lco.global/observe/api/user_requests/%s/requests/'
 FRAMES_API_URL = 'https://lco.global/observe/api/requests/%s/frames/'
 REQUEST_AUTH_API_URL = 'https://lco.global/observe/api/api-token-auth/'
+THUMBNAIL_URL = 'https://thumbnails.lco.global/'
+
+ARCHIVE_API_URL = 'https://archive-api.lco.global/'
+ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
+ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
+ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN','')
+
+PORTAL_API_URL = 'https://observe.lco.global/api/'
+PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
+PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
+PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN','')
 
 ARCHIVE_FRAMES_URL = 'https://archive-api.lco.global/frames/'
 REDUCED_DATA_SUFFIX = 'e90'

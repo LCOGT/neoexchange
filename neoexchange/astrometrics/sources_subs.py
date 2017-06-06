@@ -27,9 +27,7 @@ from socket import error
 from random import randint
 from time import sleep
 
-from reqdb.client import SchedulerClient
-from reqdb.requests import Request, UserRequest, NoRiseSetWindowsException
-from reqdb.utils.exceptions import InvalidArguments
+import requests
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
@@ -1194,15 +1192,13 @@ def configure_defaults(params):
 
     return params
 
-def submit_block_to_scheduler(elements, params):
-    request = Request()
+def make_userrequest(elements, params):
 
     params = configure_defaults(params)
-# Create Location (site, observatory etc) and add to Request
+# Create Location (site, observatory etc)
     location = make_location(params)
     logger.debug("Location=%s" % location)
-    request.set_location(location)
-# Create Target (pointing) and add to Request
+# Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
         target = make_moving_target(elements)
@@ -1210,28 +1206,29 @@ def submit_block_to_scheduler(elements, params):
         logger.debug("Making a static object")
         target = make_target(params)
     logger.debug("Target=%s" % target)
-    request.set_target(target)
-# Create Window and add to Request
+# Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
-    request.add_window(window)
-# Create Molecule and add to Request
+# Create Molecule
     molecule = make_molecule(params)
-    try:
-        request.add_molecule(molecule) # add exposure to the request
-    except InvalidArguments as e:
-        logger.error("Unable to make a molecule for %s at %s" % (params['instrument'], params['site_code']))
-        logger.error("Message from endpoint: %s" % e.message)
-        return False, params
+
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
         submitter = ' (by %s)' % submitter_id
-    request.set_note('Submitted by NEOexchange' + submitter)
+    note('Submitted by NEOexchange {}'.format(submitter))
     logger.debug("Request=%s" % request)
 
     constraints = make_constraints(params)
-    request.set_constraints(constraints)
+
+    request = {
+            "location": location,
+            "constraints": constraints,
+            "target": target,
+            "molecules": [molecule],
+            "windows": [window],
+            "observation_note": note,
+        }
 
 # If the ToO mode is set, change the observation_type
     if params['too_mode'] == True:
@@ -1242,18 +1239,39 @@ def submit_block_to_scheduler(elements, params):
     ipp_value = 1.00
     if params['site_code'] == 'V37':
         ipp_value = 1.00
-    user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
-    user_request.add_request(request)
-    user_request.operator = 'single'
 
     proposal = make_proposal(params)
-    user_request.set_proposal(proposal)
-
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
     logger.info("User Request=%s" % user_request)
+
+    return user_request
+
+
+def submit_block_to_scheduler(elements, params):
+
+    user_request = make_userrequest(elements, params)
+
+    resp = requests.post(
+        settings.PORTAL_REQUEST_API,
+        json=json.loads(user_request),
+        headers={'Authorization': 'Token {}'.format(settings.VALHALLA_TOKEN)}
+     )
 # Make an endpoint and submit the thing
-    client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
+    if resp.status_code != 200:
+        msg = "Authentication error"
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
     try:
-        response_data = client.submit(user_request)
+        response_data = resp.json()
     except NoRiseSetWindowsException:
         response_data = {}
         msg = "Object does not have any visibility"
@@ -1261,6 +1279,7 @@ def submit_block_to_scheduler(elements, params):
         params['error_msg'] = msg
         return False, params
     client.print_submit_response()
+
     request_numbers =  response_data.get('request_numbers', '')
     tracking_number =  response_data.get('tracking_number', '')
     if not tracking_number or not request_numbers:
