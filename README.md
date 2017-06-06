@@ -5,6 +5,11 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 ## History
 
 
+### 1.8.0
+
+- Adding ability to push candidates to Agent NEO on the Zooniverse platform
+- Change ReqDB observation submission to Valhalla API submission
+
 ### 1.7.2
 
 New MPC site code (Q58) for the 0.4m telescope at Siding Spring. Use case-sensitive searches for updating NEOCP Bodies.

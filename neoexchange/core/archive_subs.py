@@ -25,7 +25,7 @@ import glob
 import logging
 import requests
 
-logger = logging.getLogger('neox')
+logger = logging.getLogger(__name__)
 
 
 ssl_verify = True
@@ -236,9 +236,9 @@ def download_files(frames, output_path, verbose=False, dbg=False):
             archive_md5 = frame['version_set'][-1]['md5']
             if check_for_existing_file(filename, archive_md5, dbg, verbose) or \
                 check_for_bad_file(filename):
-                logger.debug("Skipping existing file {}".format(frame['filename']))
+                logger.info("Skipping existing file {}".format(frame['filename']))
             else:
-                logger.debug("Writing file to {}".format(filename))
+                logger.info("Writing file to {}".format(filename))
                 downloaded_frames.append(filename)
                 with open(filename, 'wb') as f:
                     f.write(requests.get(frame['url']).content)
