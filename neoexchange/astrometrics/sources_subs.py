@@ -1073,13 +1073,14 @@ def make_window(params):
 
 def make_molecule(params):
     molecule = {
+                'type' : params['exp_type'],
                 'exposure_count'  : params['exp_count'],
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
                 'filter'      : params['filter'],
-                'ag_mode'     : 'Optional', # 0=On, 1=Off, 2=Optional.  Default is 2.
+                'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
     }
@@ -1125,12 +1126,13 @@ def configure_defaults(params):
                   'Q59' : 'COJ'} # Code for 0m4b, not currently in use
 
 
-    params['pondtelescope'] = '1m0'
+    params['pondtelescope'] = '1m0a'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['filter'] = 'w'
+    params['exp_type'] = 'EXPOSE'
 
     if params['site_code'] == 'W86' or params['site_code'] == 'W87':
         # Force to Dome B (W86) as W87 is bad
@@ -1146,7 +1148,7 @@ def configure_defaults(params):
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
-        params['pondtelescope'] = '2m0'
+        params['pondtelescope'] = '2m0a'
         params['filter'] = 'solar'
     elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'
@@ -1222,12 +1224,13 @@ def submit_block_to_scheduler(elements, params):
 # Make an endpoint and submit the thing
     resp = requests.post(
         settings.PORTAL_REQUEST_API,
-        json=json.dumps(user_request),
+        json=user_request,
         headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)}
      )
-    if resp.status_code != 200:
+    if resp.status_code != 201:
         msg = "Authentication error"
         logger.error(msg)
+        logger.debug(resp.json())
         params['error_msg'] = msg
         return False, params
     try:
