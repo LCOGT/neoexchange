@@ -18,6 +18,7 @@ GNU General Public License for more details.
 import logging
 import urllib2, os
 import imaplib
+import json
 import email
 from urlparse import urljoin
 from re import sub
@@ -27,13 +28,13 @@ from socket import error
 from random import randint
 from time import sleep
 
-from reqdb.client import SchedulerClient
-from reqdb.requests import Request, UserRequest, NoRiseSetWindowsException
-from reqdb.utils.exceptions import InvalidArguments
+import requests
+import json
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -1006,17 +1007,12 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
 
 def make_location(params):
     location = {
-        'telescope_class' : params['pondtelescope'][0:3],
-        'site'        : params['site'].lower(),
-        'observatory' : params['observatory'],
-        'telescope'   : '',
+        'site'            : params['site'].lower(),
+        'telescope_class' : params['pondtelescope'][0:3]
     }
-
-# Check if the 'pondtelescope' is length 4 (1m0a) rather than length 3, and if
-# so, update the null string set above with a proper telescope
-    if len(params['pondtelescope']) == 4:
-        location['telescope'] = params['pondtelescope']
-
+    if params['site_code'] == 'W85':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'doma'
     return location
 
 def make_target(params):
@@ -1073,28 +1069,18 @@ def make_window(params):
 
 def make_molecule(params):
     molecule = {
+                'type' : params['exp_type'],
                 'exposure_count'  : params['exp_count'],
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
                 'filter'      : params['filter'],
-                'ag_mode'     : 'Optional', # 0=On, 1=Off, 2=Optional.  Default is 2.
+                'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
     }
     return molecule
-
-def make_proposal(params):
-    '''Construct needed proposal info'''
-
-    proposal = {
-                 'proposal_id'   : params['proposal_id'],
-                 'user_id'       : params['user_id'],
-                 'tag_id'        : params['tag_id'],
-                 'priority'      : params['priority'],
-               }
-    return proposal
 
 def make_constraints(params):
     constraints = {
@@ -1125,12 +1111,13 @@ def configure_defaults(params):
                   'Q59' : 'COJ'} # Code for 0m4b, not currently in use
 
 
-    params['pondtelescope'] = '1m0'
+    params['pondtelescope'] = '1m0a'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['filter'] = 'w'
+    params['exp_type'] = 'EXPOSE'
 
     if params['site_code'] == 'W86' or params['site_code'] == 'W87':
         # Force to Dome B (W86) as W87 is bad
@@ -1146,7 +1133,7 @@ def configure_defaults(params):
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
-        params['pondtelescope'] = '2m0'
+        params['pondtelescope'] = '2m0a'
         params['filter'] = 'solar'
     elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'
@@ -1156,15 +1143,13 @@ def configure_defaults(params):
 
     return params
 
-def submit_block_to_scheduler(elements, params):
-    request = Request()
+def make_userrequest(elements, params):
 
     params = configure_defaults(params)
-# Create Location (site, observatory etc) and add to Request
+# Create Location (site, observatory etc)
     location = make_location(params)
     logger.debug("Location=%s" % location)
-    request.set_location(location)
-# Create Target (pointing) and add to Request
+# Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
         target = make_moving_target(elements)
@@ -1172,55 +1157,82 @@ def submit_block_to_scheduler(elements, params):
         logger.debug("Making a static object")
         target = make_target(params)
     logger.debug("Target=%s" % target)
-    request.set_target(target)
-# Create Window and add to Request
+# Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
-    request.add_window(window)
-# Create Molecule and add to Request
+# Create Molecule
     molecule = make_molecule(params)
-    try:
-        request.add_molecule(molecule) # add exposure to the request
-    except InvalidArguments as e:
-        logger.error("Unable to make a molecule for %s at %s" % (params['instrument'], params['site_code']))
-        logger.error("Message from endpoint: %s" % e.message)
-        return False, params
+
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
-        submitter = ' (by %s)' % submitter_id
-    request.set_note('Submitted by NEOexchange' + submitter)
-    logger.debug("Request=%s" % request)
+        submitter = '(by %s)' % submitter_id
+    note = ('Submitted by NEOexchange {}'.format(submitter))
+    note = note.rstrip()
 
     constraints = make_constraints(params)
-    request.set_constraints(constraints)
+
+    request = {
+            "location": location,
+            "constraints": constraints,
+            "target": target,
+            "molecules": [molecule],
+            "windows": [window],
+            "observation_note": note,
+        }
 
 # Add the Request to the outer User Request
 # If site is ELP, increase IPP value
     ipp_value = 1.00
     if params['site_code'] == 'V37':
         ipp_value = 1.00
-    user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
-    user_request.add_request(request)
-    user_request.operator = 'single'
 
-    proposal = make_proposal(params)
-    user_request.set_proposal(proposal)
-
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
     logger.info("User Request=%s" % user_request)
+
+    return user_request
+
+
+def submit_block_to_scheduler(elements, params):
+
+    user_request = make_userrequest(elements, params)
+
 # Make an endpoint and submit the thing
-    client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
     try:
-        response_data = client.submit(user_request)
-    except NoRiseSetWindowsException:
-        response_data = {}
-        msg = "Object does not have any visibility"
+        resp = requests.post(
+            settings.PORTAL_REQUEST_API,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
         logger.error(msg)
         params['error_msg'] = msg
         return False, params
-    client.print_submit_response()
-    request_numbers =  response_data.get('request_numbers', '')
-    tracking_number =  response_data.get('tracking_number', '')
+
+    if resp.status_code not in [200,201]:
+        msg = "Parsing error"
+        logger.error(msg)
+        logger.error(resp.json())
+        params['error_msg'] = msg
+        return False, params
+
+    response = resp.json()
+    tracking_number =  response.get('id', '')
+
+    request_items = response.get('requests', '')
+
+    request_numbers =  [_['id'] for _ in request_items]
+
     if not tracking_number or not request_numbers:
         msg = "No Tracking/Request number received"
         logger.error(msg)
