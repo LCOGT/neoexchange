@@ -1234,14 +1234,6 @@ def submit_block_to_scheduler(elements, params):
         logger.error(resp.json())
         params['error_msg'] = msg
         return False, params
-    try:
-        response = resp.json()
-    except NoRiseSetWindowsException:
-        response_data = {}
-        msg = "Object does not have any visibility"
-        logger.error(msg)
-        params['error_msg'] = msg
-        return False, params
 
     tracking_number =  response.get('id', '')
 
