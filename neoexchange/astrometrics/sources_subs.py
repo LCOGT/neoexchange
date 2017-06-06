@@ -18,6 +18,7 @@ GNU General Public License for more details.
 import logging
 import urllib2, os
 import imaplib
+import json
 import email
 from urlparse import urljoin
 from re import sub
@@ -1044,17 +1045,12 @@ def get_site_status(site_code):
 
 def make_location(params):
     location = {
-        'telescope_class' : params['pondtelescope'][0:3],
-        'site'        : params['site'].lower(),
-        'observatory' : params['observatory'],
-        'telescope'   : '',
+        'site'            : params['site'].lower(),
+        'telescope_class' : params['pondtelescope'][0:3]
     }
-
-# Check if the 'pondtelescope' is length 4 (1m0a) rather than length 3, and if
-# so, update the null string set above with a proper telescope
-    if len(params['pondtelescope']) == 4:
-        location['telescope'] = params['pondtelescope']
-
+    if params['site_code'] == 'W85':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'doma'
     return location
 
 def make_target(params):
@@ -1111,28 +1107,18 @@ def make_window(params):
 
 def make_molecule(params):
     molecule = {
+                'type' : params['exp_type'],
                 'exposure_count'  : params['exp_count'],
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
                 'filter'      : params['filter'],
-                'ag_mode'     : 'Optional', # 0=On, 1=Off, 2=Optional.  Default is 2.
+                'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
     }
     return molecule
-
-def make_proposal(params):
-    '''Construct needed proposal info'''
-
-    proposal = {
-                 'proposal_id'   : params['proposal_id'],
-                 'user_id'       : params['user_id'],
-                 'tag_id'        : params['tag_id'],
-                 'priority'      : params['priority'],
-               }
-    return proposal
 
 def make_constraints(params):
     constraints = {
@@ -1163,12 +1149,13 @@ def configure_defaults(params):
                   'Q59' : 'COJ'} # Code for 0m4b, not currently in use
 
 
-    params['pondtelescope'] = '1m0'
+    params['pondtelescope'] = '1m0a'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['filter'] = 'w'
+    params['exp_type'] = 'EXPOSE'
 
     if params['site_code'] == 'W86' or params['site_code'] == 'W87':
         # Force to Dome B (W86) as W87 is bad
@@ -1184,7 +1171,7 @@ def configure_defaults(params):
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
-        params['pondtelescope'] = '2m0'
+        params['pondtelescope'] = '2m0a'
         params['filter'] = 'solar'
     elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'
@@ -1232,17 +1219,12 @@ def make_userrequest(elements, params):
             "observation_note": note,
         }
 
-# If the ToO mode is set, change the observation_type
-    if params['too_mode'] == True:
-        request.observation_type = 'TARGET_OF_OPPORTUNITY'
-
 # Add the Request to the outer User Request
 # If site is ELP, increase IPP value
     ipp_value = 1.00
     if params['site_code'] == 'V37':
         ipp_value = 1.00
 
-    proposal = make_proposal(params)
     user_request = {
         "submitter": params['user_id'],
         "requests": [request],
@@ -1252,6 +1234,11 @@ def make_userrequest(elements, params):
         "ipp_value": ipp_value,
         "proposal": params['proposal_id']
     }
+
+# If the ToO mode is set, change the observation_type
+    if params['too_mode'] == True:
+        request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
+
     logger.info("User Request=%s" % user_request)
 
     return user_request
@@ -1262,28 +1249,33 @@ def submit_block_to_scheduler(elements, params):
     user_request = make_userrequest(elements, params)
 
 # Make an endpoint and submit the thing
-    resp = requests.post(
-        settings.PORTAL_REQUEST_API,
-        json=json.dumps(user_request),
-        headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)}
-     )
-    if resp.status_code != 200:
-        msg = "Authentication error"
-        logger.error(msg)
-        params['error_msg'] = msg
-        return False, params
     try:
-        response_data = resp.json()
-    except NoRiseSetWindowsException:
-        response_data = {}
-        msg = "Object does not have any visibility"
+        resp = requests.post(
+            settings.PORTAL_REQUEST_API,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
         logger.error(msg)
         params['error_msg'] = msg
         return False, params
-    client.print_submit_response()
 
-    request_numbers =  response_data.get('request_numbers', '')
-    tracking_number =  response_data.get('tracking_number', '')
+    if resp.status_code not in [200,201]:
+        msg = "Parsing error"
+        logger.error(msg)
+        logger.error(resp.json())
+        params['error_msg'] = msg
+        return False, params
+
+    response = resp.json()
+    tracking_number =  response.get('id', '')
+
+    request_items = response.get('requests', '')
+
+    request_numbers =  [_['id'] for _ in request_items]
+
     if not tracking_number or not request_numbers:
         msg = "No Tracking/Request number received"
         logger.error(msg)

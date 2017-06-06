@@ -92,7 +92,6 @@ MIDDLEWARE_CLASSES = (
 )
 
 AUTHENTICATION_BACKENDS = (
-    'neox.auth_backend.LCOAuthBackend',
     'django.contrib.auth.backends.ModelBackend',
     )
 
@@ -283,8 +282,9 @@ ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
 ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
 ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN','')
 
-PORTAL_API_URL = 'https://observe-beta.lco.global/api/'
+PORTAL_API_URL = 'https://observe.lco.global/api/'
 PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
+PORTAL_REQUEST_URL = 'https://observe.lco.global/userrequests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
 PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN','')
 

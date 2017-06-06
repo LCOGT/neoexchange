@@ -16,6 +16,7 @@ from datetime import datetime
 from math import pi, log10
 import reversion
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
@@ -243,7 +244,7 @@ class Block(models.Model):
     def make_obsblock_link(self):
         url = ''
         if self.tracking_number != None and self.tracking_number != '':
-            url = urljoin(settings.PORTAL_REQUEST_API, self.tracking_number)
+            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
         return url
 
     def num_frames(self):
