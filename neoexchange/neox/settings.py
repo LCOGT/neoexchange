@@ -203,25 +203,25 @@ LOGGING = {
             'propagate': True,
         },
         'django': {
-            'handlers':['file'],
+            'handlers':['console'],
             'propagate': True,
             'level':'ERROR',
         },
         'core' : {
-            'handlers' : ['file','console'],
+            'handlers' : ['console'],
             'level'    : 'INFO',
         },
         'astrometrics' : {
-            'handlers' : ['file','console'],
+            'handlers' : ['console'],
             'level'    : 'ERROR',
         },
         'photometrics' : {
-            'handlers' : ['file','console'],
+            'handlers' : ['console'],
             'level'    : 'ERROR',
         },
         'neox': {
-            'handlers':['file','console'],
-            'level' : 'ERROR'
+            'handlers':['console'],
+            'level' : 'DEBUG'
         }
     }
 }
@@ -255,6 +255,20 @@ EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
 
 
+###############################
+# DEPRECATED LCO Api settings #
+###############################
+
+REQUEST_API_URL = 'https://lco.global/observe/api/user_requests/%s/requests/'
+FRAMES_API_URL = 'https://lco.global/observe/api/requests/%s/frames/'
+REQUEST_AUTH_API_URL = 'https://lco.global/observe/api/api-token-auth/'
+
+CLIENT_ID = os.environ.get('NEOX_RBAUTH_ID','')
+CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
+RBAUTH_TOKEN_URL = 'https://lco.global/observe/o/token/'
+RBAUTH_PROFILE_API = 'https://lco.global/observe/api/profile/'
+RBAUTH_PROPOSAL_API = 'https://lco.global/observe/api/proposals/'
+
 ####################
 # LCO Api settings #
 ####################
@@ -262,9 +276,6 @@ EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
 NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
-REQUEST_API_URL = 'https://lco.global/observe/api/user_requests/%s/requests/'
-FRAMES_API_URL = 'https://lco.global/observe/api/requests/%s/frames/'
-REQUEST_AUTH_API_URL = 'https://lco.global/observe/api/api-token-auth/'
 THUMBNAIL_URL = 'https://thumbnails.lco.global/'
 
 ARCHIVE_API_URL = 'https://archive-api.lco.global/'
@@ -272,13 +283,13 @@ ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
 ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
 ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN','')
 
-PORTAL_API_URL = 'https://observe.lco.global/api/'
+PORTAL_API_URL = 'https://observe-beta.lco.global/api/'
 PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
 PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN','')
 
-ARCHIVE_FRAMES_URL = 'https://archive-api.lco.global/frames/'
-REDUCED_DATA_SUFFIX = 'e90'
+ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER','')
+ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD','')
 
 #######################
 # Test Database setup #
@@ -304,17 +315,6 @@ if 'test' in sys.argv:
     OPBEAT['APP_ID'] = None
 
 
-###################
-# OAuth provider  #
-###################
-
-CLIENT_ID = os.environ.get('NEOX_RBAUTH_ID','')
-CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
-RBAUTH_TOKEN_URL = 'https://lco.global/observe/o/token/'
-RBAUTH_PROFILE_API = 'https://lco.global/observe/api/profile/'
-RBAUTH_PROPOSAL_API = 'https://lco.global/observe/api/proposals/'
-ARCHIVE_API_URL = 'https://archive-api.lco.global'
-ARCHIVE_TOKEN_URL = 'https://archive-api.lco.global/api-token-auth/'
 
 ##################
 # LOCAL SETTINGS #

@@ -94,7 +94,7 @@ def mock_check_request_status(headers, tracking_num):
 
 class MockCandidate(object):
 
-    def __init__(cls, block, cand_id):
+    def __init__(cls, id=None, block=None, cand_id=None):
         pass
 
     @classmethod
@@ -110,7 +110,7 @@ def mock_check_request_status_null(headers, tracking_num):
 def mock_check_request_status_notfound(headers, tracking_num):
     return {u'detail': u'Not found.'}
 
-def mock_check_for_images_no_millisecs(auth_header, request_id):
+def mock_check_for_images_no_millisecs(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43:28",
                     "ENCID": "clma",
@@ -124,7 +124,7 @@ def mock_check_for_images_no_millisecs(auth_header, request_id):
         }
     return header
 
-def mock_check_for_images_bad_date(auth_header, request_id):
+def mock_check_for_images_bad_date(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43",
                     "ENCID": "clma",
@@ -171,7 +171,7 @@ def mock_rbauth_login(email, password, request=None):
         ]
     return profile, proposals
 
-def mock_check_for_images(auth_header, request_id):
+def mock_check_for_images(request_id):
     images = [
     {u'filename': u'ogg0m406-kb27-20160531-0063-e90_cat.fits',
       u'headers': u'https://archive-api.lcogt.net/frames/4029371/headers/',

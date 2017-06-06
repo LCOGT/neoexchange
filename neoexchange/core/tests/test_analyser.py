@@ -89,8 +89,8 @@ class Test_Analyser(TestCase):
         self.assertEqual(sources1,0)
         resp = analyser_to_source_measurement(self.test_block, [1,2], 2)
         self.assertTrue(resp)
-        sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block).count()
-        self.assertEqual(sources2,2)
+        sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block)
+        self.assertEqual(sources2.count(),4)
 
     @patch('analyser.views.Candidate.objects.get', MockCandidate)
     def test_source_meas_updated(self):
@@ -117,8 +117,8 @@ class Test_Analyser(TestCase):
         resp = analyser_to_source_measurement(self.test_block, [1,2], 1)
         self.assertTrue(resp)
         sources2 = SourceMeasurement.objects.filter(frame__block=self.test_block)
-        self.assertEqual(sources2.count(),2)
-        self.assertEqual(sources2[0].obs_ra, 22.753496)
+        self.assertEqual(sources2.count(),4)
+        self.assertEqual(sources2[0].obs_ra, 341.30244)
 
     def test_url_reverses(self):
         submit_url = reverse('block-submit-mpc', kwargs={'pk':self.test_block.pk, 'source':2})

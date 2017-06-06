@@ -721,3 +721,22 @@ class ProposalPermission(models.Model):
 
     def __unicode__(self):
         return "%s is a member of %s" % (self.user, self.proposal)
+
+class PanoptesReport(models.Model):
+    '''
+    Status of block
+    '''
+    block = models.ForeignKey(Block)
+    when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
+    last_check = models.DateTimeField(blank=True, null=True)
+    active = models.BooleanField(default=False)
+    subject_id = models.IntegerField('Subject ID', blank=True, null=True)
+    candidate = models.ForeignKey(Candidate)
+    verifications = models.IntegerField(default=0)
+    classifiers = models.TextField(help_text='Volunteers usernames who found NEOs', blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Zooniverse Report')
+
+    def __unicode__(self):
+        return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
