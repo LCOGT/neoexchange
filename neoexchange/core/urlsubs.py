@@ -25,7 +25,7 @@ def get_lcogt_headers(auth_url, username, password):
 
     return headers
 
-def get_telescope_states(telstates_url='http://valhalla.lco.gtn/api/telescope_states/'):
+def get_telescope_states(telstates_url='http://observe.lco.global/api/telescope_states/'):
 
     try:
         response = requests.get(telstates_url).json()
