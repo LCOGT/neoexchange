@@ -28,10 +28,12 @@ from random import randint
 from time import sleep
 
 import requests
+import json
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -1177,9 +1179,9 @@ def make_userrequest(elements, params):
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
-        submitter = ' (by %s)' % submitter_id
-    note('Submitted by NEOexchange {}'.format(submitter))
-    logger.debug("Request=%s" % request)
+        submitter = '(by %s)' % submitter_id
+    note = ('Submitted by NEOexchange {}'.format(submitter))
+    note = note.rstrip()
 
     constraints = make_constraints(params)
 
@@ -1217,12 +1219,12 @@ def submit_block_to_scheduler(elements, params):
 
     user_request = make_userrequest(elements, params)
 
+# Make an endpoint and submit the thing
     resp = requests.post(
         settings.PORTAL_REQUEST_API,
-        json=json.loads(user_request),
-        headers={'Authorization': 'Token {}'.format(settings.VALHALLA_TOKEN)}
+        json=json.dumps(user_request),
+        headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)}
      )
-# Make an endpoint and submit the thing
     if resp.status_code != 200:
         msg = "Authentication error"
         logger.error(msg)
