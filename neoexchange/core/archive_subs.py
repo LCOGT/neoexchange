@@ -147,7 +147,7 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
 
 def fetch_archive_frames(auth_header, archive_url, frames):
 
-    data = lcogt_api_call(auth_header, archive_url)
+    data = lco_api_call(archive_url)
     if data.get('count', 0) > 0:
         frames += data['results']
         if data['next']:

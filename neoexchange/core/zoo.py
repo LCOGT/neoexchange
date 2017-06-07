@@ -116,12 +116,16 @@ def panoptes_add_set_mtd(candidates, blockid):
 
     # Added these subjects to the 1st Workflow because thats all we have
     workflow = Workflow.find(_id='4154')
-    try:
-        workflow.add_subject_sets([subject_set])
-    except Exception, e:
-        logger.error('Manually attach {} to workflow: {}'.format(subject_set.display_name, e))
 
-    return subject_ids
+    resp, error = workflow.http_post(
+                 '{}/links/subject_sets'.format(workflow.id),
+                 json={'subject_sets': [subject_set.id]}
+             )
+    if not error:
+        return subject_ids
+    else:
+        logger.error('Manually attach {} to workflow: {}'.format(subject_set.display_name, e))
+        return False
 
 def create_panoptes_report(block, subject_ids):
     now = datetime.now()

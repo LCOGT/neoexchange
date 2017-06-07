@@ -221,15 +221,15 @@ def block_status(block_id):
     # Get authentication token for ODIN
     logger.debug("Checking request status for %s" % block_id)
     data = check_request_status(tracking_num)
-    # data is a full LCOGT request dict for this tracking number.
-    if not data or type(data) == dict:
+    # data is a full LCOGT request dict for this tracking number (now called 'id').
+    if not data:
         return False
     # Although this is a loop, we should only have a single request so it is executed once
     exposure_count = 0
 
-    for r in data:
-        images = check_for_archive_images(request_id=r['request_number'])
-        logger.debug('Request no. %s x %s images' % (r['request_number'],len(images)))
+    for r in data['requests']:
+        images = check_for_archive_images(request_id=r['id'])
+        logger.debug('Request no. %s x %s images' % (r['id'],len(images)))
         if images:
             if len(images) >= 3:
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
