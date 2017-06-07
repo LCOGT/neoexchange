@@ -45,7 +45,7 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
-from core.frames import create_frame, fetch_observations, ingest_frames, measurements_from_block
+from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 import logging
 import reversion

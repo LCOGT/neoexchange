@@ -42,7 +42,7 @@ class MockDateTime(datetime):
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
 
-def mock_check_request_status(headers, tracking_num):
+def mock_check_request_status(tracking_num):
     status = [{'constraints': [{'id': 611796, 'request': 617292}],
              'end_time': '2015-10-22 07:30:37',
              'fail_count': 0,
@@ -104,10 +104,10 @@ class MockCandidate(object):
         return detections
 
 
-def mock_check_request_status_null(headers, tracking_num):
+def mock_check_request_status_null(tracking_num):
     return []
 
-def mock_check_request_status_notfound(headers, tracking_num):
+def mock_check_request_status_notfound(tracking_num):
     return {u'detail': u'Not found.'}
 
 def mock_check_for_images_no_millisecs(request_id):
