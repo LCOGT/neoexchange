@@ -565,7 +565,7 @@ class TestCheck_for_block(TestCase):
 
     @patch('core.frames.check_request_status', mock_check_request_status)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
-    @patch('core.archive_subs.lcogt_api_call', mock_archive_frame_header)
+    @patch('core.archive_subs.lco_api_call', mock_archive_frame_header)
     @patch('core.frames.odin_login', mock_odin_login)
     def test_block_update_active(self):
         resp = block_status(1)
@@ -574,7 +574,7 @@ class TestCheck_for_block(TestCase):
     @skipIf(True, "Edward needs to fix...")
     @patch('core.frames.check_request_status', mock_check_request_status)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
-    @patch('core.archive_subs.lcogt_api_call', mock_archive_frame_header)
+    @patch('core.archive_subs.lco_api_call', mock_archive_frame_header)
     def test_block_update_not_active(self):
         resp = block_status(2)
         self.assertFalse(resp)
@@ -582,7 +582,7 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_request_status', mock_check_request_status)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.views.ingest_frames', mock_ingest_frames)
-    @patch('core.archive_subs.lcogt_api_call', mock_archive_frame_header)
+    @patch('core.archive_subs.lco_api_call', mock_archive_frame_header)
     def test_block_update_check_status_change(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
@@ -591,7 +591,7 @@ class TestCheck_for_block(TestCase):
 
     @patch('core.frames.check_request_status', mock_check_request_status_null)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
-    @patch('core.archive_subs.lcogt_api_call', mock_archive_frame_header)
+    @patch('core.archive_subs.lco_api_call', mock_archive_frame_header)
     def test_block_update_check_no_obs(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
@@ -600,7 +600,7 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_request_status', mock_check_request_status)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.ingest_frames', mock_ingest_frames)
-    @patch('core.archive_subs.lcogt_api_call', mock_check_for_images_no_millisecs)
+    @patch('core.archive_subs.lco_api_call', mock_check_for_images_no_millisecs)
     def test_block_update_no_millisecs(self):
         blockid = self.test_block5.id
         resp = block_status(blockid)
@@ -608,7 +608,7 @@ class TestCheck_for_block(TestCase):
 
     @patch('core.frames.check_request_status', mock_check_request_status)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
-    @patch('core.archive_subs.lcogt_api_call', mock_check_for_images_bad_date)
+    @patch('core.archive_subs.lco_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
         blockid = self.test_block5.id
         resp = block_status(blockid)
@@ -617,7 +617,7 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_request_status', mock_check_request_status)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.ingest_frames', mock_ingest_frames)
-    @patch('core.archive_subs.lcogt_api_call', mock_check_for_images_no_millisecs)
+    @patch('core.archive_subs.lco_api_call', mock_check_for_images_no_millisecs)
     def test_block_update_check_num_observed(self):
         bid = 1
         resp = block_status(block_id=bid)
