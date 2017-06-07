@@ -24,4 +24,4 @@ django-oauth-toolkit
 requests_oauthlib
 matplotlib
 fits2image
-git+https://github.com/zooniverse/panoptes-python-client.git#egg=panoptes_client
+panoptes-client
