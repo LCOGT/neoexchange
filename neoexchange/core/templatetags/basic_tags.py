@@ -1,6 +1,7 @@
 from django import template
 from django.conf import settings
 from django.template import Library
+from django.template.defaultfilters import floatformat
 from astrometrics.time_subs import degreestohours, hourstodegrees, degreestodms, \
     degreestohms, radianstohms, radianstodms, dttodecimalday
 
@@ -13,6 +14,13 @@ def subsblank(value, arg):
     else:
         return value
 
+def roundeddays(value, arg):
+    '''Lightly customized version of floatformat to return "None" if the value
+    is None rather than a blank space'''
+    if value:
+        return floatformat(value,arg)
+    else:
+        return "None"
 
 register.filter('subsblank', subsblank)
 register.filter('degreestohours', degreestohours)
@@ -22,3 +30,4 @@ register.filter('degreestohms', degreestohms)
 register.filter('radianstohms', radianstohms)
 register.filter('radianstodms', radianstodms)
 register.filter('dttodecimalday', dttodecimalday)
+register.filter('roundeddays', roundeddays)

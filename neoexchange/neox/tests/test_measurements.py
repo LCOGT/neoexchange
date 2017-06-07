@@ -190,7 +190,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         self.assertIn(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
 
         self.check_for_header_in_table('id_measurements',
             'Name Date/time RA Dec Magnitude Filter Site Code')
@@ -231,7 +231,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
 
         # He sees a link that says it will display the measurements in MPC format
         mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
@@ -246,7 +246,7 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees that there is a table in which are the original
         # discovery observations from WISE (obs. code C51) and from
         # the LCOGT follow-up network.
-        testlines = [u'     N999r0q  C2015 04 20.75000002 48 24.00 -30 03 00.0          21.1 w      K91',
+        testlines = [u'     N999r0q  C2015 04 20.75000002 48 24.00 -30 03 00.0          21.1 R      K91',
                     ]
         pre_block = self.browser.find_element_by_tag_name('pre')
         rows = pre_block.text.splitlines()
@@ -280,7 +280,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
 
         # He sees a link that says it will display the measurements in MPC format
         mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
@@ -330,7 +330,7 @@ class MeasurementsPageTests(FunctionalTest):
             link.click()
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
 
         # He has just found some precovery observations from a month earlier
         # from PanSTARRS (site code F51) and wants to see if they appear in the

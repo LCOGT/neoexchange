@@ -1,6 +1,8 @@
 import requests
 import sys
 
+from django.conf import settings
+
 ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
 if sys.version_info < (2,7,9):
@@ -9,18 +11,11 @@ if sys.version_info < (2,7,9):
 
 def get_lcogt_headers(auth_url, username, password):
     #  Get the authentication token
-    response = requests.post(auth_url,
-        data = {
-                'username': username,
-                'password': password
-               }, verify=ssl_verify).json()
+    if 'archive' in auth_url:
+        token = settings.ARCHIVE_TOKEN
+    else:
+        token = settings.PORTAL_TOKEN
+    headers = {'Authorization': 'Token ' + token}
 
-    try:
-        token = response.get('token')
-
-        # Store the Authorization header
-        headers = {'Authorization': 'Token ' + token}
-    except TypeError:
-        headers = None
 
     return headers

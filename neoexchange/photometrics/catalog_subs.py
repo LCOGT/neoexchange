@@ -17,6 +17,7 @@ GNU General Public License for more details.
 
 import logging
 import os
+from glob import glob
 import numpy as np
 from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
@@ -32,6 +33,7 @@ from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
+from astrometrics.time_subs import timeit
 from core.models import CatalogSources, Frame
 
 logger = logging.getLogger(__name__)
@@ -52,7 +54,7 @@ def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance = 0.1, cat_n
 
     avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance)
 
-    return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc
+    return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name
 
 def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4", set_row_limit = 10000, rmag_limit = "<=15.0"):
     '''Pulls a catalog from Vizier'''
@@ -60,7 +62,10 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
     #query Vizier on a region of the sky with ra and dec coordinates of a specified catalog
     while set_row_limit < 100000:
 
-        query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
+        if "UCAC4" in cat_name:
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
+        else:
+		    query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
 
         #resulting catalog table
@@ -70,22 +75,24 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
         if (len(result) < 1) or (np.sum(~result[0][rmag].mask)<1):
             if "PPMXL" in cat_name:
                 cat_name = "UCAC4"
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
                 else:
                     zeros_list = list(0.0 for i in range(0,100000))
                     zeros_int_list = list(0 for i in range(0,100000))
-                    cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list, zeros_int_list], names=('_RAJ2000', '_DEJ2000', 'rmag', 'flags', 'e_rmag'))
+                    cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list, zeros_int_list], names=('RAJ2000', 'DEJ2000', 'rmag', 'flags', 'e_rmag'))
             else:
                 cat_name = "PPMXL"
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
                 else:
                     zeros_list = list(0.0 for i in range(0,100000))
                     zeros_int_list = list(0 for i in range(0,100000))
-                    cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list], names=('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'))
+                    cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list], names=('RAJ2000', 'DEJ2000', 'r2mag', 'fl'))
      #if the resulting table is neither empty nor missing columns values, set the cat_table
         else:
             cat_table = result[0]
@@ -93,7 +100,10 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
         #if didn't get all of the table, try again with a larger row limit
         if len(cat_table) == set_row_limit:
             set_row_limit += 10000
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit})
+            if "UCAC4" in cat_name:
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
+            else:
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=[cat_name])
 
             #resulting catalog table
@@ -122,21 +132,21 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
         table_1 = cat_table
         table_2 = FITS_table
         if "PPMXL" in cat_name:
-            RA_table_1 = table_1['_RAJ2000']
-            Dec_table_1 = table_1['_DEJ2000']
+            RA_table_1 = table_1['RAJ2000']
+            Dec_table_1 = table_1['DEJ2000']
             rmag_table_1 = table_1['r2mag']
             flags_table_1 = table_1['fl']
-            rmag_err_table_1 = table_1['_RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
+            rmag_err_table_1 = table_1['RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
             RA_table_2 = table_2['obs_ra']
             Dec_table_2 = table_2['obs_dec']
             rmag_table_2 = table_2['obs_mag']
             flags_table_2 = table_2['flags']
             rmag_err_table_2 = 'nan'
         else:
-            RA_table_1 = table_1['_RAJ2000']
-            Dec_table_1 = table_1['_DEJ2000']
+            RA_table_1 = table_1['RAJ2000']
+            Dec_table_1 = table_1['DEJ2000']
             rmag_table_1 = table_1['rmag']
-            flags_table_1 = table_1['_RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
+            flags_table_1 = table_1['RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
             rmag_err_table_1 = table_1['e_rmag']
             RA_table_2 = table_2['obs_ra']
             Dec_table_2 = table_2['obs_dec']
@@ -152,21 +162,21 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
             rmag_table_1 = table_1['obs_mag']
             flags_table_1 = table_1['flags']
             rmag_err_table_1 = 'nan'
-            RA_table_2 = table_2['_RAJ2000']
-            Dec_table_2 = table_2['_DEJ2000']
+            RA_table_2 = table_2['RAJ2000']
+            Dec_table_2 = table_2['DEJ2000']
             rmag_table_2 = table_2['r2mag']
             flags_table_2 = table_2['fl']
-            rmag_err_table_2 = table_2['_RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
+            rmag_err_table_2 = table_2['RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
         else:
             RA_table_1 = table_1['obs_ra']
             Dec_table_1 = table_1['obs_dec']
             rmag_table_1 = table_1['obs_mag']
             flags_table_1 = table_1['flags']
             rmag_err_table_1 = 'nan'
-            RA_table_2 = table_2['_RAJ2000']
-            Dec_table_2 = table_2['_DEJ2000']
+            RA_table_2 = table_2['RAJ2000']
+            Dec_table_2 = table_2['DEJ2000']
             rmag_table_2 = table_2['rmag']
-            flags_table_2 = table_2['_RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
+            flags_table_2 = table_2['RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
             rmag_err_table_2 = table_2['e_rmag']
 
     y = 0
@@ -402,6 +412,7 @@ def banzai_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<ASTROMCAT>',
+                    'reduction_level'        : 'RLEVEL'
                   }
 
     table_dict = OrderedDict([
@@ -427,7 +438,7 @@ def banzai_catalog_mapping():
 
 def banzai_ldac_catalog_mapping():
     '''Returns two dictionaries of the mapping between the FITS header and table
-    items and CatalogItem quantities for FITS_LDAC catalogs extracted from the 
+    items and CatalogItem quantities for FITS_LDAC catalogs extracted from the
     new pipeline (BANZAI) format files. Items in angle brackets (<FOO>) need to
     be derived (pixel scale) or assumed as they are missing from the headers.'''
 
@@ -452,6 +463,7 @@ def banzai_ldac_catalog_mapping():
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
                     'astrometric_catalog'    : '<ASTROMCAT>',
+                    'reduction_level'        : 'RLEVEL'
                   }
 
     table_dict = OrderedDict([
@@ -526,7 +538,7 @@ def fits_ldac_to_header(header_array):
 
 def open_fits_catalog(catfile, header_only=False):
     '''Opens a FITS source catalog specified by <catfile> and returns the header,
-    table data and catalog type. If [header_only]= is True, only the header is 
+    table data and catalog type. If [header_only]= is True, only the header is
     returned, and <table> is set to an empty dictionary.'''
 
     header = {}
@@ -864,11 +876,11 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
 
     # Write out new catalog file
     new_fits_catalog = fits_catalog
-    to_clobber = True
+    to_overwrite = True
     if overwrite != True:
         new_fits_catalog = new_fits_catalog + '.new'
-        to_clobber = False
-    hdulist.writeto(new_fits_catalog, checksum=True, clobber=to_clobber)
+        to_overwrite = False
+    hdulist.writeto(new_fits_catalog, checksum=True, overwrite=to_overwrite)
     return status
 
 def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
@@ -880,7 +892,7 @@ def extract_catalog(catfile, catalog_type='LCOGT', flag_filter=0):
     header = table = None
     fits_header, fits_table, cattype = open_fits_catalog(catfile)
 
-    if fits_header != {} and fits_table != {}:
+    if len(fits_header) != 0 and len(fits_table) != 0:
         header = get_catalog_header(fits_header, catalog_type)
         table = get_catalog_items(header, fits_table, catalog_type, flag_filter)
 
@@ -898,11 +910,56 @@ def update_zeropoint(header, table, avg_zeropoint, std_zeropoint):
 
     return header, table
 
-def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'):
+def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, frame_type):
+    '''update the Frame zeropoint, astrometric fit, astrometric catalog
+    and photometric catalog used'''
+
+    #if a Frame exists for the file, update the zeropoint,
+    #astrometric catalog, rms_of_fit, nstars_in_fit, and
+    #photometric catalog in the Frame
+    try:
+        frame = Frame.objects.get(filename=frame_filename, block__isnull=False)
+        frame.zeropoint=header['zeropoint']
+        frame.zeropoint_err=header['zeropoint_err']
+        frame.rms_of_fit=header['astrometric_fit_rms']
+        frame.nstars_in_fit=header['astrometric_fit_nstars']
+        frame.astrometric_catalog=ast_cat_name
+        frame.photometric_catalog=phot_cat_name
+        frame.save()
+    except Frame.MultipleObjectsReturned:
+        pass
+#    except Frame.DoesNotExist:
+        #store sources in neoexchange(CatalogSources table)
+#        frame_params = {    'sitecode':header['site_code'],
+#                            'instrument':header['instrument'],
+#                            'filter':header['filter'],
+#                            'filename':frame_filename,
+#                            'exptime':header['exptime'],
+#                            'midpoint':header['obs_midpoint'],
+#                            'block':frame.block,
+#                            'zeropoint':header['zeropoint'],
+#                            'zeropoint_err':header['zeropoint_err'],
+#                            'fwhm':header['fwhm'],
+#                            'frametype':frame_type,
+#                            'rms_of_fit':header['astrometric_fit_rms'],
+#                            'nstars_in_fit':header['astrometric_fit_nstars'],
+#                        }
+
+#        frame, created = Frame.objects.get_or_create(**frame_params)
+#        if created == True:
+#            num_new_frames_created += 1
+#            frame.astrometric_catalog = ast_cat_name
+#            frame.photometric_catalog = phot_cat_name
+#            frame.save()
+
+    return frame
+
+@timeit
+def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name = "UCAC4", ast_cat_name="2MASS"):
 
     num_new_frames_created = 0
-    num_sources_created = 0
     num_in_table = 0
+    num_sources_created = 0
 
     #read the catalog file
     header, table = extract_catalog(catfile, catalog_type)
@@ -912,15 +969,15 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
         #check for good zeropoints
         if header.get('zeropoint',-99) == -99 or header.get('zeropoint_err',-99) == -99:
             #if bad, determine new zeropoint
-            print "Refitting zeropoint, tolerance set to ", std_zeropoint_tolerance
-            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
-            print "New zp=", avg_zeropoint, std_zeropoint, count, num_in_calc
+            logger.debug("Refitting zeropoint, tolerance set to {}".format(std_zeropoint_tolerance))
+            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
+            logger.debug("New zp={} {} {} {}".format(avg_zeropoint, std_zeropoint, count, num_in_calc))
             #if crossmatch is good, update new zeropoint
             if std_zeropoint < std_zeropoint_tolerance:
-                print "Got good zeropoint - updating header"
+                logger.debug("Got good zeropoint - updating header")
                 header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
             else:
-                print "Didn't get good zeropoint - not updating header"
+                logger.debug("Didn't get good zeropoint - not updating header")
 
         #get the fits filename from the catfile in order to get the Block from the Frame
         if 'e90_cat.fits' in os.path.basename(catfile):
@@ -937,54 +994,34 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
             fits_file = os.path.basename(catfile.replace('e12_ldac.fits', 'e11.fits'))
         else:
             fits_file = os.path.basename(catfile)
-        try:
-            frame = Frame.objects.get(filename=fits_file, block__isnull=False)
-        except Frame.MultipleObjectsReturned:
-            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks %s" % (fits_file, frame))
-            return -3, -3
-        except Frame.DoesNotExist:
-            logger.error("Frame entry for fits file %s does not exist" % fits_file)
-            return -3, -3
 
-        #if a Frame exists for the fits file with a non-null block
-        #that has a bad zeropoint, update the zeropoint computed
-        #above in the Frame
-        try:
-            frame = Frame.objects.get(filename=fits_file, block__isnull=False, zeropoint__lt=0)
-            if frame.zeropoint < 0 and frame.zeropoint_err < 0:
-                frame.zeropoint=header['zeropoint']
-                frame.zeropoint_err=header['zeropoint_err']
-                frame.save()
-        except Frame.MultipleObjectsReturned:
-            pass
-        except Frame.DoesNotExist:
-            try:
-                frame = Frame.objects.get(filename=fits_file, block__isnull=False, zeropoint__gt=0)
-                if frame.zeropoint > 0 and frame.zeropoint_err > 0:
-                    frame.zeropoint=header['zeropoint']
-                    frame.zeropoint_err=header['zeropoint_err']
-                    frame.save()
-            except Frame.DoesNotExist:
-                #store sources in neoexchange(CatalogSources table)
-                frame_params = {    'sitecode':header['site_code'],
-                                    'instrument':header['instrument'],
-                                    'filter':header['filter'],
-                                    'filename':determine_filenames(catfile),
-                                    'exptime':header['exptime'],
-                                    'midpoint':header['obs_midpoint'],
-                                    'block':frame.block,
-                                    'zeropoint':header['zeropoint'],
-                                    'zeropoint_err':header['zeropoint_err'],
-                                    'fwhm':header['fwhm'],
-                                    'frametype':Frame.SINGLE_FRAMETYPE,
-                                    'rms_of_fit':header['astrometric_fit_rms'],
-                                    'nstars_in_fit':header['astrometric_fit_nstars'],
-                                }
+        #update the zeropoint computed above in the FITS file Frame
+        frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
 
-                frame, created = Frame.objects.get_or_create(**frame_params)
-                if created == True:
-                    num_new_frames_created += 1
+        #update the zeropoint computed above in the CATALOG file Frame
+        frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
 
+        #store the CatalogSources
+        num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
+    else:
+        logger.warn("Could not open %s" % catfile)
+
+    return (num_sources_created, num_in_table)
+
+def get_or_create_CatalogSources(table, frame):
+
+    num_sources_created = 0
+
+    num_in_table = len(table)
+    num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+    if num_cat_sources == 0:
+        new_sources = []
+        for source in table:
+            new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'], obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=source['obs_mag'], err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'], err_obs_mag=source['obs_mag_err'], background=source['obs_sky_bkgd'], major_axis=source['major_axis'], minor_axis=source['minor_axis'], position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']), aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
+            new_sources.append(new_source)
+        CatalogSources.objects.bulk_create(new_sources)
+        num_sources_created = len(new_sources)
+    elif num_in_table != num_cat_sources:
         for source in table:
             source_params = {   'frame':frame,
                                 'obs_x': source['ccd_x'],
@@ -1008,11 +1045,10 @@ def store_catalog_sources(catfile, std_zeropoint_tolerance, catalog_type='LCOGT'
             cat_src, created = CatalogSources.objects.get_or_create(**source_params)
             if created == True:
                 num_sources_created += 1
-        num_in_table = len(table)
     else:
-        logger.warn("Could not open %s" % catfile)
+        logger.info("Number of sources in catalog match number in DB; skipping")
 
-    return (num_sources_created, num_in_table)
+    return num_sources_created, num_in_table
 
 def make_sext_dict(catsrc, num_iter):
     '''create a dictionary of needed parameters
@@ -1044,7 +1080,7 @@ def make_sext_file_line(sext_params):
 
     return sext_line
 
-def make_sext_dict_list(new_catalog, catalog_type):
+def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
     '''create a list of dictionary entries for
     creating the .sext files needed for mtdlink'''
 
@@ -1062,13 +1098,34 @@ def make_sext_dict_list(new_catalog, catalog_type):
         fits_filename_path = new_catalog
 
     #May need to filter objects within 5 pixels of frame edge as does in cleansex.tcl
-    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0)
+    try:
+        frame = Frame.objects.get(filename=real_fits_filename)
+        edge_trim_limit, num_x_pixels, num_y_pixels = get_trim_limit(frame, edge_trim_limit)
+    except Frame.MultipleObjectsReturned:
+        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % (fits_file))
+        return -3, -3
+    except Frame.DoesNotExist:
+        logger.error("Frame entry for fits file %s does not exist" % fits_file)
+        return -3, -3
+    sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0, obs_x__gt=edge_trim_limit, obs_x__lt=num_x_pixels-edge_trim_limit, obs_y__gt=edge_trim_limit, obs_y__lt=num_y_pixels-edge_trim_limit)
     num_iter = 1
     for source in sources:
         sext_dict_list.append(make_sext_dict(source, num_iter))
         num_iter += 1
 
     return sext_dict_list, fits_filename_path
+
+def get_trim_limit(frame, edge_trim_limit):
+    '''determine if the image is a square 1-m image and trim
+    or if the image is a non-square 0.4-m image and don't trim'''
+
+    num_x_pixels = frame.get_x_size()
+    num_y_pixels = frame.get_y_size()
+    if abs(num_x_pixels-num_y_pixels) < 10.0:
+        edge_trim_limit = edge_trim_limit
+    else:
+        edge_trim_limit = 0.0
+    return edge_trim_limit, num_x_pixels, num_y_pixels
 
 def make_sext_line_list(sext_dict_list):
     '''sort the list of dictionary entries and
@@ -1169,6 +1226,10 @@ def funpack_fits_file(fpack_file):
     header = hdulist['SCI'].header
     data = hdulist['SCI'].data
     hdu = fits.PrimaryHDU(data, header)
+    hdu._bscale = 1.0
+    hdu._bzero = 0.0
+    hdu.header.insert("NAXIS2", ("BSCALE", 1.0), after=True)
+    hdu.header.insert("BSCALE", ("BZERO", 0.0), after=True)
     hdu.writeto(unpacked_file, checksum=True)
     hdulist.close()
 
@@ -1198,7 +1259,7 @@ def extract_sci_image(file_path, catalog_path):
     return fits_filename_path
 
 def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
-    '''Search CatalogSources for the passed Frame object for sources within a 
+    '''Search CatalogSources for the passed Frame object for sources within a
     box of <box_halfwidth> centered on <ra>, <dec>.
     <ra>, <dec> are in radians, <box_halfwidth> is in arcseconds, default is 3.0"
     '''
@@ -1215,3 +1276,84 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
 
     return sources
+
+def get_fits_files(fits_path):
+    '''Look through a directory, uncompressing any fpacked files and return a
+    list of all the .fits files'''
+
+    sorted_fits_files = []
+    fits_path = os.path.join(fits_path, '')
+    if os.path.isdir(fits_path):
+
+        fpacked_files = sorted(glob(fits_path + '*e91.fits.fz') + glob(fits_path + '*e11.fits.fz'))
+        for fpack_file in fpacked_files:
+            funpack_fits_file(fpack_file)
+
+        sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
+
+    else:
+    	logger.error("Not a directory")
+
+    return sorted_fits_files
+
+def sort_rocks(fits_files):
+    '''Takes a list of FITS files and creates directories for each asteroid
+    object and unique block number (i.e. if an object is observed more than
+    once, it will get a separate directory). The input fits files are then
+    symlinked into the appropriate directory.
+    A list of the directory names is return, with the entries being of the form
+    <object name>_<block id #>'''
+
+    objects = []
+    for fits_filepath in fits_files:
+        fits_header, fits_table, cattype = open_fits_catalog(fits_filepath, header_only=True)
+        object_name = fits_header.get('OBJECT', None)
+        block_id = fits_header.get('BLKUID', '').replace('/', '')
+        if object_name:
+            object_directory = object_name.replace(' ', '')
+            if block_id != '':
+                object_directory = object_directory + '_' + str(block_id)
+            if object_directory not in objects:
+                objects.append(object_directory)
+            object_directory = os.path.join(os.path.dirname(fits_filepath), object_directory)
+            if not os.path.exists(object_directory):
+                os.makedirs(object_directory)
+            dest_filepath = os.path.join(object_directory, os.path.basename(fits_filepath))
+            #if the file is an e91 and an e11 exists in the working directory, remove the link to the e11 and link the e91
+            if 'e91' in fits_filepath:
+                if os.path.exists(dest_filepath.replace('e91.fits', 'e11.fits')):
+                    os.unlink(dest_filepath.replace('e91.fits', 'e11.fits'))
+                if not os.path.exists(dest_filepath):
+                    os.symlink(fits_filepath, dest_filepath)
+            #if the file is an e11 and an e91 doesn't exit in the working directory, create link to the e11
+            elif 'e11' in fits_filepath and not os.path.exists(dest_filepath.replace('e11.fits', 'e91.fits')):
+                if not os.path.exists(dest_filepath):
+                    os.symlink(fits_filepath, dest_filepath)
+    return objects
+
+def find_first_last_frames(fits_files):
+    '''Determines the first and last reduced frames in the DB for a list of
+    passed <fits_files> (which may have paths).
+    The Frame objects for the earliest and latest frames are returned if all
+    are found, otherwise None is returned.
+    '''
+
+    first_frame = Frame(midpoint=datetime.max)
+    last_frame = Frame(midpoint=datetime.min)
+    for fits_filepath in fits_files:
+        fits_file = os.path.basename(fits_filepath)
+        try:
+            frame = Frame.objects.get(filename=fits_file, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
+        except Frame.DoesNotExist:
+            logger.error("Cannot find Frame DB entry for %s" % fits_file)
+            first_frame = last_frame = None
+            break
+        except Frame.MultipleObjectsReturned:
+            logger.error("Found multiple entries in DB for %s" % fits_file)
+            first_frame = last_frame = None
+            break
+        if frame.midpoint < first_frame.midpoint:
+            first_frame = frame
+        if frame.midpoint > last_frame.midpoint:
+            last_frame = frame
+    return first_frame, last_frame

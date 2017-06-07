@@ -17,6 +17,7 @@ import os
 from glob import glob
 import tempfile
 from unittest import skipIf
+import warnings
 
 from astropy.io import fits
 from numpy import array, arange
@@ -671,6 +672,10 @@ class TestReadMTDSFile(TestCase):
              {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'sky_pos_angle', 'pixels_frame', 'streak_length'),
                 'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
              }
+
+        # Map UserWarning to an exception for testing
+        warnings.simplefilter('error', UserWarning)
+
     def test_no_file(self):
 
         expected_dets = {}

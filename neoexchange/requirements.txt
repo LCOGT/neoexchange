@@ -3,7 +3,7 @@
 Django>=1.10,<1.11
 celery
 MySQL-python
-astropy>=1.1.1
+astropy>=1.3.1
 astroquery
 beautifulsoup4
 django-reversion>=2.0
@@ -23,5 +23,6 @@ mock==1.0.1
 opbeat
 django-oauth-toolkit
 requests_oauthlib
-autobahn
-trollius
+matplotlib
+fits2image
+panoptes-client

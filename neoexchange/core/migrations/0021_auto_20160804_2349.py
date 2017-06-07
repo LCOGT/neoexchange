@@ -15,19 +15,4 @@ class Migration(migrations.Migration):
             name='candidate',
             options={'verbose_name': 'Candidate'},
         ),
-        migrations.AddField(
-            model_name='frame',
-            name='frameid',
-            field=models.IntegerField(null=True, verbose_name=b'Archive ID', blank=True),
-        ),
-        migrations.AddField(
-            model_name='frame',
-            name='x_size',
-            field=models.IntegerField(null=True, verbose_name=b'Size x pixels', blank=True),
-        ),
-        migrations.AddField(
-            model_name='frame',
-            name='y_size',
-            field=models.IntegerField(null=True, verbose_name=b'Size y pixels', blank=True),
-        ),
     ]

@@ -16,6 +16,7 @@ from datetime import datetime
 from math import pi, log10
 import reversion
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
@@ -25,6 +26,7 @@ from django.forms.models import model_to_dict
 from astropy.time import Time
 from astropy.wcs import WCS
 from numpy import fromstring
+from requests.compat import urljoin
 try:
     # cpython 2.x
     from cPickle import loads, dumps
@@ -241,14 +243,12 @@ class Block(models.Model):
 
     def make_obsblock_link(self):
         url = ''
-        point_at_reqdb = False
         if self.tracking_number != None and self.tracking_number != '':
-            url = 'http://lco.global/observe/request/%s/' % (self.tracking_number)
-            if point_at_reqdb:
-                url = 'http://scheduler1.lco.gtn/requestdb/admin/requestdb/userrequests/'
-# Strip off leading zeros
-                url = url + self.tracking_number.lstrip('0') + '/'
+            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
         return url
+
+    def num_frames(self):
+        return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
@@ -359,17 +359,30 @@ class Frame(models.Model):
     NONLCO_FRAMETYPE = 2
     SATELLITE_FRAMETYPE = 3
     SPECTRUM_FRAMETYPE = 4
+    FITS_LDAC_CATALOG = 5
+    BANZAI_LDAC_CATALOG = 6
+    ORACDR_QL_FRAMETYPE = 10
+    BANZAI_QL_FRAMETYPE = 11
+    ORACDR_RED_FRAMETYPE = 90
+    BANZAI_RED_FRAMETYPE = 91
     FRAMETYPE_CHOICES = (
                         (SINGLE_FRAMETYPE, 'Single frame'),
                         (STACK_FRAMETYPE, 'Stack of frames'),
                         (NONLCO_FRAMETYPE, 'Non-LCOGT data'),
                         (SATELLITE_FRAMETYPE, 'Satellite data'),
-                        (SPECTRUM_FRAMETYPE, 'Spectrum')
+                        (SPECTRUM_FRAMETYPE, 'Spectrum'),
+                        (FITS_LDAC_CATALOG,    'FITS LDAC catalog'),
+                        (BANZAI_LDAC_CATALOG,  'BANZAI LDAC catalog'),
+                        (ORACDR_QL_FRAMETYPE,  'ORACDR QL frame'),
+                        (BANZAI_QL_FRAMETYPE,  'BANZAI QL frame'),
+                        (ORACDR_RED_FRAMETYPE, 'ORACDR reduced frame'),
+                        (BANZAI_RED_FRAMETYPE, 'BANZAI reduced frame'),
+
                     )
     sitecode    = models.CharField('MPC site code', max_length=4, blank=False)
     instrument  = models.CharField('instrument code', max_length=4, blank=True, null=True)
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
-    filename    = models.CharField('FITS filename', max_length=40, blank=True, null=True)
+    filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
     midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
     block       = models.ForeignKey(Block, null=True, blank=True)
@@ -384,6 +397,8 @@ class Frame(models.Model):
     time_uncertainty = models.FloatField('Time uncertainty (seconds)', null=True, blank=True)
     frameid     = models.IntegerField('Archive ID', null=True, blank=True)
     wcs         = WCSField('WCS info', blank=True, null=True, editable=False)
+    astrometric_catalog = models.CharField('Astrometric catalog used', max_length=40, default=' ')
+    photometric_catalog = models.CharField('Photometric catalog used', max_length=40, default=' ')
 
 
     def get_x_size(self):
@@ -401,6 +416,93 @@ class Frame(models.Model):
         except AttributeError:
             pass
         return y_size
+
+    def is_catalog(self):
+        is_catalog = False
+        if self.frametype == self.FITS_LDAC_CATALOG or self.frametype == self.BANZAI_LDAC_CATALOG:
+            is_catalog = True
+        return is_catalog
+
+    def is_quicklook(self):
+        is_quicklook = False
+        if self.frametype == self.ORACDR_QL_FRAMETYPE or self.frametype == self.BANZAI_QL_FRAMETYPE:
+            is_quicklook = True
+        return is_quicklook
+
+    def is_reduced(self):
+        is_reduced = False
+        if self.frametype == self.ORACDR_RED_FRAMETYPE or self.frametype == self.BANZAI_RED_FRAMETYPE:
+            is_reduced = True
+        return is_reduced
+
+    def is_processed(self):
+        is_processed = False
+        if self.is_quicklook() or self.is_reduced():
+            is_processed = True
+        return is_processed
+
+    def reduced_frames(self, include_oracdr=False):
+        frametypes = (self.BANZAI_QL_FRAMETYPE, self.BANZAI_RED_FRAMETYPE)
+        if include_oracdr:
+            frametypes = (self.BANZAI_QL_FRAMETYPE, self.BANZAI_RED_FRAMETYPE, self.ORACDR_QL_FRAMETYPE, self.ORACDR_RED_FRAMETYPE)
+
+        return frametypes
+
+    def return_site_string(self):
+        site_strings = {
+                        'K91' : 'LCO CPT Node 1m0 Dome A at Sutherland, South Africa',
+                        'K92' : 'LCO CPT Node 1m0 Dome B at Sutherland, South Africa',
+                        'K93' : 'LCO CPT Node 1m0 Dome C at Sutherland, South Africa',
+                        'W85' : 'LCO LSC Node 1m0 Dome A at Cerro Tololo, Chile',
+                        'W86' : 'LCO LSC Node 1m0 Dome B at Cerro Tololo, Chile',
+                        'W87' : 'LCO LSC Node 1m0 Dome C at Cerro Tololo, Chile',
+                        'V37' : 'LCO ELP Node at McDonald Observatory, Texas',
+                        'Z21' : 'LCO TFN Node Aqawan A 0m4a at Tenerife, Spain',
+                        'Q58' : 'LCO COJ Node 0m4a at Siding Spring, Australia',
+                        'Q63' : 'LCO COJ Node 1m0 Dome A at Siding Spring, Australia',
+                        'Q64' : 'LCO COJ Node 1m0 Dome B at Siding Spring, Australia',
+                        'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
+                        'F65' : 'LCO OGG Node 2m0 FTN at Haleakala, Maui',
+                        'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui'
+                        }
+        return site_strings.get(self.sitecode, 'Unknown LCO site')
+
+    def return_tel_string(self):
+
+        point4m_string = '0.4-m f/8 Schmidt-Cassegrain + CCD'
+        onem_string = '1.0-m f/8 Ritchey-Chretien + CCD'
+        twom_string = '2.0-m f/10 Ritchey-Chretien + CCD'
+
+        tels_strings = {
+                        'K91' : onem_string,
+                        'K92' : onem_string,
+                        'K93' : onem_string,
+                        'W85' : onem_string,
+                        'W86' : onem_string,
+                        'W87' : onem_string,
+                        'V37' : onem_string,
+                        'Z21' : point4m_string,
+                        'Q58' : point4m_string,
+                        'Q63' : onem_string,
+                        'Q64' : onem_string,
+                        'E10' : twom_string,
+                        'F65' : twom_string,
+                        'T04' : point4m_string
+                        }
+        return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
+
+    def map_filter(self):
+        '''Maps somewhat odd observed filters (e.g. 'solar') into the filter
+        (e.g. 'R') that would be used for the photometric calibration'''
+
+        new_filter = self.filter
+        # Don't perform any mapping if it's not LCO data
+        if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
+            if self.filter == 'solar' or self.filter == 'w':
+                new_filter = 'R'
+            if self.photometric_catalog == 'GAIA-DR1':
+                new_filter = 'G'
+        return new_filter
 
     class Meta:
         verbose_name = _('Observed Frame')
@@ -424,8 +526,8 @@ class SourceMeasurement(models.Model):
 
     body = models.ForeignKey(Body)
     frame = models.ForeignKey(Frame)
-    obs_ra = models.FloatField('Observed RA')
-    obs_dec = models.FloatField('Observed Dec')
+    obs_ra = models.FloatField('Observed RA', blank=True, null=True)
+    obs_dec = models.FloatField('Observed Dec', blank=True, null=True)
     obs_mag = models.FloatField('Observed Magnitude', blank=True, null=True)
     err_obs_ra = models.FloatField('Error on Observed RA', blank=True, null=True)
     err_obs_dec = models.FloatField('Error on Observed Dec', blank=True, null=True)
@@ -455,10 +557,21 @@ class SourceMeasurement(models.Model):
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             obs_type = 'S'
             microday = False
-        mpc_line = "%12s %1s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
-            self.flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
+        flags = self.flags
+        if len(self.flags) == 1:
+            if self.flags == '*':
+                # Discovery asterisk needs to go into column 12
+                flags = '* '
+            else:
+                flags = ' ' + self.flags
+        elif len(self.flags) > 2:
+            logger.warn("Flags longer than will fit into field - needs mapper")
+            flags = self.flags[0:2]
+
+        mpc_line = "%12s%2s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
+            flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
-            mag, self.frame.filter, translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+            mag, self.frame.map_filter(), translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
             if self.body.name:
@@ -515,12 +628,16 @@ class CatalogSources(models.Model):
 
     def make_mu_max(self):
         pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
-        mu_max = (-2.5*log10(self.flux_max/pixel_scale**2))+self.frame.zeropoint
+        mu_max = 0.0
+        if self.flux_max > 0.0:
+            mu_max = (-2.5*log10(self.flux_max/pixel_scale**2))+self.frame.zeropoint
         return mu_max
 
     def make_mu_threshold(self):
         pixel_scale = get_sitecam_params(self.frame.sitecode)[3]
-        mu_threshold = (-2.5*log10(self.threshold/pixel_scale**2))+self.frame.zeropoint
+        mu_threshold = 0.0
+        if self.threshold > 0.0:
+            mu_threshold = (-2.5*log10(self.threshold/pixel_scale**2))+self.frame.zeropoint
         return mu_threshold
 
     def make_flux(self):
@@ -605,3 +722,22 @@ class ProposalPermission(models.Model):
 
     def __unicode__(self):
         return "%s is a member of %s" % (self.user, self.proposal)
+
+class PanoptesReport(models.Model):
+    '''
+    Status of block
+    '''
+    block = models.ForeignKey(Block)
+    when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
+    last_check = models.DateTimeField(blank=True, null=True)
+    active = models.BooleanField(default=False)
+    subject_id = models.IntegerField('Subject ID', blank=True, null=True)
+    candidate = models.ForeignKey(Candidate)
+    verifications = models.IntegerField(default=0)
+    classifiers = models.TextField(help_text='Volunteers usernames who found NEOs', blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Zooniverse Report')
+
+    def __unicode__(self):
+        return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)

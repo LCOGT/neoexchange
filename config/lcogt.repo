@@ -1,5 +1,5 @@
 [lcogt]
 name=LCOGT Package Repository $releasever - $basearch
-baseurl=http://nagios.lco.gtn/repos/lcogt/$releasever
+baseurl=http://packagerepo.lco.gtn/repos/lcogt/$releasever
 enabled=1
 gpgcheck=0

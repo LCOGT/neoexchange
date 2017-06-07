@@ -490,6 +490,75 @@ class TestFrame(TestCase):
         self.assertEqual(params['exptime'], frame.exptime)
         self.assertEqual(params['midpoint'], frame.midpoint)
 
+    def test_create_catalog(self):
+        params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'w',
+                    'filename'      : 'lsc1m009-fl03-20161108-0065-e91_ldac.fits',
+                    'exptime'       : 260.0,
+                    'midpoint'      : '2016-11-09T06:53:01.750',
+                    'block'         : self.test_block,
+                    'frametype'     : Frame.FITS_LDAC_CATALOG,
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(5, frame.frametype)
+        self.assertEqual(' ', frame.quality)
+        self.assertEqual(None, frame.extrainfo)
+        self.assertEqual(params['instrument'], frame.instrument)
+        self.assertEqual(params['filename'], frame.filename)
+        self.assertEqual(params['exptime'], frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+        self.assertTrue(frame.is_catalog())
+
+    def test_create_banzai_ql(self):
+        params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'w',
+                    'filename'      : 'lsc1m009-fl03-20161108-0065-e11.fits',
+                    'exptime'       : 260.0,
+                    'midpoint'      : '2016-11-09T06:53:01.750',
+                    'block'         : self.test_block,
+                    'frametype'     : Frame.BANZAI_QL_FRAMETYPE,
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(11, frame.frametype)
+        self.assertEqual(' ', frame.quality)
+        self.assertEqual(None, frame.extrainfo)
+        self.assertEqual(params['instrument'], frame.instrument)
+        self.assertEqual(params['filename'], frame.filename)
+        self.assertEqual(params['exptime'], frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+        self.assertTrue(frame.is_quicklook())
+        self.assertTrue(frame.is_processed())
+
+    def test_create_banzai_red(self):
+        params = {  'sitecode'      : 'W86',
+                    'instrument'    : 'fl03',
+                    'filter'        : 'w',
+                    'filename'      : 'lsc1m009-fl03-20161108-0065-e91.fits',
+                    'exptime'       : 260.0,
+                    'midpoint'      : '2016-11-09T06:53:01.750',
+                    'block'         : self.test_block,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
+                 }
+        frame = Frame.objects.create(**params)
+
+        self.assertEqual(self.test_block, frame.block)
+        self.assertEqual(91, frame.frametype)
+        self.assertEqual(' ', frame.quality)
+        self.assertEqual(None, frame.extrainfo)
+        self.assertEqual(params['instrument'], frame.instrument)
+        self.assertEqual(params['filename'], frame.filename)
+        self.assertEqual(params['exptime'], frame.exptime)
+        self.assertEqual(params['midpoint'], frame.midpoint)
+        self.assertFalse(frame.is_quicklook())
+        self.assertTrue(frame.is_reduced())
+        self.assertTrue(frame.is_processed())
+
 # For transactional reasons, these assertRaises need to be in their own test
 # blocks (see https://code.djangoproject.com/ticket/21540)
 
@@ -637,7 +706,8 @@ class TestSourceMeasurement(TestCase):
         self.body5, created = Body.objects.get_or_create(**params)
 
         params['name'] = 'C/2016 C2'
-        params['source_type'] = 'MPC_COMET'
+        params['elements_type'] = 'MPC_COMET'
+        params['source_type'] = 'C'
         self.body_confirmed, created = Body.objects.get_or_create(**params)
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
@@ -706,6 +776,24 @@ class TestSourceMeasurement(TestCase):
                  }
         self.test_frame_satellite = Frame.objects.create(**frame_params)
 
+        frame_params = { 'sitecode': u'F51',
+                         'block': None,
+                         'exptime': None,
+                         'extrainfo': None,
+                         'filename': None,
+                         'filter': u'w',
+                         'frametype': Frame.NONLCO_FRAMETYPE,
+                         'fwhm': None,
+                         'instrument': None,
+                         'midpoint': datetime(2017, 3, 7, 15, 29, 0, 960000),
+                         'nstars_in_fit': None,
+                         'quality': u' ',
+                         'rms_of_fit': None,
+                         'time_uncertainty': None,
+                         'zeropoint': None,
+                         'zeropoint_err': None}
+        self.test_frame_nonLCO_F51 = Frame.objects.create(**frame_params)
+
     def test_mpc_1(self):
         measure_params = {  'body' : self.body,
                             'frame' : self.test_frame,
@@ -716,7 +804,7 @@ class TestSourceMeasurement(TestCase):
                          }
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 wq     K93'
+        expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
 
@@ -730,7 +818,21 @@ class TestSourceMeasurement(TestCase):
                          }
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 wq     K93'
+        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_F51_no_filter_mapping(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame_nonLCO_F51,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "2MASS",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2017 03 07.64515000 30 00.00 -00 30 00.0          21.5 wL     F51'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
 
@@ -745,7 +847,7 @@ class TestSourceMeasurement(TestCase):
                          }
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
-        expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 wt     K93'
+        expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 Rt     K93'
         mpc_line = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_line)
 
@@ -824,6 +926,36 @@ class TestSourceMeasurement(TestCase):
                           '\n' + '    CK16C020  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
         mpc_lines = measure.format_mpc_line()
         self.assertEqual(expected_mpcline, mpc_lines)
+
+    def test_discovery(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : '*',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q* C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_on_stacked(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : '*K',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line()
+        self.assertEqual(expected_mpcline, mpc_line)
 
 class TestCatalogSources(TestCase):
 

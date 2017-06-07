@@ -10,13 +10,13 @@
 {% endblock%}
 {% block main-content %}
     <div id="main" class="fill-height">
-        <div class="four columns">
+        <div class="fullwidth">
             <h5 class="section-title">Details of the Block and Candidates</h5>
             <table class="keyvalue-table" id="id_canddetail">
                 <tbody>
                     <tr>
                         <td class="kv-key">UTC midpoint: </td>
-                        <td class="kv-value">{{candidates.0.avg_midpoint|dttodecimalday:False}}</td>
+                        <td class="kv-value">{{candidates.0.avg_midpoint|date:"c"}} ({{candidates.0.avg_midpoint|dttodecimalday:False}})</td>
                     </tr>
                 </tbody>
             </table>

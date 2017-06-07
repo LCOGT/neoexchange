@@ -32,9 +32,15 @@ function setUp(){
           }
       }
   });
+  for (var i = 0; i < candidates.length; i++) {
+    candids.push(candidates[i]['id']);
+  }
+  blockcandidate = candids[0];
 
   stage = new createjs.Stage("imgCanvas");
   ministage = new createjs.Stage("zoomCanvas");
+  crosshairs = new createjs.Container();
+  stage.addChild(crosshairs);
   if (frames.length>0){
     $('#number_images').text(frames.length);
     $('#blink-stop').hide();
@@ -51,6 +57,35 @@ function resetCandidateOptions(){
   $('.candidate-accept').hide();
   $('#candidate-list').show();
   updateStatus();
+  enableBlockCandidateSelector();
+}
+
+function enableBlockCandidateSelector(){
+  if (accepted.length == 1){
+    blockcandidate = accepted[0];
+  }else if (accepted.length >1){
+    $('#block-candidate').show();
+  }else{
+    $('#block-candidate').hide();
+  }
+}
+
+function updateBlockCandidate(){
+  /* Add select element populated with accepted candidates */
+  $('#block-candidate select').html('');
+  var cid;
+  for (var i = 0, len = accepted.length; i < len; i++) {
+    cid = candids.indexOf(String(accepted[i]))+1
+    $('#block-candidate select').append('<option value="'+accepted[i]+'">Candidate '+cid+'</option>');
+  }
+  /* Add a change event to the select elements */
+  $('#block-candidate select')
+    .change(function () {
+    $( "select option:selected" ).each(function() {
+      blockcandidate = $( this ).val();
+    });
+  })
+  .change();
 }
 
 function updateStatus(){
@@ -68,19 +103,20 @@ function updateStatus(){
   for (var i = 0, len = rejected.length; i < len; i++) {
     $("#cand-"+rejected[i]+"-accept").hide();
     $("#cand-"+rejected[i]+"-reject").show();  }
+  updateBlockCandidate();
 }
 
 function nextImage() {
   var next_i = index +1;
   if (next_i <= frames.length){
-    changeImage(next_i);
+    changeImage(next_i, allcandidates=true);
   }
 }
 
 function prevImage() {
   var prev_i = index -1;
   if (prev_i >= 0){
-    changeImage(prev_i);
+    changeImage(prev_i, allcandidates=true);
   }
 }
 
@@ -98,12 +134,31 @@ function addCircle(x, y, r, fill, name, draggable) {
    stage.addChild(circle);
   }
 
+  function addCrossHairs(){
+    for (var i=0;i<stage.children.length;i++){
+      if (stage.children[i].name == 'crosshairs'){
+        stage.removeChildAt(i);
+        stage.update();
+      }
+    }
+    var circle = new createjs.Shape();
+    circle.graphics.beginFill('#ff33ff').drawCircle(0, 0, 10);
+    circle.x = 300;
+    circle.y = 300;
+    circle.alpha = 0.2;
+    circle.name = 'crosshairs'
+    circle.on("pressmove", drag);
+    circle.alpha = 0.5;
+    stage.addChild(circle);
+    stage.update();
+  }
+
 
 function drag(evt) {
     evt.target.x = evt.stageX;
     evt.target.y = evt.stageY;
     stage.update();
-    updateTarget(evt.currentTarget.name, evt.currentTarget.x, evt.currentTarget.y);
+    // updateTarget(evt.currentTarget.name, evt.currentTarget.x, evt.currentTarget.y);
     zoomImage(evt.currentTarget.x, evt.currentTarget.y);
 }
 
@@ -153,10 +208,11 @@ function rejectCandidate(cand_id){
   }
 }
 
-function startBlink(cand_index=0, allcandidates=false) {
+function startBlink(candid, allcandidates=false) {
+  var index=0;
   blinker = setInterval(function() {
     index++;
-    changeImage (index, cand_index, allcandidates);
+    changeImage (index, cand_index=candid, allcandidates);
   }, 500);
   $('#blink-stop').show();
   $('#blink-start').hide();
@@ -182,6 +238,32 @@ function zoomImage(x,y){
   ministage.update();
 }
 
+function zoomMainImage(scale){
+  var width = 600;
+  var height = 600;
+  for (var i=0;i<stage.children.length;i++){
+    if (stage.children[i].name == 'crosshairs'){
+      zoom_origin[0] = width/2 - scale*stage.children[i].x
+      zoom_origin[1] = height/2 - scale*stage.children[i].y
+    }
+  }
+}
+
+function mainImageZoomLevel(mode){
+  if (mode=='add'){
+    zoomLevel+=0.5;
+  } else if (mode =='minus'){
+    zoomLevel-=0.5;
+    zoomLevel=Math.max(zoomLevel, 1.0);
+  } else if (mode =='revert'){
+    zoomLevel = 1.0
+    zoom_origin=[0,0]
+  }
+  image_scale = zoomLevel * default_image_scale;
+  zoomMainImage(zoomLevel);
+  changeImage();
+}
+
 function handleLoad(event) {
   stage.update();
 }
@@ -202,16 +284,25 @@ function loadCandidates(candidates){
   }
 }
 
+function display_info_panel(cindex, index) {
+  // Hide all info tables to start
+  $('.coords-table').hide();
+  $('.candidate-row').hide();
+  // Only show info tables for current index
+  $('.candidate-'+cindex).show();
+  $('.candidate-'+cindex +' '+'#img-coords-'+index).show();
+  $('.candidate-'+cindex +' '+'#img-skycoords-'+index).show();
+}
+
 function changeImage(ind, cand_index=0, allcandidates=false) {
-  //
-  //
+
+  var index, coords;
+
   if (typeof(ind) == 'undefined') {
     index = 0;
   } else {
     index = ind % frames.length;
   }
-  // Remove everything already on the stage
-  stage.removeAllChildren();
 
   // Change label
   $('#current_image_index').text(index+1);
@@ -226,26 +317,31 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
   }
 
   img_holder = new createjs.Bitmap(image_url);
+
+  // Remove everything already on the stage
+  stage.removeAllChildren();
   // Update the stage when the image data has loaded
   img_holder.image.onload = handleLoad;
   // Duplicate this image on to the mini canvas
   zoomImage(500,100);
   // Scale the image to fit inside canvas
-  img_holder.scaleX = 0.6;
-  img_holder.scaleY = 0.6;
+  img_holder.setTransform(zoom_origin[0], zoom_origin[1], 0.6*zoomLevel,0.6*zoomLevel);
   stage.addChild(img_holder);
 
   if (allcandidates){
     for (var i=0; i <candidates.length;i++) {
-      target = candidates[i].coords[ind-1];
+      target = candidates[i].coords[index];
       name = "target_" + i;
-      addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
+      addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, false);
     }
-  }else{
-    target = candidates[cand_index].coords[ind-1];
+  }else if (typeof(ind) != 'undefined'){
+    var id = candids.indexOf(String(cand_index))
+    target = candidates[id].coords[index];
     name = "target_" + cand_index;
-    addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, true);
+    addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, false);
     zoomImage(target.x/image_scale, target.y/image_scale);
+    // Show the candidate information
+    display_info_panel(id, index);
   }
   stage.update();
 
@@ -270,7 +366,7 @@ function loadThumbnails(frames){
       image.src = resp;
     });
     // Once all URLs are stored change to the first image
-    changeImage(0);
+    changeImage(0, candids[0]);
   });
   return
 }

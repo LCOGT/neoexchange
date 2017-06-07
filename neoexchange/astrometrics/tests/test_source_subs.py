@@ -29,7 +29,8 @@ from neox.tests.mocks import MockDateTime
 from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
-    fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults
+    fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
+    make_userrequest
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -74,6 +75,24 @@ class TestGoldstoneChunkParser(TestCase):
     def test_multimonth_split(self):
         expected_objid = '410777' # '(410777) 2009 FD'
         chunks = [u'2015', u'Oct', u'25-Nov', u'1', u'410777', u'2009', u'FD', u'No', u'Yes', u'R']
+        obj_id = parse_goldstone_chunks(chunks)
+        self.assertEqual(expected_objid, obj_id)
+
+    def test_multimonth_split_provisional(self):
+        expected_objid = '2017 CS' # '2017 CS'
+        chunks = [u'2017', u'May', u'22-Jun', u'01', u'2017', u'CS', u'Yes', u'Yes', u'19.4', u'PHA', u'Target-of-opportunity']
+        obj_id = parse_goldstone_chunks(chunks)
+        self.assertEqual(expected_objid, obj_id)
+
+    def test_multimonth_split_provisional2(self):
+        expected_objid = '2017 CS101' # '2017 CS01'
+        chunks = [u'2017', u'May', u'22-Jun', u'01', u'2017', u'CS101', u'Yes', u'Yes', u'19.4', u'PHA', u'Target-of-opportunity']
+        obj_id = parse_goldstone_chunks(chunks)
+        self.assertEqual(expected_objid, obj_id)
+
+    def test_multimonth_split_named(self):
+        expected_objid = '6063' # '606 Jason'
+        chunks = [u'2017', u'May', u'22-Jun', u'01', u'6063', u'Jason', u'No', u'Yes', u'15.9', u'R1']
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
@@ -183,7 +202,7 @@ class TestFetchAreciboTargets(TestCase):
         targets = fetch_arecibo_targets(self.test_arecibo_page_v2)
 
         self.assertEqual(expected_targets, targets)
-   
+
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
@@ -204,8 +223,11 @@ class TestSubmitBlockToScheduler(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
-    @skipIf(True, "needs mocking, submits to real scheduler")
-    def test_submit_body_for_cpt(self):
+    @mock.patch('astrometrics.sources_subs.requests.post')
+    def test_submit_body_for_cpt(self, mock_post):
+        mock_post.return_value.status_code = 200
+
+        mock_post.return_value.json.return_value = {'id':'999', 'requests' : [{'id':'111'}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -213,17 +235,70 @@ class TestSubmitBlockToScheduler(TestCase):
         site_code = 'K92'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        params = {  'proposal_code' : 'LCO2015A-009',
+        params = {  'proposal_id' : 'LCO2015A-009',
                     'exp_count' : 18,
                     'exp_time' : 50.0,
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d')
-
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson'
                  }
 
-        request_number = submit_block_to_scheduler(body_elements, params)
+        resp, params = submit_block_to_scheduler(body_elements, params)
+        self.assertEqual(resp, '999')
+
+
+    def test_make_userrequest(self):
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'K92'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson'
+                 }
+
+        user_request = make_userrequest(body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope',None), None)
+
+
+    def test_1m_sinistro_lsc_doma_userrequest(self):
+
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'W85'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson'
+                 }
+
+        user_request = make_userrequest(body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
+        self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
+        self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
+        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'doma')
+
 
 class TestPreviousNEOCPParser(TestCase):
     '''Unit tests for the sources_subs.parse_previous_NEOCP_id() method'''
@@ -232,15 +307,23 @@ class TestPreviousNEOCPParser(TestCase):
 
         items = [u' P10ngMD was not confirmed (Aug. 19.96 UT)\n']
         expected = [u'P10ngMD', 'wasnotconfirmed', '', u'(Aug. 19.96 UT)']
-        
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
     def test_does_not_exist(self):
-    
+
         items = [u' N008b6e does not exist (Aug. 14.77 UT)\n']
         expected = [u'N008b6e', 'doesnotexist', '', u'(Aug. 14.77 UT)']
-        
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_was_not_interesting(self):
+
+        items = [u' OG12993 is not interesting (Jan. 26.10 UT)\n']
+        expected = [u'OG12993', '', '', u'(Jan. 26.10 UT)']
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
@@ -248,16 +331,16 @@ class TestPreviousNEOCPParser(TestCase):
 
         items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
         expected = [u'WQ39346', '2015 QF', '', u'(Aug. 19.79 UT)']
-        
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
-        
+
 
     def test_neo(self):
 
         items = [u' 2015 PK', BeautifulSoup('<sub>229</sub>', "html.parser").sub, u' = P10n00U (Aug. 17.98 UT)  [see ', BeautifulSoup('<a href="/mpec/K15/K15Q10.html"><i>MPEC</i> 2015-Q10</a>', "html.parser").a, u']\n']
         expected = [u'P10n00U', u'2015 PK229', u'MPEC 2015-Q10', u'(Aug. 17.98 UT)']
-        
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
@@ -267,7 +350,7 @@ class TestPreviousNEOCPParser(TestCase):
             BeautifulSoup('<a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>', "html.parser").a,
             u']\n']
         expected = [u'SW40sQ', u'C/2015 Q1', u'IAUC 2015-', u'(Aug. 19.49 UT)']
-        
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
@@ -278,7 +361,7 @@ class TestPreviousNEOCPParser(TestCase):
             u']\n']
 
         expected = [u'P10ms6N', u'C/2015 O1', u'CBET 4119', u'(July 21.99 UT)']
-        
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
@@ -288,27 +371,35 @@ class TestPreviousNEOCPParser(TestCase):
             BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004136.txt"><i>CBET</i> 4136</a>', "html.parser").a,
              u']\n']
         expected = [u'MAT01', u'C/2015 P3', u'CBET 4136', u'(Aug. 11.23 UT)']
-        
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
     def test_bad_comet2(self):
 
-        items = [u' Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)  [see ', 
+        items = [u' Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)  [see ',
             BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/iauc/20100/2015-.html"><i>IAUC</i> 2015-</a>', "html.parser").a,
              u']\n']
         expected = [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
-        
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
     def test_bad_comet3(self):
 
-        items = [u' Comet C/2015 X8 = NM0015a (Dec. 18.63 UT)  [see ', 
+        items = [u' Comet C/2015 X8 = NM0015a (Dec. 18.63 UT)  [see ',
             BeautifulSoup(' <a href="/mpec/K15/K15Y20.html"><i>MPEC</i> 2015-Y20</a>', "html.parser").a,
              u']\n']
         expected = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Dec. 18.63 UT)']
-        
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_bad_comet4(self):
+
+        items = [u' Comet C/2016 C1 = P10ABXd (Mar. 30.47 UT)\n']
+        expected = [u'P10ABXd', u'C/2016 C1', u'', u'(Mar. 30.47 UT)']
+
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
@@ -1005,7 +1096,7 @@ class TestParseMPCObsFormat(TestCase):
         params = parse_mpcobs(self.test_lines['p_ S_l'])
 
         self.compare_dict(expected_params, params)
-        
+
     def test_p_spaces_l(self):
         expected_params = { 'body'  : 'N00809b',
                             'extrainfo' : self.test_lines['p_ s_l'],
@@ -1023,7 +1114,7 @@ class TestParseMPCObsFormat(TestCase):
         params = parse_mpcobs(self.test_lines['n_ R_l'])
 
         self.compare_dict(expected_params, params)
-        
+
     def test_p_spacer_l(self):
         expected_params = {}
 
@@ -1068,12 +1159,12 @@ class TestParseMPCObsFormat(TestCase):
 
     def test_p_spacex_l(self):
         # This tests the case of an 'x' observation for a replaced discovery
-        # observation. From the MPC page 
+        # observation. From the MPC page
         # (http://www.minorplanetcenter.net/iau/info/OpticalObs.html, Note 2):
         # "In addition, there are 'X' and 'x' which are used only for already-
-        # filed observations. 'X' was given originally only to discovery 
-        # observations that were approximate or semi-accurate and that had accurate 
-        # measures corresponding to the time of discovery: this has been extended to 
+        # filed observations. 'X' was given originally only to discovery
+        # observations that were approximate or semi-accurate and that had accurate
+        # measures corresponding to the time of discovery: this has been extended to
         # other replaced discovery observations. Observations marked 'X'/'x' are to be
         # suppressed in residual blocks. They are retained so that there exists
         # an original record of a discovery. "
@@ -1163,7 +1254,7 @@ class TestFetchNEOCPObservations(TestCase):
 
         observations = fetch_NEOCP_observations(page)
         self.assertEqual(expected, observations)
-      
+
 class TestIMAPLogin(TestCase):
 
     def setUp(self):
@@ -1394,6 +1485,7 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'site' : 'TFN',
                             'filter' : 'w',
+                            'exp_type':'EXPOSE',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1411,6 +1503,7 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
                             'pondtelescope' :'0m4',
                             'observatory' : '',
+                            'exp_type':'EXPOSE',
                             'site' : 'OGG',
                             'filter' : 'w',
                             'binning' : 2}
@@ -1430,6 +1523,7 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
                             'pondtelescope' :'0m4',
                             'observatory' : '',
+                            'exp_type':'EXPOSE',
                             'site' : 'COJ',
                             'filter' : 'w',
                             'binning' : 2}
@@ -1444,7 +1538,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': 'doma',
-                            'pondtelescope': '1m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '1m0a',
                             'site': 'LSC',
                             'site_code': 'W85'}
 
@@ -1455,6 +1550,7 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(expected_params, params)
 
+
     def test_lsc_sinistro(self):
         test_params = {
               'exp_count': 42,
@@ -1463,8 +1559,9 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0',
+                            'pondtelescope' :'1m0a',
                             'observatory' : 'domb',
+                            'exp_type':'EXPOSE',
                             'site' : 'LSC',
                             'filter' : 'w',
                             'binning' : 1}
@@ -1482,8 +1579,9 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0',
+                            'pondtelescope' :'1m0a',
                             'observatory' : 'domb',
+                            'exp_type':'EXPOSE',
                             'site' : 'LSC',
                             'filter' : 'w',
                             'binning' : 1,
@@ -1503,8 +1601,9 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
-                            'pondtelescope' :'2m0',
+                            'pondtelescope' :'2m0a',
                             'observatory' : '',
+                            'exp_type':'EXPOSE',
                             'site' : 'OGG',
                             'filter' : 'solar',
                             'binning' : 2}
@@ -1522,8 +1621,9 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
-                            'pondtelescope' :'2m0',
+                            'pondtelescope' :'2m0a',
                             'observatory' : '',
+                            'exp_type':'EXPOSE',
                             'site' : 'COJ',
                             'filter' : 'solar',
                             'binning' : 2}
@@ -1541,8 +1641,9 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0',
+                            'pondtelescope' :'1m0a',
                             'observatory' : '',
+                            'exp_type':'EXPOSE',
                             'site' : 'ELP',
                             'filter' : 'w',
                             'binning' : 1}
@@ -1557,7 +1658,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'pondtelescope': '1m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '1m0a',
                             'site': 'CPT',
                             'site_code': 'K92'}
 
@@ -1573,7 +1675,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': 'doma',
-                            'pondtelescope': '1m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '1m0a',
                             'site': 'LSC',
                             'site_code': 'W85'}
 
@@ -1589,7 +1692,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': 'domb',
-                            'pondtelescope': '1m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '1m0a',
                             'site': 'LSC',
                             'site_code': 'W86'}
 
@@ -1605,7 +1709,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'pondtelescope': '1m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '1m0a',
                             'site': 'ELP',
                             'site_code': 'V37'}
 
@@ -1621,7 +1726,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': 'domb',
-                            'pondtelescope': '1m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '1m0a',
                             'site': 'LSC',
                             'site_code': 'W86'}
 
@@ -1637,7 +1743,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'pondtelescope': '1m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '1m0a',
                             'site': 'CPT',
                             'site_code': 'K93'}
 
@@ -1653,7 +1760,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'solar',
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
-                            'pondtelescope': '2m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '2m0a',
                             'site': 'OGG',
                             'site_code': 'F65'}
 
@@ -1669,7 +1777,8 @@ class TestConfigureDefaults(TestCase):
                             'filter': 'solar',
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
-                            'pondtelescope': '2m0',
+                            'exp_type':'EXPOSE',
+                            'pondtelescope': '2m0a',
                             'site': 'COJ',
                             'site_code': 'E10'}
 

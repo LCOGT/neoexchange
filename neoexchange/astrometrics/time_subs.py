@@ -17,8 +17,11 @@ GNU General Public License for more details.
 from datetime import datetime,timedelta
 from math import degrees
 import time
+import logging
 
 import pyslalib.slalib as S
+
+logger = logging.getLogger(__name__)
 
 def get_semester_start(date):
 
@@ -386,6 +389,8 @@ def timeit(method):
 
         print '%r (%r, %r) %2.2f sec' % \
               (method.__name__, args, kw, te-ts)
+        logger.debug("%r (%r, %r) %2.2f sec" % \
+              (method.__name__, args, kw, te-ts))
         return result
 
     return timed

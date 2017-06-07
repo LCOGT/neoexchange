@@ -85,6 +85,7 @@ class Command(BaseCommand):
                 # revision
                 check_body = Body.objects.filter(**kwargs)
                 if check_body.count() == 0:
+                    kwargs['updated'] = True
                     if save_and_make_revision(body, kwargs):
                         msg = "Updated %s" % obj_id
                     else:

@@ -1,12 +1,42 @@
 # NEO Exchange
 
-Portal for scheduling observations of NEOs using LCOGT
+Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
+
+
+### 1.8.0
+
+- Adding ability to push candidates to Agent NEO on the Zooniverse platform
+- Change ReqDB observation submission to Valhalla API submission
+
+### 1.7.2
+
+New MPC site code (Q58) for the 0.4m telescope at Siding Spring. Use case-sensitive searches for updating NEOCP Bodies.
+
+### 1.7.1
+
+Bug fixes in zeropoint determination for newer versions of astroquery. Deploy mtdlink into the container.
 
 ### 1.7.0
 
 Astrometry in the browser
+
+### 1.6.9
+
+Change overheads for Sinisto observations. Handle scheduling problems at semester changover at CPT.
+
+### 1.6.8
+
+Cleanups for leaner docker containers.
+
+### 1.6.7.1
+
+Lower the default IPP values. Round arc and not-seen values on the home page.
+
+### 1.6.7
+
+Trap the submission of objects that have no visibility windows.
 
 ### 1.6.6
 

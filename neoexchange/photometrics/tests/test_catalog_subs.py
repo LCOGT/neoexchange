@@ -31,7 +31,7 @@ import astropy.units as u
 from numpy import where, array
 from numpy.testing import assert_allclose
 
-from core.models import Body
+from core.models import Body, Proposal, Block, Frame
 
 #Import module to test
 from photometrics.catalog_subs import *
@@ -71,14 +71,14 @@ class ZeropointUnitTest(TestCase):
 #        print cat_name
 #        print cat_table
 
-        ra_first_source = cat_table['_RAJ2000'][0]
+        ra_first_source = cat_table['RAJ2000'][0]
 
-        dec_first_source = cat_table['_DEJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
 
         rmag_third_source = cat_table['rmag'][2]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 6)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 6)
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
@@ -100,14 +100,14 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m")
 
-        ra_first_source = cat_table['_RAJ2000'][0]
+        ra_first_source = cat_table['RAJ2000'][0]
 
-        dec_first_source = cat_table['_DEJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
 
         rmag_third_source = cat_table['rmag'][2]
 
-        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
-        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 6)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 6)
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
@@ -129,9 +129,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "PPMXL")
 
-        ra_first_source = cat_table['_RAJ2000'][0]
+        ra_first_source = cat_table['RAJ2000'][0]
 
-        dec_first_source = cat_table['_DEJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
 
         rmag_first_source = cat_table['r2mag'][0]
 
@@ -158,9 +158,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5", cat_name = "PPMXL")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['r2mag'][-1]
 
@@ -187,9 +187,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40, cat_name = "PPMXL")
 
-        ra_first_source = cat_table['_RAJ2000'][0]
+        ra_first_source = cat_table['RAJ2000'][0]
 
-        dec_first_source = cat_table['_DEJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
 
         rmag_first_source = cat_table['r2mag'][0]
 
@@ -216,14 +216,14 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "15m", "15m")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_3rdlast_source = cat_table['rmag'][-3]
 
-        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
-        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
+        self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 6)
+        self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 6)
         self.assertAlmostEqual(expected_rmag_3rdlast_source, rmag_3rdlast_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
@@ -245,9 +245,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(266.4168, -29.0078, "100m", "100m", "PPMXL")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['r2mag'][-1]
 
@@ -274,9 +274,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(298.590, 35.201, "0.5m", "0.5m", "PPMXL")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['rmag'][-1] #will replace cat_name with UCAC4 after failing with PPMXL
 
@@ -303,9 +303,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(298.590, 35.201, "0.5m", "0.5m")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
 
@@ -326,9 +326,9 @@ class ZeropointUnitTest(TestCase):
 
         cat_table, cat_name = get_vizier_catalog_table(306.6792, -26.6278, "15m", "15m")
 
-        ra_last_source = cat_table['_RAJ2000'][-1]
+        ra_last_source = cat_table['RAJ2000'][-1]
 
-        dec_last_source = cat_table['_DEJ2000'][-1]
+        dec_last_source = cat_table['DEJ2000'][-1]
 
         rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
 
@@ -369,7 +369,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
@@ -489,7 +489,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
@@ -619,7 +619,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0),
                             (299.860871, 35.381474, 14.0799999237, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
@@ -749,7 +749,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "UCAC")
 
@@ -879,7 +879,7 @@ class ZeropointUnitTest(TestCase):
                             (299.31235, 35.07259, 14.8500003815, 0),
                             (299.362172, 35.351208, 14.2600002289, 1)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('_RAJ2000', '_DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
@@ -1026,16 +1026,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 12
 
+	expected_cat_name = "PPMXL"
+
         expected_len_cross_match_table = 21
 
         catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_cross_match_and_zeropoint_with_UCAC4(self):
@@ -1048,16 +1051,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 26
 
+	expected_cat_name = "UCAC4"
+
         expected_len_cross_match_table = 56
 
         catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile)
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_force_to_UCAC4(self):
@@ -1071,16 +1077,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 9
 
+	expected_cat_name = "UCAC4"
+
         expected_len_cross_match_table = 19
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'cpt1m010-kb70-20160210-0365-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_UCAC4(self):
@@ -1094,16 +1103,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 8
 
+	expected_cat_name = "UCAC4"
+
         expected_len_cross_match_table = 16
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile)
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile)
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_PPMXL(self):
@@ -1117,16 +1129,19 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 5
 
+	expected_cat_name = "PPMXL"
+
         expected_len_cross_match_table = 8
 
-        catfile = os.path.join(os.getenv('HOME'), 'Asteroids', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
+        catfile = os.path.join('photometrics', 'tests', 'CatalogFiles', 'elp1m008-fl05-20160217-0218-e90_cat.fits')
 
-        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name="PPMXL")
 
         self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
         self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
         self.assertAlmostEqual(expected_count, count, 1)
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     @skipIf(True, "write test for no internet")
@@ -1607,7 +1622,8 @@ class FITSReadHeader(FITSUnitTest):
                             'zeropoint'     : -99,
                             'zeropoint_err' : -99,
                             'zeropoint_src' : 'N/A',
-                            'wcs'           : self.test_banzaiwcs
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
                           }
         expected_cattype = "BANZAI"
 
@@ -2096,9 +2112,148 @@ class ExternalCodeUnitTest(TestCase):
                 print "Error removing temporary test directory", self.test_dir
 
 
+class UpdateFrameZeropointTest(FITSUnitTest):
+
+    def setUp(self):
+
+        # Create test body
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body_with_provname, created = Body.objects.get_or_create(**params)
+
+        # Create test proposal
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        # Create test block
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'LSC',
+                         'body'     : self.body_with_provname,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : self.body_with_provname.current_name() + '_CPT-20150420',
+                         'block_start' : '2017-03-08 05:05:00',
+                         'block_end'   : '2017-03-08 05:22:36',
+                         'tracking_number' : '0000358587',
+                         'num_exposures' : 6L,
+                         'exp_length' : 120.0,
+                         'active'   : False
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        self.test_header = { 'astrometric_catalog': '2MASS',
+                        'astrometric_fit_nstars': -4,
+                        'astrometric_fit_rms': 0.3,
+                        'astrometric_fit_status': 0,
+                        'exptime': 120.0,
+                        'field_center_dec': -28.85420305555556,
+                        'field_center_ra': 131.64724583333333,
+                        'field_height': '26.5940m',
+                        'field_width': '26.5940m',
+                        'filter': 'w',
+                        'framename': 'lsc1m005-fl15-20170307-0121-e00.fits',
+                        'fwhm': 1.908032083525876,
+                        'instrument': 'fl15',
+                        'obs_date': datetime(2017, 3, 8, 5, 5, 40, 100000),
+                        'obs_midpoint': datetime(2017, 3, 8, 5, 6, 40, 100000),
+                        'pixel_scale': 0.38956,
+                        'reduction_level': 91,
+                        'site_code': 'W85',
+                        'zeropoint': 29.6113857745,
+                        'zeropoint_err': 0.0414642608048,
+                        'zeropoint_src': 'N/A'
+                      }
+
+        # Create test frame
+        frame_params = {    'sitecode':'W85',
+                            'instrument':'fl15',
+                            'filter':'w',
+                            'filename':'lsc1m005-fl15-20170307-0121-e91.fits',
+                            'exptime':120.0,
+                            'midpoint':datetime(2017, 3, 8, 5, 6, 40),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':1.9080,
+                            'frametype':91,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':None,
+                            'astrometric_catalog':' ',
+                            'photometric_catalog': ' '
+                        }
+
+        self.test_frame1, created = Frame.objects.get_or_create(**frame_params)
+
+        frame_params = {    'sitecode':'W85',
+                            'instrument':'fl15',
+                            'filter':'w',
+                            'filename':'lsc1m005-fl15-20170307-0121-e91_ldac.fits',
+                            'exptime':120.0,
+                            'midpoint':datetime(2017, 3, 8, 5, 6, 40),
+                            'block':self.test_block,
+                            'zeropoint':-99,
+                            'zeropoint_err':-99,
+                            'fwhm':1.9080,
+                            'frametype':6,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':None,
+                            'astrometric_catalog':' ',
+                            'photometric_catalog': ' '
+                        }
+
+        self.test_frame2, created = Frame.objects.get_or_create(**frame_params)
+
+    def test_update_SINGLE_frame_zeropoint(self):
+
+        ast_cat_name = "2MASS"
+        phot_cat_name = "UCAC4"
+        fits_file = 'lsc1m005-fl15-20170307-0121-e91.fits'
+
+        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=self.test_frame1.frametype)
+
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+        self.assertEqual(frame.zeropoint_err, 0.0414642608048)
+        self.assertEqual(frame.rms_of_fit, 0.3)
+        self.assertEqual(frame.nstars_in_fit, -4)
+        self.assertEqual(frame.astrometric_catalog, '2MASS')
+        self.assertEqual(frame.photometric_catalog, 'UCAC4')
+
+    def test_update_BANZAI_LDAC_frame_zeropoint(self):
+
+        ast_cat_name = "2MASS"
+        phot_cat_name = "UCAC4"
+        fits_file = 'lsc1m005-fl15-20170307-0121-e91_ldac.fits'
+
+        frame = update_frame_zeropoint(self.test_header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=self.test_frame2.frametype)
+
+        self.assertEqual(frame.zeropoint, 29.6113857745)
+        self.assertEqual(frame.zeropoint_err, 0.0414642608048)
+        self.assertEqual(frame.rms_of_fit, 0.3)
+        self.assertEqual(frame.nstars_in_fit, -4)
+        self.assertEqual(frame.astrometric_catalog, '2MASS')
+        self.assertEqual(frame.photometric_catalog, 'UCAC4')
+
 class MakeSEXTFileTest(FITSUnitTest):
 
     def setUp(self):
+
+        # Hand-rolled WCS for pickling testing
+        self.naxis_header = {'NAXIS1' : 4096, 'NAXIS2' : 4096, 'NAXIS' :2}
+        self.w = WCS(self.naxis_header)
 
         frame_params = {    'sitecode':'V37',
                             'instrument':'fl05',
@@ -2113,6 +2268,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'frametype':0,
                             'rms_of_fit':None,
                             'nstars_in_fit':10.0,
+                            'wcs':self.w
                         }
 
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
@@ -2151,6 +2307,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'frametype':0,
                             'rms_of_fit':None,
                             'nstars_in_fit':3.0,
+                            'wcs':self.w
                         }
 
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params)
@@ -2177,6 +2334,48 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.test_cat_src_2, created = CatalogSources.objects.get_or_create(**source_params)
 
         source_params = {   'frame':self.test_frame_2,
+                            'obs_x': 886.244640655,
+                            'obs_y': 4078.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_3, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_2,
+                            'obs_x': 4086.244640655,
+                            'obs_y': 178.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_4, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_2,
                             'obs_x': 708.002750723,
                             'obs_y': 1960.00075651,
                             'obs_ra': 218.164206491,
@@ -2195,7 +2394,113 @@ class MakeSEXTFileTest(FITSUnitTest):
                             'flux_max': 4937.96289062,
                             'threshold': 28.2903823853
                         }
-        self.test_cat_src_3, created = CatalogSources.objects.get_or_create(**source_params)
+        self.test_cat_src_5, created = CatalogSources.objects.get_or_create(**source_params)
+
+        # Hand-rolled WCS for pickling testing
+        self.naxis_header2 = {'NAXIS1' : 1500, 'NAXIS2' : 2000, 'NAXIS' :2}
+        self.w2 = WCS(self.naxis_header2)
+
+        frame_params = {    'sitecode':'K92',
+                            'instrument':'kb76',
+                            'filter':'w',
+                            'filename':'ldac_test_catalog.fits',
+                            'exptime':115.0,
+                            'midpoint':datetime(2016, 4, 28, 20, 11, 54),
+                            'block':None,
+                            'zeropoint':27.7305864552,
+                            'zeropoint_err':0.0776317342309,
+                            'fwhm':2.886,
+                            'frametype':0,
+                            'rms_of_fit':None,
+                            'nstars_in_fit':3.0,
+                            'wcs':self.w2
+                        }
+
+        self.test_frame_3, created = Frame.objects.get_or_create(**frame_params)
+
+        source_params = {   'frame':self.test_frame_3,
+                            'obs_x': 886.244640655,
+                            'obs_y': 18.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_6, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_3,
+                            'obs_x': 886.244640655,
+                            'obs_y': 1078.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_7, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_3,
+                            'obs_x': 1086.244640655,
+                            'obs_y': 178.2107121645,
+                            'obs_ra': 218.143035602,
+                            'obs_dec': 9.89449095608,
+                            'obs_mag': 16.2081203461,
+                            'err_obs_ra': 0.0000039612496427,
+                            'err_obs_dec': 0.0000041685561005,
+                            'err_obs_mag': 0.00291323265992,
+                            'background': 169.387756348,
+                            'major_axis': 1.67034721375,
+                            'minor_axis': 1.67034721375,
+                            'position_angle': -77.6206283569,
+                            'ellipticity': 0.0477138161659,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 1086.3104248,
+                            'threshold': 29.7845497131
+                        }
+        self.test_cat_src_8, created = CatalogSources.objects.get_or_create(**source_params)
+
+        source_params = {   'frame':self.test_frame_3,
+                            'obs_x': 708.002750723,
+                            'obs_y': 1960.00075651,
+                            'obs_ra': 218.164206491,
+                            'obs_dec': 9.64089784636,
+                            'obs_mag': 18.4867630005,
+                            'err_obs_ra': 0.0000016381997233,
+                            'err_obs_dec': 0.0000016349852456,
+                            'err_obs_mag': 0.00311457808129,
+                            'background': 43.1037330627,
+                            'major_axis': 0.651648461819,
+                            'minor_axis': 0.648237645626,
+                            'position_angle': 7.21760177612,
+                            'ellipticity': 0.00523412227631,
+                            'aperture_size': 3,
+                            'flags': 0,
+                            'flux_max': 4937.96289062,
+                            'threshold': 28.2903823853
+                        }
+        self.test_cat_src_9, created = CatalogSources.objects.get_or_create(**source_params)
 
     def test_dictionary_creation(self):
 
@@ -2255,24 +2560,9 @@ class MakeSEXTFileTest(FITSUnitTest):
 
         self.assertEqual(sext_line, test_line)
 
-    def test_multiple_sources_sext_dict(self):
+    def test_multiple_sources_sext_dict_trimmed(self):
 
         test_dict_first = { 'number':1,
-                            'obs_x':886.245,
-                            'obs_y':18.211,
-                            'obs_mag':16.2081,
-                            'theta':-77.62,
-                            'elongation':1.00,
-                            'fwhm':3.34,
-                            'flags':0,
-                            'deltamu':3.9049,
-                            'flux':40643.1,
-                            'area':8.7652,
-                            'ra':218.14304,
-                            'dec':9.89449
-                          }
-
-        test_dict_last = {  'number':2,
                             'obs_x':708.003,
                             'obs_y':1960.001,
                             'obs_mag':18.4868,
@@ -2292,6 +2582,8 @@ class MakeSEXTFileTest(FITSUnitTest):
 
         sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename, catalog_type)
 
+        self.assertEqual(len(sext_dict_list), 1)
+
         self.assertEqual(sext_dict_list[0]['number'], test_dict_first['number'])
         self.assertAlmostEqual(sext_dict_list[0]['obs_x'], test_dict_first['obs_x'], 3)
         self.assertAlmostEqual(sext_dict_list[0]['obs_y'], test_dict_first['obs_y'], 3)
@@ -2306,6 +2598,117 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_dict_list[0]['ra'], test_dict_first['ra'], 5)
         self.assertAlmostEqual(sext_dict_list[0]['dec'], test_dict_first['dec'], 5)
 
+    def test_multiple_sources_sext_dict_untrimmed(self):
+
+        test_dict_first = { 'number':1,
+                            'obs_x':886.245,
+                            'obs_y':18.211,
+                            'obs_mag':16.2081,
+                            'theta':-77.62,
+                            'elongation':1.00,
+                            'fwhm':3.34,
+                            'flags':0,
+                            'deltamu':3.9049,
+                            'flux':40643.1,
+                            'area':8.7652,
+                            'ra':218.14304,
+                            'dec':9.89449
+                          }
+
+        test_dict_middle1 = { 'number':2,
+                              'obs_x':886.245,
+                              'obs_y':1078.211,
+                              'obs_mag':16.2081,
+                              'theta':-77.62,
+                              'elongation':1.00,
+                              'fwhm':3.34,
+                              'flags':0,
+                              'deltamu':3.9049,
+                              'flux':40643.1,
+                              'area':8.7652,
+                              'ra':218.14304,
+                              'dec':9.89449
+                           }
+
+        test_dict_middle2 = { 'number':3,
+                              'obs_x':1086.245,
+                              'obs_y':178.211,
+                              'obs_mag':16.2081,
+                              'theta':-77.62,
+                              'elongation':1.00,
+                              'fwhm':3.34,
+                              'flags':0,
+                              'deltamu':3.9049,
+                              'flux':40643.1,
+                              'area':8.7652,
+                              'ra':218.14304,
+                              'dec':9.89449
+                           }
+
+        test_dict_last = {  'number':4,
+                            'obs_x':708.003,
+                            'obs_y':1960.001,
+                            'obs_mag':18.4868,
+                            'theta':7.218,
+                            'elongation':1.005,
+                            'fwhm':1.30,
+                            'flags':0,
+                            'deltamu':5.605,
+                            'flux':4983.4,
+                            'area':1.3271,
+                            'ra':218.16421,
+                            'dec':9.64090
+                         }
+
+        cat_ldacfilename = os.path.join(os.path.sep, 'photometrics', 'tests', 'ldac_test_catalog.fits')
+        catalog_type = 'FITS_LDAC'
+
+        sext_dict_list, fits_filename = make_sext_dict_list(cat_ldacfilename, catalog_type)
+
+        self.assertEqual(len(sext_dict_list), 4)
+
+        self.assertEqual(sext_dict_list[0]['number'], test_dict_first['number'])
+        self.assertAlmostEqual(sext_dict_list[0]['obs_x'], test_dict_first['obs_x'], 3)
+        self.assertAlmostEqual(sext_dict_list[0]['obs_y'], test_dict_first['obs_y'], 3)
+        self.assertAlmostEqual(sext_dict_list[0]['obs_mag'], test_dict_first['obs_mag'], 4)
+        self.assertAlmostEqual(sext_dict_list[0]['theta'], test_dict_first['theta'], 1)
+        self.assertAlmostEqual(sext_dict_list[0]['elongation'], test_dict_first['elongation'], 3)
+        self.assertAlmostEqual(sext_dict_list[0]['fwhm'], test_dict_first['fwhm'], 2)
+        self.assertEqual(sext_dict_list[0]['flags'], test_dict_first['flags'])
+        self.assertAlmostEqual(sext_dict_list[0]['deltamu'], test_dict_first['deltamu'], 3)
+        self.assertAlmostEqual(sext_dict_list[0]['flux'], test_dict_first['flux'], 1)
+        self.assertAlmostEqual(sext_dict_list[0]['area'], test_dict_first['area'], 4)
+        self.assertAlmostEqual(sext_dict_list[0]['ra'], test_dict_first['ra'], 5)
+        self.assertAlmostEqual(sext_dict_list[0]['dec'], test_dict_first['dec'], 5)
+
+        self.assertEqual(sext_dict_list[1]['number'], test_dict_middle1['number'])
+        self.assertAlmostEqual(sext_dict_list[1]['obs_x'], test_dict_middle1['obs_x'], 3)
+        self.assertAlmostEqual(sext_dict_list[1]['obs_y'], test_dict_middle1['obs_y'], 3)
+        self.assertAlmostEqual(sext_dict_list[1]['obs_mag'], test_dict_middle1['obs_mag'], 4)
+        self.assertAlmostEqual(sext_dict_list[1]['theta'], test_dict_middle1['theta'], 1)
+        self.assertAlmostEqual(sext_dict_list[1]['elongation'], test_dict_middle1['elongation'], 3)
+        self.assertAlmostEqual(sext_dict_list[1]['fwhm'], test_dict_middle1['fwhm'], 2)
+        self.assertEqual(sext_dict_list[1]['flags'], test_dict_middle1['flags'])
+        self.assertAlmostEqual(sext_dict_list[1]['deltamu'], test_dict_middle1['deltamu'], 3)
+        self.assertAlmostEqual(sext_dict_list[1]['flux'], test_dict_middle1['flux'], 1)
+        self.assertAlmostEqual(sext_dict_list[1]['area'], test_dict_middle1['area'], 4)
+        self.assertAlmostEqual(sext_dict_list[1]['ra'], test_dict_middle1['ra'], 5)
+        self.assertAlmostEqual(sext_dict_list[1]['dec'], test_dict_middle1['dec'], 5)
+
+        self.assertEqual(sext_dict_list[2]['number'], test_dict_middle2['number'])
+        self.assertAlmostEqual(sext_dict_list[2]['obs_x'], test_dict_middle2['obs_x'], 3)
+        self.assertAlmostEqual(sext_dict_list[2]['obs_y'], test_dict_middle2['obs_y'], 3)
+        self.assertAlmostEqual(sext_dict_list[2]['obs_mag'], test_dict_middle2['obs_mag'], 4)
+        self.assertAlmostEqual(sext_dict_list[2]['theta'], test_dict_middle2['theta'], 1)
+        self.assertAlmostEqual(sext_dict_list[2]['elongation'], test_dict_middle2['elongation'], 3)
+        self.assertAlmostEqual(sext_dict_list[2]['fwhm'], test_dict_middle2['fwhm'], 2)
+        self.assertEqual(sext_dict_list[2]['flags'], test_dict_middle2['flags'])
+        self.assertAlmostEqual(sext_dict_list[2]['deltamu'], test_dict_middle2['deltamu'], 3)
+        self.assertAlmostEqual(sext_dict_list[2]['flux'], test_dict_middle2['flux'], 1)
+        self.assertAlmostEqual(sext_dict_list[2]['area'], test_dict_middle2['area'], 4)
+        self.assertAlmostEqual(sext_dict_list[2]['ra'], test_dict_middle2['ra'], 5)
+        self.assertAlmostEqual(sext_dict_list[2]['dec'], test_dict_middle2['dec'], 5)
+
         self.assertEqual(sext_dict_list[-1]['number'], test_dict_last['number'])
         self.assertAlmostEqual(sext_dict_list[-1]['obs_x'], test_dict_last['obs_x'], 3)
         self.assertAlmostEqual(sext_dict_list[-1]['obs_y'], test_dict_last['obs_y'], 3)
@@ -2319,8 +2722,6 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertAlmostEqual(sext_dict_list[-1]['area'], test_dict_last['area'], 4)
         self.assertAlmostEqual(sext_dict_list[-1]['ra'], test_dict_last['ra'], 5)
         self.assertAlmostEqual(sext_dict_list[-1]['dec'], test_dict_last['dec'], 5)
-
-        self.assertEqual(len(sext_dict_list), 2)
 
     def test_make_sext_line_list(self):
 
@@ -2360,26 +2761,3 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertEqual(len(sext_line_list), 2)
         self.assertEqual(sext_line_list[0], test_line_list[0])
         self.assertEqual(sext_line_list[-1], test_line_list[1])
-
-
-class TestMakeSEXTFile(ExternalCodeUnitTest):
-
-    def test_make_sext_file(self):
-
-        expected_first_line =  '       405      5.959    800.006  20.7902  -89.1       1.070      0.63   0  2.82          597.2     0 218.25847   9.79143'
-        expected_second_line = '        98      6.019   1641.004  19.9684  -84.8       1.005      0.58   0  4.16         1273.2     0 218.25739   9.68169'
-
-        cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
-        catalog_type = 'FITS_LDAC'
-
-        fits_filename = make_sext_file(self.test_dir, cat_ldacfilename, catalog_type)
-
-        sext_file = os.path.join(self.test_dir, fits_filename.replace('.fits', '.sext'))
-        self.assertTrue(os.path.exists(sext_file))
-        test_file = open(sext_file, 'r')
-        test_lines = test_file.readlines()
-        test_file.close()
-
-        self.assertEqual(692, len(test_lines))
-        self.assertEqual(expected_first_line, test_lines[0].rstrip())
-        self.assertEqual(expected_second_line, test_lines[1].rstrip())

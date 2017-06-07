@@ -12,14 +12,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='frame',
-            name='x_size',
-        ),
-        migrations.RemoveField(
-            model_name='frame',
-            name='y_size',
-        ),
         migrations.AddField(
             model_name='frame',
             name='wcs',

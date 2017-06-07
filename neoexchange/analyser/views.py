@@ -19,10 +19,11 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.core.urlresolvers import reverse, reverse_lazy
 from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
-from django.http import Http404, HttpResponse, HttpResponseServerError
+from django.http import Http404, HttpResponse, HttpResponseServerError, HttpResponseRedirect
 
 from core.models import Frame, Block, Candidate, SourceMeasurement
 from core.frames import find_images_for_block
+from core.views import generate_new_candidate
 
 import logging
 
@@ -45,38 +46,70 @@ class BlockFramesView(DetailView):
             context['analysed'] = analysed
         return context
 
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        context = self.get_context_data(object=self.object)
+        if context.get('images', False):
+            return self.render_to_response(context)
+        else:
+            messages.error(request, 'There are no frame IDs for Block {}'.format(self.object.pk))
+            return HttpResponseRedirect(reverse('block-view', kwargs={'pk':kwargs['pk']}))
+
+
 class ProcessCandidates(View):
 
     def post(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
         cand_ids = request.POST.getlist('objects[]','')
-        resp = analyser_to_source_measurement(block, cand_ids)
+        blockcandidate = request.POST.get('blockcandidate','')
+        resp = analyser_to_source_measurement(block, cand_ids, blockcandidate)
         if resp:
             return HttpResponse("ok", content_type="text/plain")
         else:
             return HttpResponseServerError("There was a problem", content_type="text/plain")
 
-def analyser_to_source_measurement(block, cand_ids):
-    body = block.body
-    frames = Frame.objects.filter(block=block, frameid__isnull=False).order_by('midpoint')
+def analyser_to_source_measurement(block, cand_ids, blockcandidate):
+
+    red_frames = Frame.objects.filter(block=block, frameid__isnull=False, frametype=Frame.BANZAI_RED_FRAMETYPE).order_by('midpoint')
+    ql_frames = Frame.objects.filter(block=block, frameid__isnull=False, frametype=Frame.BANZAI_QL_FRAMETYPE).order_by('midpoint')
+    if red_frames.count() >= ql_frames.count():
+        frames = red_frames
+    else:
+        frames = ql_frames
     if not frames:
         return False
     for cand_id in cand_ids:
-        cand = Candidate.objects.get(block=block, cand_id=cand_id)
+        cand = Candidate.objects.get(id=cand_id)
+        # If this candidate (cand_id) is the intended target of the Block, use
+        # that. Otherwise generate a new Body/asteroid candidate
+        discovery = False
+        if str(cand_id) == str(blockcandidate):
+            body = block.body
+        else:
+            body = generate_new_candidate(frames)
+            discovery = True
+        if not body:
+            return False
         detections = cand.unpack_dets()
         if len(detections) != frames.count():
             return False
         for det in detections:
             frame = frames[int(det[1])-1]
-            sm = SourceMeasurement()
-            sm.body = body
-            sm.frame = frame
-            sm.obs_ra = det[4]
+            params = {
+                'body'  : body,
+                'frame' : frame
+            }
+            sm, created = SourceMeasurement.objects.get_or_create(**params)
+            # Convert the detections RA's (in decimal hours) into decimal degrees
+            # before storing
+            sm.obs_ra = det[4] * 15.0
             sm.obs_dec = det[5]
             sm.obs_mag = det[8]
             sm.aperture_size = det[14]
-            sm.astrometric_catalog = '2MASS'
-            sm.photometric_catalog = 'UCAC4'
+            if discovery:
+                # Add discovery asterisk to the first detection
+                sm.flags = '*'
+                discovery = False
             sm.save()
     return True
 
