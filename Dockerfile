@@ -58,9 +58,6 @@ RUN pip install --upgrade pip \
     && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
     && rm -rf ~/.cache/pip
 
-# Ensure crond will run on all host operating systems
-RUN sed -i -e 's/\(session\s*required\s*pam_loginuid.so\)/#\1/' /etc/pam.d/crond
-
 # Copy operating system configuration files
 COPY docker/ /
 
