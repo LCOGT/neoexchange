@@ -98,3 +98,29 @@ class SuperBlockListValidationTest(FunctionalTest):
         actual_url = self.browser.current_url
         self.assertEqual(actual_url, target_url)
         
+        # He sees that there are both cadence and non-cadence Blocks scheduled.
+        self.check_for_header_in_table('id_blocks',
+            'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
+        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 7 of 5x42.0 secs Yes Active None Not Reported',
+                     u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 Reported']
+        self.check_for_row_in_table('id_blocks', testlines[0])
+        self.check_for_row_in_table('id_blocks', testlines[1])
+
+        # He clicks on one of the cadence block links and is taken to a page with details about the
+        # individual blocks
+        link = self.browser.find_element_by_link_text('1')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the block details page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, target_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions cadence details
+        self.assertIn('Cadence details', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Block: 1', header_text)
