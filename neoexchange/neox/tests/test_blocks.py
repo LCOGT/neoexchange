@@ -78,3 +78,23 @@ class BlockDetailValidationTest(FunctionalTest):
                      u'SITE ' + self.test_block.site.upper()]
         for line in testlines:
             self.check_for_row_in_table('id_blockdetail', line)
+
+class SuperBlockListValidationTest(FunctionalTest):
+
+    def test_can_view_superblocks(self):
+
+        # A user Foo, wishes to check on the progress of a multi-day cadence
+        self.browser.get(self.live_server_url)
+
+        # He sees a link to 'active blocks'
+        link = self.browser.find_element_by_partial_link_text('active blocks')
+        target_url = "{0}{1}".format(self.live_server_url, '/block/list/')
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the blocks page
+        with self.wait_for_page_load(timeout=20):
+            link.click()
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+        
