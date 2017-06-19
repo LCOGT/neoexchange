@@ -78,7 +78,11 @@
 	                    <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
     						</div>
 						<div class="four columns rightsidebar">
+							{% if body.update_time > body.ingest %}
+							<div class="section-title">Last Update: {{body.update_time|date:"Y-M-d H:i"}}</div>
+							{% else %}
 							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
+							{% endif %}
 							<h5 class="section-title">Orbital Elements</h5>
 							<table class="keyvalue-table" id="id_orbelements">
 								<tbody>
@@ -146,11 +150,11 @@
 									</tr>
 									<tr>
 										<td class="kv-key">Diameter in meters (average)</td>
-										<td class="kv-value">{{body.diameter|floatformat:1}}</td>
+										<td class="kv-value">{{body.diameter|floatformat:0}}</td>
 									</tr>
 									<tr>
 										<td class="kv-key">Diameter in meters<br/>(range)</td>
-										<td class="kv-value">{{body.diameter_range.0|floatformat:1}} - {{body.diameter_range.1|floatformat:1}}</td>
+										<td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
 									</tr>
 								</tbody>
 							</table>
