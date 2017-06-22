@@ -15,110 +15,149 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            'origin',
+            '--objects',
             type=str,
-            choices=['allneos', 'nasa', 'radar', 'objects'],
-            default='objects',
-            narg='?'
-            help='Updates object depending on choice: allneo=all origins, nasa=NASA affiliated origins, radar=radar observatory origins, objects=origins excluding MPC and LCO',
-            )
+            help='Updates objects from origins excluding MPC and LCO'
+        )
         
         parser.add_argument(
-            'time',
+            '--allneos',
+            type=str,
+            help='Updates all objects'
+        )
+        
+        parser.add_argument(
+            '--nasa',
+            type=str,
+            help='Updates objects from origins that are NASA affilated'
+        )
+        
+        parser.add_argument(
+            '--radar',
+            type=str,
+            help='Updates objects from radar observatories origins'
+        )
+        
+        parser.add_argument(
+            '--time',
             type=int,
             choices=range(1, 25),
             default=12,
-            narg='?'
-            help='Updates objects depending on number of hours past the objects original update',
-            )
+            help='Updates objects depending on number of hours past the objects original update'
+        )
             
     def handle(self, *args, **options):
-        print "I made it here"
-        if Body.origin in options['objects']:
         
+        if options['objects']:
             origins = ['N', 'S', 'D', 'G', 'A', 'R']
             
-            if Body.updated == False:
-                self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-                update_MPC_orbit(obj_id, origins)
-                # Wait between 10 and 20 seconds
-                delay = random_delay(10, 20)
-                self.stdout.write("Slept for %d seconds" % delay)
-
-            elif Body.updated == True:
-            #checks when it has been last updated
-
-                if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+            for Body.origin in origins:
+            
+                if Body.updated == False:
                     self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
                     self.stdout.write("Slept for %d seconds" % delay)
 
-        
-        elif Body.origin in options['allneos']:
+                elif Body.updated == True:
+                #checks when it has been last updated
+    
+                    if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+                        self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        update_MPC_orbit(obj_id, origins)
+                        # Wait between 10 and 20 seconds
+                        delay = random_delay(10, 20)
+                        self.stdout.write("Slept for %d seconds" % delay)
+    
             
+        elif options['allneos']:
             origins = ['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L']
-            
-            if Body.updated == False:
-                self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-                update_MPC_orbit(obj_id, origins)
-                # Wait between 10 and 20 seconds
-                delay = random_delay(10, 20)
-                self.stdout.write("Slept for %d seconds" % delay)
+        
+            for Body.origin in origins:
 
-            elif Body.updated == True:
-            #checks when it has been last updated
-
-                if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+                if Body.updated == False:
                     self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
                     self.stdout.write("Slept for %d seconds" % delay)
+        
+                elif Body.updated == True:
+                #checks when it has been last updated
+        
+                    if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+                        self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        update_MPC_orbit(obj_id, origins)
+                        # Wait between 10 and 20 seconds
+                        delay = random_delay(10, 20)
+                        self.stdout.write("Slept for %d seconds" % delay)
 
                 
-        elif Body.origin in options['nasa']:
-            
+        elif options['nasa']:
             origins = ['G', 'N']
-            
-            if Body.updated == False:
-                self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-                update_MPC_orbit(obj_id, origins)
-                # Wait between 10 and 20 seconds
-                delay = random_delay(10, 20)
-                self.stdout.write("Slept for %d seconds" % delay)
-
-            elif Body.updated == True:
-            #checks when it has been last updated
-
-                if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+                
+            for Body.origin in origins:             
+                        
+                if Body.updated == False:
                     self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
                     self.stdout.write("Slept for %d seconds" % delay)
 
+                elif Body.updated == True:
+                #checks when it has been last updated
+
+                    if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+                        self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        update_MPC_orbit(obj_id, origins)
+                        # Wait between 10 and 20 seconds
+                        delay = random_delay(10, 20)
+                        self.stdout.write("Slept for %d seconds" % delay)
+    
                             
-        elif Body.origin in options['radar']:
-            
+        elif options['radar']:
             origins = ['G','A','R']
+                
+            for Body.origin in origins:
             
-            if Body.updated == False:
-                self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-                update_MPC_orbit(obj_id, origins)
-                # Wait between 10 and 20 seconds
-                delay = random_delay(10, 20)
-                self.stdout.write("Slept for %d seconds" % delay)
+                if Body.updated == False:
+                    self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                    update_MPC_orbit(obj_id, origins)
+                    # Wait between 10 and 20 seconds
+                    delay = random_delay(10, 20)
+                    self.stdout.write("Slept for %d seconds" % delay)
+    
+                elif Body.updated == True:
+                #checks when it has been last updated
 
-            elif Body.updated == True:
-            #checks when it has been last updated
-
-                if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+                    if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+                        self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        update_MPC_orbit(obj_id, origins)
+                        # Wait between 10 and 20 seconds
+                        delay = random_delay(10, 20)
+                        self.stdout.write("Slept for %d seconds" % delay)
+        
+        else:
+            origins = ['N', 'S', 'D', 'G', 'A', 'R']
+            
+            for Body.origin in origins:
+            
+                if Body.updated == False:
                     self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
                     self.stdout.write("Slept for %d seconds" % delay)
 
-
+                elif Body.updated == True:
+                #checks when it has been last updated
+    
+                    if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
+                        self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        update_MPC_orbit(obj_id, origins)
+                        # Wait between 10 and 20 seconds
+                        delay = random_delay(10, 20)
+                        self.stdout.write("Slept for %d seconds" % delay)
+                        
