@@ -78,6 +78,7 @@ class Command(BaseCommand):
 
                 if Body.updated == False:
                     self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                    self.stdout.write("Reading NEO %s from %s" % name, origin)
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
@@ -88,6 +89,7 @@ class Command(BaseCommand):
         
                     if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
                         self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        self.stdout.write("Reading NEO %s from %s" % name, origin)
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
@@ -101,6 +103,7 @@ class Command(BaseCommand):
                         
                 if Body.updated == False:
                     self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                    self.stdout.write("Reading NEO %s from %s" % name, origin)
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
@@ -111,6 +114,7 @@ class Command(BaseCommand):
 
                     if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
                         self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        self.stdout.write("Reading NEO %s from %s" % name, origin)
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
@@ -124,6 +128,7 @@ class Command(BaseCommand):
             
                 if Body.updated == False:
                     self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                    self.stdout.write("Reading NEO %s from %s" % name, origin)
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
@@ -134,6 +139,7 @@ class Command(BaseCommand):
 
                     if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
                         self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        self.stdout.write("Reading NEO %s from %s" % name, origin)
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
@@ -146,6 +152,7 @@ class Command(BaseCommand):
             
                 if Body.updated == False:
                     self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                    self.stdout.write("Reading NEO %s from %s" % name, origin)
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
@@ -156,6 +163,7 @@ class Command(BaseCommand):
     
                     if Body.update_time >= datetime.now() - timedelta(hours=options['time']):
                         self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+                        self.stdout.write("Reading NEO %s from %s" % name, origin)
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
