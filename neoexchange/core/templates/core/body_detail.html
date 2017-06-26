@@ -78,11 +78,7 @@
 	                    <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
     						</div>
 						<div class="four columns rightsidebar">
-							{% if body.update_time > body.ingest %}
-							<div class="section-title">Last Update: {{body.update_time|date:"Y-M-d H:i"}}</div>
-							{% else %}
 							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
-							{% endif %}
 							<h5 class="section-title">Orbital Elements</h5>
 							<table class="keyvalue-table" id="id_orbelements">
 								<tbody>
