@@ -18,4 +18,3 @@ class Command(BaseCommand):
             update_MPC_orbit(obj_id, origin='G')
             # Wait between 10 and 20 seconds
             delay = random_delay(10, 20)
-            self.stdout.write("Slept for %d seconds" % delay)
