@@ -39,8 +39,9 @@ def albedo_distribution(f=0.253, bright=0.168, dark=0.03, a=asteroid_albedo()):
         top2 = a * math.exp((-a ** 2) / (2 * bright **2))
         prr = f * (top1 / dark ** 2) + (1 - f) * (top2 / bright ** 2)
         return prr
-    else: 
-        return 'Check your albedo!'
+    else:
+        logger.debug("Check your albedo")
+        return False
 
 def asteroid_diameter(a=asteroid_albedo(), h=7):
     '''This function calculates the diameter of an asteroid. It takes an albedo(a) 
@@ -50,20 +51,20 @@ def asteroid_diameter(a=asteroid_albedo(), h=7):
     See Wright et al. The Astronomical Journal, 2016, 152, 79'''
     
     if a <= 0.00:
-        return 'You cannot have a negative albedo!'
+        logger.debut("You cannot have a negative albedo")
+        return False
     else:
         diameter = 1329000 * math.sqrt((10 ** (-0.4 * h)) / a)
         return diameter
 
 if __name__ == '__main__':
-#this is the x and y numbers to be plot. the equation was two fractions so I typed out the numerators to make things easier later and the inside of the sqrt	
-#this will generate the x-axis number
+
     a_data = []
     prr_data = []
     dia_data1 = []
     dia_data2 = []
     dia_data3 = []
-    fig, ax2 = plt.subplots()
+    fig, ax1, ax2 = plt.subplots()
 
     for i in range(0, 100):
         a1 = asteroid_albedo()
@@ -81,23 +82,23 @@ if __name__ == '__main__':
     #this should plot the points
     num_bins = 100
     
-    #n, bins, patches = ax1.hist(a_data, num_bins, normed=1, label='Albedo Distribution')
-    #ax1.plot(a_data, prr_data,'k.', label='Albedo Distribution Best Fit')
+    n, bins, patches = ax1.hist(a_data, num_bins, normed=1, label='Albedo Distribution')
+    ax1.plot(a_data, prr_data,'k.', label='Albedo Distribution Best Fit')
     ax2.plot(a_data, dia_data1,'g.', label='Magnitude = 17.75')
     ax2.plot(a_data, dia_data2, 'r.', label='Magnitude = 20.0')
     ax2.plot(a_data, dia_data3, 'y.', label='Magnitude = 22.5')
     
-    #ax1.set_xlabel('Pv')
-    #ax1.set_ylabel('P(Pv)')
+    ax1.set_xlabel('Pv')
+    ax1.set_ylabel('P(Pv)')
     ax2.set_xlabel('Pv')
     ax2.set_ylabel('Diameter (m)')
-    #ax1.set_title(r'Near Earth Asteroid Albedo Distribution')
+    ax1.set_title(r'Near Earth Asteroid Albedo Distribution')
     ax2.set_title(r'Near Earth Asteroid Diameter and Albedo') 
-    #ax1.legend(loc='upper right')
+    ax1.legend(loc='upper right')
     ax2.legend(loc='upper right')
 
     fig.tight_layout()
-  #  plt.show()
+    plt.show()
     
 
     
