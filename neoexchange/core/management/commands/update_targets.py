@@ -58,7 +58,6 @@ class Command(BaseCommand):
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
-                    self.stdout.write("Slept for %d seconds" % delay)
 
                 elif Body.updated == True:
                 #checks when it has been last updated
@@ -68,7 +67,6 @@ class Command(BaseCommand):
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
-                        self.stdout.write("Slept for %d seconds" % delay)
     
             
         elif options['allneos']:
@@ -82,7 +80,6 @@ class Command(BaseCommand):
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
-                    self.stdout.write("Slept for %d seconds" % delay)
         
                 elif Body.updated == True:
                 #checks when it has been last updated
@@ -93,7 +90,6 @@ class Command(BaseCommand):
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
-                        self.stdout.write("Slept for %d seconds" % delay)
 
                 
         elif options['nasa']:
@@ -107,7 +103,6 @@ class Command(BaseCommand):
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
-                    self.stdout.write("Slept for %d seconds" % delay)
 
                 elif Body.updated == True:
                 #checks when it has been last updated
@@ -118,7 +113,6 @@ class Command(BaseCommand):
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
-                        self.stdout.write("Slept for %d seconds" % delay)
     
                             
         elif options['radar']:
@@ -132,7 +126,6 @@ class Command(BaseCommand):
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
-                    self.stdout.write("Slept for %d seconds" % delay)
     
                 elif Body.updated == True:
                 #checks when it has been last updated
@@ -143,7 +136,6 @@ class Command(BaseCommand):
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
-                        self.stdout.write("Slept for %d seconds" % delay)
         
         else:
             origins = ['N', 'S', 'D', 'G', 'A', 'R']
@@ -156,7 +148,6 @@ class Command(BaseCommand):
                     update_MPC_orbit(obj_id, origins)
                     # Wait between 10 and 20 seconds
                     delay = random_delay(10, 20)
-                    self.stdout.write("Slept for %d seconds" % delay)
 
                 elif Body.updated == True:
                 #checks when it has been last updated
@@ -167,5 +158,4 @@ class Command(BaseCommand):
                         update_MPC_orbit(obj_id, origins)
                         # Wait between 10 and 20 seconds
                         delay = random_delay(10, 20)
-                        self.stdout.write("Slept for %d seconds" % delay)
                         
