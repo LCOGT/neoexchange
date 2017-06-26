@@ -58,7 +58,7 @@ def download_file(url, file_to_save):
             else:
                 print "HTTP Error: %s" % (e.code,)
 
-def random_delay(lower_limit=10, upper_limit=20):
+def random_delay(self, lower_limit=10, upper_limit=20):
     '''Waits a random number of integer seconds between [lower_limit; default 10]
     and [upper_limit; default 20]. Useful for slowing down web requests to prevent
     overloading remote systems. The executed delay is returned.'''
@@ -73,7 +73,9 @@ def random_delay(lower_limit=10, upper_limit=20):
         upper_limit = 20
 
     delay = randint(lower_limit, upper_limit)
+    print "Going to sleep for %d seconds" % delay
     sleep(delay)
+    
 
     return delay
 
