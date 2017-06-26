@@ -60,7 +60,7 @@ class TestAsteroidDiameter(TestCase):
         self.assertAlmostEqual(expected_diameter, diameter, 4)
         
     def test_negative_albedo(self):
-        expected_diameter = 'You cannot have a negative albedo!'
+        expected_diameter = False
         
         albedo = -0.3
         H_mag = 17.1
@@ -93,7 +93,7 @@ class TestAsteroidAlbedoDistribution(TestCase):
         self.assertAlmostEqual(expected_distribution, distribution, 4)
     
     def test_negative_albedo(self):
-        expected_distribution = 'Check your albedo!'
+        expected_distribution = False
         
         albedo = -0.20
         distribution = albedo_distribution(a = albedo)
@@ -107,7 +107,7 @@ class TestAsteroidAlbedoDistribution(TestCase):
         self.assertAlmostEqual(expected_distribution, distribution, 4)
         
     def test_not_in_albedo_range(self):
-        expected_distribution = 'Check your albedo!'
+        expected_distribution = False
 
         albedo = 5.20
         distribution = albedo_distribution(a = albedo)
