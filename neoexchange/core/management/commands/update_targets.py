@@ -15,34 +15,22 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--objects',
-            type=str,
-            help='Updates objects from origins excluding MPC and LCO'
-        )
-        
-        parser.add_argument(
-            '--allneos',
-            type=str,
-            help='Updates all objects'
-        )
-        
-        parser.add_argument(
-            '--nasa',
-            type=str,
-            help='Updates objects from origins that are NASA affilated'
-        )
-        
-        parser.add_argument(
-            '--radar',
+            'origin',
+            choices=['objects', 'allneos', 'nasa', 'radar'],
+            const='objects',
+            default='objects',
+            nargs='?',
             type=str,
             help='Updates objects from radar observatories origins'
         )
         
         parser.add_argument(
-            '--time',
+            'time',
             type=int,
             choices=range(1, 25),
+            const = 12,
             default=12,
+            nargs='?',            
             help='Updates objects depending on number of hours past the objects original update'
         )
          
@@ -50,13 +38,13 @@ class Command(BaseCommand):
     def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R']):
         self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         targets = Body.objects.filter(origin=origins).order_by('-ingest')
-           
+        print "I made it"
         if targets.updated == False:
             self.stdout.write("Reading NEO %s from %s" % targets.name, targets.origin)
             update_MPC_orbit(targets.name, targets.origin)
             # Wait between 10 and 20 seconds
             delay = random_delay(10, 20)
-
+            print "Here"
         elif targets.updated == True:
         #checks when it has been last updated
     
@@ -66,29 +54,31 @@ class Command(BaseCommand):
                 update_MPC_orbit(targets.name, targets.origin)
                 # Wait between 10 and 20 seconds
                 delay = random_delay(10, 20)
-                
+                print "There"
             elif targets.update_time >= datetime.now() - timedelta(hours=48):
             #if object has not been updated in 48 hours
                 self.stdout.write("Reading NEO %s from %s" % targets.name, targets.origin)
                 update_MPC_orbit(targets.name, targets.origin)
                 # Wait between 10 and 20 seconds
                 delay = random_delay(10, 20)
-                    
+                print "Here again"
                     
 
     def handle(self, *args, **options):
-        if options['allneos']:
-            allneos = ['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L']
-            update_neos(origins=allneos)
-        elif options['objects']:
-            objects = ['N', 'S', 'D', 'G', 'A', 'R']
-            update_neos(origins=objects)
-        elif options['nasa']:
-            nasa = ['G', 'N']
-            update_neos(origins=nasa)
-        elif options['radar']:
-            radar = ['G','A','R']
-            update_neos(origins=radar)
-        else:
-            pass
-
+            if options['allneos']:
+                allneos = ['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L']
+                update_neos(origins=allneos)
+            elif options['objects']:
+                objects = ['N', 'S', 'D', 'G', 'A', 'R']
+                update_neos(origins=objects)
+            elif options['nasa']:
+                nasa = ['G', 'N']
+                update_neos(origins=nasa)
+            elif options['radar']:
+                radar = ['G','A','R']
+                update_neos(origins=radar)
+            else:
+                objects = ['N', 'S', 'D', 'G', 'A', 'R']
+                update_neos(origins=objects)
+        
+        
