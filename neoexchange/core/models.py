@@ -133,14 +133,6 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
 
-    def albedo(self): 
-        avg = 0.167
-        return avg 
-        
-    def albedo_range(self):
-        a_min = 0.01
-        a_max = 0.6
-        return a_min, a_max  
  
     def diameter(self):        
         m = self.abs_mag
