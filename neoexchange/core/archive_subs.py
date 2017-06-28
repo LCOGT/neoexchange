@@ -18,12 +18,15 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 import os, sys
 from hashlib import md5
-from django.conf import settings
-from core.urlsubs import get_lcogt_headers
-from core.models import Frame
 import glob
 import logging
+from urlparse import urljoin
+
 import requests
+from django.conf import settings
+
+from core.urlsubs import get_lcogt_headers
+from core.models import Frame
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +147,19 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
         return reduced_data
     else:
         return quicklook_data
+
+def fetch_observations(tracking_num):
+    '''
+    Convert tracking number to a list of archive frames at the highest level of reduction
+    :param tracking_num: ID of the user request, containing all sub-requests
+    '''
+    data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
+    data = lco_api_call(data_url)
+    if data.get('requests','') == 'Not found.':
+        return []
+    for r in data['requests']:
+        images = check_for_archive_images(request_id=r['id'])
+    return images
 
 def fetch_archive_frames(auth_header, archive_url, frames):
 

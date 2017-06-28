@@ -20,51 +20,6 @@ from core.models import Frame, Block, SITE_CHOICES, TELESCOPE_CHOICES, PanoptesR
 
 logger = logging.getLogger('neox')
 
-def panoptes_add_set_hunt(files, num_segments, blockid, download_dir):
-    Panoptes.connect(username=settings.ZOONIVERSE_USER, password=settings.ZOONIVERSE_PASSWD)
-    bk = Block.objects.get(pk=blockid)
-
-    project = Project.find(slug='zemogle/agent-neo')
-
-    subject_set = SubjectSet()
-    subject_set.links.project = project
-    subject_set.display_name = 'block_{}'.format(blockid)
-    try:
-        subject_set.save()
-    except PanoptesAPIException:
-        return False
-
-    subject_list = []
-    subject_ids = []
-    telescope = dict(TELESCOPE_CHOICES)
-    site = dict(SITE_CHOICES)
-    for index in range(0, num_segments):
-        subject_files = [fn for fn in files if "-{}.jpg".format(index) in fn]
-        if not subject_files:
-            logger.debug('No files found matching -{}.jpg'.format(index))
-            continue
-
-        subject = Subject()
-        subject.links.project = project
-        for i, filename in enumerate(subject_files):
-            subject.add_location(download_dir+filename)
-            subject.metadata["image_{}".format(i)] = filename
-        subject.metadata['telescope'] = "{} at {}".format(telescope[bk.telclass], site[bk.site])
-        subject.metadata['date'] = "{}".format(bk.when_observed.isoformat())
-        subject.metadata['quadrant'] = index
-        subject.save()
-        subject_ids.append({'id':subject.id, 'quad':index})
-        subject_list.append(subject)
-
-    # add subjects to subject set
-    subject_set.add(subject_list)
-
-    # Added these subjects to the 0th Workflow because thats all we have
-    workflow = Workflow.find(_id='3700')
-    workflow.add_subject_sets([subject_set])
-
-    return subject_ids
-
 
 def panoptes_add_set_mtd(candidates, blockid):
     Panoptes.connect(username=settings.ZOONIVERSE_USER, password=settings.ZOONIVERSE_PASSWD)
@@ -184,7 +139,17 @@ def create_mosaic(filename, frameid, download_dir):
     files = ['frame-{}-{}.jpg'.format(frameid,i) for i in range(0,9)]
     return files
 
-def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir):
+def add_markers_to_image(filename):
+    logger.debug("Adding marker to {}".format(filename))
+    img = Image.open(filename)
+    image = img.convert('RGB')
+    draw = ImageDraw.Draw(image, 'RGBA')
+    draw.line((135, 150, 110, 150), fill=(0,255,0,128), width=3)
+    draw.line((150, 135, 150, 110), fill=(0,255,0,128), width=3)
+    image.save(filename, 'jpeg')
+    return
+
+def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir, ymax):
     for candidate in candidates:
         cutouts = []
         for frameid, filename, coords in zip(frameids, jpg_files,candidate['coords']):
@@ -193,10 +158,12 @@ def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir):
                 logger.debug("File exists: {}".format(outfile))
                 cutouts.append(outfile)
                 continue
-            options = "convert {infile} -crop 300x300+{x}+{y} +repage {outfile}".format(infile=filename, x=coords['x'], y=coords['y'], outfile=outfile)
-            logger.debug("Creating mosaic for {}".format(frameid))
+            options = "convert {infile} -crop 300x300+{x}+{y} +repage {outfile}".format(infile=filename, x=coords['x']-150, y=ymax-coords['y']-150, outfile=outfile)
+            logger.debug("Creating mosaic for Frame {} Canddiate {}".format(frameid, candidate['id']))
             subprocess.call(options, shell=True)
             cutouts.append(outfile)
+            # mark image with finder markers
+            add_markers_to_image(outfile)
         candidate['cutouts'] = cutouts
     return candidates
 
@@ -225,14 +192,6 @@ def download_image(frame, current_files, download_dir, blockid):
 
     return full_filename
 
-def add_markers_to_image(filename, candidates, scale, radius):
-    image = Image.open(filename)
-    draw = ImageDraw.Draw(image, 'RGBA')
-    for coords in candidates:
-        draw.ellipse((coords['x']/scale-radius, coords['y']/scale-radius, coords['x']/scale+radius, coords['y']/scale+radius), fill=(0,255,0,128))
-    image.save(filename, 'jpeg')
-    return
-
 def read_classification_report(filename):
     '''
     Read classificiation report from Zooniverse, extracting position information
@@ -247,8 +206,8 @@ def read_classification_report(filename):
 
     subjects = parse_classifications(contents)
     retire_subjects(subjects)
-    sources = identify_sources(subjects)
-    return sources
+    # sources = identify_sources(subjects)
+    return subjects
 
 def parse_classifications(contents):
     '''
@@ -261,20 +220,24 @@ def parse_classifications(contents):
     for content in contents:
         # Choose the 0th value because we only have 1 workflow
         value = json.loads(content['annotations'])[0]['value']
-        if value and int(content['subject_ids']) in active_subjects:
+        if value == 'Yes' and int(content['subject_ids']) in active_subjects:
             subject_data = json.loads(content['subject_data'])
             keys = subject_data.keys()
-            if subject_data[keys[0]]['retired']:
+            if not subject_data[keys[0]]['retired']:
                 # Only send recently retired results
                 for v in value:
                     data = {'user'  : content['user_name'],
-                            'x'     : v['x'],
-                            'y'     : v['y'],
-                            'quad'  : subject_data[keys[0]]['quadrant'],
-                            'frame' : subject_data[keys[0]]['image_0']
+                            'candidate'  : subject_data[keys[0]]['candidate_id'],
                             }
                     subjects[keys[0]].append(data)
     return subjects
+
+def identify_sources(sources):
+    for k, source in sources.items():
+        users = [dict(t) for t in set([tuple(d.items()) for d in source])]
+        if len(users) > 6:
+            print(k, users)
+    return
 
 def retire_subjects(subjects):
     for k,v in subjects.iteritems():
@@ -284,46 +247,29 @@ def retire_subjects(subjects):
             logger.debug('Retired {}'.format(active_subjects))
     return
 
+def fix_panoptes_reports():
+    Panoptes.connect(username=settings.ZOONIVERSE_USER, password=settings.ZOONIVERSE_PASSWD)
 
-def convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
-    '''
-    Takes coordinates from a quadranted image and converts them into Frame x/y
-    Requires matching with first Frame in a sequence, which is obtained from quadrant filename
-    :param filename: filename of the first quadrant file in the sequence
-    :param x,y: pixel positions in quadrant image
-    :param quad: quadrant of full image
-    :param xscale, yscale: dimensions of the quad image
-    '''
-    x = (x + quad%3 * xscale)*float(xsize)/xscale
-    y = float(ysize) - (y + quad/3 * yscale)*float(ysize)/yscale
-    x_min = x - 5
-    y_min = y - 5
-    x_max = x + 5
-    y_max = y + 5
-    return x_min, x_max, y_min, y_max
+    ids = []
 
+    report = {}
+    ssids = {u'11368': u'7901',
+             u'11461': u'7952',
+             u'11462': u'7880',
+             u'11992': u'8036',
+             u'12497': u'7946'}
 
-def identify_sources(subjects):
-    '''
-    Align Panoptes classification with CatalogSources
-    :param subjects: dictionary where the key is the subject id, values listed below
-    :param subject['frame']: Archive frame ID
-    :param subject['x']: x positions from Panoptes
-    :param subject['y']: y positions from Panoptes
-    :param subject['quad']: quadrant of full image
-    '''
-    sources = []
-    for subject_id, subject in subjects.items():
-        frameid = subject[0]['frame'].split('-')[1]
-        try:
-            frame = Frame.objects.get(frameid=frameid)
-        except Frame.DoesNotExist:
-            logger.debug("Frame {} does not exist".format(frameid))
-            continue
-        for data in subject:
-            x_min, x_max, y_min, y_max = convert_coords(data['x'], data['y'], data['quad'], 640, 640, frame.get_x_size(), frame.get_y_size())
-            cs = CatalogSources.objects.filter(frame=frame, obs_x__gte=x_min, obs_x__lte=x_max, obs_y__gte=y_min, obs_y__lte=y_max)
-            sources += list(cs)
-    # Return the distribution of sources and numbers who found them
-    source_distrib = [(s,sources.count(s)) for s in set(sources)]
-    return source_distrib
+    for k,v in ssids.items():
+     report[v] = []
+
+    for k in ssids.keys():
+        for ss in SubjectSet.find(_id=k).subjects():
+             sr = ss.raw
+             if not sr['metadata'].get('quadrant',None) and sr['metadata'].get('candidate_id',None):
+                report[ssids[k]].append({'candidate':sr['metadata']['candidate_id'],'id':sr['id']})
+
+    for k,v in report.items():
+        block = Block.objects.get(id=k)
+        cz.create_panoptes_report(block, v)
+
+    return
