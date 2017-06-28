@@ -34,7 +34,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        blocks = Block.objects.filter(active=True, block_start__lte=datetime.now(), block_end__gte=datetime.now())
+        blocks = Block.objects.filter(block_start__lte=datetime.now(), block_end__gte=datetime.now())
         download_dir = options['download_dir']
         if options['blockid']:
             blocks = Block.objects.filter(pk=options['blockid'])
@@ -86,8 +86,8 @@ class Command(BaseCommand):
 
             # Make the image cut-outs for the candidates
             candidates = make_cutouts(candidates, frameids, jpg_files, block.id, download_dir, ymax)
-            subject_ids = panoptes_add_set_mtd(candidates=candidates, blockid=block.id)
-            if subject_ids:
-                create_panoptes_report(block, subject_ids)
-            if not options['download_dir']:
-                shutil.rmtree(download_dir)
+            # subject_ids = panoptes_add_set_mtd(candidates=candidates, blockid=block.id)
+            # if subject_ids:
+            #     create_panoptes_report(block, subject_ids)
+            # if not options['download_dir']:
+            #     shutil.rmtree(download_dir)
