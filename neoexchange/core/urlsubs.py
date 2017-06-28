@@ -9,13 +9,28 @@ if sys.version_info < (2,7,9):
     requests.packages.urllib3.disable_warnings()
     ssl_verify = False # Danger, danger !
 
+def authenticate_to_lco(auth_url, username, password):
+    token = ''
+    response = requests.post(auth_url,
+        data = { 'username' : username,
+                 'password' : password
+        }
+    )
+    if response.status_code == 200:
+        token = response.json()['token']
+
+    return token
+
 def get_lcogt_headers(auth_url, username, password):
     #  Get the authentication token
     if 'archive' in auth_url:
         token = settings.ARCHIVE_TOKEN
     else:
         token = settings.PORTAL_TOKEN
-    headers = {'Authorization': 'Token ' + token}
+    if token == '':
+        # Token is blank, try to authenticate
+        token = authenticate_to_lco(auth_url, username, password)
 
+    headers = {'Authorization': 'Token ' + token}
 
     return headers
