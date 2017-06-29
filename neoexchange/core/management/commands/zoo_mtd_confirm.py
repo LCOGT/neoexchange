@@ -86,8 +86,8 @@ class Command(BaseCommand):
 
             # Make the image cut-outs for the candidates
             candidates = make_cutouts(candidates, frameids, jpg_files, block.id, download_dir, ymax)
-            # subject_ids = panoptes_add_set_mtd(candidates=candidates, blockid=block.id)
-            # if subject_ids:
-            #     create_panoptes_report(block, subject_ids)
-            # if not options['download_dir']:
-            #     shutil.rmtree(download_dir)
+            subject_ids = panoptes_add_set_mtd(candidates=candidates, blockid=block.id)
+            if subject_ids:
+                create_panoptes_report(block, subject_ids)
+            if not options['download_dir']:
+                shutil.rmtree(download_dir)
