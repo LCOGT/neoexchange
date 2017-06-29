@@ -59,17 +59,17 @@ class Command(BaseCommand):
             
     def update_neos(self, origins=['N', 'S', 'D', 'G', 'A', 'R']):
         self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-        targets = Body.objects.get(origin=origins).order_by('-ingest')
+        targets = Body.objects.filter(origin=origins)
         
-        if targets.updated == False:
+        if targets.filter(updated=False):
             self.stdout.write("Reading NEO %s from %s" % targets.name, targets.origin)
             update_MPC_orbit(targets.name, targets.origin)
             # Wait between 10 and 20 seconds
             delay = random_delay(10, 20)
             
-        elif targets.updated == True:
+        elif targets.filter(updated=True):
         #checks when it has been last updated
-    
+
             if targets.update_time >= datetime.now() - timedelta(hours=options['time']) and targets.update_time <= datetime.now() - timedelta(hours=24):
             #if object has not been updated within 
                 self.stdout.write("Reading NEO %s from %s" % targets.name, targets.origin)
@@ -78,7 +78,7 @@ class Command(BaseCommand):
                 delay = random_delay(10, 20)
                 
             elif targets.update_time >= datetime.now() - timedelta(hours=48):
-            #if object has not been updated in 48 hours
+                #if object has not been updated in 48 hours
                 self.stdout.write("Reading NEO %s from %s" % targets.name, targets.origin)
                 update_MPC_orbit(targets.name, targets.origin)
                 # Wait between 10 and 20 seconds
@@ -86,4 +86,5 @@ class Command(BaseCommand):
                 
         else:
             self.stdout.write("No NEOs to be updated")
-
+               
+                    
