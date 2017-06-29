@@ -223,6 +223,31 @@ class Body(models.Model):
             return_name = self.name
         return u'%s is %sactive' % (return_name,text)
 
+class SuperBlock(models.Model):
+
+    cadence         = models.BooleanField(default=False)
+    body            = models.ForeignKey(Body)
+    proposal        = models.ForeignKey(Proposal)
+    block_start     = models.DateTimeField(null=True, blank=True)
+    block_end       = models.DateTimeField(null=True, blank=True)
+    groupid         = models.CharField(max_length=55, null=True, blank=True)
+    tracking_number = models.CharField(max_length=10, null=True, blank=True)
+    period          = models.FloatField('Spacing between cadence observations (hours)', null=True, blank=True)
+    jitter          = models.FloatField('Acceptable deviation before or after strict period (hours)', null=True, blank=True)
+    timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
+
+    class Meta:
+        verbose_name = _('SuperBlock')
+        verbose_name_plural = _('SuperBlocks')
+        db_table = 'ingest_superblock'
+
+    def __unicode__(self):
+        if self.active:
+            text = ''
+        else:
+            text = 'not '
+
+        return u'%s is %sactive' % (self.tracking_number,text)
 
 class Block(models.Model):
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
