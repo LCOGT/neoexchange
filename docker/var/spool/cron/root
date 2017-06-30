@@ -4,3 +4,4 @@
 20,50 * * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py update_neocp_data >> /cron_debug.log
 30 0,4,8,12,16,20 * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py update_crossids >> /cron_debug.log
 */30 * * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py update_blocks >> /cron_debug.log
+30 */6 * * * source /var/www/apps/neoexchange/cronwrapper; python /var/www/apps/neoexchange/manage.py zoo_mtd_confirm >> /cron_debug.log

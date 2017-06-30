@@ -33,9 +33,9 @@ ENV PREFIX /neoexchange
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip python-devel \
                 supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
-                MySQL-python gcc gcc-gfortran openssl-devel \
+                MySQL-python gcc gcc-gfortran openssl-devel ImageMagick \
                 wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
-        && yum -y update 
+        && yum -y update
 
 # Enable LCO repo and install extra packages
 COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
@@ -54,7 +54,7 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # newer reqdbclient) fails with a missing numpy.distutils.core reference
 # for...reasons...
 RUN pip install --upgrade pip \
-    && pip install numpy \
+    && pip install -U numpy \
     && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
     && rm -rf ~/.cache/pip
 

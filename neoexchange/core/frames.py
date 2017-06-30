@@ -5,31 +5,18 @@ import sys
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from astropy.wcs import WCS
+from urlparse import urljoin
 
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
 from astrometrics.time_subs import jd_utc2datetime
 from core.urlsubs import get_lcogt_headers
-from core.archive_subs import archive_login
+from core.archive_subs import archive_login, check_for_archive_images, lco_api_call
 import logging
 import requests
 
-ssl_verify = True
-# Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
-if sys.version_info < (2,7,9):
-    requests.packages.urllib3.disable_warnings()
-    ssl_verify = False # Danger, danger !
-
 logger = logging.getLogger('core')
 
-
-def odin_login(username, password):
-    '''
-    Wrapper function to get ODIN headers
-    '''
-    auth_url = settings.REQUEST_AUTH_API_URL
-
-    return get_lcogt_headers(auth_url,username, password)
 
 def measurements_from_block(blockid, bodyid=None):
     block = Block.objects.get(pk=blockid)
@@ -40,17 +27,6 @@ def measurements_from_block(blockid, bodyid=None):
     bodies = measures.values_list('body', flat=True).distinct()
     extra_bodies = Body.objects.filter(id__in=bodies)
     return {'body' : block.body, 'measures' : measures, 'slot' : block,'extra_bodies':extra_bodies}
-
-def fetch_observations(tracking_num):
-    image_list = []
-    headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
-    data = check_request_status(headers, tracking_num)
-    if type(data) != list and data.get('detail','') == 'Not found.':
-        return image_list
-    for r in data:
-        images = check_for_images(headers,request_id=r['request_number'])
-        image_list += [i['id'] for i in images]
-    return image_list
 
 def find_images_for_block(blockid):
     '''
@@ -90,79 +66,9 @@ def candidates_by_block(blockid):
         targets.append({'id': str(cand.id), 'coords':coords, 'sky_coords':sky_coords, 'motion':motion})
     return targets
 
-
-def lcogt_api_call(auth_header, url):
-    data = None
-    try:
-        resp = requests.get(url, headers=auth_header, timeout=20, verify=ssl_verify)
-        data = resp.json()
-    except requests.exceptions.InvalidSchema, err:
-        data = None
-        logger.error("Request call to %s failed with: %s" % (url, err))
-    except ValueError, err:
-        logger.error("Request %s API did not return JSON: %s" % (url, resp.status_code))
-    except requests.exceptions.Timeout:
-        logger.error("Request API timed out")
-    return data
-
-def check_request_status(auth_header, tracking_num=None):
-    data_url = settings.REQUEST_API_URL % tracking_num
-    return lcogt_api_call(auth_header, data_url)
-
-def check_for_images(auth_header, request_id):
-    '''
-    Call ODIN request API to obtain all frames for request_id
-    Filter out non-reduced frames
-    '''
-    reduced_data = []
-    quicklook_data = []
-    data_url = settings.FRAMES_API_URL % request_id
-    data = lcogt_api_call(auth_header, data_url)
-    for datum in data:
-        if 'e91' in datum['filename']:
-            reduced_data.append(datum)
-        elif 'e11' in datum['filename']:
-            quicklook_data.append(datum)
-    if len(reduced_data) >= len(quicklook_data):
-        return reduced_data
-    else:
-        return quicklook_data
-
-def check_for_archive_images(auth_header, request_id=None, obstype='EXPOSE', limit=3000):
-    '''
-    Call Archive API to obtain all frames for request_id
-    Follow links to get all frames and filter out non-reduced frames and returns
-    fully-reduced data in preference to quicklook data
-    '''
-    reduced_data = []
-    quicklook_data = []
-
-    base_url = settings.ARCHIVE_FRAMES_URL
-    archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (base_url, limit, request_id, obstype)
-
-    frames = []
-    data = fetch_archive_frames(auth_header, archive_url, frames)
-    for datum in data:
-        headers_url = u'%s%d/headers' % (settings.ARCHIVE_FRAMES_URL, datum['id'])
-        datum[u'headers'] = headers_url
-        if datum['RLEVEL'] == 91:
-            reduced_data.append(datum)
-        elif datum['RLEVEL'] == 11:
-            quicklook_data.append(datum)
-    if len(reduced_data) >= len(quicklook_data):
-        return reduced_data
-    else:
-        return quicklook_data
-
-def fetch_archive_frames(auth_header, archive_url, frames):
-
-    data = lcogt_api_call(auth_header, archive_url)
-    if data.get('count', 0) > 0:
-        frames += data['results']
-        if data['next']:
-            fetch_archive_frames(auth_header, data['next'], frames)
-
-    return frames
+def check_request_status(tracking_num=None):
+    data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
+    return lco_api_call(data_url)
 
 def create_frame(params, block=None, frameid=None):
     # Return None if params is just whitespace
@@ -285,10 +191,9 @@ def ingest_frames(images, block):
 
     - Also find out how many scheduler blocks were used
     '''
-    archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     sched_blocks = []
     for image in images:
-        image_header = lcogt_api_call(archive_headers, image.get('headers', None))
+        image_header = lco_api_call(image.get('headers', None))
         if image_header:
             frame = create_frame(image_header['data'], block, image['id'])
             sched_blocks.append(image_header['data']['BLKUID'])
@@ -314,27 +219,23 @@ def block_status(block_id):
         return False
 
     # Get authentication token for ODIN
-    headers = odin_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
     logger.debug("Checking request status for %s" % block_id)
-    data = check_request_status(headers, tracking_num)
-    # data is a full LCOGT request dict for this tracking number.
-    if not data or type(data) == dict:
+    data = check_request_status(tracking_num)
+    # data is a full LCOGT request dict for this tracking number (now called 'id').
+    if not data:
         return False
     # Although this is a loop, we should only have a single request so it is executed once
     exposure_count = 0
 
-    # Get authentication token for Archive
-    archive_headers = archive_login(settings.NEO_ODIN_USER, settings.NEO_ODIN_PASSWD)
-
-    for r in data:
-        images = check_for_archive_images(archive_headers, request_id=r['request_number'])
-        logger.debug('Request no. %s x %s images' % (r['request_number'],len(images)))
+    for r in data['requests']:
+        images = check_for_archive_images(request_id=r['id'])
+        logger.debug('Request no. %s x %s images' % (r['id'],len(images)))
         if images:
             if len(images) >= 3:
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
-                last_image_header = lcogt_api_call(archive_headers, last_image_dict.get('headers', None))
+                last_image_header = lco_api_call(last_image_dict.get('headers', None))
                 if last_image_header == None:
                     logger.error('Image header was not returned for %s' % last_image_dict)
                     return False

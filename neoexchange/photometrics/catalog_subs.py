@@ -958,8 +958,8 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
 def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name = "UCAC4", ast_cat_name="2MASS"):
 
     num_new_frames_created = 0
-    num_sources_created = 0
     num_in_table = 0
+    num_sources_created = 0
 
     #read the catalog file
     header, table = extract_catalog(catfile, catalog_type)
@@ -1001,38 +1001,54 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
         #update the zeropoint computed above in the CATALOG file Frame
         frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
 
-        num_in_table = len(table)
-        num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
-        if num_in_table != num_cat_sources:
-            for source in table:
-                source_params = {   'frame':frame,
-                                    'obs_x': source['ccd_x'],
-                                    'obs_y': source['ccd_y'],
-                                    'obs_ra': source['obs_ra'],
-                                    'obs_dec': source['obs_dec'],
-                                    'obs_mag': source['obs_mag'],
-                                    'err_obs_ra': source['obs_ra_err'],
-                                    'err_obs_dec': source['obs_dec_err'],
-                                    'err_obs_mag': source['obs_mag_err'],
-                                    'background': source['obs_sky_bkgd'],
-                                    'major_axis': source['major_axis'],
-                                    'minor_axis': source['minor_axis'],
-                                    'position_angle': source['ccd_pa'],
-                                    'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
-                                    'aperture_size': 3.0,
-                                    'flags': source['flags'],
-                                    'flux_max': source['flux_max'],
-                                    'threshold': source['threshold']
-                                }
-                cat_src, created = CatalogSources.objects.get_or_create(**source_params)
-                if created == True:
-                    num_sources_created += 1
-        else:
-            logger.info("Number of sources in catalog match number in DB; skipping")
+        #store the CatalogSources
+        num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
     else:
         logger.warn("Could not open %s" % catfile)
 
     return (num_sources_created, num_in_table)
+
+def get_or_create_CatalogSources(table, frame):
+
+    num_sources_created = 0
+
+    num_in_table = len(table)
+    num_cat_sources = CatalogSources.objects.filter(frame=frame).count()
+    if num_cat_sources == 0:
+        new_sources = []
+        for source in table:
+            new_source = CatalogSources(frame=frame, obs_x=source['ccd_x'], obs_y=source['ccd_y'], obs_ra=source['obs_ra'], obs_dec=source['obs_dec'], obs_mag=source['obs_mag'], err_obs_ra=source['obs_ra_err'], err_obs_dec=source['obs_dec_err'], err_obs_mag=source['obs_mag_err'], background=source['obs_sky_bkgd'], major_axis=source['major_axis'], minor_axis=source['minor_axis'], position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']), aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
+            new_sources.append(new_source)
+        CatalogSources.objects.bulk_create(new_sources)
+        num_sources_created = len(new_sources)
+    elif num_in_table != num_cat_sources:
+        for source in table:
+            source_params = {   'frame':frame,
+                                'obs_x': source['ccd_x'],
+                                'obs_y': source['ccd_y'],
+                                'obs_ra': source['obs_ra'],
+                                'obs_dec': source['obs_dec'],
+                                'obs_mag': source['obs_mag'],
+                                'err_obs_ra': source['obs_ra_err'],
+                                'err_obs_dec': source['obs_dec_err'],
+                                'err_obs_mag': source['obs_mag_err'],
+                                'background': source['obs_sky_bkgd'],
+                                'major_axis': source['major_axis'],
+                                'minor_axis': source['minor_axis'],
+                                'position_angle': source['ccd_pa'],
+                                'ellipticity': 1.0-(source['minor_axis']/source['major_axis']),
+                                'aperture_size': 3.0,
+                                'flags': source['flags'],
+                                'flux_max': source['flux_max'],
+                                'threshold': source['threshold']
+                            }
+            cat_src, created = CatalogSources.objects.get_or_create(**source_params)
+            if created == True:
+                num_sources_created += 1
+    else:
+        logger.info("Number of sources in catalog match number in DB; skipping")
+
+    return num_sources_created, num_in_table
 
 def make_sext_dict(catsrc, num_iter):
     '''create a dictionary of needed parameters
@@ -1262,28 +1278,28 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     return sources
 
 def get_fits_files(fits_path):
-    '''Look through a directory, uncompressing any fpacked files and return a 
+    '''Look through a directory, uncompressing any fpacked files and return a
     list of all the .fits files'''
 
     sorted_fits_files = []
     fits_path = os.path.join(fits_path, '')
     if os.path.isdir(fits_path):
-    
+
         fpacked_files = sorted(glob(fits_path + '*e91.fits.fz') + glob(fits_path + '*e11.fits.fz'))
         for fpack_file in fpacked_files:
             funpack_fits_file(fpack_file)
 
         sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
-    
+
     else:
     	logger.error("Not a directory")
 
     return sorted_fits_files
 
 def sort_rocks(fits_files):
-    '''Takes a list of FITS files and creates directories for each asteroid 
+    '''Takes a list of FITS files and creates directories for each asteroid
     object and unique block number (i.e. if an object is observed more than
-    once, it will get a separate directory). The input fits files are then 
+    once, it will get a separate directory). The input fits files are then
     symlinked into the appropriate directory.
     A list of the directory names is return, with the entries being of the form
     <object name>_<block id #>'''
@@ -1341,4 +1357,3 @@ def find_first_last_frames(fits_files):
         if frame.midpoint > last_frame.midpoint:
             last_frame = frame
     return first_frame, last_frame
-   

@@ -48,10 +48,24 @@ class BlockAdmin(VersionAdmin):
     format_block_start.short_description = 'Block start'
     format_block_start.admin_order_field = 'block_start'
 
+    def zoo_friendly(self, obj):
+        if obj.num_exposures < 10 and obj.num_observed > 0 and obj.num_candidates > 0:
+            return True
+        else:
+            return False
+    zoo_friendly.boolean = True
+
+    def sent_to_zoo(self, obj):
+        if PanoptesReport.objects.filter(block=obj).count() > 0:
+            return True
+        else:
+            return False
+    sent_to_zoo.boolean = True
+
     def body_name(self, obj):
         return obj.body.current_name()
 
-    list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported',  )
+    list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported', 'zoo_friendly', 'sent_to_zoo')
     list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
 
     ordering = ('-block_start',)
@@ -189,3 +203,4 @@ admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
 admin.site.register(CatalogSources,CatalogSourcesAdmin)
 admin.site.register(Candidate,CandidateAdmin)
+admin.site.register(PanoptesReport)

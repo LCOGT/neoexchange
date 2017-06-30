@@ -17,6 +17,7 @@ from math import pi, log10
 import math
 import reversion
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
@@ -26,6 +27,7 @@ from django.forms.models import model_to_dict
 from astropy.time import Time
 from astropy.wcs import WCS
 from numpy import fromstring
+from requests.compat import urljoin
 try:
     # cpython 2.x
     from cPickle import loads, dumps
@@ -258,13 +260,8 @@ class Block(models.Model):
 
     def make_obsblock_link(self):
         url = ''
-        point_at_reqdb = False
         if self.tracking_number != None and self.tracking_number != '':
-            url = 'http://lco.global/observe/request/%s/' % (self.tracking_number)
-            if point_at_reqdb:
-                url = 'http://scheduler1.lco.gtn/requestdb/admin/requestdb/userrequests/'
-# Strip off leading zeros
-                url = url + self.tracking_number.lstrip('0') + '/'
+            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
         return url
 
     def num_frames(self):
@@ -742,3 +739,22 @@ class ProposalPermission(models.Model):
 
     def __unicode__(self):
         return "%s is a member of %s" % (self.user, self.proposal)
+
+class PanoptesReport(models.Model):
+    '''
+    Status of block
+    '''
+    block = models.ForeignKey(Block)
+    when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
+    last_check = models.DateTimeField(blank=True, null=True)
+    active = models.BooleanField(default=False)
+    subject_id = models.IntegerField('Subject ID', blank=True, null=True)
+    candidate = models.ForeignKey(Candidate)
+    verifications = models.IntegerField(default=0)
+    classifiers = models.TextField(help_text='Volunteers usernames who found NEOs', blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Zooniverse Report')
+
+    def __unicode__(self):
+        return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
