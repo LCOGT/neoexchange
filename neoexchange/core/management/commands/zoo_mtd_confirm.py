@@ -71,16 +71,17 @@ class Command(BaseCommand):
             if not files:
                 # Double check in case we already have the files
                 files = glob.glob(os.path.join(download_dir, "*.fz"))
-            for frameid, filename in zip(frameids,files):
-                jpg_name = os.path.join(download_dir, frameid+ ".jpg")
-                if os.path.isfile(jpg_name):
-                    jpg_files.append(jpg_name)
-                    logger.debug('File exists: {}'.format(jpg_name))
-                    continue
-                logger.debug("Making JPG {}".format(jpg_name))
-                result = fits_to_jpg(path_to_fits=filename, path_to_jpg=jpg_name, width=xmax, height=ymax, quality=75, median=85)
-                if result:
-                    jpg_files.append(jpg_name)
+            if files:
+                for frameid, filename in zip(frameids,files):
+                    jpg_name = os.path.join(download_dir, frameid+ ".jpg")
+                    if os.path.isfile(jpg_name):
+                        jpg_files.append(jpg_name)
+                        logger.debug('File exists: {}'.format(jpg_name))
+                        continue
+                    logger.debug("Making JPG {}".format(jpg_name))
+                    result = fits_to_jpg(path_to_fits=filename, path_to_jpg=jpg_name, width=xmax, height=ymax, quality=75, median=85)
+                    if result:
+                        jpg_files.append(jpg_name)
             else:
                 logger.debug('Failed to download images')
 
