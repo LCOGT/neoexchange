@@ -159,7 +159,7 @@ def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir, ymax):
                 cutouts.append(outfile)
                 continue
             options = "convert {infile} -crop 300x300+{x}+{y} +repage {outfile}".format(infile=filename, x=coords['x']-150, y=ymax-coords['y']-150, outfile=outfile)
-            logger.debug("Creating mosaic for Frame {} Canddiate {}".format(frameid, candidate['id']))
+            logger.debug("Creating mosaic for Frame {} Candidate {}".format(frameid, candidate['id']))
             subprocess.call(options, shell=True)
             cutouts.append(outfile)
             # mark image with finder markers
