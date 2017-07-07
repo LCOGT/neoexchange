@@ -33,7 +33,10 @@ def panoptes_add_set_mtd(candidates, blockid):
     try:
         subject_set.save()
     except PanoptesAPIException:
-        logger.debug('Subject set {} already exists'.format(subject_set.display_name))
+        if settings.ZOONIVERSE_USER == '' or settings.ZOONIVERSE_PASSWD == '':
+            logger.warn('ZOONIVERSE_USER and/or ZOONIVERSE_PASSWD environment variables not set')
+        else:            
+            logger.debug('Subject set {} already exists'.format(subject_set.display_name))
         return False
 
     subject_list = []
