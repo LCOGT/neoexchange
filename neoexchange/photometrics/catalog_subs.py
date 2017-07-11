@@ -200,7 +200,7 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
                             rmag_cat_1 = rmag_table_1_temp
                             rmag_cat_2 = rmag_table_2_temp
                             rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
-                            if rmag_err_table_1 != 'nan':
+                            if rmag_err_table_1.all() != 'nan':
                                 rmag_error = rmag_err_table_1[y] / 100.0
                             else:
                                 rmag_error = rmag_err_table_2[z] / 100.0
