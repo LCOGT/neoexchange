@@ -141,7 +141,7 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
             Dec_table_2 = table_2['obs_dec']
             rmag_table_2 = table_2['obs_mag']
             flags_table_2 = table_2['flags']
-            rmag_err_table_2 = 'nan'
+            table1_has_errs = True
         else:
             RA_table_1 = table_1['RAJ2000']
             Dec_table_1 = table_1['DEJ2000']
@@ -152,7 +152,7 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
             Dec_table_2 = table_2['obs_dec']
             rmag_table_2 = table_2['obs_mag']
             flags_table_2 = table_2['flags']
-            rmag_err_table_2 = 'nan'
+            table1_has_errs = True
     else:
         table_1 = FITS_table
         table_2 = cat_table
@@ -167,6 +167,7 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
             rmag_table_2 = table_2['r2mag']
             flags_table_2 = table_2['fl']
             rmag_err_table_2 = table_2['RAJ2000'] * 0 #PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
+            table1_has_errs = False
         else:
             RA_table_1 = table_1['obs_ra']
             Dec_table_1 = table_1['obs_dec']
@@ -178,6 +179,7 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
             rmag_table_2 = table_2['rmag']
             flags_table_2 = table_2['RAJ2000'] * 0 #UCAC4 does not have flags, so copy RA table column and turn values all to zeros
             rmag_err_table_2 = table_2['e_rmag']
+            table1_has_errs = False
 
     y = 0
     for value in Dec_table_1:
@@ -200,7 +202,7 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
                             rmag_cat_1 = rmag_table_1_temp
                             rmag_cat_2 = rmag_table_2_temp
                             rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
-                            if rmag_err_table_1.all() != 'nan':
+                            if table1_has_errs:
                                 rmag_error = rmag_err_table_1[y] / 100.0
                             else:
                                 rmag_error = rmag_err_table_2[z] / 100.0
