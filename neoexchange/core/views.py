@@ -1296,6 +1296,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
         logger.error("Could not find block for fits frame %s" % catfile)
         return -3, num_new_frames_created
 
+    # Check if we have a sitecode (none if this is a new instrument/telescope)
+    if header.get('site_code', None) is None:
+        logger.error("No sitecode found for fits frame %s" % catfile)
+        return -5, num_new_frames_created
+
     # Create a new Frame entry for the new_ldac_catalog
     num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)
 
