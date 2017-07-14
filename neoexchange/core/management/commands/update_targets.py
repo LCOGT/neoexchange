@@ -9,6 +9,7 @@ from astrometrics.sources_subs import random_delay
 from core.views import update_MPC_orbit
 from core.models import Body
 
+#logging.basicConfig(format='%(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -100,11 +101,13 @@ class Command(BaseCommand):
             if needs_to_be_updated:
                 if never_updated: 
                     target_type = 'Never Updated'
+                    logger.info('Updating {name} from {origin} which was {updated}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type))
                 elif not_updated_in_threemonths:
                     target_type = 'Previously Updated'
+                    logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
                 else:
                     target_type = 'Not Updated in Three Months'
-                logger.info('Updating {name} from {origin} which was {updated}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type))
+                    logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
                 #update_MPC_orbit(target.name, target.origin)
                 #delay = random_delay(10, 20)
                 were_updated.append(target)
