@@ -137,16 +137,22 @@ class Body(models.Model):
     def diameter(self):        
         m = self.abs_mag
         avg = 0.167
-        d_avg = asteroid_diameter(avg, m)
-        return d_avg
+        if m == None:
+            return None
+        else:
+            d_avg = asteroid_diameter(avg, m)
+            return d_avg
         
     def diameter_range(self):
         m = self.abs_mag
         mn = 0.01
         mx = 0.6       
-        d_max = asteroid_diameter(mn, m)
-        d_min = asteroid_diameter(mx, m)
-        return d_min, d_max
+        if m == None:
+            return None
+        else:
+            d_max = asteroid_diameter(mn, m)
+            d_min = asteroid_diameter(mx, m)
+            return d_min, d_max
         
     def epochofel_mjd(self):
         mjd = None

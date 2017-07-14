@@ -150,11 +150,19 @@
 									</tr>
 									<tr>
 										<td class="kv-key">Diameter in meters (average)</td>
+										{% if body.abs_mag == None%}
+										<td class="kv-value">{{body.diameter}}</td>
+										{% else %}
 										<td class="kv-value">{{body.diameter|floatformat:0}}</td>
+										{% endif %}
 									</tr>
 									<tr>
 										<td class="kv-key">Diameter in meters<br/>(range)</td>
+										{% if body.abs_mag == None%}
+										<td class="kv-value">{{body.diameter_range}}</td>
+										{% else %}
 										<td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
+										{% endif %}
 									</tr>
 								</tbody>
 							</table>
