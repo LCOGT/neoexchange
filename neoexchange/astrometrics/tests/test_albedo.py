@@ -22,6 +22,15 @@ from astrometrics.albedo import *
 class TestAsteroidDiameter(TestCase):
     '''Unit tests for asteroid_diameter'''
     
+    def no_magnitude(self):
+        expected_diameter = 'Missing Magnitude'
+        
+        albedo = 0.3
+        H_mag = None
+        
+        diameter = asteroid_diameter(albedo, H_mag)
+        self.Equal(expected_diameter, diameter)
+    
     def test_big_bright(self):
         expected_diameter = 375.0075
         
