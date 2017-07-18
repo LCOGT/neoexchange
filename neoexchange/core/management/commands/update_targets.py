@@ -94,7 +94,7 @@ class Command(BaseCommand):
             time_threemonths = float(timedelta.total_seconds(time_now - target.ingest))
 
             never_updated = target.updated == False
-            not_updated_in_threemonths = three_months == True and time_threemonths > 7776000
+            not_updated_in_threemonths = three_months == True and time_threemonths > 7776000 and time_diff > 172800
             time_update = target.updated == True and time_diff >= time and time_diff < 172800
             needs_to_be_updated = never_updated or not_updated_in_threemonths or time_update
             
@@ -108,8 +108,8 @@ class Command(BaseCommand):
                 else:
                     target_type = 'Not Updated in Three Months'
                     logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
-                #update_MPC_orbit(target.name, target.origin)
-                #delay = random_delay(10, 20)
+                update_MPC_orbit(target.name, target.origin)
+                delay = random_delay(10, 20)
                 were_updated.append(target)
 
                 
