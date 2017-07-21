@@ -88,6 +88,11 @@ class Command(BaseCommand):
         targets = Body.objects.filter(origin__in=origins, active=True)
         logger.info("Length of target query set to check %d" %(targets.count()))
         were_updated = []
+        were_updated_source = []
+        were_updated_bool = []
+        were_updated_time = []
+        
+        
 
         for target in targets:
             time_diff = float(timedelta.total_seconds(time_now - target.update_time))
@@ -111,11 +116,15 @@ class Command(BaseCommand):
                 update_MPC_orbit(target.name, target.origin)
                 delay = random_delay(10, 20)
                 were_updated.append(target)
+                were_updated_source.append(target.origin)
+                were_updated_bool.append(target.updated)
+                were_updated_time.append(target.update_time)
 
                 
         if were_updated == []:
             logger.info("==== No NEOs to be updated ====")
+            return were_updated, were_updated_source, were_updated_bool, were_updated_time 
         else:      
             logger.info("==== Updated {number} NEOs ====".format(number=len(were_updated)))
-            logger.debug(were_updated)
+            return were_updated, were_updated_source, were_updated_bool, were_updated_time
                     
