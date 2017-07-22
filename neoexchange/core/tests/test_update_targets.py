@@ -61,7 +61,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'A', 'A', 'G', 'S', 'R', 'R','D']
         expected_updated_bool = [True, True, True, True, True, True, True, True]
         expected_updated_time = [now, now, now, now, now, now, now, now]
-        updated = updated_targets.update_neos()
+        updated = update_targets.update_neos()
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -74,7 +74,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['A', 'A', 'G']
         expected_updated_bool = [True, True, True]
         expected_updated_time = [now, now, now]
-        updated =  updated_targets.update_neos(origins=['A','G','R'], time=64800, old=True)
+        updated = update_targets.update_neos(origins=['A','G','R'], time=64800, old=True)
 
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -87,7 +87,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'N', 'G']
         expected_updated_bool = [True, True, True]
         expected_updated_time = [now, now, now]
-        updated = updated_targets.update_neos(origins=['N','G'], time=86400)
+        updated = update_targets.update_neos(origins=['N','G'], time=86400)
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -100,7 +100,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'N', 'A', 'G', 'M', 'S', 'R', 'R', 'L']
         expected_updated_bool = [True, True, True, True, True, True, True, True, True]
         expected_updated_time = [now, now, now, now, now, now, now, now, now]
-        updated =  update_targets.update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=129600)
+        updated = update_targets.update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=129600)
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -113,7 +113,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'N', 'A', 'A', 'G', 'S', 'R', 'R', 'D']
         expected_updated_bool = [True, True, True, True, True, True, True, True, True]
         expected_updated_time = [now, now, now, now, now, now, now, now, now]
-        call_command('--sources=objects', '--time=21600')
+        updated = update_targets.update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=21600)
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
