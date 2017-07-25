@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -134,15 +134,11 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
-        self.assertIn('Siding Spring, Aust. (COJ - Q58; 0.4m)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (COJ - Q58-Q59; 0.4m)', form.as_p())
         self.assertIn('value="Q58"', form.as_p())
-# XXX COJ 0.4m b at Siding Spring is now for satellites, so code should not appear.
-# remove the 'Not' if/when telescope goes back to science
-        self.assertNotIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
-        self.assertNotIn('value="Q59"', form.as_p())
-        self.assertIn('Tenerife, Spain (TFN - Z21; 0.4m)', form.as_p())
+        self.assertIn('Tenerife, Spain (TFN - Z17,Z21; 0.4m)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
-        self.assertIn('Maui, Hawaii (OGG - T04; 0.4m)', form.as_p())
+        self.assertIn('Maui, Hawaii (OGG - T03-04; 0.4m)', form.as_p())
         self.assertIn('value="T04"', form.as_p())
 
     def test_form_handles_save_with_long_name(self):
@@ -234,12 +230,11 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
-# XXX No current valid code for the COJ 0.4m, remove the 'Not' when new code is obtained
-        self.assertNotIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
-        self.assertNotIn('value="Q59"', form.as_p())
-        self.assertIn('Tenerife, Spain (TFN - Z21; 0.4m)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (COJ - Q58-Q59; 0.4m)', form.as_p())
+        self.assertIn('value="Q58"', form.as_p())
+        self.assertIn('Tenerife, Spain (TFN - Z17,Z21; 0.4m)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
-        self.assertIn('Maui, Hawaii (OGG - T04; 0.4m)', form.as_p())
+        self.assertIn('Maui, Hawaii (OGG - T03-04; 0.4m)', form.as_p())
         self.assertIn('value="T04"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):
