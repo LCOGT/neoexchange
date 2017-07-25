@@ -31,7 +31,7 @@ import requests
 
 from core.models import Frame, Block, PanoptesReport, CatalogSources, Proposal, Body
 from core.zoo import download_images_block, download_image, panoptes_add_set_mtd, \
-    create_panoptes_report, convert_coords, identify_sources
+    create_panoptes_report, identify_sources
 
 def mock_download_image(frame, current_files, download_dir, blockid):
     return 'myfile.fits'
