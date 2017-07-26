@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -1108,7 +1108,7 @@ def configure_defaults(params):
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
                   'Q58' : 'COJ', # Code for 0m4a
-                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use
+                  'Q59' : 'COJ'} # Code for 0m4b
 
 
     params['pondtelescope'] = '1m0a'
