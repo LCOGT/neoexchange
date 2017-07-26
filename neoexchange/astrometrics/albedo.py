@@ -5,6 +5,9 @@ from astropy.modeling import models
 from astropy.modeling import fitting
 import random
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 
 def asteroid_albedo(f=0.253, bright=0.168, dark=0.03):
     '''This function generates a single albedo. It takes a dark fraction(f),
