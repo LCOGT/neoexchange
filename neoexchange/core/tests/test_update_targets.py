@@ -5,24 +5,27 @@ from django.utils.six import StringIO
 from datetime import datetime, timedelta
 import logging
 import unittest
-from mock import patch, MagicMock
+from mock import patch, Mock
 
 from core.models import Body
-from core.management.commands.update_targets import *
+from core.views import *
 
-@patch('core.views.update_MPC_orbit')
 @patch('astrometrics.sources_subs.random_delay')
+@patch('core.views.update_MPC_orbit')
 
+#mock_update_MPC_orbit = Mock()
+#mock_update_MPC_orbit.side_effect = Body.objects.updated=True and Body.objects.update_time=datetime.now()
 
 class TestUpdate_Targets(TestCase):
   
     def test_command_nasa_oldies_nine(self, mock_update_MPC_orbit, mock_random_delay):
+        out = StringIO()
         now = datetime.now()
         expected_updated = ['NASA2','NASA3','GOLDSTONE1','GOLDSTONE3']
         expected_updated_sources = ['N','N','G','G']
         expected_updated_bool = [True, True, True, True]
         expected_updated_time = [now, now, now, now]
-        updated = update_targets.update_neos(origins=['N','G'], time=43200, old=True)
+        updated = update_neos(origins=['N','G'], time=43200, old=True
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -35,9 +38,9 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['A','A','G','R','R']
         expected_updated_bool = [True, True, True, True, True]
         expected_updated_time = [now, now, now, now, now]
-        updated = update_targets.update_neos(origins=['A', 'G', 'R'], time=54000)
+        updated = update_neos(origins=['A', 'G', 'R'], time=54000)
         
-        self.assertListEqual(expected_updated, updated[0])
+        self.assertListEqual(['ARECIBO1','ARECIBO2','GOLDSTONE1','A&G2','A&G3'], updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
         self.assertListEqual(expected_updated_bool, updated[2])
         self.assertListEqual(expected_updated_time, updated[3])
@@ -48,7 +51,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'A', 'A', 'G', 'G', 'M', 'S', 'R', 'R', 'L', 'L']
         expected_updated_bool = [True, True, True, True, True, True, True, True, True, True]
         expected_updated_time = [now, now, now, now, now, now, now, now, now, now]
-        updated = update_targets.update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], old=True)
+        updated = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], old=True)
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -61,7 +64,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'A', 'A', 'G', 'S', 'R', 'R','D']
         expected_updated_bool = [True, True, True, True, True, True, True, True]
         expected_updated_time = [now, now, now, now, now, now, now, now]
-        updated = update_targets.update_neos()
+        updated = update_neos()
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -74,7 +77,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['A', 'A', 'G']
         expected_updated_bool = [True, True, True]
         expected_updated_time = [now, now, now]
-        updated = update_targets.update_neos(origins=['A','G','R'], time=64800, old=True)
+        updated = update_neos(origins=['A','G','R'], time=64800, old=True)
 
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -87,7 +90,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'N', 'G']
         expected_updated_bool = [True, True, True]
         expected_updated_time = [now, now, now]
-        updated = update_targets.update_neos(origins=['N','G'], time=86400)
+        updated = update_neos(origins=['N','G'], time=86400)
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -100,7 +103,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'N', 'A', 'G', 'M', 'S', 'R', 'R', 'L']
         expected_updated_bool = [True, True, True, True, True, True, True, True, True]
         expected_updated_time = [now, now, now, now, now, now, now, now, now]
-        updated = update_targets.update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=129600)
+        updated = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=129600)
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])
@@ -113,7 +116,7 @@ class TestUpdate_Targets(TestCase):
         expected_updated_sources = ['N', 'N', 'A', 'A', 'G', 'S', 'R', 'R', 'D']
         expected_updated_bool = [True, True, True, True, True, True, True, True, True]
         expected_updated_time = [now, now, now, now, now, now, now, now, now]
-        updated = update_targets.update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=21600)
+        updated = update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=21600)
         
         self.assertListEqual(expected_updated, updated[0])
         self.assertListEqual(expected_updated_sources, updated[1])

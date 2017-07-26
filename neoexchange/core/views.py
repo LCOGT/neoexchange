@@ -37,7 +37,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError
+    fetch_NEOCP_observations, PackedError, random_delay
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -1400,3 +1400,54 @@ def make_plot(request):
 def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
+
+def update_neos(self, origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False):
+        """This is the main portion of the update_targets command.'origins' are the list of origins
+	    to be updated. The default list contains every origin except MPC and LCO. 
+        'time' is in seconds and its default is set to 43200 seconds(12 hours). 
+        'old' allows all NEOs apart of the Query Set to be updated. Its default value is set to False.
+        Note: if you need the list of objects you can edit this code to call the list 'were_updated'"""
+        three_months = old
+        time_now = datetime.utcnow()
+        logger.info("==== Preparing to Updating Targets %s ====" % (time_now.strftime('%Y-%m-%d %H:%M')))
+        targets = Body.objects.filter(origin__in=origins, active=True)
+        logger.info("Length of target query set to check {0}".format(len(targets)))
+        were_updated = []
+        were_updated_source = []
+        were_updated_bool = []
+        were_updated_time = []
+
+        for target in range(0, targets):
+            time_diff = float(timedelta.total_seconds(time_now - target.update_time))
+            time_threemonths = float(timedelta.total_seconds(time_now - target.ingest))
+            never_updated = target.updated == False
+            not_updated_in_threemonths = three_months == True and time_threemonths > 7776000 and time_diff > 172800
+            time_update = target.updated == True and time_diff >= time and time_diff < 172800
+            needs_to_be_updated = never_updated or not_updated_in_threemonths or time_update
+            print target
+
+            if needs_to_be_updated:
+                if never_updated: 
+                    target_type = 'Never Updated'
+                    logger.info('Updating {name} from {origin} which was {updated}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type))
+                elif not_updated_in_threemonths:
+                    target_type = 'Previously Updated'
+                    logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
+                else:
+                    target_type = 'Not Updated in Three Months'
+                    logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
+                #update_MPC_orbit(target.name, target.origin)
+                #delay = random_delay(10, 20)
+                were_updated.append(target)
+                were_updated_source.append(target.origin)
+                were_updated_bool.append(target.updated)
+                were_updated_time.append(target.update_time)
+
+                
+        if were_updated == []:
+            logger.info("==== No NEOs to be updated ====")
+            return were_updated, were_updated_source, were_updated_bool, were_updated_time
+        else:      
+            logger.info("==== Updated {number} NEOs ====".format(number=len(were_updated)))
+            return were_updated, were_updated_source, were_updated_bool, were_updated_time
+                    

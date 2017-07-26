@@ -6,10 +6,10 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
 from astrometrics.sources_subs import random_delay
-from core.views import update_MPC_orbit
+from core.views import update_MPC_orbit, update_neos
 from core.models import Body
 
-#logging.basicConfig(format='%(message)s')
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,9 +74,9 @@ class Command(BaseCommand):
         else:
             origins = ['N', 'S', 'D', 'G', 'A', 'R']         
 	   
-        self.update_neos(origins, time, old)
+        update_neos(origins, time, old)
                     
-            
+    '''   
     def update_neos(self, origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False):
         """'origins' are the list of origins to be updated. The default list contains every origin except MPC and LCO. 
         'time' is in seconds and its default is set to 43200 seconds(12 hours). 
@@ -123,8 +123,8 @@ class Command(BaseCommand):
                 
         if were_updated == []:
             logger.info("==== No NEOs to be updated ====")
-            return were_updated, were_updated_source, were_updated_bool, were_updated_time 
+            logger.error(were_updated, were_updated_source, were_updated_bool, were_updated_time) 
         else:      
             logger.info("==== Updated {number} NEOs ====".format(number=len(were_updated)))
-            return were_updated, were_updated_source, were_updated_bool, were_updated_time
-                    
+            logger.error(were_updated, were_updated_source, were_updated_bool, were_updated_time)
+'''
