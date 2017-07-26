@@ -5,6 +5,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 ## History
 
 
+### 1.8.1
+
+New MPC site codes for the second 0.4m telescopes at Tenerife and Maui.
+
 ### 1.8.0
 
 - Adding ability to push candidates to Agent NEO on the Zooniverse platform
