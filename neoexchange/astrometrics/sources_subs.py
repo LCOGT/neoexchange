@@ -1111,7 +1111,7 @@ def configure_defaults(params):
                   'Q59' : 'COJ'} # Code for 0m4b
 
 
-    params['pondtelescope'] = '1m0a'
+    params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
     params['binning'] = 1
@@ -1133,7 +1133,7 @@ def configure_defaults(params):
     elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
-        params['pondtelescope'] = '2m0a'
+        params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
     elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'
