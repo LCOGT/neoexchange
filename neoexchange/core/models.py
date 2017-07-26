@@ -482,7 +482,7 @@ class Frame(models.Model):
                         'Q64' : 'LCO COJ Node 1m0 Dome B at Siding Spring, Australia',
                         'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
                         'F65' : 'LCO OGG Node 2m0 FTN at Haleakala, Maui',
-                        'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui'
+                        'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui',
                         'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui'
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
