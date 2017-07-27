@@ -4,6 +4,8 @@ import urllib.request
 import json
 import logging
 import fileinput
+import numpy as np
+import matplotlib.pyplot as plt
 
 from astrometrics.albedo import asteroid_diameter 
 """
@@ -11,7 +13,7 @@ this gets Earth close-approach data for NEOs between the dates Jan. 1st, 1900 to
 """
 logger = logging.getLogger(__name__)
 
-def get_info():
+def get_info(self):
 
     NASA_SBDB_url = 'https://ssd-api.jpl.nasa.gov/cad.api?body=Earth&date-min=1900-01-01&date-max=2100-01-01&sort=dist'
 
@@ -19,7 +21,7 @@ def get_info():
 
     if sbdb_request.status_code() == requests.codes.bad:
         logger.error("There has been an Error")
-    elif json['count']== 0:
+    elif json.loads(sbdb_request)['count']== 0: 
         logger.error("Query too restrictive")
     else:    
         info = json.loads(sbdb_request)
@@ -61,7 +63,7 @@ def get_info():
             time_uncertainty.append(tsig)
             body_close_to.append(body)
             h_mag.append(h)
-
+    return designation, orbit_id, date_of_closeapproach, distance_of_closeapproach, min_dist, max_dist, time_uncertainty, h_mag 
 
 def size(self, mag=h_mag):
     '''this creates a list of diameters and uncertainties based on asteroid_diameter'''
@@ -76,11 +78,21 @@ def size(self, mag=h_mag):
         size_avg.append(diameter)
         size_min.append(min_diameter)
         size_max.append(max_diameter)
+        
+def plotData(self):
     
+    min_error = get_info[5]
+    max_error = get_info[6]
+    sizeerror = [min_error, max_error]
+    x = get_info[8]
+    y = get_info[4]
+    fig, (ax0, ax1) = plt.subplots()
+    ax0.errorbar(x, y, yerr=sizeerror, fmt='-o')
+    ax0.set_title('Magnitude vs. Close Approach Distance of NEOs')
     
-    
-    
-    
+    n_bins = #count from json
+    ax1.hist(x, n_bins, histtype='bar')
+    ax1.set_title('
     
     
     
