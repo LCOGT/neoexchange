@@ -1401,7 +1401,7 @@ def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
-def update_neos(self, origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False):
+def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False):
         """This is the main portion of the update_targets command.'origins' are the list of origins
 	    to be updated. The default list contains every origin except MPC and LCO. 
         'time' is in seconds and its default is set to 43200 seconds(12 hours). 
@@ -1411,20 +1411,16 @@ def update_neos(self, origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=Fa
         time_now = datetime.utcnow()
         logger.info("==== Preparing to Updating Targets %s ====" % (time_now.strftime('%Y-%m-%d %H:%M')))
         targets = Body.objects.filter(origin__in=origins, active=True)
-        logger.info("Length of target query set to check {0}".format(len(targets)))
+        logger.info("Length of target query set to check {length}".format(length=targets.count()))
         were_updated = []
-        were_updated_source = []
-        were_updated_bool = []
-        were_updated_time = []
-
-        for target in range(0, targets):
+        
+        for target in targets:
             time_diff = float(timedelta.total_seconds(time_now - target.update_time))
             time_threemonths = float(timedelta.total_seconds(time_now - target.ingest))
             never_updated = target.updated == False
             not_updated_in_threemonths = three_months == True and time_threemonths > 7776000 and time_diff > 172800
             time_update = target.updated == True and time_diff >= time and time_diff < 172800
             needs_to_be_updated = never_updated or not_updated_in_threemonths or time_update
-            print target
 
             if needs_to_be_updated:
                 if never_updated: 
@@ -1439,15 +1435,12 @@ def update_neos(self, origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=Fa
                 #update_MPC_orbit(target.name, target.origin)
                 #delay = random_delay(10, 20)
                 were_updated.append(target)
-                were_updated_source.append(target.origin)
-                were_updated_bool.append(target.updated)
-                were_updated_time.append(target.update_time)
-
-                
+        updated = Body.objects.filter(origin__in=origins, active=True, updated=True).exclude(update_time__date__lt=time_now-timedelta(minutes=5))
+                                
         if were_updated == []:
             logger.info("==== No NEOs to be updated ====")
-            return were_updated, were_updated_source, were_updated_bool, were_updated_time
+            return list(updated)
         else:      
             logger.info("==== Updated {number} NEOs ====".format(number=len(were_updated)))
-            return were_updated, were_updated_source, were_updated_bool, were_updated_time
+            return list(updated)
                     

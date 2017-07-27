@@ -13,117 +13,9 @@ from core.views import *
 @patch('astrometrics.sources_subs.random_delay')
 @patch('core.views.update_MPC_orbit')
 
-#mock_update_MPC_orbit = Mock()
-#mock_update_MPC_orbit.side_effect = Body.objects.updated=True and Body.objects.update_time=datetime.now()
-
 class TestUpdate_Targets(TestCase):
-  
-    def test_command_nasa_oldies_nine(self, mock_update_MPC_orbit, mock_random_delay):
-        out = StringIO()
-        now = datetime.now()
-        expected_updated = ['NASA2','NASA3','GOLDSTONE1','GOLDSTONE3']
-        expected_updated_sources = ['N','N','G','G']
-        expected_updated_bool = [True, True, True, True]
-        expected_updated_time = [now, now, now, now]
-        updated = update_neos(origins=['N','G'], time=43200, old=True
-        
-        self.assertListEqual(expected_updated, updated[0])
-        self.assertListEqual(expected_updated_sources, updated[1])
-        self.assertListEqual(expected_updated_bool, updated[2])
-        self.assertListEqual(expected_updated_time, updated[3])
 
-    def test_command_radar_fifteen(self, mock_update_MPC_orbit, mock_random_delay):
-        now = datetime.now()
-        expected_updated = ['ARECIBO1','ARECIBO2','GOLDSTONE1','A&G2','A&G3']
-        expected_updated_sources = ['A','A','G','R','R']
-        expected_updated_bool = [True, True, True, True, True]
-        expected_updated_time = [now, now, now, now, now]
-        updated = update_neos(origins=['A', 'G', 'R'], time=54000)
-        
-        self.assertListEqual(['ARECIBO1','ARECIBO2','GOLDSTONE1','A&G2','A&G3'], updated[0])
-        self.assertListEqual(expected_updated_sources, updated[1])
-        self.assertListEqual(expected_updated_bool, updated[2])
-        self.assertListEqual(expected_updated_time, updated[3])
-        
-    def test_command_all_oldies(self, mock_update_MPC_orbit, mock_random_delay):
-        now = datetime.now()
-        expected_updated = ['NASA2','ARECIBO2','ARECIBO3','GOLDSTONE1','GOLDSTONE3','MPC1','SPACEWATCH','A&G2','LCO1','LCO2']
-        expected_updated_sources = ['N', 'A', 'A', 'G', 'G', 'M', 'S', 'R', 'R', 'L', 'L']
-        expected_updated_bool = [True, True, True, True, True, True, True, True, True, True]
-        expected_updated_time = [now, now, now, now, now, now, now, now, now, now]
-        updated = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], old=True)
-        
-        self.assertListEqual(expected_updated, updated[0])
-        self.assertListEqual(expected_updated_sources, updated[1])
-        self.assertListEqual(expected_updated_bool, updated[2])
-        self.assertListEqual(expected_updated_time, updated[3])
-        
-    def test_command_objects(self, mock_update_MPC_orbit, mock_random_delay):
-        now = datetime.now()
-        expected_updated = ['NASA2', 'ARECIBO1', 'ARECIBO2', 'GOLDSTONE1', 'SPACEWATCH', 'A&G2', 'A&G3', 'NEODSYS']
-        expected_updated_sources = ['N', 'A', 'A', 'G', 'S', 'R', 'R','D']
-        expected_updated_bool = [True, True, True, True, True, True, True, True]
-        expected_updated_time = [now, now, now, now, now, now, now, now]
-        updated = update_neos()
-        
-        self.assertListEqual(expected_updated, updated[0])
-        self.assertListEqual(expected_updated_sources, updated[1])
-        self.assertListEqual(expected_updated_bool, updated[2])
-        self.assertListEqual(expected_updated_time, updated[3])
-        
-    def test_command_radar_eighteen_oldies(self, mock_update_MPC_orbit, mock_random_delay):
-        now = datetime.now()
-        expected_updated = ['ARECIBO1', 'ARECIBO2', 'GOLDSTONE1']
-        expected_updated_sources = ['A', 'A', 'G']
-        expected_updated_bool = [True, True, True]
-        expected_updated_time = [now, now, now]
-        updated = update_neos(origins=['A','G','R'], time=64800, old=True)
-
-        self.assertListEqual(expected_updated, updated[0])
-        self.assertListEqual(expected_updated_sources, updated[1])
-        self.assertListEqual(expected_updated_bool, updated[2])
-        self.assertListEqual(expected_updated_time, updated[3])
-
-    def test_command_nasa_twentyfour(self, mock_update_MPC_orbit, mock_random_delay):
-        now = datetime.now()
-        expected_updated = ['NASA2', 'NASA3', 'GOLDSTONE1']
-        expected_updated_sources = ['N', 'N', 'G']
-        expected_updated_bool = [True, True, True]
-        expected_updated_time = [now, now, now]
-        updated = update_neos(origins=['N','G'], time=86400)
-        
-        self.assertListEqual(expected_updated, updated[0])
-        self.assertListEqual(expected_updated_sources, updated[1])
-        self.assertListEqual(expected_updated_bool, updated[2])
-        self.assertListEqual(expected_updated_time, updated[3])
-        
-    def test_command_all_thirtysix(self, mock_update_MPC_orbit, mock_random_delay):
-        now = datetime.now()
-        expected_updated = ['NASA2', 'NASA3', 'ARECIBO2', 'GOLDSTONE1', 'MPC1', 'SPACEWATCH', 'A&G2', 'A&G3', 'LCO1']
-        expected_updated_sources = ['N', 'N', 'A', 'G', 'M', 'S', 'R', 'R', 'L']
-        expected_updated_bool = [True, True, True, True, True, True, True, True, True]
-        expected_updated_time = [now, now, now, now, now, now, now, now, now]
-        updated = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=129600)
-        
-        self.assertListEqual(expected_updated, updated[0])
-        self.assertListEqual(expected_updated_sources, updated[1])
-        self.assertListEqual(expected_updated_bool, updated[2])
-        self.assertListEqual(expected_updated_time, updated[3])
-
-    def test_command_objects_six(self, mock_update_MPC_orbit, mock_random_delay):
-        now = datetime.now()
-        expected_updated = ['NASA1', 'NASA2', 'ARECIBO1', 'ARECIBO2', 'GOLDSTONE1', 'SPACEWATCH', 'A&G2', 'A&G3', 'NEODSYS']
-        expected_updated_sources = ['N', 'N', 'A', 'A', 'G', 'S', 'R', 'R', 'D']
-        expected_updated_bool = [True, True, True, True, True, True, True, True, True]
-        expected_updated_time = [now, now, now, now, now, now, now, now, now]
-        updated = update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=21600)
-        
-        self.assertListEqual(expected_updated, updated[0])
-        self.assertListEqual(expected_updated_sources, updated[1])
-        self.assertListEqual(expected_updated_bool, updated[2])
-        self.assertListEqual(expected_updated_time, updated[3])
-
-    def setup_time(self):
+    def setUp(self):
         """These are the times that the bodies ingest and update_time can be set to."""
         #these are just under the number of hours their name says they are
         six_hours = datetime.now()- timedelta(hours=5, minutes=55)
@@ -133,22 +25,10 @@ class TestUpdate_Targets(TestCase):
         thirtysix_hours = datetime.now() - timedelta(hours=35, minutes=55)
         fourtyeighthours = datetime.now() - timedelta(hours=47,minutes=55)
         #just over the time their name says they are
-        three_months = datetime.now() - timedelta(months=3, days=1)
-        six_months = datetime.now() - timedelta(months=6, days=1)
-        year = datetime.now() - timedelta(years=1, days=1)
-        
-    def messages(self):
-        timenow = datetime.now().strftime('%Y-%m-%d %H:%M')
-        prep = '==== Preparing to Updating Targets {time} ===='.format(time=timenow)
-        lenght = 'Length of target query set to check {number}'
-        never = 'Updating {name} from {source} which was Never Updated'
-        previously = 'Updating {name} from {source} which was Previously Updated on {date}'
-        old = 'Updating {name} from {source} which was Not Updated in Three Months on {date}'
-        updateNEOs = '==== Updated {updated_number} NEOs ===='
-        noNEOs ='==== No NEOs to be updated ===='
-        
-
-    def setup_bodies(self):
+        three_months = datetime.now() - timedelta(days=91)
+        six_months = datetime.now() - timedelta(days=181)
+        year = datetime.now() - timedelta(days=366)    
+    
         """These are the fake Bodies that will be tested above"""
         
         object1=Body.objects.create(
@@ -157,8 +37,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'N',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.twentyfour_hours,
-            'update_time' : setup_time.six_hours
+            'ingest' : twentyfour_hours,
+            'update_time' : six_hours
             })
             
         object2=Body.objects.create(
@@ -167,8 +47,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'N',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.fourtyeight_hours,
-            'update_time' : setup_time.fourtyeight_hours
+            'ingest' : fourtyeight_hours,
+            'update_time' : fourtyeight_hours
             })
         
         object3=Body.objects.create(
@@ -177,8 +57,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'N',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.three_months,
-            'update_time' : setup_time.thirysix_hours
+            'ingest' : three_months,
+            'update_time' : thirysix_hours
             })
         
         object4=Body.objects.create(
@@ -187,8 +67,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'A',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.eighteen_hours,
-            'update_time' : setup_time.eighteen_hours
+            'ingest' : eighteen_hours,
+            'update_time' : eighteen_hours
             })
         
         object5=Body.objects.create(
@@ -197,8 +77,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'A',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.six_hours,
-            'update_time' : setup_time.six_hours
+            'ingest' : six_hours,
+            'update_time' : six_hours
             })
         
         object6=Body.objects.create(
@@ -207,8 +87,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'A',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.six_months,
-            'update_time' : setup_time.three_months
+            'ingest' : six_months,
+            'update_time' : three_months
             })
         
         object7=Body.objects.create({
@@ -216,8 +96,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'G',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.year,
-            'update_time' : setup_time.year
+            'ingest' : year,
+            'update_time' : year
             })
         
         object8=Body.objects.create(
@@ -226,8 +106,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'G',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.fourtyeight_hours,
-            'update_time' : setup_time.three_hours
+            'ingest' : fourtyeight_hours,
+            'update_time' : three_hours
             })
         
         object9=Body.objects.create(
@@ -236,8 +116,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'G',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.six_months,
-            'update_time' : setup_time.six_months
+            'ingest' : six_months,
+            'update_time' : six_months
             })
        
         object10=Body.objects.create(
@@ -246,8 +126,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'M',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.twelve_hours,
-            'update_time' : setup_time.twelve_hours
+            'ingest' : twelve_hours,
+            'update_time' : twelve_hours
             })
         
         object11=Body.objects.create(
@@ -256,8 +136,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'M',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.twentyfour_hours,
-            'update_time' : setup_time.six_hours
+            'ingest' : twentyfour_hours,
+            'update_time' : six_hours
             })
         
         object12=Body.objects.create(
@@ -266,8 +146,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'M',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.three_months,
-            'update_time' : setup_time.twelve_hours
+            'ingest' : three_months,
+            'update_time' : twelve_hours
             })
         
         object13=Body.objects.create(
@@ -276,8 +156,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'S',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.twentyfour_hours,
-            'update_time' : setup_time.twentyfour_hours
+            'ingest' : twentyfour_hours,
+            'update_time' : twentyfour_hours
             })
             
         object14=Body.objects.create(
@@ -286,8 +166,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'R',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.six_hours,
-            'update_time' : setup_time.three_hours
+            'ingest' : six_hours,
+            'update_time' : three_hours
             })
         
         object15=Body.objects.create(
@@ -296,8 +176,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'R',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.twelve_hours,
-            'update_time' : setup_time.twelve_hours
+            'ingest' : twelve_hours,
+            'update_time' : twelve_hours
             })
         
         object16=Body.objects.create(
@@ -306,8 +186,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'R',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.thirtysix_hours,
-            'update_time' : setup_time.thirtysix_hours
+            'ingest' : thirtysix_hours,
+            'update_time' : thirtysix_hours
             })
         object17=Body.objects.create(
             params = {
@@ -315,8 +195,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'D',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.year,
-            'update_time' : setup_time.eighteen_hours
+            'ingest' : year,
+            'update_time' : eighteen_hours
             })
         
         object18=Body.objects.create(
@@ -325,8 +205,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'L',
             'active' : True,
             'updated' : False,
-            'ingest' : setup_time.six_hours,
-            'update_time' : setup_time.six_hours
+            'ingest' : six_hours,
+            'update_time' : six_hours
             })
         object19=Body.objects.create(
             params = {
@@ -334,8 +214,8 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'L',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.three_months,
-            'update_time' : setup_time.fourtyeight_hours
+            'ingest' : three_months,
+            'update_time' : fourtyeight_hours
             })
         object20=Body.objects.create(
             params = {
@@ -343,6 +223,56 @@ class TestUpdate_Targets(TestCase):
             'origin' : 'L',
             'active' : True,
             'updated' : True,
-            'ingest' : setup_time.twentyfour_hours,
-            'update_time' : setup_time.eighteen_hours
+            'ingest' : twentyfour_hours,
+            'update_time' : eighteen_hours
             })
+  
+    def test_command_nasa_oldies_nine(self, mock_update_MPC_orbit, mock_random_delay):
+        expected_updated = list(Body.objects.filter(origin__in=['N','G'], active=True, updated=True).exclude(update_time__date__gt=datetime.now()-timedelta(minutes=5)))
+        updated = update_neos(origins=['N','G'], time=43200, old=True)
+        
+        self.assertListEqual(expected_updated, updated)
+
+    def test_command_radar_fifteen(self, mock_update_MPC_orbit, mock_random_delay):
+        expected_updated = list(Body.objects.filter(origin__in=['A', 'G', 'R'], active=True, updated=True).exclude(update_time__date__gt=datetime.now()-timedelta(minutes=5)))
+        updated = update_neos(origins=['A', 'G', 'R'], time=54000)
+        
+        self.assertListEqual(expected_updated, updated)
+        
+    def test_command_all_oldies(self, mock_update_MPC_orbit, mock_random_delay):
+        expected_updated = list(Body.objects.filter(origin__in=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], active=True, updated=True).exclude(update_time__date__gt=datetime.now()-timedelta(minutes=5)))
+        updated = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], old=True)
+        
+        self.assertListEqual(expected_updated, updated)
+        
+    def test_command_objects(self, mock_update_MPC_orbit, mock_random_delay):
+        expected_updated = list(Body.objects.filter(origin__in=['N', 'S', 'D', 'G', 'A', 'R'], active=True, updated=True).exclude(update_time__date__gt=datetime.now()-timedelta(minutes=5)))
+        updated = update_neos()
+        
+        self.assertListEqual(expected_updated, updated)
+        
+    def test_command_radar_eighteen_oldies(self, mock_update_MPC_orbit, mock_random_delay):
+        expected_updated = list(Body.objects.filter(origin__in=['A','G','R'], active=True, updated=True).exclude(update_time__date__gt=datetime.now()-timedelta(minutes=5)))
+        updated = update_neos(origins=['A','G','R'], time=64800, old=True)
+
+        self.assertListEqual(expected_updated, updated)
+
+    def test_command_nasa_twentyfour(self, mock_update_MPC_orbit, mock_random_delay):
+        expected_updated = list(Body.objects.filter(origin__in=['N','G'], active=True, updated=True).exclude(update_time__date__gt=datetime.now()-timedelta(minutes=5)))
+        updated = update_neos(origins=['N','G'], time=86400)
+        
+        self.assertListEqual(expected_updated, updated)
+        
+    def test_command_all_thirtysix(self, mock_update_MPC_orbit, mock_random_delay):
+        expected_updated = list(Body.objects.filter(origin__in=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], active=True, updated=True).exclude(update_time__date__gt=datetime.now()-timedelta(minutes=5)))
+        updated = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=129600)
+        
+        self.assertListEqual(expected_updated, updated)
+
+    def test_command_objects_six(self, mock_update_MPC_orbit, mock_random_delay):
+        expected_updated = list(Body.objects.filter(origin__in=['N', 'S', 'D', 'G', 'A', 'R'], active=True, updated=True).exclude(update_time__date__gt=datetime.now()-timedelta(minutes=5)))
+        updated = update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=21600)
+        
+        self.assertListEqual(expected_updated, updated)
+
+
