@@ -92,7 +92,7 @@ def plotData(self):
     
     n_bins = #count from json
     ax1.hist(x, n_bins, histtype='bar')
-    ax1.set_title('
+    ax1.set_title('Number of NEOs that make a Close Approach vs. the Approximate Size of the NEOs')
     
     
     

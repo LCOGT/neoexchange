@@ -1434,13 +1434,12 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False):
                     logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
                 #update_MPC_orbit(target.name, target.origin)
                 #delay = random_delay(10, 20)
-                were_updated.append(target)
-        updated = Body.objects.filter(origin__in=origins, active=True, updated=True).exclude(update_time__date__lt=time_now-timedelta(minutes=5))
-                                
+                were_updated.append('<Body: {body} is active>'.format(body=target))
+                
         if were_updated == []:
             logger.info("==== No NEOs to be updated ====")
-            return list(updated)
+            return list(were_updated)
         else:      
             logger.info("==== Updated {number} NEOs ====".format(number=len(were_updated)))
-            return list(updated)
+            return list(were_updated)
                     
