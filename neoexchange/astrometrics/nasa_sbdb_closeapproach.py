@@ -63,7 +63,7 @@ def get_info(self):
             time_uncertainty.append(tsig)
             body_close_to.append(body)
             h_mag.append(h)
-    return designation, orbit_id, date_of_closeapproach, distance_of_closeapproach, min_dist, max_dist, time_uncertainty, h_mag 
+        
 
 def size(self, mag=h_mag):
     '''this creates a list of diameters and uncertainties based on asteroid_diameter'''
