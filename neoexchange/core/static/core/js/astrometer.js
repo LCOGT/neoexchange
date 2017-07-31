@@ -268,7 +268,7 @@ function mainImageZoomLevel(mode){
   }
   image_scale = zoomLevel * default_image_scale;
   zoomMainImage(zoomLevel);
-  changeImage();
+  changeImage(0,0,true);
 }
 
 function handleLoad(event) {
@@ -382,7 +382,7 @@ function loadThumbnails(frames){
       image.src = resp;
     });
     // Once all URLs are stored change to the first image
-    changeImage(0, candids[0]);
+    changeImage(0, candids[0],allcandidates=true);
   });
   return
 }
