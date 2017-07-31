@@ -120,16 +120,22 @@ function prevImage() {
   }
 }
 
-function addCircle(x, y, r, fill, name, draggable) {
+function addCircle(x, y, r, fill, cid, ind, draggable=false,info=true) {
    var circle = new createjs.Shape();
    circle.graphics.beginFill(fill).drawCircle(0, 0, r);
    circle.x = x;
    circle.y = y;
    circle.alpha = 0.2;
-   circle.name = name;
+   circle.name = cid;
    if (draggable==true){
      circle.on("pressmove", drag);
      circle.alpha = 0.5;
+   }
+   if (info==true){
+     circle.on("click", function(evt) {
+        blinkCandidate(cid);
+        display_info_panel(cid,ind);
+      });
    }
    stage.addChild(circle);
   }
@@ -222,6 +228,7 @@ function stopBlink() {
   clearInterval(blinker);
   $('#blink-stop').hide();
   $('#blink-start').show();
+  changeImage(ind=0, cand_index=0, allcandidates=true)
 }
 
 function zoomImage(x,y){
@@ -284,19 +291,30 @@ function loadCandidates(candidates){
   }
 }
 
-function display_info_panel(cindex, index) {
+function display_info_panel(cindex, ind) {
   // Hide all info tables to start
   $('.coords-table').hide();
   $('.candidate-row').hide();
   // Only show info tables for current index
   $('.candidate-'+cindex).show();
-  $('.candidate-'+cindex +' '+'#img-coords-'+index).show();
-  $('.candidate-'+cindex +' '+'#img-skycoords-'+index).show();
+  $('.candidate-'+cindex +' '+'#img-coords-'+ind).show();
+  $('.candidate-'+cindex +' '+'#img-skycoords-'+ind).show();
+}
+
+function blinkCandidate(ind) {
+  stopBlink();
+  startBlink(ind, false);
+  $('#candidate-list').hide();
+  $('.candidate-accept').show();
+
+  $("#cand-accept").data('cand_id', ind);
+  $("#cand-reject").data('cand_id', ind);
 }
 
 function changeImage(ind, cand_index=0, allcandidates=false) {
 
-  var index, coords;
+  var index
+  var coords;
 
   if (typeof(ind) == 'undefined') {
     index = 0;
@@ -331,14 +349,12 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
   if (allcandidates){
     for (var i=0; i <candidates.length;i++) {
       target = candidates[i].coords[index];
-      name = "target_" + i;
-      addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, false);
+      addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", cid=candidates[i].id, ind=i);
     }
   }else if (typeof(ind) != 'undefined'){
     var id = candids.indexOf(String(cand_index))
     target = candidates[id].coords[index];
-    name = "target_" + cand_index;
-    addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, false);
+    addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", cid=cand_index, ind=ind);
     zoomImage(target.x/image_scale, target.y/image_scale);
     // Show the candidate information
     display_info_panel(id, index);
