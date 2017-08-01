@@ -1401,13 +1401,15 @@ def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
-def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False):
+def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False, never=True):
         """This is the main portion of the update_targets command.'origins' are the list of origins
 	    to be updated. The default list contains every origin except MPC and LCO. 
         'time' is in seconds and its default is set to 43200 seconds(12 hours). 
         'old' allows all NEOs apart of the Query Set to be updated. Its default value is set to False.
         Note: if you need the list of objects you can edit this code to call the list 'were_updated'"""
+        time_opt = time
         three_months = old
+        never_update = never
         time_now = datetime.utcnow()
         logger.info("==== Preparing to Updating Targets %s ====" % (time_now.strftime('%Y-%m-%d %H:%M')))
         targets = Body.objects.filter(origin__in=origins, active=True)
@@ -1415,31 +1417,34 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False):
         were_updated = []
         
         for target in targets:
-            time_diff = float(timedelta.total_seconds(time_now - target.update_time))
-            time_threemonths = float(timedelta.total_seconds(time_now - target.ingest))
-            never_updated = target.updated == False
-            not_updated_in_threemonths = three_months == True and time_threemonths > 7776000 and time_diff > 172800
-            time_update = target.updated == True and time_diff >= time and time_diff < 172800
-            needs_to_be_updated = never_updated or not_updated_in_threemonths or time_update
+            up_time_diff = float(timedelta.total_seconds(time_now - target.update_time))
+            in_time_diff = float(timedelta.total_seconds(time_now - target.ingest))
+            never_updated = target.updated == False and never_update==True
+            not_updated_in_threemonths = three_months == True and in_time_diff > 7776000 and up_time_diff > 172800
+            if time_opt == 0:
+                needs_to_be_updated = never_updated or not_updated_in_threemonths
+            else:
+                time_update = target.updated == True and up_time_diff > 0 and up_time_diff >= time_opt and up_time_diff <= 172800
+                needs_to_be_updated = never_updated or not_updated_in_threemonths or time_update
 
             if needs_to_be_updated:
-                if never_updated: 
+                if never_updated:
                     target_type = 'Never Updated'
                     logger.info('Updating {name} from {origin} which was {updated}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type))
-                elif not_updated_in_threemonths:
+                elif time_update:
                     target_type = 'Previously Updated'
                     logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
-                else:
+                elif not_updated_in_threemonths:
                     target_type = 'Not Updated in Three Months'
                     logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
                 #update_MPC_orbit(target.name, target.origin)
                 #delay = random_delay(10, 20)
-                were_updated.append('<Body: {body} is active>'.format(body=target))
+                were_updated.append(target.name)
                 
         if were_updated == []:
             logger.info("==== No NEOs to be updated ====")
-            return list(were_updated)
+            return were_updated
         else:      
             logger.info("==== Updated {number} NEOs ====".format(number=len(were_updated)))
-            return list(were_updated)
+            return were_updated
                     

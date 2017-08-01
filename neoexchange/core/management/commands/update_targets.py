@@ -28,9 +28,9 @@ class Command(BaseCommand):
             choices=['allneos', 'nasa', 'radar', 'objects'],
             default='objects',
             help='Updates NEOs by origin source. "allneos" updates all NEOs, "nasa" updates origins assosiated' \
-            'with NASA, "radar" updates NEOs being followed by radar origins, "objects" updates all but MPC and' \
-            'LCO objects, "M" is the Minor Planet Center, "N" is NASA, "S" is Spacewatch, "D" is NEODSYS, "G" is' \
-            'Goldstone,"A" is Arecibo, "R" is both Goldstone and Aricebo, "L" is LCO.'
+            ' with NASA, "radar" updates NEOs being followed by radar origins, "objects" updates all but MPC and' \
+            ' LCO objects, "M" is the Minor Planet Center, "N" is NASA, "S" is Spacewatch, "D" is NEODSYS, "G" is' \
+            ' Goldstone,"A" is Arecibo, "R" is both Goldstone and Aricebo, "L" is LCO.'
         )
         
         parser.add_argument(
@@ -43,6 +43,15 @@ class Command(BaseCommand):
             'to not update old NEOs.'
         )
             
+        parser.add_argument(
+            '--never',
+            type=bool,
+            choices=[True, False],
+            default=True,
+            help='When set to True the code updates all NEOs apart of the QuerySet that have never been updated.' \
+            ' If this is set to False it will not update NEOs that have never been updated.'
+        )
+
         parser.add_argument(
             '--time',
             type=int,
@@ -62,6 +71,11 @@ class Command(BaseCommand):
             old = True
         else:
             old = False
+            
+        if options['never']:
+            never = False
+        else:
+            never = True
 
         if options['sources']=='allneos':
             origins = ['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L']
@@ -74,4 +88,4 @@ class Command(BaseCommand):
         else:
             origins = ['N', 'S', 'D', 'G', 'A', 'R']         
 	   
-        update_neos(origins, time, old)
+        update_neos(origins, time, old, never)
