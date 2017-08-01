@@ -161,8 +161,8 @@ function addCircle(x, y, r, fill, cid, ind, draggable=false,info=true) {
 
 
 function drag(evt) {
-    evt.target.x = evt.stageX;
-    evt.target.y = evt.stageY;
+    evt.target.x = (evt.stageX-stage.x)/stage.scaleX;
+    evt.target.y = (evt.stageY-stage.y)/stage.scaleY;
     stage.update();
     // updateTarget(evt.currentTarget.name, evt.currentTarget.x, evt.currentTarget.y);
     zoomImage(evt.currentTarget.x, evt.currentTarget.y);
@@ -245,30 +245,50 @@ function zoomImage(x,y){
   ministage.update();
 }
 
-function zoomMainImage(scale){
-  var width = 600;
-  var height = 600;
+function zoomMainImage(scaleDelta){
+
   for (var i=0;i<stage.children.length;i++){
     if (stage.children[i].name == 'crosshairs'){
-      zoom_origin[0] = width/2 - scale*stage.children[i].x
-      zoom_origin[1] = height/2 - scale*stage.children[i].y
+      //var scaleDelta = 0.5;
+      var currentScale = stage.scaleX;
+      var nextScale = currentScale + scaleDelta;
+
+      var offsetX = -(stage.children[i].x * scaleDelta);
+      var offsetY = -(stage.children[i].y * scaleDelta);
+
+      stage.x += offsetX;
+      stage.y += offsetY;
+
+      stage.scaleX = nextScale;
+      stage.scaleY = nextScale;
+
+      stage.update();
     }
   }
 }
 
 function mainImageZoomLevel(mode){
   if (mode=='add'){
-    zoomLevel+=0.5;
+    zoomLevel=0.5;
+    zoomMainImage(zoomLevel);
   } else if (mode =='minus'){
-    zoomLevel-=0.5;
-    zoomLevel=Math.max(zoomLevel, 1.0);
-  } else if (mode =='revert'){
-    zoomLevel = 1.0
-    zoom_origin=[0,0]
+    zoomLevel=-0.5;
+    //zoomLevel=Math.max(zoomLevel, 1.0);
+    zoomMainImage(zoomLevel);
+  }
+  if (mode =='revert'){
+    stage.x = 0;
+    stage.y = 0;
+
+    stage.scaleX = 1;
+    stage.scaleY = 1;
+
+    stage.update();
+    zoomLevel = 1;
   }
   image_scale = zoomLevel * default_image_scale;
-  zoomMainImage(zoomLevel);
-  changeImage(0,0,true);
+
+  //changeImage(0,0,true);
 }
 
 function handleLoad(event) {
@@ -343,7 +363,7 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
   // Duplicate this image on to the mini canvas
   zoomImage(500,100);
   // Scale the image to fit inside canvas
-  img_holder.setTransform(zoom_origin[0], zoom_origin[1], 0.6*zoomLevel,0.6*zoomLevel);
+  img_holder.setTransform(zoom_origin[0], zoom_origin[1], 0.6,0.6);
   stage.addChild(img_holder);
 
   if (allcandidates){
