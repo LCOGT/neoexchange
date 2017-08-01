@@ -1437,8 +1437,8 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False, n
                 elif not_updated_in_threemonths:
                     target_type = 'Not Updated in Three Months'
                     logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
-                #update_MPC_orbit(target.name, target.origin)
-                #delay = random_delay(10, 20)
+                update_MPC_orbit(target.name, target.origin)
+                delay = random_delay(10, 20)
                 were_updated.append(target.name)
                 
         if were_updated == []:
