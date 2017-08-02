@@ -1,30 +1,32 @@
 """This code is to get information from NASA's JPL SBDB Close-Approach Data. This will produce a JSON file that can be manipulated."""
 
-import urllib.request
+import requests
 import json
 import logging
 import fileinput
 import numpy as np
 import matplotlib.pyplot as plt
 
-from astrometrics.albedo import asteroid_diameter 
+from albedo import asteroid_diameter 
 """
 this gets Earth close-approach data for NEOs between the dates Jan. 1st, 1900 to Jan 1st, 2100 and is sorted by distance 
 """
 logger = logging.getLogger(__name__)
 
-def get_info(self):
+def get_info(self, url='https://ssd-api.jpl.nasa.gov/cad.api?body=Earth&date-min=1900-01-01&date-max=2100-01-01&sort=dist'):
 
-    NASA_SBDB_url = 'https://ssd-api.jpl.nasa.gov/cad.api?body=Earth&date-min=1900-01-01&date-max=2100-01-01&sort=dist'
-
-    sbdb_request = requests.get(NASA_SBDB_url)
+    sbdb_request = requests.get(url)
 
     if sbdb_request.status_code() == requests.codes.bad:
-        logger.error("There has been an Error")
+        logger.info("Bad Request")
+    elif sbdb_request.status_code() == requests.codes.error:
+        logger.info("JPL Internal Server Error")
     elif json.loads(sbdb_request)['count']== 0: 
-        logger.error("Query too restrictive")
+        logger.info("Query too restricted")
     else:    
+        logger.info("Request Good")
         info = json.loads(sbdb_request)
+        print info
         designation = []
         orbit_id = []
         date_of_closeapproach = []
@@ -37,37 +39,27 @@ def get_info(self):
         time_uncertainty = []
         body_close_to = []
         h_mag = [] 
-        for objects in json['data']:
-            des = line.split(', u')[0]
-            iD = float(line.split(', u')[1])
-            date = float(line.split(', u')[2])
-            cal_date = line.slit(', u')[3]
-            dist = float(line.split(', u')[4])
-            min_d = float(line.split(', u')[5])
-            max_d = float(line.split(', u')[6])
-            vel = float(line.split(', u')[7])
-            vel_inf = float(line.split(', u')[8])
-            tsig = float(line.split(', u')[9])
-            body = line.split(', u')[10]
-            h = float(line.split(', u')[11])
-            
-            designation.append(des)
-            orbit_id.append(iD)
-            date_of_closeapproach(date)
-            calender_date.append(cal_date)
-            dist_of_closeapproach.append(dist)
-            min_dist.append(min_d)
-            max_dist.append(max_d)
-            velocity.append(vel)
-            velocity_massless.append(vel_inf)
-            time_uncertainty.append(tsig)
-            body_close_to.append(body)
-            h_mag.append(h)
-        
+        name = []
+        for objects in info['data']:
+            designation.append(objects[0])
+            orbit_id.append(objects[1])
+            date_of_closeapproach(objects[2])
+            calender_date.append(objects[3])
+            dist_of_closeapproach.append(objects[4])
+            min_dist.append(objects[5])
+            max_dist.append(objects[6])
+            velocity.append(objects[7])
+            velocity_massless.append(objects[8])
+            time_uncertainty.append(objects[9])
+            body_close_to.append(objects[10])
+            h_mag.append(objects[11])
+            name.append(objects[12])
+        neo_info = {'count':info['count'],'des':designation, 'iD':orbit_id, 'date':date_of_closeapproach, 'dist':dist_of_closeapproach, 'mind':min_dist, 'maxd':max_dist, 'vel':velocity, 'tsig':time_uncertainty, 'h_mag':h_mag, 'name':name}  
+        return neo_info
 
-def size(self, mag=h_mag):
+def size(self, info=get_info):
     '''this creates a list of diameters and uncertainties based on asteroid_diameter'''
-    h = mag
+    h = info[h_mag]
     size_avg = []
     size_min = []
     size_max = []
@@ -78,32 +70,40 @@ def size(self, mag=h_mag):
         size_avg.append(diameter)
         size_min.append(min_diameter)
         size_max.append(max_diameter)
+    neo_size = {'dia':size_avg, 'mindia':size_min, 'maxdia':size_min}
+    return neo_size
         
-def plotData(self):
+def plotData(self, info=get_info, size=size):
+    fig, (ax0, ax1, ax2, ax3, ax4) = plt.subplots()
     
-    min_error = get_info[5]
-    max_error = get_info[6]
-    sizeerror = [min_error, max_error]
-    x = get_info[8]
-    y = get_info[4]
-    fig, (ax0, ax1) = plt.subplots()
-    ax0.errorbar(x, y, yerr=sizeerror, fmt='-o')
+    
+    min_error = info[mind]
+    max_error = info[maxd]
+    dist_error = [min_error, max_error]
+    x = info[h_mag]
+    y = info[dist]
+    
+    ax0.errorbar(x, y, yerr=dist_error, fmt='-o')
     ax0.set_title('Magnitude vs. Close Approach Distance of NEOs')
     
-    n_bins = #count from json
-    ax1.hist(x, n_bins, histtype='bar')
-    ax1.set_title('Number of NEOs that make a Close Approach vs. the Approximate Size of the NEOs')
+    min_diaerror = size[mindia]
+    max_diaerror = size[maxdia]
+    dia_error = [mindia, maxdia]
+    w = size[dia]
+    
+    ax1.errorbar(w, y, werr=dia_error, yerr=dist_error, fmt='-o')
+    ax1.set_title('Approximate Diameter vs. Close Approach Distance of NEOs')
     
     
+    n_bins = info[count]
+    ax2.hist(w, n_bins, histtype='bar')
+    ax2.set_title('Number of NEOs that make a Close Approach vs. Approximate Diameter')
     
-'''
-{
-  "signature":{"version":"1.1","source":"NASA/JPL SBDB Close Approach Data API"},
-  "count":"2",
-  "fields":["des","orbit_id","jd","cd","dist","dist_min","dist_max","v_rel","v_inf","t_sigma_f","h","fullname"],
-  "data":[
-    ["2007 JB21","9","2418800.878283280","1910-May-09 09:05","0.0020925812637796","0.000330379338764904","0.00489001931160697","7.59151917808528","7.4218978450753","00:25","25.4","       (2007 JB21)"],
-    ["2012 BX34","16","2419429.176816497","1912-Jan-27 16:15","0.00224445877558233","0.00107169260360805","0.0791138808793694","9.53393503237496","9.40859414806313","1_00:16","27.6","       (2012 BX34)"]
-  ]
-}
-'''
+    v = info[vel]
+    ax3.errorbar(v, y, yerr=dist_error, fmt='-o')
+    ax3.set_title('Velocity vs. Close Approach Distance of NEOs')
+    
+    ax4.scatter(x, v)
+    ax4.set_title('Velocity vs. Magnitude')
+    
+    plt.show()
