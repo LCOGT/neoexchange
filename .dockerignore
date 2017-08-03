@@ -8,3 +8,5 @@
 */*.db
 *.pyc
 *.pyo
+*.fits
+*.dat
