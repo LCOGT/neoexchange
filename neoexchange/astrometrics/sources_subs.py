@@ -1119,18 +1119,7 @@ def configure_defaults(params):
     params['filter'] = 'w'
     params['exp_type'] = 'EXPOSE'
 
-    if params['site_code'] == 'W86' or params['site_code'] == 'W87':
-        # Force to Dome B (W86) as W87 is bad
-        params['binning'] = 1
-        params['observatory'] = 'domb'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-        if params['site_code'] == 'W87':
-            params['site_code'] = 'W86'
-    elif params['site_code'] == 'W85':
-        params['binning'] = 1
-        params['observatory'] = 'doma'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-    elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
