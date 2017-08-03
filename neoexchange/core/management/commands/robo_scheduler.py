@@ -122,9 +122,9 @@ class Command(BaseCommand):
 
         username = options['user']
         self.stdout.write("==== Runnning for date %s , submitting as %s" % (scheduling_date.date(), username))
-        self.stdout.write('==== Cutoffs: Bright= %.1f, Faint = %.1f, SPD= %.1f(=%+.1f Dec), Motion= %.1f "/min' % \
+        self.stdout.write('==== Cutoffs: Bright= %.1f, Faint = %.1f, SPD= %.1f(=%+.1f Dec), Motion= %.1f "/min, Not Seen= %.1f days' % \
             (options['bright_limit'], options['faint_limit'], \
-             options['spd_cutoff'], options['spd_cutoff'] - 90.0, options['speed_limit']))
+             options['spd_cutoff'], options['spd_cutoff'] - 90.0, options['speed_limit'], options['not_seen']))
 
         latest = Body.objects.filter(active=True).latest('ingest')
         max_dt = latest.ingest
