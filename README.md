@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 1.8.2
+
+Bug fix for zooming Analyser view. Feature update on making markers for candidates clickable.
 
 ### 1.8.1
 
