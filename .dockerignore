@@ -10,3 +10,5 @@
 *.pyo
 *.fits
 *.dat
+*.fz
+neoexchange/photometrics/tests/*
