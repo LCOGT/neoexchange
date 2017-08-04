@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -1146,10 +1146,10 @@ def configure_defaults(params):
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
                   'Q58' : 'COJ', # Code for 0m4a
-                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use
+                  'Q59' : 'COJ'} # Code for 0m4b
 
 
-    params['pondtelescope'] = '1m0a'
+    params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
     params['binning'] = 1
@@ -1157,21 +1157,10 @@ def configure_defaults(params):
     params['filter'] = 'w'
     params['exp_type'] = 'EXPOSE'
 
-    if params['site_code'] == 'W86' or params['site_code'] == 'W87':
-        # Force to Dome B (W86) as W87 is bad
-        params['binning'] = 1
-        params['observatory'] = 'domb'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-        if params['site_code'] == 'W87':
-            params['site_code'] = 'W86'
-    elif params['site_code'] == 'W85':
-        params['binning'] = 1
-        params['observatory'] = 'doma'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-    elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
-        params['pondtelescope'] = '2m0a'
+        params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
     elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'

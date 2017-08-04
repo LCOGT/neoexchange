@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2017-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ import requests
 
 from core.models import Frame, Block, PanoptesReport, CatalogSources, Proposal, Body
 from core.zoo import download_images_block, download_image, panoptes_add_set_mtd, \
-    create_panoptes_report, convert_coords, identify_sources
+    create_panoptes_report, identify_sources
 
 def mock_download_image(frame, current_files, download_dir, blockid):
     return 'myfile.fits'

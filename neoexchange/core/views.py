@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -558,7 +558,18 @@ def check_for_block(form_data, params, new_body):
         Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
 
         # XXX Code smell, duplicated from sources_subs.configure_defaults()
-        site_list = { 'V37' : 'ELP' , 'K92' : 'CPT' , 'K93' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ', 'Z21' : 'TFN', 'Q58' : 'COJ', 'Q59' : 'COJ', 'T04' : 'OGG'  }
+        site_list = { 'V37' : 'ELP' ,
+                      'K92' : 'CPT' ,
+                      'K93' : 'CPT',
+                      'Q63' : 'COJ',
+                      'W85' : 'LSC',
+                      'W86' : 'LSC',
+                      'F65' : 'OGG',
+                      'E10' : 'COJ',
+                      'Z21' : 'TFN',
+                      'Q58' : 'COJ',
+                      'Q59' : 'COJ',
+                      'T04' : 'OGG'  }
 
         try:
             block_id = Block.objects.get(body=new_body.id,
@@ -1300,6 +1311,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     if block == None:
         logger.error("Could not find block for fits frame %s" % catfile)
         return -3, num_new_frames_created
+
+    # Check if we have a sitecode (none if this is a new instrument/telescope)
+    if header.get('site_code', None) is None:
+        logger.error("No sitecode found for fits frame %s" % catfile)
+        return -5, num_new_frames_created
 
     # Create a new Frame entry for the new_ldac_catalog
     num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)

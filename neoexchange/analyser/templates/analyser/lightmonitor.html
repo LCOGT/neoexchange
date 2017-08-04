@@ -12,7 +12,6 @@
 <script>
 var stage;
 var ministage;
-var index = 0;
 var point_size = 10;
 var blinker;
 var img_holder;
@@ -38,13 +37,7 @@ var blockcandidate;
 
 		$('.candidate-select').click(function(){
 			var ind = $(this).data('cand_id');
-			stopBlink();
-			startBlink(ind, false);
-			$('#candidate-list').hide();
-			$('.candidate-accept').show();
-
-			$("#cand-accept").data('cand_id', ind);
-			$("#cand-reject").data('cand_id', ind);
+      blinkCandidate(ind);
 		});
 
 		$('#blink-stop').click(function(){

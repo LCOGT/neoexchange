@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -1600,8 +1600,8 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0a',
-                            'observatory' : 'domb',
+                            'pondtelescope' :'1m0',
+                            'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'LSC',
                             'filter' : 'w',
@@ -1620,13 +1620,13 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0a',
-                            'observatory' : 'domb',
+                            'pondtelescope' :'1m0',
+                            'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'LSC',
                             'filter' : 'w',
                             'binning' : 1,
-                            'site_code' : 'W86',
+                            'site_code' : 'W87',
                             'exp_count' : 42,
                             'exp_time' : 42.0}
 
@@ -1642,7 +1642,7 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
-                            'pondtelescope' :'2m0a',
+                            'pondtelescope' :'2m0',
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'OGG',
@@ -1662,7 +1662,7 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
-                            'pondtelescope' :'2m0a',
+                            'pondtelescope' :'2m0',
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'COJ',
@@ -1682,7 +1682,7 @@ class TestConfigureDefaults(TestCase):
               }
 
         expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0a',
+                            'pondtelescope' :'1m0',
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'ELP',
@@ -1700,7 +1700,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
-                            'pondtelescope': '1m0a',
+                            'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K92'}
 
@@ -1715,9 +1715,9 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
-                            'observatory': 'doma',
+                            'observatory': '',
                             'exp_type':'EXPOSE',
-                            'pondtelescope': '1m0a',
+                            'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W85'}
 
@@ -1732,9 +1732,9 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
-                            'observatory': 'domb',
+                            'observatory': '',
                             'exp_type':'EXPOSE',
-                            'pondtelescope': '1m0a',
+                            'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W86'}
 
@@ -1751,7 +1751,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
-                            'pondtelescope': '1m0a',
+                            'pondtelescope': '1m0',
                             'site': 'ELP',
                             'site_code': 'V37'}
 
@@ -1766,11 +1766,11 @@ class TestConfigureDefaults(TestCase):
         expected_params = { 'binning': 1,
                             'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
-                            'observatory': 'domb',
+                            'observatory': '',
                             'exp_type':'EXPOSE',
-                            'pondtelescope': '1m0a',
+                            'pondtelescope': '1m0',
                             'site': 'LSC',
-                            'site_code': 'W86'}
+                            'site_code': 'W87'}
 
 
         params = { 'site_code' : 'W87' }
@@ -1785,7 +1785,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
-                            'pondtelescope': '1m0a',
+                            'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K93'}
 
@@ -1802,7 +1802,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
                             'exp_type':'EXPOSE',
-                            'pondtelescope': '2m0a',
+                            'pondtelescope': '2m0',
                             'site': 'OGG',
                             'site_code': 'F65'}
 
@@ -1819,7 +1819,7 @@ class TestConfigureDefaults(TestCase):
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
                             'exp_type':'EXPOSE',
-                            'pondtelescope': '2m0a',
+                            'pondtelescope': '2m0',
                             'site': 'COJ',
                             'site_code': 'E10'}
 

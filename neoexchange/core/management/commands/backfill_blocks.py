@@ -54,7 +54,8 @@ class Command(BaseCommand):
             header, dummy_table, cattype = open_fits_catalog(first_file, header_only=True)
             tracking_num = header.get('tracknum', None)
             if tracking_num:
-                blocks = Block.objects.filter(tracking_number=tracking_num)
+                tracking_num_nopad = tracking_num.lstrip('0')
+                blocks = Block.objects.filter(Q(tracking_number=tracking_num)|Q(tracking_number=tracking_num_nopad))
                 if len(blocks) == 0:
                     name = header.get('object', None)
                     if name:
@@ -85,5 +86,10 @@ class Command(BaseCommand):
                     if len(fits_files) >= frames.count():
                         self.stdout.write("Updating status of Block #%d (found %d FITS files, know of %d Frames in DB" % (old_block.id,len(fits_files), frames.count()))
                         block_status(old_block.id)
+                elif len(blocks) >= 2:
+                        msg = "Found multiple Blocks "
+                        msg += "%s" % ( [block.id for block in blocks])
+                        msg += " in DB for tracking number %s. Fix up manually" % tracking_num
+                        self.stdout.write(msg)
             else:
                 self.stdout.write("Could not obtain tracking number (did this bypass the scheduler!?")

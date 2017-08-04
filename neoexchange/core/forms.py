@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,13 +26,12 @@ logger = logging.getLogger(__name__)
 SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('F65','Maui, Hawaii (FTN - F65)'),
          ('E10','Siding Spring, Aust. (FTS - E10)'),
-         ('W85','CTIO, Chile (LSC - W85; Sinistro)'),
-         ('W86','CTIO, Chile (LSC - W86; Sinistro)'),
+         ('W86','CTIO, Chile (LSC - W85-87; Sinistro)'),
          ('K92','Sutherland, S. Africa (CPT - K91-93; Sinistro)'),
          ('Q63','Siding Spring, Aust. (COJ - Q63-64; Sinistro)'),
-         ('Q58','Siding Spring, Aust. (COJ - Q58; 0.4m)'),
-         ('Z21','Tenerife, Spain (TFN - Z21; 0.4m)'),
-         ('T04','Maui, Hawaii (OGG - T04; 0.4m)'))
+         ('Q58','Siding Spring, Aust. (COJ - Q58-59; 0.4m)'),
+         ('Z21','Tenerife, Spain (TFN - Z17,Z21; 0.4m)'),
+         ('T04','Maui, Hawaii (OGG - T03-04; 0.4m)'))
 
 
 class EphemQuery(forms.Form):

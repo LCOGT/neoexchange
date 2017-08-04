@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -48,10 +48,24 @@ class BlockAdmin(VersionAdmin):
     format_block_start.short_description = 'Block start'
     format_block_start.admin_order_field = 'block_start'
 
+    def zoo_friendly(self, obj):
+        if obj.num_exposures < 10 and obj.num_observed > 0 and obj.num_candidates > 0:
+            return True
+        else:
+            return False
+    zoo_friendly.boolean = True
+
+    def sent_to_zoo(self, obj):
+        if PanoptesReport.objects.filter(block=obj).count() > 0:
+            return True
+        else:
+            return False
+    sent_to_zoo.boolean = True
+
     def body_name(self, obj):
         return obj.body.current_name()
 
-    list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported',  )
+    list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported', 'zoo_friendly', 'sent_to_zoo')
     list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
 
     ordering = ('-block_start',)

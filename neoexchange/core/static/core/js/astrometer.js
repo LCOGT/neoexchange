@@ -120,16 +120,22 @@ function prevImage() {
   }
 }
 
-function addCircle(x, y, r, fill, name, draggable) {
+function addCircle(x, y, r, fill, cid, ind, draggable=false,info=true) {
    var circle = new createjs.Shape();
    circle.graphics.beginFill(fill).drawCircle(0, 0, r);
    circle.x = x;
    circle.y = y;
    circle.alpha = 0.2;
-   circle.name = name;
+   circle.name = cid;
    if (draggable==true){
      circle.on("pressmove", drag);
      circle.alpha = 0.5;
+   }
+   if (info==true){
+     circle.on("click", function(evt) {
+        blinkCandidate(cid);
+        display_info_panel(cid,ind);
+      });
    }
    stage.addChild(circle);
   }
@@ -155,8 +161,8 @@ function addCircle(x, y, r, fill, name, draggable) {
 
 
 function drag(evt) {
-    evt.target.x = evt.stageX;
-    evt.target.y = evt.stageY;
+    evt.target.x = (evt.stageX-stage.x)/stage.scaleX;
+    evt.target.y = (evt.stageY-stage.y)/stage.scaleY;
     stage.update();
     // updateTarget(evt.currentTarget.name, evt.currentTarget.x, evt.currentTarget.y);
     zoomImage(evt.currentTarget.x, evt.currentTarget.y);
@@ -222,6 +228,7 @@ function stopBlink() {
   clearInterval(blinker);
   $('#blink-stop').hide();
   $('#blink-start').show();
+  changeImage(ind=0, cand_index=0, allcandidates=true)
 }
 
 function zoomImage(x,y){
@@ -238,30 +245,50 @@ function zoomImage(x,y){
   ministage.update();
 }
 
-function zoomMainImage(scale){
-  var width = 600;
-  var height = 600;
+function zoomMainImage(scaleDelta){
+
   for (var i=0;i<stage.children.length;i++){
     if (stage.children[i].name == 'crosshairs'){
-      zoom_origin[0] = width/2 - scale*stage.children[i].x
-      zoom_origin[1] = height/2 - scale*stage.children[i].y
+      //var scaleDelta = 0.5;
+      var currentScale = stage.scaleX;
+      var nextScale = currentScale + scaleDelta;
+
+      var offsetX = -(stage.children[i].x * scaleDelta);
+      var offsetY = -(stage.children[i].y * scaleDelta);
+
+      stage.x += offsetX;
+      stage.y += offsetY;
+
+      stage.scaleX = nextScale;
+      stage.scaleY = nextScale;
+
+      stage.update();
     }
   }
 }
 
 function mainImageZoomLevel(mode){
   if (mode=='add'){
-    zoomLevel+=0.5;
+    zoomLevel=0.5;
+    zoomMainImage(zoomLevel);
   } else if (mode =='minus'){
-    zoomLevel-=0.5;
-    zoomLevel=Math.max(zoomLevel, 1.0);
-  } else if (mode =='revert'){
-    zoomLevel = 1.0
-    zoom_origin=[0,0]
+    zoomLevel=-0.5;
+    //zoomLevel=Math.max(zoomLevel, 1.0);
+    zoomMainImage(zoomLevel);
+  }
+  if (mode =='revert'){
+    stage.x = 0;
+    stage.y = 0;
+
+    stage.scaleX = 1;
+    stage.scaleY = 1;
+
+    stage.update();
+    zoomLevel = 1;
   }
   image_scale = zoomLevel * default_image_scale;
-  zoomMainImage(zoomLevel);
-  changeImage();
+
+  //changeImage(0,0,true);
 }
 
 function handleLoad(event) {
@@ -284,19 +311,30 @@ function loadCandidates(candidates){
   }
 }
 
-function display_info_panel(cindex, index) {
+function display_info_panel(cindex, ind) {
   // Hide all info tables to start
   $('.coords-table').hide();
   $('.candidate-row').hide();
   // Only show info tables for current index
   $('.candidate-'+cindex).show();
-  $('.candidate-'+cindex +' '+'#img-coords-'+index).show();
-  $('.candidate-'+cindex +' '+'#img-skycoords-'+index).show();
+  $('.candidate-'+cindex +' '+'#img-coords-'+ind).show();
+  $('.candidate-'+cindex +' '+'#img-skycoords-'+ind).show();
+}
+
+function blinkCandidate(ind) {
+  stopBlink();
+  startBlink(ind, false);
+  $('#candidate-list').hide();
+  $('.candidate-accept').show();
+
+  $("#cand-accept").data('cand_id', ind);
+  $("#cand-reject").data('cand_id', ind);
 }
 
 function changeImage(ind, cand_index=0, allcandidates=false) {
 
-  var index, coords;
+  var index
+  var coords;
 
   if (typeof(ind) == 'undefined') {
     index = 0;
@@ -325,20 +363,18 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
   // Duplicate this image on to the mini canvas
   zoomImage(500,100);
   // Scale the image to fit inside canvas
-  img_holder.setTransform(zoom_origin[0], zoom_origin[1], 0.6*zoomLevel,0.6*zoomLevel);
+  img_holder.setTransform(zoom_origin[0], zoom_origin[1], 0.6,0.6);
   stage.addChild(img_holder);
 
   if (allcandidates){
     for (var i=0; i <candidates.length;i++) {
       target = candidates[i].coords[index];
-      name = "target_" + i;
-      addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, false);
+      addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", cid=candidates[i].id, ind=i);
     }
   }else if (typeof(ind) != 'undefined'){
     var id = candids.indexOf(String(cand_index))
     target = candidates[id].coords[index];
-    name = "target_" + cand_index;
-    addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", name, false);
+    addCircle(target.x/image_scale, target.y/image_scale, point_size, "#58FA58", cid=cand_index, ind=ind);
     zoomImage(target.x/image_scale, target.y/image_scale);
     // Show the candidate information
     display_info_panel(id, index);
@@ -366,7 +402,7 @@ function loadThumbnails(frames){
       image.src = resp;
     });
     // Once all URLs are stored change to the first image
-    changeImage(0, candids[0]);
+    changeImage(0, candids[0],allcandidates=true);
   });
   return
 }

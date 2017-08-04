@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@ GNU General Public License for more details.
 '''
 from datetime import datetime
 from math import pi, log10
+import math
 import reversion
 
 from django.conf import settings
@@ -38,6 +39,7 @@ from astrometrics.ast_subs import normal_to_packed
 from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params, comp_sep
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
+from astrometrics.albedo import asteroid_albedo, asteroid_diameter
 
 
 OBJECT_TYPES = (
@@ -133,6 +135,21 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
 
+ 
+    def diameter(self):        
+        m = self.abs_mag
+        avg = 0.167
+        d_avg = asteroid_diameter(avg, m)
+        return d_avg
+        
+    def diameter_range(self):
+        m = self.abs_mag
+        mn = 0.01
+        mx = 0.6       
+        d_max = asteroid_diameter(mn, m)
+        d_min = asteroid_diameter(mx, m)
+        return d_min, d_max
+        
     def epochofel_mjd(self):
         mjd = None
         try:
@@ -458,12 +475,15 @@ class Frame(models.Model):
                         'W87' : 'LCO LSC Node 1m0 Dome C at Cerro Tololo, Chile',
                         'V37' : 'LCO ELP Node at McDonald Observatory, Texas',
                         'Z21' : 'LCO TFN Node Aqawan A 0m4a at Tenerife, Spain',
+                        'Z17' : 'LCO TFN Node Aqawan A 0m4b at Tenerife, Spain',
                         'Q58' : 'LCO COJ Node 0m4a at Siding Spring, Australia',
+                        'Q59' : 'LCO COJ Node 0m4b at Siding Spring, Australia',
                         'Q63' : 'LCO COJ Node 1m0 Dome A at Siding Spring, Australia',
                         'Q64' : 'LCO COJ Node 1m0 Dome B at Siding Spring, Australia',
                         'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
                         'F65' : 'LCO OGG Node 2m0 FTN at Haleakala, Maui',
-                        'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui'
+                        'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui',
+                        'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui'
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
 
@@ -482,12 +502,15 @@ class Frame(models.Model):
                         'W87' : onem_string,
                         'V37' : onem_string,
                         'Z21' : point4m_string,
+                        'Z17' : point4m_string,
                         'Q58' : point4m_string,
+                        'Q59' : point4m_string,
                         'Q63' : onem_string,
                         'Q64' : onem_string,
                         'E10' : twom_string,
                         'F65' : twom_string,
-                        'T04' : point4m_string
+                        'T04' : point4m_string,
+                        'T03' : point4m_string
                         }
         return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
 

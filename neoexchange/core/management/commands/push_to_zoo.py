@@ -1,7 +1,7 @@
 from core.models import Block, PanoptesReport
 from django.core.management.base import BaseCommand, CommandError
 from datetime import datetime, timedelta
-from core.zoo import download_images_block, create_panoptes_report, reorder_candidates, panoptes_add_set_hunt
+from core.zoo import download_images_block, create_panoptes_report, reorder_candidates
 from core.archive_subs import archive_lookup_images
 from core.frames import find_images_for_block
 from django.conf import settings
