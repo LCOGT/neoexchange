@@ -140,6 +140,10 @@
 										<td class="kv-key">Slope Parameter (G)</td>
 										<td class="kv-value">{{body.slope}}</td>
 									</tr>
+                                                                        {% if body.source_type == 'C' or body.source_type == 'J' %}
+                                                                        <tr> 
+                                                                        </tr>
+                                                                        {% else %}
 									<tr>
 										<td class="kv-key">Albedo (average)</td>
 										<td class="kv-value">0.17</td>
@@ -150,7 +154,7 @@
 									</tr>
 									<tr>
 										<td class="kv-key">Diameter in meters (average)</td>
-										{% if body.abs_mag == None%}
+										{% if body.abs_mag == None %}
 										<td class="kv-value">{{body.diameter}}</td>
 										{% else %}
 										<td class="kv-value">{{body.diameter|floatformat:0}}</td>
@@ -163,7 +167,8 @@
 										{% else %}
 										<td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
 										{% endif %}
-									</tr>
+									</tr>     
+                                                                        {% endif %}                                                                  
 								</tbody>
 							</table>
 							<h5 class="section-title">Follow-up Details</h5>
