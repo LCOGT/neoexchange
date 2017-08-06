@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 ephem_subs.py -- Asteroid ephemeris related routines.
 
@@ -1212,7 +1212,7 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z21', 'Q58', 'Q59', 'T04', 'W89']:
+    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z17', 'Z21', 'Q58', 'Q59', 'T03', 'T04', 'W89']:
         ha_pos_limit = 4.46 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 15.0
@@ -1234,9 +1234,11 @@ def return_LCOGT_site_codes_mapping():
                          'OGG-CLMA-2M0A' : 'F65',
                          'COJ-CLMA-2M0A' : 'E10',
                          'TFN-AQWA-0M4A' : 'Z21',
+                         'TFN-AQWA-0M4B' : 'Z17',
                          'COJ-CLMA-0M4A' : 'Q58',
                          'COJ-CLMA-0M4B' : 'Q59',
                          'OGG-CLMA-0M4B' : 'T04',
+                         'OGG-CLMA-0M4C' : 'T03',
                          'LSC-AQWA-0M4A' : 'W89',
                          'SQA-DOMA-0M8A' : 'G51'}
 
@@ -1283,7 +1285,7 @@ def get_sitecam_params(site):
     point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z21', 'W89', 'T04', 'Q58', 'Q59']
+    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'T03', 'T04', 'Q58', 'Q59']
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':

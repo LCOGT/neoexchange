@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -86,7 +86,11 @@ class TestGetMountLimits(TestCase):
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
     def test_point4m_by_site5(self):
-        (neg_limit, pos_limit, alt_limit) = get_mountlimits('COJ-CLMA-0M4A')
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('COJ-CLMA-0M4B')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site6(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('TFN-AQWA-0M4A')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
     def test_point4m_by_site_code(self):
@@ -99,6 +103,18 @@ class TestGetMountLimits(TestCase):
 
     def test_point4m_by_site_code3(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('T04')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code4(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('Q58')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code5(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('T03')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code6(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z17')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
     def test_point4m_by_site_code_lowercase(self):
@@ -986,6 +1002,36 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.point4m_setup_overhead, setup_overhead)
         self.assertEqual(self.point4m_exp_overhead, exp_overhead)
 
+    def test_point4m_site4(self):
+        site_code = 'Q58'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site5(self):
+        site_code = 'Z17'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site6(self):
+        site_code = 'T03'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
     def test_1m_cpt_site_sinistro1(self):
         site_code = 'K92'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
@@ -1211,3 +1257,47 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_long, 0.0)
         self.assertLess(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
+
+class TestLCOGT_domes_to_site_codes(TestCase):
+
+    def test_point4m_tfn_1(self):
+        expected_code = 'Z21'
+
+        code = LCOGT_domes_to_site_codes('tfn', 'aqwa', '0m4a')
+
+        self.assertEqual(expected_code, code)
+
+    def test_point4m_tfn_2(self):
+        expected_code = 'Z17'
+
+        code = LCOGT_domes_to_site_codes('tfn', 'aqwa', '0m4b')
+
+        self.assertEqual(expected_code, code)
+
+    def test_point4m_coj_1(self):
+        expected_code = 'Q58'
+
+        code = LCOGT_domes_to_site_codes('coj', 'clma', '0m4a')
+
+        self.assertEqual(expected_code, code)
+
+    def test_point4m_coj_2(self):
+        expected_code = 'Q59'
+
+        code = LCOGT_domes_to_site_codes('coj', 'clma', '0m4b')
+
+        self.assertEqual(expected_code, code)
+
+    def test_point4m_ogg_1(self):
+        expected_code = 'T04'
+
+        code = LCOGT_domes_to_site_codes('ogg', 'clma', '0m4b')
+
+        self.assertEqual(expected_code, code)
+
+    def test_point4m_ogg_2(self):
+        expected_code = 'T03'
+
+        code = LCOGT_domes_to_site_codes('ogg', 'clma', '0m4c')
+
+        self.assertEqual(expected_code, code)
