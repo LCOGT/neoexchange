@@ -267,10 +267,12 @@ class SuperBlock(models.Model):
         return u'%s is %sactive' % (self.tracking_number,text)
 
 class Block(models.Model):
+
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES)
     body            = models.ForeignKey(Body)
     proposal        = models.ForeignKey(Proposal)
+    superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -294,6 +296,11 @@ class Block(models.Model):
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
+
+    def save(self, *args, **kwargs):
+        if not self.superblock:
+            self.superblock = self.id
+        super(Block, self).save(*args, **kwargs)
 
     class Meta:
         verbose_name = _('Observation Block')

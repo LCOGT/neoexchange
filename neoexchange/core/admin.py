@@ -40,6 +40,9 @@ class BodyAdmin(VersionAdmin):
       'fast_moving', 'updated')
     ordering = ('-ingest',)
 
+@admin.register(SuperBlock)
+class SuperBlockAdmin(VersionAdmin):
+    ordering = ('-block_start',)
 
 @admin.register(Block)
 class BlockAdmin(VersionAdmin):
