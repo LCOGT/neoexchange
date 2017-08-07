@@ -252,6 +252,7 @@ class SuperBlock(models.Model):
     period          = models.FloatField('Spacing between cadence observations (hours)', null=True, blank=True)
     jitter          = models.FloatField('Acceptable deviation before or after strict period (hours)', null=True, blank=True)
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
+    active          = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = _('SuperBlock')
@@ -299,7 +300,8 @@ class Block(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.superblock:
-            self.superblock = self.id
+            sblock, created = SuperBlock.objects.get_or_create(pk=self.id, body=self.body, proposal=self.proposal)
+            self.superblock = sblock
         super(Block, self).save(*args, **kwargs)
 
     class Meta:
