@@ -1,13 +1,28 @@
 from datetime import datetime, timedelta
+from math import degrees
 
 from django.core.management.base import BaseCommand, CommandError
 
 from core.models import Body, Block
 from core.views import schedule_check, schedule_submit, record_block
-from astrometrics.ephem_subs import format_emp_line, determine_sites_to_schedule
+from astrometrics.ephem_subs import format_emp_line, determine_sites_to_schedule, get_sitepos,\
+    moon_ra_dec
 from astrometrics.sources_subs import get_site_status
+from pyslalib.slalib import sla_dsep
 
-def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0, speed_cutoff=5.0):
+def compute_moon_sep(date, object_ra, object_dec, site='500'):
+    '''Compute the separation between an object at <object_ra>, <object_dec> and the Moon
+    at time <date> from the specified [site] (defaults to geocenter if not specified.
+    The separation is returned in degrees.'''
+
+    site_name, site_long, site_lat, site_hgt = get_sitepos(site)
+    moon_ra, moon_dec, diam = moon_ra_dec(date, site_long, site_lat, site_hgt)
+    moon_obj_sep = sla_dsep(object_ra, object_dec, moon_ra, moon_dec)
+    moon_obj_sep = degrees(moon_obj_sep)
+
+    return moon_obj_sep
+
+def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0, speed_cutoff=5.0, moon_sep_cutoff=30.0):
     north_1m0_list = []
     north_0m4_list = []
     south_1m0_list = []
@@ -16,8 +31,8 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
 
     run_datetime = datetime.utcnow()
 
-    print(" Object     RA           Dec       Mag.   Speed")
-    print("------------------------------------------------")
+    print(" Object     RA           Dec       Mag.   Speed  Moon Sep.")
+    print("----------------------------------------------------------")
 
     for body in bodies:
         body_line = body.compute_position()
@@ -27,11 +42,20 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
         sky_motion_pa = body_line[-1]
         if not body_line:
             continue
+        moon_sep = compute_moon_sep(obs_date, body_line[0], body_line[1], '500')
+        prefix = ' '
+        suffix = ' '
+        if moon_sep < moon_sep_cutoff:
+            prefix = '('
+            suffix = ')'
+        moon_sep_str = "%s%.1f%s" % ( prefix, moon_sep, suffix)
         line_bits = format_emp_line((obs_date, body_line[0], body_line[1], vmag, sky_motion, -99, spd, sky_motion_pa), '500')
-        print("%7s %s %s  V=%s  %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4]))
+        print("%7s %s %s  V=%s  %s   %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4], moon_sep_str))
         if vmag > faint_limit or vmag < bright_limit:
             continue
         if sky_motion > speed_cutoff:
+            continue
+        if moon_sep < moon_sep_cutoff:
             continue
         # Find number of active and inactive but unreported Blocks
         num_active = Block.objects.filter(body=body, active=True, block_end__gte=run_datetime-timedelta(seconds=35*60)).count()
