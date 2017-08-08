@@ -300,7 +300,15 @@ class Block(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.superblock:
-            sblock, created = SuperBlock.objects.get_or_create(pk=self.id, body=self.body, proposal=self.proposal)
+            sblock_kwargs = {
+                                'body' : self.body,
+                                'proposal' : self.proposal,
+                                'block_start' : self.block_start,
+                                'block_end' : self.block_end,
+                                'groupid' : self.groupid,
+                                'tracking_number' : self.tracking_number
+                            }
+            sblock, created = SuperBlock.objects.get_or_create(pk=self.id, **sblock_kwargs)
             self.superblock = sblock
         super(Block, self).save(*args, **kwargs)
 
