@@ -18,10 +18,10 @@ from django.contrib.staticfiles import views
 from django.contrib import admin
 from django.views.generic import ListView, DetailView
 from django.core.urlresolvers import reverse_lazy
-from core.models import Body, Block, SourceMeasurement
+from core.models import Body, Block, SourceMeasurement, SuperBlock
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
-    UploadReport, BlockTimeSummary, plotframe, make_plot, CandidatesViewBlock, BlockReportMPC
+    UploadReport, BlockTimeSummary, plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, SuperBlockListView
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -34,7 +34,7 @@ urlpatterns = [
     url(r'^makeplot/$', make_plot, name='makeplot'),
     url(r'^plotframe/$', plotframe),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
-    url(r'^block/list/$', BlockListView.as_view(model=Block, queryset=Block.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
+    url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),
     url(r'^block/(?P<pk>\d+)/report/$',BlockReport.as_view(), name='report-block'),
     url(r'^block/(?P<pk>\d+)/upload/$',UploadReport.as_view(), name='upload-report'),

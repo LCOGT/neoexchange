@@ -36,6 +36,9 @@
                                                         <span class="sortable" id="obs_details">Obs. Details</span>
                                                 </th>
                                                 <th>
+                                                        <span class="sortable" id="block_active">Cadence?</span>
+                                                </th>
+                                                <th>
                                                         <span class="sortable" id="block_active">Active?</span>
                                                 </th>
                                                 <th>
@@ -56,6 +59,7 @@
                                                 <td data-label="Proposal">{{block.proposal.code}}</td>
                                                 <td data-label="Tracking #"><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
                                                 <td data-label="Obs. details">{{block.num_exposures}}x{{block.exp_length}} secs</td>
+                                                <td data-label="Cadence?"><span class="">{% if block.cadence %}<span class="warning msgpadded">Yes</span>{% else %}No{% endif %}</span></td>
                                                 <td data-label="Active?"><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
                                                 <td  data-label="Observed?">{{block.num_observed}}</td>
                                                 <td data-label="Reported?"><span class="">{% if block.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>

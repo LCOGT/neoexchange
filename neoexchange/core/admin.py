@@ -42,6 +42,16 @@ class BodyAdmin(VersionAdmin):
 
 @admin.register(SuperBlock)
 class SuperBlockAdmin(VersionAdmin):
+    def format_block_start(self, obj):
+        return obj.block_start.strftime('%Y-%m-%d %H:%M')
+    format_block_start.short_description = 'Block start'
+    format_block_start.admin_order_field = 'block_start'
+
+    def body_name(self, obj):
+        return obj.body.current_name()
+
+    list_display = ('groupid', 'body_name', 'proposal', 'block_start', 'active', )
+    list_filter = ('proposal', 'block_start', 'active', )
     ordering = ('-block_start',)
 
 @admin.register(Block)
