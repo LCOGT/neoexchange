@@ -68,7 +68,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'body'     : self.body,
                          'proposal' : self.neo_proposal,
                          'block_start' : '2015-04-20 13:00:00',
-                         'block_end'   : '2015-04-21 03:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
                          'tracking_number' : '00042',
                          'active'   : True
                        }

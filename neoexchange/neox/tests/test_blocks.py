@@ -1,7 +1,7 @@
 from .base import FunctionalTest
 from django.core.urlresolvers import reverse
 #from selenium import webdriver
-from core.models import SuperBlock
+from core.models import Block, SuperBlock
 
 class BlocksListValidationTest(FunctionalTest):
 
@@ -82,7 +82,25 @@ class BlockDetailValidationTest(FunctionalTest):
 
 class SuperBlockListValidationTest(FunctionalTest):
 
+    def insert_cadence_blocks(self):
+        # Insert extra blocks as part of a cadence
+        block_params = { 'telclass' : '1m0',
+                         'site'     : 'cpt',
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-21 13:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'tracking_number' : '00044',
+                         'num_exposures' : 5,
+                         'exp_length' : 40.0,
+                         'active'   : True,
+                         'superblock' : self.test_sblock
+                       }
+        self.test_block = Block.objects.create(pk=3, **block_params)
+
     def test_can_view_superblocks(self):
+
+        self.insert_cadence_blocks()
 
         # A user Foo, wishes to check on the progress of a multi-day cadence
         self.browser.get(self.live_server_url)
@@ -102,7 +120,7 @@ class SuperBlockListValidationTest(FunctionalTest):
         # He sees that there are both cadence and non-cadence Blocks scheduled.
         self.check_for_header_in_table('id_blocks',
             'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
-        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
+        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 1 of 5x42.0 secs, 1 of 5x40.0 secs Yes Active 0 / 2 0 / 2',
                      u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1']
         self.check_for_row_in_table('id_blocks', testlines[0])
         self.check_for_row_in_table('id_blocks', testlines[1])
