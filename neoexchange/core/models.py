@@ -15,6 +15,7 @@ GNU General Public License for more details.
 from datetime import datetime
 from math import pi, log10
 import math
+from collections import Counter
 import reversion
 
 from django.conf import settings
@@ -254,6 +255,45 @@ class SuperBlock(models.Model):
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
 
+    def get_sites(self):
+        qs = Block.objects.filter(superblock=self.id).values_list('site', flat=True).distinct()
+
+        return ", ".join(qs)
+
+    def get_telclass(self):
+        qs = Block.objects.filter(superblock=self.id).values_list('telclass', flat=True).distinct()
+
+        return ", ".join(qs)
+        qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
+
+    def get_obsdetails(self):
+        qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
+
+        # Count number of unique N exposure x Y exposure length combinations
+        counts = Counter([elem for elem in qs])
+
+        if len(counts) > 1:
+            obs_details = []
+            for c in counts.items():
+                obs_details.append("%d of %dx%.1f secs" % (c[1], c[0][0], c[0][1]))
+
+            obs_details_str =  ", ".join(obs_details)
+        else:
+            c = list(counts)
+            obs_details_str = "%dx%.1f secs" % (c[0][0], c[0][1])
+
+        return obs_details_str
+
+    def get_num_observed(self):
+        qs = Block.objects.filter(superblock=self.id)
+
+        return (qs.filter(num_observed__gte=1).count(), qs.count())
+
+    def get_num_reported(self):
+        qs = Block.objects.filter(superblock=self.id)
+
+        return (qs.filter(reported=True).count(), qs.count())
+
     class Meta:
         verbose_name = _('SuperBlock')
         verbose_name_plural = _('SuperBlocks')
@@ -306,7 +346,8 @@ class Block(models.Model):
                                 'block_start' : self.block_start,
                                 'block_end' : self.block_end,
                                 'groupid' : self.groupid,
-                                'tracking_number' : self.tracking_number
+                                'tracking_number' : self.tracking_number,
+                                'active' : self.active
                             }
             sblock, created = SuperBlock.objects.get_or_create(pk=self.id, **sblock_kwargs)
             self.superblock = sblock
