@@ -146,6 +146,10 @@ class BlockDetailView(DetailView):
     model = Block
 
 
+class SuperBlockDetailView(DetailView):
+    template_name = 'core/block_detail.html'
+    model = SuperBlock
+
 class BlockListView(ListView):
     model = Block
     template_name = 'core/block_list.html'

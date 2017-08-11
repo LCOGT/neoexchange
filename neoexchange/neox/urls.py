@@ -21,7 +21,8 @@ from django.core.urlresolvers import reverse_lazy
 from core.models import Body, Block, SourceMeasurement, SuperBlock
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
-    UploadReport, BlockTimeSummary, plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, SuperBlockListView
+    UploadReport, BlockTimeSummary, plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
+    SuperBlockListView, SuperBlockDetailView
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -43,7 +44,7 @@ urlpatterns = [
     url(r'^block/(?P<pk>\d+)/analyser/$',BlockFramesView.as_view(), name='block-ast'),
     url(r'^block/(?P<pk>\d+)/analyser/submit/$',ProcessCandidates.as_view(), name='submit-candidates'),
     url(r'^block/(?P<pk>\d+)/candidates/$', CandidatesViewBlock.as_view(), name='view-candidates'),
-    url(r'^block/(?P<pk>\d+)/$',BlockDetailView.as_view(model=Block), name='block-view'),
+    url(r'^block/(?P<pk>\d+)/$', SuperBlockDetailView.as_view(model=SuperBlock), name='block-view'),
     url(r'^target/$', ListView.as_view(model=Body, queryset=Body.objects.filter(active=True).order_by('-origin','-ingest'), context_object_name="target_list"), name='targetlist'),
     url(r'^target/(?P<pk>\d+)/measurements/mpc/$', MeasurementViewBody.as_view(template='core/mpcreport.html'), name='measurement-mpc'),
     url(r'^target/(?P<pk>\d+)/measurements/$', MeasurementViewBody.as_view(), name='measurement'),
