@@ -294,6 +294,22 @@ class SuperBlock(models.Model):
 
         return (qs.filter(reported=True).count(), qs.count())
 
+    def get_last_observed(self):
+        last_observed = None
+        qs = Block.objects.filter(superblock=self.id, num_observed__gte=1)
+        if qs.count() > 0:
+            last_observed = qs.latest('when_observed').when_observed
+
+        return last_observed
+
+    def get_last_reported(self):
+        last_reported = None
+        qs = Block.objects.filter(superblock=self.id, reported=True)
+        if qs.count() > 0:
+            last_reported = qs.latest('when_reported').when_reported
+
+        return last_reported
+
     class Meta:
         verbose_name = _('SuperBlock')
         verbose_name_plural = _('SuperBlocks')

@@ -99,7 +99,9 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'exp_length' : 30.0,
                          'active'   : False,
                          'num_observed' : 1,
-                         'reported' : True
+                         'when_observed' : '2015-04-20 03:31:42',
+                         'reported' : True,
+                         'when_reported' : '2015-04-20 09:29:30',
                        }
         self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
