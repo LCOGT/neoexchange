@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
 {% load staticfiles %}
 
-{% block header %}Block details{% endblock %}
+{% block header %}
+    {% if object.cadence %}
+    Cadence details
+    {% else %}
+    Block details
+    {% endif %}
+{% endblock %}
 
 {% block script-content %}
 {% endblock %}
