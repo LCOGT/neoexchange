@@ -44,7 +44,7 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     run_sextractor_make_catalog, find_block_for_frame, \
     make_new_catalog_entry, generate_new_candidate_id
 from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock
 from core.forms import EphemQuery
 
 # Disable logging during testing
@@ -444,12 +444,15 @@ class TestCheck_for_block(TestCase):
     def test_db_storage(self):
         expected_body_count = 5 # Pew, pew, bang, bang...
         expected_block_count = 7
+        expected_sblock_count = 7
 
         body_count = Body.objects.count()
         block_count =  Block.objects.count()
+        sblock_count =  SuperBlock.objects.count()
 
         self.assertEqual(expected_body_count, body_count)
         self.assertEqual(expected_block_count, block_count)
+        self.assertEqual(expected_sblock_count, sblock_count)
 
     def test_body_with_provname_no_blocks(self):
 
