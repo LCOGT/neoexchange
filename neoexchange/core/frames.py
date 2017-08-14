@@ -238,6 +238,9 @@ def block_status(block_id):
     # data is a full LCOGT request dict for this tracking number (now called 'id').
     if not data:
         return False
+    # Check if the request was not found
+    if data.get('detail', 'None') == u'Not found.':
+        return False
     # Although this is a loop, we should only have a single request so it is executed once
     exposure_count = 0
 
