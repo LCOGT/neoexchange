@@ -566,7 +566,6 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_request_status', mock_check_request_status)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.archive_subs.lco_api_call', mock_archive_frame_header)
-    @patch('core.frames.odin_login', mock_odin_login)
     def test_block_update_active(self):
         resp = block_status(1)
         self.assertTrue(resp)
