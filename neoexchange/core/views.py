@@ -577,18 +577,20 @@ def check_for_block(form_data, params, new_body):
                       'T04' : 'OGG'  }
 
         try:
-            block_id = Block.objects.get(body=new_body.id,
+            block_id = SuperBlock.objects.get(body=new_body.id,
                                          groupid__contains=form_data['group_id'],
-                                         proposal=Proposal.objects.get(code=form_data['proposal_code']),
-                                         site=site_list[params['site_code']])
-        except Block.MultipleObjectsReturned:
-            logger.debug("Multiple blocks found")
+                                         proposal=Proposal.objects.get(code=form_data['proposal_code'])
+                                         )
+#                                         site=site_list[params['site_code']])
+        except SuperBlock.MultipleObjectsReturned:
+            logger.debug("Multiple superblocks found")
             return 2
-        except Block.DoesNotExist:
-            logger.debug("Block not found")
+        except SuperBlock.DoesNotExist:
+            logger.debug("SuperBlock not found")
             return 0
         else:
-            logger.debug("Block found")
+            logger.debug("SuperBlock found")
+            # XXX Do we want to check for matching site in the Blocks as well?
             return 1
 
 def record_block(tracking_number, params, form_data, body):
