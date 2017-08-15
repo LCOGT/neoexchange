@@ -1227,7 +1227,10 @@ def submit_block_to_scheduler(elements, params):
         logger.error(msg)
         params['error_msg'] = msg
         return False, params
-    request_number = request_numbers[0]
-    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))
+    params['request_numbers'] = request_numbers
+    params['block_duration'] = sum([float(_['duration']) for _ in request_items])
+
+    request_number_string = ", ".join([str(x) for x in request_numbers])
+    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
 
     return tracking_number, params

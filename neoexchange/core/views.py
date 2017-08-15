@@ -594,25 +594,44 @@ def check_for_block(form_data, params, new_body):
             return 1
 
 def record_block(tracking_number, params, form_data, body):
-    '''Records a just-submitted observation as a Block in the database.
+    '''Records a just-submitted observation as a SuperBlock and Block(s) in the database.
     '''
 
     logger.debug("form data=%s" % form_data)
     logger.debug("   params=%s" % params)
     if tracking_number:
-        block_kwargs = { 'telclass' : params['pondtelescope'].lower(),
-                         'site'     : params['site'].lower(),
+        cadence = False
+        if len(params.get('request_numbers', [])) > 1:
+            cadence = True
+        sblock_kwargs = {
                          'body'     : body,
                          'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                          'groupid'  : form_data['group_id'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
                          'tracking_number' : tracking_number,
-                         'num_exposures'   : form_data['exp_count'],
-                         'exp_length'      : form_data['exp_length'],
-                         'active'   : True
+                         'cadence'  : cadence,
+                         'period'   : params.get('period', None),
+                         'jitter'   : params.get('jitter', None),
+                         'timeused' : params.get('block_duration', None),
+                         'active'   : True,
                        }
-        pk = Block.objects.create(**block_kwargs)
+        sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
+        for request in params.get('request_numbers', []):
+            block_kwargs = { 'superblock' : sblock_pk,
+                             'telclass' : params['pondtelescope'].lower(),
+                             'site'     : params['site'].lower(),
+                             'body'     : body,
+                             'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                             'groupid'  : form_data['group_id'],
+                             'block_start' : form_data['start_time'],
+                             'block_end'   : form_data['end_time'],
+                             'tracking_number' : request,
+                             'num_exposures'   : form_data['exp_count'],
+                             'exp_length'      : form_data['exp_length'],
+                             'active'   : True
+                           }
+            pk = Block.objects.create(**block_kwargs)
         return True
     else:
         return False
