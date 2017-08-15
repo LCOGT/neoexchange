@@ -264,7 +264,6 @@ class SuperBlock(models.Model):
         qs = Block.objects.filter(superblock=self.id).values_list('telclass', flat=True).distinct()
 
         return ", ".join(qs)
-        qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
 
     def get_obsdetails(self):
         qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
