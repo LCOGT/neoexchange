@@ -1417,10 +1417,16 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False, n
         were_updated = []
         
         for target in targets:
+            #seconds since body has been updated
             up_time_diff = float(timedelta.total_seconds(time_now - target.update_time))
+            #seconds since body was ingested
             in_time_diff = float(timedelta.total_seconds(time_now - target.ingest))
+            #determines if body was never updated and never was called from command line
             never_updated = target.updated == False and never_update==True
+            #determinds if old was called from command line, ingest date was greater than 90 days, and updated time is greater than 2 days
             not_updated_in_threemonths = three_months == True and in_time_diff > 7776000 and up_time_diff > 172800
+            
+            #I think I want this to be 172800(48hrs) instead of 0 and then I do not not need up_time_diff > 0  in the else statement, does that make more sense?
             if time_opt == 0:
                 needs_to_be_updated = never_updated or not_updated_in_threemonths
             else:
@@ -1428,6 +1434,7 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False, n
                 needs_to_be_updated = never_updated or not_updated_in_threemonths or time_update
 
             if needs_to_be_updated:
+                #if body needs to be updated and is one of the types it will log that specific information 
                 if never_updated:
                     target_type = 'Never Updated'
                     logger.info('Updating {name} from {origin} which was {updated}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type))
@@ -1437,10 +1444,11 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False, n
                 elif not_updated_in_threemonths:
                     target_type = 'Not Updated in Three Months'
                     logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
+                #here is where the update happens and it adds the body to list of updated objects
                 update_MPC_orbit(target.name, target.origin)
                 delay = random_delay(10, 20)
                 were_updated.append(target.name)
-                
+        # generates message after bodies updated to state how many were updated        
         if were_updated == []:
             logger.info("==== No NEOs to be updated ====")
             return were_updated
