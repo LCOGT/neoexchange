@@ -306,11 +306,6 @@ if 'test' in sys.argv:
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'test_db', # Add the name of your SQLite3 database file here.
         },
-        'rbauth':
-                {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'test_rbauth', # Add the name of your SQLite3 database file here.
-        }
     }
     OPBEAT['APP_ID'] = None
 
