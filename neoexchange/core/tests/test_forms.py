@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -126,20 +126,17 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="F65"', form.as_p())
         self.assertIn('Siding Spring, Aust. (FTS - E10)', form.as_p())
         self.assertIn('value="E10"', form.as_p())
-        self.assertIn('CTIO, Chile (LSC - W85; Sinistro)', form.as_p())
-        self.assertIn('value="W85"', form.as_p())
-        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W85-87; Sinistro)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
         self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', form.as_p())
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
-# XXX No current valid code for the COJ 0.4m, remove the 'Not' when new code is obtained
-        self.assertNotIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
-        self.assertNotIn('value="Q59"', form.as_p())
-        self.assertIn('Tenerife, Spain (TFN - Z21; 0.4m)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (COJ - Q58-59; 0.4m)', form.as_p())
+        self.assertIn('value="Q58"', form.as_p())
+        self.assertIn('Tenerife, Spain (TFN - Z17,Z21; 0.4m)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
-        self.assertIn('Maui, Hawaii (OGG - T04; 0.4m)', form.as_p())
+        self.assertIn('Maui, Hawaii (OGG - T03-04; 0.4m)', form.as_p())
         self.assertIn('value="T04"', form.as_p())
 
     def test_form_handles_save_with_long_name(self):
@@ -206,8 +203,7 @@ class TestScheduleForm(TestCase):
     def test_form_has_lsc_fields(self):
         form = ScheduleForm()
         self.assertIsInstance(form, ScheduleForm)
-        self.assertIn('CTIO, Chile (LSC - W85; Sinistro)', form.as_p())
-        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W85-87; Sinistro)', form.as_p())
 
     def test_form_has_cpt_fields(self):
         form = ScheduleForm()
@@ -223,20 +219,17 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="F65"', form.as_p())
         self.assertIn('Siding Spring, Aust. (FTS - E10)', form.as_p())
         self.assertIn('value="E10"', form.as_p())
-        self.assertIn('CTIO, Chile (LSC - W85; Sinistro)', form.as_p())
-        self.assertIn('value="W85"', form.as_p())
-        self.assertIn('CTIO, Chile (LSC - W86; Sinistro)', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W85-87; Sinistro)', form.as_p())
         self.assertIn('value="W86"', form.as_p())
         self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', form.as_p())
         self.assertIn('value="K92"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
-# XXX No current valid code for the COJ 0.4m, remove the 'Not' when new code is obtained
-        self.assertNotIn('Siding Spring, Aust. (COJ - Q59; 0.4m)', form.as_p())
-        self.assertNotIn('value="Q59"', form.as_p())
-        self.assertIn('Tenerife, Spain (TFN - Z21; 0.4m)', form.as_p())
+        self.assertIn('Siding Spring, Aust. (COJ - Q58-59; 0.4m)', form.as_p())
+        self.assertIn('value="Q58"', form.as_p())
+        self.assertIn('Tenerife, Spain (TFN - Z17,Z21; 0.4m)', form.as_p())
         self.assertIn('value="Z21"', form.as_p())
-        self.assertIn('Maui, Hawaii (OGG - T04; 0.4m)', form.as_p())
+        self.assertIn('Maui, Hawaii (OGG - T03-04; 0.4m)', form.as_p())
         self.assertIn('value="T04"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):

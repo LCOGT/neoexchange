@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 time_subs.py -- Various routines to handle times.
 
@@ -16,8 +16,12 @@ GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta
 from math import degrees
+import time
+import logging
 
 import pyslalib.slalib as S
+
+logger = logging.getLogger(__name__)
 
 def get_semester_start(date):
 
@@ -375,3 +379,18 @@ def dttodecimalday(dt, microdays=False):
         date_string = ""
 
     return date_string
+
+def timeit(method):
+    '''Decorator for timing methods'''
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+
+        print '%r (%r, %r) %2.2f sec' % \
+              (method.__name__, args, kw, te-ts)
+        logger.debug("%r (%r, %r) %2.2f sec" % \
+              (method.__name__, args, kw, te-ts))
+        return result
+
+    return timed

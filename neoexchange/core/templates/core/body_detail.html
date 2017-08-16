@@ -90,7 +90,7 @@
 										<td class="kv-value">{{body.epochofel_mjd}}</td>
 									</tr>
 									<tr>
-										<td class="kv-key" class="kv-key">Orbital inclination in deg</td>
+										<td class="kv-key">Orbital inclination in deg</td>
 										<td class="kv-value">{{body.orbinc}}</td>
 									</tr>
 									<tr>
@@ -135,6 +135,22 @@
 									<tr>
 										<td class="kv-key">Slope Parameter (G)</td>
 										<td class="kv-value">{{body.slope}}</td>
+									</tr>
+									<tr>
+										<td class="kv-key">Albedo (average)</td>
+										<td class="kv-value">0.17</td>
+									</tr>
+									<tr>
+										<td class="kv-key">Albedo (range)</td>
+										<td class="kv-value">0.01 - 0.60</td>
+									</tr>
+									<tr>
+										<td class="kv-key">Diameter in meters (average)</td>
+										<td class="kv-value">{{body.diameter|floatformat:0}}</td>
+									</tr>
+									<tr>
+										<td class="kv-key">Diameter in meters<br/>(range)</td>
+										<td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
 									</tr>
 								</tbody>
 							</table>

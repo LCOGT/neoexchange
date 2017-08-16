@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2015-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2017 LCO  
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -85,6 +85,7 @@ class Command(BaseCommand):
                 # revision
                 check_body = Body.objects.filter(**kwargs)
                 if check_body.count() == 0:
+                    kwargs['updated'] = True
                     if save_and_make_revision(body, kwargs):
                         msg = "Updated %s" % obj_id
                     else:

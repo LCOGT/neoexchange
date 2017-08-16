@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,6 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
+import os
 from datetime import datetime, timedelta
 from math import floor
 from django.db.models import Q
@@ -26,7 +27,7 @@ from django.shortcuts import render, redirect
 from django.views.generic import DetailView, ListView, FormView, TemplateView, View
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
-from django.http import Http404
+from django.http import Http404, HttpResponse, HttpResponseRedirect
 from httplib import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
@@ -39,14 +40,20 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates
+    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
+from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
+    read_mtds_file
+from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
+    determine_filenames, increment_red_level, update_ldac_catalog_wcs
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
-from core.frames import create_frame, fetch_observations, ingest_frames
+from core.frames import create_frame, ingest_frames, measurements_from_block
+from core.mpc_submit import email_report_to_mpc
 import logging
 import reversion
 import json
 import requests
 from urlparse import urljoin
+import numpy as np
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -139,6 +146,7 @@ class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = Block
 
+
 class BlockListView(ListView):
     model = Block
     template_name = 'core/block_list.html'
@@ -156,6 +164,28 @@ class BlockReport(LoginRequiredMixin, View):
         block.when_reported = datetime.utcnow()
         block.save()
         return redirect(reverse('blocklist'))
+
+class BlockReportMPC(LoginRequiredMixin, View):
+
+    def get(self, request, *args, **kwargs):
+        block = Block.objects.get(pk=kwargs['pk'])
+        if block.reported == True:
+            messages.error(request,'Block has already been reported')
+            return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
+        if request.user.is_authenticated:
+            email = request.user.email
+        else:
+            email = None
+        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'], bodyid=kwargs.get('source',None), email_sender=email)
+        if mpc_resp:
+            block.active = False
+            block.reported = True
+            block.when_reported = datetime.utcnow()
+            block.save()
+            return redirect(reverse('blocklist'))
+        else:
+            messages.error(request,'It was not possible to email report to MPC')
+            return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
 
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'
@@ -182,14 +212,11 @@ class UploadReport(LoginRequiredMixin, FormView):
         return super(UploadReport, self).form_valid(form)
 
 
-
 class MeasurementViewBlock(LoginRequiredMixin, View):
     template = 'core/measurements.html'
     def get(self, request, *args, **kwargs):
-        block = Block.objects.get(pk=kwargs['pk'])
-        frames = Frame.objects.filter(block=block).values_list('id',flat=True)
-        measures = SourceMeasurement.objects.filter(frame__in=frames)
-        return render(request, self.template, {'body':block.body,'measures':measures,'slot':block})
+        data = measurements_from_block(blockid=kwargs['pk'])
+        return render(request, self.template, data)
 
 class MeasurementViewBody(View):
     template = 'core/measurements.html'
@@ -197,6 +224,64 @@ class MeasurementViewBody(View):
         body = Body.objects.get(pk=kwargs['pk'])
         measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         return render(request, self.template, {'body':body, 'measures' : measures})
+
+class CandidatesViewBlock(LoginRequiredMixin, View):
+    template = 'core/candidates.html'
+    def get(self, request, *args, **kwargs):
+       block = Block.objects.get(pk=kwargs['pk'])
+       candidates = Candidate.objects.filter(block=block).order_by('score')
+       return render(request, self.template, {'body':block.body,'candidates':candidates,'slot':block})
+
+def generate_new_candidate_id(prefix='LNX'):
+
+    new_id = None
+    qs = Body.objects.filter(origin='L', provisional_name__contains=prefix).order_by('provisional_name')
+
+    if qs.count() == 0:
+        # No discoveries so far, sad face
+        num_zeros = 7 - len(prefix)
+        new_id = "%s%0.*d" % (prefix, num_zeros, 1)
+    else:
+        last_body_id = qs.last().provisional_name
+        try:
+            last_body_num = int(last_body_id.replace(prefix, ''))
+            new_id_num = last_body_num + 1
+            num_zeros = 7 - len(prefix)
+            new_id = "%s%0.*d" % (prefix, num_zeros, new_id_num)
+        except ValueError:
+            logger.warn("Unable to decode last discoveries' id (id=%s)" % last_body_id)
+    return new_id
+
+def generate_new_candidate(cand_frame_data, prefix='LNX'):
+
+    new_body = None
+    new_id = generate_new_candidate_id(prefix)
+    first_frame = cand_frame_data.order_by('midpoint')[0]
+    last_frame = cand_frame_data.latest('midpoint')
+    if new_id:
+        try:
+            time_span = last_frame.midpoint - first_frame.midpoint
+            arc_length = time_span.total_seconds() / 86400.0
+        except:
+            arc_length = None
+
+        params = {  'provisional_name' : new_id,
+                    'origin' : 'L',
+                    'source_type' : 'U',
+                    'discovery_date' : first_frame.midpoint,
+                    'num_obs' : cand_frame_data.count(),
+                    'arc_length' : arc_length
+                 }
+        new_body, created = Body.objects.get_or_create(**params)
+        if created:
+            not_seen = datetime.utcnow() - last_frame.midpoint
+            not_seen_days = not_seen.total_seconds() / 86400.0
+            new_body.not_seen = not_seen_days
+            new_body.save()
+    else:
+        logger.warn("Could not determine a new id for the new object")
+
+    return new_body
 
 def ephemeris(request):
 
@@ -354,7 +439,11 @@ def schedule_check(data, body, ok_to_schedule=True):
         utc_date = data['utc_date']
     # Determine the semester boundaries for the current time and truncate the dark time and
     # therefore the windows appropriately.
-    semester_start, semester_end = get_semester_dates(datetime.utcnow())
+    semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
+    semester_start, semester_end = get_semester_dates(semester_date)
+    if dark_start.day != dark_end.day and semester_start < dark_start:
+        semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()) - timedelta(days=1))
+        semester_start, semester_end = get_semester_dates(semester_date)
     dark_start = max(dark_start, semester_start)
     dark_end = min(dark_end, semester_end)
 
@@ -519,7 +608,18 @@ def check_for_block(form_data, params, new_body):
         Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
 
         # XXX Code smell, duplicated from sources_subs.configure_defaults()
-        site_list = { 'V37' : 'ELP' , 'K92' : 'CPT' , 'K93' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ', 'Z21' : 'TFN', 'Q59' : 'COJ', 'T04' : 'OGG'  }
+        site_list = { 'V37' : 'ELP' ,
+                      'K92' : 'CPT' ,
+                      'K93' : 'CPT',
+                      'Q63' : 'COJ',
+                      'W85' : 'LSC',
+                      'W86' : 'LSC',
+                      'F65' : 'OGG',
+                      'E10' : 'COJ',
+                      'Z21' : 'TFN',
+                      'Q58' : 'COJ',
+                      'Q59' : 'COJ',
+                      'T04' : 'OGG'  }
 
         try:
             block_id = Block.objects.get(body=new_body.id,
@@ -618,7 +718,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
         return False
 
     try:
-        body, created = Body.objects.get_or_create(provisional_name=obj_id)
+        body, created = Body.objects.get_or_create(provisional_name__startswith=obj_id, defaults={'provisional_name' : obj_id})
     except:
         logger.debug("Multiple objects found called %s" % obj_id)
         return False
@@ -632,7 +732,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
         if not created:
             # Find out if the details have changed, if they have, save a
             # revision
-            check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
+            check_body = Body.objects.filter(provisional_name__startswith=obj_id, **kwargs)
             if check_body.count() == 0:
                 if save_and_make_revision(body, kwargs):
                     msg = "Updated %s" % obj_id
@@ -656,7 +756,7 @@ def update_NEOCP_observations(obj_id, extra_params={}):
     the number of Source Measurements for that Body'''
 
     try:
-        body = Body.objects.get(provisional_name=obj_id)
+        body = Body.objects.get(provisional_name__startswith=obj_id)
         num_measures = SourceMeasurement.objects.filter(body=body).count()
 
 # Check if the NEOCP has more measurements than we do
@@ -1053,7 +1153,7 @@ def create_source_measurement(obs_lines, block=None):
                     unpacked_name = packed_to_normal(params['body'])
                 except PackedError:
                     unpacked_name = 'ZZZZZZ'
-                obs_body = Body.objects.get(Q(provisional_name=params['body']) |
+                obs_body = Body.objects.get(Q(provisional_name__startswith=params['body']) |
                                             Q(name=params['body']) |
                                             Q(name=unpacked_name)
                                            )
@@ -1093,8 +1193,6 @@ def create_source_measurement(obs_lines, block=None):
                                         'obs_ra'  : params['obs_ra'],
                                         'obs_dec' : params['obs_dec'],
                                         'obs_mag' : params['obs_mag'],
-                                        'astrometric_catalog' : params['astrometric_catalog'],
-                                        'photometric_catalog' : params['astrometric_catalog'],
                                         'flags'   : params['flags']
                                      }
                     measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
@@ -1108,3 +1206,263 @@ def create_source_measurement(obs_lines, block=None):
                 measures = False
 
     return measures
+
+def determine_original_name(fits_file):
+    '''Determines the ORIGNAME for the FITS file <fits_file>.
+    This is pretty disgusting and a sign we are probably doing something wrong
+    and should store the true filename but at least it's contained to one place
+    now...'''
+    fits_file_orig = fits_file
+    if 'e90.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
+    elif 'e10.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e10.fits', 'e00.fits'))
+    elif 'e91.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e91.fits', 'e00.fits'))
+    elif 'e11.fits' in os.path.basename(fits_file):
+        fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
+    return fits_file_orig
+
+def find_matching_image_file(catfile):
+    '''Find the matching image file for the passed <catfile>. Returns None if it
+    can't be found or opened'''
+
+    if os.path.exists(catfile) == False or os.path.isfile(catfile) == False:
+        logger.error("Could not open matching image for catalog %s" % catfile)
+        return None
+    fits_file_for_sext = catfile + "[SCI]"
+
+    return fits_file_for_sext
+
+def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
+    '''Run SExtractor, rename output to new filename which is returned'''
+
+    logger.debug("Running SExtractor on BANZAI file: %s" % fits_file)
+    sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type='FITS_LDAC')
+    if sext_status == 0:
+        fits_ldac_catalog ='test_ldac.fits'
+        fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
+
+        # Rename catalog to permanent name
+        fits_file_output = os.path.basename(fits_file)
+        fits_file_output = fits_file_output.replace('[SCI]', '').replace('.fits', '_ldac.fits')
+        new_ldac_catalog = os.path.join(dest_dir, fits_file_output)
+        logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
+        os.rename(fits_ldac_catalog_path, new_ldac_catalog)
+
+    else:
+        logger.error("Execution of SExtractor failed")
+        return sext_status, -4
+
+    return sext_status, new_ldac_catalog
+
+def find_block_for_frame(catfile):
+    '''Try and find a Block for the original passed <catfile> filename (new style with
+    filename directly stored in the DB. If that fails, try and determine the filename
+    that would have been stored with the ORIGNAME.
+    Returns the Block if found, None otherwise.'''
+
+    #try and find Frame does for the fits catfile with a non-null block
+    try:
+        frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
+    except Frame.MultipleObjectsReturned:
+        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % os.path.basename(catfile))
+        return None
+    except Frame.DoesNotExist:
+        # Try and find the Frame under the original name (old-style)
+        fits_file_orig = determine_original_name(catfile)
+        try:
+            frame = Frame.objects.get(filename=fits_file_orig, block__isnull=False)
+        except Frame.MultipleObjectsReturned:
+            logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file_orig)
+            return None
+        except Frame.DoesNotExist:
+            logger.error("Frame entry for fits file %s does not exist" % fits_file_orig)
+            return None
+    return frame.block
+
+def make_new_catalog_entry(new_ldac_catalog, header, block):
+
+    num_new_frames_created = 0
+
+    #if a Frame does not exist for the catalog file with a non-null block
+    #create one with the fits filename
+    catfilename = os.path.basename(new_ldac_catalog)
+    if len(Frame.objects.filter(filename=catfilename, block__isnull=False)) < 1:
+
+        #Create a new Frame entry for new fits_file_output name
+        frame_params = {    'sitecode':header['site_code'],
+                          'instrument':header['instrument'],
+                              'filter':header['filter'],
+                            'filename':catfilename,
+                             'exptime':header['exptime'],
+                            'midpoint':header['obs_midpoint'],
+                               'block':block,
+                           'zeropoint':header['zeropoint'],
+                       'zeropoint_err':header['zeropoint_err'],
+                                'fwhm':header['fwhm'],
+                           'frametype':Frame.BANZAI_LDAC_CATALOG,
+                           'astrometric_catalog' : header.get('astrometric_catalog', None),
+                          'rms_of_fit':header['astrometric_fit_rms'],
+                       'nstars_in_fit':header['astrometric_fit_nstars'],
+                                'wcs' :header.get('wcs', None),
+                        }
+
+        frame, created = Frame.objects.get_or_create(**frame_params)
+        if created == True:
+            logger.debug("Created new Frame id#%d", frame.id)
+            num_new_frames_created += 1
+
+    return num_new_frames_created
+
+def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
+    '''New version of check_catalog_and_refit designed for BANZAI data. This
+    version of the routine assumes that the astrometric fit status of <catfile>
+    is likely to be good and exits if not the case. A new source extraction
+    is performed unless we find an existing Frame record for the catalog.
+    The name of the newly created FITS LDAC catalog from this process is returned
+    or an integer status code if no fit was needed or could not be performed.'''
+
+    num_new_frames_created = 0
+
+    # Open catalog, get header and check fit status
+    fits_header, junk_table, cattype = open_fits_catalog(catfile, header_only=True)
+    header = get_catalog_header(fits_header, cattype)
+
+    if header.get('astrometric_fit_status', None) != 0:
+        logger.error("Bad astrometric fit found")
+        return -1, num_new_frames_created
+
+    # Check catalog type
+    if cattype != 'BANZAI':
+        logger.error("Unable to process non-BANZAI data at this time")
+        return -99, num_new_frames_created
+
+    # Check for matching catalog
+    catfilename = os.path.basename(catfile).replace('.fits', '_ldac.fits')
+    catalog_frames = Frame.objects.filter(filename=catfilename, frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG))
+    if len(catalog_frames) != 0:
+        return os.path.abspath(os.path.join(dest_dir, os.path.basename(catfile.replace('.fits', '_ldac.fits')))), 0
+
+    # Find image file for this catalog
+    fits_file = find_matching_image_file(catfile)
+    if fits_file == None:
+        logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
+        return -1, num_new_frames_created
+
+    # Make a new FITS_LDAC catalog from the frame
+    status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file)
+    if status != 0:
+        logger.error("Execution of SExtractor failed")
+        return -4, 0
+
+    # Find Block for original frame
+    block = find_block_for_frame(catfile)
+    if block == None:
+        logger.error("Could not find block for fits frame %s" % catfile)
+        return -3, num_new_frames_created
+
+    # Check if we have a sitecode (none if this is a new instrument/telescope)
+    if header.get('site_code', None) is None:
+        logger.error("No sitecode found for fits frame %s" % catfile)
+        return -5, num_new_frames_created
+
+    # Create a new Frame entry for the new_ldac_catalog
+    num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)
+
+    return new_ldac_catalog, num_new_frames_created
+
+def store_detections(mtdsfile, dbg=False):
+
+    num_candidates = 0
+    moving_objects = read_mtds_file(mtdsfile)
+    if moving_objects != {} and len(moving_objects.get('detections', [])) > 0:
+        det_frame = moving_objects['frames'][0]
+        try:
+            frame = Frame.objects.get(filename=det_frame[0], block__isnull=False)
+        except Frame.MultipleObjectsReturned:
+            logger.error("Frame %s exists multiple times" % det_frame[0])
+            return None
+        except Frame.DoesNotExist:
+            logger.error("Frame %s does not exist" % det_frame[0])
+            return None
+        jds = np.array([x[1] for x in moving_objects['frames']], dtype=np.float64)
+        mean_jd = jds.mean(dtype=np.float64)
+        mean_dt = jd_utc2datetime(mean_jd)
+        for candidate in moving_objects['detections']:
+            # These parameters are the same for all frames and do not need
+            # averaging
+            score = candidate[0]['score']
+            speed = candidate[0]['velocity']
+            sky_position_angle = candidate[0]['sky_pos_angle']
+            # These need averaging across the frames. Accumulate means as doubles
+            # (float64) to avoid loss of precision.
+            mean_ra = candidate['ra'].mean(dtype=np.float64) * 15.0
+            mean_dec = candidate['dec'].mean(dtype=np.float64)
+            mean_x = candidate['x'].mean(dtype=np.float64)
+            mean_y = candidate['y'].mean(dtype=np.float64)
+            # Need to construct a masked array for the magnitude to avoid
+            # problems with 0.00 values
+            mag = np.ma.masked_array(candidate['mag'], mask=candidate['mag'] <= 0.0)
+            mean_mag = mag.mean(dtype=np.float64)
+
+            try:
+                cand = Candidate.objects.get(block=frame.block, cand_id=candidate['det_number'][0], avg_midpoint=mean_dt, score=score,\
+                        avg_x=mean_x, avg_y=mean_y,avg_ra=mean_ra, avg_dec=mean_dec, avg_mag=mean_mag, speed=speed,\
+                        sky_motion_pa=sky_position_angle)
+                if cand.detections!=candidate.tostring():
+                    cand.detections=candidate.tostring()
+                    cand.save()
+            except Candidate.MultipleObjectsReturned:
+                pass
+            except Candidate.DoesNotExist:
+                # Store candidate moving object
+                params = {  'block' : frame.block,
+                            'cand_id' : candidate['det_number'][0],
+                            'avg_midpoint' : mean_dt,
+                            'score' : score,
+                            'avg_x' : mean_x,
+                            'avg_y' : mean_y,
+                            'avg_ra' : mean_ra,
+                            'avg_dec' : mean_dec,
+                            'avg_mag' : mean_mag,
+                            'speed' : speed,
+                            'sky_motion_pa' : sky_position_angle,
+                            'detections' : candidate.tostring()
+                        }
+                if dbg: print params
+                cand, created = Candidate.objects.get_or_create(**params)
+                if dbg: print cand, created
+                if created:
+                    num_candidates += 1
+
+    return num_candidates
+
+def make_plot(request):
+
+    import matplotlib
+    matplotlib.use('Agg')
+    import aplpy
+    import io
+
+    fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
+    fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
+
+    sources = CatalogSources.objects.filter(frame__filename__contains=fits_file[0:28]).values_list('obs_ra', 'obs_dec')
+
+    fig = aplpy.FITSFigure(fits_filepath)
+    fig.show_grayscale(pmin=0.25, pmax=98.0)
+    ra = [X[0] for X in sources]
+    dec = [X[1] for X in sources]
+
+    fig.show_markers(ra, dec, edgecolor='green', facecolor='none', marker='o', s=15, alpha=0.5)
+
+    buffer = io.BytesIO()
+    fig.save(buffer, format='png')
+    fig.save(fits_filepath.replace('.fits', '.png'), format='png')
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+def plotframe(request):
+
+    return render(request, 'core/frame_plot.html')

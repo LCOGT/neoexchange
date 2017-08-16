@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -18,6 +18,7 @@ GNU General Public License for more details.
 import logging
 import urllib2, os
 import imaplib
+import json
 import email
 from urlparse import urljoin
 from re import sub
@@ -31,10 +32,14 @@ from reqdb.client import SchedulerClient
 from reqdb.requests import Request, UserRequest, NoRiseSetWindowsException
 from reqdb.utils.exceptions import InvalidArguments
 from reqdb.cadence import CadenceFactory
+
+import requests
+import json
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -114,15 +119,20 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
 def parse_previous_NEOCP_id(items, dbg=False):
     crossmatch = ['', '', '', '']
     if len(items) == 1:
-# Is of the form "<foo> does not exist" or "<foo> was not confirmed"
+# Is of the form "<foo> does not exist" or "<foo> was not confirmed". But can
+# now apparently include comets...
         chunks = items[0].split()
         none_id = ''
+        body = chunks[0]
         if chunks[1].find('does') >= 0:
             none_id = 'doesnotexist'
         elif chunks[1].find('was') >= 0:
             none_id = 'wasnotconfirmed'
+        elif chunks[0].find('Comet') >=0:
+            body = chunks[4]
+            none_id = chunks[1] + ' ' + chunks[2]
 
-        crossmatch = [chunks[0], none_id, '', ' '.join(chunks[-3:])]
+        crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
 # Is of the form "<foo> = <bar>(<date> UT)"
         if items[0].find('Comet') != 1:
@@ -745,7 +755,13 @@ def parse_goldstone_chunks(chunks, dbg=False):
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isalnum():
             # We have something that straddles months
             if dbg: print "In case 2b"
-            object_id = str(chunks[4])
+            if chunks[5].isdigit() or chunks[5][0:2].isupper() == False:
+                # Of the form '2017 May 29-Jun 02 418094 2007 WV4' or number and
+                # name e.g.  '2017 May 29-Jun 02 6063 Jason'
+                object_id = str(chunks[4])
+            else:
+                # Of the form '2017 May 29-Jun 02 2017 CS'
+                object_id = str(chunks[4]) + ' ' + chunks[5]
         elif astnum <= 31 and (chunks[3].isdigit() or chunks[3][0:2] == 'P/' \
         or chunks[3][0:2] == 'C/') and chunks[4].isalnum():
             # We have a date range e.g. '2016 Mar 17-23'
@@ -854,10 +870,10 @@ def fetch_arecibo_targets(page=None):
     if type(page) == BeautifulSoup:
         # Find the tables, we want the second one
         tables = page.find_all('table')
-        if len(tables) != 2:
-            logger.warn("Unexpected number of tables found in Arecibo page")
+        if len(tables) != 2 and len(tables) != 3 :
+            logger.warn("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
         else:
-            targets_table = tables[1]
+            targets_table = tables[-1]
             rows = targets_table.find_all('tr')
             if len(rows) > 1:
                 for row in rows[1:]:
@@ -1008,17 +1024,12 @@ def fetch_yarkovsky_targets(yark_targets):
 
 def make_location(params):
     location = {
-        'telescope_class' : params['pondtelescope'][0:3],
-        'site'        : params['site'].lower(),
-        'observatory' : params['observatory'],
-        'telescope'   : '',
+        'site'            : params['site'].lower(),
+        'telescope_class' : params['pondtelescope'][0:3]
     }
-
-# Check if the 'pondtelescope' is length 4 (1m0a) rather than length 3, and if
-# so, update the null string set above with a proper telescope
-    if len(params['pondtelescope']) == 4:
-        location['telescope'] = params['pondtelescope']
-
+    if params['site_code'] == 'W85':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'doma'
     return location
 
 def make_target(params):
@@ -1075,35 +1086,26 @@ def make_window(params):
 
 def make_molecule(params):
     molecule = {
+                'type' : params['exp_type'],
                 'exposure_count'  : params['exp_count'],
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
                 'filter'      : params['filter'],
-                'ag_mode'     : 'Optional', # 0=On, 1=Off, 2=Optional.  Default is 2.
+                'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
     }
     return molecule
 
-def make_proposal(params):
-    '''Construct needed proposal info'''
-
-    proposal = {
-                 'proposal_id'   : params['proposal_id'],
-                 'user_id'       : params['user_id'],
-                 'tag_id'        : params['tag_id'],
-                 'priority'      : params['priority'],
-               }
-    return proposal
-
 def make_constraints(params):
     constraints = {
-#                      'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
                        'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
-#                      'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
-#                      'max_airmass' : 2.37,    # 25 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
+                       'min_lunar_distance': 30
                     }
     return constraints
 
@@ -1155,12 +1157,13 @@ def configure_defaults(params):
                   'W85' : 'LSC',
                   'W86' : 'LSC',
                   'W87' : 'LSC',
-                  'W89' : 'LSC',
+                  'W89' : 'LSC', # Code for 0m4a
                   'F65' : 'OGG',
                   'E10' : 'COJ',
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
-                  'Q59' : 'COJ'} # Code for 0m4b, not currently in use 
+                  'Q58' : 'COJ', # Code for 0m4a
+                  'Q59' : 'COJ'} # Code for 0m4b
 
 
     params['pondtelescope'] = '1m0'
@@ -1169,24 +1172,14 @@ def configure_defaults(params):
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['filter'] = 'w'
+    params['exp_type'] = 'EXPOSE'
 
-    if params['site_code'] == 'W86' or params['site_code'] == 'W87':
-        # Force to Dome B (W86) as W87 is bad
-        params['binning'] = 1
-        params['observatory'] = 'domb'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-        if params['site_code'] == 'W87':
-            params['site_code'] = 'W86'
-    elif params['site_code'] == 'W85':
-        params['binning'] = 1
-        params['observatory'] = 'doma'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-    elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
-    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q59':
+    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['filter'] = 'w'
@@ -1194,15 +1187,13 @@ def configure_defaults(params):
 
     return params
 
-def submit_block_to_scheduler(elements, params):
-    request = Request()
+def make_userrequest(elements, params):
 
     params = configure_defaults(params)
-# Create Location (site, observatory etc) and add to Request
+# Create Location (site, observatory etc)
     location = make_location(params)
     logger.debug("Location=%s" % location)
-    request.set_location(location)
-# Create Target (pointing) and add to Request
+# Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
         target = make_moving_target(elements)
@@ -1210,33 +1201,34 @@ def submit_block_to_scheduler(elements, params):
         logger.debug("Making a static object")
         target = make_target(params)
     logger.debug("Target=%s" % target)
-    request.set_target(target)
-# Create Window and add to Request
+# Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
-    request.add_window(window)
-# Create Molecule and add to Request
+# Create Molecule
     molecule = make_molecule(params)
-    try:
-        request.add_molecule(molecule) # add exposure to the request
-    except InvalidArguments as e:
-        logger.error("Unable to make a molecule for %s at %s" % (params['instrument'], params['site_code']))
-        logger.error("Message from endpoint: %s" % e.message)
-        return False, params
+
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
-        submitter = ' (by %s)' % submitter_id
-    request.set_note('Submitted by NEOexchange' + submitter)
-    logger.debug("Request=%s" % request)
+        submitter = '(by %s)' % submitter_id
+    note = ('Submitted by NEOexchange {}'.format(submitter))
+    note = note.rstrip()
 
     constraints = make_constraints(params)
-    request.set_constraints(constraints)
+
+    request = {
+            "location": location,
+            "constraints": constraints,
+            "target": target,
+            "molecules": [molecule],
+            "windows": [window],
+            "observation_note": note,
+        }
 
 # If site is ELP, increase IPP value
-    ipp_value = 1.05
+    ipp_value = 1.00
     if params['site_code'] == 'V37':
-        ipp_value = 1.25
+        ipp_value = 1.00
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() or 'jitter' in params.keys():
@@ -1244,20 +1236,52 @@ def submit_block_to_scheduler(elements, params):
     else:
         user_request = make_single(params, ipp_value, request)
 
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
     logger.info("User Request=%s" % user_request)
+
+    return user_request
+
+
+def submit_block_to_scheduler(elements, params):
+
+    user_request = make_userrequest(elements, params)
+
 # Make an endpoint and submit the thing
-    client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
     try:
-        response_data = client.submit(user_request)
-    except NoRiseSetWindowsException:
-        response_data = {}
-        msg = "Object does not have any visibility"
+        resp = requests.post(
+            settings.PORTAL_REQUEST_API,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
         logger.error(msg)
         params['error_msg'] = msg
         return False, params
-    client.print_submit_response()
-    request_numbers =  response_data.get('request_numbers', '')
-    tracking_number =  response_data.get('tracking_number', '')
+
+    if resp.status_code not in [200,201]:
+        msg = "Parsing error"
+        logger.error(msg)
+        logger.error(resp.json())
+        params['error_msg'] = msg
+        return False, params
+
+    response = resp.json()
+    tracking_number =  response.get('id', '')
+
+    request_items = response.get('requests', '')
+
+    request_numbers =  [_['id'] for _ in request_items]
+
     if not tracking_number or not request_numbers:
         msg = "No Tracking/Request number received"
         logger.error(msg)

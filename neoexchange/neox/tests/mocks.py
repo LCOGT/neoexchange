@@ -42,7 +42,7 @@ class MockDateTime(datetime):
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
 
-def mock_check_request_status(headers, tracking_num):
+def mock_check_request_status(tracking_num):
     status = [{'constraints': [{'id': 611796, 'request': 617292}],
              'end_time': '2015-10-22 07:30:37',
              'fail_count': 0,
@@ -92,14 +92,25 @@ def mock_check_request_status(headers, tracking_num):
              }]
     return status
 
+class MockCandidate(object):
 
-def mock_check_request_status_null(headers, tracking_num):
+    def __init__(cls, id=None, block=None, cand_id=None):
+        pass
+
+    @classmethod
+    def unpack_dets(cls):
+        detections = [ (1, 1, 308, 2457652.799609, 22.753496, -21.67525, 1278.9119873046875, 1086.0040283203125, 21.280000686645508, 1.190000057220459, 1.0110000371932983, -37.599998474121094, 0.019999999552965164, 3.7699999809265137, 1, 2.130000114440918, 0.1979999989271164, 41.400001525878906, 4.599999904632568, 4.5),
+       (1, 2, 321, 2457652.80265, 22.753466, -21.67479, 1278.9820556640625, 1086.0469970703125, 21.06999969482422, 1.2999999523162842, 1.0770000219345093, 42.79999923706055, 0.019999999552965164, 3.890000104904175, 1, 2.130000114440918, 0.1979999989271164, 41.400001525878906, 4.599999904632568, 4.5)]
+        return detections
+
+
+def mock_check_request_status_null(tracking_num):
     return []
 
-def mock_check_request_status_notfound(headers, tracking_num):
+def mock_check_request_status_notfound(tracking_num):
     return {u'detail': u'Not found.'}
 
-def mock_check_for_images_no_millisecs(auth_header, request_id):
+def mock_check_for_images_no_millisecs(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43:28",
                     "ENCID": "clma",
@@ -113,7 +124,7 @@ def mock_check_for_images_no_millisecs(auth_header, request_id):
         }
     return header
 
-def mock_check_for_images_bad_date(auth_header, request_id):
+def mock_check_for_images_bad_date(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43",
                     "ENCID": "clma",
@@ -160,7 +171,7 @@ def mock_rbauth_login(email, password, request=None):
         ]
     return profile, proposals
 
-def mock_check_for_images(auth_header, request_id):
+def mock_check_for_images(request_id):
     images = [
     {u'filename': u'ogg0m406-kb27-20160531-0063-e90_cat.fits',
       u'headers': u'https://archive-api.lcogt.net/frames/4029371/headers/',
@@ -193,6 +204,17 @@ def mock_archive_frame_header(archive_headers, images):
         }
     return header
 
+def mock_find_images_for_block(blockid):
+    data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
+    return data
+
+def mock_odin_login(username, password):
+    return {}
+
 def mock_fetch_observations(tracking_num):
     images = ['1','2','3']
     return images
+
+def mock_run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
+
+    return -1, None

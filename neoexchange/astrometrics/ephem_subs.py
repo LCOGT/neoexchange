@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 ephem_subs.py -- Asteroid ephemeris related routines.
 
@@ -374,7 +374,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     else:
         spd = None
 
-    emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd)
+    emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
 
     return emp_line
 
@@ -446,17 +446,18 @@ def format_emp_line(emp_line, site_code):
 
     if str(site_code) == '500':
 # Geocentric position, so no altitude. moon parameters, score or hour angle
-        geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|N/A|N/A|N/A|N/A|N/A|N/A"
+        geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|N/A|N/A|N/A|N/A|N/A|N/A"
 
         formatted_line = geo_row_format % (emp_time, ra_string, dec_string, \
-            emp_line[3], emp_line[4])
+            emp_line[3], emp_line[4], emp_line[7])
 
     else:
 # Get site and mount parameters
         (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
         (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(site_code)
 
-        blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
+#                         Date  RA Dec Mag   Motion P.A  Alt Mphase Msep Malt   Score HA
+        blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
 # Compute apparent RA, Dec of the Moon
         (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt)
@@ -487,7 +488,7 @@ def format_emp_line(emp_line, site_code):
 #    num_fov = int(pointings_sep/ccd_fov)
 
         formatted_line = blk_row_format % (emp_time, ra_string, dec_string, \
-            emp_line[3], emp_line[4], emp_line[5],\
+            emp_line[3], emp_line[4],  emp_line[7], emp_line[5],\
             moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
 
     line_as_list = formatted_line.split('|')
@@ -528,6 +529,49 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
         emp.append(format_emp_line(line, site_code))
 
     return emp
+
+def make_unit_vector(angle):
+    '''Make a unit vector from the passed angle (in degrees).
+    The result is returned in a numpy array'''
+
+    return array([cos(radians(angle)), sin(radians(angle))])
+
+def average_angles(angle1, angle2):
+    '''Average two angles <angle1> <angle2> (in degrees) correctly.
+    The result is returned in degrees.'''
+
+    v1 = make_unit_vector(angle1)
+    v2 = make_unit_vector(angle2)
+    v = v1 + v2
+    average = degrees(atan2(v[1], v[0]))
+    if average < 0.0:
+        average += 360.0
+    return average
+
+def determine_rates_pa(start_time, end_time, elements, site_code):
+    '''Determine the minimum and maximum rates (in "/min) and the average
+    position angle (PA) and range of PA (delta PA) during the time
+    from <start_time> -> <end_time> for the body represented by <elements>
+    from the <site_code>'''
+
+    first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=True, display=True)
+    first_frame_speed = first_frame_emp[4]
+    first_frame_pa = first_frame_emp[7]
+
+    last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=True, display=True)
+    last_frame_speed = last_frame_emp[4]
+    last_frame_pa = last_frame_emp[7]
+
+    logger.debug("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
+    min_rate = min(first_frame_speed, last_frame_speed) - (0.01*min(first_frame_speed, last_frame_speed))
+    max_rate = max(first_frame_speed, last_frame_speed) + (0.01*max(first_frame_speed, last_frame_speed))
+    pa = average_angles(first_frame_pa, last_frame_pa)
+    deltapa = max(first_frame_pa,last_frame_pa) - min(first_frame_pa,last_frame_pa)
+    if deltapa > 180.0:
+        deltapa = 360.0 - deltapa
+    deltapa = max(10.0, deltapa)
+
+    return min_rate, max_rate, pa, deltapa
 
 def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False):
     '''Determine the times of darkness at the site specified by <site_code>
@@ -707,7 +751,7 @@ def get_mag_mapping(site_code):
     good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
     # COJ normally has bad seeing, allow more time
     bad_onem_site_codes = ['Q63', 'Q64']
-    point4m_site_codes = ['Z21', 'W89', 'T04', 'Q59']
+    point4m_site_codes = ['Z21', 'W89', 'T04', 'Q58', 'Q59']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
@@ -847,6 +891,16 @@ def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
 def arcmins_to_radians(arcmin):
     return (arcmin/60.0)*(pi/180.0)
 
+def comp_sep(ra_cand_deg, dec_cand_deg, ra_ephem_rad, dec_ephem_rad):
+    '''Wrapper around SLALIB's sla_dsep to compute the separation between a
+    detected position specified by (ra_cand_deg, dec_cand_deg; in DEGREES) with
+    an ephemeris position (ra_ephem_rad, dec_ephem_rad; in RADIANS).
+    The computed separation is returned in arcseconds'''
+
+    sep = S.sla_dsep(radians(ra_cand_deg), radians(dec_cand_deg), ra_ephem_rad, dec_ephem_rad)
+    sep = degrees(sep)*3600.0
+    return sep
+
 def get_sitepos(site_code, dbg=False):
     '''Returns site name, geodetic longitude (East +ve), latitude (both in radians)
     and altitude (meters) for passed sitecode. This can be either a SLALIB site
@@ -880,13 +934,13 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(104, 00, 54.63)
         site_long = -site_long
         site_hgt = 2010.0
-        site_name = 'LCOGT Node at McDonald Observatory (ELP)'
+        site_name = 'LCO Node at McDonald Observatory (ELP)'
     elif site_code == 'BPL' or site_code == '500':
         (site_lat, status)  =  S.sla_daf2r(34, 25, 57)
         (site_long, status) =  S.sla_daf2r(119, 51, 46)
         site_long = -site_long
         site_hgt = 7.0
-        site_name = 'LCOGT Back Parking Lot Node (BPL)'
+        site_name = 'LCO Back Parking Lot Node (BPL)'
     elif site_code == 'LSC-DOMA-1M0A' or site_code == 'W85':
 # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
 # corrected by +3m for telescope height from Vince.
@@ -895,7 +949,7 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(70, 48, 17.24)
         site_long = -site_long # West of Greenwich !
         site_hgt = 2201.0
-        site_name = 'LCOGT LSC Node 1m0 Dome A at Cerro Tololo'
+        site_name = 'LCO LSC Node 1m0 Dome A at Cerro Tololo'
     elif site_code == 'LSC-DOMB-1M0A' or site_code == 'W86':
 # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
 # corrected by +3m for telescope height from Vince.
@@ -904,7 +958,7 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(70, 48, 16.78)
         site_long = -site_long # West of Greenwich !
         site_hgt = 2201.0
-        site_name = 'LCOGT LSC Node 1m0 Dome B at Cerro Tololo'
+        site_name = 'LCO LSC Node 1m0 Dome B at Cerro Tololo'
     elif site_code == 'LSC-DOMC-1M0A' or site_code == 'W87':
 # Latitude, longitude from Eric Mamajek (astro-ph: 1210.1616) Table 6. Height
 # corrected by +3m for telescope height from Vince.
@@ -913,7 +967,7 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(70, 48, 16.85)
         site_long = -site_long # West of Greenwich !
         site_hgt = 2201.0
-        site_name = 'LCOGT LSC Node 1m0 Dome C at Cerro Tololo'
+        site_name = 'LCO LSC Node 1m0 Dome C at Cerro Tololo'
     elif site_code == 'LSC-AQWA-0M4A' or site_code == 'W89':
 # Latitude, longitude from somewhere
         (site_lat, status)  =  S.sla_daf2r(30, 10, 3.79)
@@ -921,7 +975,7 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(70, 48, 16.88)
         site_long = -site_long # West of Greenwich !
         site_hgt = 2202.5
-        site_name = 'LCOGT LSC Node 0m4a Aqawan A at Cerro Tololo'
+        site_name = 'LCO LSC Node 0m4a Aqawan A at Cerro Tololo'
     elif site_code == 'CPT-DOMA-1M0A' or site_code == 'K91':
 # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
 # corrected by +3m for telescope height from Vince.
@@ -929,7 +983,7 @@ def get_sitepos(site_code, dbg=False):
         site_lat = -site_lat   # Southern hemisphere !
         (site_long, status) =  S.sla_daf2r(20, 48, 36.65)
         site_hgt = 1807.0
-        site_name = 'LCOGT CPT Node 1m0 Dome A at Sutherland'
+        site_name = 'LCO CPT Node 1m0 Dome A at Sutherland'
     elif site_code == 'CPT-DOMB-1M0A' or site_code == 'K92':
 # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
 # corrected by +3m for telescope height from Vince.
@@ -937,7 +991,7 @@ def get_sitepos(site_code, dbg=False):
         site_lat = -site_lat   # Southern hemisphere !
         (site_long, status) =  S.sla_daf2r(20, 48, 36.13)
         site_hgt = 1807.0
-        site_name = 'LCOGT CPT Node 1m0 Dome B at Sutherland'
+        site_name = 'LCO CPT Node 1m0 Dome B at Sutherland'
     elif site_code == 'CPT-DOMC-1M0A' or site_code == 'K93':
 # Latitude, longitude from site GPS co-ords plus offsets from site plan. Height
 # corrected by +3m for telescope height from Vince.
@@ -945,7 +999,7 @@ def get_sitepos(site_code, dbg=False):
         site_lat = -site_lat   # Southern hemisphere !
         (site_long, status) =  S.sla_daf2r(20, 48, 36.39)
         site_hgt = 1807.0
-        site_name = 'LCOGT CPT Node 1m0 Dome C at Sutherland'
+        site_name = 'LCO CPT Node 1m0 Dome C at Sutherland'
     elif site_code == 'COJ-DOMA-1M0A' or site_code == 'Q63':
 # Latitude, longitude from Google Earth guesswork. Height
 # corrected by +3m for telescope height from Vince.
@@ -953,7 +1007,7 @@ def get_sitepos(site_code, dbg=False):
         site_lat = -site_lat   # Southern hemisphere !
         (site_long, status) =  S.sla_daf2r(149, 04, 14.33)
         site_hgt = 1168.0
-        site_name = 'LCOGT COJ Node 1m0 Dome A at Siding Spring'
+        site_name = 'LCO COJ Node 1m0 Dome A at Siding Spring'
     elif site_code == 'COJ-DOMB-1M0A' or site_code == 'Q64':
 # Latitude, longitude from Google Earth guesswork. Height
 # corrected by +3m for telescope height from Vince.
@@ -961,28 +1015,35 @@ def get_sitepos(site_code, dbg=False):
         site_lat = -site_lat   # Southern hemisphere !
         (site_long, status) =  S.sla_daf2r(149, 04, 14.75)
         site_hgt = 1168.0
-        site_name = 'LCOGT COJ Node 1m0 Dome B at Siding Spring'
+        site_name = 'LCO COJ Node 1m0 Dome B at Siding Spring'
     elif site_code == 'TFN-AQWA-0M4A' or site_code == 'Z21':
 # Latitude, longitude from Todd B./Google Earth
         (site_lat, status)  =  S.sla_daf2r(28, 18, 1.11)
         (site_long, status) =  S.sla_daf2r(16, 30, 42.13)
         site_long = -site_long # West of Greenwich !
         site_hgt = 2390.0
-        site_name = 'LCOGT TFN Node 0m4a Aqawan A at Tenerife'
+        site_name = 'LCO TFN Node 0m4a Aqawan A at Tenerife'
     elif site_code == 'OGG-CLMA-0M4B' or site_code == 'T04':
 # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
         (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
         (site_long, status) =  S.sla_daf2r(156, 15, 27.11)
         site_long = -site_long # West of Greenwich !
         site_hgt = 3037.0
-        site_name = 'LCOGT OGG Node 0m4b at Maui'
+        site_name = 'LCO OGG Node 0m4b at Maui'
+    elif site_code == 'COJ-CLMA-0M4A' or site_code == 'Q58':
+# Latitude, longitude from Google Earth, SE corner of clamshell, probably wrong
+        (site_lat, status)  =  S.sla_daf2r(31, 16, 22.38)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) =  S.sla_daf2r(149, 04, 15.05)
+        site_hgt = 1191.0
+        site_name = 'LCO COJ Node 0m4a at Siding Spring'
     elif site_code == 'COJ-CLMA-0M4B' or site_code == 'Q59':
 # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
         (site_lat, status)  =  S.sla_daf2r(31, 16, 22.48)
         site_lat = -site_lat   # Southern hemisphere !
         (site_long, status) =  S.sla_daf2r(149, 04, 14.91)
         site_hgt = 1191.0
-        site_name = 'LCOGT COJ Node 0m4b at Siding Spring'
+        site_name = 'LCO COJ Node 0m4b at Siding Spring'
     else:
 # Obtain latitude, longitude of the observing site.
 # Reverse longitude to get the more normal East-positive convention
@@ -1151,7 +1212,7 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z21', 'Q59', 'T04', 'W89']:
+    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z17', 'Z21', 'Q58', 'Q59', 'T03', 'T04', 'W89']:
         ha_pos_limit = 4.46 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 15.0
@@ -1173,8 +1234,11 @@ def return_LCOGT_site_codes_mapping():
                          'OGG-CLMA-2M0A' : 'F65',
                          'COJ-CLMA-2M0A' : 'E10',
                          'TFN-AQWA-0M4A' : 'Z21',
+                         'TFN-AQWA-0M4B' : 'Z17',
+                         'COJ-CLMA-0M4A' : 'Q58',
                          'COJ-CLMA-0M4B' : 'Q59',
                          'OGG-CLMA-0M4B' : 'T04',
+                         'OGG-CLMA-0M4C' : 'T03',
                          'LSC-AQWA-0M4A' : 'W89',
                          'SQA-DOMA-0M8A' : 'G51'}
 
@@ -1214,14 +1278,14 @@ def get_sitecam_params(site):
     point4m_alt_limit = 15.0
 
     onem_exp_overhead = 15.5
-    sinistro_exp_overhead = 48.0
-    onem_setup_overhead = 120.0
+    sinistro_exp_overhead = 38.0
+    onem_setup_overhead = 110.0
     twom_setup_overhead = 180.0
     twom_exp_overhead = 22.5
     point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z21', 'W89', 'T04', 'Q59']
+    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'T03', 'T04', 'Q58', 'Q59']
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
