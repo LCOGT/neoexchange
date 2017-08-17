@@ -278,6 +278,36 @@ class TestUpdate_Targets(TestCase):
     def test_none_updated(self, mock_update_MPC_orbit, mock_random_delay):
         update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=0, old=False, never=False)
         updated = []
+        
+        for i in updated:
+	        self.assertIn(i, update)
 
-        self.assertListEqual(updated, update)
+    def test_zerotruefalse(self, mock_update_MPC_orbit, mock_random_delay):
+        update = update_neos(time=0, old=True, never=False)
+        updated = ['NASA1', 'NASA3', 'GOLDSTONE1', 'GOLDSTONE2', 'GOLDSTONE3', 'A&G1', 'A&G3']
+        
+        for i in updated:
+	        self.assertIn(i, update)
+   
+    def test_zerofalsetrue(self, mock_update_MPC_orbit, mock_random_delay):
+        update = update_neos(time=0, old=False, never=True)
+        updated = ['NASA1', 'NASA2', 'NASA3', 'ARECIBO1', 'ARECIBO2', 'GOLDSTONE1', 'GOLDSTONE2', 'SPACEWATCH', 'A&G1', 'A&G2', 'A&G3', 'NEODSYS']
+        
+        for i in updated:
+	        self.assertIn(i, update)
+        
+    def test_zerotruetrue(self, mock_update_MPC_orbit, mock_random_delay):
+        update = update_neos(time=0, old=True, never=True)
+        updated = ['NASA1', 'NASA2', 'NASA3', 'ARECIBO1', 'ARECIBO2', 'ARECIBO3', 'GOLDSTONE1', 'GOLDSTONE2', 'GOLDSTONE3', 'SPACEWATCH', 'A&G1', 'A&G2', 'A&G3', 'NEODSYS']
+        
+        for i in updated:
+	        self.assertIn(i, update)
+        
+    def test_zerofalsefalse(self, mock_update_MPC_orbit, mock_random_delay):
+        update = update_neos(time=0, old=False, never=False)
+        updated = ['NASA1', 'NASA3', 'GOLDSTONE2', 'A&G1', 'A&G3']
+        
+        for i in updated:
+	        self.assertIn(i, update)
+	        
 

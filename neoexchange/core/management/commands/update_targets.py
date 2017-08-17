@@ -38,8 +38,8 @@ class Command(BaseCommand):
             type=bool,
             choices=[True, False],
             default=False,
-            help='When set to True the code updates all NEOs apart of QuerySet that are three months or older' \
-            'and NEOs that LCO is activily following from the sources provided. The default is set to False' \
+            help='When set to True the code updates all NEOs apart of QuerySet that are three months or older ' \
+            'and NEOs that LCO is activily following from the sources provided. The default is set to False ' \
             'to not update old NEOs.'
         )
             
@@ -57,10 +57,10 @@ class Command(BaseCommand):
             type=int,
             choices=[0, 10800, 21600, 32400, 43200, 54000, 64800, 75600, 86400, 129600, 172799],
             default=43200,           
-            help='Updates objects depending on the time that has passed from the objects original update.' \
-           'The argument given is the number of hours that has passed in seconds. If the objects have been' \
-           'updated then the code looks for objects that have not been updated within the argument time and' \
-           '48 hours. Default is set to 43200 seconds (12 hours). 3hrs=10800, 6hrs=21600, 9hrs=32400,' \
+            help='Updates objects depending on the time that has passed from the objects original update. ' \
+           'The argument given is the number of hours that has passed in seconds. If the objects have been ' \
+           'updated then the code looks for objects that have not been updated within the argument time and ' \
+           '48 hours. Default is set to 43200 seconds (12 hours). 3hrs=10800, 6hrs=21600, 9hrs=32400, ' \
            '12hrs=43200, 15hrs=54000, 18hrs=64800, 21hrs=75600, 24hrs=86400, 36hrs=129600, 48hrs=172799'
         )
         

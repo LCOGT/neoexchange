@@ -1427,10 +1427,10 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False, n
             not_updated_in_threemonths = three_months == True and in_time_diff > 7776000 and up_time_diff > 172800
             
             #I think I want this to be 172800(48hrs) instead of 0 and then I do not not need up_time_diff > 0  in the else statement, does that make more sense?
-            if time_opt == 0:
+            if time_opt == 172800:
                 needs_to_be_updated = never_updated or not_updated_in_threemonths
             else:
-                time_update = target.updated == True and up_time_diff > 0 and up_time_diff >= time_opt and up_time_diff <= 172800
+                time_update = target.updated == True and up_time_diff >= 0 and up_time_diff >= time_opt and up_time_diff < 172800
                 needs_to_be_updated = never_updated or not_updated_in_threemonths or time_update
 
             if needs_to_be_updated:
@@ -1445,8 +1445,8 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False, n
                     target_type = 'Not Updated in Three Months'
                     logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
                 #here is where the update happens and it adds the body to list of updated objects
-                update_MPC_orbit(target.name, target.origin)
-                delay = random_delay(10, 20)
+                #update_MPC_orbit(target.name, target.origin)
+                #delay = random_delay(10, 20)
                 were_updated.append(target.name)
         # generates message after bodies updated to state how many were updated        
         if were_updated == []:
