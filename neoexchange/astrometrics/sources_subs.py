@@ -28,6 +28,11 @@ from socket import error
 from random import randint
 from time import sleep
 
+from reqdb.client import SchedulerClient
+from reqdb.requests import Request, UserRequest, NoRiseSetWindowsException
+from reqdb.utils.exceptions import InvalidArguments
+from reqdb.cadence import CadenceFactory
+
 import requests
 import json
 from bs4 import BeautifulSoup
@@ -1005,6 +1010,18 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         return []
     return NASA_targets
 
+def fetch_yarkovsky_targets(yark_targets):
+    '''Fetches yarkovsky targets from command line and returns a list of targets'''
+
+    yark_target_list = []
+
+    for obj_id in yark_targets:
+        if '_' in obj_id:
+            obj_id = str(obj_id).replace('_', ' ')
+        yark_target_list.append(obj_id)
+
+    return yark_target_list
+
 def make_location(params):
     location = {
         'site'            : params['site'].lower(),
@@ -1092,8 +1109,46 @@ def make_constraints(params):
                     }
     return constraints
 
-def configure_defaults(params):
+def make_single(params, ipp_value, request):
+    '''Create a user_request for a single observation'''
 
+    user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
+    user_request.add_request(request)
+    user_request.operator = 'single'
+
+    proposal = make_proposal(params)
+    user_request.set_proposal(proposal)
+
+    return user_request
+
+def make_cadence(elements, params, ipp_value):
+    '''Create a user_request for a cadence observation'''
+
+    if len(elements) > 0:
+        logger.debug("Making a moving object")
+        target = make_moving_target(elements)
+    else:
+        logger.debug("Making a static object")
+        target = make_target(params)
+
+    factory = CadenceFactory()
+    factory.name = params['group_id']
+    factory.start = params['start_time'].strftime('%Y-%m-%d %H:%M:%S')
+    factory.end = params['end_time'].strftime('%Y-%m-%d %H:%M:%S')
+    factory.period = timedelta(seconds=params['period']*3600.0) # Interval between scheduled starts
+    factory.target = target
+    factory.proposal = make_proposal(params)
+    factory.add_molecule(make_molecule(params)) # You can add many molecules this way
+    factory.jitter = timedelta(seconds=params['jitter']*3600.0) #1hr of jitter is 30 min either side. defaults is 0
+    factory.location = make_location(params) # default is any 1m0 telescope
+    factory.constraints = make_constraints(params) # default has no constraints
+    factory.ipp_value = ipp_value
+
+    user_request = factory.build()
+
+    return user_request
+
+def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
                   'K92' : 'CPT',
@@ -1170,11 +1225,16 @@ def make_userrequest(elements, params):
             "observation_note": note,
         }
 
-# Add the Request to the outer User Request
 # If site is ELP, increase IPP value
     ipp_value = 1.00
     if params['site_code'] == 'V37':
         ipp_value = 1.00
+
+# Add the Request to the outer User Request
+    if 'period' in params.keys() or 'jitter' in params.keys():
+        user_request = make_cadence(elements, params, ipp_value)
+    else:
+        user_request = make_single(params, ipp_value, request)
 
     user_request = {
         "submitter": params['user_id'],

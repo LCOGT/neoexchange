@@ -15,6 +15,7 @@ GNU General Public License for more details.
 
 import os
 from datetime import datetime, timedelta
+from math import floor
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
@@ -33,7 +34,7 @@ import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
-from .forms import EphemQuery, ScheduleForm, ScheduleBlockForm, MPCReportForm
+from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
@@ -335,7 +336,8 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def get(self, request, *args, **kwargs):
         form = self.get_form()
-        return self.render_to_response(self.get_context_data(form=form, body=self.body))
+        cadence_form = ScheduleCadenceForm()
+        return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
 
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
@@ -357,6 +359,26 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
+
+class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
+    '''
+    Creates a suggested observation request, including time window and molecules
+    '''
+    template_name = 'core/schedule.html'
+    form_class = ScheduleCadenceForm
+    ok_to_schedule = False
+
+    def post(self, request, *args, **kwargs):
+        form = ScheduleCadenceForm(request.POST)
+        if form.is_valid():
+            return self.form_valid(form,request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
 
 
@@ -457,6 +479,29 @@ def schedule_check(data, body, ok_to_schedule=True):
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
+    # Get period and jitter for cadence
+    period = data.get('period','')
+    jitter = data.get('jitter','')
+
+    if period and jitter:
+        '''Number of times the cadence request will run between start and end date'''
+        cadence_start = data['start_time']
+        cadence_end = data['end_time']
+        total_run_time = cadence_end - cadence_start
+        cadence_period = timedelta(seconds=data['period']*3600.0)
+        total_requests = 1 + int(floor(total_run_time.total_seconds() / cadence_period.total_seconds()))
+        # Remove the last start if the request would run past the cadence end
+        if cadence_start + total_requests * cadence_period + timedelta(seconds=slot_length*60.0) > cadence_end:
+            total_requests -= 1
+
+        '''Total hours of time used by all cadence requests'''
+        total_time = timedelta(seconds=slot_length*60.0) * total_requests
+        total_time = total_time.total_seconds()/3600.0
+
+    suffix = datetime.strftime(utc_date, '%Y%m%d')
+    if period != '' and jitter != '':
+        suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
@@ -467,14 +512,21 @@ def schedule_check(data, body, ok_to_schedule=True):
         'schedule_ok': ok_to_schedule,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + suffix,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
         'mid_time': dark_midpoint.isoformat(),
         'ra_midpoint': emp[1],
-        'dec_midpoint': emp[2]
+        'dec_midpoint': emp[2],
+        'period' : period,
+        'jitter' : jitter
     }
+
+    if period and jitter:
+        resp['num_times'] = total_requests
+        resp['total_time'] = total_time
+
     return resp
 
 
@@ -506,6 +558,9 @@ def schedule_submit(data, body, username):
               'end_time': data['end_time'],
               'group_id': data['group_id']
               }
+    if data['period'] or data['jitter']:
+        params['period'] = data['period']
+        params['jitter'] = data['jitter']
     # Check for pre-existing block
     tracking_number = None
     resp_params = None

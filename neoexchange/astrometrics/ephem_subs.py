@@ -1357,3 +1357,92 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(orbelems))
             logger.error(str(emp_line))
     return FOM
+
+def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow(), date_range=30, dark_and_up_time_limit=3.0, slot_length=20, ephem_step_size='5 m'):
+    '''Determine when it's best to observe Yarkovsky & radar/ARM
+    targets in the future'''
+
+    visible_dates = []
+    emp_visible_dates = []
+    dark_and_up_time_all = []
+    max_alt_all = []
+    delta_date = 0
+    while delta_date <= date_range:
+
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        emp = call_compute_ephem(orbelems, dark_start, dark_end, site_code, ephem_step_size, alt_limit=30)
+
+        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+
+        if emp_dark_and_up != []:
+
+            obj_mag = float(emp_dark_and_up[0][3])
+
+            moon_alt_start = int(emp_dark_and_up[0][8])
+            moon_alt_end = int(emp_dark_and_up[-1][8])
+            moon_up = False
+            if moon_alt_start>=30 or moon_alt_end>=30:
+                moon_up = True
+
+            moon_phase = float(emp_dark_and_up[0][6])
+
+            score = int(emp_dark_and_up[0][9])
+
+            max_alt = compute_max_altitude(emp_dark_and_up)
+
+            if dark_and_up_time>=dark_and_up_time_limit and obj_mag<=21.5 and moon_up == True and moon_phase<=0.85 and score>0:
+                visible_dates.append(emp_dark_and_up[0][0][0:10])
+                emp_visible_dates.append(emp_dark_and_up[0])
+                dark_and_up_time_all.append(dark_and_up_time)
+                max_alt_all.append(max_alt)
+            elif dark_and_up_time>=dark_and_up_time_limit and obj_mag<=21.5 and moon_up == False:
+                visible_dates.append(emp_dark_and_up[0][0][0:10])
+                emp_visible_dates.append(emp_dark_and_up[0])
+                dark_and_up_time_all.append(dark_and_up_time)
+                max_alt_all.append(max_alt)
+
+        utc_date += timedelta(days=1)
+        delta_date += 1
+
+    return visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all
+
+def compute_dark_and_up_time(emp):
+    '''Computes the amount of time a target is up and the
+    sky is dark from emp'''
+
+    dark_and_up_time = None
+    dark_and_up_time_start = None
+    dark_and_up_time_end = None
+    emp_dark_and_up = []
+    start = None
+
+    if emp != []:
+        for line in emp:
+            if 'Limits' not in line[10] and start == None:
+                dark_and_up_time_start = datetime.strptime(line[0], '%Y %m %d %H:%M')
+                dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
+                start = 1
+                emp_dark_and_up.append(line)
+            elif 'Limits' not in line[10]:
+                dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
+                emp_dark_and_up.append(line)
+        if dark_and_up_time_start != None and dark_and_up_time_end != None:
+            dark_and_up_time = dark_and_up_time_end - dark_and_up_time_start
+            dark_and_up_time = dark_and_up_time.seconds/3600.0 #in hrs
+
+    return dark_and_up_time, emp_dark_and_up
+
+def compute_max_altitude(emp_dark_and_up):
+    '''Computes the maximum altitude a target
+    reaches on a given night'''
+
+    max_alt = 0
+    prev_max_alt = 0
+
+    for line in emp_dark_and_up:
+        alt = int(line[5])
+        if alt > prev_max_alt:
+            max_alt = alt
+        prev_max_alt = max_alt
+
+    return max_alt

@@ -324,3 +324,5 @@ if not CURRENT_PATH.startswith('/var/www'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
+
+#print DATABASES['default']
