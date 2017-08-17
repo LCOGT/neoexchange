@@ -37,7 +37,7 @@ class ScheduleObservations(FunctionalTest):
     @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
     def test_login(self):
         self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
-        username_input = self.browser.find_element_by_id("username")
+        username_input = self.browser.find_element_by_id("email")
         username_input.send_keys(self.username)
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
