@@ -1401,10 +1401,10 @@ def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
-def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R', 'Y'], updated_time=48, ingest_limit=90, start_time=datetime.utcnow()):
+def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R', 'Y'], updated_time=2, ingest_limit=90, start_time=datetime.utcnow()):
         """This is the main portion of the update_targets command.'origins' are the list of origins
 	    to be updated. The default list contains every origin except MPC and LCO. 'update_time' is 
-	    in hours and its default is set to 48 hours. 'ingest_limit' is the number of days from the 
+	    in days and its default is set to 2 days. 'ingest_limit' is the number of days from the 
 	    'start_time' limiting the NEOs in the Query Set to be updated. 'start_time' is set at the 
 	    default of datetime.utcnow(), but it can be changed to any datetime value.
         Note: if you need the list of objects you can edit this code to call the list 'were_updated'"""
@@ -1420,10 +1420,10 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R', 'Y'], updated_time=48, in
         else:
             time = start_time
             
-        updated = time - timedelta(hours=updated_time)#time to put into query
+        updated = time - timedelta(days=updated_time)#time to put into query
         ingested = time - timedelta(days=ingest_limit)#time to put into query
         logger.info("==== Preparing to Update Targets %s ====" % (now.strftime('%Y-%m-%d %H:%M')))
-        targets = Body.objects.filter(origin__in=origins, ingest__gte=ingested, update_time__lte=updated, active=True)
+        targets = Body.objects.filter(origin__in=origins, ingest__lte=ingested, update_time__gte=updated, active=True)
         logger.info("Length of target query set to update is {length}".format(length=targets.count()))
     
         for target in targets:

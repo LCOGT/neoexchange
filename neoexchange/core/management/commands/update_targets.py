@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = 'This command updates objects that have been ingested in the last three months, that ' \
-    'have not been updated within 48 hours, and that are not from the Minor Planet Center or LCO ' \
+    'have not been updated within 2 days and that are not from the Minor Planet Center or LCO ' \
     'using default settings. There are three optional arguments that have choices that specify ' \
     'what you would like to update; sources, ingest_time, update_age, and date.'
 
@@ -44,10 +44,9 @@ class Command(BaseCommand):
         parser.add_argument(
             '--update_age',
             type=int,
-            default=48,           
-            help='update_age is the '
-            '"update_age" is the time in hours from the "date" given in the command line.' \
-            ' The command takes in a interger value of hours. The default value is 48 hours '
+            default=2,           
+            help='"update_age" is the time in days from the "date" given in the command line.' \
+            ' The command takes in a interger value of hours. The default value is 2 days. '
         )
         
     	parser.add_argument(
