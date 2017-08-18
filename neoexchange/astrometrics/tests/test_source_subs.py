@@ -30,7 +30,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest
+    make_userrequest, make_cadence
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1788,3 +1788,88 @@ class TestConfigureDefaults(TestCase):
         params = configure_defaults(params)
 
         self.assertEqual(params, expected_params)
+
+class TestMakeCadence(TestCase):
+
+    def setUp(self):
+
+        self.elements = {"epochofel_mjd": 58000.0,
+                         "current_name" : "3122",
+                         "meandist": 1.7691326,
+                         "longascnode": 336.0952,
+                         "orbinc": 22.1508, 
+                         "eccentricity": 0.4233003,
+                         "meananom": 351.43854,
+                         "elements_type": "MPC_MINOR_PLANET",
+                         "type": "NON_SIDEREAL",
+                         "argofperih": 27.8469}
+        self.params =  {'utc_date' : datetime(2017,8,20,0,0),
+                        'start_time' : datetime(2017,8,20,8,40),
+                        'end_time' : datetime(2017,8,20,19,40),
+                        'period' : 2.0,
+                        'jitter' : 0.25,
+                        'group_id' : "3122_Q59-20170815",
+                        'proposal_id' : 'LCOSchedulerTest',
+                        'user_id' : 'tlister@lcogt.net',
+                        'exp_type' : 'EXPOSE',
+                        'exp_count' : 105,
+                        'exp_time' : 20.0,
+                        'binning' : 2,
+                        'instrument' : '0M4-SCICAM-SBIG',
+                        'filter' : 'w',
+                        'site' : 'COJ',
+                        'pondtelescope' : '0m4a',
+                        'site_code' : 'Q59'
+                        }
+        self.ipp_value = 1.0
+
+    def test1(self):
+        expected = '{"operator": "single", \
+                     "requests": [{"operator": "many", \
+                        "requests": [{"observation_note": "", \
+                                      "location": {"site": "coj", "telescope_class": "0m4"}, \
+                                      "molecules": [{"exposure_time": 20.0, \
+                                                     "exposure_count": 105, \
+                                                     "ag_name": "",\
+                                                     "fill_window": false,\
+                                                     "ag_exp_time": 10.0,\
+                                                     "priority": 1, \
+                                                     "ag_filter": "",\
+                                                     "filter": "w", \
+                                                     "spectra_lamp": "", \
+                                                     "acquire_radius_arcsec": 0.0, \
+                                                     "instrument_name": "0M4-SCICAM-SBIG", \
+                                                     "ag_mode": "OPTIONAL", \
+                                                     "acquire_mode": "WCS", \
+                                                     "readout_mode": "", \
+                                                     "type": "EXPOSE", \
+                                                     "spectra_slit": "",\
+                                                     "bin_y": 2, "bin_x": 2}], \
+                                        "windows": [{"start": "2017-08-20T10:32:30", \
+                                                     "end": "2017-08-20T11:48:48"}], \
+                                        "constraints": {"max_airmass": 1.74, \
+                                                        "min_lunar_distance": 30}, \
+                                         "type": "request", \
+                                         "observation_type": "NORMAL", \
+                                         "target": {"epochofel": 58000.0, \
+                                                    "name": "3122", \
+                                                    "rot_angle": 0.0, \
+                                                    "rot_mode": "", \
+                                                    "meandist": 1.7691326, \
+                                                    "longascnode": 336.0952, \
+                                                    "orbinc": 22.1508, \
+                                                    "acquire_mode": "OPTIONAL", \
+                                                    "eccentricity": 0.4233003, \
+                                                    "meananom": 351.43854, \
+                                                    "scheme": "MPC_MINOR_PLANET", \
+                                                    "type": "NON_SIDEREAL", \
+                                                    "argofperih": 27.8469}}, \
+                                            {"observation_note": "", \
+                                            "location": {"site": "coj", "telescope_class": "0m4"}, "molecules": [{"exposure_time": 20.0, "exposure_count": 105, "ag_name": "", "fill_window": False, "ag_exp_time": 10.0, "priority": 1, "ag_filter": "", "filter": "w", "spectra_lamp": "", "acquire_radius_arcsec": 0.0, "instrument_name": "0M4-SCICAM-SBIG", "ag_mode": "OPTIONAL", "acquire_mode": "WCS", "readout_mode": "", "type": "EXPOSE", "spectra_slit": "", "bin_y": 2, "bin_x": 2}], "windows": [{"start": "2017-08-20T12:32:30", "end": "2017-08-20T13:48:48"}], "constraints": {"max_airmass": 1.74, "min_lunar_distance": 30}, "type": "request", "observation_type": "NORMAL", "target": {"epochofel": 58000.0, "name": "3122", "rot_angle": 0.0, "rot_mode": "", "meandist": 1.7691326, "longascnode": 336.0952, "orbinc": 22.1508, "acquire_mode": "OPTIONAL", "eccentricity": 0.4233003, "meananom": 351.43854, "scheme": "MPC_MINOR_PLANET", "type": "NON_SIDEREAL", "argofperih": 27.8469}}, {"observation_note": "", "location": {"site": "coj", "telescope_class": "0m4"}, "molecules": [{"exposure_time": 20.0, "exposure_count": 105, "ag_name": "", "fill_window": False, "ag_exp_time": 10.0, "priority": 1, "ag_filter": "", "filter": "w", "spectra_lamp": "", "acquire_radius_arcsec": 0.0, "instrument_name": "0M4-SCICAM-SBIG", "ag_mode": "OPTIONAL", "acquire_mode": "WCS", "readout_mode": "", "type": "EXPOSE", "spectra_slit": "", "bin_y": 2, "bin_x": 2}], "windows": [{"start": "2017-08-20T14:32:30", "end": "2017-08-20T15:48:48"}], "constraints": {"max_airmass": 1.74, "min_lunar_distance": 30}, "type": "request", "observation_type": "NORMAL", "target": {"epochofel": 58000.0, "name": "3122", "rot_angle": 0.0, "rot_mode": "", "meandist": 1.7691326, "longascnode": 336.0952, "orbinc": 22.1508, "acquire_mode": "OPTIONAL", "eccentricity": 0.4233003, "meananom": 351.43854, "scheme": "MPC_MINOR_PLANET", "type": "NON_SIDEREAL", "argofperih": 27.8469}}, {"observation_note": "", "location": {"site": "coj", "telescope_class": "0m4"}, "molecules": [{"exposure_time": 20.0, "exposure_count": 105, "ag_name": "", "fill_window": False, "ag_exp_time": 10.0, "priority": 1, "ag_filter": "", "filter": "w", "spectra_lamp": "", "acquire_radius_arcsec": 0.0, "instrument_name": "0M4-SCICAM-SBIG", "ag_mode": "OPTIONAL", "acquire_mode": "WCS", "readout_mode": "", "type": "EXPOSE", "spectra_slit": "", "bin_y": 2, "bin_x": 2}], "windows": [{"start": "2017-08-20T16:32:30", "end": "2017-08-20T17:48:48"}], "constraints": {"max_airmass": 1.74, "min_lunar_distance": 30}, "type": "request", "observation_type": "NORMAL", "target": {"epochofel": 58000.0, "name": "3122", "rot_angle": 0.0, "rot_mode": "", "meandist": 1.7691326, "longascnode": 336.0952, "orbinc": 22.1508, "acquire_mode": "OPTIONAL", "eccentricity": 0.4233003, "meananom": 351.43854, "scheme": "MPC_MINOR_PLANET", "type": "NON_SIDEREAL", "argofperih": 27.8469}}], \
+                                            "type": "compound_request"}], \
+                                            "group_id": "3122_Q59-20170815", \
+                                            "type": "compound_request", \
+                                            "ipp_value": 1.0}'
+        ur = make_cadence(self.elements, self.params, self.ipp_value)
+
+        self.assertEqual(expected, ur.as_json())

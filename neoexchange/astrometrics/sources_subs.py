@@ -1121,6 +1121,12 @@ def make_single(params, ipp_value, request):
 
     return user_request
 
+def make_proposal(params):
+    proposal =  { 'proposal_id' : params['proposal_id'],
+                  'user_id' : params['user_id']
+                }
+    return proposal
+
 def make_cadence(elements, params, ipp_value):
     '''Create a user_request for a cadence observation'''
 
