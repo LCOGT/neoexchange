@@ -240,12 +240,11 @@ class TestUpdate_Targets(TestCase):
         for i in updated:
 	        self.assertIn(i, update)
 
-    def test_command_objects(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos()
-        updated = ['NASA2', 'NASA3', 'ARECIBO2', 'GOLDSTONE2', 'SPACEWATCH', 'A&G1', 'A&G2'] 
+    def test_command_incorrect_time(self, mock_update_MPC_orbit, mock_random_delay):
+        update = update_neos(start_time='2015/07/21 21:00:00')
+        updated = 'start_time error! Check the format of your date!' 
 
-        for i in updated:
-	        self.assertIn(i, update)
+        self.assertEqual(updated, update)#fix this!!!!
 
     def test_command_objects_six(self, mock_update_MPC_orbit, mock_random_delay):
         update = update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], updated_time=6)
@@ -261,15 +260,15 @@ class TestUpdate_Targets(TestCase):
         for i in updated:
 	        self.assertIn(i, update)
         
-    def test_command_radar_fifteen(self, mock_update_MPC_orbit, mock_random_delay):
+    def test_command_radar_fifteen_datetime(self, mock_update_MPC_orbit, mock_random_delay):
         update = update_neos(origins=['A', 'G', 'R'], updated_time=15, start_time=datetime.now()-timedelta(days=30))
         updated = ['ARECIBO2', 'GOLDSTONE2', 'A&G1', 'A&G2']
         
         for i in updated:
 	        self.assertIn(i, update)
         
-    def test_not_updated_previously(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L', 'Y'])
+    def test_all_string_time(self, mock_update_MPC_orbit, mock_random_delay):
+        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L', 'Y'], start_time='2017-01-23 15:00:00')
         updated = ['NASA2', 'NASA3', 'ARECIBO2', 'GOLDSTONE2', 'MPC1', 'MPC2', 'MPC3', 'SPACEWATCH', 'A&G1', 'A&G2', 'LCO1', 'LCO2', 'LCO3']
 
         for i in updated:

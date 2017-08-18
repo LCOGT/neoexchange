@@ -1408,30 +1408,33 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R', 'Y'], updated_time=48, in
 	    'start_time' limiting the NEOs in the Query Set to be updated. 'start_time' is set at the 
 	    default of datetime.utcnow(), but it can be changed to any datetime value.
         Note: if you need the list of objects you can edit this code to call the list 'were_updated'"""
-        if (start_time is datetime) == False:
+        now = datetime.utcnow()
+        were_updated = []
+        
+        if type(start_time) is str:
             try:
                 time = datetime.strptime(start_time, "%y-%m-%d %H:%M:%S")
                 updated = time - timedelta(hours=updated_time)#time to put into query
                 ingested = time - timedelta(days=ingest_limit)#time to put into query
-                logger.info("==== Preparing to Updating Targets %s ====" % (datetime.utcnow().strftime('%Y-%m-%d %H:%M')))
-                
+                logger.info("==== Preparing to Updating Targets %s ====" % (now.strftime('%Y-%m-%d %H:%M')))
+                targets = Body.objects.filter(origin__in=origins, ingest__gt=ingested, update_time__gt=updated, active=True)
+                logger.info("Length of target query set to check {length}".format(length=targets.count()))
+            
             except ValueError:
-                logger.info("start_time error! Check the format of your date")          
+                logger.info("start_time error! Check the format of your date!")          
             
         else:
             updated = start_time - timedelta(hours=updated_time)#time to put into query
             ingested = start_time - timedelta(days=ingest_limit)#time to put into query
-            logger.info("==== Preparing to Updating Targets %s ====" % (datetime.strftime('%Y-%m-%d %H:%M')))
-            
-        targets = Body.objects.filter(origin__in=origins, ingest__gt=ingested, update_time__gt=updated, active=True)
-        logger.info("Length of target query set to check {length}".format(length=targets.count()))
-        were_updated = []
+            logger.info("==== Preparing to Updating Targets %s ====" % (now.strftime('%Y-%m-%d %H:%M')))
+            targets = Body.objects.filter(origin__in=origins, ingest__gt=ingested, update_time__gt=updated, active=True)
+            logger.info("Length of target query set to check {length}".format(length=targets.count()))
         
         for target in targets:
             logger.info('Updating {name} from {origin} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, date=target.update_time))
             #here is where the update happens and it adds the body to list of updated objects
             #update_MPC_orbit(target.name, target.origin)
-            delay = random_delay(10, 20)
+            #delay = random_delay(10, 20)
             were_updated.append(target.name)
         # generates message after bodies updated to state how many were updated        
         if were_updated == []:
