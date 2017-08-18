@@ -18,17 +18,16 @@ class TestUpdate_Targets(TestCase):
     def setUp(self):
         """These are the times that the bodies ingest and update_time can be set to."""
         #these are just under the number of hours their name says they are
-        three_hours = datetime.now() - timedelta(hours=3, minutes=5)
-        six_hours = datetime.now()- timedelta(hours=6, minutes=5)
-        twelve_hours = datetime.now() - timedelta(hours=12, minutes=5)
-        eighteen_hours = datetime.now() - timedelta(hours=18, minutes=5)
-        twentyfour_hours = datetime.now() - timedelta(hours=24, minutes=5)
-        thirtysix_hours = datetime.now() - timedelta(hours=36, minutes=5)
+        three_hours = datetime.now() - timedelta(hours=2, minutes=55)
+        six_hours = datetime.now()- timedelta(hours=5, minutes=55)
+        twelve_hours = datetime.now() - timedelta(hours=11, minutes=55)
+        eighteen_hours = datetime.now() - timedelta(hours=17, minutes=55)
+        twentyfour_hours = datetime.now() - timedelta(hours=23, minutes=55)
+        thirtysix_hours = datetime.now() - timedelta(hours=35, minutes=55)
         fourtyeight_hours = datetime.now() - timedelta(hours=47,minutes=55)
-        #just over the time their name says they are
-        three_months = datetime.now() - timedelta(days=91)
-        six_months = datetime.now() - timedelta(days=181)
-        year = datetime.now() - timedelta(days=366)    
+        three_months = datetime.now() - timedelta(days=85)
+        six_months = datetime.now() - timedelta(days=175)
+        year = datetime.now() - timedelta(days=355)    
     
         """These are the fake Bodies that will be tested above"""
         
@@ -37,7 +36,7 @@ class TestUpdate_Targets(TestCase):
             origin='N',
             active=True,
             updated=True,
-            ingest=twentyfour_hours,
+            ingest=six_months,
             update_time=six_hours
             )
             
@@ -64,7 +63,7 @@ class TestUpdate_Targets(TestCase):
             origin='A',
             active=True,
             updated=False,
-            ingest=eighteen_hours,
+            ingest=year,
             update_time=eighteen_hours
             )
         
@@ -127,7 +126,7 @@ class TestUpdate_Targets(TestCase):
             origin='M',
             active=True,
             updated=True,
-            ingest=twentyfour_hours,
+            ingest=three_months,
             update_time=six_hours
             )
         
@@ -172,7 +171,7 @@ class TestUpdate_Targets(TestCase):
             origin='R',
             active=True,
             updated=True,
-            ingest=thirtysix_hours,
+            ingest=six_months,
             update_time=thirtysix_hours
             )
             
@@ -212,102 +211,74 @@ class TestUpdate_Targets(TestCase):
             update_time=eighteen_hours
             )
             
+#update_neos(origins=origins, updated_time=time, ingest_limit=old, never_update=never, start_time=date)         
     def test_command_all_oldies(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], old=True)
-        updated = ['NASA2', 'NASA3', 'ARECIBO1', 'ARECIBO2', 'ARECIBO3', 'GOLDSTONE1', 'GOLDSTONE3', 'MPC1', 'SPACEWATCH', 'A&G2', 'NEODSYS', 'LCO1', 'LCO2']
+        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], ingest_limit=90)
+        updated = ['NASA2', 'NASA3', 'ARECIBO2', 'GOLDSTONE2', 'MPC1', 'MPC2', 'MPC3', 'SPACEWATCH', 'A&G1', 'A&G2', 'LCO1', 'LCO2', 'LCO3']
 	
         for i in updated:
 	        self.assertIn(i, update)
 
     def test_command_all_thirtysix(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=129600)
-        updated = ['NASA2', 'ARECIBO1', 'ARECIBO2', 'GOLDSTONE1', 'MPC1', 'SPACEWATCH', 'A&G2', 'A&G3', 'NEODSYS', 'LCO1', 'LCO2']
+        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], updated_time=36, ingest_limit=10)
+        updated = ['ARECIBO2', 'GOLDSTONE2', 'MPC1', 'SPACEWATCH', 'A&G1', 'A&G2', 'LCO1', 'LCO3']
 
         for i in updated:
 	        self.assertIn(i, update)
         
     def test_command_nasa_oldies_nine(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['N','G'], time=43200, old=True)
-        updated = ['NASA2', 'NASA3', 'GOLDSTONE1', 'GOLDSTONE3']
+        update = update_neos(origins=['N','G'], updated_time=9, ingest_limit=185)
+        updated = ['NASA1', 'GOLDSTONE2']
 
         for i in updated:
 	        self.assertIn(i, update)    
 
     def test_command_nasa_twentyfour(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['N','G'], time=86400)
-        updated = ['NASA2', 'NASA3', 'GOLDSTONE1']
+        update = update_neos(origins=['N','G'], updated_time=24)
+        updated = ['GOLDSTONE2']
 
         for i in updated:
 	        self.assertIn(i, update)
 
     def test_command_objects(self, mock_update_MPC_orbit, mock_random_delay):
         update = update_neos()
-        updated = ['NASA2', 'NASA3', 'ARECIBO1', 'GOLDSTONE1', 'SPACEWATCH', 'A&G2', 'A&G3', 'NEODSYS'] 
+        updated = ['NASA2', 'NASA3', 'ARECIBO2', 'GOLDSTONE2', 'SPACEWATCH', 'A&G1', 'A&G2'] 
 
         for i in updated:
 	        self.assertIn(i, update)
 
     def test_command_objects_six(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=21600)
-        updated = ['NASA1', 'NASA2', 'NASA3', 'ARECIBO1', 'ARECIBO2', 'GOLDSTONE1', 'SPACEWATCH', 'A&G2', 'A&G3', 'NEODSYS']
+        update = update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], updated_time=6)
+        updated = ['ARECIBO2', 'GOLDSTONE2', 'A&G1']
         
         for i in updated:
 	        self.assertIn(i, update)
 
     def test_command_radar_eighteen_oldies(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['A','G','R'], time=64800, old=True)
-        updated = ['ARECIBO1', 'ARECIBO2', 'ARECIBO3', 'GOLDSTONE1', 'GOLDSTONE3', 'A&G2', 'A&G3']
+        update = update_neos(origins=['A','G','R'], updated_time=18, ingest_limit=185)
+        updated = ['ARECIBO2', 'GOLDSTONE2', 'A&G1', 'A&G2']
 
         for i in updated:
 	        self.assertIn(i, update)
         
     def test_command_radar_fifteen(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['A', 'G', 'R'], time=54000)
-        updated = ['ARECIBO1', 'ARECIBO2', 'GOLDSTONE1', 'A&G2', 'A&G3']
+        update = update_neos(origins=['A', 'G', 'R'], updated_time=15, start_time=datetime.now()-timedelta(days=30))
+        updated = ['ARECIBO2', 'GOLDSTONE2', 'A&G1', 'A&G2']
         
         for i in updated:
 	        self.assertIn(i, update)
         
     def test_not_updated_previously(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=10800, never=True)
-        updated = ['NASA1', 'NASA2', 'NASA3', 'ARECIBO1', 'ARECIBO2', 'GOLDSTONE1', 'GOLDSTONE2', 'MPC1', 'MPC2', 'MPC3', 'SPACEWATCH', 'A&G1', 'A&G2', 'A&G3', 'NEODSYS', 'LCO1', 'LCO2', 'LCO3']
+        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L', 'Y'])
+        updated = ['NASA2', 'NASA3', 'ARECIBO2', 'GOLDSTONE2', 'MPC1', 'MPC2', 'MPC3', 'SPACEWATCH', 'A&G1', 'A&G2', 'LCO1', 'LCO2', 'LCO3']
 
         for i in updated:
 	        self.assertIn(i, update)
         
     def test_none_updated(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L'], time=0, old=False, never=False)
+        update = update_neos(origins=['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L', 'Y'], updated_time=0, ingest_limit=90)
         updated = []
         
         for i in updated:
 	        self.assertIn(i, update)
-
-    def test_zerotruefalse(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(time=0, old=True, never=False)
-        updated = ['NASA1', 'NASA3', 'GOLDSTONE1', 'GOLDSTONE2', 'GOLDSTONE3', 'A&G1', 'A&G3']
-        
-        for i in updated:
-	        self.assertIn(i, update)
-   
-    def test_zerofalsetrue(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(time=0, old=False, never=True)
-        updated = ['NASA1', 'NASA2', 'NASA3', 'ARECIBO1', 'ARECIBO2', 'GOLDSTONE1', 'GOLDSTONE2', 'SPACEWATCH', 'A&G1', 'A&G2', 'A&G3', 'NEODSYS']
-        
-        for i in updated:
-	        self.assertIn(i, update)
-        
-    def test_zerotruetrue(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(time=0, old=True, never=True)
-        updated = ['NASA1', 'NASA2', 'NASA3', 'ARECIBO1', 'ARECIBO2', 'ARECIBO3', 'GOLDSTONE1', 'GOLDSTONE2', 'GOLDSTONE3', 'SPACEWATCH', 'A&G1', 'A&G2', 'A&G3', 'NEODSYS']
-        
-        for i in updated:
-	        self.assertIn(i, update)
-        
-    def test_zerofalsefalse(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(time=0, old=False, never=False)
-        updated = ['NASA1', 'NASA3', 'GOLDSTONE2', 'A&G1', 'A&G3']
-        
-        for i in updated:
-	        self.assertIn(i, update)
-	        
 

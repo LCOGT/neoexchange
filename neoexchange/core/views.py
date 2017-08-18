@@ -1401,53 +1401,38 @@ def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
-def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], time=43200, old=False, never=True):
+def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R', 'Y'], updated_time=48, ingest_limit=90, start_time=datetime.utcnow()):
         """This is the main portion of the update_targets command.'origins' are the list of origins
-	    to be updated. The default list contains every origin except MPC and LCO. 
-        'time' is in seconds and its default is set to 43200 seconds(12 hours). 
-        'old' allows all NEOs apart of the Query Set to be updated. Its default value is set to False.
+	    to be updated. The default list contains every origin except MPC and LCO. 'update_time' is 
+	    in hours and its default is set to 48 hours. 'ingest_limit' is the number of days from the 
+	    'start_time' limiting the NEOs in the Query Set to be updated. 'start_time' is set at the 
+	    default of datetime.utcnow(), but it can be changed to any datetime value.
         Note: if you need the list of objects you can edit this code to call the list 'were_updated'"""
-        time_opt = time
-        three_months = old
-        never_update = never
-        time_now = datetime.utcnow()
-        logger.info("==== Preparing to Updating Targets %s ====" % (time_now.strftime('%Y-%m-%d %H:%M')))
-        targets = Body.objects.filter(origin__in=origins, active=True)
+        if (start_time is datetime) == False:
+            try:
+                time = datetime.strptime(start_time, "%y-%m-%d %H:%M:%S")
+                updated = time - timedelta(hours=updated_time)#time to put into query
+                ingested = time - timedelta(days=ingest_limit)#time to put into query
+                logger.info("==== Preparing to Updating Targets %s ====" % (datetime.utcnow().strftime('%Y-%m-%d %H:%M')))
+                
+            except ValueError:
+                logger.info("start_time error! Check the format of your date")          
+            
+        else:
+            updated = start_time - timedelta(hours=updated_time)#time to put into query
+            ingested = start_time - timedelta(days=ingest_limit)#time to put into query
+            logger.info("==== Preparing to Updating Targets %s ====" % (datetime.strftime('%Y-%m-%d %H:%M')))
+            
+        targets = Body.objects.filter(origin__in=origins, ingest__gt=ingested, update_time__gt=updated, active=True)
         logger.info("Length of target query set to check {length}".format(length=targets.count()))
         were_updated = []
         
         for target in targets:
-            #seconds since body has been updated
-            up_time_diff = float(timedelta.total_seconds(time_now - target.update_time))
-            #seconds since body was ingested
-            in_time_diff = float(timedelta.total_seconds(time_now - target.ingest))
-            #determines if body was never updated and never was called from command line
-            never_updated = target.updated == False and never_update==True
-            #determinds if old was called from command line, ingest date was greater than 90 days, and updated time is greater than 2 days
-            not_updated_in_threemonths = three_months == True and in_time_diff > 7776000 and up_time_diff > 172800
-            
-            #I think I want this to be 172800(48hrs) instead of 0 and then I do not not need up_time_diff > 0  in the else statement, does that make more sense?
-            if time_opt == 172800:
-                needs_to_be_updated = never_updated or not_updated_in_threemonths
-            else:
-                time_update = target.updated == True and up_time_diff >= 0 and up_time_diff >= time_opt and up_time_diff < 172800
-                needs_to_be_updated = never_updated or not_updated_in_threemonths or time_update
-
-            if needs_to_be_updated:
-                #if body needs to be updated and is one of the types it will log that specific information 
-                if never_updated:
-                    target_type = 'Never Updated'
-                    logger.info('Updating {name} from {origin} which was {updated}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type))
-                elif time_update:
-                    target_type = 'Previously Updated'
-                    logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
-                elif not_updated_in_threemonths:
-                    target_type = 'Not Updated in Three Months'
-                    logger.info('Updating {name} from {origin} which was {updated} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, updated=target_type, date=target.update_time))
-                #here is where the update happens and it adds the body to list of updated objects
-                #update_MPC_orbit(target.name, target.origin)
-                #delay = random_delay(10, 20)
-                were_updated.append(target.name)
+            logger.info('Updating {name} from {origin} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, date=target.update_time))
+            #here is where the update happens and it adds the body to list of updated objects
+            #update_MPC_orbit(target.name, target.origin)
+            delay = random_delay(10, 20)
+            were_updated.append(target.name)
         # generates message after bodies updated to state how many were updated        
         if were_updated == []:
             logger.info("==== No NEOs to be updated ====")
