@@ -9,14 +9,13 @@ from astrometrics.sources_subs import random_delay
 from core.views import update_MPC_orbit, update_neos
 from core.models import Body
 
-
 logger = logging.getLogger(__name__)
 
-
 class Command(BaseCommand):
-    help = 'Updates objects that have not been updated within 12 hours that are not from the Minor Planet Center' \
-    'or LCO using default settings. There are three optional arguments that have choices that specify what you' \
-    'would like to update; sources, old, and time.'
+    help = 'This command updates objects that have been ingested in the last three months, that ' \
+    'have not been updated within 48 hours, and that are not from the Minor Planet Center or LCO ' \
+    'using default settings. There are three optional arguments that have choices that specify ' \
+    'what you would like to update; sources, ingest_time, update_age, and date.'
 
     def __init__(self):
         super(Command, self).__init__()
@@ -27,18 +26,19 @@ class Command(BaseCommand):
             type=str,
             choices=['allneos', 'nasa', 'radar', 'objects'],
             default='objects',
-            help='Updates NEOs by origin source. "allneos" updates all NEOs, "nasa" updates origins assosiated' \
-            ' with NASA, "radar" updates NEOs being followed by radar origins, "objects" updates all but MPC and' \
-            ' LCO objects, "M" is the Minor Planet Center, "N" is NASA, "S" is Spacewatch, "D" is NEODSYS, "G" is' \
-            ' Goldstone,"A" is Arecibo, "R" is both Goldstone and Aricebo, "L" is LCO, "Y" is Yarkovsky.'
+            help='Updates NEOs by origin source. "allneos" updates all NEOs, "nasa" updates ' \
+            'origins assosiated with NASA, "radar" updates NEOs being followed by radar origins,' \
+            ' "objects" updates all but MPC and LCO objects, "M" is the Minor Planet Center,'\
+            ' "N" is NASA, "S" is Spacewatch, "D" is NEODSYS, "G" is Goldstone,"A" is Arecibo,' \
+            ' "R" is both Goldstone and Aricebo, "L" is LCO, "Y" is Yarkovsky.'
         )
         
         parser.add_argument(
             '--ingest_time',
-            type=float,
+            type=int,
             default=90,
-            help='ingest_time is the number of days from the "date" given in the command line.' \
-            ' '
+            help='"ingest_time" is the number of days from the "date" given in the command line.' \
+            ' The command takes in a integer value of days. The default vaule is 90 days.'
         )
 
         parser.add_argument(
@@ -46,25 +46,24 @@ class Command(BaseCommand):
             type=int,
             default=48,           
             help='update_age is the '
-            'update_age is the time in hours from the "date" given in the command line.' \
-            ' '
+            '"update_age" is the time in hours from the "date" given in the command line.' \
+            ' The command takes in a interger value of hours. The default value is 48 hours '
         )
         
     	parser.add_argument(
          	'--date',
          	type=str,
         	default=datetime.utcnow(),
-        	help='date'
+        	help='"date" is the starting date that the updates will be centered around. ' \
+        	'The default is datetime.datetime.utcnow(). If a date is given in the command ' \
+        	'it must be a string in the format of "%y-%m-%d %H:%M:%S"; any other format ' \
+        	'will trigger a ValueError.'
 	    )
-
-
-
 
     def handle(self, *args, **options):
         time = options['update_age'] 
         date = options['date']
         old = options['ingest_time'] 
-            
 
         if options['sources']=='allneos':
             origins = ['M', 'N', 'S', 'D', 'G', 'A', 'R', 'L', 'Y']
