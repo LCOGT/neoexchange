@@ -241,9 +241,8 @@ class TestUpdate_Targets(TestCase):
 	        self.assertIn(i, update)
 
     def test_command_incorrect_time(self, mock_update_MPC_orbit, mock_random_delay):
-        update = update_neos(start_time='2015/07/21 21:00:00')
-
-        self.assertRaises(ValueError, update)
+        with self.assertRaisesRegexp(ValueError, 'Check the format of your date; it should look like this:%y-%m-%d %H:%M:%S'):
+            update_neos(start_time='2015/07/21 21:00:00')
 
     def test_command_objects_six(self, mock_update_MPC_orbit, mock_random_delay):
         update = update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R'], updated_time=6)
