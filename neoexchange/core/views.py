@@ -1423,7 +1423,7 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R', 'Y'], updated_time=48, in
         updated = time - timedelta(hours=updated_time)#time to put into query
         ingested = time - timedelta(days=ingest_limit)#time to put into query
         logger.info("==== Preparing to Update Targets %s ====" % (now.strftime('%Y-%m-%d %H:%M')))
-        targets = Body.objects.filter(origin__in=origins, ingest__gt=ingested, update_time__gt=updated, active=True).all()
+        targets = Body.objects.filter(origin__in=origins, ingest__gte=ingested, update_time__lte=updated, active=True)
         logger.info("Length of target query set to update is {length}".format(length=targets.count()))
     
         for target in targets:
