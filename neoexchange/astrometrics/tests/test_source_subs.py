@@ -1823,7 +1823,11 @@ class TestMakeCadence(TestCase):
                         }
         self.ipp_value = 1.0
 
+    @mock.patch('reqdb.requests.datetime', MockDateTime)
     def test1(self):
+
+        MockDateTime.change_datetime(2017, 8, 17,  21, 27, 5)
+
         expected = '{"operator": "single", \
                      "requests": [{"operator": "many", \
                         "requests": [{"observation_note": "", \
