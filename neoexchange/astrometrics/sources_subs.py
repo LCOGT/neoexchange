@@ -1130,15 +1130,15 @@ def make_proposal(params):
                 }
     return proposal
 
-def make_cadence(elements, params, ipp_value, request=None, use_factory=True):
+def make_cadence(elements, params, ipp_value, request=None, use_factory=False):
 
     if use_factory:
         ur =  make_cadence_factory(elements, params, ipp_value)
     else:
-        ur =  make_cadence_valhalla(params, ipp_value, request)
+        ur =  make_cadence_valhalla(request, params, ipp_value)
     return ur
 
-def make_cadence_valhalla(request, params, ipp_value):
+def make_cadence_valhalla(request, params, ipp_value, debug=False):
 
 
     cadence_url = urljoin(settings.PORTAL_REQUEST_API, 'cadence/')
@@ -1176,6 +1176,16 @@ def make_cadence_valhalla(request, params, ipp_value):
         return False, params
 
     cadence_user_request = resp.json()
+
+    if debug:
+        print('Cadence generated {} requests'.format(len(cadence_user_request['requests'])))
+        i = 1
+        for request in cadence_user_request['requests']:
+            print('Request {0} window start: {1} window end: {2}'.format(
+                i, request['windows'][0]['start'], request['windows'][0]['end']
+            ))
+        i = i + 1
+
     return cadence_user_request
 
 def make_cadence_factory(elements, params, ipp_value):
@@ -1288,7 +1298,7 @@ def make_userrequest(elements, params):
         ipp_value = 1.00
 
 # Add the Request to the outer User Request
-    if 'period' in params.keys() or 'jitter' in params.keys():
+    if 'period' in params.keys() and 'jitter' in params.keys():
         user_request = make_cadence(elements, params, ipp_value, request)
     else:
         user_request = make_single(params, ipp_value, request)
