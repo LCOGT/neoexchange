@@ -1138,10 +1138,28 @@ def make_cadence(elements, params, ipp_value, request=None, use_factory=False):
         ur =  make_cadence_valhalla(request, params, ipp_value)
     return ur
 
-def make_cadence_valhalla(request, params, ipp_value, debug=False):
-
+def expand_cadence(user_request):
 
     cadence_url = urljoin(settings.PORTAL_REQUEST_API, 'cadence/')
+
+    try:
+        resp = requests.post(
+            cadence_url,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
+
+    cadence_user_request = resp.json()
+
+    return True, cadence_user_request
+
+def make_cadence_valhalla(request, params, ipp_value, debug=False):
 
     # Add cadence parameters into Request
     request['cadence']= {
@@ -1162,22 +1180,9 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
         "proposal": params['proposal_id']
     }
 # Submit the UserRequest with the cadence
-    try:
-        resp = requests.post(
-            cadence_url,
-            json=user_request,
-            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
-            timeout=20.0
-         )
-    except requests.exceptions.Timeout:
-        msg = "Observing portal API timed out"
-        logger.error(msg)
-        params['error_msg'] = msg
-        return False, params
+    status, cadence_user_request = expand_cadence(user_request)
 
-    cadence_user_request = resp.json()
-
-    if debug:
+    if debug and status == True:
         print('Cadence generated {} requests'.format(len(cadence_user_request['requests'])))
         i = 1
         for request in cadence_user_request['requests']:

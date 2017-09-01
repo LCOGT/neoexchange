@@ -24,7 +24,7 @@ import mock
 from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_expand_cadence
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
@@ -1905,6 +1905,7 @@ class TestMakeCadence(TestCase):
         for key in ur_dict.keys():
             self.assertEqual(expected[key], ur_dict[key])
 
+    @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     def test_cadence_valhalla(self):
         expected = {
                      u'group_id': u'3122_Q59-20170815',
@@ -2021,6 +2022,7 @@ class TestMakeCadence(TestCase):
         for key in ur.keys():
             self.assertEqual(expected[key], ur[key])
 
+    @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     def test_cadence_wrapper(self):
         expected = {
                      u'group_id': u'3122_Q59-20170815',
