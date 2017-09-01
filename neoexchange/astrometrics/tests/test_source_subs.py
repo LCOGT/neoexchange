@@ -30,7 +30,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence
+    make_userrequest, make_cadence, make_cadence_valhalla
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1795,6 +1795,7 @@ class TestMakeCadence(TestCase):
 
         self.elements = {"epochofel_mjd": 58000.0,
                          "current_name" : "3122",
+                         "name" : "3122",
                          "meandist": 1.7691326,
                          "longascnode": 336.0952,
                          "orbinc": 22.1508, 
@@ -1823,10 +1824,32 @@ class TestMakeCadence(TestCase):
                         }
         self.ipp_value = 1.0
 
+        self.request = {  'constraints' : {'max_airmass': 2.0, 'min_lunar_distance': 15},
+                          'location' : { 'site' : self.params['site'].lower(),
+                                         'telescope_class' : self.params['pondtelescope'][0:3]
+                                       },
+                          'target' : self.elements,
+                          'molecules' : [{  'ag_mode': 'OPTIONAL',
+                                            'ag_name': '',
+                                            'bin_x' : self.params['binning'],
+                                            'bin_y' : self.params['binning'],
+                                            'exposure_count' : self.params['exp_count'],
+                                            'exposure_time' : self.params['exp_time'],
+                                            'filter' : self.params['filter'],
+                                            'instrument_name' : self.params['instrument'],
+                                            'type' : self.params['exp_type']
+                                        }],
+                          'windows' : [{'start' : datetime.strftime(self.params['start_time'], '%Y-%m-%dT%H:%M:%SZ'),
+                                        'end'   : datetime.strftime(self.params['end_time'], '%Y-%m-%dT%H:%M:%SZ')
+                                        }]
+                        }
+        self.request['target']['epochofel'] = self.request['target']['epochofel_mjd']
+        self.request['target']['scheme'] = self.request['target']['elements_type']
+
         self.maxDiff = None
 
     @mock.patch('reqdb.requests.datetime', MockDateTime)
-    def test1(self):
+    def test_cadence_factory(self):
 
         MockDateTime.change_datetime(2017, 8, 17,  21, 27, 5)
 
@@ -1881,3 +1904,119 @@ class TestMakeCadence(TestCase):
         ur_dict = ur.as_dict()
         for key in ur_dict.keys():
             self.assertEqual(expected[key], ur_dict[key])
+
+    def test_cadence_valhalla(self):
+        expected = {
+                     u'group_id': u'3122_Q59-20170815',
+                     u'ipp_value': 1.0,
+                     u'observation_type': u'NORMAL',
+                     u'operator': u'MANY',
+                     u'proposal': u'LCOSchedulerTest',
+                     u'requests': [{u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
+                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
+                       u'molecules': [{u'ag_mode': u'OPTIONAL',
+                         u'ag_name': u'',
+                         u'bin_x': 2,
+                         u'bin_y': 2,
+                         u'exposure_count': 10,
+                         u'exposure_time': 2.0,
+                         u'filter': u'w',
+                         u'instrument_name': u'0M4-SCICAM-SBIG',
+                         u'priority': 1,
+                         u'type': u'EXPOSE'}],
+                       u'target': {u'argofperih': 27.8469,
+                        u'eccentricity': 0.4233003,
+                        u'epochofel': 58000.0,
+                        u'longascnode': 336.0952,
+                        u'meananom': 351.43854,
+                        u'meandist': 1.7691326,
+                        u'name': u'3122',
+                        u'orbinc': 22.1508,
+                        u'scheme': u'MPC_MINOR_PLANET',
+                        u'type': u'NON_SIDEREAL'},
+                       u'windows': [{u'end': u'2017-09-02T06:07:30Z',
+                         u'start': u'2017-09-02T06:00:00Z'}]},
+                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
+                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
+                       u'molecules': [{u'ag_mode': u'OPTIONAL',
+                         u'ag_name': u'',
+                         u'bin_x': 2,
+                         u'bin_y': 2,
+                         u'exposure_count': 10,
+                         u'exposure_time': 2.0,
+                         u'filter': u'w',
+                         u'instrument_name': u'0M4-SCICAM-SBIG',
+                         u'priority': 1,
+                         u'type': u'EXPOSE'}],
+                       u'target': {u'argofperih': 27.8469,
+                        u'eccentricity': 0.4233003,
+                        u'epochofel': 58000.0,
+                        u'longascnode': 336.0952,
+                        u'meananom': 351.43854,
+                        u'meandist': 1.7691326,
+                        u'name': u'3122',
+                        u'orbinc': 22.1508,
+                        u'scheme': u'MPC_MINOR_PLANET',
+                        u'type': u'NON_SIDEREAL'},
+                       u'windows': [{u'end': u'2017-09-02T08:07:30Z',
+                         u'start': u'2017-09-02T07:52:30Z'}]},
+                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
+                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
+                       u'molecules': [{u'ag_mode': u'OPTIONAL',
+                         u'ag_name': u'',
+                         u'bin_x': 2,
+                         u'bin_y': 2,
+                         u'exposure_count': 10,
+                         u'exposure_time': 2.0,
+                         u'filter': u'w',
+                         u'instrument_name': u'0M4-SCICAM-SBIG',
+                         u'priority': 1,
+                         u'type': u'EXPOSE'}],
+                       u'target': {u'argofperih': 27.8469,
+                        u'eccentricity': 0.4233003,
+                        u'epochofel': 58000.0,
+                        u'longascnode': 336.0952,
+                        u'meananom': 351.43854,
+                        u'meandist': 1.7691326,
+                        u'name': u'3122',
+                        u'orbinc': 22.1508,
+                        u'scheme': u'MPC_MINOR_PLANET',
+                        u'type': u'NON_SIDEREAL'},
+                       u'windows': [{u'end': u'2017-09-02T10:07:30Z',
+                         u'start': u'2017-09-02T09:52:30Z'}]},
+                      {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
+                       u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
+                       u'molecules': [{u'ag_mode': u'OPTIONAL',
+                         u'ag_name': u'',
+                         u'bin_x': 2,
+                         u'bin_y': 2,
+                         u'exposure_count': 10,
+                         u'exposure_time': 2.0,
+                         u'filter': u'w',
+                         u'instrument_name': u'0M4-SCICAM-SBIG',
+                         u'priority': 1,
+                         u'type': u'EXPOSE'}],
+                       u'target': {u'argofperih': 27.8469,
+                        u'eccentricity': 0.4233003,
+                        u'epochofel': 58000.0,
+                        u'longascnode': 336.0952,
+                        u'meananom': 351.43854,
+                        u'meandist': 1.7691326,
+                        u'name': u'3122',
+                        u'orbinc': 22.1508,
+                        u'scheme': u'MPC_MINOR_PLANET',
+                        u'type': u'NON_SIDEREAL'},
+                       u'windows': [{u'end': u'2017-09-02T12:07:30Z',
+                         u'start': u'2017-09-02T11:52:30Z'}]}],
+                     u'submitter': u'tlister@lcogt.net'}
+
+        self.request['location']['site'] = 'ogg'
+        self.request['molecules'][0]['exposure_count'] = 10
+        self.request['molecules'][0]['exposure_time'] = 2.0
+        params = self.params
+        params['start_time'] = datetime(2017,9,2,6,0,0)
+        params['end_time'] = datetime(2017,9,2,12,40,0)
+
+        ur = make_cadence_valhalla(self.request, params, self.ipp_value)
+        for key in ur.keys():
+            self.assertEqual(expected[key], ur[key])

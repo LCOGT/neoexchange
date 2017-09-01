@@ -1112,12 +1112,15 @@ def make_constraints(params):
 def make_single(params, ipp_value, request):
     '''Create a user_request for a single observation'''
 
-    user_request =  UserRequest(group_id=params['group_id'], ipp_value=ipp_value)
-    user_request.add_request(request)
-    user_request.operator = 'single'
-
-    proposal = make_proposal(params)
-    user_request.set_proposal(proposal)
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
 
     return user_request
 
@@ -1127,7 +1130,55 @@ def make_proposal(params):
                 }
     return proposal
 
-def make_cadence(elements, params, ipp_value):
+def make_cadence(elements, params, ipp_value, request=None, use_factory=True):
+
+    if use_factory:
+        ur =  make_cadence_factory(elements, params, ipp_value)
+    else:
+        ur =  make_cadence_valhalla(params, ipp_value, request)
+    return ur
+
+def make_cadence_valhalla(request, params, ipp_value):
+
+
+    cadence_url = urljoin(settings.PORTAL_REQUEST_API, 'cadence/')
+
+    # Add cadence parameters into Request
+    request['cadence']= {
+                            'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
+                            'end'   : datetime.strftime(params['end_time'],'%Y-%m-%dT%H:%M:%S'),
+                            'period': params['period'],
+                            'jitter': params['jitter']
+                        }
+    del(request['windows'])
+
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
+# Submit the UserRequest with the cadence
+    try:
+        resp = requests.post(
+            cadence_url,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
+
+    cadence_user_request = resp.json()
+    return cadence_user_request
+
+def make_cadence_factory(elements, params, ipp_value):
     '''Create a user_request for a cadence observation'''
 
     if len(elements) > 0:
@@ -1238,19 +1289,10 @@ def make_userrequest(elements, params):
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() or 'jitter' in params.keys():
-        user_request = make_cadence(elements, params, ipp_value)
+        user_request = make_cadence(elements, params, ipp_value, request)
     else:
         user_request = make_single(params, ipp_value, request)
 
-    user_request = {
-        "submitter": params['user_id'],
-        "requests": [request],
-        "group_id": params['group_id'],
-        "observation_type": "NORMAL",
-        "operator": "SINGLE",
-        "ipp_value": ipp_value,
-        "proposal": params['proposal_id']
-    }
     logger.info("User Request=%s" % user_request)
 
     return user_request
