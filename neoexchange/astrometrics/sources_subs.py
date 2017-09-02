@@ -1152,8 +1152,13 @@ def expand_cadence(user_request):
     except requests.exceptions.Timeout:
         msg = "Observing portal API timed out"
         logger.error(msg)
-        params['error_msg'] = msg
-        return False, params
+        return False, msg
+
+    if resp.status_code not in [200,201]:
+        msg = "Cadence generation error"
+        logger.error(msg)
+        logger.error(resp.json())
+        return False, resp.json()
 
     cadence_user_request = resp.json()
 
