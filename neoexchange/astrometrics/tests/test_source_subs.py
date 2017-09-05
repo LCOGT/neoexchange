@@ -227,7 +227,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id':'999', 'requests' : [{'id':'111'}]}
+        mock_post.return_value.json.return_value = {'id':'999', 'requests' : [{'id':'111', 'duration' : 1820}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
