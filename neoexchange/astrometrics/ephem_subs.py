@@ -1378,15 +1378,15 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
 
             obj_mag = float(emp_dark_and_up[0][3])
 
-            moon_alt_start = int(emp_dark_and_up[0][8])
-            moon_alt_end = int(emp_dark_and_up[-1][8])
+            moon_alt_start = int(emp_dark_and_up[0][9])
+            moon_alt_end = int(emp_dark_and_up[-1][9])
             moon_up = False
             if moon_alt_start>=30 or moon_alt_end>=30:
                 moon_up = True
 
-            moon_phase = float(emp_dark_and_up[0][6])
+            moon_phase = float(emp_dark_and_up[0][7])
 
-            score = int(emp_dark_and_up[0][9])
+            score = int(emp_dark_and_up[0][10])
 
             max_alt = compute_max_altitude(emp_dark_and_up)
 
@@ -1418,12 +1418,12 @@ def compute_dark_and_up_time(emp):
 
     if emp != []:
         for line in emp:
-            if 'Limits' not in line[10] and start == None:
+            if 'Limits' not in line[11] and start == None:
                 dark_and_up_time_start = datetime.strptime(line[0], '%Y %m %d %H:%M')
                 dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
                 start = 1
                 emp_dark_and_up.append(line)
-            elif 'Limits' not in line[10]:
+            elif 'Limits' not in line[11]:
                 dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
                 emp_dark_and_up.append(line)
         if dark_and_up_time_start != None and dark_and_up_time_end != None:
@@ -1440,7 +1440,7 @@ def compute_max_altitude(emp_dark_and_up):
     prev_max_alt = 0
 
     for line in emp_dark_and_up:
-        alt = int(line[5])
+        alt = int(float(line[6]))
         if alt > prev_max_alt:
             max_alt = alt
         prev_max_alt = max_alt
