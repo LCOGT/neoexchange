@@ -39,12 +39,12 @@ class ScheduleCadence(FunctionalTest):
     @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
     def test_login(self):
         self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
-        username_input = self.browser.find_element_by_id("username")
-        username_input.send_keys(self.username)
+        username_input = self.browser.find_element_by_id("email")
+        username_input.send_keys(self.email)
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
         with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_xpath('//input[@value="login"]').click()
+            self.browser.find_element_by_id('login-btn').click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
