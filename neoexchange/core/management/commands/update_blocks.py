@@ -22,7 +22,7 @@ class Command(BaseCommand):
         superblocks = SuperBlock.objects.filter(active=True, block_start__lte=now, block_end__lte=now)
         self.stdout.write("==== %s Completed SuperBlocks %s ====" % (superblocks.count(), now_string))
         for sblock in superblocks:
-            num_active_block = Blocks.objects.filter(superblock=sblock.id, active=True).count()
+            num_active_blocks = Block.objects.filter(superblock=sblock.id, active=True).count()
             if num_active_blocks == 0:
                 sblock.active = False
                 sblock.save()
