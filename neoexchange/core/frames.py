@@ -241,6 +241,10 @@ def block_status(block_id):
     # Check if the request was not found
     if data.get('detail', 'None') == u'Not found.':
         return False
+    # Check if credentials provided
+    if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
+        logger.error("No VALHALLA_TOKEN set")
+        return False
     # Although this is a loop, we should only have a single request so it is executed once
     exposure_count = 0
 
