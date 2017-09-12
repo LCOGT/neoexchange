@@ -88,7 +88,7 @@ class Command(BaseCommand):
                                 min_sep = sep
                                 best_source = source
 
-                    if best_source:
+                    if best_source and best_source.obs_mag > 0.0:
                         times.append(frame.midpoint)
                         mags.append(best_source.obs_mag)
                         mag_errs.append(best_source.err_obs_mag)
