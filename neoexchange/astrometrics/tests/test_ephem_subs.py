@@ -1270,7 +1270,7 @@ class TestDetermineSitesToSchedule(TestCase):
         d = datetime(2017, 3,  9,  19, 27, 5)
 
         expected_sites = { 'north' : { '0m4' : ['Z21',], '1m0' : ['V37',] },
-                           'south' : { '0m4' : [ ]     , '1m0' : ['K92',] }
+                           'south' : { '0m4' : [ ]     , '1m0' : ['K93', 'K92', 'K91'] }
                          }
 
         sites = determine_sites_to_schedule(d)
@@ -1282,7 +1282,7 @@ class TestDetermineSitesToSchedule(TestCase):
         should be schedulable for Northern targets, OGG for bright targets'''
         d = datetime(2017, 3,  9,  23, 27, 5)
 
-        expected_sites = { 'north' : { '0m4' : ['T04',], '1m0' : ['V37',] },
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03'], '1m0' : ['V37',] },
                            'south' : { '0m4' : [ ]     , '1m0' : ['W86', 'W85'] }
                          }
 
@@ -1296,7 +1296,7 @@ class TestDetermineSitesToSchedule(TestCase):
  
         d = datetime(2017, 3, 10,  00, 2, 5)
 
-        expected_sites = { 'north' : { '0m4' : ['T04',], '1m0' : ['V37',] },
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03'], '1m0' : ['V37',] },
                            'south' : { '0m4' : [ ]     , '1m0' : ['W86', 'W85'] }
                          }
 
@@ -1308,8 +1308,8 @@ class TestDetermineSitesToSchedule(TestCase):
         '''Morning in UK so COJ is open and a little bit of OGG 0.4m is available'''
         d = datetime(2017, 3,  10,  8, 27, 5)
 
-        expected_sites = { 'north' : { '0m4' : ['T04',], '1m0' : [ ] },
-                           'south' : { '0m4' : [ ]     , '1m0' : ['Q63', 'Q64'] }
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03'], '1m0' : [ ] },
+                           'south' : { '0m4' : ['Q58',], '1m0' : ['Q63', 'Q64'] }
                          }
 
         sites = determine_sites_to_schedule(d)
@@ -1322,7 +1322,7 @@ class TestDetermineSitesToSchedule(TestCase):
         d = datetime(2017, 3,  10, 12,  0, 1)
 
         expected_sites = { 'north' : { '0m4' : [ ],         '1m0' : [ ] },
-                           'south' : { '0m4' : [ 'Q59', ] , '1m0' : ['Q63', 'Q64'] }
+                           'south' : { '0m4' : [ 'Q58', ] , '1m0' : ['Q63', 'Q64'] }
                          }
 
         sites = determine_sites_to_schedule(d)
