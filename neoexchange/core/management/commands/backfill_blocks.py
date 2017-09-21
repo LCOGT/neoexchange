@@ -96,6 +96,7 @@ class Command(BaseCommand):
                 #Fetch groupid from header; use to find Block; pass header and Block to create_frame
                 for fits_file in fits_files:
                     header, dummy_table, cattype = open_fits_catalog(fits_file, header_only=True)
+                    header['DATE_OBS'] = header['DATE-OBS']
                     group_id = header.get('groupid', None)
                     block = Block.objects.get(groupid=group_id)
                     frame = create_frame(header, block)
