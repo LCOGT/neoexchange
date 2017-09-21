@@ -1269,7 +1269,7 @@ class TestDetermineSitesToSchedule(TestCase):
         schedulable for Northern targets'''
         d = datetime(2017, 3,  9,  19, 27, 5)
 
-        expected_sites = { 'north' : { '0m4' : ['Z21',], '1m0' : ['V37',] },
+        expected_sites = { 'north' : { '0m4' : ['Z21','Z17'], '1m0' : ['V37',] },
                            'south' : { '0m4' : [ ]     , '1m0' : ['K93', 'K92', 'K91'] }
                          }
 
