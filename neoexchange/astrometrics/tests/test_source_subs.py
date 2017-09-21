@@ -327,6 +327,15 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_was_not_a_minor_planet(self):
+
+        items = [u' A10422t was not a minor planet (Sept. 20.89 UT)\n']
+        expected = [u'A10422t', 'wasnotminorplanet', '', u'(Sept. 20.89 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+
     def test_non_neo(self):
 
         items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
