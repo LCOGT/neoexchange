@@ -1317,7 +1317,7 @@ class TestDetermineSitesToSchedule(TestCase):
         self.assertEqual(expected_sites, sites)
 
     def test_UK_late_morning(self):
-        '''Late morning in UK so onlyCOJ is open; not enough time at the 
+        '''Late morning in UK so only COJ is open; not enough time at the
         OGG 0.4m is available'''
         d = datetime(2017, 3,  10, 12,  0, 1)
 
