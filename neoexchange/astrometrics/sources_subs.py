@@ -1226,7 +1226,7 @@ def make_userrequest(elements, params):
 
 # If the ToO mode is set, change the observation_type
     if params.get('too_mode', False) == True:
-        request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
+        user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
 
     logger.info("User Request=%s" % user_request)
 

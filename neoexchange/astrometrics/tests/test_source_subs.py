@@ -297,7 +297,33 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
-        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'doma')
+
+
+    def test_make_too_userrequest(self):
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'Q63'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : body_elements['current_name'] + '_' + 'COJ' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'too_mode' : True
+                 }
+
+        user_request = make_userrequest(body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope',None), None)
+        self.assertEqual(user_request['requests'][0].get('observation_type', None), None)
+        self.assertEqual(user_request['observation_type'], 'TARGET_OF_OPPORTUNITY')
 
 
 class TestPreviousNEOCPParser(TestCase):
