@@ -125,6 +125,7 @@ class Command(BaseCommand):
         parser.add_argument('--speed_limit', default=speed_limit_default, type=float, help="Rate of motion limit ("+str(speed_limit_default)+")")
         parser.add_argument('--not_seen', default=not_seen_default, type=float, help="Cutoff since object was seen ("+str(not_seen_default)+" days)")
         parser.add_argument('--too', action="store_true", help="Whether to execute as disruptive ToO")
+        parser.add_argument('--object', default=None, type=str, help="Specific object to schedule")
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s --date [YYYYMMDD[-HH]] --user [tlister@lcogt.net] --run"
@@ -150,11 +151,23 @@ class Command(BaseCommand):
             (options['bright_limit'], options['faint_limit'], \
              options['spd_cutoff'], options['spd_cutoff'] - 90.0, options['speed_limit'], options['not_seen']))
 
-        latest = Body.objects.filter(active=True).latest('ingest')
-        max_dt = latest.ingest
-        min_dt = max_dt - timedelta(days=5)
-        newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
-        bodies = newest.filter(not_seen__lte=options['not_seen'], source_type='U', updated=False)
+        if options['object'] is not None:
+            bodies = Body.objects.filter(provisional_name=options['object'])
+            if bodies.count() == 0:
+                raise CommandError("Did not find body %s" % options['object'])
+            elif bodies.count() > 1:
+                raise CommandError("Found multiple bodies")
+            newest = bodies
+            # Reset limits to prevent filtering
+            options['bright_limit'] = min(options['bright_limit'], 8)
+            options['faint_limit'] = max(options['faint_limit'], 22)
+            options['speed_limit'] = max(options['speed_limit'], 999)
+        else:
+            latest = Body.objects.filter(active=True).latest('ingest')
+            max_dt = latest.ingest
+            min_dt = max_dt - timedelta(days=5)
+            newest = Body.objects.filter(ingest__range=(min_dt, max_dt), active=True)
+            bodies = newest.filter(not_seen__lte=options['not_seen'], source_type='U', updated=False)
         self.stdout.write("Found %d newest bodies, %d available for scheduling" % (newest.count(), bodies.count()))
 
         north_list, south_list = filter_bodies(bodies, scheduling_date, options['bright_limit'], options['faint_limit'], \
