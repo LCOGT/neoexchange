@@ -88,6 +88,18 @@ class FunctionalTest(StaticLiveServerTestCase):
                        }
         self.test_block = Block.objects.create(pk=1, **block_params)
 
+
+        sblock_params = {
+                         'cadence'  : False,
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-22 13:00:00',
+                         'tracking_number' : '00043',
+                         'active'   : False
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(pk=2, **sblock_params)
+
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
                          'body'     : self.body,
@@ -98,6 +110,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
+                         'superblock' : self.test_sblock2,
                          'num_observed' : 1,
                          'when_observed' : '2015-04-20 03:31:42',
                          'reported' : True,
