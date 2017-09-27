@@ -34,7 +34,7 @@ RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip python-devel \
                 supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
                 MySQL-python gcc gcc-gfortran openssl-devel ImageMagick \
-                wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
+                less wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
         && yum -y update
 
 # Enable LCO repo and install extra packages

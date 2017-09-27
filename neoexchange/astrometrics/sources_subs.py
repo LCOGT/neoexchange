@@ -126,12 +126,14 @@ def parse_previous_NEOCP_id(items, dbg=False):
         body = chunks[0]
         if chunks[1].find('does') >= 0:
             none_id = 'doesnotexist'
-        elif chunks[1].find('was') >= 0:
-            none_id = 'wasnotconfirmed'
         elif chunks[0].find('Comet') >=0:
             body = chunks[4]
             none_id = chunks[1] + ' ' + chunks[2]
-
+        if len(chunks) >= 5:
+            if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
+                none_id = 'wasnotconfirmed'
+            if chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+                none_id = 'wasnotminorplanet'
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
 # Is of the form "<foo> = <bar>(<date> UT)"

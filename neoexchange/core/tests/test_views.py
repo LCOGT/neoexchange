@@ -1729,6 +1729,17 @@ class TestClean_crossid(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_was_minor_planet(self):
+        crossid = [u'A10422t', 'wasnotminorplanet', '', u'(Sept. 20.89 UT)']
+        expected_params = { 'active' : False,
+                            'name' : '',
+                            'source_type' : 'J'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
     def test_comet_cbet_recent(self):
         crossid =  [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
@@ -2487,6 +2498,29 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('N', body.source_type)
         self.assertEqual('M', body.origin)
         self.assertEqual('2016 JD18', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_artsat(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
+        crossid_info = [u'A10422t', 'wasnotminorplanet', '', u'(Sept. 20.89 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'A10422t'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('J', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('', body.name)
 
 class TestStoreDetections(TestCase):
 

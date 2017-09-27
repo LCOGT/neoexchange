@@ -7,7 +7,7 @@ from django.db.models import Q
 
 from core.models import Frame, Block, SuperBlock, Body, Proposal
 from photometrics.catalog_subs import get_fits_files, open_fits_catalog
-from core.frames import block_status
+from core.frames import block_status, create_frame
 
 class Command(BaseCommand):
 
@@ -53,7 +53,7 @@ class Command(BaseCommand):
             first_file = fits_files[0]
             header, dummy_table, cattype = open_fits_catalog(first_file, header_only=True)
             tracking_num = header.get('tracknum', None)
-            if tracking_num:
+            if tracking_num and tracking_num!='UNSPECIFIED':
                 tracking_num_nopad = tracking_num.lstrip('0')
                 sblocks = SuperBlock.objects.filter(Q(tracking_number=tracking_num)|Q(tracking_number=tracking_num_nopad))
                 if len(sblocks) == 0:
@@ -115,4 +115,18 @@ class Command(BaseCommand):
                         msg += " in DB for tracking number %s. Fix up manually" % tracking_num
                         self.stdout.write(msg)
             else:
-                self.stdout.write("Could not obtain tracking number (did this bypass the scheduler!?")
+                self.stdout.write("Could not obtain tracking number (did this bypass the scheduler!?)")
+                #Fetch groupid from header; use to find Block; pass header and Block to create_frame
+                for fits_file in fits_files:
+                    header, dummy_table, cattype = open_fits_catalog(fits_file, header_only=True)
+                    if header != {}:
+                        header['DATE_OBS'] = header['DATE-OBS']
+                        group_id = header.get('groupid', None)
+                        block = Block.objects.get(groupid=group_id)
+                        frame = create_frame(header, block)
+                if header != {}:
+                    block.when_observed = datetime.strptime(header['DATE-OBS'][:19],'%Y-%m-%dT%H:%M:%S')
+                    block.num_observed = 1
+                    block.save()
+                else:
+                    self.stdout.write("Could not find fits file!")

@@ -4,6 +4,11 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 1.8.3
+
+Add check for and marking of 'was not a minor planet' in the Previous NEOCP page
+as spacecraft. Fixes for POND submitted blocks and lightcurve extraction.
+
 ### 1.8.2
 
 Bug fix for zooming Analyser view. Feature update on making markers for candidates clickable.
