@@ -245,6 +245,7 @@ class Body(models.Model):
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
+    rapid_response  = models.BooleanField('Is this a ToO/Rapid Response observation?', default=False)
     body            = models.ForeignKey(Body)
     proposal        = models.ForeignKey(Proposal)
     block_start     = models.DateTimeField(null=True, blank=True)
