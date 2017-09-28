@@ -25,22 +25,49 @@ logger = logging.getLogger(__name__)
 
 def get_semester_start(date):
 
-    year, month, day, hour, minute, second = date.year, 4, 1, 0, 0, 0
-    if date.month >= 10 or date.month < 4:
-        month = 10
-        if date.month < 10:
+    if date <= datetime(2017, 3, 31, 23, 59, 59):
+        year, month, day, hour, minute, second = date.year, 4, 1, 0, 0, 0
+        if date.month >= 10 or date.month < 4:
+            month = 10
+            if date.month < 10:
+                year -= 1
+        start = datetime(year, month, day, hour, minute, second)
+    elif date >= datetime(2017, 4, 1, 0, 0, 0) and date <= datetime(2017, 11, 30, 23, 59, 59):
+        start = datetime(2017, 4, 1, 0, 0, 0)
+    else:
+        year, month, day, hour, minute, second = date.year, 12, 1, 0, 0, 0
+        if date.month >= 6 and date.month < 12:
+            month = 6
+        elif date.month <= 5:
             year -= 1
-    return datetime(year, month, day, hour, minute, second)
+        start = datetime(year, month, day, hour, minute, second)
+
+    return start
 
 def get_semester_end(date):
 
-    year, month, day, hour, minute, second = date.year, 9, 30, 23, 59, 59
-    if date.month >= 10 or date.month < 4:
-        month = 3
-        day = 31
-        if date.month >= 10:
+    if date <= datetime(2017, 3, 31, 23, 59, 59):
+        year, month, day, hour, minute, second = date.year, 9, 30, 23, 59, 59
+        if date.month >= 10 or date.month < 4:
+            month = 3
+            day = 31
+            if date.month >= 10:
+                year += 1
+        end = datetime(year, month, day, hour, minute, second)
+
+    elif date >= datetime(2017, 4, 1, 0, 0, 0) and date <= datetime(2017, 11, 30, 23, 59, 59):
+        # Odd 2017AB semester
+        end = datetime(2017, 11, 30, 23, 59, 59)
+    else:
+        year, month, day, hour, minute, second = date.year, 5, 31, 23, 59, 59
+        if date.month >= 6 and date.month < 12:
+            month = 11
+            day = 30
+        if date.month >= 12:
             year += 1
-    return datetime(year, month, day, hour, minute, second)
+        end = datetime(year, month, day, hour, minute, second)
+
+    return end
 
 def get_semester_dates(date):
     '''Returns the semester start and end datetimes for the LCOGT semesters.
