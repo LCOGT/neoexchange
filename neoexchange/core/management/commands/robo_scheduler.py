@@ -50,22 +50,32 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
             suffix = ')'
         moon_sep_str = "%s%.1f%s" % ( prefix, moon_sep, suffix)
         line_bits = format_emp_line((obs_date, body_line[0], body_line[1], vmag, sky_motion, -99, spd, sky_motion_pa), '500')
-        print("%7s %s %s  V=%s  %s   %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4], moon_sep_str))
+        schedule = True
+        status = 'OK'
+
         if vmag > faint_limit or vmag < bright_limit:
-            continue
+            status = "Outside mag. range"
+            schedule = False
         if sky_motion > speed_cutoff:
-            continue
+            status = "Too fast"
+            schedule = False
         if moon_sep < moon_sep_cutoff:
-            continue
+            status = "Too close to the Moon"
+            schedule = False
         # Find number of active and inactive but unreported Blocks
         num_active = Block.objects.filter(body=body, active=True, block_end__gte=run_datetime-timedelta(seconds=35*60)).count()
         num_not_found = Block.objects.filter(body=body, active=False, num_observed__gte=1, reported=False).count()
         if num_active >= 1:
-            print "Already active"
-            continue
+            status = "Already active"
+            schedule = False
         if num_not_found >= 2:
-            print "Tried twice already and not found"
+            status = "Tried twice already and not found"
+            schedule = False
+
+        print("%7s %s %s  V=%s  %s   %5.5s  %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4], moon_sep_str, status))
+        if schedule == False:
             continue
+
         if spd > spd_south_cut:
             if vmag < point4m_mag_cut:
                 north_0m4_list.append(body)
