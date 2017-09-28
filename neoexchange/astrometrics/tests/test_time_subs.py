@@ -222,43 +222,92 @@ class TestGetSemesterDates(TestCase):
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
 
-    def test_start_of_17B_semester(self):
-        date = datetime(2017, 10, 1, 0, 1, 0)
-        expected_start = datetime(2017, 10, 1, 0, 0, 0)
-        expected_end = datetime(2018, 3, 31, 23, 59, 59)
-
-        start, end = get_semester_dates(date)
-
-        self.assertEqual(expected_start, start)
-        self.assertEqual(expected_end, end)
-
-    def test_end_of_17B_semester(self):
-        date = datetime(2018, 3, 31, 22, 0, 0)
-        expected_start = datetime(2017, 10, 1, 0, 0, 0)
-        expected_end = datetime(2018, 3, 31, 23, 59, 59)
-
-        start, end = get_semester_dates(date)
-
-        self.assertEqual(expected_start, start)
-        self.assertEqual(expected_end, end)
-
-    def test_start_of_17A_semester(self):
-        date = datetime(2017, 4, 1,  0, 0, 1)
+    def test_start_of_17AB_semester(self):
+        date = datetime(2017, 4, 1, 0, 0, 1)
         expected_start = datetime(2017, 4, 1, 0, 0, 0)
-        expected_end = datetime(2017, 9, 30, 23, 59, 59)
+        expected_end = datetime(2017, 11, 30, 23, 59, 59)
 
         start, end = get_semester_dates(date)
 
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
 
-    def test_end_of_17A_semester(self):
-        date = datetime(2017, 9, 30,  23, 0, 1)
+    def test_end_of_17AB_semester(self):
+        date = datetime(2017, 11, 30, 22, 0, 0)
         expected_start = datetime(2017, 4, 1, 0, 0, 0)
-        expected_end = datetime(2017, 9, 30, 23, 59, 59)
+        expected_end = datetime(2017, 11, 30, 23, 59, 59)
 
         start, end = get_semester_dates(date)
 
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
 
+    def test_before_start_of_17AB_semester(self):
+        date = datetime(2017, 3, 31,  23, 59, 58)
+        expected_start = datetime(2016, 10, 1, 0, 0, 0)
+        expected_end = datetime(2017, 3, 31, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_end_of_17AB_semester2(self):
+        date = datetime(2017, 10, 1,  0, 0, 1) # Just over old boundary
+        expected_start = datetime(2017, 4, 1, 0, 0, 0)
+        expected_end = datetime(2017, 11, 30, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_start_of_18A_semester(self):
+        date = datetime(2017, 12, 1,  0, 0, 1)
+        expected_start = datetime(2017, 12, 1, 0, 0, 0)
+        expected_end = datetime(2018, 5, 31, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_start_of_18A_semester2(self):
+        date = datetime(2018, 1, 1,  0, 0, 1)
+        expected_start = datetime(2017, 12, 1, 0, 0, 0)
+        expected_end = datetime(2018, 5, 31, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_end_of_18A_semester(self):
+        date = datetime(2018, 5, 31,  23, 0, 1)
+        expected_start = datetime(2017, 12, 1, 0, 0, 0)
+        expected_end = datetime(2018, 5, 31, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_start_of_18B_semester(self):
+        date = datetime(2018, 6, 1, 0, 1, 0)
+        expected_start = datetime(2018, 6, 1, 0, 0, 0)
+        expected_end = datetime(2018, 11, 30, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
+
+    def test_end_of_18B_semester(self):
+        date = datetime(2018, 11, 30, 23, 30, 0)
+        expected_start = datetime(2018, 6, 1, 0, 0, 0)
+        expected_end = datetime(2018, 11, 30, 23, 59, 59)
+
+        start, end = get_semester_dates(date)
+
+        self.assertEqual(expected_start, start)
+        self.assertEqual(expected_end, end)
