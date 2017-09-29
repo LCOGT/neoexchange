@@ -257,6 +257,12 @@ class SuperBlock(models.Model):
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
 
+    def make_obsblock_link(self):
+        url = ''
+        if self.tracking_number != None and self.tracking_number != '':
+            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
+        return url
+
     def get_sites(self):
         qs = Block.objects.filter(superblock=self.id).values_list('site', flat=True).distinct()
 
@@ -345,6 +351,7 @@ class Block(models.Model):
 
     def make_obsblock_link(self):
         url = ''
+        # XXX Change to request number and point at requests endpoint (https://observe.lco.global/requests/<request no.>/
         if self.tracking_number != None and self.tracking_number != '':
             url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
         return url
