@@ -874,7 +874,7 @@ class TestSchedule_Check(TestCase):
                         'target_name': self.body_mp.current_name(),
                         'start_time' : '2017-04-01T00:00:00',
                         'end_time'   : '2017-04-01T03:40:00',
-                        'mid_time': '2017-04-01T01:40:00',
+                        'mid_time': '2017-04-01T01:50:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -902,6 +902,138 @@ class TestSchedule_Check(TestCase):
                         }
         resp = schedule_check(data, self.body_mp)
 #        self.assertEqual(expected_resp, resp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_2017AB_semester(self):
+        MockDateTime.change_datetime(2017, 9, 28, 19, 0, 0)
+
+        data = { 'site_code' : 'Z17',
+                 'utc_date' : datetime(2017, 10, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-09-30T18:50:00',
+                        'end_time'   : '2017-10-01T04:50:00',
+                        'mid_time': '2017-09-30T23:50:00',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_end_2017AB_semester(self):
+        MockDateTime.change_datetime(2017, 11, 30, 19, 0, 0)
+
+        data = { 'site_code' : 'Z17',
+                 'utc_date' : datetime(2017, 12, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-11-30T18:50:00',
+                        'end_time'   : '2017-11-30T23:59:59',
+                        'mid_time': '2017-11-30T21:24:59.500000',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_start_2018A_semester(self):
+        MockDateTime.change_datetime(2017, 12,  1,  1, 0, 0)
+
+        data = { 'site_code' : 'K91',
+                 'utc_date' : datetime(2017, 12, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2017-12-01T00:00:00',
+                        'end_time'   : '2017-12-01T02:00:00',
+                        'mid_time': '2017-12-01T01:00:00',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_end_2018A_semester(self):
+        MockDateTime.change_datetime(2018,  5, 31, 23, 0, 0)
+
+        data = { 'site_code' : 'K91',
+                 'utc_date' : datetime(2018,  6, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2018-05-31T16:50:00',
+                        'end_time'   : '2018-05-31T23:59:59',
+                        'mid_time': '2018-05-31T20:24:59.500000',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_start_2018B_semester(self):
+        MockDateTime.change_datetime(2018,  6,  1,  1, 0, 0)
+
+        data = { 'site_code' : 'K91',
+                 'utc_date' : datetime(2018,  6, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2018-06-01T00:00:00',
+                        'end_time'   : '2018-06-01T04:10:00',
+                        'mid_time': '2018-06-01T02:05:00',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp['start_time'], resp['start_time'])
+        self.assertEqual(expected_resp['end_time'], resp['end_time'])
+        self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_semester_end_2018B_semester(self):
+        MockDateTime.change_datetime(2018, 11, 30, 23, 0, 0)
+
+        data = { 'site_code' : 'K91',
+                 'utc_date' : datetime(2018, 12, 1),
+                 'proposal_code' : self.neo_proposal.code
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'start_time' : '2018-11-30T18:40:00',
+                        'end_time'   : '2018-11-30T23:59:59',
+                        'mid_time': '2018-11-30T21:19:59.500000',
+
+                        }
+        resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp['start_time'], resp['start_time'])
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
