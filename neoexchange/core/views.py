@@ -928,6 +928,11 @@ def clean_crossid(astobj, dbg=False):
         objtype = 'X'
         desig = ''
         active = False
+    elif obj_id != '' and desig == 'wasnotminorplanet':
+        # "was not a minor planet"; set to satellite and no longer interesting
+        objtype = 'J'
+        desig = ''
+        active = False
     elif obj_id != '' and desig == '' and reference == '':
         # "Was not interesting" (normally a satellite), no longer interesting
         # so set inactive

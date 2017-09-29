@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '1.8.2'
+VERSION = '1.8.3'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -306,11 +306,6 @@ if 'test' in sys.argv:
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'test_db', # Add the name of your SQLite3 database file here.
         },
-        'rbauth':
-                {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'test_rbauth', # Add the name of your SQLite3 database file here.
-        }
     }
     OPBEAT['APP_ID'] = None
 
