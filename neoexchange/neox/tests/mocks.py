@@ -600,7 +600,7 @@ def mock_check_for_images(request_id):
      ]
     return images
 
-def mock_archive_frame_header(archive_headers, images):
+def mock_archive_frame_header(archive_headers):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43:28.067",
                     "ENCID": "clma",
