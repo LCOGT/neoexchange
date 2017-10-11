@@ -60,13 +60,14 @@ ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Come
 
 ORIGINS = (
             ('M','Minor Planet Center'),
-            ('N','NASA ARM'),
+            ('N','NASA'),
             ('S','Spaceguard'),
             ('D','NEODSYS'),
             ('G','Goldstone'),
             ('A','Arecibo'),
             ('R','Goldstone & Arecibo'),
-            ('L','LCOGT')
+            ('L','LCOGT'),
+            ('Y','Yarkovsky')
             )
 
 TELESCOPE_CHOICES = (
