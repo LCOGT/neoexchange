@@ -18,7 +18,6 @@ GNU General Public License for more details.
 import logging
 import urllib2, os
 import imaplib
-import json
 import email
 from urlparse import urljoin
 from re import sub
@@ -27,14 +26,9 @@ from datetime import datetime, timedelta
 from socket import error
 from random import randint
 from time import sleep
-
-from reqdb.client import SchedulerClient
-from reqdb.requests import Request, UserRequest, NoRiseSetWindowsException
-from reqdb.utils.exceptions import InvalidArguments
-from reqdb.cadence import CadenceFactory
-
 import requests
 import json
+
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
@@ -1132,13 +1126,13 @@ def make_proposal(params):
                 }
     return proposal
 
-def make_cadence(elements, params, ipp_value, request=None, use_factory=False):
+def make_cadence(elements, params, ipp_value, request=None):
+    '''Generate a cadence user request from the <elements> and <params>.'''
 
-    if use_factory:
-        ur =  make_cadence_factory(elements, params, ipp_value)
-    else:
-        ur =  make_cadence_valhalla(request, params, ipp_value)
+    ur =  make_cadence_valhalla(request, params, ipp_value)
+
     return ur
+
 
 def expand_cadence(user_request):
 
@@ -1167,6 +1161,7 @@ def expand_cadence(user_request):
     return True, cadence_user_request
 
 def make_cadence_valhalla(request, params, ipp_value, debug=False):
+    '''Create a user_request for a cadence observation'''
 
     # Add cadence parameters into Request
     request['cadence']= {
@@ -1200,32 +1195,6 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
 
     return cadence_user_request
 
-def make_cadence_factory(elements, params, ipp_value):
-    '''Create a user_request for a cadence observation'''
-
-    if len(elements) > 0:
-        logger.debug("Making a moving object")
-        target = make_moving_target(elements)
-    else:
-        logger.debug("Making a static object")
-        target = make_target(params)
-
-    factory = CadenceFactory()
-    factory.name = params['group_id']
-    factory.start = params['start_time'].strftime('%Y-%m-%d %H:%M:%S')
-    factory.end = params['end_time'].strftime('%Y-%m-%d %H:%M:%S')
-    factory.period = timedelta(seconds=params['period']*3600.0) # Interval between scheduled starts
-    factory.target = target
-    factory.proposal = make_proposal(params)
-    factory.add_molecule(make_molecule(params)) # You can add many molecules this way
-    factory.jitter = timedelta(seconds=params['jitter']*3600.0) #1hr of jitter is 30 min either side. defaults is 0
-    factory.location = make_location(params) # default is any 1m0 telescope
-    factory.constraints = make_constraints(params) # default has no constraints
-    factory.ipp_value = ipp_value
-
-    user_request = factory.build()
-
-    return user_request
 
 def configure_defaults(params):
 
