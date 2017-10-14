@@ -1357,3 +1357,25 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(orbelems))
             logger.error(str(emp_line))
     return FOM
+
+def compute_distance(d, site1_code, site1_ra, site1_dec, site2_code, site2_ra, site2_dec):
+
+    R_e = 6378.2
+    deg90 = radians(90.0)
+
+
+    site, site1_long, site1_lat, site1_hgt = get_sitepos(site1_code)
+    site, site2_long, site2_lat, site2_hgt = get_sitepos(site2_code)
+
+    beta = site1_long - site2_long
+    chord = [R_e*(cos(site1_lat)-cos(site2_lat)*cos(beta)), R_e*(-cos(site2_lat)*sin(beta)),R_e*(sin(site1_lat)-sin(site2_lat))]
+
+    ha = compute_hourangle(d, site1_long, site1_lat, site1_hgt,site1_ra, site1_dec)
+
+    W_vec = [cos(ha)*cos(site1_dec), sin(ha)*cos(site1_dec), sin(site1_dec)]
+    theta = acos(S.sla_dvdv(chord,W_vec)/S.sla_dvn(chord)[1])
+    cos_gamma  = cos(deg90-site1_dec)*cos(deg90-site2_dec)+sin(deg90-site1_dec)*sin(deg90-site2_dec)*cos(site1_ra-site2_ra)
+    gamma=acos(cos_gamma)
+    distance = S.sla_dvn(chord)[1]*sin(theta)/(2.0*tan(gamma/2.0))
+
+    return distance
