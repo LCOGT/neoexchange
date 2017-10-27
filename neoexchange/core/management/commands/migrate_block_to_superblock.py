@@ -9,7 +9,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         blocks = Block.objects.all()
-        
+        msg = "Found %d Blocks to migrate" % (blocks.count())
+        self.stdout.write(msg)
+
         for block in blocks:
             cadence = False
             if 'cad' in block.groupid:
