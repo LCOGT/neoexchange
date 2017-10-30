@@ -72,7 +72,7 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
             status = "Tried twice already and not found"
             schedule = False
 
-        print("%7s %s %s  V=%s  %s   %5.5s  %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4], moon_sep_str, status))
+        print("%7s %s %s  V=%s  %s   %6.6s  %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4], moon_sep_str, status))
         if schedule == False:
             continue
 
