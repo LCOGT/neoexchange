@@ -1194,7 +1194,7 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
-    def test_2014UR_arecibo_then_ARM(self):
+    def test_2014UR_arecibo_then_NASA(self):
 
         expected_elements = self.expected_elements
         expected_elements['origin'] = 'N'
