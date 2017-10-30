@@ -5,13 +5,13 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
-from core.models import Frame, Block, Body, Proposal
+from core.models import Frame, Block, SuperBlock, Body, Proposal
 from photometrics.catalog_subs import get_fits_files, open_fits_catalog
 from core.frames import block_status, create_frame
 
 class Command(BaseCommand):
 
-    help = 'Hacky command to create Body, Block and Frames for downloaded data'
+    help = 'Hacky command to create Body, Block, SuperBlock and Frames for downloaded data'
 
     def add_arguments(self, parser):
         default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
@@ -55,8 +55,8 @@ class Command(BaseCommand):
             tracking_num = header.get('tracknum', None)
             if tracking_num and tracking_num!='UNSPECIFIED':
                 tracking_num_nopad = tracking_num.lstrip('0')
-                blocks = Block.objects.filter(Q(tracking_number=tracking_num)|Q(tracking_number=tracking_num_nopad))
-                if len(blocks) == 0:
+                sblocks = SuperBlock.objects.filter(Q(tracking_number=tracking_num)|Q(tracking_number=tracking_num_nopad))
+                if len(sblocks) == 0:
                     name = header.get('object', None)
                     if name:
                         # Take out any parentheses e.g. (28484)
@@ -64,7 +64,17 @@ class Command(BaseCommand):
                     bodies = Body.objects.filter(Q(provisional_name__exact = name )|Q(provisional_packed__exact = name)|Q(name__exact = name))
                     if len(bodies) == 1:
                         body = bodies[0]
-                        block_params = { 'active': True,
+                        sblock_params = { 'active': True,
+                                          'block_start': header.get('blksdate'),
+                                          'block_end'  : header.get('blkedate'),
+                                          'body': body,
+                                          'groupid'   : header.get('groupid', ''),
+                                          'proposal' : Proposal.objects.get(code=header.get('propid', '')),
+                                          'tracking_number': tracking_num,
+                                        }
+                        new_sblock = SuperBlock.objects.create(**sblock_params)
+                        block_params = { 'superblock' : new_sblock,
+                                         'active': True,
                                          'block_start': header.get('blksdate'),
                                          'block_end'  : header.get('blkedate'),
                                          'body': body,
@@ -74,21 +84,34 @@ class Command(BaseCommand):
                                          'proposal' : Proposal.objects.get(code=header.get('propid', '')),
                                          'site'     : header.get('siteid'),
                                          'telclass' : header['telid'][0:3],
-                                         'tracking_number': tracking_num,
+                                         'tracking_number': header.get('reqnum', tracking_num)
                                        }
                         new_block = Block.objects.create(**block_params)
+                        self.stdout.write("Updating status of new Block %d" % new_block.id)
                         block_status(new_block.id)
                     else:
                         self.stdout.write("Could not find Body from FITS data (OBJECT=%s)" % name)
-                elif len(blocks) == 1:
-                    old_block = blocks[0]
-                    frames = Frame.objects.filter(block=old_block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
-                    if len(fits_files) >= frames.count():
-                        self.stdout.write("Updating status of Block #%d (found %d FITS files, know of %d Frames in DB" % (old_block.id,len(fits_files), frames.count()))
-                        block_status(old_block.id)
-                elif len(blocks) >= 2:
-                        msg = "Found multiple Blocks "
-                        msg += "%s" % ( [block.id for block in blocks])
+                elif len(sblocks) == 1:
+                    old_sblock = sblocks[0]
+                    blocks = Block.objects.filter(superblock=old_sblock)
+                    if blocks.count() == 0:
+                        msg = "Could not find any Blocks to match SuperBlock #%d (%s)" % (old_sblock.id, old_sblock.tracking_number)
+                        self.stdout.write(msg)
+                    else:
+                        self.stdout.write("Checking sub Block status for SuperBlock #%d" % old_sblock.id)
+                        for sub_block in blocks:
+                            if sub_block.tracking_number == header.get('reqnum', tracking_num):
+                                self.stdout.write("Found Block %d with matching REQNUM=%s" % (sub_block.id, sub_block.tracking_number))
+                                frames = Frame.objects.filter(block=sub_block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE))
+                                if len(fits_files) >= frames.count():
+                                    self.stdout.write("Updating status of Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
+                                    block_status(sub_block.id)
+                                else:
+                                    self.stdout.write("Already have more/right number of frames for Block #%d (found %d FITS files, know of %d Frames in DB)" % (sub_block.id,len(fits_files), frames.count()))
+
+                elif len(sblocks) >= 2:
+                        msg = "Found multiple SuperBlocks "
+                        msg += "%s" % ( [sblock.id for sblock in sblocks])
                         msg += " in DB for tracking number %s. Fix up manually" % tracking_num
                         self.stdout.write(msg)
             else:

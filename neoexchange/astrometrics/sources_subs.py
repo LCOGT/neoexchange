@@ -18,7 +18,6 @@ GNU General Public License for more details.
 import logging
 import urllib2, os
 import imaplib
-import json
 import email
 from urlparse import urljoin
 from re import sub
@@ -27,9 +26,9 @@ from datetime import datetime, timedelta
 from socket import error
 from random import randint
 from time import sleep
-
 import requests
 import json
+
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
@@ -1007,6 +1006,18 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         return []
     return NASA_targets
 
+def fetch_yarkovsky_targets(yark_targets):
+    '''Fetches yarkovsky targets from command line and returns a list of targets'''
+
+    yark_target_list = []
+
+    for obj_id in yark_targets:
+        if '_' in obj_id:
+            obj_id = str(obj_id).replace('_', ' ')
+        yark_target_list.append(obj_id)
+
+    return yark_target_list
+
 def make_location(params):
     location = {
         'site'            : params['site'].lower(),
@@ -1094,8 +1105,98 @@ def make_constraints(params):
                     }
     return constraints
 
-def configure_defaults(params):
+def make_single(params, ipp_value, request):
+    '''Create a user_request for a single observation'''
 
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
+
+    return user_request
+
+def make_proposal(params):
+    proposal =  { 'proposal_id' : params['proposal_id'],
+                  'user_id' : params['user_id']
+                }
+    return proposal
+
+def make_cadence(elements, params, ipp_value, request=None):
+    '''Generate a cadence user request from the <elements> and <params>.'''
+
+    ur =  make_cadence_valhalla(request, params, ipp_value)
+
+    return ur
+
+
+def expand_cadence(user_request):
+
+    cadence_url = urljoin(settings.PORTAL_REQUEST_API, 'cadence/')
+
+    try:
+        resp = requests.post(
+            cadence_url,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
+        logger.error(msg)
+        return False, msg
+
+    if resp.status_code not in [200,201]:
+        msg = "Cadence generation error"
+        logger.error(msg)
+        logger.error(resp.json())
+        return False, resp.json()
+
+    cadence_user_request = resp.json()
+
+    return True, cadence_user_request
+
+def make_cadence_valhalla(request, params, ipp_value, debug=False):
+    '''Create a user_request for a cadence observation'''
+
+    # Add cadence parameters into Request
+    request['cadence']= {
+                            'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
+                            'end'   : datetime.strftime(params['end_time'],'%Y-%m-%dT%H:%M:%S'),
+                            'period': params['period'],
+                            'jitter': params['jitter']
+                        }
+    del(request['windows'])
+
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
+# Submit the UserRequest with the cadence
+    status, cadence_user_request = expand_cadence(user_request)
+
+    if debug and status == True:
+        print('Cadence generated {} requests'.format(len(cadence_user_request['requests'])))
+        i = 1
+        for request in cadence_user_request['requests']:
+            print('Request {0} window start: {1} window end: {2}'.format(
+                i, request['windows'][0]['start'], request['windows'][0]['end']
+            ))
+        i = i + 1
+
+    return cadence_user_request
+
+
+def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
                   'K92' : 'CPT',
@@ -1172,21 +1273,17 @@ def make_userrequest(elements, params):
             "observation_note": note,
         }
 
-# Add the Request to the outer User Request
 # If site is ELP, increase IPP value
     ipp_value = 1.00
     if params['site_code'] == 'V37':
         ipp_value = 1.00
 
-    user_request = {
-        "submitter": params['user_id'],
-        "requests": [request],
-        "group_id": params['group_id'],
-        "observation_type": "NORMAL",
-        "operator": "SINGLE",
-        "ipp_value": ipp_value,
-        "proposal": params['proposal_id']
-    }
+# Add the Request to the outer User Request
+    if 'period' in params.keys() and 'jitter' in params.keys():
+        user_request = make_cadence(elements, params, ipp_value, request)
+    else:
+        user_request = make_single(params, ipp_value, request)
+
     logger.info("User Request=%s" % user_request)
 
     return user_request
@@ -1229,7 +1326,10 @@ def submit_block_to_scheduler(elements, params):
         logger.error(msg)
         params['error_msg'] = msg
         return False, params
-    request_number = request_numbers[0]
-    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))
+    params['request_numbers'] = request_numbers
+    params['block_duration'] = sum([float(_['duration']) for _ in request_items])
+
+    request_number_string = ", ".join([str(x) for x in request_numbers])
+    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
 
     return tracking_number, params

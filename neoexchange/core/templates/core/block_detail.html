@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
 {% load staticfiles %}
 
-{% block header %}Block details{% endblock %}
+{% block header %}
+    {% if object.cadence %}
+    Cadence details
+    {% else %}
+    Block details
+    {% endif %}
+{% endblock %}
 
 {% block script-content %}
 {% endblock %}
@@ -19,16 +25,20 @@
     <div class="container" id="main">
             <div class="row">
                 <div class="eight columns">
-                    <h5 class="section-title">Details of the Block</h5>
+                    {% if object.cadence %}
+                        <h5 class="section-title">Details of the Cadence</h5>
+                    {% else %}
+                         <h5 class="section-title">Details of the Block</h5>
+                    {% endif %}
                     <table class="keyvalue-table" id="id_blockdetail">
                         <tbody>
                             <tr>
                                 <td class="kv-key">Telescope class</td>
-                                <td class="kv-value">{{object.telclass}}</td>
+                                <td class="kv-value">{{object.get_telclass}}</td>
                             </tr>
                             <tr>
                                 <td class="kv-key">Site</td>
-                                <td class="kv-value">{{object.site|upper}}</td>
+                                <td class="kv-value">{{object.get_sites|upper}}</td>
                             </tr>
                             <tr>
                                 <td class="kv-key">Body</td>
@@ -52,15 +62,11 @@
                             </tr>
                             <tr>
                                 <td class="kv-key">Number of exposures</td>
-                                <td class="kv-value">{{object.num_exposures}}</td>
-                            </tr>
-                            <tr>
-                                <td class="kv-key">Exposure length</td>
-                                <td class="kv-value">{{object.exp_length}} seconds</td>
+                                <td class="kv-value">{{object.get_obsdetails}}</td>
                             </tr>
                             <tr>
                                 <td class="kv-key">Last observed</td>
-                                <td class="kv-value">{% if object.num_observed > 0 %}{{object.when_observed|date:"Y-m-d H:i"}}{% else %}Not Observed{% endif %}</td>
+                                <td class="kv-value">{% if object.get_num_observed.0 > 0 %}{{object.get_last_observed|date:"Y-m-d H:i"}}{% else %}Not Observed{% endif %}</td>
                             </tr>
                             <tr>
                                 <td class="kv-key">Active?</td>
@@ -68,11 +74,11 @@
                             </tr>
                             <tr>
                                 <td class="kv-key">Reported?</td>
-                                <td class="kv-value"><span class="">{% if object.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
+                                <td class="kv-value"><span class="">{% if object.get_num_reported.0 > 0 %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
                             </tr>
                             <tr>
                                 <td class="kv-key">When Reported</td>
-                                <td class="kv-value"><span class="">{% if object.reported %}<span class="warning msgpadded">{{object.when_reported|date:"Y-m-d H:i"}}</span>{% else %}Not Reported{% endif %}</span></td>
+                                <td class="kv-value"><span class="">{% if object.get_num_reported.0 > 0 %}<span class="warning msgpadded">{{object.get_last_reported|date:"Y-m-d H:i"}}</span>{% else %}Not Reported{% endif %}</span></td>
                             </tr>
                       </tbody>
                     </table>
