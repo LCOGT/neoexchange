@@ -12,7 +12,10 @@ class Command(BaseCommand):
         msg = "Found %d Blocks to migrate" % (blocks.count())
         self.stdout.write(msg)
 
+	printcounter = 0
         for block in blocks:
+	    if printcounter % 100==0:
+		print "Migrated Block #%d" % printcounter
             cadence = False
             if 'cad' in block.groupid:
                 cadence = True
@@ -20,3 +23,4 @@ class Command(BaseCommand):
             block.save()
             block.superblock.cadence = cadence
             block.superblock.save()
+	    printcounter += 1
