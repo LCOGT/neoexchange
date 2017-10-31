@@ -1235,7 +1235,7 @@ def configure_defaults(params):
         params['binning'] = 2 # 1 is the Right Answer...
         if params['site_code'] == 'W89':
             params['observatory'] = 'aqwb'
-        if parmas['site_code'] == 'V99':
+        if params['site_code'] == 'V99':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
             
