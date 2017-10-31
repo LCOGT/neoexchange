@@ -624,12 +624,14 @@ def check_for_block(form_data, params, new_body):
                       'Q63' : 'COJ',
                       'W85' : 'LSC',
                       'W86' : 'LSC',
+                      'W89' : 'LSC',
                       'F65' : 'OGG',
                       'E10' : 'COJ',
                       'Z21' : 'TFN',
                       'Q58' : 'COJ',
                       'Q59' : 'COJ',
-                      'T04' : 'OGG'  }
+                      'T04' : 'OGG',
+                      'V99' : 'ELP'  }
 
         try:
             block_id = SuperBlock.objects.get(body=new_body.id,

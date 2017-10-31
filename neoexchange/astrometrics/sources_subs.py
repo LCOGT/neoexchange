@@ -1211,7 +1211,8 @@ def configure_defaults(params):
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
                   'Q58' : 'COJ', # Code for 0m4a
-                  'Q59' : 'COJ'} # Code for 0m4b
+                  'Q59' : 'COJ',
+                  'V99' : 'ELP'} # Code for 0m4a
 
 
     params['pondtelescope'] = '1m0'
@@ -1227,11 +1228,17 @@ def configure_defaults(params):
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
-    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
+    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59' or params['site_code'] == 'V99':
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['filter'] = 'w'
         params['binning'] = 2 # 1 is the Right Answer...
+        if params['site_code'] == 'W89':
+            params['observatory'] = 'aqwb'
+        if parmas['site_code'] == 'V99':
+            # elp-aqwa-0m4a kb80
+            params['observatory'] = 'aqwa'
+            
 
     return params
 
