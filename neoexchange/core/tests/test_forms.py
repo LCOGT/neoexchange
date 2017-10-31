@@ -138,6 +138,10 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="Z21"', form.as_p())
         self.assertIn('Maui, Hawaii (OGG - T03-04; 0.4m)', form.as_p())
         self.assertIn('value="T04"', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W89; 0.4m)', form.as_p())
+        self.assertIn('value="W89"', form.as_p())
+        self.assertIn('McDonald, Texas (ELP - V99; 0.4m)', form.as_p())
+        self.assertIn('value="V99"', form.as_p())
 
     def test_form_handles_save_with_long_name(self):
         form = EphemQuery(data = {'target' : 'P/2016 BA141',
@@ -231,6 +235,10 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="Z21"', form.as_p())
         self.assertIn('Maui, Hawaii (OGG - T03-04; 0.4m)', form.as_p())
         self.assertIn('value="T04"', form.as_p())
+        self.assertIn('CTIO, Chile (LSC - W89; 0.4m)', form.as_p())
+        self.assertIn('value="W89"', form.as_p())
+        self.assertIn('McDonald, Texas (ELP - V99; 0.4m)', form.as_p())
+        self.assertIn('value="V99"', form.as_p())
 
     def test_sched_form_hides_inactive_proposals(self):
         form = ScheduleForm()
