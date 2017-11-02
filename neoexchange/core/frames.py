@@ -227,7 +227,11 @@ def block_status(block_id):
     status = False
     try:
         block = Block.objects.get(id=block_id)
-        tracking_num = block.superblock.tracking_number
+        try:
+            tracking_num = block.superblock.tracking_number
+        except AttributeError:
+            logger.error("Superblock for Block with id %s does not exist" % block_id)
+            return False
     except ObjectDoesNotExist:
         logger.error("Block with id %s does not exist" % block_id)
         return False
