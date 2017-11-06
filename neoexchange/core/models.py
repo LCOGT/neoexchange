@@ -133,6 +133,7 @@ class Body(models.Model):
     num_obs             = models.IntegerField('Number of observations', blank=True, null=True)
     arc_length          = models.FloatField('Length of observed arc (days)', blank=True, null=True)
     not_seen            = models.FloatField('Time since last observation (days)', blank=True, null=True)
+    taxonomic_class     = models.CharField('Taxonomic Class',max_length = 10 , blank=True, null=True)
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)

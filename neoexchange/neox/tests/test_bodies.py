@@ -71,7 +71,7 @@ class BodyDetailsTest(FunctionalTest):
         self.assertIn('Object: ' + self.body.current_name(), header_text)
 
         #She notices there is a section describing the object's spectral info
-        testlines = [u'TAXONOMIC TYPE ' + str(self.body.taxonom_class),]
+        testlines = [u'TAXONOMIC CLASS ' + str(self.body.taxonomic_class),]
 
         for line in testlines:
             self.check_for_row_in_table('id_spectralinfo', line)

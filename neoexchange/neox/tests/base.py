@@ -45,7 +45,8 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'num_obs'       : 17,
                     'arc_length'    : 3.0,
                     'not_seen'      : 0.42,
-                    'updated'       : True
+                    'updated'       : True,
+                    'taxonomic_class' : 'Sq'
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
 

@@ -182,6 +182,35 @@
 									</tr>
                                                                         {% endif %}
 								</tbody>
+							</table>						
+							<h5 class="section-title">Spectroscopy Details</h5>
+							<table class="keyvalue-table" id="id_spectralinfo">
+								<tbody>
+                                                                        {% if body.taxonomic_class %}
+									<tr>
+										<td class="kv-key">Taxonomic Class</td>
+										<td class="kv-value">{{body.taxonomic_class}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.num_obs %}
+									<tr>
+										<td class="kv-key">Number of observations</td>
+										<td class="kv-value">{{body.num_obs}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.arc_length %}
+									<tr>
+										<td class="kv-key">Arc length (days)</td>
+										<td class="kv-value">{{body.arc_length}}</td>
+									</tr>
+                                                                        {% endif %}
+                                                                        {% if body.not_seen %}
+									<tr>
+										<td class="kv-key">Time since last observation (days)</td>
+										<td class="kv-value">{{body.not_seen|floatformat:2}}</td>
+									</tr>
+                                                                        {% endif %}
+								</tbody>
 							</table>
 						</div>
 					</div>
