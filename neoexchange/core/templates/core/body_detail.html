@@ -186,18 +186,24 @@
 							<h5 class="section-title">Spectroscopy Details</h5>
 							<table class="keyvalue-table" id="id_spectralinfo">
 								<tbody>
-                                                                        {% if body.taxonomic_class %}
+                                                                        {% if body.bd_taxonomic_class %}
 									<tr>
-										<td class="kv-key">Taxonomic Class</td>
-										<td class="kv-value">{{body.taxonomic_class}}</td>
+										<td class="kv-key">Bus-Demeo Taxonomic Type</td>
+										<td class="kv-value">{{body.bd_taxonomic_class}}</td>
 									</tr>
                                                                         {% endif %}
-                                                                        {% if body.tax_scheme %}
+                                                                        {% if body.th_taxonomic_class %}
 									<tr>
-										<td class="kv-key">Taxonomic Scheme</td>
-										<td class="kv-value">{{body.get_tax_scheme_display}}</td>
+										<td class="kv-key">Tholen Taxonomic Type</td>
+										<td class="kv-value">{{body.th_taxonomic_class}}</td>
 									</tr>
                                                                         {% endif %}
+                                                                        {% if body.ot_taxonomic_class %}
+									<tr>
+										<td class="kv-key">{{body.get_tax_scheme_display}} Taxonomic Type</td>
+										<td class="kv-value">{{body.ot_taxonomic_class}}</td>
+									</tr>
+                                                                        {% endif %}                                     
                                                                         {% if body.tax_reference %}
 									<tr>
 										<td class="kv-key">Reference</td>

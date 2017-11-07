@@ -46,8 +46,10 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'arc_length'    : 3.0,
                     'not_seen'      : 0.42,
                     'updated'       : True,
-                    'taxonomic_class' : 'Sq',
-                    'tax_scheme'    :   'BD',
+                    'bd_taxonomic_class' : 'Sq',
+                    'th_taxonomic_class' : 'S',
+                    'ot_taxonomic_class' : 'Sa',
+                    'tax_scheme'    :   'S',
                     'tax_reference' : 'PDS6',
                     'tax_notes'     : 'This is a test Body',
                     }

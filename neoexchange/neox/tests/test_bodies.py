@@ -71,8 +71,9 @@ class BodyDetailsTest(FunctionalTest):
         self.assertIn('Object: ' + self.body.current_name(), header_text)
 
         #She notices there is a section describing the object's spectral info
-        testlines = [u'TAXONOMIC CLASS ' + str(self.body.taxonomic_class),
-                     u'TAXONOMIC SCHEME ' + 'Bus-DeMeo',
+        testlines = ['BUS-DEMEO' + u' TAXONOMIC TYPE ' + str(self.body.bd_taxonomic_class),
+                     'THOLEN' + u' TAXONOMIC TYPE ' + str(self.body.th_taxonomic_class),
+                     'SMASS' + u' TAXONOMIC TYPE ' + str(self.body.ot_taxonomic_class),
                      u'REFERENCE ' + 'Neese, C., Ed., Asteroid Taxonomy V6.0. EAR-A-5-DDR-TAXONOMY-V6.0. NASA Planetary Data System, 2010.',
                      u'NOTES ' + str(self.body.tax_notes),]
                      
