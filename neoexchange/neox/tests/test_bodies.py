@@ -72,8 +72,8 @@ class BodyDetailsTest(FunctionalTest):
 
         #She notices there is a section describing the object's spectral info
         testlines = [u'TAXONOMIC CLASS ' + str(self.body.taxonomic_class),
-                     u'TAXONOMIC SCHEME ' + str(self.body.tax_scheme),
-                     u'REFERENCE ' + str(self.body.tax_reference),
+                     u'TAXONOMIC SCHEME ' + 'Bus-DeMeo',
+                     u'REFERENCE ' + 'Neese, C., Ed., Asteroid Taxonomy V6.0. EAR-A-5-DDR-TAXONOMY-V6.0. NASA Planetary Data System, 2010.',
                      u'NOTES ' + str(self.body.tax_notes),]
                      
         for line in testlines:

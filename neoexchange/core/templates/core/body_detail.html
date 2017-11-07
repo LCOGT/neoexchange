@@ -192,22 +192,22 @@
 										<td class="kv-value">{{body.taxonomic_class}}</td>
 									</tr>
                                                                         {% endif %}
-                                                                        {% if body.num_obs %}
+                                                                        {% if body.tax_scheme %}
 									<tr>
-										<td class="kv-key">Number of observations</td>
-										<td class="kv-value">{{body.num_obs}}</td>
+										<td class="kv-key">Taxonomic Scheme</td>
+										<td class="kv-value">{{body.get_tax_scheme_display}}</td>
 									</tr>
                                                                         {% endif %}
-                                                                        {% if body.arc_length %}
+                                                                        {% if body.tax_reference %}
 									<tr>
-										<td class="kv-key">Arc length (days)</td>
-										<td class="kv-value">{{body.arc_length}}</td>
+										<td class="kv-key">Reference</td>
+										<td class="kv-value">{{body.get_tax_reference_display}}</td>
 									</tr>
                                                                         {% endif %}
-                                                                        {% if body.not_seen %}
+                                                                        {% if body.tax_notes %}
 									<tr>
-										<td class="kv-key">Time since last observation (days)</td>
-										<td class="kv-value">{{body.not_seen|floatformat:2}}</td>
+										<td class="kv-key">Notes</td>
+										<td class="kv-value">{{body.tax_notes}}</td>
 									</tr>
                                                                         {% endif %}
 								</tbody>

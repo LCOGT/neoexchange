@@ -46,7 +46,10 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'arc_length'    : 3.0,
                     'not_seen'      : 0.42,
                     'updated'       : True,
-                    'taxonomic_class' : 'Sq'
+                    'taxonomic_class' : 'Sq',
+                    'tax_scheme'    :   'BD',
+                    'tax_reference' : 'PDS6',
+                    'tax_notes'     : 'This is a test Body',
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
 

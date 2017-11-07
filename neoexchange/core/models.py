@@ -88,6 +88,22 @@ SITE_CHOICES = (
                     ('sin','Sinistro cameras')
     )
 
+TAX_SCHEME_CHOICES = (
+                        ('T','Tholen'),
+                        ('Ba','Barucci'),
+                        ('Td','Tedesco'),
+                        ('H','Howell'),
+                        ('S','SMASS'),
+                        ('B','Bus'),
+                        ('3T','S3OS2_TH'),
+                        ('3B','S3OS2_BB'),
+                        ('BD','Bus-DeMeo')
+                     )
+
+TAX_REFERENCE_CHOICES = (
+                        ('PDS6','Neese, C., Ed., Asteroid Taxonomy V6.0. EAR-A-5-DDR-TAXONOMY-V6.0. NASA Planetary Data System, 2010.'),
+                     )
+
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
@@ -134,6 +150,9 @@ class Body(models.Model):
     arc_length          = models.FloatField('Length of observed arc (days)', blank=True, null=True)
     not_seen            = models.FloatField('Time since last observation (days)', blank=True, null=True)
     taxonomic_class     = models.CharField('Taxonomic Class',max_length = 10 , blank=True, null=True)
+    tax_scheme          = models.CharField('Taxonomic Scheme',max_length=2,choices=TAX_SCHEME_CHOICES,blank=True, null=True)
+    tax_reference       = models.CharField('Reference source for Taxonomic data',max_length=6,choices=TAX_REFERENCE_CHOICES,blank=True, null=True)
+    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=20,blank=True, null=True)
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
