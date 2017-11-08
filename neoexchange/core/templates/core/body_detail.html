@@ -186,36 +186,25 @@
 							<h5 class="section-title">Spectroscopy Details</h5>
 							<table class="keyvalue-table" id="id_spectralinfo">
 								<tbody>
-                                                                        {% if body.bd_taxonomic_class %}
+                                     {% for s in spectra %}
 									<tr>
-										<td class="kv-key">Bus-Demeo Taxonomic Type</td>
-										<td class="kv-value">{{body.bd_taxonomic_class}}</td>
-									</tr>
-                                                                        {% endif %}
-                                                                        {% if body.th_taxonomic_class %}
+										<td class="kv-key"> {{s.get_tax_scheme_display}} Taxonomic Type</td>
+										<td class="kv-value">{{s.taxonomic_class}}</td>
+									</tr>	
+									{% if s.tax_notes %}
+									    <tr>
+									    	<td style="font-size:xx-small;text-align:right;" colspan=2>{{s.tax_notes}}</td>
+									    </tr>
+									{% endif %}
 									<tr>
-										<td class="kv-key">Tholen Taxonomic Type</td>
-										<td class="kv-value">{{body.th_taxonomic_class}}</td>
-									</tr>
-                                                                        {% endif %}
-                                                                        {% if body.ot_taxonomic_class %}
-									<tr>
-										<td class="kv-key">{{body.get_tax_scheme_display}} Taxonomic Type</td>
-										<td class="kv-value">{{body.ot_taxonomic_class}}</td>
-									</tr>
-                                                                        {% endif %}                                     
-                                                                        {% if body.tax_reference %}
-									<tr>
-										<td class="kv-key">Reference</td>
-										<td class="kv-value">{{body.get_tax_reference_display}}</td>
-									</tr>
-                                                                        {% endif %}
-                                                                        {% if body.tax_notes %}
-									<tr>
-										<td class="kv-key">Notes</td>
-										<td class="kv-value">{{body.tax_notes}}</td>
-									</tr>
-                                                                        {% endif %}
+										<td style="font-size:xx-small;text-align:right;" colspan=2>{{s.get_tax_reference_display}}</td>
+									</tr>	
+								    {% empty %}
+								        <tr>
+								            <td class="kv-key"> Known Taxonomies</td>
+								            <td class="kv-value">None</td>
+								        </tr>
+								    {% endfor %}
 								</tbody>
 							</table>
 						</div>

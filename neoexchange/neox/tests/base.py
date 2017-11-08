@@ -3,7 +3,7 @@ from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
-from core.models import Body, Proposal, Block, SuperBlock
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo
 from contextlib import contextmanager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.expected_conditions import \
@@ -46,14 +46,33 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'arc_length'    : 3.0,
                     'not_seen'      : 0.42,
                     'updated'       : True,
-                    'bd_taxonomic_class' : 'Sq',
-                    'th_taxonomic_class' : 'S',
-                    'ot_taxonomic_class' : 'Sa',
-                    'tax_scheme'    :   'S',
-                    'tax_reference' : 'PDS6',
-                    'tax_notes'     : 'This is a test Body',
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def insert_test_spectra(self):
+
+        spectra_params = {'body'          : self.body,
+                          'taxonomic_class' : 'Sq',
+                          'tax_scheme'    :   'BD',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : 'This is a test Body',
+                          }
+        self.test_spectra = SpectralInfo.objects.create(pk=1, **spectra_params)
+
+        spectra_params2 = {'body'          : self.body,
+                          'taxonomic_class' : 'S',
+                          'tax_scheme'    :   'T',
+                          'tax_reference' : 'PDS6',
+                          }
+        self.test_spectra2 = SpectralInfo.objects.create(pk=2, **spectra_params2)
+
+        spectra_params3 = {'body'          : self.body,
+                          'taxonomic_class' : 'Sa',
+                          'tax_scheme'    :   'S',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : 'This is another test Body',
+                          }
+        self.test_spectra3 = SpectralInfo.objects.create(pk=3, **spectra_params3)
 
     def insert_test_proposals(self):
 
@@ -137,6 +156,7 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.insert_test_body()
         self.insert_test_proposals()
         self.insert_test_blocks()
+        self.insert_test_spectra()
 
     def tearDown(self):
         self.browser.refresh()

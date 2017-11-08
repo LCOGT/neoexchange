@@ -71,11 +71,11 @@ class BodyDetailsTest(FunctionalTest):
         self.assertIn('Object: ' + self.body.current_name(), header_text)
 
         #She notices there is a section describing the object's spectral info
-        testlines = ['BUS-DEMEO' + u' TAXONOMIC TYPE ' + str(self.body.bd_taxonomic_class),
-                     'THOLEN' + u' TAXONOMIC TYPE ' + str(self.body.th_taxonomic_class),
-                     'SMASS' + u' TAXONOMIC TYPE ' + str(self.body.ot_taxonomic_class),
-                     u'REFERENCE ' + 'Neese, C., Ed., Asteroid Taxonomy V6.0. EAR-A-5-DDR-TAXONOMY-V6.0. NASA Planetary Data System, 2010.',
-                     u'NOTES ' + str(self.body.tax_notes),]
+        testlines = ['BUS-DEMEO' + u' TAXONOMIC TYPE ' + str(self.test_spectra.taxonomic_class),
+                     'THOLEN' + u' TAXONOMIC TYPE ' + str(self.test_spectra2.taxonomic_class),
+                     'SMASS' + u' TAXONOMIC TYPE ' + str(self.test_spectra3.taxonomic_class),
+                     'Neese, C., Ed., Asteroid Taxonomy V6.0. EAR-A-5-DDR-TAXONOMY-V6.0. NASA Planetary Data System, 2010.',
+                     str(self.test_spectra.tax_notes),]
                      
         for line in testlines:
             self.check_for_row_in_table('id_spectralinfo', line)

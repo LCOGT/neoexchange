@@ -149,12 +149,6 @@ class Body(models.Model):
     num_obs             = models.IntegerField('Number of observations', blank=True, null=True)
     arc_length          = models.FloatField('Length of observed arc (days)', blank=True, null=True)
     not_seen            = models.FloatField('Time since last observation (days)', blank=True, null=True)
-    bd_taxonomic_class  = models.CharField('Bus-Demeo Taxonomic Class', blank=True, null=True,max_length=6)
-    th_taxonomic_class  = models.CharField('Tholen Taxonomic Class', blank=True, null=True,max_length=6)
-    ot_taxonomic_class  = models.CharField('Other Taxonomic Class', blank=True, null=True,max_length=10)
-    tax_scheme          = models.CharField('Other Taxonomic Scheme',blank=True,choices=TAX_SCHEME_CHOICES, null=True,max_length=2)
-    tax_reference       = models.CharField('Reference source for Taxonomic data',max_length=6,choices=TAX_REFERENCE_CHOICES,blank=True, null=True)
-    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=20,blank=True, null=True)
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
@@ -263,6 +257,18 @@ class Body(models.Model):
             and self.name != None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name,text)
+
+class SpectralInfo(models.Model):
+    body                = models.ForeignKey(Body, on_delete=models.CASCADE)
+    taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True,max_length=6)
+    tax_scheme          = models.CharField('Taxonomic Scheme',blank=True,choices=TAX_SCHEME_CHOICES, null=True,max_length=2)
+    tax_reference       = models.CharField('Reference source for Taxonomic data',max_length=6,choices=TAX_REFERENCE_CHOICES,blank=True, null=True)
+    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=20,blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('Spectroscopy Detail')
+        verbose_name_plural = _('Spectroscopy Details')
+        db_table = 'ingest_taxonomy'
 
 class SuperBlock(models.Model):
 
