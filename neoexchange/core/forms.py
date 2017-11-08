@@ -74,6 +74,40 @@ class ScheduleForm(forms.Form):
         self.fields['proposal_code'].choices = proposal_choices
 
 
+class ScheduleCadenceForm(forms.Form):
+    proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad',}))
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad',}))
+    start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'], initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
+    end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'], initial=datetime.today, required=True, error_messages={'required': _(u'UTC end date is required')})
+    period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Period is required')})
+    jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Jitter is required')})
+
+    # def clean_start_time(self):
+    #     start = self.cleaned_data['start_time']
+    #     if start < datetime.utcnow():
+    #         raise forms.ValidationError("Window cannot start in the past")
+    #     return start
+    #
+    # def clean_end_time(self):
+    #     end = self.cleaned_data['end_time']
+    #     if end < datetime.utcnow():
+    #         raise forms.ValidationError("Window cannot end in the past")
+    #     return end
+
+    def clean(self):
+        cleaned_data = super(ScheduleCadenceForm, self).clean()
+        start = cleaned_data['start_time']
+        end = cleaned_data['end_time']
+        if end < start:
+            raise forms.ValidationError("End date must be after start date")
+
+    def __init__(self, *args, **kwargs):
+        self.proposal_code = kwargs.pop('proposal_code', None)
+        super(ScheduleCadenceForm, self).__init__(*args, **kwargs)
+        proposals = Proposal.objects.filter(active=True)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        self.fields['proposal_code'].choices = proposal_choices
+
 class ScheduleBlockForm(forms.Form):
     start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
@@ -83,6 +117,8 @@ class ScheduleBlockForm(forms.Form):
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
+    jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    period = forms.FloatField(widget=forms.HiddenInput(), required=False)
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']

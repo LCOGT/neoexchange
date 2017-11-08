@@ -519,6 +519,261 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+class TestLongTermScheduling(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : '2001 SQ263',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2017-02-16 00:00:00',
+                    'meananom'      : 324.47087,
+                    'argofperih'    : 262.49786,
+                    'longascnode'   : 327.13827,
+                    'orbinc'        : 3.94116,
+                    'eccentricity'  : 0.4914435,
+                    'meandist'      : 0.9474511,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'Y',
+                    'not_seen'      : 45.02,
+                    'arc_length'    : 5538.0,
+                    'score'         : None,
+                    'abs_mag'       : 22.4
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params = {  'provisional_name' : '192559',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2016-07-31 00:00:00',
+                    'meananom'      : 48.13538,
+                    'argofperih'    : 75.95569,
+                    'longascnode'   : 228.17879,
+                    'orbinc'        : 10.06115,
+                    'eccentricity'  : 0.2265235,
+                    'meandist'      : 1.0745542,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'Y',
+                    'not_seen'      : 2981.02,
+                    'arc_length'    : 3650.0,
+                    'score'         : None,
+                    'abs_mag'       : 20.4
+                    }
+        self.body2, created = Body.objects.get_or_create(**params)
+
+        params = {  'provisional_name' : '265482',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2016-07-31 00:00:00',
+                    'meananom'      : 269.50759,
+                    'argofperih'    : 284.82825,
+                    'longascnode'   : 110.84583,
+                    'orbinc'        : 6.17463,
+                    'eccentricity'  : 0.32794,
+                    'meandist'      : 1.12956,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'Y',
+                    'not_seen'      : 2159.72,
+                    'arc_length'    : 2461.0,
+                    'score'         : None,
+                    'abs_mag'       : 21.3
+                    }
+        self.body3, created = Body.objects.get_or_create(**params)
+
+        params = {  'provisional_name' : '2011 EP51',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2016-07-31 00:00:00',
+                    'meananom'      : 270.23275,
+                    'argofperih'    : 169.66452,
+                    'longascnode'   : 160.11304,
+                    'orbinc'        : 3.40805,
+                    'eccentricity'  : 0.3075497,
+                    'meandist'      : 0.8282785,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'Y',
+                    'not_seen'      : 1037.72,
+                    'arc_length'    : 1090.0,
+                    'score'         : None,
+                    'abs_mag'       : 24.7
+                    }
+        self.body4, created = Body.objects.get_or_create(**params)
+
+        params = {  'provisional_name' : '469219',
+                    'slope'         : 0.15,
+                    'epochofel'     : '2016-07-31 00:00:00',
+                    'meananom'      : 297.53221,
+                    'argofperih'    : 307.22764,
+                    'longascnode'   : 66.51321,
+                    'orbinc'        : 7.77144,
+                    'eccentricity'  : 0.1041435,
+                    'meandist'      : 1.00123,
+                    'source_type'   : 'N',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'Y',
+                    'not_seen'      : 210.72,
+                    'arc_length'    : 4468.0,
+                    'score'         : None,
+                    'abs_mag'       : 24.2
+                    }
+        self.body5, created = Body.objects.get_or_create(**params)
+
+    def test_LongTermScheduling_with_body(self):
+        #Body is only up for a few days starting at the
+        #beginning of the search.
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body)
+
+        expected_returned_params = (['2017 01 06', '2017 01 09'], [['2017 01 06 01:20', '02 13 50.14', '+31 54 14.0', '21.0', ' 4.69', '240.8', '+79', '0.52', ' 31', '+62', '+059', '-00:47'], ['2017 01 09 01:20', '01 52 45.62', '+29 03 29.1', '21.2', ' 4.51', '237.6', '+86', '0.84', ' 33', '+53', '+069', '-00:14']], [5.25, 4.666666666666667], [88, 88])
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 6, 0, 0, 00), date_range=5)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_LongTermScheduling_with_body_no_dark_and_up_emp(self):
+        site_code = 'K92'
+        body_elements = model_to_dict(self.body)
+
+        expected_returned_params = ([], [], [], [])
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 6, 0, 0, 00), date_range=5)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_LongTermScheduling_with_body_no_emp(self):
+        site_code = 'K92'
+        body_elements = model_to_dict(self.body)
+
+        expected_returned_params = ([], [], [], [])
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 2, 27, 0, 0, 00), date_range=3)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_LongTermScheduling_with_body2(self):
+        #Body is up for a couple days when gets faint enough,
+        #but then moon gets full. Body becomes observable again
+        #after moon "fades" until no longer up for at least 3 hrs.
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body2)
+
+        expected_returned_params = (['2017 01 09', '2017 01 16', '2017 01 17', '2017 01 18', '2017 01 19', '2017 01 20', '2017 01 21', '2017 01 22', '2017 01 23', '2017 01 24'], [['2017 01 09 08:30', '11 07 53.60', '-19 20 19.8', '21.5', ' 1.03', '162.0', '+30', '0.86', '106', '+26', '+021', '-02:18'], ['2017 01 16 08:25', '11 11 11.23', '-22 01 59.9', '21.3', ' 0.97', '172.4', '+30', '0.82', ' 28', '+53', '+012', '-01:59'], ['2017 01 17 08:25', '11 11 28.60', '-22 24 52.3', '21.3', ' 0.97', '174.1', '+30', '0.74', ' 27', '+42', '+016', '-01:55'], ['2017 01 18 08:25', '11 11 43.01', '-22 47 39.7', '21.2', ' 0.96', '175.9', '+30', '0.64', ' 31', '+31', '+020', '-01:51'], ['2017 01 19 08:25', '11 11 54.34', '-23 10 21.4', '21.2', ' 0.96', '177.8', '+30', '0.55', ' 38', '+20', '+023', '-01:48'], ['2017 01 20 08:25', '11 12 02.53', '-23 32 56.7', '21.2', ' 0.95', '179.7', '+30', '0.45', ' 47', '+09', '+027', '-01:44'], ['2017 01 21 08:25', '11 12 07.47', '-23 55 24.9', '21.1', ' 0.95', '181.7', '+30', '0.36', ' 56', '-01', '+030', '-01:40'], ['2017 01 22 08:25', '11 12 09.07', '-24 17 45.2', '21.1', ' 0.94', '183.7', '+30', '0.27', ' 66', '-11', '+034', '-01:36'], ['2017 01 23 08:20', '11 12 07.27', '-24 39 52.1', '21.1', ' 0.94', '185.8', '+30', '0.19', ' 76', '-22', '+037', '-01:37'], ['2017 01 24 08:20', '11 12 01.93', '-25 01 54.1', '21.0', ' 0.93', '188.0', '+30', '0.12', ' 86', '-33', '+041', '-01:33']], [4.083333333333333, 3.9166666666666665, 3.8333333333333335, 3.6666666666666665, 3.5833333333333335, 3.4166666666666665, 3.3333333333333335, 3.1666666666666665, 3.1666666666666665, 3.0], [39, 37, 36, 36, 36, 35, 35, 34, 34, 34])
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 8, 0, 0, 00), date_range=18)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_LongTermScheduling_with_body2_shorter_time_limit(self):
+        #Body is up for a couple days when gets faint enough,
+        #but then moon gets full. Body becomes observable again
+        #after moon "fades" until no longer up for at least 3 hrs.
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body2)
+
+        expected_returned_params = (['2017 01 09', '2017 01 16', '2017 01 17', '2017 01 18', '2017 01 19', '2017 01 20', '2017 01 21', '2017 01 22', '2017 01 23', '2017 01 24', '2017 01 25', '2017 01 26', '2017 01 27', '2017 01 28'], [['2017 01 09 08:30', '11 07 53.60', '-19 20 19.8', '21.5', ' 1.03', '162.0', '+30', '0.86', '106', '+26', '+021', '-02:18'], ['2017 01 16 08:25', '11 11 11.23', '-22 01 59.9', '21.3', ' 0.97', '172.4', '+30', '0.82', ' 28', '+53', '+012', '-01:59'], ['2017 01 17 08:25', '11 11 28.60', '-22 24 52.3', '21.3', ' 0.97', '174.1', '+30', '0.74', ' 27', '+42', '+016', '-01:55'], ['2017 01 18 08:25', '11 11 43.01', '-22 47 39.7', '21.2', ' 0.96', '175.9', '+30', '0.64', ' 31', '+31', '+020', '-01:51'], ['2017 01 19 08:25', '11 11 54.34', '-23 10 21.4', '21.2', ' 0.96', '177.8', '+30', '0.55', ' 38', '+20', '+023', '-01:48'], ['2017 01 20 08:25', '11 12 02.53', '-23 32 56.7', '21.2', ' 0.95', '179.7', '+30', '0.45', ' 47', '+09', '+027', '-01:44'], ['2017 01 21 08:25', '11 12 07.47', '-23 55 24.9', '21.1', ' 0.95', '181.7', '+30', '0.36', ' 56', '-01', '+030', '-01:40'], ['2017 01 22 08:25', '11 12 09.07', '-24 17 45.2', '21.1', ' 0.94', '183.7', '+30', '0.27', ' 66', '-11', '+034', '-01:36'], ['2017 01 23 08:20', '11 12 07.27', '-24 39 52.1', '21.1', ' 0.94', '185.8', '+30', '0.19', ' 76', '-22', '+037', '-01:37'], ['2017 01 24 08:20', '11 12 01.93', '-25 01 54.1', '21.0', ' 0.93', '188.0', '+30', '0.12', ' 86', '-33', '+041', '-01:33'], ['2017 01 25 08:20', '11 11 52.97', '-25 23 45.5', '21.0', ' 0.93', '190.2', '+30', '0.07', ' 96', '-43', '+044', '-01:29'], ['2017 01 26 08:20', '11 11 40.31', '-25 45 25.4', '21.0', ' 0.93', '192.5', '+30', '0.03', '107', '-53', '+047', '-01:25'], ['2017 01 27 08:20', '11 11 23.85', '-26 06 52.7', '20.9', ' 0.93', '194.8', '+30', '0.00', '117', '-62', '+050', '-01:21'], ['2017 01 28 08:20', '11 11 03.50', '-26 28 06.2', '20.9', ' 0.93', '197.2', '+30', '0.00', '127', '-70', '+053', '-01:16']], [4.083333333333333, 3.9166666666666665, 3.8333333333333335, 3.6666666666666665, 3.5833333333333335, 3.4166666666666665, 3.3333333333333335, 3.1666666666666665, 3.1666666666666665, 3.0, 2.9166666666666665, 2.75, 2.6666666666666665, 2.5], [39, 37, 36, 36, 36, 35, 35, 34, 34, 34, 33, 33, 33, 32])
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 8, 0, 0, 00), date_range=20, dark_and_up_time_limit=2.5)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_LongTermScheduling_with_body3(self):
+        #Body is not observable (because not up for >3 hrs) until
+        #sometime after start of search and then until the end of
+        #the date range.
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body3)
+
+        expected_returned_params = (['2017 01 21', '2017 01 22', '2017 01 23', '2017 01 24', '2017 01 25', '2017 01 26'], [['2017 01 21 08:15', '13 31 15.01', '+13 18 31.1', '18.2', ' 8.80', '311.3', '+30', '0.36', ' 35', '-03', '+031', '-04:09'], ['2017 01 22 07:55', '13 20 59.76', '+15 30 00.5', '18.1', ' 8.43', '310.7', '+30', '0.27', ' 48', '-17', '+036', '-04:15'], ['2017 01 23 07:40', '13 10 56.80', '+17 33 59.8', '18.1', ' 8.04', '310.0', '+30', '0.20', ' 62', '-31', '+041', '-04:16'], ['2017 01 24 07:20', '13 01 11.14', '+19 29 22.9', '18.0', ' 7.65', '309.2', '+30', '0.13', ' 76', '-45', '+045', '-04:22'], ['2017 01 25 07:05', '12 51 39.02', '+21 16 57.8', '18.0', ' 7.25', '308.2', '+30', '0.07', ' 89', '-58', '+050', '-04:24'], ['2017 01 26 06:50', '12 42 22.99', '+22 56 25.1', '18.0', ' 6.87', '307.3', '+31', '0.03', '103', '-70', '+054', '-04:26']], [4.333333333333333, 4.666666666666667, 4.916666666666667, 5.25, 5.5, 5.75], [73, 75, 77, 79, 80, 82])
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 19, 0, 0, 00), date_range=7)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_LongTermScheduling_with_body4(self):
+        #Body is not observable (because too faint) until
+        #sometime after start of search and then until the end of
+        #the date range.
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body4)
+
+        expected_returned_params = (['2017 01 26', '2017 01 27', '2017 01 28', '2017 01 29', '2017 01 30'], [['2017 01 26 06:40', '10 53 54.75', '-13 15 07.5', '21.5', ' 4.76', '294.8', '+30', '0.03', '116', '-72', '+054', '-02:47'], ['2017 01 27 06:25', '10 47 10.72', '-12 24 58.0', '21.4', ' 4.96', '295.4', '+30', '0.01', '129', '-76', '+055', '-02:52'], ['2017 01 28 06:10', '10 40 12.85', '-11 31 37.6', '21.3', ' 5.15', '296.1', '+30', '0.00', '141', '-68', '+052', '-02:56'], ['2017 01 29 05:55', '10 33 01.97', '-10 35 07.5', '21.2', ' 5.34', '296.7', '+30', '0.02', '153', '-55', '+048', '-03:00'], ['2017 01 30 05:40', '10 25 39.12', '-09 35 32.1', '21.1', ' 5.52', '297.3', '+30', '0.05', '160', '-40', '+043', '-03:03']], [5.583333333333333, 5.666666666666667, 5.833333333333333, 5.916666666666667, 6.083333333333333], [46, 47, 47, 48, 49])
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 25, 0, 0, 00), date_range=5)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_LongTermScheduling_with_body5(self):
+        #Body is not observable (because too faint) at
+        #any time in the date range.
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body5)
+
+        expected_returned_params = ([], [], [], [])
+
+        returned_params = monitor_long_term_scheduling(site_code, body_elements, utc_date=datetime(2017, 1, 6, 0, 0, 00), date_range=7)
+
+        self.assertEqual(expected_returned_params, returned_params)
+
+    def test_dark_and_up_time_body_never_above_horizon(self):
+        site_code = 'K92'
+        body_elements = model_to_dict(self.body)
+
+        expected_dark_and_up_time = None
+        expected_emp_dark_and_up = []
+
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+
+        self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
+        self.assertEqual(expected_emp_dark_and_up, emp_dark_and_up)
+
+    def test_dark_and_up_time_body_above_horizon(self):
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body)
+
+        expected_dark_and_up_time = 5.25
+        expected_emp_dark_and_up_first_line = ['2017 01 06 01:20', '02 13 50.14', '+31 54 14.0', '21.0', ' 4.69', '240.8', '+79', '0.52', ' 31', '+62', '+059', '-00:47']
+
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+
+        self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
+        self.assertEqual(expected_emp_dark_and_up_first_line, emp_dark_and_up[0])
+
+    def test_compute_max_altitude(self):
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body)
+
+        expected_max_alt = 88
+
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        dark_and_up_time = compute_dark_and_up_time(emp)
+
+        max_alt = compute_max_altitude(emp)
+
+        self.assertEqual(expected_max_alt, max_alt)
+
+    def test_compute_max_altitude_not_up_and_dark(self):
+        site_code = 'K92'
+        body_elements = model_to_dict(self.body)
+
+        expected_max_alt = 0
+
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        dark_and_up_time = compute_dark_and_up_time(emp)
+
+        max_alt = compute_max_altitude(emp)
+
+        self.assertEqual(expected_max_alt, max_alt)
+
 class TestDetermineRatesAndPA(TestCase):
 
     def setUp(self):

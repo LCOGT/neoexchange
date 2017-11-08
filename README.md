@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 1.9.0
+
+Add cadence support.
+
 ### 1.8.3
 
 Add check for and marking of 'was not a minor planet' in the Previous NEOCP page

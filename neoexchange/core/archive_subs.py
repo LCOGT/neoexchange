@@ -26,7 +26,6 @@ import requests
 from django.conf import settings
 
 from core.urlsubs import get_lcogt_headers
-from core.models import Frame
 
 logger = logging.getLogger(__name__)
 

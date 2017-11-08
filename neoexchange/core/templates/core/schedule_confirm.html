@@ -77,6 +77,24 @@
                         <td class="kv-key">Window (UTC)</td>
                         <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
                     </tr>
+                    {% if data.jitter %}
+                    <tr id="id_jitter">
+                        <td class="kv-key">Jitter (hours)</td>
+                        <td class="kv-value">{{ data.jitter }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if data.period %}
+                    <tr id="id_period">
+                        <td class="kv-key">Period (hours)</td>
+                        <td class="kv-value">{{ data.period }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if data.num_times and data.total_time %}
+                    <tr id="id_cadence_cost">
+                        <td class="kv-key">No. of repeats / Total time (hours)</td>
+                        <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         {% endif %}
@@ -95,6 +113,8 @@
           {{form.proposal_code}}
           {{form.site_code}}
           {{form.group_id}}
+	  {{form.jitter}}
+	  {{form.period}}
         </div>
       </div>
 

@@ -57,6 +57,10 @@ target/
 .spyderproject
 .spyderworkspace
 
+# PyCharm files
+**/.idea/workspace.xml
+**/.idea/tasks.xml
+
 neox/local_settings.py
 Diffs
 

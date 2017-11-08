@@ -3,7 +3,7 @@ from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
-from core.models import Body, Proposal, Block
+from core.models import Body, Proposal, Block, SuperBlock
 from contextlib import contextmanager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.expected_conditions import \
@@ -62,6 +62,18 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
 
     def insert_test_blocks(self):
+
+        sblock_params = {
+                         'cadence' : True,
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(pk=1, **sblock_params)
+
         block_params = { 'telclass' : '1m0',
                          'site'     : 'cpt',
                          'body'     : self.body,
@@ -71,9 +83,22 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'tracking_number' : '00042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
-                         'active'   : True
+                         'active'   : True,
+                         'superblock' : self.test_sblock
                        }
         self.test_block = Block.objects.create(pk=1, **block_params)
+
+
+        sblock_params = {
+                         'cadence'  : False,
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-22 13:00:00',
+                         'tracking_number' : '00043',
+                         'active'   : False
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(pk=2, **sblock_params)
 
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
@@ -85,8 +110,11 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
+                         'superblock' : self.test_sblock2,
                          'num_observed' : 1,
-                         'reported' : True
+                         'when_observed' : '2015-04-20 03:31:42',
+                         'reported' : True,
+                         'when_reported' : '2015-04-20 09:29:30',
                        }
         self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
