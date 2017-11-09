@@ -1352,6 +1352,12 @@ class TestCreate_sourcemeasurement(TestCase):
 
         self.sat_test_body = Body.objects.create(**N009ags_params)
 
+        G07212_params = { 'provisional_name' : 'G07212',
+                        }
+
+        self.gbot_test_body = Body.objects.create(**G07212_params)
+
+
         self.maxDiff = None
 
     def test_create_nonLCO(self):
@@ -1577,6 +1583,34 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(6, len(sources))
         self.assertEqual(4, len(nonLCO_frames))
         self.assertEqual(2, len(LCO_frames))
+
+    def test_create_with_trailing_space(self):
+
+        expected_params = { 'body' : 'G07212',
+                            'filter' : 'G',
+                            'obs_date' : datetime(2017, 11, 2, 4, 10, 16, int(0.32*1e6)),
+                            'site_code' : '309',
+                            'obs_ra' : 48.408025,
+                            'obs_dec'   : 19.463075,
+                            'obs_mag'   : 21.4,
+                          }
+
+        test_obslines = u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309"
+
+        source_measures = create_source_measurement(test_obslines)
+        self.assertIsNot(source_measures, False)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+
 
 class TestFrames(TestCase):
     def setUp(self):
