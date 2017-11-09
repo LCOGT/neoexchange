@@ -1009,6 +1009,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_ C_le' : u'     K13R33T  C2013 09 13.18561323 15 20.53 -10 21 52.6          20.4 V      W86\r\n',
                             'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
                             'p_ x_l' :  u'g0232K10F41B* x2010 03 19.91359 06 26 37.29 +35 47 01.3                L~0FUhC51',
+                            'p_quoteC_h': u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309",
 
                           }
         self.maxDiff = None
@@ -1228,6 +1229,24 @@ class TestParseMPCObsFormat(TestCase):
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_f'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_quoteC_h(self):
+
+        expected_params = { 'body'  : 'G07212',
+                            'flags' : "'",
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2017, 11, 2, 4, 10, 16, int(0.32*1e6)),
+                            'obs_ra'    : 48.408025,
+                            'obs_dec'   : 19.463075,
+                            'obs_mag'   : 21.4,
+                            'filter'    : 'G',
+                            'astrometric_catalog' : 'GAIA-DR1',
+                            'site_code' : '309'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_quoteC_h'])
 
         self.compare_dict(expected_params, params)
 

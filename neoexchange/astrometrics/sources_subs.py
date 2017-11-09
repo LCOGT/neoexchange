@@ -546,6 +546,7 @@ def parse_mpcobs(line):
     else:
         body = number
 
+    body = body.rstrip()
     obs_type = str(line[14])
     flag_char = str(line[13])
 
