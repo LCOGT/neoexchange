@@ -1333,3 +1333,71 @@ def submit_block_to_scheduler(elements, params):
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
 
     return tracking_number, params
+
+def fetch_taxonomy_page():
+    '''Fetches the Arecibo list of radar targets, returning a list
+    of object id's for the current year'''
+
+    arecibo_url = 'http://www.naic.edu/~pradar/'
+
+    page = fetchpage_and_make_soup(arecibo_url)
+
+    return page
+
+def fetch_taxonomy_data(page=None):
+    '''Parses the Arecibo webpage for upcoming radar targets and returns a list
+    of these targets back.
+    Takes either a BeautifulSoup page version of the Arecibo target page (from
+    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    '''
+
+    if type(page) != BeautifulSoup:
+        page = fetch_arecibo_page()
+
+    targets = []
+
+    if type(page) == BeautifulSoup:
+        # Find the tables, we want the second one
+        tables = page.find_all('table')
+        if len(tables) != 2 and len(tables) != 3 :
+            logger.warn("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
+        else:
+            targets_table = tables[-1]
+            rows = targets_table.find_all('tr')
+            if len(rows) > 1:
+                for row in rows[1:]:
+                    items = row.find_all('td')
+                    target_object = items[0].text
+                    target_object = target_object.strip()
+                    # See if it is the form "(12345) 2008 FOO". If so, extract
+                    # just the asteroid number
+                    if '(' in target_object and ')' in target_object:
+                        # See if we have parentheses around the number or around the
+                        # temporary desigination.
+                        # If the first character in the string is a '(' we have the first
+                        # case and should split on the closing ')' and take the 0th chunk
+                        # If the first char is not a '(', then we have parentheses around
+                        # the temporary desigination and we should split on the '(', take
+                        # the 0th chunk and strip whitespace
+                        split_char = ')'
+                        if target_object[0] != '(':
+                            split_char = '('
+                        target_object = target_object.split(split_char)[0].replace('(','')
+                        target_object = target_object.strip()
+                    else:
+                        # No parentheses, either just a number or a number and name
+                        chunks = target_object.split(' ')
+                        if len(chunks) >= 2:
+                            if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                target_object = chunks[0]
+                            else:
+                                target_object = chunks[0] + " " + chunks[1]
+                        else:
+                            logger.warn("Unable to parse Arecibo target %s" % target_object)
+                            target_object = None
+                    if target_object:
+                        targets.append(target_object)
+            else:
+                logger.warn("No targets found in Arecibo page")
+    return targets

@@ -30,7 +30,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence
+    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_data
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -2091,3 +2091,42 @@ class TestMakeCadence(TestCase):
         ur = make_cadence(self.elements, params, self.ipp_value, self.request)
         for key in ur.keys():
             self.assertEqual(expected[key], ur[key])
+
+class TestFetchTaxonomyData(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored, partial version of the PDS Taxonomy Database
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
+        self.test_taxonomy_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+    def test_basics(self):
+        expected_length = 17
+
+        targets = fetch_taxonomy_data(self.test_taxonomy_page)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_targets(self):
+        expected_targets =  [u'980',
+                             u'1199',
+                             u'2422',
+                             u'3908',
+                             u'3792',
+                             u'4686',
+                             u'4688',
+                             u'4695',
+                             u'4701',
+                             u'4702',
+                             u'4706',
+                             u'4711',
+                             u'4713',
+                             u'4718',
+                             u'4719',
+                             u'1997 AC11',
+                             u'1997 GL3']
+
+        targets = fetch_taxonomy_data(self.test_taxonomy_page)
+
+        self.assertEqual(expected_targets, targets)
+
