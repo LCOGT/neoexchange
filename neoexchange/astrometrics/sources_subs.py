@@ -1356,16 +1356,14 @@ def fetch_taxonomy_page():
 def fetch_taxonomy_data(page=None):
     '''Parses the online taxonomy database for targets and pulls a list
     of these targets back.
-    Takes either a BeautifulSoup page version of the Taxonomy data page (from
-    a call to fetch_taxonomy_page() - to allow  standalone testing) or  calls
-    this routine and then parses the resulting page.
     '''
 
-    targets = []
+    tax_table=[]
     with open(page) as tax_text:
         for line in tax_text:
             name=line[8:25]
-            line=line[:8]+line[26:]
+            end=line[103:]
+            line=line[:8]+line[26:104]
             chunks=line.split(' ')
             chunks=filter(None, chunks)
             if chunks[0] != '\n':
@@ -1373,23 +1371,60 @@ def fetch_taxonomy_data(page=None):
                     chunks[1] = chunks[1]+' '+chunks[2]
                     del chunks[2]
                 chunks.insert(1,name)
-                #print(line)
-                print(chunks[1])
+                #parse Object ID=Object Number or Provisional designation if no number
                 if chunks[0] != '0':
-                    targets.append(chunks[0])
+                    obj_id=(chunks[0])
                 else:
-                    targets.append(chunks[2])
+                    obj_id=(chunks[2])
+                #Build Taxonomy reference table. This is clunky. Better to search table for matching values first?
+                if chunks[3] != '-':
+                    if chunks[19] != '-':
+                        chunks[4] = chunks[4] + "|"+ end
+                    row=[obj_id,chunks[3],"T","PDS6",chunks[4]]
+                    tax_table.append(row)
+                if chunks[5] != '-':
+                    if chunks[19] != '-':
+                        chunks[6] = chunks[6] + "|"+ end
+                    row=[obj_id,chunks[5],"Ba","PDS6",chunks[6]]
+                    tax_table.append(row)
+                if chunks[7] != '-':
+                    if chunks[19] != '-':
+                        chunks[8] = chunks[8] + "|"+ end
+                    row=[obj_id,chunks[7],"Td","PDS6",chunks[8]]
+                    tax_table.append(row)
+                if chunks[9] != '-':
+                    if chunks[19] != '-':
+                        chunks[10] = chunks[10] + "|"+ end
+                    row=[obj_id,chunks[9],"H","PDS6",chunks[10]]
+                    tax_table.append(row)
+                if chunks[11] != '-':
+                    if chunks[19] != '-':
+                        chunks[12] = chunks[12] + "|"+ end
+                    row=[obj_id,chunks[11],"S","PDS6",chunks[12]]
+                    tax_table.append(row)
+                if chunks[13] != '-':
+                    if chunks[19] != '-':
+                        chunks[14] = chunks[14] + "|"+ end
+                    row=[obj_id,chunks[13],"B","PDS6",chunks[14]]
+                    tax_table.append(row)
+                if chunks[15] != '-':
+                    if chunks[19] != '-':
+                        out = end
+                    else:
+                        out=' '
+                    row=[obj_id,chunks[15],"3T","PDS6",out]
+                    tax_table.append(row)
+                if chunks[16] != '-':
+                    if chunks[19] != '-':
+                        out = end
+                    else:
+                        out=' '
+                    row=[obj_id,chunks[16],"3B","PDS6",out]
+                    tax_table.append(row)
+                if chunks[17] != '-':
+                    if chunks[19] != '-':
+                        chunks[18] = chunks[18] + "|"+ end
+                    row=[obj_id,chunks[17],"BD","PDS6",chunks[18]]
+                    tax_table.append(row)
 
-
-
-
-
-
-
-
-
-
-
-
-
-    return targets
+    return tax_table

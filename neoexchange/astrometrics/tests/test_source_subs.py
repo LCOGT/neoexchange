@@ -2102,7 +2102,7 @@ class TestFetchTaxonomyData(TestCase):
         self.test_taxonomy_page = os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat')
 
     def test_basics(self):
-        expected_length = 18
+        expected_length = 33
 
         targets = fetch_taxonomy_data(self.test_taxonomy_page)
 
@@ -2110,25 +2110,80 @@ class TestFetchTaxonomyData(TestCase):
 
     def test_targets(self):
         expected_targets =  ['980',
+                             '980',
+                             '980',
+                             '980',
+                             '980',
                              '1199',
                              '2422',
                              '3908',
+                             '3908',
+                             '3908',
                              '3792',
+                             '3792',
+                             '3903',
                              '3903',
                              '4686',
                              '4688',
+                             '4688',
+                             '4695',
                              '4695',
                              '4701',
                              '4702',
                              '4706',
+                             '4706',
+                             '4706',
                              '4711',
+                             '4713',
+                             '4713',
+                             '4713',
                              '4713',
                              '4718',
                              '4719',
                              '1997 AC11',
-                             '1997 GL3']
+                             '1997 GL3'
+                            ]
 
-        targets = fetch_taxonomy_data(self.test_taxonomy_page)
-
+        tax_data = fetch_taxonomy_data(self.test_taxonomy_page)
+        targets=[row[0] for row in tax_data]
         self.assertEqual(expected_targets, targets)
+
+    def test_tax(self):
+        expected_tax =  ['SU',
+                         'S3',
+                         'S',
+                         'T',
+                         'L',
+                         'CGTP:',
+                         'S',
+                         'V',
+                         '***',
+                         'V',
+                         'S',
+                         'S',
+                         'Sq',
+                         'S',
+                         'B',
+                         'QU',
+                         'Q',
+                         'S',
+                         'K',
+                         'Xe',
+                         'S',
+                         'S',
+                         'S',
+                         'S',
+                         'S',
+                         'A',
+                         'A',
+                         'Sl',
+                         'Sw',
+                         'Sl',
+                         'C',
+                         'Xc',
+                         'V',
+                          ]
+        tax_data = fetch_taxonomy_data(self.test_taxonomy_page)
+        taxonomy=[row[1] for row in tax_data]
+        self.assertEqual(expected_tax, taxonomy)
 
