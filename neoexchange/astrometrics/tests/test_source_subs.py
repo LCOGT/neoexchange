@@ -2187,3 +2187,11 @@ class TestFetchTaxonomyData(TestCase):
         taxonomy=[row[1] for row in tax_data]
         self.assertEqual(expected_tax, taxonomy)
 
+    def test_tax_site_pull(self):
+        expected_line = '      1 Ceres             -          G      7G  G0 7I G?  2I CvB    65  -   -   C   s   C   C   C   a  -                     '
+        test_page=fetch_taxonomy_page
+        with open(test_page,'r') as f:
+            first_line = f.readline()
+        self.assertEqual(expected_line, first_line)
+            
+
