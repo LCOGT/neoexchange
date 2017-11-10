@@ -1,5 +1,8 @@
 from datetime import datetime as real_datetime
 from datetime import datetime
+from urlparse import urljoin
+
+from django.conf import settings
 
 # Adapted from http://www.ryangallen.com/wall/11/mock-today-django-testing/
 # and changed to datetime and python 2.x
@@ -630,6 +633,141 @@ def mock_fetch_observations(tracking_num):
 def mock_run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 
     return -1, None
+
+def mock_requests_post(*args, **kwargs):
+    class MockResponse:
+        def __init__(self, json_data, status_code):
+            self.json_data = json_data
+            self.status_code = status_code
+
+        def json(self):
+            return self.json_data
+
+    cadence_url = urljoin(settings.PORTAL_REQUEST_API, 'cadence/')
+    cadence = {
+                 u'group_id': u'3122_Q59-20170815',
+                 u'ipp_value': 1.0,
+                 u'observation_type': u'NORMAL',
+                 u'operator': u'MANY',
+                 u'proposal': u'LCOSchedulerTest',
+                 u'requests': [{u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
+                   u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
+                   u'molecules': [{u'ag_mode': u'OPTIONAL',
+                     u'ag_name': u'',
+                     u'bin_x': 2,
+                     u'bin_y': 2,
+                     u'exposure_count': 10,
+                     u'exposure_time': 2.0,
+                     u'filter': u'w',
+                     u'instrument_name': u'0M4-SCICAM-SBIG',
+                     u'priority': 1,
+                     u'type': u'EXPOSE'}],
+                   u'target': {u'argofperih': 27.8469,
+                    u'eccentricity': 0.4233003,
+                    u'epochofel': 58000.0,
+                    u'longascnode': 336.0952,
+                    u'meananom': 351.43854,
+                    u'meandist': 1.7691326,
+                    u'name': u'3122',
+                    u'orbinc': 22.1508,
+                    u'scheme': u'MPC_MINOR_PLANET',
+                    u'type': u'NON_SIDEREAL'},
+                   u'windows': [{u'end': u'2017-09-02T06:07:30Z',
+                     u'start': u'2017-09-02T06:00:00Z'}]},
+                  {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
+                   u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
+                   u'molecules': [{u'ag_mode': u'OPTIONAL',
+                     u'ag_name': u'',
+                     u'bin_x': 2,
+                     u'bin_y': 2,
+                     u'exposure_count': 10,
+                     u'exposure_time': 2.0,
+                     u'filter': u'w',
+                     u'instrument_name': u'0M4-SCICAM-SBIG',
+                     u'priority': 1,
+                     u'type': u'EXPOSE'}],
+                   u'target': {u'argofperih': 27.8469,
+                    u'eccentricity': 0.4233003,
+                    u'epochofel': 58000.0,
+                    u'longascnode': 336.0952,
+                    u'meananom': 351.43854,
+                    u'meandist': 1.7691326,
+                    u'name': u'3122',
+                    u'orbinc': 22.1508,
+                    u'scheme': u'MPC_MINOR_PLANET',
+                    u'type': u'NON_SIDEREAL'},
+                   u'windows': [{u'end': u'2017-09-02T08:07:30Z',
+                     u'start': u'2017-09-02T07:52:30Z'}]},
+                  {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
+                   u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
+                   u'molecules': [{u'ag_mode': u'OPTIONAL',
+                     u'ag_name': u'',
+                     u'bin_x': 2,
+                     u'bin_y': 2,
+                     u'exposure_count': 10,
+                     u'exposure_time': 2.0,
+                     u'filter': u'w',
+                     u'instrument_name': u'0M4-SCICAM-SBIG',
+                     u'priority': 1,
+                     u'type': u'EXPOSE'}],
+                   u'target': {u'argofperih': 27.8469,
+                    u'eccentricity': 0.4233003,
+                    u'epochofel': 58000.0,
+                    u'longascnode': 336.0952,
+                    u'meananom': 351.43854,
+                    u'meandist': 1.7691326,
+                    u'name': u'3122',
+                    u'orbinc': 22.1508,
+                    u'scheme': u'MPC_MINOR_PLANET',
+                    u'type': u'NON_SIDEREAL'},
+                   u'windows': [{u'end': u'2017-09-02T10:07:30Z',
+                     u'start': u'2017-09-02T09:52:30Z'}]},
+                  {u'constraints': {u'max_airmass': 2.0, u'min_lunar_distance': 15.0},
+                   u'location': {u'site': u'ogg', u'telescope_class': u'0m4'},
+                   u'molecules': [{u'ag_mode': u'OPTIONAL',
+                     u'ag_name': u'',
+                     u'bin_x': 2,
+                     u'bin_y': 2,
+                     u'exposure_count': 10,
+                     u'exposure_time': 2.0,
+                     u'filter': u'w',
+                     u'instrument_name': u'0M4-SCICAM-SBIG',
+                     u'priority': 1,
+                     u'type': u'EXPOSE'}],
+                   u'target': {u'argofperih': 27.8469,
+                    u'eccentricity': 0.4233003,
+                    u'epochofel': 58000.0,
+                    u'longascnode': 336.0952,
+                    u'meananom': 351.43854,
+                    u'meandist': 1.7691326,
+                    u'name': u'3122',
+                    u'orbinc': 22.1508,
+                    u'scheme': u'MPC_MINOR_PLANET',
+                    u'type': u'NON_SIDEREAL'},
+                   u'windows': [{u'end': u'2017-09-02T12:07:30Z',
+                     u'start': u'2017-09-02T11:52:30Z'}]}],
+                 u'submitter': u'tlister@lcogt.net'}
+
+    failure={u'group_id': [u'This field is required.'],
+             u'ipp_value': [u'This field is required.'],
+             u'observation_type': [u'This field is required.'],
+             u'operator': [u'This field is required.'],
+             u'proposal': [u'This field is required.'],
+             u'requests': [u'You must specify at least 1 request']}
+
+
+    sub_json = kwargs['json']
+    simulate_error = sub_json.get('trigger_error', False)
+
+    if args[0] == cadence_url:
+        if simulate_error == False:
+            return MockResponse(cadence, 200)
+        else:
+            return MockResponse(failure, 400)
+    elif args[0] == 'http://someotherurl.com/anothertest.json':
+        return MockResponse({"key2": "value2"}, 200)
+
+    return MockResponse(None, 404)
 
 def mock_expand_cadence(user_request):
 
