@@ -1335,69 +1335,61 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 def fetch_taxonomy_page():
-    '''Fetches the Arecibo list of radar targets, returning a list
-    of object id's for the current year'''
+    '''Fetches Taxonomy data to be compared against database.'''
 
-    arecibo_url = 'http://www.naic.edu/~pradar/'
+    taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
+    req_page = urllib2.Request(taxonomy_url, headers=req_headers)
+    opener = urllib2.build_opener() # create an opener object
+    try:
+        response = opener.open(req_page)
+    except urllib2.URLError as e:
+        if not hasattr(e, "code"):
+            raise
+        print "Page retrieval failed:", e
+        return None
 
-    page = fetchpage_and_make_soup(arecibo_url)
+  # Suck the HTML down
+    page = response.read()
 
     return page
 
 def fetch_taxonomy_data(page=None):
-    '''Parses the Arecibo webpage for upcoming radar targets and returns a list
+    '''Parses the online taxonomy database for targets and pulls a list
     of these targets back.
-    Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    Takes either a BeautifulSoup page version of the Taxonomy data page (from
+    a call to fetch_taxonomy_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     '''
 
-    if type(page) != BeautifulSoup:
-        page = fetch_arecibo_page()
-
     targets = []
+    with open(page) as tax_text:
+        for line in tax_text:
+            name=line[8:25]
+            line=line[:8]+line[26:]
+            chunks=line.split(' ')
+            chunks=filter(None, chunks)
+            if chunks[0] != '\n':
+                if chunks[1] != '-':
+                    chunks[1] = chunks[1]+' '+chunks[2]
+                    del chunks[2]
+                chunks.insert(1,name)
+                #print(line)
+                print(chunks[1])
+                if chunks[0] != '0':
+                    targets.append(chunks[0])
+                else:
+                    targets.append(chunks[2])
 
-    if type(page) == BeautifulSoup:
-        # Find the tables, we want the second one
-        tables = page.find_all('table')
-        if len(tables) != 2 and len(tables) != 3 :
-            logger.warn("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
-        else:
-            targets_table = tables[-1]
-            rows = targets_table.find_all('tr')
-            if len(rows) > 1:
-                for row in rows[1:]:
-                    items = row.find_all('td')
-                    target_object = items[0].text
-                    target_object = target_object.strip()
-                    # See if it is the form "(12345) 2008 FOO". If so, extract
-                    # just the asteroid number
-                    if '(' in target_object and ')' in target_object:
-                        # See if we have parentheses around the number or around the
-                        # temporary desigination.
-                        # If the first character in the string is a '(' we have the first
-                        # case and should split on the closing ')' and take the 0th chunk
-                        # If the first char is not a '(', then we have parentheses around
-                        # the temporary desigination and we should split on the '(', take
-                        # the 0th chunk and strip whitespace
-                        split_char = ')'
-                        if target_object[0] != '(':
-                            split_char = '('
-                        target_object = target_object.split(split_char)[0].replace('(','')
-                        target_object = target_object.strip()
-                    else:
-                        # No parentheses, either just a number or a number and name
-                        chunks = target_object.split(' ')
-                        if len(chunks) >= 2:
-                            if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                target_object = chunks[0]
-                            else:
-                                target_object = chunks[0] + " " + chunks[1]
-                        else:
-                            logger.warn("Unable to parse Arecibo target %s" % target_object)
-                            target_object = None
-                    if target_object:
-                        targets.append(target_object)
-            else:
-                logger.warn("No targets found in Arecibo page")
+
+
+
+
+
+
+
+
+
+
+
+
     return targets

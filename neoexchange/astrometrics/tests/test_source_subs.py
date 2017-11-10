@@ -2096,35 +2096,37 @@ class TestFetchTaxonomyData(TestCase):
 
     def setUp(self):
         # Read and make soup from the stored, partial version of the PDS Taxonomy Database
-        test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
-        self.test_taxonomy_page = BeautifulSoup(test_fh, "html.parser")
-        test_fh.close()
+        #test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
+        #self.test_taxonomy_page = test_fh
+        #test_fh.close()
+        self.test_taxonomy_page = os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat')
 
     def test_basics(self):
-        expected_length = 17
+        expected_length = 18
 
         targets = fetch_taxonomy_data(self.test_taxonomy_page)
 
         self.assertEqual(expected_length, len(targets))
 
     def test_targets(self):
-        expected_targets =  [u'980',
-                             u'1199',
-                             u'2422',
-                             u'3908',
-                             u'3792',
-                             u'4686',
-                             u'4688',
-                             u'4695',
-                             u'4701',
-                             u'4702',
-                             u'4706',
-                             u'4711',
-                             u'4713',
-                             u'4718',
-                             u'4719',
-                             u'1997 AC11',
-                             u'1997 GL3']
+        expected_targets =  ['980',
+                             '1199',
+                             '2422',
+                             '3908',
+                             '3792',
+                             '3903',
+                             '4686',
+                             '4688',
+                             '4695',
+                             '4701',
+                             '4702',
+                             '4706',
+                             '4711',
+                             '4713',
+                             '4718',
+                             '4719',
+                             '1997 AC11',
+                             '1997 GL3']
 
         targets = fetch_taxonomy_data(self.test_taxonomy_page)
 
