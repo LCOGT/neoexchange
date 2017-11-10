@@ -21,6 +21,7 @@ from unittest import skipIf
 from bs4 import BeautifulSoup
 import os
 import mock
+import urllib2
 from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
@@ -30,7 +31,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_data
+    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -2103,8 +2104,7 @@ class TestFetchTaxonomyData(TestCase):
 
     def test_basics(self):
         expected_length = 33
-
-        targets = fetch_taxonomy_data(self.test_taxonomy_page)
+        targets = fetch_taxonomy_page(self.test_taxonomy_page)
 
         self.assertEqual(expected_length, len(targets))
 
@@ -2143,8 +2143,7 @@ class TestFetchTaxonomyData(TestCase):
                              '1997 AC11',
                              '1997 GL3'
                             ]
-
-        tax_data = fetch_taxonomy_data(self.test_taxonomy_page)
+        tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
         targets=[row[0] for row in tax_data]
         self.assertEqual(expected_targets, targets)
 
@@ -2183,15 +2182,12 @@ class TestFetchTaxonomyData(TestCase):
                          'Xc',
                          'V',
                           ]
-        tax_data = fetch_taxonomy_data(self.test_taxonomy_page)
+        tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
         taxonomy=[row[1] for row in tax_data]
         self.assertEqual(expected_tax, taxonomy)
 
     def test_tax_site_pull(self):
-        expected_line = '      1 Ceres             -          G      7G  G0 7I G?  2I CvB    65  -   -   C   s   C   C   C   a  -                     '
-        test_page=fetch_taxonomy_page
-        with open(test_page,'r') as f:
-            first_line = f.readline()
-        self.assertEqual(expected_line, first_line)
-            
+        expected_line = ['1','G',"T","PDS6","7G"]
+        tax_data = fetch_taxonomy_page()
+        self.assertEqual(expected_line, tax_data[0])
 
