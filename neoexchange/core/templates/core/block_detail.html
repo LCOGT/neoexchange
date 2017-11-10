@@ -84,24 +84,44 @@
                     </table>
                 </div>
                 <div class="four columns">
-                    <h5 class="section-title">Controls</h5>
+                    <h5 class="section-title">{% if  object.block_set.all%}Blocks{% else%}Controls{% endif %}</h5>
                         {% if request.user.is_authenticated %}
-                          {% if object.num_observed > 0 and object.num_frames < 10 and object.num_candidates > 0 %}
-                            <a class="button button-primary" href="{% url 'block-ast' object.id %}" id="analyse-btn">Analyse Images</a><br/>
-                            {% if not object.reported %}
-                            <a class="button button-primary" href="{% url 'block-report' object.id %}">Report</a><br/>
-                            {% endif %}
-                            {% if object.num_candidates > 0 %}
-                              <a class="button button-primary" href="{% url 'view-candidates' object.id %}">Candidates ({{object.num_candidates}})</a><br/>
-                            {% endif %}
-                          {% elif object.reported %}
-                            <a class="button button-primary" href="{% url 'block-report-mpc' object.id %}">View report in MPC format</a><br/>
-                            <a class="button button-primary" href="{% url 'upload-report' object.id %}">Upload MPC format</a>
-                          {% elif not object.reported %}
-                          <a class="button button-primary" href="{% url 'report-block' object.id %}">Mark as Reported</a><br/>
-                          {%else%}
-                          No actions available
-                          {% endif %}
+                        <ul class="block-status">
+                        {% for blk in object.block_set.all %}
+                        <li class="{% cycle 'odd' 'even' %}">
+                            <span class="block-status-line">
+                              <span class="block-status-item">
+                              {% if blk.reported and blk.when_observed %}
+                              <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
+                              {% elif blk.when_observed and not blk.reported %}
+                              <i class="fa fa-clock-o fa-lg" style="color: #FF9933;"></i>
+                              {% elif not blk.reported and not blk.when_observed and blk.active %}
+                              <i class="fa fa-circle-o fa-lg" style="color:#263c6f;"></i>
+                              {% elif not blk.reported and not blk.when_observed and  not blk.active %}
+                              <i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
+                              {% endif %}
+                              </span>
+                              <span class="block-status-item">{{blk.block_start|date:"c"}}</span>
+                              <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
+                              <span class="block-status-item">{{blk.block_end|date:"c"}}</span>
+                              {% if blk.num_observed > 0 and blk.num_frames < 10 and blk.num_candidates > 0 %}
+                              <div class="block-control"><a href="{% url 'block-ast' blk.id %}" id="analyse-btn">Analyse Images</a></div>
+                              {% if not blk.reported %}
+                              <div class="block-control"><a href="{% url 'block-report' blk.id %}">Report</a></div>
+                              {% endif %}
+                              {% if blk.num_candidates > 0 %}
+                              <div class="block-control"><a href="{% url 'view-candidates' blk.id %}">Candidates ({{blk.num_candidates}})</a></div>
+                              {% endif %}
+                              {% elif blk.reported %}
+                              <div class="block-control"><a href="{% url 'block-report-mpc' blk.id %}">View report in MPC format</a></div>
+                              <div class="block-control"><a href="{% url 'upload-report' blk.id %}">Upload MPC format</a></div>
+                              {% elif not blk.reported %}
+                              <div class="block-control"><a href="{% url 'report-block' blk.id %}">Mark as Reported</a></div>
+                              {% endif %}
+                            </span>
+                        </li>
+                        {% endfor %}
+                      </ul>
                         {% else %}
                         <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
                         {% endif %}
