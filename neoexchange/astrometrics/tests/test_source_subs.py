@@ -24,7 +24,7 @@ import mock
 from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
-from neox.tests.mocks import MockDateTime, mock_expand_cadence, mock_requests_post
+from neox.tests.mocks import MockDateTime, mock_requests_post
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
@@ -1877,8 +1877,8 @@ class TestMakeCadence(TestCase):
         self.maxDiff = None
 
 
-    @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
-    def test_cadence_valhalla(self):
+    @mock.patch('astrometrics.sources_subs.requests.post', side_effect=mock_requests_post)
+    def test_cadence_valhalla(self, mock_get):
         expected = {
                      u'group_id': u'3122_Q59-20170815',
                      u'ipp_value': 1.0,
@@ -1994,8 +1994,8 @@ class TestMakeCadence(TestCase):
         for key in ur.keys():
             self.assertEqual(expected[key], ur[key])
 
-    @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
-    def test_cadence_wrapper(self):
+    @mock.patch('astrometrics.sources_subs.requests.post', side_effect=mock_requests_post)
+    def test_cadence_wrapper(self, mock_get):
         expected = {
                      u'group_id': u'3122_Q59-20170815',
                      u'ipp_value': 1.0,
@@ -2235,7 +2235,7 @@ class TestMakeCadence(TestCase):
             self.assertEqual(expected[key], cadence_user_request[key])
 
     @mock.patch('astrometrics.sources_subs.requests.post', side_effect=mock_requests_post)
-    def test_expand_cadence(self, mock_get):
+    def test_expand_cadence_error(self, mock_get):
 
         expected = { u'group_id': [u'This field is required.'],
                      u'ipp_value': [u'This field is required.'],
