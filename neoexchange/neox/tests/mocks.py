@@ -754,16 +754,21 @@ def mock_requests_post(*args, **kwargs):
              u'operator': [u'This field is required.'],
              u'proposal': [u'This field is required.'],
              u'requests': [u'You must specify at least 1 request']}
-
+    no_tels_failure={u'non_field_errors': [u"Invalid instrument name '0M4-SCICAM-SBIG' at site=tfn, obs=Any, tel=Any. \nValid instruments include: "]}
 
     sub_json = kwargs['json']
     simulate_error = sub_json.get('trigger_error', False)
+    simulate_no_tels_error = sub_json.get('trigger_no_tels_error', False)
 
     if args[0] == cadence_url:
         if simulate_error == False:
             return MockResponse(cadence, 200)
         else:
-            return MockResponse(failure, 400)
+            if simulate_no_tels_error:
+                return MockResponse(no_tels_failure, 400)
+            else:
+                return MockResponse(failure, 400)
+
     elif args[0] == 'http://someotherurl.com/anothertest.json':
         return MockResponse({"key2": "value2"}, 200)
 

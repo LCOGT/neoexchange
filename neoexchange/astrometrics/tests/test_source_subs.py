@@ -2252,3 +2252,24 @@ class TestMakeCadence(TestCase):
 
         self.assertEqual(False, status)
         self.assertEqual(expected, cadence_user_request)
+
+    @mock.patch('astrometrics.sources_subs.requests.post', side_effect=mock_requests_post)
+    def test_make_cadence_no_tels_error(self, mock_get):
+
+        expected = {u'non_field_errors': [u"Invalid instrument name '0M4-SCICAM-SBIG' at site=tfn, obs=Any, tel=Any. \nValid instruments include: "]}
+
+        # Add extra flags in the user request to make the mock simulate an
+        # error of no working telescopes
+        user_request = { 'requests' : [{'cadence': {'end': '2017-11-11T18:00:00',
+                                                    'jitter': 0.25,
+                                                    'period': 1.0,
+                                                    'start': '2017-11-10T18:00:00'},
+                                        'location': {'site': 'tfn', 'telescope_class': '0m4'},
+                                       }],
+                         'trigger_error' : True,
+                         'trigger_no_tels_error' : True,
+                       }
+        status, cadence_user_request = expand_cadence(user_request)
+
+        self.assertEqual(False, status)
+        self.assertEqual(expected, cadence_user_request)
