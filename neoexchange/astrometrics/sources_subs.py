@@ -1351,7 +1351,16 @@ def parse_taxonomy_data(tax_text=None):
     '''Parses the online taxonomy database for targets and pulls a list
     of these targets back.
     '''
-
+    tax_scheme=['T',
+                'Ba',
+                'Td',
+                'H',
+                'S',
+                'B',
+                '3T',
+                '3B',
+                'BD',
+                ]
     tax_table=[]
     for line in tax_text:
         name=line[8:25]
@@ -1374,36 +1383,15 @@ def parse_taxonomy_data(tax_text=None):
             else:
                 obj_id=(chunks[2])
             #Build Taxonomy reference table. This is clunky. Better to search table for matching values first?
-            if chunks[3] != '-':
-                if chunks[19] != '-':
-                    chunks[4] = chunks[4] + "|"+ end
-                row=[obj_id,chunks[3],"T","PDS6",chunks[4]]
-                tax_table.append(row)
-            if chunks[5] != '-':
-                if chunks[19] != '-':
-                    chunks[6] = chunks[6] + "|"+ end
-                row=[obj_id,chunks[5],"Ba","PDS6",chunks[6]]
-                tax_table.append(row)
-            if chunks[7] != '-':
-                if chunks[19] != '-':
-                    chunks[8] = chunks[8] + "|"+ end
-                row=[obj_id,chunks[7],"Td","PDS6",chunks[8]]
-                tax_table.append(row)
-            if chunks[9] != '-':
-                if chunks[19] != '-':
-                    chunks[10] = chunks[10] + "|"+ end
-                row=[obj_id,chunks[9],"H","PDS6",chunks[10]]
-                tax_table.append(row)
-            if chunks[11] != '-':
-                if chunks[19] != '-':
-                    chunks[12] = chunks[12] + "|"+ end
-                row=[obj_id,chunks[11],"S","PDS6",chunks[12]]
-                tax_table.append(row)
-            if chunks[13] != '-':
-                if chunks[19] != '-':
-                    chunks[14] = chunks[14] + "|"+ end
-                row=[obj_id,chunks[13],"B","PDS6",chunks[14]]
-                tax_table.append(row)
+            index=range(1,7)
+            index=[2*x+1 for x in index]+[17]
+  #          print(index)
+            for i in index:
+                if chunks[i] != '-':
+                    if chunks[19] != '-':
+                        chunks[i+1] = chunks[i+1] + "|"+ end
+                    row=[obj_id,chunks[i],tax_scheme[(i-1)/2-1],"PDS6",chunks[i+1]]
+                    tax_table.append(row)
             if chunks[15] != '-':
                 if chunks[19] != '-':
                     out = end
@@ -1417,10 +1405,5 @@ def parse_taxonomy_data(tax_text=None):
                 else:
                     out=' '
                 row=[obj_id,chunks[16],"3B","PDS6",out]
-                tax_table.append(row)
-            if chunks[17] != '-':
-                if chunks[19] != '-':
-                    chunks[18] = chunks[18] + "|"+ end
-                row=[obj_id,chunks[17],"BD","PDS6",chunks[18]]
                 tax_table.append(row)
     return tax_table
