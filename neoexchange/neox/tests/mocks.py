@@ -644,6 +644,8 @@ def mock_requests_post(*args, **kwargs):
             return self.json_data
 
     cadence_url = urljoin(settings.PORTAL_REQUEST_API, 'cadence/')
+    portal_url = settings.PORTAL_REQUEST_API
+
     cadence = {
                  u'group_id': u'3122_Q59-20170815',
                  u'ipp_value': 1.0,
@@ -756,7 +758,7 @@ def mock_requests_post(*args, **kwargs):
              u'requests': [u'You must specify at least 1 request']}
     no_tels_failure={u'non_field_errors': [u"Invalid instrument name '0M4-SCICAM-SBIG' at site=tfn, obs=Any, tel=Any. \nValid instruments include: "]}
 
-    sub_json = kwargs['json']
+    sub_json = kwargs.get('json', {})
     simulate_error = sub_json.get('trigger_error', False)
     simulate_no_tels_error = sub_json.get('trigger_no_tels_error', False)
 
@@ -769,7 +771,7 @@ def mock_requests_post(*args, **kwargs):
             else:
                 return MockResponse(failure, 400)
 
-    elif args[0] == 'http://someotherurl.com/anothertest.json':
+    elif args[0] == portal_url:
         return MockResponse({"key2": "value2"}, 200)
 
     return MockResponse(None, 404)
