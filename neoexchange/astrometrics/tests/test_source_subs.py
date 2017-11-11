@@ -2254,7 +2254,7 @@ class TestMakeCadence(TestCase):
         self.assertEqual(expected, cadence_user_request)
 
     @mock.patch('astrometrics.sources_subs.requests.post', side_effect=mock_requests_post)
-    def test_make_cadence_no_tels_error(self, mock_get):
+    def test_expand_cadence_no_tels_error(self, mock_get):
 
         expected = {u'non_field_errors': [u"Invalid instrument name '0M4-SCICAM-SBIG' at site=tfn, obs=Any, tel=Any. \nValid instruments include: "]}
 
