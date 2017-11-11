@@ -32,6 +32,11 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
     make_userrequest, make_cadence_valhalla, make_cadence, expand_cadence
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
 
 class TestGoldstoneChunkParser(TestCase):
     '''Unit tests for the sources_subs.parse_goldstone_chunks() method'''
