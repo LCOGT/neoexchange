@@ -22,7 +22,7 @@ def compute_moon_sep(date, object_ra, object_dec, site='500'):
 
     return moon_obj_sep
 
-def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0, speed_cutoff=5.0, moon_sep_cutoff=30.0):
+def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0, speed_cutoff=5.0, moon_sep_cutoff=30.0, too=False):
     north_1m0_list = []
     north_0m4_list = []
     south_1m0_list = []
@@ -63,14 +63,17 @@ def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, fai
             status = "Too close to the Moon"
             schedule = False
         # Find number of active and inactive but unreported Blocks
-        num_active = Block.objects.filter(body=body, active=True, block_end__gte=run_datetime-timedelta(seconds=35*60)).count()
-        num_not_found = Block.objects.filter(body=body, active=False, num_observed__gte=1, reported=False).count()
-        if num_active >= 1:
-            status = "Already active"
-            schedule = False
-        if num_not_found >= 2:
-            status = "Tried twice already and not found"
-            schedule = False
+        if too == False:
+            num_active = Block.objects.filter(body=body, active=True, block_end__gte=run_datetime-timedelta(seconds=35*60)).count()
+            num_not_found = Block.objects.filter(body=body, active=False, num_observed__gte=1, reported=False).count()
+            if num_active >= 1:
+                status = "Already active"
+                schedule = False
+            if num_not_found >= 2:
+                status = "Tried twice already and not found"
+                schedule = False
+        else:
+            schedule = True
 
         print("%7s %s %s  V=%s  %s   %6.6s  %s" % ( body.current_name(), line_bits[1], line_bits[2], line_bits[3], line_bits[4], moon_sep_str, status))
         if schedule == False:
@@ -181,7 +184,7 @@ class Command(BaseCommand):
         self.stdout.write("Found %d newest bodies, %d available for scheduling" % (newest.count(), bodies.count()))
 
         north_list, south_list = filter_bodies(bodies, scheduling_date, options['bright_limit'], options['faint_limit'], \
-             options['spd_cutoff'], options['speed_limit'])
+             options['spd_cutoff'], options['speed_limit'],too=options['too'])
 
         # Dictionary *and* list comprehensions, super swank...
         north_targets = {tel_class : [str(x.current_name()) for x in north_list[tel_class]] for tel_class in north_list.keys()}
