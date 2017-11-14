@@ -1064,6 +1064,9 @@ def make_location(params):
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
         location['observatory'] = 'doma'
+    elif params['site_code'] == 'W87':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'domc'
     return location
 
 def make_target(params):
@@ -1155,6 +1158,10 @@ def make_single(params, ipp_value, request):
         "ipp_value": ipp_value,
         "proposal": params['proposal_id']
     }
+
+# If the ToO mode is set, change the observation_type
+    if params.get('too_mode', False) == True:
+        user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
 
     return user_request
 
@@ -1315,20 +1322,6 @@ def make_userrequest(elements, params):
     ipp_value = 1.00
     if params['site_code'] == 'V37':
         ipp_value = 1.00
-
-    user_request = {
-        "submitter": params['user_id'],
-        "requests": [request],
-        "group_id": params['group_id'],
-        "observation_type": "NORMAL",
-        "operator": "SINGLE",
-        "ipp_value": ipp_value,
-        "proposal": params['proposal_id']
-    }
-
-# If the ToO mode is set, change the observation_type
-    if params.get('too_mode', False) == True:
-        user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
