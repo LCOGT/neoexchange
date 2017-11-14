@@ -675,6 +675,7 @@ def record_block(tracking_number, params, form_data, body):
                          'period'   : params.get('period', None),
                          'jitter'   : params.get('jitter', None),
                          'timeused' : params.get('block_duration', None),
+                         'rapid_response' : params.get('too_mode', False),
                          'active'   : True,
                        }
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
