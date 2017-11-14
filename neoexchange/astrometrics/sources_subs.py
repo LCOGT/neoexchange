@@ -1335,18 +1335,37 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 def fetch_taxonomy_page(page=None):
-    '''Fetches Taxonomy data to be compared against database.'''
+    '''Fetches Taxonomy data to be compared against database. First from PDS, then from Binzel 2004'''
 
     if page == None:
         taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
         data_file = urllib2.urlopen(taxonomy_url)
         data_out=parse_taxonomy_data(data_file)
         data_file.close
+        binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
+        with open(binzel_taxonomy_page, 'r') as input_file:
+            binzel_out=parse_binzel_data(input_file)
+        data_out=data_out+binzel_out
     else:
         with open(page, 'r') as input_file:
             data_out = parse_taxonomy_data(input_file)
     return data_out
 
+def parse_binzel_data(tax_text=None):
+    '''Parses the Binzel taxonomy database for targets and pulls a list
+    of these targets back.
+    '''
+    tax_table=[]
+    for line in tax_text:
+        if line[0] !='#':
+            line=line.split('\n')
+            chunks=line[0].split(',')
+            if chunks[0] == '':
+                chunks[0] = chunks[2]
+            row=[chunks[0],chunks[4],"B","BZ04",chunks[10]]
+            tax_table.append(row)
+    return tax_table       
+    
 def parse_taxonomy_data(tax_text=None):
     '''Parses the online taxonomy database for targets and pulls a list
     of these targets back.

@@ -2191,3 +2191,7 @@ class TestFetchTaxonomyData(TestCase):
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
 
+    def test_binzel_pull(self):
+        expected_line = ['2002 EC','X:',"B","BZ04","*"]
+        tax_data = fetch_taxonomy_page()
+        self.assertEqual(expected_line, tax_data[-1])

@@ -102,6 +102,7 @@ TAX_SCHEME_CHOICES = (
 
 TAX_REFERENCE_CHOICES = (
                         ('PDS6','Neese, C., Ed., Asteroid Taxonomy V6.0. EAR-A-5-DDR-TAXONOMY-V6.0. NASA Planetary Data System, 2010.'),
+                        ('BZ04','Binzel, R. P., Rivkin, A. S., Stuart, J. S., Harris, A. W., Bus, S. J., and Burbine, T. H. (2004).'),
                      )
 
 class Proposal(models.Model):
