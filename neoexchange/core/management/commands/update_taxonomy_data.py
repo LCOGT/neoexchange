@@ -11,8 +11,7 @@ class Command(BaseCommand):
         self.stdout.write("==== Fetching Taxonomy Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         new_tax_data = fetch_taxonomy_page()
         for tax_id in new_tax_data:
-            resp = update_taxonomy(tax_id)
+            resp = update_taxonomy(tax_id,dbg=False)
             if resp:
                 msg = "Updated Taxonomy for %s" % tax_id[0]
                 self.stdout.write(msg)
-        

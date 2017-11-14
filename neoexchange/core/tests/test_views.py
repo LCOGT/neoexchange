@@ -42,9 +42,9 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id
+    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
 from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
 from core.forms import EphemQuery
 
 # Disable logging during testing
@@ -2796,3 +2796,52 @@ class Test_Generate_New_Candidate_Id(TestCase):
 
         self.assertEqual(expected_id, new_id)
         self.assertEqual(3, Body.objects.count())
+
+class Test_Add_New_Taxonomy_Data(TestCase):
+
+    def setUp(self):
+
+        params = { 'name' : '980',
+                   'provisional_name' : 'LNX0003',
+                   'origin' : 'L',
+                 }
+        self.body = Body.objects.create(pk=1,**params)
+
+        tax_params = {'body'          : self.body,
+                      'taxonomic_class' : 'S3',
+                      'tax_scheme'    :   'Ba',
+                      'tax_reference' : 'PDS6',
+                      'tax_notes'     : '7I',
+                      }
+        self.test_spectra = SpectralInfo.objects.create(pk=1, **tax_params)
+
+    def test_one_body(self):
+        expected_res = True
+        test_obj=['980','SU',"T","PDS6","7G"]
+        new_tax = update_taxonomy(test_obj)
+
+        self.assertEqual(expected_res, new_tax)
+
+    def test_new_target(self):
+        expected_res = False
+        test_obj=['4702','S',"B","PDS6","s"]
+        new_tax = update_taxonomy(test_obj)
+
+        self.assertEqual(expected_res, new_tax)
+
+    def test_same_data(self):
+        expected_res = False
+        test_obj=['980','S3',"Ba","PDS6","7I"]
+        new_tax = update_taxonomy(test_obj)
+
+        self.assertEqual(expected_res, new_tax)
+
+    def test_same_data_twice(self):
+        expected_res = False
+        test_obj=['980','SU',"T","PDS6","7G"]
+        new_tax = update_taxonomy(test_obj)
+        new_tax = update_taxonomy(test_obj)
+
+        self.assertEqual(expected_res, new_tax)
+
+
