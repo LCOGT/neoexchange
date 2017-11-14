@@ -270,6 +270,9 @@ class SpectralInfo(models.Model):
         verbose_name_plural = _('Spectroscopy Details')
         db_table = 'ingest_taxonomy'
 
+    def __unicode__(self):
+        return "%s is a %s-Type Asteroid" % (self.body.name, self.taxonomic_class)
+
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)

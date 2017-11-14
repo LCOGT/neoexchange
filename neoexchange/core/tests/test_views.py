@@ -2845,3 +2845,4 @@ class Test_Add_New_Taxonomy_Data(TestCase):
         self.assertEqual(expected_res, new_tax)
 
 
+
