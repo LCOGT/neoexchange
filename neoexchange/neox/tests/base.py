@@ -62,7 +62,7 @@ class FunctionalTest(StaticLiveServerTestCase):
         spectra_params2 = {'body'          : self.body,
                           'taxonomic_class' : 'S',
                           'tax_scheme'    :   'T',
-                          'tax_reference' : 'PDS6',
+                          'tax_reference' : 'BZ04',
                           }
         self.test_spectra2 = SpectralInfo.objects.create(pk=2, **spectra_params2)
 

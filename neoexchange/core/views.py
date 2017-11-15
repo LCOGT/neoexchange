@@ -1519,10 +1519,13 @@ def update_taxonomy(taxobj,dbg=False):
     try:
         body = Body.objects.get(name=obj_id)
     except:
-        if dbg == True:
-            print "No such Body as %s" % obj_id
-            print "number of bodies: %i" %body_all.count()
-        return False
+        try:
+            body = Body.objects.get(provisional_name=obj_id)
+        except:
+            if dbg == True:
+                print "No such Body as %s" % obj_id
+                print "number of bodies: %i" %body_all.count()
+            return False
     #Must be a better way to do this next bit, but I don't know what it is off the top of my head.
     check_tax = SpectralInfo.objects.filter(body=body,taxonomic_class=taxobj[1],tax_scheme=taxobj[2],tax_reference=taxobj[3],tax_notes=taxobj[4])
     if check_tax.count() != 0:

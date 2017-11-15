@@ -2817,7 +2817,7 @@ class Test_Add_New_Taxonomy_Data(TestCase):
 
     def test_one_body(self):
         expected_res = True
-        test_obj=['980','SU',"T","PDS6","7G"]
+        test_obj=['LNX0003','SU',"T","PDS6","7G"]
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
