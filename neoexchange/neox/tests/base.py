@@ -55,22 +55,23 @@ class FunctionalTest(StaticLiveServerTestCase):
                           'taxonomic_class' : 'Sq',
                           'tax_scheme'    :   'BD',
                           'tax_reference' : 'PDS6',
-                          'tax_notes'     : 'This is a test Body',
+                          'tax_notes'     : 'b',
                           }
         self.test_spectra = SpectralInfo.objects.create(pk=1, **spectra_params)
 
         spectra_params2 = {'body'          : self.body,
                           'taxonomic_class' : 'S',
-                          'tax_scheme'    :   'T',
+                          'tax_scheme'    :   'B',
                           'tax_reference' : 'BZ04',
+                          'tax_notes'     : '[5]',
                           }
         self.test_spectra2 = SpectralInfo.objects.create(pk=2, **spectra_params2)
 
         spectra_params3 = {'body'          : self.body,
                           'taxonomic_class' : 'Sa',
-                          'tax_scheme'    :   'S',
+                          'tax_scheme'    :   'T',
                           'tax_reference' : 'PDS6',
-                          'tax_notes'     : 'This is another test Body',
+                          'tax_notes'     : '7G',
                           }
         self.test_spectra3 = SpectralInfo.objects.create(pk=3, **spectra_params3)
 

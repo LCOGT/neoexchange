@@ -101,8 +101,8 @@ TAX_SCHEME_CHOICES = (
                      )
 
 TAX_REFERENCE_CHOICES = (
-                        ('PDS6','Neese, C., Ed., Asteroid Taxonomy V6.0. EAR-A-5-DDR-TAXONOMY-V6.0. NASA Planetary Data System, 2010.'),
-                        ('BZ04','Binzel, R. P., Rivkin, A. S., Stuart, J. S., Harris, A. W., Bus, S. J., and Burbine, T. H. (2004).'),
+                        ('PDS6','Neese, Asteroid Taxonomy V6.0. (2010).'),
+                        ('BZ04','Binzel, et al. (2004).'),
                      )
 
 class Proposal(models.Model):
@@ -265,6 +265,66 @@ class SpectralInfo(models.Model):
     tax_scheme          = models.CharField('Taxonomic Scheme',blank=True,choices=TAX_SCHEME_CHOICES, null=True,max_length=2)
     tax_reference       = models.CharField('Reference source for Taxonomic data',max_length=6,choices=TAX_REFERENCE_CHOICES,blank=True, null=True)
     tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=20,blank=True, null=True)
+
+    def make_readable_tax_notes(self):
+        text=self.tax_notes
+        text_out=''
+        if self.tax_reference == 'PDS6':
+            if self.tax_scheme in "T,Ba,Td,H,S,B":
+                if  text[0].isdigit:
+                    if text[1].isdigit():
+                        text_out=text_out + ' %s color indices were used.\n' % (text[0:2])
+                    else:
+                        text_out=text_out + ' %s color indices were used.\n' % (text[0])
+                if "G" in text:
+                    text_out=text_out + ' Used groundbased radiometric albedo.'
+                if "I" in text:
+                    text_out=text_out + ' Used IRAS radiometric albedo.'
+                if "A" in text:
+                    text_out=text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
+                if "S" in text:
+                    text_out=text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
+                if "s" in text:
+                    text_out=text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
+                if len(text) > 3:
+                    text_out=text_out + text
+            elif self.tax_scheme == "BD":
+                if "a" in text:
+                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
+                if "b" in text:
+                    text_out=text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+                if "c" in text:
+                    text_out=text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
+                if "d" in text:
+                    text_out=text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
+                if "e" in text:
+                    text_out=text_out + ' Visible and NIR: DeMeo et al. (2009).'
+                if "f" in text:
+                    text_out=text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
+                if "g" in text:
+                    text_out=text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
+                if "h" in text:
+                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
+                if "i" in text:
+                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+            else:
+                text_out=text_out + text
+        elif self.tax_reference == 'BZ04':
+            if "1" in text:
+                text_out=text_out + ' Spectra first published by Xu et al. (1995)'
+            if "2" in text:
+                text_out=text_out + ' Spectra first published by Bus and Binzel (2002a)'
+            if "3" in text:
+                text_out=text_out + ' Spectra first published by Binzel et al. (2001a)'
+            if "4" in text:
+                text_out=text_out + ' Spectra first published by Binzel et al. (2001b)'
+            if "5" in text:
+                text_out=text_out + ' Spectra first published by Binzel et al. (2004b)'
+            if "6" in text:
+                text_out=text_out + ' Spectra first published by Binzel et al. (2004a)'
+        else:
+                text_out=text_out + text
+        return text_out
 
     class Meta:
         verbose_name = _('Spectroscopy Detail')
