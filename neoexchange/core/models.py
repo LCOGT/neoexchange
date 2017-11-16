@@ -316,6 +316,10 @@ class SpectralInfo(models.Model):
         text_out=text_out+end
         return text_out
 
+    def give_target_name(self):
+        target=self.body.name
+        return target
+
     class Meta:
         verbose_name = _('Spectroscopy Detail')
         verbose_name_plural = _('Spectroscopy Details')
