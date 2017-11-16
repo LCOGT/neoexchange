@@ -111,8 +111,14 @@ class FrameAdmin(VersionAdmin):
 
 @admin.register(SpectralInfo)
 class SpectralInfoAdmin(VersionAdmin):
-    list_display = ('give_target_name', 'taxonomic_class', 'tax_scheme', 'tax_reference', 'make_readable_tax_notes')
-    list_filter = ('taxonomic_class', 'tax_scheme')
+
+    def body_name(self, obj):
+        return obj.body.current_name()
+
+    list_display = ('body_name', 'taxonomic_class', 'tax_scheme', 'tax_reference', 'make_readable_tax_notes')
+    list_filter = ('body_name','taxonomic_class', 'tax_scheme')
+
+    ordering = ('body_name',)
 
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
