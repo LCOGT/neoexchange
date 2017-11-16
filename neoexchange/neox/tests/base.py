@@ -63,7 +63,7 @@ class FunctionalTest(StaticLiveServerTestCase):
                           'taxonomic_class' : 'T',
                           'tax_scheme'    :   'H',
                           'tax_reference' : 'PDS6',
-                          'tax_notes'     : '7',
+                          'tax_notes'     : '7 | Other notes maybe.',
                           }
         self.test_spectra2 = SpectralInfo.objects.create(pk=2, **spectra_params2)
 

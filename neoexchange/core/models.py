@@ -269,7 +269,12 @@ class SpectralInfo(models.Model):
     def make_readable_tax_notes(self):
         text=self.tax_notes
         text_out=''
+        end=''
         if self.tax_reference == 'PDS6':
+            if "|" in text:
+                chunks=text.split('|')
+                text=chunks[0]
+                end =chunks[1]
             if self.tax_scheme in "T,Ba,Td,H,S,B":
                 if  text[0].isdigit():
                     if len(text) > 1:
@@ -289,8 +294,6 @@ class SpectralInfo(models.Model):
                     text_out=text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                 if "s" in text:
                     text_out=text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
-                if len(text) > 3:
-                    text_out=text_out + text
             elif self.tax_scheme == "BD":
                 if "a" in text:
                     text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
@@ -309,24 +312,8 @@ class SpectralInfo(models.Model):
                 if "h" in text:
                     text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
                 if "i" in text:
-                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
-            else:
-                text_out=text_out + text
-        elif self.tax_reference == 'BZ04':
-            if "1" in text:
-                text_out=text_out + ' Spectra first published by Xu et al. (1995)'
-            if "2" in text:
-                text_out=text_out + ' Spectra first published by Bus and Binzel (2002a)'
-            if "3" in text:
-                text_out=text_out + ' Spectra first published by Binzel et al. (2001a)'
-            if "4" in text:
-                text_out=text_out + ' Spectra first published by Binzel et al. (2001b)'
-            if "5" in text:
-                text_out=text_out + ' Spectra first published by Binzel et al. (2004b)'
-            if "6" in text:
-                text_out=text_out + ' Spectra first published by Binzel et al. (2004a)'
-        else:
-                text_out=text_out + text
+                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).' 
+        text_out=text_out+end
         return text_out
 
     class Meta:
