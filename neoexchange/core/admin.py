@@ -109,6 +109,10 @@ class FrameAdmin(VersionAdmin):
 
     ordering = ('-midpoint',)
 
+@admin.register(SpectralInfo)
+class SpectralInfoAdmin(VersionAdmin):
+    list_display = ('body.name', 'taxonomic_class', 'tax_scheme', 'tax_reference', 'make_readable_tax_notes')
+
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
 
@@ -216,5 +220,4 @@ admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
 admin.site.register(CatalogSources,CatalogSourcesAdmin)
 admin.site.register(Candidate,CandidateAdmin)
-admin.site.register(SpectralInfo)
 admin.site.register(PanoptesReport)
