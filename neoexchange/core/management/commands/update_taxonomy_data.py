@@ -14,6 +14,4 @@ class Command(BaseCommand):
             resp = update_taxonomy(tax_id,dbg=False)
             if resp:
                 msg = "Updated Taxonomy for %s" % tax_id[0]
-            else:
-                msg = "No objects needing updated Taxonomy."
-            self.stdout.write(msg)
+                self.stdout.write(msg)

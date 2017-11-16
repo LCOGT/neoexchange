@@ -2109,43 +2109,19 @@ class TestFetchTaxonomyData(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_targets(self):
-        expected_targets =  ['980',
-                             '980',
-                             '980',
-                             '980',
-                             '980',
-                             '1199',
-                             '2422',
-                             '3908',
-                             '3908',
-                             '3908',
-                             '3792',
-                             '3792',
-                             '3903',
-                             '3903',
-                             '4686',
-                             '4688',
-                             '4688',
-                             '4695',
-                             '4695',
-                             '4701',
-                             '4702',
-                             '4706',
-                             '4706',
-                             '4706',
-                             '4711',
-                             '4713',
-                             '4713',
-                             '4713',
-                             '4713',
-                             '4718',
-                             '4719',
-                             '1997 AC11',
-                             '1997 GL3'
+        expected_targets =  [['980','SU',"T","PDS6",'7G'],
+                             ['980','S3',"Ba","PDS6",'7I'],
+                             ['980','S',"Td","PDS6",'2I'],
+                             ['980','T',"H","PDS6",'65'],
+                             ['980','L',"B","PDS6",'s'],
+                             ['4713','A',"B","PDS6",'s'],
+                             ['4713','A',"3T","PDS6",' '],
+                             ['4713','Sl',"3B","PDS6",' '],
+                             ['4713','Sw',"BD","PDS6",'a'],
                             ]
         tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
-        targets=[row[0] for row in tax_data]
-        self.assertEqual(expected_targets, targets)
+        for line in expected_targets:
+            self.assertIn(line, tax_data)
 
     def test_tax(self):
         expected_tax =  ['SU',
@@ -2191,7 +2167,7 @@ class TestFetchTaxonomyData(TestCase):
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
 
-    def test_binzel_pull(self):
-        expected_line = ['2002 EC','X:',"B","BZ04","*"]
-        tax_data = fetch_taxonomy_page()
-        self.assertEqual(expected_line, tax_data[-1])
+    #def test_binzel_pull(self):
+    #    expected_line = ['2002 EC','X:',"B","BZ04","*"]
+    #    tax_data = fetch_taxonomy_page()
+    #    self.assertEqual(expected_line, tax_data[-1])

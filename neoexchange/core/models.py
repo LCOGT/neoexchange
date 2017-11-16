@@ -272,8 +272,11 @@ class SpectralInfo(models.Model):
         if self.tax_reference == 'PDS6':
             if self.tax_scheme in "T,Ba,Td,H,S,B":
                 if  text[0].isdigit:
-                    if text[1].isdigit():
-                        text_out=text_out + ' %s color indices were used.\n' % (text[0:2])
+                    if len(text) > 1:
+                        if text[1].isdigit():
+                            text_out=text_out + ' %s color indices were used.\n' % (text[0:2])
+                        else:
+                            text_out=text_out + ' %s color indices were used.\n' % (text[0])
                     else:
                         text_out=text_out + ' %s color indices were used.\n' % (text[0])
                 if "G" in text:

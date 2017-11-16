@@ -1342,10 +1342,11 @@ def fetch_taxonomy_page(page=None):
         data_file = urllib2.urlopen(taxonomy_url)
         data_out=parse_taxonomy_data(data_file)
         data_file.close
-        binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
-        with open(binzel_taxonomy_page, 'r') as input_file:
-            binzel_out=parse_binzel_data(input_file)
-        data_out=data_out+binzel_out
+        ####Binzel_taxonomy_page appears to be completely included within PDS Version6.0
+        #binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
+        #with open(binzel_taxonomy_page, 'r') as input_file:
+        #    binzel_out=parse_binzel_data(input_file)
+        #data_out=data_out+binzel_out
     else:
         with open(page, 'r') as input_file:
             data_out = parse_taxonomy_data(input_file)
@@ -1376,8 +1377,7 @@ def parse_taxonomy_data(tax_text=None):
                 'H',
                 'S',
                 'B',
-                '3T',
-                '3B',
+                '3T/3B',
                 'BD',
                 ]
     tax_table=[]

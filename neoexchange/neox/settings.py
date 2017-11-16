@@ -325,4 +325,4 @@ if not CURRENT_PATH.startswith('/var/www'):
         if "local_settings" not in str(e):
             raise e
 
-#print DATABASES['default']
+print DATABASES['default']
