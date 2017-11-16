@@ -116,9 +116,7 @@ class SpectralInfoAdmin(VersionAdmin):
         return obj.body.current_name()
 
     list_display = ('body_name', 'taxonomic_class', 'tax_scheme', 'tax_reference', 'make_readable_tax_notes')
-    list_filter = ('body_name','taxonomic_class', 'tax_scheme')
-
-    ordering = ('body_name',)
+    list_filter = ('taxonomic_class', 'tax_scheme')
 
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
