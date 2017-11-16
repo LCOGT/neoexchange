@@ -78,6 +78,7 @@ class BodyDetailsTest(FunctionalTest):
                      'Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).',
                      '7 color indices were used.',
                      '7 color indices were used. Used groundbased radiometric albedo.',
+                     'Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                      ]
         for line in testlines:
             self.check_for_row_in_table('id_spectralinfo', line)

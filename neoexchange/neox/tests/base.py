@@ -71,9 +71,17 @@ class FunctionalTest(StaticLiveServerTestCase):
                           'taxonomic_class' : 'Sa',
                           'tax_scheme'    :   'T',
                           'tax_reference' : 'PDS6',
-                          'tax_notes'     : '7G',
+                          'tax_notes'     : '2G',
                           }
         self.test_spectra3 = SpectralInfo.objects.create(pk=3, **spectra_params3)
+
+        spectra_params4 = {'body'          : self.body,
+                          'taxonomic_class' : 'L',
+                          'tax_scheme'    :   'B',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : 'S',
+                          }
+        self.test_spectra4 = SpectralInfo.objects.create(pk=4, **spectra_params4)
 
     def insert_test_proposals(self):
 

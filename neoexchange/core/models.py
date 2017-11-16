@@ -271,7 +271,7 @@ class SpectralInfo(models.Model):
         text_out=''
         if self.tax_reference == 'PDS6':
             if self.tax_scheme in "T,Ba,Td,H,S,B":
-                if  text[0].isdigit:
+                if  text[0].isdigit():
                     if len(text) > 1:
                         if text[1].isdigit():
                             text_out=text_out + ' %s color indices were used.\n' % (text[0:2])
