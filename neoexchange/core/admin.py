@@ -113,7 +113,7 @@ class FrameAdmin(VersionAdmin):
 class SpectralInfoAdmin(VersionAdmin):
     list_display = ('give_target_name', 'taxonomic_class', 'tax_scheme', 'tax_reference', 'make_readable_tax_notes')
     ordering = ('-give_target_name',)
-    list_filter = ('give_target_name', 'taxonomic_class', 'tax_scheme')
+    list_filter = ('taxonomic_class', 'tax_scheme')
 
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
