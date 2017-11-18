@@ -481,8 +481,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         ok_to_schedule = False
 
     # Get period and jitter for cadence
-    period = data.get('period','')
-    jitter = data.get('jitter','')
+    period = data.get('period', None)
+    jitter = data.get('jitter', None)
 
     if period and jitter:
         '''Number of times the cadence request will run between start and end date'''
@@ -500,7 +500,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         total_time = total_time.total_seconds()/3600.0
 
     suffix = datetime.strftime(utc_date, '%Y%m%d')
-    if period != '' and jitter != '':
+    if period and jitter:
         suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
 
     resp = {
