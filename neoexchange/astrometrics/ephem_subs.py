@@ -1050,6 +1050,13 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(149, 04, 14.91)
         site_hgt = 1191.0
         site_name = 'LCO COJ Node 0m4b at Siding Spring'
+    elif site_code == 'CPT-AQWA-0M4A' or site_code == 'K99':
+# Latitude, longitude copid from K93
+        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.38)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) =  S.sla_daf2r(20, 48, 36.39)
+        site_hgt = 1807.0
+        site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
     else:
 # Obtain latitude, longitude of the observing site.
 # Reverse longitude to get the more normal East-positive convention
@@ -1218,7 +1225,7 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z17', 'Z21', 'Q58', 'Q59', 'T03', 'T04', 'W89']:
+    elif '-AQWA' in site or '-AQWB' in site or 'CLMA-0M4' in site or site in ['Z17', 'Z21', 'Q58', 'Q59', 'T03', 'T04', 'W89', 'V99', 'K99']:
         ha_pos_limit = 4.46 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 15.0
@@ -1247,6 +1254,8 @@ def return_LCOGT_site_codes_mapping():
                          'OGG-CLMA-0M4C' : 'T03',
                          'LSC-AQWA-0M4A' : 'W89',
                          'LSC-AQWB-0M4A' : 'W89',
+                         'ELP-AQWA-0M4A' : 'V99',
+                         'CPT-AQWA-0M4A' : 'K99',
                          'SQA-DOMA-0M8A' : 'G51'}
 
     return valid_site_codes
@@ -1292,7 +1301,7 @@ def get_sitecam_params(site):
     point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'T03', 'T04', 'Q58', 'Q59', 'V99']
+    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'T03', 'T04', 'Q58', 'Q59', 'V99', 'K99']
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':

@@ -93,6 +93,14 @@ class TestGetMountLimits(TestCase):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('TFN-AQWA-0M4A')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
+    def test_point4m_by_site7(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('LSC-AQWB-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site8(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('CPT-AQWA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
     def test_point4m_by_site_code(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z21')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
@@ -115,6 +123,18 @@ class TestGetMountLimits(TestCase):
 
     def test_point4m_by_site_code6(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z17')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code7(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('W89')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code8(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('V99')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code9(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('K99')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
     def test_point4m_by_site_code_lowercase(self):
@@ -1279,6 +1299,36 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site6(self):
         site_code = 'T03'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site7(self):
+        site_code = 'W89'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site8(self):
+        site_code = 'V99'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site9(self):
+        site_code = 'K99'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(1.139, pixel_scale)

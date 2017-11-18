@@ -593,6 +593,7 @@ class Frame(models.Model):
                         'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui',
                         'W89' : 'LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile',
                         'V99' : 'LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas',
+                        'K99' : 'LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa',
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
 
@@ -619,7 +620,10 @@ class Frame(models.Model):
                         'E10' : twom_string,
                         'F65' : twom_string,
                         'T04' : point4m_string,
-                        'T03' : point4m_string
+                        'T03' : point4m_string,
+                        'W89' : point4m_string,
+                        'V99' : point4m_string,
+                        'K99' : point4m_string,
                         }
         return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
 

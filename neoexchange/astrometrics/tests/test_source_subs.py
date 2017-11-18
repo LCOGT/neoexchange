@@ -1542,6 +1542,26 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_cpt_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'K99',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'exp_type':'EXPOSE',
+                            'site' : 'CPT',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
     def test_1m_sinistro_lsc_doma(self):
         expected_params = { 'binning': 1,
                             'filter': 'w',
