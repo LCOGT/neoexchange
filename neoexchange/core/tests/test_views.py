@@ -706,8 +706,8 @@ class TestSchedule_Check(TestCase):
                         'mid_time': '2016-04-06T14:05:00',
                         'ra_midpoint': 3.3121839503195525,
                         'dec_midpoint': -0.16049303559750142,
-                        'period' : '',
-                        'jitter' : ''
+                        'period' : None,
+                        'jitter' : None
                         }
 
         resp = schedule_check(data, self.body_mp)
