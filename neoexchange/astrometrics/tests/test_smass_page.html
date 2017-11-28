@@ -1,0 +1,368 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!-- saved from url=(0058)http://smass.mit.edu/catalog.php?sort=dat&mpcc=on&text=off -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Catalog of Asteroid Spectra</title>
+
+<meta name="ROBOTS" content="NOINDEX,NOFOLLOW">
+<meta name="KEYWORDS" content="data,asteroid,spectra">
+<meta name="DESCRIPTION" content="Available asteroid spectra, and
+references to the scientific literature describing results.">
+
+<!-- popup script from
+   HTML Code Tutorial - Popup Windows: The Basics
+   www.htmlcodetutorial.com -->
+<script type="text/javascript">
+<!--
+function popup(mylink, windowname)
+{
+if (! window.focus)return true;
+var href;
+if (typeof(mylink) == 'string')
+   href=mylink;
+else
+   href=mylink.href;
+window.open(href, windowname, 'width=350,height=150,scrollbars=no,toolbar=yes,location=no,directories=no,status=no,menubar=no,resizable=no,left=75,top=350');
+return false;
+}
+//-->
+</script>
+
+
+<style type="text/css" media="all">@import "_stylesheets/smasssite.css";</style>
+<style type="text/css" media="all">@import "_stylesheets/catalog.css";</style>
+<style type="text/css" media="print">@import "_stylesheets/printmedia.css";</style>
+<style type="text/css">
+#SECTIONCONTENT>p.withlist
+  {margin-bottom: 0;}
+#SECTIONCONTENT>ul
+  {margin-top:0;}
+dl dt
+  {padding-top: 0.5pc;
+   font-weight: bold;}
+dl dd
+  {padding-bottom: 0.5pc;}
+.emphasize
+  {background-color: #C99;
+   border: solid 3px black;
+   padding: 3px;}
+.bulletless
+  {list-style: none;}
+
+.oddrow
+  {background-color: #DDD;}
+.evenrow
+  {background-color: #FFF;}
+.mpnumber
+  {text-align: right;}
+.mpname
+  {text-align: left;}
+.provdesig
+  {text-align: left;}
+.datalinks
+  {text-align: center;}
+.refnumber
+  {text-align: center;}
+.inactive
+  {color: grey;}
+.error
+  {color: red;}
+.warning
+  {color: orange;}
+
+/* CSS for scrolling table with fixed header
+   by Paul O'B, CSS Advisor,
+   from "Test Your CSS Skills Number 22" at SitePoint Forums,
+   www.sitepoint.com */
+
+   The solution involves absolutely placing the content in the table
+   head above the actual table itself by creating a stacking context
+   on a parent element and moving the table head content into some
+   reserved space above the table.
+
+   As long as we are repeating the table head data on the table footer
+   then the cells will be sized correctly even if we have absolutely
+   removed the content from the head.
+
+   As we can't absolutely position a th element then an inner element
+   was nested (p element) inside the "th" element and that inner p
+   element instead was pushed above the table.
+
+   The table itself can't scroll so another wrapper is used around the
+   table and that is the element that carries the scrollbar and will
+   scroll the table within it.
+
+   The rest is just minor details and tidying up. */
+p
+  {margin: 0 0 1em;}
+table p
+  {margin: 0;}
+.scrollbox
+  {position: relative;
+   float: left;
+   margin: 0.5pc 0 2pc 2%;
+   padding: 3.25pc 0 0; /* padding-top is visible height of fixed header */
+   width: 95%;
+   height: 430px;
+   overflow: hidden;
+   background: #C99;
+   border: 2px inset #000;}
+.inner
+  {width: 100%;
+   height: 430px;
+   overflow: auto;}
+table
+  {width: 100%;
+   margin: 0 0 0 -1px;
+   border-collapse: collapse;}
+td
+  {padding: 0 5px 0 5px;
+   border: 1px solid #000;
+   text-align: center;}
+tfoot th, thead th
+  {font-weight: bold;
+   border: 1px solid #000;
+   padding: 0 3px 0 5px;
+   background: #C99;}
+thead th
+  {border: none;}
+thead tr p, thead tr ul
+  {position: absolute;
+   top: 0;}
+.last
+  {padding-right: 15px!important;}
+/* Next rule to hide the footer preserving needed effect on column widths: */
+tfoot
+  {visibility: hidden;
+   height: 0;
+   overflow: hidden;}
+
+/* The following rule definitely selects 
+   the header text for the minor planet number column,
+   but it refuses to text-align: right.
+   Has to do with the position: absolute rule
+div.scrollbox div.inner table#data thead tr th.mpnumber p a
+  {text-align: right;
+   color: green;} */
+
+table ul
+  {list-style: none;
+   margin: 0;
+   padding: 0;}
+li.sortlink
+  {font-weight: normal;}
+table a img
+  {border: none;
+   padding-bottom: 1px;
+   border-bottom: solid 2px blue;}
+table a:visited img
+  {border: none;
+   padding-bottom: 1px;
+   border-bottom: solid 2px purple;}
+
+</style>
+<!--[if lte IE 7]>
+<style type="text/css">
+.inner {overflow-x: hidden;}
+</style>
+<![endif]-->
+
+</head>
+ 
+<body>
+
+<div id="SITEHEADER">
+<p><a href="http://smass.mit.edu/home.html">Planetary Spectroscopy at MIT</a>
+</p>
+</div>
+
+<div id="SITENAV" class="catalog">
+   <p>Navigation menu:</p>
+   <ul>
+      <li class="catalog">
+      <a href="http://smass.mit.edu/catalog.php">Browse catalog of asteroid spectra</a></li>
+   </ul>
+</div>
+
+<div id="SECTIONCONTENT">
+
+<div id="TITLE">
+<h1>Browse Catalog of Asteroid Spectra</h1>
+<ul>
+<li><a href="http://smass.mit.edu/smass.html">SMASS</a>: Small Main-Belt Asteroid Spectroscopic Survey</li>
+<li>
+The <a href="http://smass.mit.edu/minus.html">MIT-UH-IRTF Joint Campaign</a>
+for NEO Spectral Reconnaissance
+</li>
+</ul>
+</div>
+
+<p>
+<span class="emphasize">
+Please read below, “<a href="http://smass.mit.edu/catalog.php?sort=dat&amp;mpcc=on&amp;text=off#USEANDCITE">How to Use and Cite These Data</a>” prior to proceeding.
+</span>
+</p>
+<p><span class="aside">MPC convention: <a href="http://smass.mit.edu/catalog.php?sort=dat&amp;mpcc=off&amp;text=off">off</a> | <span class="inactive">on</span></span></p>
+
+<div class="scrollbox"><div class="inner"><table id="data" cellspacing="0" cellpadding="0"><thead><tr>
+<th class="mpnumber"><ul><li>&nbsp;</li><li>Number</li><li class="sortlink"><a href="http://smass.mit.edu/catalog.php?sort=num&amp;mpcc=on&amp;text=off">[sort]</a></li></ul></th>
+<th class="mpname"><ul><li>&nbsp;</li><li>Name</li><li class="sortlink"><a href="http://smass.mit.edu/catalog.php?sort=nam&amp;mpcc=on&amp;text=off">[sort]</a></li></ul></th>
+<th class="provdesig"><ul><li>Provisional</li><li>Designation</li><li class="sortlink"><a href="http://smass.mit.edu/catalog.php?sort=pro&amp;mpcc=on&amp;text=off">[sort]</a></li></ul></th>
+<th class="datalinks"><ul><li>Data</li><li>Available</li></ul></th>
+<th class="datalinks"><ul><li>Data</li><li>Files</li></ul></th>
+<th class="refnumber"><ul><li>Data</li><li>Reference</li><li class="sortlink"><a href="http://smass.mit.edu/catalog.php?sort=ref&amp;mpcc=on&amp;text=off">[sort]</a></li></ul></th>
+<th><ul><li>Last</li><li>Updated</li><li class="sortlink"><span class="inactive">[sort]</span></li></ul></th>
+</tr></thead>
+<tfoot><tr> 
+<th class="mpnumber"><ul><li>&nbsp;</li><li>Number</li><li class="sortlink"><a href="http://smass.mit.edu/catalog.php?sort=num&amp;mpcc=on&amp;text=off">[sort]</a></li></ul></th>
+<th class="mpname"><ul><li>&nbsp;</li><li>Name</li><li class="sortlink"><a href="http://smass.mit.edu/catalog.php?sort=nam&amp;mpcc=on&amp;text=off">[sort]</a></li></ul></th>
+<th class="provdesig"><ul><li>Provisional</li><li>Designation</li><li class="sortlink"><a href="http://smass.mit.edu/catalog.php?sort=pro&amp;mpcc=on&amp;text=off">[sort]</a></li></ul></th>
+<th class="datalinks"><ul><li>Data</li><li>Available</li></ul></th>
+<th class="datalinks"><ul><li>Data</li><li>Files</li></ul></th>
+<th class="refnumber"><ul><li>Data</li><li>Reference</li><li class="sortlink"><a href="http://smass.mit.edu/catalog.php?sort=ref&amp;mpcc=on&amp;text=off">[sort]</a></li></ul></th>
+<th><ul><li>Last</li><li>Updated</li><li class="sortlink"><span class="inactive">[sort]</span></li></ul></th>
+</tr></tfoot>
+<tbody>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(302)</td><td class="mpname" rowspan="1">Clarissa</td><td class="provdesig" rowspan="1"></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp233/a000302.sp233"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp233/sp233_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(6053)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">1993 BW<sub>3</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp233/a006053.sp233"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp233/sp233_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="2">(96631)</td><td class="mpname" rowspan="2"></td><td class="provdesig" rowspan="2">1999 FP<sub>59</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp233/a096631.sp233"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp233/sp233_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp234/a096631.sp234"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp234/sp234_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[234]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(141670)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2002 JS<sub>100</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp235/a141670.sp235"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp235/sp235_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[235]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(142464)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2002 TC<sub>9</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp235/a142464.sp235"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp235/sp235_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[235]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(143624)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2003 HM<sub>16</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp236/a143624.sp236"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp236/sp236_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[236]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(190208)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2006 AQ</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp236/a190208.sp236"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp236/sp236_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[236]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(237805)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2002 CF<sub>26</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp235/a237805.sp235"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp235/sp235_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[235]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(265962)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2006 CG</td><td class="datalinks">Vis+NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp233/a265962.sp233"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp233/sp233_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="2">(416584)</td><td class="mpname" rowspan="2"></td><td class="provdesig" rowspan="2">2004 JB<sub>12</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp233/a416584.sp233"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp233/sp233_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp234/a416584.sp234"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp234/sp234_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[234]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(422699)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 PD<sub>3</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp233/a422699.sp233"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp233/sp233_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2017 RL</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp236/au2017RL.sp236.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp236/sp236_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[236]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(96631)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">1999 FP<sub>59</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp232/a096631.sp232.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(143992)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2004 AF</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp232/a143992.sp232.tx"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(242211)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2003 QB<sub>90</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp232/a242211.sp232.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(416584)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2004 JB<sub>12</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp232/a416584.sp232"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2017 MB<sub>1</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp232/au2017MB1.sp232.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2017 MC<sub>4</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp232/au2017MC4.sp232.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(2329)</td><td class="mpname" rowspan="1">Orthos</td><td class="provdesig" rowspan="1">1976 WA</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp230/a002329.sp230.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp230/sp230_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[230]</a></td><td>2017-07-17</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(11398)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">1998 YP<sub>11</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp231/a011398.sp231.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp231/sp231_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[231]</a></td><td>2017-07-17</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(143404)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2003 BD<sub>44</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp229/a143404.sp229.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp229/sp229_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[229]</a></td><td>2017-07-17</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(190166)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2005 UP<sub>156</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp230/a190166.sp230.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp230/sp230_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[230]</a></td><td>2017-07-17</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(250620)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2005 GE<sub>59</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp229/a250620.sp229.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp229/sp229_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[229]</a></td><td>2017-07-17</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(370307)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2002 RH<sub>52</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp229/a370307.sp229.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp229/sp229_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[229]</a></td><td>2017-07-17</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(388838)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2008 EZ<sub>5</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp229/a388838.sp230.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp229/sp230_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[230]</a></td><td>2017-07-17</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(484795)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2009 DE<sub>47</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp230/a484795.sp230.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp230/sp230_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[230]</a></td><td>2017-07-17</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(488645)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2003 OV</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp229/au2003OV.sp229.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp229/sp229_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[229]</a></td><td>2017-07-17</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2017 CR<sub>32</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp229/au2017CR32.sp229.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp229/sp229_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[229]</a></td><td>2017-07-17</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2017 CS</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp231/au2017CS.sp231.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp231/sp231_plot.pd"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[231]</a></td><td>2017-07-17</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(4179)</td><td class="mpname" rowspan="1">Toutatis</td><td class="provdesig" rowspan="1">1989 AC</td><td class="datalinks">Vis+NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp228/a004179.sp228.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp228/sp228_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[228]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(5587)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">1990 SB</td><td class="datalinks">Vis+NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a005587.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(5653)</td><td class="mpname" rowspan="1">Camarillo</td><td class="provdesig" rowspan="1">1992 WD<sub>5</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp225/a005653.sp225.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp225/sp225_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[225]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(7341)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">1991 VK</td><td class="datalinks">Vis+NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a007341.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(7343)</td><td class="mpname" rowspan="1">Ockeghem</td><td class="provdesig" rowspan="1">1992 GE<sub>2</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/a007343.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(24447)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 QY<sub>1</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp225/a024447.sp225.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp225/sp225_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[225]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(36831)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 SD<sub>101</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a036831.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(76818)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 RG<sub>79</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/a076818.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(105406)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 QN<sub>150</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a105406.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(106589)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 WN<sub>107</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp225/a106589.sp225.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp225/sp225_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[225]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(114960)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2003 QZ<sub>60</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/a114960.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(152563)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">1992 BF</td><td class="datalinks">Vis+NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a152563.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(177287)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2003 WF<sub>166</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a177287.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(190541)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 RO<sub>77</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a190541.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(203217)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2001 FX<sub>9</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/a203217.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(226514)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2003 UX<sub>34</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp225/a226514.sp225.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp225/sp225_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[225]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(265482)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2005 EE</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp227/a265482.sp227.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp227/sp227_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[227]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(326683)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2002 WP</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp225/a326683.sp225.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp225/sp225_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[225]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="2">(413002)</td><td class="mpname" rowspan="2"></td><td class="provdesig" rowspan="2">1999 VG<sub>22</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a413002.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp225/a413002.sp225.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp225/sp225_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[225]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(433953)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">1997 XR<sub>2</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a433953.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">(438955)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2010 LN<sub>14</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp227/a438955.sp227.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp227/sp227_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[227]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(443103)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2013 WT<sub>67</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp228/a443103.sp228.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp228/sp228_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[228]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="2">(468583)</td><td class="mpname" rowspan="2"></td><td class="provdesig" rowspan="2">2007 LS</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/a468583.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp225/a468583.sp225.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp225/sp225_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[225]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">(475665)</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2006 VY<sub>13</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/a475665.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 CE<sub>59</sub></td><td class="datalinks">Vis+NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp228/au2000CE59.sp228.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp228/sp228_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[228]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2005 TF</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/au2005TF.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2005 WS<sub>3</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/au2005WS3.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2011 UU<sub>106</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp224/au2011UU106.sp224.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp224/sp224_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[224]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2011 WO<sub>41</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp228/au2011WO41.sp228.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp228/sp228_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[228]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2014 AD<sub>17</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/au2014AD17.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2015 BN<sub>509</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp227/au2015BN509.sp227.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp227/sp227_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[227]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2016 NL<sub>15</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/au2016NL15.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2016 PR<sub>8</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/au2016PR8.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2016 UE<sub>101</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/au2016UE101.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2016 UU<sub>80</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp227/au2016UU80.sp227.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp227/sp227_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[227]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2016 XH<sub>1</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp225/au2016XH1.sp225.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp225/sp225_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[225]</a></td><td>2017-03-15</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2016 YK</td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp226/au2016YK.sp226.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp226/sp226_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[226]</a></td><td>2017-03-15</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2017 DA<sub>36</sub></td><td class="datalinks">NIR</td><td class="datalinks"><a href="http://smass.mit.edu/data/spex/sp228/au2017DA36.sp228.txt"><img src="./test_smass_page_files/tabulated.png" alt="tabulated data file"></a> <a href="http://smass.mit.edu/data/spex/sp228/sp228_plot.pdf"><img src="./test_smass_page_files/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="http://smass.mit.edu/minus.html#unpublished">sp[228]</a></td><td>2017-03-15</td></tr>
+</tbody>
+</table></div></div>
+<p><span class="aside">Catalog last updated 2017-09-25 | <a href="http://smass.mit.edu/catalog.php?sort=dat&amp;mpcc=off&amp;text=on" onclick="return popup(this, &#39;popup02&#39;)">
+Generate downloadable summary text file</a>
+</span></p>
+<h2><a name="USEANDCITE">How to Use These Data</a></h2>
+
+<p class="withlist">
+Data files:
+</p>
+<ul class="bulletless">
+<li>
+<img src="./test_smass_page_files/tabulated.png" alt="icon for tabulated data">
+= data values as ASCII text file.
+“Vis” and “NIR” refer to
+visible and near-IR wavelengths, respectively.
+</li>
+<li>
+<img src="./test_smass_page_files/graph.png" alt="icon for graph of data">
+= graph of spectrum, .pdf format
+   <span class="aside">
+   (requires
+   <a href="http://www.adobe.com/products/acrobat/readstep2.html">Acrobat Reader</a>.)
+   </span>
+</li>
+</ul>
+
+<p>
+To download a data file,
+right-click on its icon in the table and choose
+“Save Link As...” or
+“Save Target As...”.
+<br>
+(Mac users with single-button mouse, use &lt;CTRL&gt;-click.)
+</p>
+<p>
+“Last Updated” is the date that
+the spectrum was last added or most recently modified.
+</p>
+
+<h2>How to Cite These Data</h2>
+
+<p>
+To find the published or unpublished reference for a spectrum,
+click its “Data Reference” link.
+</p>
+
+<p>
+Unpublished spectra made available here are considered to be in the
+public domain and may be freely used for any purpose.
+We welcome collaboration opportunities,
+but there is no pre-condition for collaboration for use of these data.
+(<a href="http://smass.mit.edu/minus.html#unpublished">Requested citation and acknowledgement</a>)
+</p>
+
+
+<div id="FOOTER">
+
+   <ul>
+      <li class="validator">
+      <a href="http://validator.w3.org/check?uri=referer"><img src="./test_smass_page_files/valid-html401" alt="Valid HTML 4.01 Strict" height="31" width="88"></a>
+      </li>
+      <li>
+      Page last modified 2012 Jul 25
+      </li>
+   </ul>
+
+</div>
+</div>
+
+
+
+</body></html>

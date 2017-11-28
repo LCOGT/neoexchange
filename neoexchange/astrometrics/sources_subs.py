@@ -1427,3 +1427,11 @@ def parse_taxonomy_data(tax_text=None):
                 row=[obj_id,chunks[16],"3B","PDS6",out]
                 tax_table.append(row)
     return tax_table
+
+def fetch_smass_page(page=None):
+    '''Fetches SMASS spectra to be compared against database.'''
+
+    if page == None:
+        smass_url = 'http://smass.mit.edu/catalog.php?sort=dat&mpcc=on&text=off'
+    else:
+    return data_out

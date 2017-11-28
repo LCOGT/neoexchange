@@ -31,7 +31,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page
+    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page,fetch_smass_page
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -2186,7 +2186,17 @@ class TestFetchTaxonomyData(TestCase):
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
 
-    #def test_binzel_pull(self):
-    #    expected_line = ['2002 EC','X:',"B","BZ04","*"]
-    #    tax_data = fetch_taxonomy_page()
-    #    self.assertEqual(expected_line, tax_data[-1])
+class TestFetchPreviousSpectra(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored, partial version of the PDS Taxonomy Database
+        #test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
+        #self.test_taxonomy_page = test_fh
+        #test_fh.close()
+        self.test_smass_page = os.path.join('astrometrics', 'tests', 'test_smass_page.html')
+
+    def test_basics(self):
+        expected_length = 33
+        targets = fetch_smass_page(self.test_smass_page)
+
+        self.assertEqual(expected_length, len(targets))
