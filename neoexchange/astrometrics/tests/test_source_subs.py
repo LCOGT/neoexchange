@@ -31,7 +31,8 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page,fetch_smass_targets
+    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page,fetch_smass_targets,\
+    fetch_manos_targets
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -2193,11 +2194,21 @@ class TestFetchPreviousSpectra(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_smass_page.html'), 'r')
         self.test_smass_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+        test_fh2 = open(os.path.join('astrometrics', 'tests', 'test_manos_page.html'), 'r')
+        self.test_manos_page = BeautifulSoup(test_fh2, "html.parser")
+        test_fh2.close()
 
-    def test_basics(self):
+    def test_smass_basics(self):
         expected_length = 16
         page = self.test_smass_page
         targets = fetch_smass_targets(page)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_manos_basics(self):
+        expected_length = 16
+        page = self.test_manos_page
+        targets = fetch_manos_targets(page)
 
         self.assertEqual(expected_length, len(targets))
 
@@ -2215,3 +2226,11 @@ class TestFetchPreviousSpectra(TestCase):
         smass_data = fetch_smass_targets(self.test_smass_page)
         for line in expected_targets:
             self.assertIn(line, smass_data)
+
+    def test_smass_site_pull(self):
+        expected_line = ['302'   ,'NIR',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25']
+        smass_data = fetch_smass_targets()
+        self.assertEqual(expected_line, smass_data[0])
+
+
+

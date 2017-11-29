@@ -1431,14 +1431,14 @@ def parse_taxonomy_data(tax_text=None):
 def fetch_smass_page():
     '''Fetches the smass list of spectral targets'''
 
-    smass_url = 'http://smass.mit.edu/catalog.php?sort=dat&mpcc=on&text=off'
+    smass_url = 'http://smass.mit.edu/catalog.php?sort=dat&mpcc=off&text=off'
 
     page = fetchpage_and_make_soup(smass_url)
 
     return page
 
 def fetch_smass_targets(page=None):
-    '''Parses the smass webpage for upcoming radar targets and returns a list
+    '''Parses the smass webpage for spectroscopy results and returns a list
     of these targets back along with links to data files.
     Takes either a BeautifulSoup page version of the SMASS target page (from
     a call to fetch_smass_page() - to allow  standalone testing) or  calls
@@ -1459,7 +1459,6 @@ def fetch_smass_targets(page=None):
             targets_table = tables[0]
             rows = targets_table.find_all('tr')
             if len(rows) > 1:
-                #print rows
                 for row in rows[2:]:
                     mpnum = row.find_all('td', class_="mpnumber")
                     provdes = row.find_all('td', class_="provdesig")
@@ -1491,8 +1490,18 @@ def fetch_smass_targets(page=None):
                     ref=ref.strip()
                     target_object=[target_name,t_wav,t_link,ref,date]
                     targets.append(target_object)
-  #          else:
-  #              logger.warn("No targets found in Arecibo page")
-    print targets
+
     return targets
+
+def fetch_manos_targets(page=None):
+    '''Parses the manos webpage for spectroscopy results and returns a list
+    of these targets back along with links to data files when present.
+    Takes either a BeautifulSoup page version of the MANOS target page (from
+    a call to fetch_manos_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    '''
+    targets = []
+
+    return targets
+
 
