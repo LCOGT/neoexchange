@@ -31,7 +31,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page,fetch_smass_page
+    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page,fetch_smass_targets
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -2190,13 +2190,28 @@ class TestFetchPreviousSpectra(TestCase):
 
     def setUp(self):
         # Read and make soup from the stored, partial version of the PDS Taxonomy Database
-        #test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
-        #self.test_taxonomy_page = test_fh
-        #test_fh.close()
-        self.test_smass_page = os.path.join('astrometrics', 'tests', 'test_smass_page.html')
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_smass_page.html'), 'r')
+        self.test_smass_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
 
     def test_basics(self):
-        expected_length = 33
-        targets = fetch_smass_page(self.test_smass_page)
+        expected_length = 16
+        page = self.test_smass_page
+        targets = fetch_smass_targets(page)
 
         self.assertEqual(expected_length, len(targets))
+
+    def test_targets(self):
+        expected_targets =  [['302'   ,'NIR',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25'],
+                             ['6053'  ,'NIR',"http://smass.mit.edu/data/spex/sp233/a006053.sp233.txt","sp[233]",'2017-09-25'],
+                             ['96631' ,'NIR',"http://smass.mit.edu/data/spex/sp233/a096631.sp233.txt","sp[233]",'2017-09-25'],
+                             ['96631' ,'NIR',"http://smass.mit.edu/data/spex/sp234/a096631.sp234.txt","sp[234]",'2017-09-25'],
+                             ['265962','Vis+NIR',"http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt","sp[233]",'2017-09-25'],
+                             ['416584','NIR',"http://smass.mit.edu/data/spex/sp233/a416584.sp233.txt","sp[233]",'2017-09-25'],
+                             ['416584','NIR',"http://smass.mit.edu/data/spex/sp234/a416584.sp234.txt","sp[234]",'2017-09-25'],
+                             ['422699','NIR',"http://smass.mit.edu/data/spex/sp233/a422699.sp233.txt","sp[233]",'2017-09-25'],
+                             ['2006 UY64','NIR',"http://smass.mit.edu/data/spex/sp212/au2006uy64.sp212.txt","sp[212]",'2015-12-02'],
+                            ]
+        smass_data = fetch_smass_targets(self.test_smass_page)
+        for line in expected_targets:
+            self.assertIn(line, smass_data)

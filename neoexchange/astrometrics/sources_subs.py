@@ -1428,10 +1428,71 @@ def parse_taxonomy_data(tax_text=None):
                 tax_table.append(row)
     return tax_table
 
-def fetch_smass_page(page=None):
-    '''Fetches SMASS spectra to be compared against database.'''
+def fetch_smass_page():
+    '''Fetches the smass list of spectral targets'''
 
-    if page == None:
-        smass_url = 'http://smass.mit.edu/catalog.php?sort=dat&mpcc=on&text=off'
-    else:
-    return data_out
+    smass_url = 'http://smass.mit.edu/catalog.php?sort=dat&mpcc=on&text=off'
+
+    page = fetchpage_and_make_soup(smass_url)
+
+    return page
+
+def fetch_smass_targets(page=None):
+    '''Parses the smass webpage for upcoming radar targets and returns a list
+    of these targets back along with links to data files.
+    Takes either a BeautifulSoup page version of the SMASS target page (from
+    a call to fetch_smass_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    '''
+
+    if type(page) != BeautifulSoup:
+        page = fetch_smass_page()
+
+    targets = []
+
+    if type(page) == BeautifulSoup:
+        # Find the table, make sure there is only one
+        tables = page.find_all('table')
+        if len(tables) != 1:
+            logger.warn("Unexpected number of tables found on SMASS page (Found %d)" % len(tables))
+        else:
+            targets_table = tables[0]
+            rows = targets_table.find_all('tr')
+            if len(rows) > 1:
+                #print rows
+                for row in rows[2:]:
+                    mpnum = row.find_all('td', class_="mpnumber")
+                    provdes = row.find_all('td', class_="provdesig")
+                    data = row.find_all('td', class_="datalinks")
+                    ref = row.find_all('td', class_="refnumber last")
+                    items = row.find_all('td')
+                    if len(mpnum) > 0:
+                        target_name = mpnum[0].text
+                        target_name = target_name.strip()
+                        if target_name == '':
+                            target_name = provdes[0].text
+                            target_name = target_name.strip()
+                    t_wav = data[0].text
+                    t_wav = t_wav.strip()
+                    t_link = row.find_all('a')
+                    t_link= "http://smass.mit.edu/"+t_link[0]['href']
+                    if t_link[-4:] != ".txt":
+                        if t_link[-3:] == ".tx":
+                            t_link = t_link + "t"
+                        elif t_link[-2:] == ".t":
+                            t_link = t_link + "xt"
+                        elif t_link[-1:] == ".":
+                            t_link = t_link + "txt"
+                        else:
+                            t_link = t_link + ".txt"
+                    date=items[-1].text
+                    date=date.strip()
+                    ref=ref[0].text
+                    ref=ref.strip()
+                    target_object=[target_name,t_wav,t_link,ref,date]
+                    targets.append(target_object)
+  #          else:
+  #              logger.warn("No targets found in Arecibo page")
+    print targets
+    return targets
+
