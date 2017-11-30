@@ -2228,14 +2228,14 @@ class TestFetchPreviousSpectra(TestCase):
             self.assertIn(line, smass_data)
 
     def test_manos_targets(self):
-        expected_targets =  [['1627'     ,'Vis+NIR'],
-                             ['1981'     ,'Vis+NIR'],
-                             ['6063'     ,'NIR'    ],
-                             ['17511'    ,'Vis+NIR'],
-                             ['1999 SH10','Vis'    ],
-                             ['1999 TU95','Vis'    ],
-                             ['350751'   ,'Vis+NIR'],
-                             ['2004 BZ74','NA'],
+        expected_targets =  [['1627'     ,'Vis+NIR','',''],
+                             ['1981'     ,'Vis'    ,'',''],
+                             ['6063'     ,'NA'     ,'',''],
+                             ['17511'    ,'NA'     ,'',''],
+                             ['1999 SH10','Vis'    ,'https://manosobs.files.wordpress.com/2014/09/1999sh10.png',''],
+                             ['1999 TU95','Vis'    ,'',''],
+                             ['350751'   ,'Vis'    ,'',''],
+                             ['2004 BZ74','NA'     ,'',''],
                             ]
         manos_data = fetch_manos_targets(self.test_manos_page)
         for line in expected_targets:

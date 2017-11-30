@@ -1538,19 +1538,28 @@ def fetch_manos_targets(page=None):
                         target_name = target_name.split(split_char)[0].replace('(','')
                         target_name = target_name.strip()
                     items = row.find_all('td')
-                   # for item in items[3:]:
-                   #    if item.find('a'):
-                   #         if item.find('a')['href'] == "http://smass.mit.edu/catalog.php":
-                   #             item = ex
-                    if items[3].text.strip() != ex:
+                    vislink=''
+                    nirlink=''
+                    if items[3].find('a'):
+                        vislink=items[3].find('a')['href']
+                    if items[4].find('a'):
+                        nirlink=items[4].find('a')['href']
+                    ###Ignore data from external sources to MANOS
+                    ###Ignore data in "Queue mode"
+                    if items[3].text.strip() == check or vislink[:16] == "https://manosobs":
                         target_wav = "Vis"
-                        if items[4].text.strip() != ex:
+                        if items[4].text.strip() == check or nirlink[:16] == "https://manosobs":
                             target_wav = "Vis+NIR"
-                    elif items[4].text.strip() != ex:
+                        else:
+                            nirlink=''
+                    elif items[4].text.strip() == check or nirlink[:16] == "https://manosobs":
                         target_wav = "NIR"
+                        vislink=''
                     else:
                         target_wav = "NA"
-                    target_object=[target_name,target_wav]
+                        vislink=''
+                        nirlink=''
+                    target_object=[target_name,target_wav,vislink,nirlink]
                     targets.append(target_object)
     #print targets
     return targets
