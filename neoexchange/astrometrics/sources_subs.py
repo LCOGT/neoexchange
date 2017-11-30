@@ -19,6 +19,7 @@ import logging
 import urllib2, os
 import imaplib
 import email
+import re
 from urlparse import urljoin
 from re import sub
 from math import degrees
@@ -1493,6 +1494,14 @@ def fetch_smass_targets(page=None):
 
     return targets
 
+def fetch_manos_page():
+    '''Fetches the manos list of spectral targets'''
+
+    manos_url = 'https://manosobs.wordpress.com/observations/neo-observing-log/'
+    page = fetchpage_and_make_soup(manos_url)
+
+    return page
+
 def fetch_manos_targets(page=None):
     '''Parses the manos webpage for spectroscopy results and returns a list
     of these targets back along with links to data files when present.
@@ -1500,8 +1509,50 @@ def fetch_manos_targets(page=None):
     a call to fetch_manos_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     '''
+
+    if type(page) != BeautifulSoup:
+        page = fetch_manos_page()
+
     targets = []
 
+    if type(page) == BeautifulSoup:
+        # Find the table, make sure there is only one
+        tables = page.find_all('table')
+        if len(tables) != 1:
+            logger.warn("Unexpected number of tables found on MANOS page (Found %d)" % len(tables))
+        else:
+            targets_table = tables[0]
+            rows = page.find_all('tr')
+            check = page.find(string=re.compile('Observation done:'))
+            check = check[-1]
+            ex = page.find(string=re.compile('No observation:'))
+            ex = ex[-1]
+            if len(rows) > 1:
+                for row in rows[2:]:
+                    #print row
+                    mpnum = row.find_all('a', limit=1)
+                    target_name = mpnum[0].text
+                    target_name = target_name.strip()
+                    if '(' in target_name and ')' in target_name:
+                        split_char = ')'
+                        target_name = target_name.split(split_char)[0].replace('(','')
+                        target_name = target_name.strip()
+                    items = row.find_all('td')
+                   # for item in items[3:]:
+                   #    if item.find('a'):
+                   #         if item.find('a')['href'] == "http://smass.mit.edu/catalog.php":
+                   #             item = ex
+                    if items[3].text.strip() != ex:
+                        target_wav = "Vis"
+                        if items[4].text.strip() != ex:
+                            target_wav = "Vis+NIR"
+                    elif items[4].text.strip() != ex:
+                        target_wav = "NIR"
+                    else:
+                        target_wav = "NA"
+                    target_object=[target_name,target_wav]
+                    targets.append(target_object)
+    #print targets
     return targets
 
 

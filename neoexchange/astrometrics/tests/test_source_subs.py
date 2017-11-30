@@ -2206,13 +2206,13 @@ class TestFetchPreviousSpectra(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_manos_basics(self):
-        expected_length = 16
+        expected_length = 8
         page = self.test_manos_page
         targets = fetch_manos_targets(page)
 
         self.assertEqual(expected_length, len(targets))
 
-    def test_targets(self):
+    def test_smass_targets(self):
         expected_targets =  [['302'   ,'NIR',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25'],
                              ['6053'  ,'NIR',"http://smass.mit.edu/data/spex/sp233/a006053.sp233.txt","sp[233]",'2017-09-25'],
                              ['96631' ,'NIR',"http://smass.mit.edu/data/spex/sp233/a096631.sp233.txt","sp[233]",'2017-09-25'],
@@ -2227,10 +2227,24 @@ class TestFetchPreviousSpectra(TestCase):
         for line in expected_targets:
             self.assertIn(line, smass_data)
 
-    def test_smass_site_pull(self):
-        expected_line = ['302'   ,'NIR',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25']
-        smass_data = fetch_smass_targets()
-        self.assertEqual(expected_line, smass_data[0])
+    def test_manos_targets(self):
+        expected_targets =  [['1627'     ,'Vis+NIR'],
+                             ['1981'     ,'Vis+NIR'],
+                             ['6063'     ,'NIR'    ],
+                             ['17511'    ,'Vis+NIR'],
+                             ['1999 SH10','Vis'    ],
+                             ['1999 TU95','Vis'    ],
+                             ['350751'   ,'Vis+NIR'],
+                             ['2004 BZ74','NA'],
+                            ]
+        manos_data = fetch_manos_targets(self.test_manos_page)
+        for line in expected_targets:
+            self.assertIn(line, manos_data)
+
+#    def test_smass_site_pull(self):
+#        expected_line = ['302'   ,'NIR',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25']
+#        smass_data = fetch_smass_targets()
+#        self.assertEqual(expected_line, smass_data[0])
 
 
 
