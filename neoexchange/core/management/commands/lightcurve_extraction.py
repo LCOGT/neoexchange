@@ -70,7 +70,8 @@ class Command(BaseCommand):
                 mag_estimate = emp_line[3]
                 (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                 sources = search_box(frame, ra, dec, options['boxwidth'])
-                self.stdout.write("%s %s %s %s (%d) %s" % (frame.midpoint, ra_string, dec_string, frame.sitecode, len(sources), frame.filename))
+                midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
+                self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
                 if len(sources) != 0:
                     if len(sources) == 1:
                         best_source = sources[0]
