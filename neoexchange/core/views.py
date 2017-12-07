@@ -502,6 +502,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     suffix = datetime.strftime(utc_date, '%Y%m%d')
     if period and jitter:
         suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        if len(body.current_name()) > 7:
+             # Name is too long to fit in the groupid field, trim off year part.
+             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%m%d'), datetime.strftime(data['end_time'], '%m%d'))
 
     resp = {
         'target_name': body.current_name(),

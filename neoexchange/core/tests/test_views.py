@@ -713,6 +713,91 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_cadence_short_name(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        self.body_mp.name = '2009 HA'
+        self.body_mp.save()
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'period' : 4.0,
+                 'jitter' : 1.0,
+                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
+                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.111571453511374,
+                        'speed': 2.8742514597935136,
+                        'slot_length': 20,
+                        'exp_count': 12,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'utc_date': data['utc_date'].date().isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T23:00:00',
+                        'mid_time': '2016-04-06T16:00:00',
+                        'ra_midpoint': 3.3109489700795587,
+                        'dec_midpoint': -0.15943962965814026,
+                        'period' : 4.0,
+                        'jitter' : 1.0,
+                        'num_times' : 3,
+                        'total_time' : 1.0
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_cadence_long_name(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'period' : 4.0,
+                 'jitter' : 1.0,
+                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
+                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.111571453511374,
+                        'speed': 2.8742514597935136,
+                        'slot_length': 20,
+                        'exp_count': 12,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': '2009 HA21_Q63-cad-0406-0406',
+                        'utc_date': data['utc_date'].date().isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T23:00:00',
+                        'mid_time': '2016-04-06T16:00:00',
+                        'ra_midpoint': 3.3109489700795587,
+                        'dec_midpoint': -0.15943962965814026,
+                        'period' : 4.0,
+                        'jitter' : 1.0,
+                        'num_times' : 3,
+                        'total_time' : 1.0
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
 
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
