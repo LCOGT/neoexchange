@@ -1312,6 +1312,14 @@ def submit_block_to_scheduler(elements, params):
         msg = "Parsing error"
         logger.error(msg)
         logger.error(resp.json())
+        try:
+            error_msg = resp.json()
+            error_msg = error_msg.get('requests', msg)
+            if len(error_msg) == 1:
+                error_msg = error_msg[0].get('non_field_errors', msg)
+                msg = error_msg[0]
+        except AttributeError:
+            msg = "Unable to decode response from Valhalla"
         params['error_msg'] = msg
         return False, params
 

@@ -170,11 +170,15 @@ class BlockReport(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        block.active = False
-        block.reported = True
-        block.when_reported = datetime.utcnow()
-        block.save()
-        return redirect(reverse('blocklist'))
+        if block.when_observed:
+            block.active = False
+            block.reported = True
+            block.when_reported = datetime.utcnow()
+            block.save()
+            return redirect(reverse('blocklist'))
+        else:
+            messages.error(request,'Block does not have any observations')
+            return HttpResponseRedirect(reverse('block-view', kwargs={'pk':block.superblock.id}))
 
 class BlockReportMPC(LoginRequiredMixin, View):
 
