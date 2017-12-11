@@ -464,28 +464,23 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     visible_emp = call_compute_ephem(body_elements, dark_start, dark_end, \
-        data['site_code'], 600, 30.0, format=False)
+        data['site_code'], 600, 30.0, format_emp=False)
     
+    emp = []
     if len(visible_emp) == 0:
         slot_length = 0.
         ok_to_schedule = False
-        magnitude = -99.0
-        speed = -99.0
         window_start = dark_start
         window_end = dark_end
-        window_midpoint = dark_start + (dark_end - dark_start) / 2
-
+        window_midpoint = dark_midpoint
+        emp = [-99 for x in range(5)]
     else:
         midpoint_index = len(visible_emp) / 2
         emp = visible_emp[midpoint_index]
-        magnitude = emp[3]
-        speed = emp[4]
         window_start = visible_emp[0][0]
         window_end = visible_emp[-1][0]
         window_midpoint = emp[0]
 
-    if emp == []:
-        emp = [-99 for x in range(5)]
     magnitude = emp[3]
     speed = emp[4]
 

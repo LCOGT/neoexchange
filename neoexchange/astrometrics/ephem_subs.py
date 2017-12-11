@@ -494,7 +494,8 @@ def format_emp_line(emp_line, site_code):
     line_as_list = formatted_line.split('|')
     return line_as_list
 
-def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size, alt_limit=0, format=True):
+
+def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_size, alt_limit=0, format_emp=True):
     '''Wrapper for compute_ephem to enable use within plan_obs (or other codes)
     by making repeated calls for datetimes from <dark_start> -> <dark_end> spaced
     by <ephem_step_size> seconds. The results are assembled into a list of tuples
@@ -525,7 +526,7 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 # Get subset of ephemeris when it's dark and object is up
     visible_emp = dark_and_object_up(full_emp, dark_start, dark_end, slot_length, alt_limit)
 
-    if format == True:
+    if format_emp:
         emp = []
         for line in visible_emp:
             emp.append(format_emp_line(line, site_code))
