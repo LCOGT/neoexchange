@@ -6,6 +6,27 @@
 	<link rel="stylesheet" href="{% static "core/css/forms.css" %}">
 {% endblock %}
 
+{% block script-content %}
+<script src="{% static "core/js/auth.js" %}"  type="text/javascript" ></script>
+<script>
+$(document).ready(function(){
+
+	$( "#login-btn" ).click(function( event ) {
+		event.preventDefault();
+		login($('#email').val(), $('#password').val(), function(result){
+	    if(result){
+	      //$('#login-form').hide();
+	      //$('#alert-error').hide();
+	      //$('#logout').show();
+				$( "#login-form" ).submit();
+	    }else{
+	      $('#alert-error').show().find('strong').text('Login Failed');
+	    }
+	  });
+	});
+	});
+</script>
+{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 {% block main-content %}
@@ -19,24 +40,35 @@
 {% endif %}
 			<div id="main">
 
-				<div class="bigpadded">
+				<div class="container">
 					<div class="row">
-					<form action="" method="post"  id="customForm" >
+					<form action="{% url 'auth_login' %}" method="post"  id="login-form" class="customForm" >
 						{% csrf_token %}
 						<div class="row">
-							<label for="username">Username/Email Address:</label>
-							<input type="text" name="username" value="{% if form.username.value %}{{ form.username.value }}{% endif %}" id="username">
-							<div class="red">{{form.username.errors.as_text}}</div>
+							<div class="four columns">
+								<label for="username">Username/Email Address:</label>
+							</div>
+							<div class="eight columns">
+								<input type="text" name="username" value="{% if form.username.value %}{{ form.username.value }}{% endif %}" id="email">
+								<div class="red">{{form.username.errors.as_text}}</div>
+							</div>
 						</div>
 						<div class="row">
+							<div class="four columns">
 							<label for="password">Password:</label>
+						</div>
+						<div class="eight columns">
 							<input type="password" name="password" value="" id="password">
 							<div class="red">{{form.password.errors.as_text}}</div>
 						</div>
+						</div>
 						<input type="hidden" name="next" value="{{ next }}">
 						<div class="row">
-							<input type="submit" value="login" class="button" />
-                            <div class="tos">By logging in, you agree to <a href="http://lcogt.net/observatory/termsofuse" target="_blank">the LCOGT terms of use</a>.</div>
+
+							<button class="button" id="login-btn" onClick="return false;">
+								Sign In
+							</button>
+              <div class="tos">By logging in, you agree to <a href="https://lco.global/observatory/termsofuse" target="_blank">the LCO terms of use</a>.</div>
 						</div>
 						<div class="row">
 							{% if form.errors %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block header %}Hacky Frame Plot{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+
+
+{% block main-content %}
+<!-- Main body -->
+<div class="container" id="main">
+    {% block graphic %} 
+        <img src="{% url 'makeplot' %}">
+    {% endblock %}
+</div>
+{% endblock %}

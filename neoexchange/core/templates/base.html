@@ -3,9 +3,9 @@
 <html>
 	<head>
         <base href="{{base_url}}">
-		<title>{%block header %}{% endblock %} | LCOGT NEOx</title>
+		<title>{%block header %}{% endblock %} | LCO NEOx</title>
 		<meta charset="UTF-8" />
-		<meta name="author" content="Las Cumbres Observatory Global Telescope Network" />
+		<meta name="author" content="Las Cumbres Observatory" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes" />
 		<meta name="version" content="{{site_version}}" />
 		{% block meta %}{% endblock %}
@@ -14,9 +14,12 @@
 		{% endblock %}
 		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
 		{% block css-content %}{% endblock %}
-		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="{% static "core/css/font-awesome.min.css" %}">
+		<link rel="stylesheet" href="{% static "core/css/skeleton.css" %}">
+		<link rel="stylesheet" href="{% static "core/css/normalize.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/styles.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/forms.css" %}">
+
 
         {% block last-css-content %}{% endblock %}
         <!--[if lt IE 9]>
@@ -24,8 +27,16 @@
         <![endif]-->
 		<script type="text/javascript" src="{% static "core/js/jquery-1.10.2.js" %}"></script>
 		<script type="text/javascript" src="{% static "core/js/jquery-ui-1.10.3.min.js" %}"></script>
+		<script type="text/javascript" src="{% static "core/js/auth.js" %}"></script>
 		<script type="text/javascript">
 			$(document).ready(function(){
+
+				/* Grab the token from localstorage and makes sure we can use it */
+				$.ajaxPrefilter(function(options, originalOptions, jqXHR){
+				  if(options.url.indexOf('lcogt.net/') >= 0 && localStorage.getItem('token')){
+				    jqXHR.setRequestHeader('Authorization', 'Token ' + localStorage.getItem('token'));
+				  }
+				});
 
 				$(document).on('click','#messages-inbox',function(event){
 					centreDiv('#show-messages');
@@ -62,7 +73,7 @@
 									{% if user.first_name %}{{ user.first_name }}{% else %}{{user.username}}{% endif %}
 								</li>
 								<li>
-									<a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}"> Logout</a>
+									<a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}" id="logout-btn"> Logout</a>
 								</li>
 								{% else %}
 								<li>
@@ -73,10 +84,10 @@
 						</div>
 						{% endblock %}
 						<div id="lcogt-name">
-							<a target="_parent" href="http://lcogt.net/" title="LCOGT Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory </span><span class="g">G</span><span class="wide">lobal </span><span class="t">T</span><span class="wide">elescope Network</span></a>
+							<a target="_parent" href="http://lco.global/" title="LCO Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory</span></a>
 						</div>
 					</div>
-					<div class="container">
+					<div class="container-lg">
 					<div id="header" role="banner">
 						<div id="logo">
 							<a href="{% url 'home' %}" title="NEO exchange homepage" rel="home"><img src="{% static "core/images/NEO-logo_sm.jpg" %}" alt="NEO exchange" /></a>
@@ -88,8 +99,8 @@
 							</div>
 						</div>
 						<div id="powered-by">
-							<a href="http://lcogt.net" title="LCOGT Home" rel="home">
-								<img src="{% static 'core/images/logo-gray-poweredby.png' %}" alt="Home" id="logo-image2" />
+							<a href="http://lco.global" title="LCO Home" rel="home">
+								<img src="{% static 'core/images/LCO_bw_poweredby.png' %}" alt="Home" id="logo-image2" />
 							</a>
 						</div>
 					</div>
@@ -97,8 +108,7 @@
 				</div>
 							<!-- Header region -->
 				<div id="{% block extramenucss %}extramenu{% endblock %}">
-					<div class="container">
-						<div class="extramenu_padder" role="menubar">
+					<div class="container-lg">
 							{% block extramenu %}
 							{% endblock %}
 							<nav id="navigation" role="navigation">
@@ -115,6 +125,10 @@
 									<li>
 										<a href="{% url 'blocklist' %}" title="Blocks scheduled for NEO follow-up" class="navitem">Blocks</a>
 									</li>
+									<li>
+										<a href="{% url 'block-summary' %}" title="Block Summary for NEO follow-up" class="navitem">Efficiency</a>
+									</li>
+
 								</ul>
 								{% endblock %}
 
@@ -123,7 +137,6 @@
 									<input type="submit" class="button keepvisible" role="menuitem" value="Search" id="id_search_submit">
 								</form>
 							</nav>
-						</div>
 					</div>
 				</div>
 				{% block main-content %}{% endblock %}
@@ -140,6 +153,8 @@
 			{% endfor %}
 			</div>
 		</div>
+		{% block end-scripts %}
+		{% endblock %}
 		<script>
 		  var _gaq = _gaq || [];
 		  _gaq.push(['_setAccount', 'UA-2087713-1']);

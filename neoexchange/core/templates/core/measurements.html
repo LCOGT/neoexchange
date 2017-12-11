@@ -1,19 +1,27 @@
 {% extends 'base.html' %}
 {% load staticfiles basic_tags %}
-{% load url from future %}
 {% block header %}Source measurements{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 {% block extramenu %}
 					<div class="headingleft">
-						<h1>Source Measurements for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+						<h1>Source Measurements: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
 					</div>
 {% endblock%}
 {% block main-content %}
 			<div id="main" class="fill-height">
+				<div class="container">
 				<div class="row">
-					<p><a href="{% url 'measurement-mpc' body.id %}">[View in MPC format]</a></p>
+					<p>
+					{% if slot %}
+					<h5>Report to MPC</h5>
+					{% for b in extra_bodies %} <a class="button button-primary" href="{% url 'block-submit-mpc' slot.id b.id %}">{{b.current_name}}</a>{% endfor%}
+					{% endif %}
 				</div>
+				<div class="row">
+					<a href="{% if slot %}{% url 'block-report-mpc' slot.id %}{% else %}{% url 'measurement-mpc' body.id %}{%endif%}">[ View in MPC format ]</a></p>
+				</div>
+			</div>
 				<div class="fullwidth">
 					<table class="datatable" id="id_measurements">
 						<thead>
@@ -52,6 +60,10 @@
                 <td>{{line.frame.filter}}</td>
                 <td>{{line.frame.sitecode}}</td>
 							</tr>
+              {% empty %}
+              <tr>
+                <td colspan=7>No measurements have been made yet</td>
+              </tr>
 						{% endfor %}
 						</tbody>
 					</table>

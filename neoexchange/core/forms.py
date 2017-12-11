@@ -1,50 +1,65 @@
+'''
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+'''
+
 from datetime import datetime, date, timedelta
 from django import forms
 from django.db.models import Q
 from .models import Body, Proposal, Block
+from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 import logging
 logger = logging.getLogger(__name__)
 
+
 SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('F65','Maui, Hawaii (FTN - F65)'),
          ('E10','Siding Spring, Aust. (FTS - E10)'),
-         ('W85','CTIO, Chile (LSC - W85; SBIG)'),
-         ('W86','CTIO, Chile (LSC - W86; Sinsitro)'),
-         ('K92','Sutherland, S. Africa (CPT - K91-93)'),
-         ('Q63','Siding Spring, Aust. (COJ - Q63-64)'))
+         ('W86','CTIO, Chile (LSC - W85-87; Sinistro)'),
+         ('K92','Sutherland, S. Africa (CPT - K91-93; Sinistro)'),
+         ('Q63','Siding Spring, Aust. (COJ - Q63-64; Sinistro)'),
+         ('Q58','Siding Spring, Aust. (COJ - Q58-59; 0.4m)'),
+         ('Z21','Tenerife, Spain (TFN - Z17,Z21; 0.4m)'),
+         ('T04','Maui, Hawaii (OGG - T03-04; 0.4m)'))
 
 
 class EphemQuery(forms.Form):
 
-    target = forms.CharField(label="Enter target name...", max_length=10, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
+    target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
     alt_limit = forms.FloatField(initial=30.0, required=True, widget=forms.TextInput(attrs={'size':'4'}))
 
     def clean_target(self):
         name = self.cleaned_data['target']
-        body = Body.objects.filter(Q(provisional_name__icontains = name )|Q(provisional_packed__icontains = name)|Q(name__icontains = name))
+        body = Body.objects.filter(Q(provisional_name__startswith = name )|Q(provisional_packed__startswith = name)|Q(name__startswith = name))
         if body.count() == 1 :
             return body[0]
         elif body.count() == 0:
             raise forms.ValidationError("Object not found.")
         elif body.count() > 1:
-            raise forms.ValidationError("Multiple objects found.")
+            newbody = Body.objects.filter(Q(provisional_name__exact = name )|Q(provisional_packed__exact = name)|Q(name__exact = name))
+            if newbody.count() == 1:
+                return newbody[0]
+            else:
+                raise forms.ValidationError("Multiple objects found.")
 
 class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
     site_code = forms.ChoiceField(required=True, choices=SITES)
     utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
-    # body_id = forms.IntegerField(widget=forms.HiddenInput())
-    # ok_to_schedule = forms.BooleanField(initial=False, required=False, widget=forms.HiddenInput())
 
-    # def clean_body_id(self):
-    #     body = Body.objects.filter(pk=self.cleaned_data['body_id'])
-    #     if body.count() == 1 :
-    #         return body[0]
-    #     elif body.count() == 0:
-    #         raise forms.ValidationError("Object not found.")
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
         if start < datetime.utcnow().date():
@@ -59,6 +74,40 @@ class ScheduleForm(forms.Form):
         self.fields['proposal_code'].choices = proposal_choices
 
 
+class ScheduleCadenceForm(forms.Form):
+    proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad',}))
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad',}))
+    start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'], initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
+    end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'], initial=datetime.today, required=True, error_messages={'required': _(u'UTC end date is required')})
+    period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Period is required')})
+    jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Jitter is required')})
+
+    # def clean_start_time(self):
+    #     start = self.cleaned_data['start_time']
+    #     if start < datetime.utcnow():
+    #         raise forms.ValidationError("Window cannot start in the past")
+    #     return start
+    #
+    # def clean_end_time(self):
+    #     end = self.cleaned_data['end_time']
+    #     if end < datetime.utcnow():
+    #         raise forms.ValidationError("Window cannot end in the past")
+    #     return end
+
+    def clean(self):
+        cleaned_data = super(ScheduleCadenceForm, self).clean()
+        start = cleaned_data['start_time']
+        end = cleaned_data['end_time']
+        if end < start:
+            raise forms.ValidationError("End date must be after start date")
+
+    def __init__(self, *args, **kwargs):
+        self.proposal_code = kwargs.pop('proposal_code', None)
+        super(ScheduleCadenceForm, self).__init__(*args, **kwargs)
+        proposals = Proposal.objects.filter(active=True)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        self.fields['proposal_code'].choices = proposal_choices
+
 class ScheduleBlockForm(forms.Form):
     start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
@@ -68,12 +117,12 @@ class ScheduleBlockForm(forms.Form):
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
+    jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    period = forms.FloatField(widget=forms.HiddenInput(), required=False)
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
-        logger.debug("cleaned_data=%s" % (self.cleaned_data))
         window_cutoff = datetime.utcnow() - timedelta(days=1)
-        logger.debug("In clean_start_time %s %s" % (start, window_cutoff))
         if start <= window_cutoff:
             raise forms.ValidationError("Window cannot start in the past")
         else:

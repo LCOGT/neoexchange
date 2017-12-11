@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -15,18 +15,25 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-from re import sub
-from reqdb.client import SchedulerClient
-from reqdb.requests import Request, UserRequest
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
-from math import degrees
-import slalib as S
 import logging
 import urllib2, os
+import imaplib
+import email
 from urlparse import urljoin
+from re import sub
+from math import degrees
+from datetime import datetime, timedelta
+from socket import error
+from random import randint
+from time import sleep
+import requests
+import json
 
+from bs4 import BeautifulSoup
+import pyslalib.slalib as S
+
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +58,24 @@ def download_file(url, file_to_save):
             else:
                 print "HTTP Error: %s" % (e.code,)
 
+def random_delay(lower_limit=10, upper_limit=20):
+    '''Waits a random number of integer seconds between [lower_limit; default 10]
+    and [upper_limit; default 20]. Useful for slowing down web requests to prevent
+    overloading remote systems. The executed delay is returned.'''
+
+    try:
+        lower_limit = max(int(lower_limit), 0)
+    except ValueError:
+        lower_limit = 10
+    try:
+        upper_limit = int(upper_limit)
+    except ValueError:
+        upper_limit = 20
+
+    delay = randint(lower_limit, upper_limit)
+    sleep(delay)
+
+    return delay
 
 def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser"):
     '''Fetches the specified URL from <url> and parses it using BeautifulSoup.
@@ -88,15 +113,22 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
 def parse_previous_NEOCP_id(items, dbg=False):
     crossmatch = ['', '', '', '']
     if len(items) == 1:
-# Is of the form "<foo> does not exist" or "<foo> was not confirmed"
+# Is of the form "<foo> does not exist" or "<foo> was not confirmed". But can
+# now apparently include comets...
         chunks = items[0].split()
         none_id = ''
+        body = chunks[0]
         if chunks[1].find('does') >= 0:
             none_id = 'doesnotexist'
-        elif chunks[1].find('was') >= 0:
-            none_id = 'wasnotconfirmed'
-
-        crossmatch = [chunks[0], none_id, '', ' '.join(chunks[-3:])]
+        elif chunks[0].find('Comet') >=0:
+            body = chunks[4]
+            none_id = chunks[1] + ' ' + chunks[2]
+        if len(chunks) >= 5:
+            if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
+                none_id = 'wasnotconfirmed'
+            if chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+                none_id = 'wasnotminorplanet'
+        crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
 # Is of the form "<foo> = <bar>(<date> UT)"
         if items[0].find('Comet') != 1:
@@ -427,6 +459,9 @@ def fetch_mpcobs(asteroid, debug=False):
     return None
 
 def translate_catalog_code(code_or_name):
+    '''Mapping between the single character in column 72 of MPC records
+    and the astrometric reference catalog used.
+    Documentation at: http://www.minorplanetcenter.net/iau/info/CatalogueCodes.html'''
 
     catalog_codes = {
                   "a" : "USNO-A1",
@@ -441,7 +476,6 @@ def translate_catalog_code(code_or_name):
                   "j" : "GSC-1.2",
                   "k" : "GSC-2.2",
                   "l" : "ACT",
-                  "L" : "2MASS",
                   "m" : "GSC-ACT",
                   "n" : "TRC",
                   "o" : "USNO-B1",
@@ -455,7 +489,28 @@ def translate_catalog_code(code_or_name):
                   "w" : "CMC-14",
                   "x" : "HIP-2",
                   "z" : "GSC-1.x",
+                  "A" : "AC",
+                  "B" : "SAO 1984",
+                  "C" : "SAO",
+                  "D" : "AGK 3",
+                  "E" : "FK4",
+                  "F" : "ACRS",
+                  "G" : "Lick Gaspra Catalogue",
+                  "H" : "Ida93 Catalogue",
+                  "I" : "Perth 70",
+                  "J" : "COSMOS/UKST Southern Sky Catalogue",
+                  "K" : "Yale",
+                  "L" : "2MASS",
+                  "M" : "GSC-2.3",
                   "N" : "SDSS-DR7",
+                  "O" : "SST-RC1",
+                  "P" : "MPOSC3",
+                  "Q" : "CMC-15",
+                  "R" : "SST-RC4",
+                  "S" : "URAT-1",
+                  "T" : "URAT-2",
+                  "U" : "GAIA-DR1",
+                  "V" : "GAIA-DR2",
                   }
     catalog_or_code = ''
     if len(code_or_name) == 1:
@@ -469,7 +524,12 @@ def translate_catalog_code(code_or_name):
 
 def parse_mpcobs(line):
     '''Parse a MPC format 80 column observation record line, returning a
-    dictionary of values or an empty dictionary if it couldn't be parsed'''
+    dictionary of values or an empty dictionary if it couldn't be parsed
+
+    Be ware of potential confusion between obs_type of 'S' and 's'. This
+    enforced by MPC, see
+    http://www.minorplanetcenter.net/iau/info/SatelliteObs.html
+    '''
 
     params = {}
     line = line.rstrip()
@@ -486,6 +546,7 @@ def parse_mpcobs(line):
     else:
         body = number
 
+    body = body.rstrip()
     obs_type = str(line[14])
     flag_char = str(line[13])
 
@@ -503,8 +564,8 @@ def parse_mpcobs(line):
     except ValueError:
         obs_mag = None
 
-    if obs_type == 'C':
-        # Regular CCD observations
+    if obs_type == 'C' or obs_type == 'S':
+        # Regular CCD observations or first line of satellite observations
 #        print "Date=",line[15:32]
         params = {  'body'     : body,
                     'flags'    : flag,
@@ -525,15 +586,24 @@ def parse_mpcobs(line):
     elif obs_type.upper() == 'R':
         # Radar observations, skip
         logger.debug("Found radar observation, skipping")
-    elif obs_type == 'S':
-        # Satellite -based observation, do something with it
-        logger.warn("Found satellite observation, skipping (for now)")
+    elif obs_type == 's':
+        # Second line of satellite-based observation, stuff whole line into
+        # 'extrainfo' and parse what we can (so we can identify the corresponding
+        # 'S' line/frame)
+        params = {  'body'     : body,
+                    'obs_type' : obs_type,
+                    'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
+                    'extrainfo' : line,
+                    'site_code' : str(line[-3:])
+                 }
     return params
 
 def clean_element(element):
     '''Cleans an element (passed) by converting to ascii and removing any units'''
     key = element[0].encode('ascii', 'ignore')
-    value = element[1].encode('ascii', 'ignore')
+    value = None
+    if len(element) == 2:
+        value = element[1].encode('ascii', 'ignore')
     # Match a open parenthesis followed by 0 or more non-whitespace followed by
     # a close parenthesis and replace it with a blank string
     key = sub(r' \(\S*\)','', key)
@@ -564,8 +634,8 @@ def parse_mpcorbit(page, dbg=False):
     # Find the table of elements and then the subtables within it
     elements_table = page.find('table', {'class' : 'nb'})
     if elements_table == None:
-        if dbg: "No element tables found"
-        return None
+        if dbg: logger.debug("No element tables found")
+        return {}
     data_tables = elements_table.find_all('table')
     for table in data_tables:
         rows = table.find_all('tr')
@@ -682,8 +752,16 @@ def parse_goldstone_chunks(chunks, dbg=False):
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isalnum():
             # We have something that straddles months
             if dbg: print "In case 2b"
-            object_id = str(chunks[4])
-        elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isalnum():
+            if chunks[5].isdigit() or chunks[5][0:2].isupper() == False:
+                # Of the form '2017 May 29-Jun 02 418094 2007 WV4' or number and
+                # name e.g.  '2017 May 29-Jun 02 6063 Jason'
+                object_id = str(chunks[4])
+            else:
+                # Of the form '2017 May 29-Jun 02 2017 CS'
+                object_id = str(chunks[4]) + ' ' + chunks[5]
+        elif astnum <= 31 and (chunks[3].isdigit() or chunks[3][0:2] == 'P/' \
+        or chunks[3][0:2] == 'C/') and chunks[4].isalnum():
+            # We have a date range e.g. '2016 Mar 17-23'
             # Test if the first 2 characters of chunks[4] are uppercase
             # If yes then we have a desigination e.g. [2014] 'UR' or [2015] 'FW117'
             # If no, then we have a name e.g. [1566] 'Icarus'
@@ -728,6 +806,16 @@ def fetch_goldstone_targets(dbg=False):
             in_objects = True
         else:
             if in_objects == True:
+                # Look for malformed comma-separated dates in the first part of
+                # the line and convert the first occurence to hyphens before
+                # splitting.
+                if ', ' in line[0:40]:
+                    line = line.replace(', ', '-', 1)
+                # Look for malformed space and hyphen-separated dates in the
+                # first part of the line and convert the first occurence to
+                # hyphens before splitting.
+                if '- ' in line[0:40] or ' -' in line[0:40]:
+                    line = line.replace('- ', '-', 1).replace(' -', '-', 1)
                 chunks = line.lstrip().split()
                 #if dbg: print line
                 # Check if the start of the stripped line is no longer the
@@ -767,7 +855,7 @@ def fetch_arecibo_targets(page=None):
     '''Parses the Arecibo webpage for upcoming radar targets and returns a list
     of these targets back.
     Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls 
+    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     '''
 
@@ -779,37 +867,166 @@ def fetch_arecibo_targets(page=None):
     if type(page) == BeautifulSoup:
         # Find the tables, we want the second one
         tables = page.find_all('table')
-        if len(tables) != 2:
-            logger.warn("Unexpected number of tables found in Arecibo page")
+        if len(tables) != 2 and len(tables) != 3 :
+            logger.warn("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
         else:
-            targets_table = tables[1]
+            targets_table = tables[-1]
             rows = targets_table.find_all('tr')
             if len(rows) > 1:
                 for row in rows[1:]:
                     items = row.find_all('td')
                     target_object = items[0].text
+                    target_object = target_object.strip()
                     # See if it is the form "(12345) 2008 FOO". If so, extract
                     # just the asteroid number
                     if '(' in target_object and ')' in target_object:
-                        target_object = target_object.split(')')[0].replace('(','')
-                    targets.append(target_object)
+                        # See if we have parentheses around the number or around the
+                        # temporary desigination.
+                        # If the first character in the string is a '(' we have the first
+                        # case and should split on the closing ')' and take the 0th chunk
+                        # If the first char is not a '(', then we have parentheses around
+                        # the temporary desigination and we should split on the '(', take
+                        # the 0th chunk and strip whitespace
+                        split_char = ')'
+                        if target_object[0] != '(':
+                            split_char = '('
+                        target_object = target_object.split(split_char)[0].replace('(','')
+                        target_object = target_object.strip()
+                    else:
+                        # No parentheses, either just a number or a number and name
+                        chunks = target_object.split(' ')
+                        if len(chunks) >= 2:
+                            if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                target_object = chunks[0]
+                            else:
+                                target_object = chunks[0] + " " + chunks[1]
+                        else:
+                            logger.warn("Unable to parse Arecibo target %s" % target_object)
+                            target_object = None
+                    if target_object:
+                        targets.append(target_object)
             else:
                 logger.warn("No targets found in Arecibo page")
     return targets
 
+def imap_login(username, password, server='imap.gmail.com'):
+    '''Logs into the specified IMAP [server] (Google's gmail is assumed if not
+    specified) with the provide username and password.
+
+    An imaplib.IMAP4_SSL connection instance is returned or None if the
+    login failed'''
+
+    try:
+        mailbox = imaplib.IMAP4_SSL(server)
+    except error:
+        return None
+
+    try:
+        mailbox.login(username, password)
+    except imaplib.IMAP4_SSL.error:
+        logger.error("Login to %s with username=%s failed" % (server, username))
+        mailbox = None
+
+    return mailbox
+
+def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
+    '''Search through the specified folder/label (defaults to "NASA-ARM" if not
+    specified) within the passed IMAP mailbox <mailbox> for emails to the
+    small bodies list and returns a list of targets. Emails that are more than
+    [date_cutoff] days old (default is 1 day) will not be looked at.'''
+
+    list_address = '"small-bodies-observations@lists.nasa.gov"'
+    list_authors  = [ '"paul.a.abell@nasa.gov"',
+                      '"paul.w.chodas@jpl.nasa.gov"',
+                      '"brent.w.barbee@nasa.gov"']
+    list_prefix = '[' + list_address.replace('"','').split('@')[0] +']'
+    list_suffix = 'Observations Requested'
+
+    NASA_targets = []
+
+    status, data = mailbox.select(folder)
+    if status == "OK":
+        msgnums = ['']
+        for author in list_authors:
+        # Look for messages to the mailing list but without specifying a charset
+            status, msgs = mailbox.search(None, 'TO', list_address,\
+                                                'FROM', author)
+
+            if status == 'OK' and len(msgs) > 0 and msgs[0] != '':
+                msgnums = [msgnums[0] + ' '+ msgs[0],]
+        # Messages numbers come back in a space-separated string inside a
+        # 1-element list in msgnums
+        if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
+
+            for num in msgnums[0].split():
+                try:
+                    status, data = mailbox.fetch(num, '(RFC822)')
+                    if status != 'OK' or len(data) == 0 and msgnums[0] != None:
+                        logger.error("ERROR getting message %s", num)
+                    else:
+                        # Convert message and see if it has the right things
+                        msg = email.message_from_string(data[0][1])
+                        # Strip off any "Fwd: " parts
+                        msg_subject = msg['Subject'].replace('Fwd: ', '')
+                        date_tuple = email.utils.parsedate_tz(msg['Date'])
+                        msg_utc_date = datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
+                        time_diff = datetime.utcnow() - msg_utc_date
+                        # See if the subject has the right prefix and suffix and is
+                        # within a day of 'now'
+                        if list_prefix in msg_subject and list_suffix in msg_subject and \
+                            time_diff <= timedelta(days=date_cutoff):
+
+                            # Define a slice for the fields of the message we will want for
+                            # the target.
+                            end_slice = 3
+                            if list_suffix.split()[0] in msg_subject.split():
+                                end_slice = msg_subject.split().index(list_suffix.split()[0])
+
+                            TARGET_DESIGNATION = slice(1, end_slice)
+
+                            target = ' '.join(msg_subject.split()[TARGET_DESIGNATION]).strip()
+                            target = target.replace('-', '')
+                            target = target.strip()
+                            if ',' in target:
+                                targets = target.split(',')
+                                for target in targets:
+                                    target = target.strip()
+                                    if target not in NASA_targets:
+                                        NASA_targets.append(target)
+                            else:
+                                if target not in NASA_targets:
+                                    NASA_targets.append(target)
+                except:
+                    logger.error("ERROR getting message %s", num)
+                    return NASA_targets
+        else:
+            logger.warn("No mailing list messages found")
+            return []
+    else:
+        logger.error("Could not open folder/label %s on %s" % (folder, mailbox.host))
+        return []
+    return NASA_targets
+
+def fetch_yarkovsky_targets(yark_targets):
+    '''Fetches yarkovsky targets from command line and returns a list of targets'''
+
+    yark_target_list = []
+
+    for obj_id in yark_targets:
+        if '_' in obj_id:
+            obj_id = str(obj_id).replace('_', ' ')
+        yark_target_list.append(obj_id)
+
+    return yark_target_list
+
 def make_location(params):
     location = {
-        'telescope_class' : params['pondtelescope'][0:3],
-        'site'        : params['site'].lower(),
-        'observatory' : params['observatory'],
-        'telescope'   : '',
+        'site'            : params['site'].lower(),
+        'telescope_class' : params['pondtelescope'][0:3]
     }
-
-# Check if the 'pondtelescope' is length 4 (1m0a) rather than length 3, and if
-# so, update the null string set above with a proper telescope
-    if len(params['pondtelescope']) == 4:
-        location['telescope'] = params['pondtelescope']
-
+    if params['site_code'] == 'W85':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'doma'
     return location
 
 def make_target(params):
@@ -828,7 +1045,7 @@ def make_target(params):
 def make_moving_target(elements):
     '''Make a target dictionary for the request from an element set'''
 
-    print elements
+#    print elements
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],
@@ -843,7 +1060,7 @@ def make_moving_target(elements):
             }
 
     if elements['elements_type'].upper() == 'MPC_COMET':
-        target['epochofperih'] = elements['epochofperih']
+        target['epochofperih'] = elements['epochofperih_mjd']
         target['perihdist'] = elements['perihdist']
     else:
         target['meandist']  = elements['meandist']
@@ -866,71 +1083,166 @@ def make_window(params):
 
 def make_molecule(params):
     molecule = {
+                'type' : params['exp_type'],
                 'exposure_count'  : params['exp_count'],
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
                 'filter'      : params['filter'],
-                'ag_mode'     : 'Optional', # 0=On, 1=Off, 2=Optional.  Default is 2.
+                'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
     }
     return molecule
 
-def make_proposal(params):
-    '''Construct needed proposal info'''
-
-    proposal = {
-                 'proposal_id'   : params['proposal_id'],
-                 'user_id'       : params['user_id'],
-                 'tag_id'        : params['tag_id'],
-                 'priority'      : params['priority'],
-               }
-    return proposal
-
 def make_constraints(params):
     constraints = {
-#                      'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
                        'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
-#                      'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
-#                      'max_airmass' : 2.37,    # 25 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
+#                       'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
+                       'min_lunar_distance': 30
                     }
     return constraints
 
+def make_single(params, ipp_value, request):
+    '''Create a user_request for a single observation'''
+
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
+
+    return user_request
+
+def make_proposal(params):
+    proposal =  { 'proposal_id' : params['proposal_id'],
+                  'user_id' : params['user_id']
+                }
+    return proposal
+
+def make_cadence(elements, params, ipp_value, request=None):
+    '''Generate a cadence user request from the <elements> and <params>.'''
+
+    ur =  make_cadence_valhalla(request, params, ipp_value)
+
+    return ur
+
+
+def expand_cadence(user_request):
+
+    cadence_url = urljoin(settings.PORTAL_REQUEST_API, 'cadence/')
+
+    try:
+        resp = requests.post(
+            cadence_url,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
+        logger.error(msg)
+        return False, msg
+
+    if resp.status_code not in [200,201]:
+        msg = "Cadence generation error"
+        logger.error(msg)
+        logger.error(resp.json())
+        return False, resp.json()
+
+    cadence_user_request = resp.json()
+
+    return True, cadence_user_request
+
+def make_cadence_valhalla(request, params, ipp_value, debug=False):
+    '''Create a user_request for a cadence observation'''
+
+    # Add cadence parameters into Request
+    request['cadence']= {
+                            'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
+                            'end'   : datetime.strftime(params['end_time'],'%Y-%m-%dT%H:%M:%S'),
+                            'period': params['period'],
+                            'jitter': params['jitter']
+                        }
+    del(request['windows'])
+
+    user_request = {
+        "submitter": params['user_id'],
+        "requests": [request],
+        "group_id": params['group_id'],
+        "observation_type": "NORMAL",
+        "operator": "SINGLE",
+        "ipp_value": ipp_value,
+        "proposal": params['proposal_id']
+    }
+# Submit the UserRequest with the cadence
+    status, cadence_user_request = expand_cadence(user_request)
+
+    if debug and status == True:
+        print('Cadence generated {} requests'.format(len(cadence_user_request['requests'])))
+        i = 1
+        for request in cadence_user_request['requests']:
+            print('Request {0} window start: {1} window end: {2}'.format(
+                i, request['windows'][0]['start'], request['windows'][0]['end']
+            ))
+        i = i + 1
+
+    return cadence_user_request
+
+
 def configure_defaults(params):
 
-    site_list = { 'V37' : 'ELP' , 'K92' : 'CPT', 'Q63' : 'COJ', 'W85' : 'LSC', 'W86' : 'LSC', 'F65' : 'OGG', 'E10' : 'COJ' }
+    site_list = { 'V37' : 'ELP',
+                  'K92' : 'CPT',
+                  'K93' : 'CPT',
+                  'Q63' : 'COJ',
+                  'W85' : 'LSC',
+                  'W86' : 'LSC',
+                  'W87' : 'LSC',
+                  'W89' : 'LSC', # Code for 0m4a
+                  'F65' : 'OGG',
+                  'E10' : 'COJ',
+                  'Z21' : 'TFN',
+                  'T04' : 'OGG',
+                  'Q58' : 'COJ', # Code for 0m4a
+                  'Q59' : 'COJ'} # Code for 0m4b
+
+
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
     params['site'] = site_list[params['site_code']]
-    params['binning'] = 2
-    params['instrument'] = '1M0-SCICAM-SBIG'
+    params['binning'] = 1
+    params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['filter'] = 'w'
+    params['exp_type'] = 'EXPOSE'
 
-    if params['site_code'] == 'W86' or params['site_code'] == 'W87':
-        params['binning'] = 1
-        params['observatory'] = 'domb'
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-    elif params['site_code'] == 'V37':
-        params['binning'] = 1
-        params['instrument'] = '1M0-SCICAM-SINISTRO'
-    elif params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
+        params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
+    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
+        params['instrument'] =  '0M4-SCICAM-SBIG'
+        params['pondtelescope'] = '0m4'
+        params['filter'] = 'w'
+        params['binning'] = 2 # 1 is the Right Answer...
 
     return params
 
-def submit_block_to_scheduler(elements, params):
-    request = Request()
+def make_userrequest(elements, params):
 
     params = configure_defaults(params)
-# Create Location (site, observatory etc) and add to Request
+# Create Location (site, observatory etc)
     location = make_location(params)
     logger.debug("Location=%s" % location)
-    request.set_location(location)
-# Create Target (pointing) and add to Request
+# Create Target (pointing)
     if len(elements) > 0:
         logger.debug("Making a moving object")
         target = make_moving_target(elements)
@@ -938,42 +1250,188 @@ def submit_block_to_scheduler(elements, params):
         logger.debug("Making a static object")
         target = make_target(params)
     logger.debug("Target=%s" % target)
-    request.set_target(target)
-# Create Window and add to Request
+# Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
-    request.add_window(window)
-# Create Molecule and add to Request
+# Create Molecule
     molecule = make_molecule(params)
-    request.add_molecule(molecule) # add exposure to the request
+
     submitter = ''
     submitter_id = params.get('submitter_id', '')
     if submitter_id != '':
-        submitter = ' (by %s)' % submitter_id
-    request.set_note('Submitted by NEOexchange' + submitter)
-    logger.debug("Request=%s" % request)
+        submitter = '(by %s)' % submitter_id
+    note = ('Submitted by NEOexchange {}'.format(submitter))
+    note = note.rstrip()
 
     constraints = make_constraints(params)
-    request.set_constraints(constraints)
+
+    request = {
+            "location": location,
+            "constraints": constraints,
+            "target": target,
+            "molecules": [molecule],
+            "windows": [window],
+            "observation_note": note,
+        }
+
+# If site is ELP, increase IPP value
+    ipp_value = 1.00
+    if params['site_code'] == 'V37':
+        ipp_value = 1.00
 
 # Add the Request to the outer User Request
-    user_request =  UserRequest(group_id=params['group_id'])
-    user_request.add_request(request)
-    user_request.operator = 'single'
-    proposal = make_proposal(params)
-    user_request.set_proposal(proposal)
+    if 'period' in params.keys() and 'jitter' in params.keys():
+        user_request = make_cadence(elements, params, ipp_value, request)
+    else:
+        user_request = make_single(params, ipp_value, request)
+
+    logger.info("User Request=%s" % user_request)
+
+    return user_request
+
+
+def submit_block_to_scheduler(elements, params):
+
+    user_request = make_userrequest(elements, params)
 
 # Make an endpoint and submit the thing
-    client = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
-    response_data = client.submit(user_request)
-    client.print_submit_response()
-    request_numbers =  response_data.get('request_numbers', '')
-    tracking_number =  response_data.get('tracking_number', '')
-#    request_numbers = (-42,)
-    if not tracking_number or not request_numbers:
-        logger.error("No Tracking/Request number received")
+    try:
+        resp = requests.post(
+            settings.PORTAL_REQUEST_API,
+            json=user_request,
+            headers={'Authorization': 'Token {}'.format(settings.PORTAL_TOKEN)},
+            timeout=20.0
+         )
+    except requests.exceptions.Timeout:
+        msg = "Observing portal API timed out"
+        logger.error(msg)
+        params['error_msg'] = msg
         return False, params
-    request_number = request_numbers[0]
-    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number))
+
+    if resp.status_code not in [200,201]:
+        msg = "Parsing error"
+        logger.error(msg)
+        logger.error(resp.json())
+        try:
+            error_msg = resp.json()
+            error_msg = error_msg.get('requests', msg)
+            if len(error_msg) == 1:
+                error_msg = error_msg[0].get('non_field_errors', msg)
+                msg = error_msg[0]
+        except AttributeError:
+            msg = "Unable to decode response from Valhalla"
+        params['error_msg'] = msg
+        return False, params
+
+    response = resp.json()
+    tracking_number =  response.get('id', '')
+
+    request_items = response.get('requests', '')
+
+    request_numbers =  [_['id'] for _ in request_items]
+
+    if not tracking_number or not request_numbers:
+        msg = "No Tracking/Request number received"
+        logger.error(msg)
+        params['error_msg'] = msg
+        return False, params
+    params['request_numbers'] = request_numbers
+    params['block_duration'] = sum([float(_['duration']) for _ in request_items])
+
+    request_number_string = ", ".join([str(x) for x in request_numbers])
+    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
 
     return tracking_number, params
+
+def fetch_taxonomy_page(page=None):
+    '''Fetches Taxonomy data to be compared against database. First from PDS, then from Binzel 2004'''
+
+    if page == None:
+        taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
+        data_file = urllib2.urlopen(taxonomy_url)
+        data_out=parse_taxonomy_data(data_file)
+        data_file.close
+        ####Binzel_taxonomy_page appears to be completely included within PDS Version6.0
+        #binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
+        #with open(binzel_taxonomy_page, 'r') as input_file:
+        #    binzel_out=parse_binzel_data(input_file)
+        #data_out=data_out+binzel_out
+    else:
+        with open(page, 'r') as input_file:
+            data_out = parse_taxonomy_data(input_file)
+    return data_out
+
+def parse_binzel_data(tax_text=None):
+    '''Parses the Binzel taxonomy database for targets and pulls a list
+    of these targets back.
+    '''
+    tax_table=[]
+    for line in tax_text:
+        if line[0] !='#':
+            line=line.split('\n')
+            chunks=line[0].split(',')
+            if chunks[0] == '':
+                chunks[0] = chunks[2]
+            row=[chunks[0],chunks[4],"B","BZ04",chunks[10]]
+            tax_table.append(row)
+    return tax_table       
+    
+def parse_taxonomy_data(tax_text=None):
+    '''Parses the online taxonomy database for targets and pulls a list
+    of these targets back.
+    '''
+    tax_scheme=['T',
+                'Ba',
+                'Td',
+                'H',
+                'S',
+                'B',
+                '3T/3B',
+                'BD',
+                ]
+    tax_table=[]
+    for line in tax_text:
+        name=line[8:25]
+        end=line[103:]
+        line=line[:8]+line[26:104]
+        chunks=line.split(' ')
+        chunks=filter(None, chunks)
+        if chunks[0] != '\n':
+            if chunks[1] != '-':
+                chunks[1] = chunks[1]+' '+chunks[2]
+                del chunks[2]
+            chunks.insert(1,name)
+            if ',' in chunks[18]:
+                chunks[18]=chunks[18][:2]
+                chunks.insert(19,chunks[18][3:])
+            #print(chunks[0],len(chunks))
+            #parse Object ID=Object Number or Provisional designation if no number
+            if chunks[0] != '0':
+                obj_id=(chunks[0])
+            else:
+                obj_id=(chunks[2])
+            #Build Taxonomy reference table. This is clunky. Better to search table for matching values first?
+            index=range(1,7)
+            index=[2*x+1 for x in index]+[17]
+  #          print(index)
+            for i in index:
+                if chunks[i] != '-':
+                    if chunks[19] != '-':
+                        chunks[i+1] = chunks[i+1] + "|"+ end
+                    row=[obj_id,chunks[i],tax_scheme[(i-1)/2-1],"PDS6",chunks[i+1]]
+                    tax_table.append(row)
+            if chunks[15] != '-':
+                if chunks[19] != '-':
+                    out = end
+                else:
+                    out=' '
+                row=[obj_id,chunks[15],"3T","PDS6",out]
+                tax_table.append(row)
+            if chunks[16] != '-':
+                if chunks[19] != '-':
+                    out = end
+                else:
+                    out=' '
+                row=[obj_id,chunks[16],"3B","PDS6",out]
+                tax_table.append(row)
+    return tax_table

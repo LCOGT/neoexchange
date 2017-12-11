@@ -1,120 +1,130 @@
-NEO Exchange
-============
+# NEO Exchange
 
-Portal for scheduling observations of NEOs using LCOGT
+Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
-Local Setup
------------
+## History
 
-Construct a Python Virtual Environment (virtualenv) by executing:  
-```bash
-virtualenv <path to virtualenv>
-source <path to virtualenv>/bin/activate # for bash-shells
-```
+### 2.1.0
 
-or:  
+Fixes for non-cadence submitting. Improved error message passthrough from scheduling endpoints. Fixes for block reporting. First part of spectroscopy support for storing spectral taxonomies.
 
-`source <path to virtualenv>/bin/activate.csh # for (t)csh-shells`  
+### 1.9.0
 
-then:
+Add cadence support.
 
-`pip install -r neoexchange/requirements.txt`
+### 1.8.3
 
-You will need to create a `neox/local_settings.py` file which has details of your database setup and local filesystem e.g.
+Add check for and marking of 'was not a minor planet' in the Previous NEOCP page
+as spacecraft. 
+Fixes for POND submitted blocks and lightcurve extraction.
+Changes for the new semester boundaries.
 
-```
-import os, sys
+### 1.8.2
 
-CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.dirname(CURRENT_PATH)
+Bug fix for zooming Analyser view. Feature update on making markers for candidates clickable.
 
-SECRET_KEY = '<50 random characters>'
+### 1.8.1
 
-PREFIX =""
-DEBUG = True
-PRODUCTION = False
-STATIC_ROOT =  '<filesystem path>'
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
+New MPC site codes for the second 0.4m telescopes at Tenerife and Maui.
 
-OPBEAT = {
-    'ORGANIZATION_ID': '',
-    'APP_ID': '',
-    'SECRET_TOKEN': '',
-}
+### 1.8.0
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "neoexchange.db",
-        "USER": "",
-        "PASSWORD":  "",
-        "HOST": "",
-    }
-}
-```
+- Adding ability to push candidates to Agent NEO on the Zooniverse platform
+- Change ReqDB observation submission to Valhalla API submission
 
-Deployment
-----------
+### 1.7.2
 
-You will need to set up 3 environment variables before deploying (if you are just locally testing see instructions below).
+New MPC site code (Q58) for the 0.4m telescope at Siding Spring. Use case-sensitive searches for updating NEOCP Bodies.
 
-If you are using BASH or ZSH add the following to your .profile or .zshrc files:
-```bash
-export NEOX_DB_USER='<insert your DB username>'
-export NEOX_DB_PASSWD='<insert your DB password>'
-export NEOX_DB_HOST='<insert the name of your DB server>'
-```
+### 1.7.1
 
-Docker
-------
-If you are building a Docker container use the following syntax:
-```bash
-docker build -t docker.lcogt.net/neoexchange:latest .
-```
-This will build a Docker image which will need to be pushed into a Docker registry with:
-```bash
-docker push docker.lcogt.net/neoexchange:latest
-```
-Starting a Docker container from this image can be done with a `docker run` command or using `docker-compose`.
+Bug fixes in zeropoint determination for newer versions of astroquery. Deploy mtdlink into the container.
 
+### 1.7.0
 
-Local Testing
--------------
+Astrometry in the browser
 
-For local testing you will probably want to create a
-`neoexchange/neox/local_settings.py` file to point at a local test database and
-to switch on `DEBUG` for easier testing. An example file would look like:
-```python
-import sys, os
+### 1.6.9
 
-CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.dirname(CURRENT_PATH)
+Change overheads for Sinisto observations. Handle scheduling problems at semester changover at CPT.
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'neox.db',                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-    }
-}
+### 1.6.8
 
-DEBUG = True
+Cleanups for leaner docker containers.
 
-# Use a different database file when testing or exploring in the shell.
-if 'test' in sys.argv or 'test_coverage' in sys.argv or 'shell' in sys.argv:
-    DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
-    DATABASES['default']['NAME'] = 'test.db'
-    DATABASES['default']['USER'] = ''
-    DATABASES['default']['PASSWORD'] = ''
+### 1.6.7.1
 
-STATIC_ROOT = os.path.abspath(os.path.join(BASE_DIR, '../../static/'))
-```
+Lower the default IPP values. Round arc and not-seen values on the home page.
 
-To prepare the local SQLite DB for use, you should follow these steps:
+### 1.6.7
 
-1. `cd neoexchange\neoexchange`
-2. Run `python manage.py syncdb`. This will perform migrations as necessary.
+Trap the submission of objects that have no visibility windows.
+
+### 1.6.6
+
+Fix for incorrect revisions being created and clean up script
+
+### 1.6.5
+
+Add fix and trap for a site which has no working telescopes.
+
+### 1.6.4
+
+Addition of 0.4m telescope support.
+
+### 1.6.0-1.6.3
+
+Internal version numbers during addition of 0.4m telescope support.
+
+### 1.5.5
+
+Switch over telescope at Cerro Tololo (W85) to Sinistro. Increase the InterProposal Priority (IPP) value for requests at McDonald (V37). Switch imports to newer pySLALIB module.
+
+### 1.5.4
+
+Update for LCO rebranding.
+
+### 1.5.3
+
+Switch over 2 telescopes at South Africa (K91 & K92) to Sinistro. Filter out proposals with <10 blocks from the block efficiency plot.
+
+### 1.5.2
+
+### 1.5.1
+
+Correct a long-running problem where we didn't correct the Frame midpoint for
+half of the exposure time for our own frames. Store FWHM in the Frame objects
+when creating.
+
+### 1.5.0
+
+Django 1.10 release
+
+### 1.4.6
+Prevent creation of Bodies without orbital elements. Add 0.4m site codes for
+proper attribution when creating frames. Fix missing `.fits` extensions in archive
+replies when creating Frames.
+
+### 1.4.5
+Fix for Arecibo object parsing.
+
+### 1.4.4
+Adding short delay when polling MPC for object info.
+
+### 1.4.3
+Adding support for new Sinistro (K93) camera at CPT
+
+### 1.4.2
+Better comet handling
+
+### 1.4.1
+Better support for new request and frame APIs
+
+### 1.4.0
+- Adding support for new request and frame APIs
+
+### 1.3.0
+- Restructuring frame parsing out of `views.py`
+
+### 1.2.5alpha
+- Moon phase on homepage

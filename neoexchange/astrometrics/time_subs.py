@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2017 LCO
 
 time_subs.py -- Various routines to handle times.
 
@@ -16,11 +16,78 @@ GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta
 from math import degrees
-import slalib as S
+import time
+import logging
+
+import pyslalib.slalib as S
+
+logger = logging.getLogger(__name__)
+
+def get_semester_start(date):
+
+    if date <= datetime(2017, 3, 31, 23, 59, 59):
+        year, month, day, hour, minute, second = date.year, 4, 1, 0, 0, 0
+        if date.month >= 10 or date.month < 4:
+            month = 10
+            if date.month < 10:
+                year -= 1
+        start = datetime(year, month, day, hour, minute, second)
+    elif date >= datetime(2017, 4, 1, 0, 0, 0) and date <= datetime(2017, 11, 30, 23, 59, 59):
+        start = datetime(2017, 4, 1, 0, 0, 0)
+    else:
+        year, month, day, hour, minute, second = date.year, 12, 1, 0, 0, 0
+        if date.month >= 6 and date.month < 12:
+            month = 6
+        elif date.month <= 5:
+            year -= 1
+        start = datetime(year, month, day, hour, minute, second)
+
+    return start
+
+def get_semester_end(date):
+
+    if date <= datetime(2017, 3, 31, 23, 59, 59):
+        year, month, day, hour, minute, second = date.year, 9, 30, 23, 59, 59
+        if date.month >= 10 or date.month < 4:
+            month = 3
+            day = 31
+            if date.month >= 10:
+                year += 1
+        end = datetime(year, month, day, hour, minute, second)
+
+    elif date >= datetime(2017, 4, 1, 0, 0, 0) and date <= datetime(2017, 11, 30, 23, 59, 59):
+        # Odd 2017AB semester
+        end = datetime(2017, 11, 30, 23, 59, 59)
+    else:
+        year, month, day, hour, minute, second = date.year, 5, 31, 23, 59, 59
+        if date.month >= 6 and date.month < 12:
+            month = 11
+            day = 30
+        if date.month >= 12:
+            year += 1
+        end = datetime(year, month, day, hour, minute, second)
+
+    return end
+
+def get_semester_dates(date):
+    '''Returns the semester start and end datetimes for the LCOGT semesters.
+    LCOGT has two semesters, A & B, which run as follows:
+    A semester: <year>-04-01 00:00:00 UTC until <year>-09-30 23:59:59 UTC
+    B semester: <year>-10-01 00:00:00 UTC until <year+1>-03-31 23:59:59 UTC
+    e.g. 2015B runs from 2015-10-01 00:00:00->2016-03-31 23:59:59 and 2016A
+    runs from 2016-04-01 00:00:00 until 2016-09-30 23:59:59'''
+
+    start = get_semester_start(date)
+    end = get_semester_end(date)
+
+    return start, end
+
 
 def parse_neocp_date(neocp_datestr, dbg=False):
     '''Parse dates from the NEOCP (e.g. '(Nov. 16.81 UT)' ) into a datetime
-    object and return this. No sanity checking of the input is done'''
+    object and return this. Checking for the wrong number of days in the month
+    is done (in which case we set it to the first day of the next month) but 
+    otherwise, no sanity checking of the input is done'''
     month_map = { 'Jan' : 1,
                   'Feb' : 2,
                   'Mar' : 3,
@@ -34,15 +101,20 @@ def parse_neocp_date(neocp_datestr, dbg=False):
                   'Nov' : 11,
                   'Dec' : 12 }
 
-    chunks = neocp_datestr.split(' ')
+    chunks = neocp_datestr.split()
     if dbg: print chunks
     if len(chunks) != 3: return None
     month_str = chunks[0].replace('(', '').replace('.', '')
     day_chunks = chunks[1].split('.')
     if dbg: print day_chunks
-    neocp_datetime = datetime(year=datetime.utcnow().year, month=month_map[month_str[0:3]],
-        day=int(day_chunks[0]))
-
+    month_num = month_map[month_str[0:3]]
+    day_num = int(day_chunks[0])
+    try:
+        neocp_datetime = datetime(year = datetime.utcnow().year, month = month_num, day = day_num)
+    except ValueError:
+        month_num += 1
+        day_num = 1
+        neocp_datetime = datetime(year = datetime.utcnow().year, month = month_num, day = day_num)
     decimal_day = float('0.' + day_chunks[1].split()[0])
     neocp_datetime = neocp_datetime + timedelta(days=decimal_day)
 
@@ -334,3 +406,18 @@ def dttodecimalday(dt, microdays=False):
         date_string = ""
 
     return date_string
+
+def timeit(method):
+    '''Decorator for timing methods'''
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+
+        print '%r (%r, %r) %2.2f sec' % \
+              (method.__name__, args, kw, te-ts)
+        logger.debug("%r (%r, %r) %2.2f sec" % \
+              (method.__name__, args, kw, te-ts))
+        return result
+
+    return timed

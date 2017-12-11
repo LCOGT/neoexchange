@@ -3,13 +3,25 @@ from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
-from core.models import Body, Proposal, Block
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo
+from contextlib import contextmanager
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.expected_conditions import \
+    staleness_of
 
 class FunctionalTest(StaticLiveServerTestCase):
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
         if settings.DEBUG == False:
             settings.DEBUG = True
+
+    @contextmanager
+    def wait_for_page_load(self, timeout=30):
+        old_page = self.browser.find_element_by_tag_name('html')
+        yield
+        WebDriverWait(self.browser, timeout).until(
+            staleness_of(old_page)
+        )
 
     def insert_test_body(self):
         params = {  'provisional_name' : 'N999r0q',
@@ -33,9 +45,43 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'num_obs'       : 17,
                     'arc_length'    : 3.0,
                     'not_seen'      : 0.42,
-                    'updated'       : True
+                    'updated'       : True,
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def insert_test_spectra(self):
+
+        spectra_params = {'body'          : self.body,
+                          'taxonomic_class' : 'Sq',
+                          'tax_scheme'    :   'BD',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : 'b',
+                          }
+        self.test_spectra = SpectralInfo.objects.create(pk=1, **spectra_params)
+
+        spectra_params2 = {'body'          : self.body,
+                          'taxonomic_class' : 'T',
+                          'tax_scheme'    :   'H',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : '7 | Other notes maybe.',
+                          }
+        self.test_spectra2 = SpectralInfo.objects.create(pk=2, **spectra_params2)
+
+        spectra_params3 = {'body'          : self.body,
+                          'taxonomic_class' : 'Sa',
+                          'tax_scheme'    :   'T',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : '2G',
+                          }
+        self.test_spectra3 = SpectralInfo.objects.create(pk=3, **spectra_params3)
+
+        spectra_params4 = {'body'          : self.body,
+                          'taxonomic_class' : 'L',
+                          'tax_scheme'    :   'B',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : 'S',
+                          }
+        self.test_spectra4 = SpectralInfo.objects.create(pk=4, **spectra_params4)
 
     def insert_test_proposals(self):
 
@@ -50,6 +96,18 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
 
     def insert_test_blocks(self):
+
+        sblock_params = {
+                         'cadence' : True,
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'tracking_number' : '00042',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(pk=1, **sblock_params)
+
         block_params = { 'telclass' : '1m0',
                          'site'     : 'cpt',
                          'body'     : self.body,
@@ -59,9 +117,22 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'tracking_number' : '00042',
                          'num_exposures' : 5,
                          'exp_length' : 42.0,
-                         'active'   : True
+                         'active'   : True,
+                         'superblock' : self.test_sblock
                        }
         self.test_block = Block.objects.create(pk=1, **block_params)
+
+
+        sblock_params = {
+                         'cadence'  : False,
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'block_start' : '2015-04-20 03:00:00',
+                         'block_end'   : '2015-04-22 13:00:00',
+                         'tracking_number' : '00043',
+                         'active'   : False
+                       }
+        self.test_sblock2 = SuperBlock.objects.create(pk=2, **sblock_params)
 
         block_params2 = { 'telclass' : '2m0',
                          'site'     : 'coj',
@@ -73,8 +144,11 @@ class FunctionalTest(StaticLiveServerTestCase):
                          'num_exposures' : 7,
                          'exp_length' : 30.0,
                          'active'   : False,
+                         'superblock' : self.test_sblock2,
                          'num_observed' : 1,
-                         'reported' : True
+                         'when_observed' : '2015-04-20 03:31:42',
+                         'reported' : True,
+                         'when_reported' : '2015-04-20 09:29:30',
                        }
         self.test_block2 = Block.objects.create(pk=2, **block_params2)
 
@@ -85,11 +159,13 @@ class FunctionalTest(StaticLiveServerTestCase):
         fp.set_preference("startup.homepage_welcome_url", "about:blank");
         fp.set_preference("startup.homepage_welcome_url.additional", "about:blank");
 
-        self.browser = webdriver.Firefox(firefox_profile=fp)
+        if not hasattr(self, 'browser'):
+            self.browser = webdriver.Firefox(firefox_profile=fp)
         self.browser.implicitly_wait(5)
         self.insert_test_body()
         self.insert_test_proposals()
         self.insert_test_blocks()
+        self.insert_test_spectra()
 
     def tearDown(self):
         self.browser.refresh()

@@ -1,0 +1,16 @@
+.svn
+.git
+*/Diffs
+*/neox.log
+*/.coveragerc
+*/htmlcov
+*/comet
+*/*.db
+*.pyc
+*.pyo
+*.fits
+*.dat
+*.fz
+neoexchange/photometrics/tests/*
+neoexchange/lightcurve.png
+neoexchange/lightcurve_data.txt

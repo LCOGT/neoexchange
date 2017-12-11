@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% block header %}Blocks summary{% endblock %}
+
+{% block script-content %}
+<style>
+
+#block-graph {
+  font-size: 90%;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+</style>
+<script type="text/javascript" src="{% static "core/js/d3.v3.min.js" %}"></script>
+
+{% endblock %}
+
+{% block end-scripts %}
+<script type="text/javascript">
+// var datedata = {{slots|safe}};
+
+var data = {{summary|safe}};
+
+        var margin = {
+                                top: 20,
+                                right: 30,
+                                bottom: 60,
+                                left: 60
+                        },
+                                width = 900 - margin.left - margin.right,
+                                height = 345 - margin.top - margin.bottom,
+                                that = this;
+
+
+                        var x = d3.scale.ordinal().rangeRoundBands([0, width], .3);
+
+                        var y = d3.scale.linear().rangeRound([height, 0]);
+
+                        var color = d3.scale.category20();
+
+                        var xAxis = d3.svg.axis().scale(x).orient("bottom");
+
+                        var yAxis = d3.svg.axis().scale(y).orient("left");
+
+                        var svg = d3.select("#block-graph")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+                        color.domain(d3.keys(data[0]).filter(function (key) {
+                                return key !== "proposal";
+                        }));
+
+
+      data.forEach(function(d) {
+        var y0 = 0;
+        d.blocks = color.domain().map(function(name) { return {name: name, y0: y0, y1: y0 += +d[name]}; });
+        d.total = d.blocks[d.blocks.length - 1].y1;
+      });
+
+      data.sort(function(a, b) { return b.total - a.total; });
+      y.domain([0, d3.max(data, function(d) { return d.total; })]);
+                        x.domain(data.map(function (d) {return d.proposal;}));
+
+                        svg.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")").call(xAxis).selectAll("text").style("text-anchor", "start").attr("dx", "-.8em").attr("transform", "rotate(25)" );
+
+                        svg.append("g").attr("class", "y axis").call(yAxis);
+
+                        var proposal = svg.selectAll(".block-values")
+        .data(data)
+        .enter()
+        .append("g")
+        .attr("class", "block-values")
+        .attr("transform", function (d) {
+                                return "translate(" + x(d.proposal) + ",0)";
+                         });
+
+                        proposal.selectAll("rect").data(function (d) {
+                                return d.blocks;
+                        }).enter()
+        .append("rect")
+        .attr("width", x.rangeBand())
+        .attr("y", function (d) {
+                                return y(d.y1);
+                        }).attr("height", function (d) {
+                                return y(d.y0) - y(d.y1);
+                        }).style("fill", function (d) {
+                                return color(d.name);
+                        })
+
+        proposal.append("text")
+          .attr("y", function(d) { return y(d.blocks[1].y1+25); })
+          .attr("dy", ".35em")
+          .text(function(d) {
+            if (d.total == 0){
+              return
+            }else {
+              var percent = ((d.total-d.blocks[0].y1)/d.total)*100;
+              return d.total-d.blocks[0].y1+" / "+d.total+" ("+percent.toFixed(1)+"%)";
+            }
+          });
+
+      var legend = svg.selectAll(".legend")
+          .data(color.domain().slice().reverse())
+          .enter().append("g")
+          .attr("class", "legend")
+          .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+      legend.append("rect")
+          .attr("x", width - 18)
+          .attr("width", 18)
+          .attr("height", 18)
+          .style("fill", color);
+
+      legend.append("text")
+          .attr("x", width - 24)
+          .attr("y", 9)
+          .attr("dy", ".35em")
+          .style("text-anchor", "end")
+          .text(function(d) { return d; });
+
+</script>
+{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+{% block extramenu %}
+        <div class="headingleft">
+                <h1>Observing Block Summary</h1>
+        </div>
+{% endblock%}
+{% block main-content %}
+        <div class="container" id="main">
+                <div class="row">
+                  <div id="block-graph"></div>
+                  <p>Numbers quoted are "Not Observed / Total requested" and percentage unobserved for each proposal. Proposals with less than 10 blocks are filtered out.</p>
+                </div>
+        </div>
+{% endblock %}

@@ -43,7 +43,7 @@ class NewVisitorTest(FunctionalTest):
 
         # He notices the page title has the name of the site and the header
         # mentions current targets
-        self.assertIn('Home | LCOGT NEOx', self.browser.title)
+        self.assertIn('Home | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_id('site-name').text
         self.assertIn('Minor planet follow-up portal', header_text)
 
@@ -56,8 +56,8 @@ class NewVisitorTest(FunctionalTest):
 
         # he goes to the page from N999r0q and computes the ephemeris
         link = self.browser.find_element_by_link_text('N999r0q')
-        self.browser.implicitly_wait(3)
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He decides to using the the ephemeris formte
         inputbox = self.get_item_input_box()
@@ -68,7 +68,8 @@ class NewVisitorTest(FunctionalTest):
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        self.browser.find_element_by_id("id_submit").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -76,10 +77,10 @@ class NewVisitorTest(FunctionalTest):
         self.assertIn('Ephemeris for N999r0q at V37', menu)
 
         self.check_for_header_in_table('id_ephemeris_table',
-            'Date/Time (UTC) RA Dec Mag "/min Alt Moon Phase Moon Dist. Moon Alt. Score H.A.'
+            'Date/Time (UTC) RA Dec Mag "/min P.A. Alt Moon Phase Moon Dist. Moon Alt. Score H.A.'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25'
+            '2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 89.2 +33 0.09 107 -42 +047 -04:25'
         )
 
         # # There is a button asking whether to schedule the target
@@ -99,15 +100,16 @@ class NewVisitorTest(FunctionalTest):
         self.browser.get(self.live_server_url)
 
         link = self.browser.find_element_by_link_text('N999r0q')
-        self.browser.implicitly_wait(3)
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He notices a new selection for the site code and chooses FTN (F65)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
         self.assertIn('Maui, Hawaii (FTN - F65)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
+        # site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
+        site_choices.select_by_value("F65")
 
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
@@ -120,7 +122,8 @@ class NewVisitorTest(FunctionalTest):
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        self.browser.find_element_by_id("id_submit").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -131,14 +134,14 @@ class NewVisitorTest(FunctionalTest):
         table = self.browser.find_element_by_id('id_ephemeris_table')
         table_body = table.find_element_by_tag_name('tbody')
         rows = table_body.find_elements_by_tag_name('tr')
-        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
+        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 89.2 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
 
         # Check the values are correct for F65
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 21 11:30 20 10 38.15 +29 56 52.1 20.4 2.45 +20 0.09 108 -47 -999 -05:09'
+            '2015 04 21 11:30 20 10 38.15 +29 56 52.1 20.4 2.45 89.0 +20 0.09 108 -47 -999 -05:09'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 21 11:35 20 10 39.09 +29 56 52.4 20.4 2.45 +21 0.09 108 -48 -999 -05:04'
+            '2015 04 21 11:35 20 10 39.09 +29 56 52.4 20.4 2.45 89.0 +21 0.09 108 -48 -999 -05:04'
         )
 
 
@@ -150,8 +153,8 @@ class NewVisitorTest(FunctionalTest):
 
         # He is invited to enter a target to compute an ephemeris
         link = self.browser.find_element_by_link_text('N999r0q')
-        self.browser.implicitly_wait(3)
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
@@ -178,7 +181,8 @@ class NewVisitorTest(FunctionalTest):
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        self.browser.find_element_by_id("id_submit").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -189,14 +193,14 @@ class NewVisitorTest(FunctionalTest):
         table = self.browser.find_element_by_id('id_ephemeris_table')
         table_body = table.find_element_by_tag_name('tbody')
         rows = table_body.find_elements_by_tag_name('tr')
-        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
+        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 89.2 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
 
         # Check the values are correct for F65
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 28 10:20 20 40 36.53 +29 36 33.1 20.6 2.08 +52 0.72 136 -15 +058 -02:53'
+            '2015 04 28 10:20 20 40 36.53 +29 36 33.1 20.6 2.08 93.4 +52 0.72 136 -15 +058 -02:53'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 28 10:25 20 40 37.32 +29 36 32.5 20.6 2.08 +54 0.72 136 -16 +059 -02:48'
+            '2015 04 28 10:25 20 40 37.32 +29 36 32.5 20.6 2.08 93.4 +54 0.72 136 -16 +059 -02:48'
         )
 
 
@@ -214,9 +218,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses CPT (K91)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('Sutherland, S. Africa (CPT - K91-93)', [option.text for option in site_choices.options])
+        self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('Sutherland, S. Africa (CPT - K91-93)')
+        site_choices.select_by_visible_text('Sutherland, S. Africa (CPT - K91-93; Sinistro)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
@@ -242,7 +246,8 @@ class NewVisitorTest(FunctionalTest):
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
-        self.browser.find_element_by_id("id_submit").click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_submit").click()
 
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
@@ -255,17 +260,17 @@ class NewVisitorTest(FunctionalTest):
         rows = table_body.find_elements_by_tag_name('tr')
 
         # Check the default settings are not present
-        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
+        self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 89.2 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
         # Check values before the altitude cutoff are not present
-        self.assertNotIn('2015 09 03 17:20 23 53 43.05 -12 42 22.9 19.3 1.84 +2 0.68 56 -53 -999 Limits', [row.text for row in rows])
+        self.assertNotIn('2015 09 03 17:20 23 53 43.05 -12 42 22.9 19.3 1.84 211.7 +2 0.68 56 -53 -999 Limits', [row.text for row in rows])
 
         # Check the values are correct for K92
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 03 19:35 23 53 33.81 -12 45 53.8 19.3 1.87 +30 0.67 57 -26 +039 -04:05'
+            '2015 09 03 19:35 23 53 33.81 -12 45 53.8 19.3 1.87 213.7 +30 0.67 57 -26 +039 -04:05'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 03 19:40 23 53 33.46 -12 46 01.6 19.3 1.87 +32 0.67 58 -25 +040 -04:00'
+            '2015 09 03 19:40 23 53 33.46 -12 46 01.6 19.3 1.87 213.7 +32 0.67 58 -25 +040 -04:00'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 04 03:20 23 52 59.34 -12 57 44.9 19.3 1.83 +35 0.64 61 +41 +022 +03:41'
+            '2015 09 04 03:20 23 52 59.34 -12 57 44.9 19.3 1.83 215.1 +35 0.64 61 +41 +022 +03:41'
         )
