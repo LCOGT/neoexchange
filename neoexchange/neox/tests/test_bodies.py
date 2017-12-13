@@ -47,6 +47,31 @@ class BodyDetailsTest(FunctionalTest):
         for line in testlines:
             self.check_for_row_in_table('id_followup', line)
 
+    def test_results_for_no_H(self):
+        print self.body.abs_mag
+        self.body.abs_mag=None
+        self.body.save()
+		# A new user comes along to the site
+        self.browser.get(self.live_server_url)
+
+        # She sees a link from the targets' name on the front page to a more
+        # detailed view.
+        link = self.browser.find_element_by_link_text('N999r0q')
+        body_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        self.assertIn(link.get_attribute('href'), body_url)
+
+        # She clicks the link and is taken to a page with the targets' details.
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), body_url)
+
+        #the target has no Absolute Magnitude
+        testlines = [u'ABSOLUTE MAGNITUDE (H) '  + 'None',
+                        ]
+        for line in testlines:
+            self.check_for_row_in_table('id_orbelements', line)
+
     def test_can_view_spectral_details(self):
 
 		# A new user comes along to the site

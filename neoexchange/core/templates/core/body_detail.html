@@ -132,7 +132,6 @@
 										<td class="kv-key">Absolute Magnitude (H)</td>
 										<td class="kv-value">{{body.abs_mag}}</td>
 									</tr>
-									{% if body.abs_mag %}
 									<tr>
 										<td class="kv-key">Slope Parameter (G)</td>
 										<td class="kv-value">{{body.slope}}</td>
@@ -153,7 +152,6 @@
 										<td class="kv-key">Diameter in meters<br/>(range)</td>
 										<td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
 									</tr>
-									{% endif %}
 								</tbody>
 							</table>
 							<h5 class="section-title">Follow-up Details</h5>
