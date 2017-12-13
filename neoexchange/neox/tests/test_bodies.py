@@ -48,7 +48,6 @@ class BodyDetailsTest(FunctionalTest):
             self.check_for_row_in_table('id_followup', line)
 
     def test_results_for_no_H(self):
-        print self.body.abs_mag
         self.body.abs_mag=None
         self.body.save()
 		# A new user comes along to the site
