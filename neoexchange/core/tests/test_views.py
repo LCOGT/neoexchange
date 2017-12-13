@@ -617,7 +617,6 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lco_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
-        print self.core.frames.lco_api_call
         blockid = self.test_block5.id
         resp = block_status(blockid)
         self.assertFalse(resp)
