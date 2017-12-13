@@ -181,7 +181,7 @@ class TestBody(TestCase):
 
         self.assertEqual(expected, result)
 
-    def test_noabsmag(self):
+    def test_no_absmag(self):
         test_body=self.body
         test_body.abs_mag = None
         test_body.save()
