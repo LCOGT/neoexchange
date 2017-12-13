@@ -189,6 +189,14 @@ class TestBody(TestCase):
         diameter = test_body.diameter()
         self.assertEqual(None, diameter)
 
+    def test_bad_absmag(self):
+        test_body=self.body
+        test_body.abs_mag = -99
+        test_body.save()
+
+        diameter = test_body.diameter()
+        self.assertEqual(None, diameter)
+
 
 @patch('core.models.datetime', MockDateTime)
 class TestComputeFOM(TestCase):

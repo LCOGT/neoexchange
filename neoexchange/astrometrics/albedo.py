@@ -56,6 +56,8 @@ def asteroid_diameter(a=asteroid_albedo(), h=7):
         return False
     else:
         try:
+            if h < -90:
+                raise ValueError('Nothing brighter than -90, must be a flag.')
             diameter = 1329000 * math.sqrt((10 ** (-0.4 * h)) / a)
             return diameter
         except:
