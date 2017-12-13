@@ -25,7 +25,7 @@ class FunctionalTest(StaticLiveServerTestCase):
 
     def insert_test_body(self):
         params = {  'provisional_name' : 'N999r0q',
- #                   'abs_mag'       : 21.0,
+                    'abs_mag'       : 21.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
