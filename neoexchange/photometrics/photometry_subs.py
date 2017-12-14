@@ -28,10 +28,25 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     D	        -0.281  0.246   0.460   0.551   0.627   0.191
     X	        -0.247  0.207   0.367   0.419   0.450   0.146
 
-    Mean (S + C)	-0.28	0.23	0.39	0.37	0.36	0.16
+    Mean (S+C)   -0.28	0.23	0.39	0.37	0.36	0.16
     '''
 
-    delta_mag = 0.23
-    new_mag = mag_V - delta_mag
+
+    mag_mapping = { 'SOLAR' : {'r' : 0.183, 'i' : 0.293, 'w' : 0.114 },
+                    'MEAN'  : {'r' : 0.230, 'i' : 0.390, 'w' : 0.160 },
+                  }
+
+    # Lookup taxonomy to try and get V-<passband> color terms
+    color_terms = mag_mapping.get(taxonomy.upper(), None)
+
+    # If we got a sucessful taxonomy lookup, try to lookup the <passband>
+    # in the color terms
+    delta_mag = None
+    if color_terms:
+        delta_mag = color_terms.get(passband.lower(), None)
+
+    new_mag = None
+    if delta_mag:
+        new_mag = mag_V - delta_mag
 
     return new_mag

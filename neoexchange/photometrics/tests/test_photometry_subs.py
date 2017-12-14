@@ -25,7 +25,7 @@ class TestTransformVmag(TestCase):
         V = 20.0
         new_passband = 'i'
 
-        expected_mag = V-0.23
+        expected_mag = V-0.39
 
         new_mag = transform_Vmag(V, new_passband)
 
@@ -37,7 +37,7 @@ class TestTransformVmag(TestCase):
         new_passband = 'i'
         taxonomy = 'Mean'
 
-        expected_mag = V-0.23
+        expected_mag = V-0.39
 
         new_mag = transform_Vmag(V, new_passband, taxonomy)
 
