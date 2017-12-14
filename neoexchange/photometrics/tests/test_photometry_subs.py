@@ -43,6 +43,54 @@ class TestTransformVmag(TestCase):
 
         self.assertEqual(expected_mag, new_mag)
 
+    def test_taxon_mean_uppercase_to_i(self):
+
+        V = 20.0
+        new_passband = 'i'
+        taxonomy = 'MEAN'
+
+        expected_mag = V-0.39
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_mean_lowercase_to_i(self):
+
+        V = 20.0
+        new_passband = 'i'
+        taxonomy = 'mean'
+
+        expected_mag = V-0.39
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_bad(self):
+
+        V = 20.0
+        new_passband = 'i'
+        taxonomy = 'foo'
+
+        expected_mag = None
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_bad_passband(self):
+
+        V = 20.0
+        new_passband = 'U'
+        taxonomy = 'mean'
+
+        expected_mag = None
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
     def test_taxon_solar_to_i(self):
 
         V = 20.5
@@ -50,6 +98,54 @@ class TestTransformVmag(TestCase):
         taxonomy = 'Solar'
 
         expected_mag = V-0.293
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_mean_to_w(self):
+
+        V = 19.0
+        new_passband = 'w'
+        taxonomy = 'Mean'
+
+        expected_mag = V-0.16
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_solar_to_w(self):
+
+        V = 16.25
+        new_passband = 'w'
+        taxonomy = 'Solar'
+
+        expected_mag = V-0.114
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_mean_to_r(self):
+
+        V = 19.1
+        new_passband = 'r'
+        taxonomy = 'MeAn'
+
+        expected_mag = V-0.23
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_solar_to_r(self):
+
+        V = 16.25
+        new_passband = 'r'
+        taxonomy = 'solaR'
+
+        expected_mag = V-0.183
 
         new_mag = transform_Vmag(V, new_passband, taxonomy)
 
