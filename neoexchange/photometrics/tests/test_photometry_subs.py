@@ -91,6 +91,18 @@ class TestTransformVmag(TestCase):
 
         self.assertEqual(expected_mag, new_mag)
 
+    def test_bad_uc_passband(self):
+
+        V = 20.0
+        new_passband = 'R'  # Bessell-R not the same as (SDSS/PS)-r
+        taxonomy = 'mean'
+
+        expected_mag = None
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
     def test_taxon_solar_to_i(self):
 
         V = 20.5

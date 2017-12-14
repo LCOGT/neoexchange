@@ -46,7 +46,7 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     # in the color terms
     delta_mag = None
     if color_terms:
-        delta_mag = color_terms.get(passband.lower(), None)
+        delta_mag = color_terms.get(passband, None)
 
     new_mag = None
     if delta_mag:
