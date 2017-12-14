@@ -55,7 +55,7 @@ def asteroid_diameter(a=asteroid_albedo(), h=7):
         logger.debug("You cannot have a negative albedo")
         return False
     elif h < -90:
-        logger.warning('Nothing brighter than -90, must be a flag.')
+        logger.warn('Nothing brighter than -90, must be a flag.')
         return None
     else:
         try:
