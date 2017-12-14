@@ -150,3 +150,111 @@ class TestTransformVmag(TestCase):
         new_mag = transform_Vmag(V, new_passband, taxonomy)
 
         self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Stype_to_r(self):
+
+        V = 10
+        new_passband = 'r'
+        taxonomy = 'S'
+
+        expected_mag = V-0.275
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Stype_to_i(self):
+
+        V = 10
+        new_passband = 'i'
+        taxonomy = 'S'
+
+        expected_mag = V-0.470
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Stype_to_w(self):
+
+        V = 10
+        new_passband = 'w'
+        taxonomy = 'S'
+
+        expected_mag = V-0.199
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Ctype_to_r(self):
+
+        V = 10
+        new_passband = 'r'
+        taxonomy = 'C'
+
+        expected_mag = V-0.194
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Ctype_to_i(self):
+
+        V = 10
+        new_passband = 'i'
+        taxonomy = 'c'
+
+        expected_mag = V-0.308
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Ctype_to_w(self):
+
+        V = 10
+        new_passband = 'w'
+        taxonomy = 'C'
+
+        expected_mag = V-0.120
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Xtype_to_r(self):
+
+        V = 10
+        new_passband = 'r'
+        taxonomy = 'X'
+
+        expected_mag = V-0.207
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Xtype_to_i(self):
+
+        V = 10
+        new_passband = 'i'
+        taxonomy = 'x'
+
+        expected_mag = V-0.367
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Xtype_to_w(self):
+
+        V = 10
+        new_passband = 'w'
+        taxonomy = 'X'
+
+        expected_mag = V-0.146
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
