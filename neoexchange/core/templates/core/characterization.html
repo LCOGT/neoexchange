@@ -13,7 +13,7 @@
 
 {% block main-content %}
     <div class="fullwidth">
-        <table id="id_ranked_targets" class="datatable">
+        <table id="characterization_targets" class="datatable">
             <thead>
                 <tr>
                     <th class="list_project">
@@ -44,15 +44,15 @@
                         <span class="sortable" id="MANOS">MANOS Target?</span>
                     </th>
                     <th>
-                        <span class="sortable" id="obsdate">Next Observable</span>
+                        <span class="sortable" id="obsdate">Observation Window</span>
                     </th>
                     <th>
-                        <span class="sortable" id="reported">Reported</span>
+                        <span class="sortable" id="reported">Reported?</span>
                     </th>
                 </tr>
             </thead>
             <tbody>
-                {% for body in newest|dictsortreversed:"FOM" %}
+                {% for body in char_targets %}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
                     <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
@@ -63,8 +63,8 @@
                     <td data-label="H Mag">{{body.abs_mag}}</td>
                     <td data-label="SMASS Obs"> </td>
                     <td data-label="MANOS Target?"> </td>
-                    <td data-label="Next Observable"> </td>
-                    <td data-label="Reported?"> </td>
+                    <td data-label="Observation Window"> </td>
+                    <td data-label="Reported?"></td>
                     </tr>
                 {% empty%}
                     <tr><td colspan=16> No new targets</td></tr>

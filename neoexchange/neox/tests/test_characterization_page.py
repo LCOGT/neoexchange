@@ -65,19 +65,30 @@ class CharacterizationPageTest(FunctionalTest):
     @patch('core.models.datetime', MockDateTime)
     def test_ranking_page(self):
 
-        MockDateTime.change_datetime(2017, 12, 21, 17, 0, 0)
-#        self.insert_extra_test_body()
-#        self.insert_another_extra_test_body()
+        MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
+        self.insert_extra_test_body()
+        self.insert_another_extra_test_body()
 
         #Kildorn the Unstoppable goes to the characterization page and expects to see the list of bodies in need of Characterization.
         characterization_page_url = self.live_server_url + '/characterization/'
         self.browser.get(characterization_page_url)
         self.assertNotIn('Home | LCO NEOx', self.browser.title)
         self.assertIn('Characterization Page | LCO NEOx', self.browser.title)
+        self.check_for_header_in_table('characterization_targets',\
+            'Rank Target Name R.A. Dec. V Mag. Spectra H Mag. SMASS Obs MANOS Target? Observation Window Reported?')
 
+        # Position below computed for 2015-07-01 17:00:00
+        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 21.0',
+                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 21.0',
+                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 21.0']
+        self.check_for_row_in_table('characterization_targets', testlines[0])
+        self.check_for_row_in_table('characterization_targets', testlines[1])
+        self.check_for_row_in_table('characterization_targets', testlines[2])
 
         #He notices that they are ordered somehow
         
         #Kildorn notices a link to the body page
         
         #He then sees that there is information from other surveys that have already gotten spectra for his targets
+
+        #Now knowing what he must do, Kildorn the Unstoppable takes a lunch break.

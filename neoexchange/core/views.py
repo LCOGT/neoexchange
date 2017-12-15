@@ -578,9 +578,6 @@ def ranking(request):
 
     return render(request, 'core/ranking.html', params)
 
-def characterization(request):
-
-    return render(request, 'core/characterization.html')
 
 def build_unranked_list_params():
     params = {}
@@ -616,6 +613,38 @@ def build_unranked_list_params():
         'newest': unranked
     }
     return params
+
+def characterization(request):
+
+    params = build_characterization_list()
+    return render(request, 'core/characterization.html',params)
+
+def build_characterization_list():
+    params = {}
+    try:
+        # If we don't have any Body instances, return None instead of breaking
+        char_targets = Body.objects.filter(active=True)
+        unranked = []
+        for body in char_targets:
+            body_dict = model_to_dict(body)
+            body_dict['current_name'] = body.current_name()
+            emp_line = body.compute_position()
+            if not emp_line:
+                continue
+            body_dict['ra'] = emp_line[0]
+            body_dict['dec'] = emp_line[1]
+            body_dict['v_mag'] = emp_line[2]
+            unranked.append(body_dict)
+    except Exception, e:
+        unranked = None
+        logger.error('Characterization list failed on %s' % e)
+    params = {
+        'targets': Body.objects.filter(active=True).count(),
+        'blocks': Block.objects.filter(active=True).count(),
+        'char_targets': unranked
+    }
+    return params
+
 
 def check_for_block(form_data, params, new_body):
         '''Checks if a block with the given name exists in the Django DB.
