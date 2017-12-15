@@ -31,6 +31,10 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     X           -0.247  0.207   0.367   0.419   0.450   0.146
 
     Mean (S+C)   -0.28  0.23    0.39    0.37    0.36    0.16
+
+    According to Binzel et al. in _Asteroids IV_, p. 246:
+    "About 90% of the known NEOs fall in the S-, Q-, C- and X-complexes
+    with S- (50%), C- (15%), X- (10%) and Q- (10%) dominating"
     '''
 
 
@@ -38,6 +42,7 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
                     'MEAN'  : {'r' : 0.230, 'i' : 0.390, 'w' : 0.160 },
                        'S'  : {'r' : 0.275, 'i' : 0.470, 'w' : 0.199 },
                        'C'  : {'r' : 0.194, 'i' : 0.308, 'w' : 0.120 },
+                       'Q'  : {'r' : 0.252, 'i' : 0.379, 'w' : 0.156 },
                        'X'  : {'r' : 0.207, 'i' : 0.367, 'w' : 0.146 },
                   }
 

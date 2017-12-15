@@ -271,6 +271,42 @@ class TestTransformVmag(TestCase):
 
         self.assertEqual(expected_mag, new_mag)
 
+    def test_taxon_Qtype_to_r(self):
+
+        V = 15.1
+        new_passband = 'r'
+        taxonomy = 'Q'
+
+        expected_mag = V-0.252
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Qtype_to_i(self):
+
+        V = 12.5
+        new_passband = 'i'
+        taxonomy = 'q'
+
+        expected_mag = V-0.379
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Qtype_to_w(self):
+
+        V = 14
+        new_passband = 'w'
+        taxonomy = 'Q'
+
+        expected_mag = V-0.156
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
 class TestComputeFloydsSNR(TestCase):
 
     def setUp(self):
