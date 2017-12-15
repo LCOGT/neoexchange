@@ -23,7 +23,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
-    SuperBlockListView, SuperBlockDetailView
+    SuperBlockListView, SuperBlockDetailView, characterization
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
@@ -53,6 +53,7 @@ urlpatterns = [
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
+    url(r'^characterization/$', characterization, name='characterization'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$',ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     url(r'^schedule/(?P<pk>\d+)/cadence/$', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),

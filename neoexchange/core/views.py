@@ -578,6 +578,9 @@ def ranking(request):
 
     return render(request, 'core/ranking.html', params)
 
+def characterization(request):
+
+    return render(request, 'core/characterization.html')
 
 def build_unranked_list_params():
     params = {}

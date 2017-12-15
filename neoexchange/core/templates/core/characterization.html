@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+
+{% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
+
+{% block header %}Characterization Page{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+{% block extramenucss %}extramenu-home{% endblock %}
+
+{% block extramenu %}
+{% endblock%}
+
+{% block main-content %}
+    <div class="fullwidth">
+        <table id="id_ranked_targets" class="datatable">
+            <thead>
+                <tr>
+                    <th class="list_project">
+                        <span class="sortable" id="rank">Rank</span>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="name_id">Target Name</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="ra">R.A.</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="dec">Dec.</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="Vmag">V Mag.</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="spectra">Spectra</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="Hmag">H Mag.</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="SMASS">SMASS Obs</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="MANOS">MANOS Target?</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="obsdate">Next Observable</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="reported">Reported</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for body in newest|dictsortreversed:"FOM" %}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td data-label="Rank">{{forloop.counter}}</td>
+                    <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
+                    <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
+                    <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
+                    <td data-label="V Mag">{{body.v_mag|floatformat:1 }}</td>
+                    <td data-label="Spectra"> </td>
+                    <td data-label="H Mag">{{body.abs_mag}}</td>
+                    <td data-label="SMASS Obs"> </td>
+                    <td data-label="MANOS Target?"> </td>
+                    <td data-label="Next Observable"> </td>
+                    <td data-label="Reported?"> </td>
+                    </tr>
+                {% empty%}
+                    <tr><td colspan=16> No new targets</td></tr>
+                {% endfor%}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
