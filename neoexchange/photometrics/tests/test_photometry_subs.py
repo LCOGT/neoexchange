@@ -275,8 +275,8 @@ class TestComputeFloydsSNR(TestCase):
 
     def setUp(self):
 
-        self.ftn_zp = 24.0
-        self.fts_zp = 22.5
+        self.ftn_zp = 25.3
+        self.fts_zp = 23.1
 
         self.precision = 3
 
