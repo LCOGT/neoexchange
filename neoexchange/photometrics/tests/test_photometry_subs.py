@@ -270,3 +270,23 @@ class TestTransformVmag(TestCase):
         new_mag = transform_Vmag(V, new_passband, taxonomy)
 
         self.assertEqual(expected_mag, new_mag)
+
+class TestComputeFloydsSNR(TestCase):
+
+    def setUp(self):
+
+        self.ftn_zp = 24.0
+        self.fts_zp = 22.5
+
+        self.precision = 3
+
+    def test_faint_ftn1(self):
+
+        mag_i = 18.0
+        exp_time = 100.0
+
+        expected_snr = 42.0
+
+        snr =  compute_floyds_snr(mag_i, self.ftn_zp)
+
+        self.assertAlmostEqual(expected_snr, snr, self.precision)

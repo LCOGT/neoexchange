@@ -15,6 +15,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
+from math import sqrt
+
 def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     '''
     Table 2. Asteroid magnitude transformations from Pan-STARRS1 AB filter magnitudes to the
@@ -53,3 +55,21 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
         new_mag = mag_V - delta_mag
 
     return new_mag
+
+def compute_floyds_snr(mag_i, exp_time, zp_i=24.0, sky_variance=2, read_noise=3.7):
+    '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
+    magnitude (mag_i) for the given exposure time <exp_time>.
+    The i' band zeropoint [zp_i] (defaults to 24.0) that gives 1 electron/pixel/s,
+    the sky variance and the readnoise [read_noise] (defaults to 3.7e-/pixel)
+    are also needed.
+    Extinction and variation with airmass are not included nor is the (neglibile)
+    dark current'''
+
+    # Photons per second from the source
+    m_0 = 10.0 ** ( -0.4 * (mag_i - zp_i))
+    signal = m_0 * exp_time
+    noise = signal + (sky_variance * exp_time) + read_noise**2
+    noise = sqrt(noise)
+    snr = signal / noise
+
+    return snr
