@@ -83,16 +83,16 @@ class FunctionalTest(StaticLiveServerTestCase):
                           }
         self.test_taxonomy4 = SpectralInfo.objects.create(pk=4, **taxonomy_params4)
 
-#    def insert_previous_spectra(self):
-#
-#        spectra_params = {'body'         : self.body,
-#                          'spec_wav'     : 'Vis',
-#                          'spec_vis'     : 'sp233/a265962.sp233.txt',
-#                          'spec_ref'     : 'sp[233]',
-#                          'spec_source'  : 'S',
-#                          'spec_date'    : '2017-09-25',
-#                          }
-#        self.test_spectra = SpectralInfo.objects.create(pk=1, **spectra_params)
+    def insert_previous_spectra(self):
+
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_ref'     : 'sp[233]',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spectra_params)
 
     def insert_test_proposals(self):
 

@@ -336,22 +336,22 @@ class SpectralInfo(models.Model):
     def __unicode__(self):
         return "%s is a %s-Type Asteroid" % (self.body.name, self.taxonomic_class)
 
-#class PreviousSpectra(models.Model):
-#    body                = models.ForeignKey(Body, on_delete=models.CASCADE)
-#    spec_wav            = models.CharField('Wavelength', blank=True, null=True,max_length=7,choices=SPECTRAL_WAV_CHOICES)
-#    spec_vis            = models.CharField('Visible Spectra Link',blank=True, null=True,max_length=25)
-#    spec_ir             = models.CharField('IR Spectra Link',max_length=25,blank=True, null=True)
-#    spec_ref            = models.CharField('Spectra Reference',max_length=10,blank=True, null=True)
-#    spec_source         = models.CharField('Source',max_length=1,blank=True, null=True,choices=SPECTRAL_SOURCE_CHOICES)
-#    spec_date           = models.DateField(blank=True, null=True)
-#
-#    class Meta:
-#        verbose_name = _('External Spectroscopy')
-#        verbose_name_plural = _('External Spectroscopy')
-#        db_table = 'ingest_previous_spectra'
-#
-#    def __unicode__(self):
-#        return "%s has %s spectra of %s" % (self.spec_source,self.spec_wav,self.body.name)
+class PreviousSpectra(models.Model):
+    body                = models.ForeignKey(Body, on_delete=models.CASCADE)
+    spec_wav            = models.CharField('Wavelength', blank=True, null=True,max_length=7,choices=SPECTRAL_WAV_CHOICES)
+    spec_vis            = models.CharField('Visible Spectra Link',blank=True, null=True,max_length=25)
+    spec_ir             = models.CharField('IR Spectra Link',max_length=25,blank=True, null=True)
+    spec_ref            = models.CharField('Spectra Reference',max_length=10,blank=True, null=True)
+    spec_source         = models.CharField('Source',max_length=1,blank=True, null=True,choices=SPECTRAL_SOURCE_CHOICES)
+    spec_date           = models.DateField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('External Spectroscopy')
+        verbose_name_plural = _('External Spectroscopy')
+        db_table = 'ingest_previous_spectra'
+
+    def __unicode__(self):
+        return "%s has %s spectra of %s" % (self.spec_source,self.spec_wav,self.body.name)
 
 class SuperBlock(models.Model):
 

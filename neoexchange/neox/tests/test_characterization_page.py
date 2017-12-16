@@ -80,7 +80,7 @@ class CharacterizationPageTest(FunctionalTest):
 
         # Position below computed for 2015-07-01 17:00:00
         testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 NEEDED 21.0',
-                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 NEEDED 21.0',
+                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 NEEDED 21.0 Visible No',
                     u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 NEEDED  21.0']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
