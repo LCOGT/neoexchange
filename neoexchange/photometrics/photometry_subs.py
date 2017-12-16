@@ -19,6 +19,15 @@ from math import sqrt
 
 def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     '''
+    Returns the magnitude in <passband> for an asteroid with a V amgnitude of
+    <mag_V> and a taxonomic class of [taxonomy]. If the taxonomy is not given,
+    a 'Mean' is assumed
+    Taxonomy can be one of:
+    'solar' - assuming solar colors (used by the MPC?),
+    'mean'  - average of the S- and C-types is used,
+    'neo'   - average weighted by the occurence fraction among NEOs,
+    's', 'c', 'q', 'x' - individual taxonomies
+
     Table 2. Asteroid magnitude transformations from Pan-STARRS1 AB filter magnitudes to the
     Johnson-Cousin V system based on Tonry et al. (2012). Solar colors are also included for
     reference.
@@ -34,7 +43,7 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
 
     According to Binzel et al. in _Asteroids IV_, p. 246:
     "About 90% of the known NEOs fall in the S-, Q-, C- and X-complexes
-    with S- (50%), C- (15%), X- (10%) and Q- (10%) dominating"
+    with S- (50%), C- (15%), X- (10%) and Q- (10%) types dominating."
     '''
 
 
@@ -44,6 +53,7 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
                        'C'  : {'r' : 0.194, 'i' : 0.308, 'w' : 0.120 },
                        'Q'  : {'r' : 0.252, 'i' : 0.379, 'w' : 0.156 },
                        'X'  : {'r' : 0.207, 'i' : 0.367, 'w' : 0.146 },
+                     'NEO'  : {'r' : 0.213, 'i' : 0.356, 'w' : 0.148 },
                   }
 
     # Lookup taxonomy to try and get V-<passband> color terms

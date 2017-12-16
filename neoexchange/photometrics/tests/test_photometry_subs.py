@@ -307,6 +307,42 @@ class TestTransformVmag(TestCase):
 
         self.assertEqual(expected_mag, new_mag)
 
+    def test_taxon_NEOtype_to_r(self):
+
+        V = 15.1
+        new_passband = 'r'
+        taxonomy = 'NeO'
+
+        expected_mag = V-0.213
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_NEOtype_to_i(self):
+
+        V = 12.5
+        new_passband = 'i'
+        taxonomy = 'neo'
+
+        expected_mag = V-0.356
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_NEOtype_to_w(self):
+
+        V = 14
+        new_passband = 'w'
+        taxonomy = 'NEO'
+
+        expected_mag = V-0.148
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
 class TestComputeFloydsSNR(TestCase):
 
     def setUp(self):
