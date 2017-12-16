@@ -58,6 +58,7 @@ class CharacterizationPageTest(FunctionalTest):
                     }
         self.body, created = Body.objects.get_or_create(pk=4, **params)
 
+
 # The characterization page computes the RA, Dec of each body for 'now' so we need to mock
 # patch the datetime used by models.Body.compute_position to give the same
 # consistent answer.
@@ -78,9 +79,9 @@ class CharacterizationPageTest(FunctionalTest):
             'Rank Target Name R.A. Dec. V Mag. Spectra H Mag. SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 21.0',
-                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 21.0',
-                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 21.0']
+        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 NEEDED 21.0',
+                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 NEEDED 21.0',
+                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 NEEDED  21.0']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
         self.check_for_row_in_table('characterization_targets', testlines[2])

@@ -71,9 +71,9 @@ class BodyDetailsTest(FunctionalTest):
         self.assertIn('Object: ' + self.body.current_name(), header_text)
 
         #She notices there is a section describing the object's spectral info
-        testlines = ['BUS-DEMEO' + u' TAXONOMIC TYPE ' + str(self.test_spectra.taxonomic_class),
-                     'HOWELL' + u' TAXONOMIC TYPE ' + str(self.test_spectra2.taxonomic_class),
-                     'THOLEN' + u' TAXONOMIC TYPE ' + str(self.test_spectra3.taxonomic_class),
+        testlines = ['BUS-DEMEO' + u' TAXONOMIC TYPE ' + str(self.test_taxonomy.taxonomic_class),
+                     'HOWELL' + u' TAXONOMIC TYPE ' + str(self.test_taxonomy2.taxonomic_class),
+                     'THOLEN' + u' TAXONOMIC TYPE ' + str(self.test_taxonomy3.taxonomic_class),
                      'Neese, Asteroid Taxonomy V6.0. (2010).',
                      'Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).',
                      '7 color indices were used. Other notes maybe.',
