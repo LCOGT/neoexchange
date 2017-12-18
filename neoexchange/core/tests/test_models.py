@@ -28,7 +28,7 @@ from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources, Candidate, WCSField
+    CatalogSources, Candidate, WCSField,PreviousSpectra
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -145,6 +145,15 @@ class TestBody(TestCase):
                          'reported' : False
                        }
         self.test_block5b = Block.objects.create(**block_params5b)
+
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_ref'     : 'sp[233]',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spectra_params)
 
     def test_get_block_info_NoBlock(self):
         expected = ('Not yet', 'Not yet')
@@ -1137,3 +1146,4 @@ class TestCandidate(TestCase):
         for frame in arange(self.dets_array.shape[0]):
             for column in self.dets_array.dtype.names:
                 self.assertAlmostEqual(self.dets_array[column][frame], new_dets_array[column][frame], 7)
+        

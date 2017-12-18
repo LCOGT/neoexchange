@@ -64,7 +64,7 @@ class CharacterizationPageTest(FunctionalTest):
 # consistent answer.
 
     @patch('core.models.datetime', MockDateTime)
-    def test_ranking_page(self):
+    def test_characterization_page(self):
 
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
         self.insert_extra_test_body()
@@ -79,9 +79,9 @@ class CharacterizationPageTest(FunctionalTest):
             'Rank Target Name R.A. Dec. V Mag. Spectra H Mag. SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 NEEDED 21.0',
-                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 NEEDED 21.0 Visible No',
-                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 NEEDED  21.0']
+        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 21.0',
+                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 21.0 Vis',
+                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 21.0']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
         self.check_for_row_in_table('characterization_targets', testlines[2])
