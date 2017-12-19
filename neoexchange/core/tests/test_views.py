@@ -1614,6 +1614,19 @@ class TestFrames(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
+        block_params = { 'telclass' : '0m4',
+                         'site'     : 'CPT',
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : 'TEMP_GROUP',
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'tracking_number' : '522289',
+                         'num_exposures' : 5,
+                         'exp_length' : 145.0,
+                         'active'   : True
+                       }
+        self.test_block_0m4 = Block.objects.create(**block_params)
 
     def test_add_frame(self):
         params = parse_mpcobs(self.test_obslines[-1])
@@ -1769,6 +1782,169 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_cpt_0m4_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-11T23:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID":"cpt",
+                        "TELID":"0m4a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb96",
+                        "ORIGNAME" : "cpt0m407-kb96-20171211-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='L09')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'L09')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_elp_0m4_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-11T23:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID":"elp",
+                        "TELID":"0m4a",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb80",
+                        "ORIGNAME" : "elp0m407-kb96-20171211-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='V38')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'V38')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_tfn_0m4n1_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-11T23:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID":"tfn",
+                        "TELID":"0m4a",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb29",
+                        "ORIGNAME" : "tfn0m414-kb29-20171211-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='Z21')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'Z21')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_tfn_0m4n2_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-11T23:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID":"tfn",
+                        "TELID":"0m4b",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb88",
+                        "ORIGNAME" : "tfn0m410-kb88-20171211-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='Z17')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'Z17')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_lsc_0m4n1_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-12T03:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID":"lsc",
+                        "TELID":"0m4a",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb95",
+                        "ORIGNAME" : "lsc0m409-kb95-20171211-0121-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='W89')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'W89')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_lsc_0m4n2_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-12T03:59:28.067",
+                        "ENCID": "aqwb",
+                        "SITEID":"lsc",
+                        "TELID":"0m4a",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb26",
+                        "ORIGNAME" : "lsc0m412-kb26-20171211-0041-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='W79')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'W79')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
 
     def test_add_source_measurements(self):
