@@ -83,6 +83,10 @@ def compute_floyds_snr(mag_i, exp_time, zp_i=24.0, sky_mag_i=19.3, sky_variance=
     pixel_scale = 6.0/14.4
     # Photons per second from the source
     m_0 = 10.0 ** ( -0.4 * (mag_i - zp_i))
+#   6.6... magic number is the mantissa part of Planck's constant. Most of the
+#   exponent part (10^-34) is cancelled by Jansky->erg conversion (10^-23) and
+#   erg->Watts (10^-7)
+#   m_0 =    flux_jy * 10000.0/6.6260693/wavelength
     signal = m_0 * exp_time
 
     sky =  10.0 ** ( -0.4 * (sky_mag_i - zp_i))
