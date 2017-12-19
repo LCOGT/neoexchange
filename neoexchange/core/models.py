@@ -108,7 +108,7 @@ TAX_REFERENCE_CHOICES = (
 SPECTRAL_WAV_CHOICES = (
                         ('Vis','Visible'),
                         ('NIR','Near Infrared'),
-                        ('VIS+NIR','Both Visible and Near IR'),
+                        ('Vis+NIR','Both Visible and Near IR'),
                         ('NA','None Yet.'),
                      )
 

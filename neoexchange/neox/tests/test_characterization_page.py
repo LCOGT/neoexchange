@@ -2,7 +2,7 @@ from .base import FunctionalTest
 from mock import patch
 from neox.tests.mocks import MockDateTime
 from datetime import datetime
-from core.models import Body
+from core.models import Body, PreviousSpectra
 
 class CharacterizationPageTest(FunctionalTest):
 
@@ -32,6 +32,22 @@ class CharacterizationPageTest(FunctionalTest):
                     }
         self.body, created = Body.objects.get_or_create(pk=3, **params)
 
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'Vis+NIR',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_ir'      : 'sp233/a265962.sp233.txt',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=4, **spectra_params)
+
+        spectra_params2 = {'body'         : self.body,
+                          'spec_wav'     : 'NA',
+                          'spec_source'  : 'M',
+                          'spec_date'    : '2017-08-25',
+                          }
+        self.test_spectra2 = PreviousSpectra.objects.create(pk=5, **spectra_params2)
+
     def insert_another_extra_test_body(self):
         params = {  'name'          : 'V38821zi',
                     'abs_mag'       : 21.0,
@@ -58,6 +74,21 @@ class CharacterizationPageTest(FunctionalTest):
                     }
         self.body, created = Body.objects.get_or_create(pk=4, **params)
 
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'NIR',
+                          'spec_ir'      : 'sp234/a096631.sp234.txt',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=6, **spectra_params)
+
+        spectra_params3 = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp234.txt',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2010-10-25',
+                          }
+        self.test_spectra3 = PreviousSpectra.objects.create(pk=7, **spectra_params3)
 
 # The characterization page computes the RA, Dec of each body for 'now' so we need to mock
 # patch the datetime used by models.Body.compute_position to give the same
@@ -79,9 +110,9 @@ class CharacterizationPageTest(FunctionalTest):
             'Rank Target Name R.A. Dec. V Mag. Spectra H Mag. SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 21.0',
-                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 21.0 Vis',
-                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 21.0']
+        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 21.0 Vis+NIR NO',
+                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 21.0 Vis NIR',
+                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 21.0 Vis+NIR YES']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
         self.check_for_row_in_table('characterization_targets', testlines[2])

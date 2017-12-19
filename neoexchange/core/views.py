@@ -14,7 +14,7 @@ GNU General Public License for more details.
 '''
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from math import floor
 from django.db.models import Q
 from django.forms.models import model_to_dict
@@ -626,8 +626,45 @@ def build_characterization_list():
         char_targets = Body.objects.filter(active=True)
         unranked = []
         for body in char_targets:
+            spectra=PreviousSpectra.objects.filter(body = body)
+            s_wav=s_vis_link=s_nir_link=None
+            m_vis_link=m_nir_link=None
+            m_wav="NO"
+            if spectra:
+                s_date = date.today()-date(1000,01,01)
+                for spectrum in spectra:
+                    if spectrum.spec_source == "S":
+                        if s_wav == spectrum.spec_wav or not s_wav:
+                            if s_date > date.today()-spectrum.spec_date:
+                                s_date=date.today()-spectrum.spec_date
+                                s_wav=spectrum.spec_wav
+                                s_vis_link=spectrum.spec_vis
+                                s_nir_link=spectrum.spec_ir
+                        else:
+                            s_date=date.today()-spectrum.spec_date
+                            s_wav="Vis+NIR"
+                            if spectrum.spec_vis:
+                                s_vis_link=spectrum.spec_vis
+                            if spectrum.spec_ir:
+                                s_nir_link=spectrum.spec_ir
+                    elif spectrum.spec_source == "M":
+                        m_wav=spectrum.spec_wav
+                        m_vis_link=spectrum.spec_vis
+                        m_nir_link=spectrum.spec_ir
+                        if m_wav == "NA":
+                            m_wav = "YES"
             body_dict = model_to_dict(body)
             body_dict['current_name'] = body.current_name()
+            body_dict['s_wav']=s_wav
+            if s_vis_link:
+                body_dict['s_vis_link']='http://smass.mit.edu/data/spex/'+s_vis_link
+            if s_nir_link:
+                body_dict['s_nir_link']='http://smass.mit.edu/data/spex/'+s_nir_link
+            if m_vis_link:
+                body_dict['m_vis_link']='https://manosobs.files.wordpress.com/'+m_vis_link
+            if m_nir_link:
+                body_dict['m_nir_link']='https://manosobs.files.wordpress.com/'+m_nir_link
+            body_dict['m_wav']=m_wav
             emp_line = body.compute_position()
             if not emp_line:
                 continue
@@ -644,7 +681,6 @@ def build_characterization_list():
         'char_targets': unranked
     }
     return params
-
 
 def check_for_block(form_data, params, new_body):
         '''Checks if a block with the given name exists in the Django DB.

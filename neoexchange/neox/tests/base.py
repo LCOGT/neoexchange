@@ -3,7 +3,7 @@ from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
-from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo,PreviousSpectra
 from contextlib import contextmanager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.expected_conditions import \
@@ -84,7 +84,6 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.test_taxonomy4 = SpectralInfo.objects.create(pk=4, **taxonomy_params4)
 
     def insert_previous_spectra(self):
-
         spectra_params = {'body'         : self.body,
                           'spec_wav'     : 'Vis',
                           'spec_vis'     : 'sp233/a265962.sp233.txt',
@@ -93,6 +92,22 @@ class FunctionalTest(StaticLiveServerTestCase):
                           'spec_date'    : '2017-09-25',
                           }
         self.test_spectra = PreviousSpectra.objects.create(pk=1, **spectra_params)
+
+        spectra_params2 = {'body'         : self.body,
+                          'spec_wav'     : 'NIR',
+                          'spec_source'  : 'M',
+                          'spec_ir'     : '2014/09/1999sh10.png',
+                          'spec_date'    : '2017-08-25',
+                          }
+        self.test_spectra2 = PreviousSpectra.objects.create(pk=2, **spectra_params2)
+
+        spectra_params3 = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2010-10-25',
+                          }
+        self.test_spectra3 = PreviousSpectra.objects.create(pk=3, **spectra_params3)
 
     def insert_test_proposals(self):
 
@@ -177,11 +192,12 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.insert_test_proposals()
         self.insert_test_blocks()
         self.insert_test_taxonomy()
+        self.insert_previous_spectra()
 
     def tearDown(self):
         self.browser.refresh()
 #        self.browser.implicitly_wait(5)
-        self.browser.quit()
+#        self.browser.quit()
 
     def check_for_row_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)
