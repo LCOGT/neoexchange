@@ -1230,10 +1230,7 @@ def configure_defaults(params):
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
-    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or \
-    params['site_code'] == 'T04' or params['site_code'] == 'Q58' or \
-    params['site_code'] == 'Q59' or params['site_code'] == 'V38' or \
-    params['site_code'] == 'L09' or params['site_code'] == 'W79':
+    elif params['site_code'] in ['Z21', 'W89', 'W79', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['filter'] = 'w'
