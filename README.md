@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.1.2
+
+Add support for the 0.4m telescopes at Cerro Tololo, Sutherland and McDonald.
+
 ### 2.1.1
 
 Fix for missing absolute magnitudes breaking the diameter calculation.
