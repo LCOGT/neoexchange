@@ -3,7 +3,7 @@ from django.conf import settings
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
-from core.models import Body, Proposal, Block, SuperBlock
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo
 from contextlib import contextmanager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.expected_conditions import \
@@ -45,9 +45,43 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'num_obs'       : 17,
                     'arc_length'    : 3.0,
                     'not_seen'      : 0.42,
-                    'updated'       : True
+                    'updated'       : True,
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def insert_test_spectra(self):
+
+        spectra_params = {'body'          : self.body,
+                          'taxonomic_class' : 'Sq',
+                          'tax_scheme'    :   'BD',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : 'b',
+                          }
+        self.test_spectra = SpectralInfo.objects.create(pk=1, **spectra_params)
+
+        spectra_params2 = {'body'          : self.body,
+                          'taxonomic_class' : 'T',
+                          'tax_scheme'    :   'H',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : '7 | Other notes maybe.',
+                          }
+        self.test_spectra2 = SpectralInfo.objects.create(pk=2, **spectra_params2)
+
+        spectra_params3 = {'body'          : self.body,
+                          'taxonomic_class' : 'Sa',
+                          'tax_scheme'    :   'T',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : '2G',
+                          }
+        self.test_spectra3 = SpectralInfo.objects.create(pk=3, **spectra_params3)
+
+        spectra_params4 = {'body'          : self.body,
+                          'taxonomic_class' : 'L',
+                          'tax_scheme'    :   'B',
+                          'tax_reference' : 'PDS6',
+                          'tax_notes'     : 'S',
+                          }
+        self.test_spectra4 = SpectralInfo.objects.create(pk=4, **spectra_params4)
 
     def insert_test_proposals(self):
 
@@ -92,7 +126,7 @@ class FunctionalTest(StaticLiveServerTestCase):
         sblock_params = {
                          'cadence'  : False,
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
+                         'proposal' : self.test_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-22 13:00:00',
                          'tracking_number' : '00043',
@@ -131,6 +165,7 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.insert_test_body()
         self.insert_test_proposals()
         self.insert_test_blocks()
+        self.insert_test_spectra()
 
     def tearDown(self):
         self.browser.refresh()

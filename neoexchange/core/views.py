@@ -127,6 +127,7 @@ class BodyDetailView(DetailView):
         context = super(BodyDetailView, self).get_context_data(**kwargs)
         context['form'] = EphemQuery()
         context['blocks'] = Block.objects.filter(body=self.object).order_by('block_start')
+        context['spectra'] = SpectralInfo.objects.filter(body=self.object)
         return context
 
 
@@ -169,11 +170,15 @@ class BlockReport(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        block.active = False
-        block.reported = True
-        block.when_reported = datetime.utcnow()
-        block.save()
-        return redirect(reverse('blocklist'))
+        if block.when_observed:
+            block.active = False
+            block.reported = True
+            block.when_reported = datetime.utcnow()
+            block.save()
+            return redirect(reverse('blocklist'))
+        else:
+            messages.error(request,'Block does not have any observations')
+            return HttpResponseRedirect(reverse('block-view', kwargs={'pk':block.superblock.id}))
 
 class BlockReportMPC(LoginRequiredMixin, View):
 
@@ -501,6 +506,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     suffix = datetime.strftime(utc_date, '%Y%m%d')
     if period and jitter:
         suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        if len(body.current_name()) > 7:
+             # Name is too long to fit in the groupid field, trim off year part.
+             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%m%d'), datetime.strftime(data['end_time'], '%m%d'))
 
     resp = {
         'target_name': body.current_name(),
@@ -1504,3 +1512,44 @@ def make_plot(request):
 def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
+
+def update_taxonomy(taxobj,dbg=False):
+    '''Update the passed <taxobj> for a new taxonomy update.
+    <taxobj> is expected to be a list of:
+    designation/provisional designation, taxonomy, taxonomic scheme, reference, notes
+    normally produced by the fetch_taxonomy_page() method.
+    Will only add (never remove) taxonomy fields that are not already in Taxonomy database and match objects in DB.'''
+
+    if len(taxobj) != 5:
+        return False
+
+    obj_id = taxobj[0].rstrip()
+    body_all=Body.objects.all()
+    try:
+        body = Body.objects.get(name=obj_id)
+    except:
+        try:
+            body = Body.objects.get(provisional_name=obj_id)
+        except:
+            if dbg == True:
+                print "No such Body as %s" % obj_id
+                print "number of bodies: %i" %body_all.count()
+            return False
+    #Must be a better way to do this next bit, but I don't know what it is off the top of my head.
+    check_tax = SpectralInfo.objects.filter(body=body,taxonomic_class=taxobj[1],tax_scheme=taxobj[2],tax_reference=taxobj[3],tax_notes=taxobj[4])
+    if check_tax.count() != 0:
+        if dbg == True:
+            print "Data already in DB"
+        return False
+    params = {  'body'          : body,
+                'taxonomic_class' : taxobj[1],
+                'tax_scheme'    : taxobj[2],
+                'tax_reference' : taxobj[3],
+                'tax_notes'     : taxobj[4],
+                }
+    tax, created = SpectralInfo.objects.get_or_create(**params)
+    if not created:
+        if dbg == True:
+            print "Did not write for some reason."
+        return False
+    return True

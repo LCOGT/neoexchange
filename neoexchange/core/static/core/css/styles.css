@@ -862,6 +862,7 @@ ul.block-status li, ul.candidate-controls li { padding: 8px 0; border-top: 1px s
 ul.candidate-controls li {width:100%;}
 .block-status-line, .candidate {display:block;cursor:pointer;}
 .block-status-item { display:table-cell; padding: 0 10px;}
+.block-control { padding: 0 10px;}
 
 ul.candidate-controls li:hover {background-color:#eee; }
 

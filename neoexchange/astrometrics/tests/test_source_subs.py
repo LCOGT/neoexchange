@@ -21,6 +21,7 @@ from unittest import skipIf
 from bs4 import BeautifulSoup
 import os
 import mock
+import urllib2
 from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
@@ -30,7 +31,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence
+    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1009,6 +1010,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_ C_le' : u'     K13R33T  C2013 09 13.18561323 15 20.53 -10 21 52.6          20.4 V      W86\r\n',
                             'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
                             'p_ x_l' :  u'g0232K10F41B* x2010 03 19.91359 06 26 37.29 +35 47 01.3                L~0FUhC51',
+                            'p_quoteC_h': u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309",
 
                           }
         self.maxDiff = None
@@ -1228,6 +1230,24 @@ class TestParseMPCObsFormat(TestCase):
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_f'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_quoteC_h(self):
+
+        expected_params = { 'body'  : 'G07212',
+                            'flags' : "'",
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2017, 11, 2, 4, 10, 16, int(0.32*1e6)),
+                            'obs_ra'    : 48.408025,
+                            'obs_dec'   : 19.463075,
+                            'obs_mag'   : 21.4,
+                            'filter'    : 'G',
+                            'astrometric_catalog' : 'GAIA-DR1',
+                            'site_code' : '309'
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_quoteC_h'])
 
         self.compare_dict(expected_params, params)
 
@@ -2171,3 +2191,82 @@ class TestMakeCadence(TestCase):
         ur = make_cadence(self.elements, params, self.ipp_value, self.request)
         for key in ur.keys():
             self.assertEqual(expected[key], ur[key])
+
+class TestFetchTaxonomyData(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored, partial version of the PDS Taxonomy Database
+        #test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
+        #self.test_taxonomy_page = test_fh
+        #test_fh.close()
+        self.test_taxonomy_page = os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat')
+
+    def test_basics(self):
+        expected_length = 33
+        targets = fetch_taxonomy_page(self.test_taxonomy_page)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_targets(self):
+        expected_targets =  [['980','SU',"T","PDS6",'7G'],
+                             ['980','S3',"Ba","PDS6",'7I'],
+                             ['980','S',"Td","PDS6",'2I'],
+                             ['980','T',"H","PDS6",'65'],
+                             ['980','L',"B","PDS6",'s'],
+                             ['4713','A',"B","PDS6",'s'],
+                             ['4713','A',"3T","PDS6",' '],
+                             ['4713','Sl',"3B","PDS6",' '],
+                             ['4713','Sw',"BD","PDS6",'a'],
+                            ]
+        tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
+        for line in expected_targets:
+            self.assertIn(line, tax_data)
+
+    def test_tax(self):
+        expected_tax =  ['SU',
+                         'S3',
+                         'S',
+                         'T',
+                         'L',
+                         'CGTP:',
+                         'S',
+                         'V',
+                         '***',
+                         'V',
+                         'S',
+                         'S',
+                         'Sq',
+                         'S',
+                         'B',
+                         'QU',
+                         'Q',
+                         'S',
+                         'K',
+                         'Xe',
+                         'S',
+                         'S',
+                         'S',
+                         'S',
+                         'S',
+                         'A',
+                         'Sw',
+                         'A',
+                         'Sl',
+                         'Sl',
+                         'C',
+                         'Xc',
+                         'V',
+                          ]
+        tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
+        taxonomy=[row[1] for row in tax_data]
+        self.assertEqual(expected_tax, taxonomy)
+
+    def test_tax_site_pull(self):
+        expected_line = ['1','G',"T","PDS6","7G"]
+        tax_data = fetch_taxonomy_page()
+        self.assertEqual(expected_line, tax_data[0])
+
+    #def test_binzel_pull(self):
+    #    expected_line = ['2002 EC','X:',"B","BZ04","*"]
+    #    tax_data = fetch_taxonomy_page()
+    #    self.assertEqual(expected_line, tax_data[-1])

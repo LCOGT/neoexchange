@@ -182,6 +182,30 @@
 									</tr>
                                                                         {% endif %}
 								</tbody>
+							</table>						
+							<h5 class="section-title">Spectroscopy Details</h5>
+							<table class="keyvalue-table" id="id_spectralinfo">
+								<tbody>
+                                     {% for s in spectra %}
+									<tr>
+										<td class="kv-key"> {{s.get_tax_scheme_display}} Taxonomic Type</td>
+										<td class="kv-value">{{s.taxonomic_class}}</td>
+									</tr>	
+									{% if s.tax_notes and s.tax_notes != "*"%}
+									    <tr>
+									    	<td style="font-size:xx-small;text-align:right;" colspan=2>{{s.make_readable_tax_notes}}</td>
+									    </tr>
+									{% endif %}
+									<tr>
+										<td style="font-size:xx-small;text-align:right;" colspan=2>{{s.get_tax_reference_display}}</td>
+									</tr>	
+								    {% empty %}
+								        <tr>
+								            <td class="kv-key"> Known Taxonomies</td>
+								            <td class="kv-value">None</td>
+								        </tr>
+								    {% endfor %}
+								</tbody>
 							</table>
 						</div>
 					</div>

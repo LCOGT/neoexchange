@@ -42,9 +42,9 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id
+    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
 from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
 from core.forms import EphemQuery
 
 # Disable logging during testing
@@ -617,7 +617,6 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lco_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
-        print self.core.frames.lco_api_call
         blockid = self.test_block5.id
         resp = block_status(blockid)
         self.assertFalse(resp)
@@ -713,6 +712,91 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_cadence_short_name(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        self.body_mp.name = '2009 HA'
+        self.body_mp.save()
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'period' : 4.0,
+                 'jitter' : 1.0,
+                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
+                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.111571453511374,
+                        'speed': 2.8742514597935136,
+                        'slot_length': 20,
+                        'exp_count': 12,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'utc_date': data['utc_date'].date().isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T23:00:00',
+                        'mid_time': '2016-04-06T16:00:00',
+                        'ra_midpoint': 3.3109489700795587,
+                        'dec_midpoint': -0.15943962965814026,
+                        'period' : 4.0,
+                        'jitter' : 1.0,
+                        'num_times' : 3,
+                        'total_time' : 1.0
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_cadence_long_name(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'period' : 4.0,
+                 'jitter' : 1.0,
+                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
+                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.111571453511374,
+                        'speed': 2.8742514597935136,
+                        'slot_length': 20,
+                        'exp_count': 12,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': '2009 HA21_Q63-cad-0406-0406',
+                        'utc_date': data['utc_date'].date().isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T23:00:00',
+                        'mid_time': '2016-04-06T16:00:00',
+                        'ra_midpoint': 3.3109489700795587,
+                        'dec_midpoint': -0.15943962965814026,
+                        'period' : 4.0,
+                        'jitter' : 1.0,
+                        'num_times' : 3,
+                        'total_time' : 1.0
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
 
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
@@ -1352,6 +1436,12 @@ class TestCreate_sourcemeasurement(TestCase):
 
         self.sat_test_body = Body.objects.create(**N009ags_params)
 
+        G07212_params = { 'provisional_name' : 'G07212',
+                        }
+
+        self.gbot_test_body = Body.objects.create(**G07212_params)
+
+
         self.maxDiff = None
 
     def test_create_nonLCO(self):
@@ -1577,6 +1667,34 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(6, len(sources))
         self.assertEqual(4, len(nonLCO_frames))
         self.assertEqual(2, len(LCO_frames))
+
+    def test_create_with_trailing_space(self):
+
+        expected_params = { 'body' : 'G07212',
+                            'filter' : 'G',
+                            'obs_date' : datetime(2017, 11, 2, 4, 10, 16, int(0.32*1e6)),
+                            'site_code' : '309',
+                            'obs_ra' : 48.408025,
+                            'obs_dec'   : 19.463075,
+                            'obs_mag'   : 21.4,
+                          }
+
+        test_obslines = u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309"
+
+        source_measures = create_source_measurement(test_obslines)
+        self.assertIsNot(source_measures, False)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+
 
 class TestFrames(TestCase):
     def setUp(self):
@@ -2972,3 +3090,53 @@ class Test_Generate_New_Candidate_Id(TestCase):
 
         self.assertEqual(expected_id, new_id)
         self.assertEqual(3, Body.objects.count())
+
+class Test_Add_New_Taxonomy_Data(TestCase):
+
+    def setUp(self):
+
+        params = { 'name' : '980',
+                   'provisional_name' : 'LNX0003',
+                   'origin' : 'L',
+                 }
+        self.body = Body.objects.create(pk=1,**params)
+
+        tax_params = {'body'          : self.body,
+                      'taxonomic_class' : 'S3',
+                      'tax_scheme'    :   'Ba',
+                      'tax_reference' : 'PDS6',
+                      'tax_notes'     : '7I',
+                      }
+        self.test_spectra = SpectralInfo.objects.create(pk=1, **tax_params)
+
+    def test_one_body(self):
+        expected_res = True
+        test_obj=['LNX0003','SU',"T","PDS6","7G"]
+        new_tax = update_taxonomy(test_obj)
+
+        self.assertEqual(expected_res, new_tax)
+
+    def test_new_target(self):
+        expected_res = False
+        test_obj=['4702','S',"B","PDS6","s"]
+        new_tax = update_taxonomy(test_obj)
+
+        self.assertEqual(expected_res, new_tax)
+
+    def test_same_data(self):
+        expected_res = False
+        test_obj=['980','S3',"Ba","PDS6","7I"]
+        new_tax = update_taxonomy(test_obj)
+
+        self.assertEqual(expected_res, new_tax)
+
+    def test_same_data_twice(self):
+        expected_res = False
+        test_obj=['980','SU',"T","PDS6","7G"]
+        new_tax = update_taxonomy(test_obj)
+        new_tax = update_taxonomy(test_obj)
+
+        self.assertEqual(expected_res, new_tax)
+
+
+

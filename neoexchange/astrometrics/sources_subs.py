@@ -546,6 +546,7 @@ def parse_mpcobs(line):
     else:
         body = number
 
+    body = body.rstrip()
     obs_type = str(line[14])
     flag_char = str(line[13])
 
@@ -1354,3 +1355,96 @@ def submit_block_to_scheduler(elements, params):
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
 
     return tracking_number, params
+
+def fetch_taxonomy_page(page=None):
+    '''Fetches Taxonomy data to be compared against database. First from PDS, then from Binzel 2004'''
+
+    if page == None:
+        taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
+        data_file = urllib2.urlopen(taxonomy_url)
+        data_out=parse_taxonomy_data(data_file)
+        data_file.close
+        ####Binzel_taxonomy_page appears to be completely included within PDS Version6.0
+        #binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
+        #with open(binzel_taxonomy_page, 'r') as input_file:
+        #    binzel_out=parse_binzel_data(input_file)
+        #data_out=data_out+binzel_out
+    else:
+        with open(page, 'r') as input_file:
+            data_out = parse_taxonomy_data(input_file)
+    return data_out
+
+def parse_binzel_data(tax_text=None):
+    '''Parses the Binzel taxonomy database for targets and pulls a list
+    of these targets back.
+    '''
+    tax_table=[]
+    for line in tax_text:
+        if line[0] !='#':
+            line=line.split('\n')
+            chunks=line[0].split(',')
+            if chunks[0] == '':
+                chunks[0] = chunks[2]
+            row=[chunks[0],chunks[4],"B","BZ04",chunks[10]]
+            tax_table.append(row)
+    return tax_table       
+    
+def parse_taxonomy_data(tax_text=None):
+    '''Parses the online taxonomy database for targets and pulls a list
+    of these targets back.
+    '''
+    tax_scheme=['T',
+                'Ba',
+                'Td',
+                'H',
+                'S',
+                'B',
+                '3T/3B',
+                'BD',
+                ]
+    tax_table=[]
+    for line in tax_text:
+        name=line[8:25]
+        end=line[103:]
+        line=line[:8]+line[26:104]
+        chunks=line.split(' ')
+        chunks=filter(None, chunks)
+        if chunks[0] != '\n':
+            if chunks[1] != '-':
+                chunks[1] = chunks[1]+' '+chunks[2]
+                del chunks[2]
+            chunks.insert(1,name)
+            if ',' in chunks[18]:
+                chunks[18]=chunks[18][:2]
+                chunks.insert(19,chunks[18][3:])
+            #print(chunks[0],len(chunks))
+            #parse Object ID=Object Number or Provisional designation if no number
+            if chunks[0] != '0':
+                obj_id=(chunks[0])
+            else:
+                obj_id=(chunks[2])
+            #Build Taxonomy reference table. This is clunky. Better to search table for matching values first?
+            index=range(1,7)
+            index=[2*x+1 for x in index]+[17]
+  #          print(index)
+            for i in index:
+                if chunks[i] != '-':
+                    if chunks[19] != '-':
+                        chunks[i+1] = chunks[i+1] + "|"+ end
+                    row=[obj_id,chunks[i],tax_scheme[(i-1)/2-1],"PDS6",chunks[i+1]]
+                    tax_table.append(row)
+            if chunks[15] != '-':
+                if chunks[19] != '-':
+                    out = end
+                else:
+                    out=' '
+                row=[obj_id,chunks[15],"3T","PDS6",out]
+                tax_table.append(row)
+            if chunks[16] != '-':
+                if chunks[19] != '-':
+                    out = end
+                else:
+                    out=' '
+                row=[obj_id,chunks[16],"3B","PDS6",out]
+                tax_table.append(row)
+    return tax_table
