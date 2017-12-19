@@ -32,9 +32,9 @@ SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('Q58','Siding Spring, Aust. (COJ - Q58-59; 0.4m)'),
          ('Z21','Tenerife, Spain (TFN - Z17,Z21; 0.4m)'),
          ('T04','Maui, Hawaii (OGG - T03-04; 0.4m)'),
-         ('W89','CTIO, Chile (LSC - W89; 0.4m)'),
-         ('V99','McDonald, Texas (ELP - V99; 0.4m)'),
-         ('K99','Sutherland, S. Africa (CPT - K99; 0.4m)'))
+         ('W89','CTIO, Chile (LSC - W89,W79; 0.4m)'),
+         ('V38','McDonald, Texas (ELP - V38; 0.4m)'),
+         ('L09','Sutherland, S. Africa (CPT - L09; 0.4m)'))
 
 
 class EphemQuery(forms.Form):

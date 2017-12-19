@@ -338,7 +338,7 @@ class Test_Generate_Message(TestCase):
         self.test_block3.save()
 
         self.test_frame_point4m.sitecode = 'W89'
-        self.test_frame_point4m.instrument = 'kb26'
+        self.test_frame_point4m.instrument = 'kb93'
         self.test_frame_point4m.save()
 
         expected_message = (u'COD W89\n'
@@ -347,8 +347,8 @@ class Test_Generate_Message(TestCase):
                             u'OBS T. Lister, S. Greenstreet, E. Gomez\n'
                             u'MEA T. Lister\n'
                             u'TEL 0.4-m f/8 Schmidt-Cassegrain + CCD\n'
-                            u'ACK NEOx_2015 XS54_W89_kb26\n'
-                            u'COM LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile\n'
+                            u'ACK NEOx_2015 XS54_W89_kb93\n'
+                            u'COM LCO LSC Node Aqawan A 0m4a at Cerro Tololo, Chile\n'
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET 2MASS\n'
                             u'BND R\n'
@@ -364,27 +364,27 @@ class Test_Generate_Message(TestCase):
 
         self.assertEqual(expected_message, message)
 
-    def test_V99(self):
+    def test_W79(self):
 
-        self.test_block3.site = 'elp'
+        self.test_block3.site = 'lsc'
         self.test_block3.save()
 
-        self.test_frame_point4m.sitecode = 'V99'
+        self.test_frame_point4m.sitecode = 'W79'
         self.test_frame_point4m.instrument = 'kb26'
         self.test_frame_point4m.save()
 
-        expected_message = (u'COD V99\n'
+        expected_message = (u'COD W79\n'
                             u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                             u'CON [tlister@lco.global]\n'
                             u'OBS T. Lister, S. Greenstreet, E. Gomez\n'
                             u'MEA T. Lister\n'
                             u'TEL 0.4-m f/8 Schmidt-Cassegrain + CCD\n'
-                            u'ACK NEOx_2015 XS54_V99_kb26\n'
-                            u'COM LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas\n'
+                            u'ACK NEOx_2015 XS54_W79_kb26\n'
+                            u'COM LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile\n'
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET 2MASS\n'
                             u'BND R\n'
-                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 R      V99\n')
+                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 R      W79\n')
         message = generate_message(self.test_block3.id, self.test_block3.body.id)
 
         i = 0
@@ -396,27 +396,59 @@ class Test_Generate_Message(TestCase):
 
         self.assertEqual(expected_message, message)
 
-    def test_K99(self):
+    def test_V38(self):
 
-        self.test_block3.site = 'cpt'
+        self.test_block3.site = 'elp'
         self.test_block3.save()
 
-        self.test_frame_point4m.sitecode = 'K99'
-        self.test_frame_point4m.instrument = 'kb96'
+        self.test_frame_point4m.sitecode = 'V38'
+        self.test_frame_point4m.instrument = 'kb26'
         self.test_frame_point4m.save()
 
-        expected_message = (u'COD K99\n'
+        expected_message = (u'COD V38\n'
                             u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
                             u'CON [tlister@lco.global]\n'
                             u'OBS T. Lister, S. Greenstreet, E. Gomez\n'
                             u'MEA T. Lister\n'
                             u'TEL 0.4-m f/8 Schmidt-Cassegrain + CCD\n'
-                            u'ACK NEOx_2015 XS54_K99_kb96\n'
+                            u'ACK NEOx_2015 XS54_V38_kb26\n'
+                            u'COM LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas\n'
+                            u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
+                            u'NET 2MASS\n'
+                            u'BND R\n'
+                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 R      V38\n')
+        message = generate_message(self.test_block3.id, self.test_block3.body.id)
+
+        i = 0
+        expected_lines = expected_message.split('\n')
+        message_lines = message.split('\n')
+        while i < len(expected_lines):
+            self.assertEqual(expected_lines[i], message_lines[i])
+            i += 1
+
+        self.assertEqual(expected_message, message)
+
+    def test_L09(self):
+
+        self.test_block3.site = 'cpt'
+        self.test_block3.save()
+
+        self.test_frame_point4m.sitecode = 'L09'
+        self.test_frame_point4m.instrument = 'kb96'
+        self.test_frame_point4m.save()
+
+        expected_message = (u'COD L09\n'
+                            u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'
+                            u'CON [tlister@lco.global]\n'
+                            u'OBS T. Lister, S. Greenstreet, E. Gomez\n'
+                            u'MEA T. Lister\n'
+                            u'TEL 0.4-m f/8 Schmidt-Cassegrain + CCD\n'
+                            u'ACK NEOx_2015 XS54_L09_kb96\n'
                             u'COM LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa\n'
                             u'AC2 tlister@lco.global,sgreenstreet@lco.global\n'
                             u'NET 2MASS\n'
                             u'BND R\n'
-                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 R      K99\n')
+                            u'     K15X54S  C2015 12 05.04918900 30 24.00 +32 45 18.0          20.5 R      L09\n')
         message = generate_message(self.test_block3.id, self.test_block3.body.id)
 
         i = 0
