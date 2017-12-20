@@ -20,7 +20,7 @@ class CharacterizationPageTest(FunctionalTest):
                     'source_type'   : 'U',
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
-                    'origin'        : 'M',
+                    'origin'        : 'N',
                     'ingest'        : '2015-05-11 17:20:00',
                     'score'         : 85,
                     'discovery_date': '2015-05-10 12:00:00',
@@ -33,9 +33,9 @@ class CharacterizationPageTest(FunctionalTest):
         self.body, created = Body.objects.get_or_create(pk=3, **params)
 
         spectra_params = {'body'         : self.body,
-                          'spec_wav'     : 'Vis+NIR',
-                          'spec_vis'     : 'sp233/a265962.sp233.txt',
-                          'spec_ir'      : 'sp233/a265962.sp233.txt',
+                          'spec_wav'     : 'NIR',
+                          'spec_ir'     : 'sp233/a265962.sp233.txt',
+                          'spec_ref'     : 'sp[233]',
                           'spec_source'  : 'S',
                           'spec_date'    : '2017-09-25',
                           }
@@ -62,7 +62,7 @@ class CharacterizationPageTest(FunctionalTest):
                     'source_type'   : 'U',
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
-                    'origin'        : 'M',
+                    'origin'        : 'G',
                     'ingest'        : '2015-05-11 17:20:00',
                     'score'         : 100,
                     'discovery_date': '2015-05-10 12:00:00',
@@ -107,12 +107,12 @@ class CharacterizationPageTest(FunctionalTest):
         self.assertNotIn('Home | LCO NEOx', self.browser.title)
         self.assertIn('Characterization Page | LCO NEOx', self.browser.title)
         self.check_for_header_in_table('characterization_targets',\
-            'Rank Target Name R.A. Dec. V Mag. Spectra H Mag. SMASS Obs MANOS Target? Observation Window Reported?')
+            'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 21.0 Vis+NIR NO',
-                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 21.0 Vis NIR',
-                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 21.0 Vis+NIR YES']
+        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 LC 21.0 Goldstone Vis+NIR NO',
+                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 LC 21.0 Minor Planet Center Vis+NIR NIR',
+                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
         self.check_for_row_in_table('characterization_targets', testlines[2])

@@ -665,6 +665,11 @@ def build_characterization_list():
             if m_nir_link:
                 body_dict['m_nir_link']='https://manosobs.files.wordpress.com/'+m_nir_link
             body_dict['m_wav']=m_wav
+            body_dict['origin']=body.get_origin_display()
+            if 'Vis' in s_wav or 'Vis' in m_wav:
+                body_dict['obs_needed']='LC'
+            else:
+                body_dict['obs_needed']='Spec/LC'
             emp_line = body.compute_position()
             if not emp_line:
                 continue
@@ -1612,3 +1617,5 @@ def update_taxonomy(taxobj,dbg=False):
             print "Did not write for some reason."
         return False
     return True
+
+

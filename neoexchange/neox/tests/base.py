@@ -85,9 +85,9 @@ class FunctionalTest(StaticLiveServerTestCase):
 
     def insert_previous_spectra(self):
         spectra_params = {'body'         : self.body,
-                          'spec_wav'     : 'Vis',
+                          'spec_wav'     : 'Vis+NIR',
                           'spec_vis'     : 'sp233/a265962.sp233.txt',
-                          'spec_ref'     : 'sp[233]',
+                          'spec_ir'      : 'sp233/a265962.sp233.txt',
                           'spec_source'  : 'S',
                           'spec_date'    : '2017-09-25',
                           }
