@@ -456,6 +456,9 @@ class TestComputeFloydsSNR(SNRTestCase):
 
        mag_I = 18.0
        exp_time = 100.0
+
+       expected_snr = 4.60
+
        self.tic_params['eff_area'] = 12.47*u.meter**2
 
        snr = compute_floyds_snr(mag_I, exp_time, self.tic_params, emulate_signal=True)

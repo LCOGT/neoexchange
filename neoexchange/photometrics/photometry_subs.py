@@ -120,7 +120,7 @@ def compute_photon_rate(mag, tic_params, emulate_signal=False):
 
     return rate
 
-def compute_floyds_snr(mag_i, exp_time, zp_i=24.0, sky_mag_i=19.3, sky_variance=2, read_noise=3.7, dbg=False, emulate_signal=False):
+def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=False):
     '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
     magnitude (mag_i) for the given exposure time <exp_time>.
     The i' band zeropoint [zp_i] (defaults to 24.0) that gives 1 electron/pixel/s,
@@ -131,14 +131,14 @@ def compute_floyds_snr(mag_i, exp_time, zp_i=24.0, sky_mag_i=19.3, sky_variance=
 
     pixel_scale = 6.0/14.4
     # Photons per second from the source
-    m_0 = 10.0 ** ( -0.4 * (mag_i - zp_i))
+    m_0 = 10.0 ** ( -0.4 * (mag_i - tic_params['zp_i']))
 
     signal = m_0 * exp_time
 
-    sky =  10.0 ** ( -0.4 * (sky_mag_i - zp_i))
+    sky =  10.0 ** ( -0.4 * (tic_params['sky_mag_i'] - tic_params['zp_i']))
     if dbg: print signal, sky
     sky = sky / pixel_scale**2
-    noise = signal + (sky * exp_time) + read_noise**2
+    noise = signal + (sky * exp_time) + tic_params.get('read_noise', 0.0)**2
     noise = sqrt(noise)
     snr = signal / noise
 
