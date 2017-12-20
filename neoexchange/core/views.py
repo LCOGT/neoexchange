@@ -1618,4 +1618,14 @@ def update_taxonomy(taxobj,dbg=False):
         return False
     return True
 
+def update_previous_spectra(specobj,dbg=False):
+    '''Update the passed <specobj> for a new external spectroscopy update.
+    <specobj> is expected to be a list of:
+    designation/provisional designation, wavelength region, data link, reference, date
+    normally produced by the fetch_manos_tagets() or fetch_smass_targets() method.
+    Will only add (never remove) spectroscopy details that are not already in spectroscopy database and match Characterization objects in DB.'''
+
+    return True
+
+
 
