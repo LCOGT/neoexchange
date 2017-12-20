@@ -672,7 +672,11 @@ class Frame(models.Model):
                         'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
                         'F65' : 'LCO OGG Node 2m0 FTN at Haleakala, Maui',
                         'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui',
-                        'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui'
+                        'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui',
+                        'W89' : 'LCO LSC Node Aqawan A 0m4a at Cerro Tololo, Chile',
+                        'W79' : 'LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile',
+                        'V38' : 'LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas',
+                        'L09' : 'LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa',
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
 
@@ -699,7 +703,11 @@ class Frame(models.Model):
                         'E10' : twom_string,
                         'F65' : twom_string,
                         'T04' : point4m_string,
-                        'T03' : point4m_string
+                        'T03' : point4m_string,
+                        'W89' : point4m_string,
+                        'W79' : point4m_string,
+                        'V38' : point4m_string,
+                        'L09' : point4m_string,
                         }
         return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
 

@@ -751,7 +751,7 @@ def get_mag_mapping(site_code):
     good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
     # COJ normally has bad seeing, allow more time
     bad_onem_site_codes = ['Q63', 'Q64']
-    point4m_site_codes = ['Z21', 'W89', 'T04', 'Q58', 'Q59']
+    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
@@ -929,11 +929,17 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long
         site_hgt = 328.0
         site_name = 'Sedgwick Observatory (SQA)'
-    elif site_code == 'ELP' or site_code == '711' or site_code == 'V37':
+    elif site_code == 'ELP-DOMA' or site_code == 'V37':
         (site_lat, status)  =  S.sla_daf2r(30, 40, 47.53)
         (site_long, status) =  S.sla_daf2r(104, 00, 54.63)
         site_long = -site_long
         site_hgt = 2010.0
+        site_name = 'LCO Node at McDonald Observatory (ELP)'
+    elif site_code == 'ELP-AQWA-0M4A' or site_code == 'V38':
+        (site_lat, status)  =  S.sla_daf2r(30, 40, 48.15)
+        (site_long, status) =  S.sla_daf2r(104, 00, 54.24)
+        site_long = -site_long
+        site_hgt = 2027.0
         site_name = 'LCO Node at McDonald Observatory (ELP)'
     elif site_code == 'BPL' or site_code == '500':
         (site_lat, status)  =  S.sla_daf2r(34, 25, 57)
@@ -973,6 +979,14 @@ def get_sitepos(site_code, dbg=False):
         (site_lat, status)  =  S.sla_daf2r(30, 10, 3.79)
         site_lat = -site_lat   # Southern hemisphere !
         (site_long, status) =  S.sla_daf2r(70, 48, 16.88)
+        site_long = -site_long # West of Greenwich !
+        site_hgt = 2202.5
+        site_name = 'LCO LSC Node 0m4a Aqawan A at Cerro Tololo'
+    elif site_code == 'LSC-AQWB-0M4A' or site_code == 'W79':
+# Latitude, longitude from Nikolaus/Google Earth
+        (site_lat, status)  =  S.sla_daf2r(30, 10, 3.56)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) =  S.sla_daf2r(70, 48, 16.74)
         site_long = -site_long # West of Greenwich !
         site_hgt = 2202.5
         site_name = 'LCO LSC Node 0m4a Aqawan A at Cerro Tololo'
@@ -1044,6 +1058,13 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(149, 04, 14.91)
         site_hgt = 1191.0
         site_name = 'LCO COJ Node 0m4b at Siding Spring'
+    elif site_code == 'CPT-AQWA-0M4A' or site_code == 'L09':
+# Latitude, longitude from Nikolaus/Google Earth
+        (site_lat, status)  =  S.sla_daf2r(32, 22, 50.25)
+        site_lat = -site_lat   # Southern hemisphere !
+        (site_long, status) =  S.sla_daf2r(20, 48, 35.54)
+        site_hgt = 1804.0
+        site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
     else:
 # Obtain latitude, longitude of the observing site.
 # Reverse longitude to get the more normal East-positive convention
@@ -1212,7 +1233,7 @@ def get_mountlimits(site_code_or_name):
         ha_pos_limit = 4.5 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 30.0
-    elif '-AQWA' in site or 'CLMA-0M4' in site or site in ['Z17', 'Z21', 'Q58', 'Q59', 'T03', 'T04', 'W89']:
+    elif '-AQWA' in site or '-AQWB' in site or 'CLMA-0M4' in site or site in ['Z17', 'Z21', 'Q58', 'Q59', 'T03', 'T04', 'W89', 'W79', 'V38', 'L09']:
         ha_pos_limit = 4.46 * 15.0
         ha_neg_limit = -4.5 * 15.0
         alt_limit = 15.0
@@ -1240,6 +1261,9 @@ def return_LCOGT_site_codes_mapping():
                          'OGG-CLMA-0M4B' : 'T04',
                          'OGG-CLMA-0M4C' : 'T03',
                          'LSC-AQWA-0M4A' : 'W89',
+                         'LSC-AQWB-0M4A' : 'W79',
+                         'ELP-AQWA-0M4A' : 'V38',
+                         'CPT-AQWA-0M4A' : 'L09',
                          'SQA-DOMA-0M8A' : 'G51'}
 
     return valid_site_codes
@@ -1285,7 +1309,7 @@ def get_sitecam_params(site):
     point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'T03', 'T04', 'Q58', 'Q59']
+    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':

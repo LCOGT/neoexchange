@@ -1562,6 +1562,86 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_cpt_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'L09',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'exp_type':'EXPOSE',
+                            'site' : 'CPT',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_elp_point4m(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'V38',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : 'aqwa',
+                            'exp_type':'EXPOSE',
+                            'site' : 'ELP',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_lsc_point4m_num1(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'W89',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'exp_type':'EXPOSE',
+                            'site' : 'LSC',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_lsc_point4m_num2(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': 'W79',
+              }
+
+        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
+                            'pondtelescope' :'0m4',
+                            'observatory' : '',
+                            'exp_type':'EXPOSE',
+                            'site' : 'LSC',
+                            'filter' : 'w',
+                            'binning' : 2}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
     def test_1m_sinistro_lsc_doma(self):
         expected_params = { 'binning': 1,
                             'filter': 'w',
