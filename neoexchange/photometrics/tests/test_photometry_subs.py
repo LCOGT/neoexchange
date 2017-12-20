@@ -356,24 +356,29 @@ class SNRTestCase(TestCase):
         self.precision = 4
         self.expected_units = u.Unit('ph/(s*cm**2*AA)')
 
-        self.tic_params = { 'zp_i'      : self.ftn_zp,
-                            'sky_mag_i' : 19.3,
-                            'sky_variance' : 2,
-                            'read_noise': 3.7,
-                            'eff_area'  : 2.84*u.meter**2,
-                            'flux_mag0' : 3631.0*u.Jy,
-                            'wavelength': 752.0*u.nm
-                          }
+        self.ftn_tic_params = { 'zp_i'      : self.ftn_zp,
+                                'sky_mag_i' : 19.3,
+                                'read_noise': 3.7,
+                                'eff_area'  : 2.84*u.meter**2,
+                                'flux_mag0' : 3631.0*u.Jy,
+                                'wavelength': 752.0*u.nm
+                              }
+
+        self.wht_tic_params = { 'zp_i'      : 17.271,
+                                'sky_mag_i' : 20.0,
+                                'read_noise': 3.9,
+                                'eff_area'  : 12.47*u.meter**2,
+                                'flux_mag0' : 2550.0*u.Jy,
+                                'wavelength': 820.0*u.nm
+                              }
 
 class TestComputePhotonRate(SNRTestCase):
 
     def test_I_mag0(self):
-        self.tic_params['flux_mag0'] = 2550.0*u.Jy
-        self.tic_params['wavelength'] = 8200*u.angstrom
 
         mag_I = 0.0
         expected_rate = 469.321344
-        rate = compute_photon_rate(mag_I, self.tic_params)
+        rate = compute_photon_rate(mag_I, self.wht_tic_params)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
@@ -382,18 +387,16 @@ class TestComputePhotonRate(SNRTestCase):
 
         mag_ip = 0.0
         expected_rate = 728.706068
-        rate = compute_photon_rate(mag_ip, self.tic_params)
+        rate = compute_photon_rate(mag_ip, self.ftn_tic_params)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
 
     def test_I_mag0_signal(self):
-        self.tic_params['flux_mag0'] = 2550.0*u.Jy
-        self.tic_params['wavelength'] = 8200*u.angstrom
 
         mag_I = 0.0
         expected_rate = 471.1752
-        rate = compute_photon_rate(mag_I, self.tic_params, emulate_signal=True)
+        rate = compute_photon_rate(mag_I, self.wht_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
@@ -402,18 +405,16 @@ class TestComputePhotonRate(SNRTestCase):
 
         mag_ip = 0.0
         expected_rate = 731.5845
-        rate = compute_photon_rate(mag_ip, self.tic_params, emulate_signal=True)
+        rate = compute_photon_rate(mag_ip, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
 
     def test_I_mag18_signal(self):
-        self.tic_params['flux_mag0'] = 2550.0*u.Jy
-        self.tic_params['wavelength'] = 8200*u.angstrom
 
         mag_I = 18.0
         expected_rate = 2.972914340482041e-05
-        rate = compute_photon_rate(mag_I, self.tic_params, emulate_signal=True)
+        rate = compute_photon_rate(mag_I, self.wht_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
@@ -422,29 +423,29 @@ class TestComputePhotonRate(SNRTestCase):
 
         mag_ip = 18.0
         expected_rate = 4.6159855659670969e-05
-        rate = compute_photon_rate(mag_ip, self.tic_params, emulate_signal=True)
+        rate = compute_photon_rate(mag_ip, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
 
     def test_V_mag0_signal(self):
-        self.tic_params['flux_mag0'] = 3640.0*u.Jy
-        self.tic_params['wavelength'] = 0.55*u.micron
+        self.ftn_tic_params['flux_mag0'] = 3640.0*u.Jy
+        self.ftn_tic_params['wavelength'] = 0.55*u.micron
 
         mag_V = 0.0
         expected_rate = 1002.75482
-        rate = compute_photon_rate(mag_V, self.tic_params, emulate_signal=True)
+        rate = compute_photon_rate(mag_V, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
 
     def test_V_mag0_microns(self):
-        self.tic_params['flux_mag0'] = 3640.0*u.Jy
-        self.tic_params['wavelength'] = 0.55*u.micron
+        self.ftn_tic_params['flux_mag0'] = 3640.0*u.Jy
+        self.ftn_tic_params['wavelength'] = 0.55*u.micron
 
         mag_V = 0.0
         expected_rate = 998.80951728995279
-        rate = compute_photon_rate(mag_V, self.tic_params)
+        rate = compute_photon_rate(mag_V, self.ftn_tic_params)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
@@ -452,16 +453,28 @@ class TestComputePhotonRate(SNRTestCase):
 class TestComputeFloydsSNR(SNRTestCase):
 
 
-    def test_wht_I(self):
+    def test_wht_I_signal(self):
+
+# Setup to replicate value in SIGNAL:
+# I Instrument = WHT ISIS
+# E Extinction per airmass (mag)   0.00
+# G Grating                     R158R
+# D Detector                     RED+
+# B Band I  = wavelength (A)    8200
+# M Apparent magnitude            18.0
+# T Integration time (sec)       100.0
+# F FWHM (object*seeing, arcsec)   1.0
+# K Sky brightness mag/sq.arcsec  20.00
+# S Slit width (arcsec)            3.0
+# A Airmass                        1.0
+# (rest at defaults)
 
        mag_I = 18.0
        exp_time = 100.0
 
-       expected_snr = 4.60
+       expected_snr = 5.42
 
-       self.tic_params['eff_area'] = 12.47*u.meter**2
-
-       snr = compute_floyds_snr(mag_I, exp_time, self.tic_params, emulate_signal=True)
+       snr = compute_floyds_snr(mag_I, exp_time, self.wht_tic_params, emulate_signal=True)
 
        self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -472,6 +485,6 @@ class TestComputeFloydsSNR(SNRTestCase):
 
         expected_snr = 42.0
 
-        snr =  compute_floyds_snr(mag_i, exp_time, self.tic_params)
+        snr =  compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
