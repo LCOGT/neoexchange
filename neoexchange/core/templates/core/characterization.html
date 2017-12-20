@@ -64,35 +64,39 @@
                     {% if body.s_wav == 'Vis+NIR'%}
                         {% if body.s_vis_link%}
                             {% if body.s_nir_link%}
-                                <td data-label="SMASS Obs"><a href={{body.s_vis_link}}>Vis+</a><a href={{body.s_nir_link}}>NIR</a></td>
+                                <td style="text-align:left;" data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a></td>
                             {% else %}
-                                <td data-label="SMASS Obs"><a href={{body.s_vis_link}}>Vis</a>+NIR</td>
+                                <td style="text-align:left;" data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a></td>
                             {% endif %}
                         {% else %}
                             {% if body.s_nir_link%}
-                                <td data-label="SMASS Obs">Vis+<a href={{body.s_nir_link}}>NIR</a></td>
+                                <td style="text-align:left;" data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a></td>
                             {% else %}
-                                <td data-label="SMASS Obs">{{body.s_wav}}</td>
+                                <td style="text-align:left;" data-label="SMASS Obs">{{body.s_wav}}</td>
                             {% endif %}
                         {% endif %}
                     {% else %}
                         {% if body.s_vis_link and body.s_wav == 'Vis'%}
-                            <td data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a> </td>
+                            <td style="text-align:left;"  data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a> </td>
                         {% else %}
                             {% if body.s_nir_link and body.s_wav == 'NIR'%}
-                                <td data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a> </td>
+                                <td style="text-align:left;" data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a> </td>
                             {% else %}
-                                <td data-label="SMASS Obs">{{body.s_wav}}</td>
+                                <td style="text-align:left;" data-label="SMASS Obs">{{body.s_wav}}</td>
                             {% endif %}
                         {% endif %}
                     {% endif %}
                     {% if body.m_nir_link %}
-                        <td data-label="MANOS Target?"> <a href={{body.m_nir_link}}>{{body.m_wav}}</td>
+                        <td data-label="MANOS Target?"> <a href={{body.m_nir_link}}>{{body.m_wav}}</a></td>
                     {% else %}
-                        <td data-label="MANOS Target?"> {{body.m_wav}}</td>
+                        {% if body.m_vis_link %}
+                        <td data-label="MANOS Target?"> <a href={{body.m_vis_link}}>{{body.m_wav}}</a></td>
+                        {% else %}
+                            <td data-label="MANOS Target?"> {{body.m_wav}}</td>
+                        {% endif %}
                     {% endif %}
                     <td data-label="Observation Window"> </td>
-                    <td data-label="Reported?"><a href="#">C</a></td>
+                    <td data-label="Reported?"></td>
                     </tr>
                 {% empty%}
                     <tr><td colspan=16> No new targets</td></tr>
