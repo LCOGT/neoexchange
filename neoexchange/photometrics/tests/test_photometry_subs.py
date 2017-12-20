@@ -367,8 +367,7 @@ class SNRTestCase(TestCase):
 
 class TestComputePhotonRate(SNRTestCase):
 
-    def test_wht_I(self):
-        self.tic_params ['eff_area'] = 12.47*u.meter**2
+    def test_I_mag0(self):
         self.tic_params['flux_mag0'] = 2550.0*u.Jy
         self.tic_params['wavelength'] = 8200*u.angstrom
 
@@ -379,8 +378,7 @@ class TestComputePhotonRate(SNRTestCase):
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
 
-    def test_wht_SDSS_ip(self):
-        self.tic_params ['eff_area'] = 12.47*u.meter**2
+    def test_ip_mag0(self):
 
         mag_ip = 0.0
         expected_rate = 728.706068
@@ -389,8 +387,7 @@ class TestComputePhotonRate(SNRTestCase):
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
 
-    def test_wht_I_signal(self):
-        self.tic_params ['eff_area'] = 12.47*u.meter**2
+    def test_I_mag0_signal(self):
         self.tic_params['flux_mag0'] = 2550.0*u.Jy
         self.tic_params['wavelength'] = 8200*u.angstrom
 
@@ -401,12 +398,53 @@ class TestComputePhotonRate(SNRTestCase):
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
 
-    def test_wht_SDSS_ip_signal(self):
-        self.tic_params ['eff_area'] = 12.47*u.meter**2
+    def test_SDSS_ip_mag0_signal(self):
 
         mag_ip = 0.0
         expected_rate = 731.5845
         rate = compute_photon_rate(mag_ip, self.tic_params, emulate_signal=True)
+
+        self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
+        self.assertEqual(self.expected_units, rate.unit)
+
+    def test_I_mag18_signal(self):
+        self.tic_params['flux_mag0'] = 2550.0*u.Jy
+        self.tic_params['wavelength'] = 8200*u.angstrom
+
+        mag_I = 18.0
+        expected_rate = 2.972914340482041e-05
+        rate = compute_photon_rate(mag_I, self.tic_params, emulate_signal=True)
+
+        self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
+        self.assertEqual(self.expected_units, rate.unit)
+
+    def test_SDSS_ip_mag18_signal(self):
+
+        mag_ip = 18.0
+        expected_rate = 4.6159855659670969e-05
+        rate = compute_photon_rate(mag_ip, self.tic_params, emulate_signal=True)
+
+        self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
+        self.assertEqual(self.expected_units, rate.unit)
+
+    def test_V_mag0_signal(self):
+        self.tic_params['flux_mag0'] = 3640.0*u.Jy
+        self.tic_params['wavelength'] = 0.55*u.micron
+
+        mag_V = 0.0
+        expected_rate = 1002.75482
+        rate = compute_photon_rate(mag_V, self.tic_params, emulate_signal=True)
+
+        self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
+        self.assertEqual(self.expected_units, rate.unit)
+
+    def test_V_mag0_microns(self):
+        self.tic_params['flux_mag0'] = 3640.0*u.Jy
+        self.tic_params['wavelength'] = 0.55*u.micron
+
+        mag_V = 0.0
+        expected_rate = 998.80951728995279
+        rate = compute_photon_rate(mag_V, self.tic_params)
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)

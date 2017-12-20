@@ -74,10 +74,22 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
 
     return new_mag
 
-def compute_photon_rate(mag_I, tic_params, emulate_signal=False):
+def compute_photon_rate(mag, tic_params, emulate_signal=False):
+    '''Compute the number of photons/s/cm^2/angstrom for an object of magnitude
+    <mag> in a specific passband.
+    The result is returned as a `~astropy.units.Quantity` object or None if this
+    can't be calculated. If [emulate_signal] is set to True, then it will use a
+    lower precision value of h (Planck's constant) to emulate the IAC's SIGNAL
+    code (http://catserver.ing.iac.es/signal/)
 
+    In order to work, this routine need a dictionary, <tic_params>, for the
+    telecope, instrument, camera parameters. For this routine, the needed entries
+    are:
+        'flux_mag0'  : the flux in Janskys of a mag=0 object in this band (u.Jy)
+        'wavelength' : the central wavelength of the band involved (normally u.nm,
+                       although astropy.units wavelength should work)
+    '''
 
-    m_0 = None
     if emulate_signal:
 #   Equivalent original code below
 #   6.6 magic no .is the mantissa part of Planck's constant(rounded). Most of the
@@ -100,7 +112,13 @@ def compute_photon_rate(mag_I, tic_params, emulate_signal=False):
     else:
         m_0 = tic_params['flux_mag0'].to(u.photon / u.cm**2 / u.s / u.angstrom, equivalencies=u.spectral_density(tic_params['wavelength']))
 
-    return m_0
+    rate = None
+    try:
+        rate = m_0*10.0**(-0.4*mag)
+    except TypeError:
+        pass
+
+    return rate
 
 def compute_floyds_snr(mag_i, exp_time, zp_i=24.0, sky_mag_i=19.3, sky_variance=2, read_noise=3.7, dbg=False, emulate_signal=False):
     '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
