@@ -14,6 +14,7 @@ GNU General Public License for more details.
 '''
 
 from django.test import TestCase
+from astropy import units as u
 
 #Import module to test
 from photometrics.photometry_subs import *
@@ -343,14 +344,85 @@ class TestTransformVmag(TestCase):
 
         self.assertEqual(expected_mag, new_mag)
 
-class TestComputeFloydsSNR(TestCase):
+class SNRTestCase(TestCase):
+    def __init__(self, *args, **kwargs):
+        super(SNRTestCase, self).__init__(*args, **kwargs)
 
     def setUp(self):
 
         self.ftn_zp = 25.3
         self.fts_zp = 23.1
 
-        self.precision = 3
+        self.precision = 4
+        self.expected_units = u.Unit('ph/(s*cm**2*AA)')
+
+        self.tic_params = { 'zp_i'      : self.ftn_zp,
+                            'sky_mag_i' : 19.3,
+                            'sky_variance' : 2,
+                            'read_noise': 3.7,
+                            'eff_area'  : 2.84*u.meter**2,
+                            'flux_mag0' : 3631.0*u.Jy,
+                            'wavelength': 752.0*u.nm
+                          }
+
+class TestComputePhotonRate(SNRTestCase):
+
+    def test_wht_I(self):
+        self.tic_params ['eff_area'] = 12.47*u.meter**2
+        self.tic_params['flux_mag0'] = 2550.0*u.Jy
+        self.tic_params['wavelength'] = 8200*u.angstrom
+
+        mag_I = 0.0
+        expected_rate = 469.321344
+        rate = compute_photon_rate(mag_I, self.tic_params)
+
+        self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
+        self.assertEqual(self.expected_units, rate.unit)
+
+    def test_wht_SDSS_ip(self):
+        self.tic_params ['eff_area'] = 12.47*u.meter**2
+
+        mag_ip = 0.0
+        expected_rate = 728.706068
+        rate = compute_photon_rate(mag_ip, self.tic_params)
+
+        self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
+        self.assertEqual(self.expected_units, rate.unit)
+
+    def test_wht_I_signal(self):
+        self.tic_params ['eff_area'] = 12.47*u.meter**2
+        self.tic_params['flux_mag0'] = 2550.0*u.Jy
+        self.tic_params['wavelength'] = 8200*u.angstrom
+
+        mag_I = 0.0
+        expected_rate = 471.1752
+        rate = compute_photon_rate(mag_I, self.tic_params, emulate_signal=True)
+
+        self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
+        self.assertEqual(self.expected_units, rate.unit)
+
+    def test_wht_SDSS_ip_signal(self):
+        self.tic_params ['eff_area'] = 12.47*u.meter**2
+
+        mag_ip = 0.0
+        expected_rate = 731.5845
+        rate = compute_photon_rate(mag_ip, self.tic_params, emulate_signal=True)
+
+        self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
+        self.assertEqual(self.expected_units, rate.unit)
+
+class TestComputeFloydsSNR(SNRTestCase):
+
+
+    def test_wht_I(self):
+
+       mag_I = 18.0
+       exp_time = 100.0
+       self.tic_params['eff_area'] = 12.47*u.meter**2
+
+       snr = compute_floyds_snr(mag_I, exp_time, self.tic_params, emulate_signal=True)
+
+       self.assertAlmostEqual(expected_snr, snr, self.precision)
 
     def test_faint_ftn1(self):
 
@@ -359,6 +431,6 @@ class TestComputeFloydsSNR(TestCase):
 
         expected_snr = 42.0
 
-        snr =  compute_floyds_snr(mag_i, self.ftn_zp)
+        snr =  compute_floyds_snr(mag_i, exp_time, self.tic_params)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)

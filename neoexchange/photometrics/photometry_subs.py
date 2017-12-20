@@ -17,6 +17,9 @@ GNU General Public License for more details.
 
 from math import sqrt
 
+from astropy import units as u
+from astropy.constants import c, h
+
 def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     '''
     Returns the magnitude in <passband> for an asteroid with a V amgnitude of
@@ -71,7 +74,35 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
 
     return new_mag
 
-def compute_floyds_snr(mag_i, exp_time, zp_i=24.0, sky_mag_i=19.3, sky_variance=2, read_noise=3.7, dbg=False):
+def compute_photon_rate(mag_I, tic_params, emulate_signal=False):
+
+
+    m_0 = None
+    if emulate_signal:
+#   Equivalent original code below
+#   6.6 magic no .is the mantissa part of Planck's constant(rounded). Most of the
+#   exponent part (10^-34) is cancelled by Jansky->erg conversion (10^-23) and
+#   erg->Watts (10^-7)
+#       m_0 = tic_params['flux_mag0'] * 10000.0/6.6/tic_params['wavelength']
+
+# Need new version of h at same low precision as SIGNAL's original code
+        hc = (6.6e-27 * h.cgs.unit) * c.to(u.angstrom / u.s)
+
+# Photon energy in ergs/photon
+        photon_energy = (hc / tic_params['wavelength'].to(u.angstrom))/u.photon
+
+# Convert flux in Janskys (=10^-23 ergs s^-1 cm^-2 Hz^-1) to an energy density per second
+        energy_density = tic_params['flux_mag0'].to(u.erg/(u.s*u.cm**2*u.Hz)) * tic_params['wavelength'].to(u.Hz,equivalencies=u.spectral())
+
+# Divide by the energy-per-photon at this wavelength and the wavelength to give us
+# photons per second per cm**2 per Angstrom, matching the astropy version below
+        m_0 = energy_density / photon_energy / tic_params['wavelength'].to(u.AA)
+    else:
+        m_0 = tic_params['flux_mag0'].to(u.photon / u.cm**2 / u.s / u.angstrom, equivalencies=u.spectral_density(tic_params['wavelength']))
+
+    return m_0
+
+def compute_floyds_snr(mag_i, exp_time, zp_i=24.0, sky_mag_i=19.3, sky_variance=2, read_noise=3.7, dbg=False, emulate_signal=False):
     '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
     magnitude (mag_i) for the given exposure time <exp_time>.
     The i' band zeropoint [zp_i] (defaults to 24.0) that gives 1 electron/pixel/s,
@@ -83,10 +114,7 @@ def compute_floyds_snr(mag_i, exp_time, zp_i=24.0, sky_mag_i=19.3, sky_variance=
     pixel_scale = 6.0/14.4
     # Photons per second from the source
     m_0 = 10.0 ** ( -0.4 * (mag_i - zp_i))
-#   6.6... magic number is the mantissa part of Planck's constant. Most of the
-#   exponent part (10^-34) is cancelled by Jansky->erg conversion (10^-23) and
-#   erg->Watts (10^-7)
-#   m_0 =    flux_jy * 10000.0/6.6260693/wavelength
+
     signal = m_0 * exp_time
 
     sky =  10.0 ** ( -0.4 * (sky_mag_i - zp_i))
