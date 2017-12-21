@@ -1395,12 +1395,12 @@ def determine_sites_to_schedule(sched_date = datetime.utcnow()):
     if sched_date.hour >= 17 and sched_date.hour < 23:
         N_point4m_sites = ['Z21', 'Z17']
         N_onem_sites = ['V37', ]
-        S_point4m_sites = []
+        S_point4m_sites = ['L09',]
         S_onem_sites = ['K93', 'K92', 'K91']
     elif sched_date.hour >= 23 or ( sched_date.hour >= 0 and sched_date.hour < 8):
-        N_point4m_sites = ['T04', 'T03']
+        N_point4m_sites = ['T04', 'T03', 'V38']
         N_onem_sites = ['V37', ]
-        S_point4m_sites = []
+        S_point4m_sites = ['W89', 'W79']
         S_onem_sites = ['W87', 'W85']
     elif sched_date.hour >= 8 and sched_date.hour < 12:
         N_point4m_sites = ['T04', 'T03']

@@ -1664,7 +1664,7 @@ class TestDetermineSitesToSchedule(TestCase):
         d = datetime(2017, 3,  9,  19, 27, 5)
 
         expected_sites = { 'north' : { '0m4' : ['Z21','Z17'], '1m0' : ['V37',] },
-                           'south' : { '0m4' : [ ]     , '1m0' : ['K93', 'K92', 'K91'] }
+                           'south' : { '0m4' : ['L09', ]    , '1m0' : ['K93', 'K92', 'K91'] }
                          }
 
         sites = determine_sites_to_schedule(d)
@@ -1676,8 +1676,8 @@ class TestDetermineSitesToSchedule(TestCase):
         should be schedulable for Northern targets, OGG for bright targets'''
         d = datetime(2017, 3,  9,  23, 27, 5)
 
-        expected_sites = { 'north' : { '0m4' : ['T04', 'T03'], '1m0' : ['V37',] },
-                           'south' : { '0m4' : [ ]     , '1m0' : ['W86', 'W85'] }
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38'], '1m0' : ['V37',] },
+                           'south' : { '0m4' : ['W89', 'W79'], '1m0' : ['W87', 'W85'] }
                          }
 
         sites = determine_sites_to_schedule(d)
@@ -1690,8 +1690,8 @@ class TestDetermineSitesToSchedule(TestCase):
  
         d = datetime(2017, 3, 10,  00, 2, 5)
 
-        expected_sites = { 'north' : { '0m4' : ['T04', 'T03'], '1m0' : ['V37',] },
-                           'south' : { '0m4' : [ ]     , '1m0' : ['W86', 'W85'] }
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38'], '1m0' : ['V37',] },
+                           'south' : { '0m4' : ['W89', 'W79']       , '1m0' : ['W87', 'W85'] }
                          }
 
         sites = determine_sites_to_schedule(d)
