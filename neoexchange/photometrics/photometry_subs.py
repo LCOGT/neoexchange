@@ -159,6 +159,7 @@ def calculate_effective_area(tic_params, dbg=False):
     5) CCD detector efficiency (QE)
     '''
     extinction = extinction_in_band(tic_params)
+    if dbg: print "Extinction per airmass (mag)   %.3f" % (extinction,)
 
     area = tic_params['eff_area'].to(u.cm**2)
     thru_atm  = 10.0**(-extinction/(2.5*tic_params.get('airmass', 1.0)))

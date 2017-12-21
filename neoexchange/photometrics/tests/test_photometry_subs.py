@@ -354,7 +354,7 @@ class SNRTestCase(TestCase):
         self.expected_units = u.Unit('ph/(s*cm**2*AA)')
 
         self.ftn_tic_params = { 
-                                'sky_mag'   : 19.3,
+                                'sky_mag'   : 19.8,
                                 'read_noise': 3.7,
                                 'eff_area'  : 2.84*u.meter**2,
                                 'flux_mag0' : 3631.0*u.Jy,
@@ -364,7 +364,7 @@ class SNRTestCase(TestCase):
                                 'instrument_eff' : 0.42,
                                 'grating_eff': 0.60,
                                 'ccd_qe'     : 0.70,
-                                'pixel_scale': 0.337*(u.arcsec/u.pixel),
+                                'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
                                 'wave_scale' : 3.51*(u.angstrom/u.pixel),
                                 'fwhm' : 1.0 * u.arcsec,
                                 'slit_width' : 2.0 * u.arcsec,
@@ -600,5 +600,24 @@ class TestComputeFloydsSNR(SNRTestCase):
         expected_snr = 42.0
 
         snr =  compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params)
+
+        self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+    def test_signal_ftn_I(self):
+
+        mag_I = 15.5
+        exp_time = 100.0
+        # Override defaults
+        self.ftn_tic_params['flux_mag0']  = 2550.0*u.Jy
+        self.ftn_tic_params['wavelength'] = 820.0*u.nm
+        self.ftn_tic_params['sky_mag']    = 19.6
+        self.ftn_tic_params['filter']     = 'I'
+        self.ftn_tic_params['ccd_qe']     = 0.56
+        self.ftn_tic_params['slit_width'] = 3.0 * u.arcsec
+        print self.ftn_tic_params
+
+        expected_snr = 12.84996700
+
+        snr =  compute_floyds_snr(mag_I, exp_time, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
