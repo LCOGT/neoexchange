@@ -363,6 +363,7 @@ class SNRTestCase(TestCase):
                                 'flux_mag0' : 3631.0*u.Jy,
                                 'wavelength': 752.0*u.nm,
                                 'filter'    : 'ip',
+                                'num_mirrors' : 3,  # Tertiary fold mirror
                                 'instrument_eff' : 0.42,
                                 'grating_eff' : 0.60,
                                 'ccd_qe'    : 0.70
@@ -530,6 +531,19 @@ class TestCalcEffectiveArea(SNRTestCase):
         area = calculate_effective_area(self.wht_tic_params)
 
         self.assertAlmostEqual(expected_area.to_value(u.m**2), area.to_value(u.m**2), 6)
+        self.assertEqual(expected_area.unit, area.unit)
+
+    def test_ftn_I(self):
+
+        expected_area = 3327.098429203033 * u.cm**2
+# Override values to match SIGNAL
+        self.ftn_tic_params['extinction'] = 0.06
+        self.ftn_tic_params['ccd_qe'] = 0.80
+
+        area = calculate_effective_area(self.ftn_tic_params)
+
+        self.assertAlmostEqual(expected_area.to_value(u.m**2), area.to_value(u.m**2), 6)
+        self.assertEqual(expected_area.unit, area.unit)
 
 class TestComputeFloydsSNR(SNRTestCase):
 
