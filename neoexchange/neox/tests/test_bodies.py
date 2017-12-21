@@ -28,6 +28,8 @@ class BodyDetailsTest(FunctionalTest):
         self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Object: ' + self.body.current_name(), header_text)
+        title_text = self.browser.find_element_by_class_name('container').text
+        self.assertNotIn('Characterization Target', title_text)
 
         # She notices there is a table which lists a lot more details about
         # the Body.
@@ -54,6 +56,9 @@ class BodyDetailsTest(FunctionalTest):
 
         # She sees a link from the targets' name on the front page to a more
         # detailed view.
+        self.body.origin='N'     ###This target is from NASA
+        self.body.save()
+
         link = self.browser.find_element_by_link_text('N999r0q')
         body_url = self.live_server_url + reverse('target',kwargs={'pk':1})
         self.assertIn(link.get_attribute('href'), body_url)
@@ -69,6 +74,8 @@ class BodyDetailsTest(FunctionalTest):
         self.assertIn(self.body.current_name() + ' details | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Object: ' + self.body.current_name(), header_text)
+        title_text = self.browser.find_element_by_class_name('container').text
+        self.assertIn('Characterization Target', title_text)
 
         #She notices there is a section describing the object's spectral info
         testlines = ['BUS-DEMEO' + u' TAXONOMIC TYPE ' + str(self.test_taxonomy.taxonomic_class),

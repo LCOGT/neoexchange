@@ -110,12 +110,10 @@ class CharacterizationPageTest(FunctionalTest):
             'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'3 V38821zi 23 43 12.75 +19 58 55.6 20.7 LC 21.0 Goldstone Vis+NIR NO',
-                    u'1 N999r0q 23 43 12.75 +19 58 55.6 20.7 LC 21.0 Minor Planet Center Vis+NIR NIR',
-                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES']
+        testlines =[u'2 V38821zi 23 43 12.75 +19 58 55.6 20.7 LC 21.0 Goldstone Vis+NIR NO',
+                    u'1 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
-        self.check_for_row_in_table('characterization_targets', testlines[2])
 
         #He notices that they are ordered somehow
         

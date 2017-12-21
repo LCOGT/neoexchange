@@ -166,6 +166,11 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
 
+    def characterization(self):
+        if self.active == True and self.origin != 'M':
+            return True
+        else:
+            return False
  
     def diameter(self):        
         m = self.abs_mag

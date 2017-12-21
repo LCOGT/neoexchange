@@ -623,7 +623,7 @@ def build_characterization_list():
     params = {}
     try:
         # If we don't have any Body instances, return None instead of breaking
-        char_targets = Body.objects.filter(active=True)
+        char_targets = Body.objects.filter(active=True).exclude(origin='M')
         unranked = []
         for body in char_targets:
             spectra=PreviousSpectra.objects.filter(body = body)
