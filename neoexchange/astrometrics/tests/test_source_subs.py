@@ -2199,7 +2199,7 @@ class TestFetchPreviousSpectra(TestCase):
         test_fh2.close()
 
     def test_smass_basics(self):
-        expected_length = 11
+        expected_length = 12
         page = self.test_smass_page
         targets = fetch_smass_targets(page)
 
@@ -2216,6 +2216,7 @@ class TestFetchPreviousSpectra(TestCase):
         expected_targets =  [['302'   ,'NIR',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25'],
                              ['6053'  ,'NIR',"http://smass.mit.edu/data/spex/sp233/a006053.sp233.txt","sp[233]",'2017-09-25'],
                              ['96631' ,'NIR',"http://smass.mit.edu/data/spex/sp233/a096631.sp233.txt","sp[233]",'2017-09-25'],
+                             ['96631' ,'Vis',"http://smass.mit.edu/data/spex/sp234/a096631.sp234.txt","sp[234]",'2017-09-25'],
                              ['265962','Vis+NIR',"http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt","sp[233]",'2017-09-25'],
                              ['416584','NIR',"http://smass.mit.edu/data/spex/sp233/a416584.sp233.txt","sp[233]",'2017-09-25'],
                              ['422699','NIR',"http://smass.mit.edu/data/spex/sp233/a422699.sp233.txt","sp[233]",'2017-09-25'],
