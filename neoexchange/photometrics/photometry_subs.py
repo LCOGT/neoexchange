@@ -219,7 +219,7 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
     signal = m_0 * (exp_time * u.s) * eff_area
 
     # Compute sky brightness in photons/A/s/cm^2/arcsec^2 from sky magnitude (assumed to be a mag/sq. arcsec)
-    sky = compute_photon_rate(tic_params['sky_mag_i'], tic_params, emulate_signal)
+    sky = compute_photon_rate(tic_params['sky_mag'], tic_params, emulate_signal)
     sky = sky * eff_area * (exp_time * u.s)
     if dbg: print 'Object=', signal, 'Sky=', sky
     if dbg: print tic_params['pixel_scale'] , tic_params['wave_scale'], tic_params.get('slit_width', 1.0*u.arcsec)

@@ -350,14 +350,11 @@ class SNRTestCase(TestCase):
 
     def setUp(self):
 
-        self.ftn_zp = 25.3
-        self.fts_zp = 23.1
-
         self.precision = 4
         self.expected_units = u.Unit('ph/(s*cm**2*AA)')
 
-        self.ftn_tic_params = { 'zp_i'      : self.ftn_zp,
-                                'sky_mag_i' : 19.3,
+        self.ftn_tic_params = { 
+                                'sky_mag'   : 19.3,
                                 'read_noise': 3.7,
                                 'eff_area'  : 2.84*u.meter**2,
                                 'flux_mag0' : 3631.0*u.Jy,
@@ -372,8 +369,8 @@ class SNRTestCase(TestCase):
                                 'fwhm' : 1.0 * u.arcsec,
                                 'slit_width' : 2.0 * u.arcsec,
                               }
-        self.wht_tic_params = { 'zp_i'      : 17.271,
-                                'sky_mag_i' : 20.0,
+        self.wht_tic_params = { 
+                                'sky_mag'   : 20.0,
                                 'read_noise': 3.9,
                                 'eff_area'  : 12.47*u.meter**2,
                                 'flux_mag0' : 2550.0*u.Jy,
