@@ -361,15 +361,22 @@ class SNRTestCase(TestCase):
                                 'read_noise': 3.7,
                                 'eff_area'  : 2.84*u.meter**2,
                                 'flux_mag0' : 3631.0*u.Jy,
-                                'wavelength': 752.0*u.nm
+                                'wavelength': 752.0*u.nm,
+                                'filter'    : 'ip',
+                                'instrument_eff' : 0.42,
+                                'grating_eff' : 0.60,
+                                'ccd_qe'    : 0.70
                               }
-
         self.wht_tic_params = { 'zp_i'      : 17.271,
                                 'sky_mag_i' : 20.0,
                                 'read_noise': 3.9,
                                 'eff_area'  : 12.47*u.meter**2,
                                 'flux_mag0' : 2550.0*u.Jy,
-                                'wavelength': 820.0*u.nm
+                                'wavelength': 820.0*u.nm,
+                                'filter'    : 'I',
+                                'instrument_eff' : 0.42,
+                                'grating_eff' : 0.60,
+                                'ccd_qe'    : 0.80,
                               }
 
 class TestComputePhotonRate(SNRTestCase):
@@ -449,6 +456,80 @@ class TestComputePhotonRate(SNRTestCase):
 
         self.assertAlmostEqual(expected_rate, rate.to_value(), self.precision)
         self.assertEqual(self.expected_units, rate.unit)
+
+class TestExtinctionInBand(SNRTestCase):
+
+    def test_I(self):
+
+        expected_k = 0.06
+
+        k = extinction_in_band(self.wht_tic_params)
+
+        self.assertEqual(expected_k, k)
+
+    def test_ip(self):
+
+        expected_k = 0.075
+
+        k = extinction_in_band(self.ftn_tic_params)
+
+        self.assertEqual(expected_k, k)
+
+    def test_I_override(self):
+
+        expected_k = 0.01
+        self.wht_tic_params['extinction'] = 0.01
+
+        k = extinction_in_band(self.wht_tic_params)
+
+        self.assertEqual(expected_k, k)
+
+    def test_ip_override(self):
+
+        expected_k = 0.082
+        self.ftn_tic_params['extinction'] = 0.082
+
+        k = extinction_in_band(self.ftn_tic_params)
+
+        self.assertEqual(expected_k, k)
+
+    def test_bad_filter(self):
+
+        expected_k = 0.00
+        self.ftn_tic_params['filter'] = 'foo'
+
+        k = extinction_in_band(self.ftn_tic_params)
+
+        self.assertEqual(expected_k, k)
+
+    def test_bad_override_good_filter(self):
+
+        expected_k = 0.075
+        self.ftn_tic_params['extinction'] = 'foo'
+
+        k = extinction_in_band(self.ftn_tic_params)
+
+        self.assertEqual(expected_k, k)
+
+    def test_bad_override_bad_filter(self):
+
+        expected_k = 0.00
+        self.ftn_tic_params['extinction'] = 'foo'
+        self.ftn_tic_params['filter'] = 'foo'
+
+        k = extinction_in_band(self.ftn_tic_params)
+
+        self.assertEqual(expected_k, k)
+
+class TestCalcEffectiveArea(SNRTestCase):
+
+    def test_wht_I(self):
+
+        expected_area = 17186.794281005859 * u.cm**2
+
+        area = calculate_effective_area(self.wht_tic_params)
+
+        self.assertAlmostEqual(expected_area.to_value(u.m**2), area.to_value(u.m**2), 6)
 
 class TestComputeFloydsSNR(SNRTestCase):
 

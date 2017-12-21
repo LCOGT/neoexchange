@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from math import sqrt
+from math import sqrt, log10
 
 from astropy import units as u
 from astropy.constants import c, h
@@ -120,6 +120,64 @@ def compute_photon_rate(mag, tic_params, emulate_signal=False):
 
     return rate
 
+def extinction_in_band(tic_params_or_filter):
+    '''Returns the extinction in the bandpass. <tic_params_or_filter> can either
+    be a filter name (e.g. 'I', ip') or a dictionary of telecope, instrument,
+    camera parameters, in which case the 'filter' key is used to retrieve the
+    bandpass.
+    The extinction in magnitudes/airmass is returned or 0.0 (if the bandpass was
+    not found)'''
+
+# Extinction values from SIGNAL (for La Palma) for UBVRIZ, 
+# Tonry et al. 2012 (divided by 1.2) for u'g'r'i'z'w
+    airm = 1.2
+    extinction = { 'U': 0.55, 'B': 0.25, 'V' : 0.15, 'R' : 0.09, 'I' : 0.06, 'Z' : 0.05,
+                   'gp' : 0.22/airm, 'rp' : 0.13/airm ,'ip' : 0.09/airm, 'zp' : 0.05/airm, 'w' : 0.15/airm }
+
+    obs_filter = tic_params_or_filter
+    if type(tic_params_or_filter) == dict:
+        try:
+            extinction = float(tic_params_or_filter.get('extinction', None))
+            return extinction
+        except (TypeError,ValueError):
+            pass
+        obs_filter = tic_params_or_filter.get('filter', None)
+
+
+    return extinction.get(obs_filter, 0.0)
+
+def calculate_effective_area(tic_params, dbg=False):
+    '''Calculate effective collecting area of the telescope, instrument & detector
+    The effective throughput consists of four terms:
+    1) atmospheric transmission (based on extinction/airmass and airmass),
+    2) mirror reflectivity (85% for Al assumed unless specified)**no. of of mirrors,
+    3) instrument efficiency * scaling factor (1.0 assumed unless specified),
+    4) filter or grating efficiency,
+    5) CCD detector efficiency (QE)
+    '''
+    extinction = extinction_in_band(tic_params)
+
+    area = tic_params['eff_area'].to(u.cm**2)
+    thru_atm  = 10.0**(-extinction/(2.5*tic_params.get('airmass', 1.0)))
+    thru_tel  = tic_params.get('mirror_eff', 0.85)**float(tic_params.get('num_mirrors', 2))
+    thru_inst = tic_params['instrument_eff'] * tic_params.get('true_vs_pred', 1.0)
+    if tic_params.get('imaging', False) == True:
+        thru_filt_grat = tic_params['filter_eff']
+        filt_grat_string = 'filt'
+    else:
+        thru_filt_grat = tic_params['grating_eff']
+        filt_grat_string = 'grat'
+    throughput = thru_atm * thru_tel * thru_inst * thru_filt_grat
+
+    if dbg:
+        fmt = "Atm*tel*inst*%4s throughput   %.2f =  %.2f *  %.2f *  %.2f *  %.2f"
+        print fmt % (filt_grat_string, throughput, thru_atm, thru_tel, thru_inst, thru_filt_grat)
+
+    area = area * throughput
+    area = area * tic_params['ccd_qe']
+
+    return area
+
 def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=False):
     '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
     magnitude (mag_i) for the given exposure time <exp_time>.
@@ -129,17 +187,33 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
     Extinction and variation with airmass are not included nor is the (neglibile)
     dark current'''
 
+    imaging = False
     pixel_scale = 6.0/14.4
     # Photons per second from the source
-    m_0 = 10.0 ** ( -0.4 * (mag_i - tic_params['zp_i']))
+    m_0 = compute_photon_rate(mag_i, tic_params, emulate_signal)
+    eff_area = calculate_effective_area(tic_params, dbg)
+    signal = m_0 * exp_time * eff_area
 
-    signal = m_0 * exp_time
+    m_0 = compute_photon_rate(0.0, tic_params, emulate_signal)
+
+    zp = m_0 * eff_area
+
+    if imaging:
+        zp *= tic_params['bandwidth']
+    else:
+        zp *= u.angstrom
+
+    # Convert to magnitude, subtract extinction
+    if zp != 0:
+        if dbg: print 'ZP (photons/sec)=', zp
+        zp = -u.Magnitude(zp)
+        if dbg: print 'ZP (mag+extinct)=', zp
 
     sky =  10.0 ** ( -0.4 * (tic_params['sky_mag_i'] - tic_params['zp_i']))
     if dbg: print signal, sky
     sky = sky / pixel_scale**2
-    noise = signal + (sky * exp_time) + tic_params.get('read_noise', 0.0)**2
+    noise = signal.value + (sky * exp_time) + tic_params.get('read_noise', 0.0)**2
     noise = sqrt(noise)
-    snr = signal / noise
+    snr = signal.value / noise
 
     return snr
