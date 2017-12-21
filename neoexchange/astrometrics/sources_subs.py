@@ -1439,7 +1439,7 @@ def fetch_smass_page():
 
     return page
 
-def fetch_smass_targets(page=None):
+def fetch_smass_targets(page=None,fetch_all=False):
     '''Parses the smass webpage for spectroscopy results and returns a list
     of these targets back along with links to data files.
     Takes either a BeautifulSoup page version of the SMASS target page (from
@@ -1451,7 +1451,7 @@ def fetch_smass_targets(page=None):
         page = fetch_smass_page()
 
     targets = []
-
+    current_year = datetime.now().year
     if type(page) == BeautifulSoup:
         # Find the table, make sure there is only one
         tables = page.find_all('table')
@@ -1498,6 +1498,8 @@ def fetch_smass_targets(page=None):
                     date=items[-1].text
                     date=date.strip()
                     date=datetime.strptime(date,'%Y-%m-%d').date()
+                    if not fetch_all and date.year < current_year:
+                        return targets
                     ref=ref[0].text
                     ref=ref.strip()
                     target_object=[target_name,t_wav,v_link,i_link,ref,date]

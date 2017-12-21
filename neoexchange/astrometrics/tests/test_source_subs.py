@@ -2201,7 +2201,14 @@ class TestFetchPreviousSpectra(TestCase):
     def test_smass_basics(self):
         expected_length = 12
         page = self.test_smass_page
-        targets = fetch_smass_targets(page)
+        targets = fetch_smass_targets(page,True)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_smass_year(self):
+        expected_length = 10
+        page = self.test_smass_page
+        targets = fetch_smass_targets(page,False)
 
         self.assertEqual(expected_length, len(targets))
 
@@ -2223,7 +2230,7 @@ class TestFetchPreviousSpectra(TestCase):
                              ['2006 UY64','NIR','',"spex/sp209/au2010pr66.sp209.txt","sp[209]",datetime.strptime('2017-12-02','%Y-%m-%d').date()],
                              ['416584','Vis',"spex/sp210/au2005lw7.sp210.txt",'',"sp[210]",datetime.strptime('2015-12-02','%Y-%m-%d').date()],
                             ]
-        smass_data = fetch_smass_targets(self.test_smass_page)
+        smass_data = fetch_smass_targets(self.test_smass_page,True)
         for line in expected_targets:
             self.assertIn(line, smass_data)
 
