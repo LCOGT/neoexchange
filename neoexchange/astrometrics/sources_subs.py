@@ -1490,8 +1490,14 @@ def fetch_smass_targets(page=None):
                     ref=ref[0].text
                     ref=ref.strip()
                     target_object=[target_name,t_wav,t_link,ref,date]
-                    targets.append(target_object)
-
+                    same_object=[row for row in targets if target_name == row[0]]
+                    same_object=[item for sublist in same_object for item in sublist]
+                    if same_object and date <= same_object[4] and t_wav == same_object[1]:
+                        continue
+                    elif same_object and t_wav == same_object[1]:
+                        targets[targets.index(same_object)]=target_object
+                    else:
+                        targets.append(target_object)
     return targets
 
 def fetch_manos_page():

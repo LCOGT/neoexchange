@@ -1623,8 +1623,16 @@ def update_previous_spectra(specobj,dbg=False):
     <specobj> is expected to be a list of:
     designation/provisional designation, wavelength region, data link, reference, date
     normally produced by the fetch_manos_tagets() or fetch_smass_targets() method.
-    Will only add (never remove) spectroscopy details that are not already in spectroscopy database and match Characterization objects in DB.'''
+    Will only add (never remove) spectroscopy details that are not already in spectroscopy 
+    database and match Characterization objects in DB.'''
 
+    params = {  'body'          : body,
+                'spec_wav'      : specobj[1],
+                'spec_vis'      : specobj[2],
+                'spec_ref'      : specobj[3],
+                'spec_source'   : specobj[4],
+                'spec_date'     : specobj[5],
+                }
     return True
 
 

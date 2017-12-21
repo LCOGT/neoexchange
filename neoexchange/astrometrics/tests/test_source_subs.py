@@ -2199,7 +2199,7 @@ class TestFetchPreviousSpectra(TestCase):
         test_fh2.close()
 
     def test_smass_basics(self):
-        expected_length = 16
+        expected_length = 11
         page = self.test_smass_page
         targets = fetch_smass_targets(page)
 
@@ -2216,12 +2216,11 @@ class TestFetchPreviousSpectra(TestCase):
         expected_targets =  [['302'   ,'NIR',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25'],
                              ['6053'  ,'NIR',"http://smass.mit.edu/data/spex/sp233/a006053.sp233.txt","sp[233]",'2017-09-25'],
                              ['96631' ,'NIR',"http://smass.mit.edu/data/spex/sp233/a096631.sp233.txt","sp[233]",'2017-09-25'],
-                             ['96631' ,'NIR',"http://smass.mit.edu/data/spex/sp234/a096631.sp234.txt","sp[234]",'2017-09-25'],
                              ['265962','Vis+NIR',"http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt","sp[233]",'2017-09-25'],
                              ['416584','NIR',"http://smass.mit.edu/data/spex/sp233/a416584.sp233.txt","sp[233]",'2017-09-25'],
-                             ['416584','NIR',"http://smass.mit.edu/data/spex/sp234/a416584.sp234.txt","sp[234]",'2017-09-25'],
                              ['422699','NIR',"http://smass.mit.edu/data/spex/sp233/a422699.sp233.txt","sp[233]",'2017-09-25'],
-                             ['2006 UY64','NIR',"http://smass.mit.edu/data/spex/sp212/au2006uy64.sp212.txt","sp[212]",'2015-12-02'],
+                             ['2006 UY64','NIR',"http://smass.mit.edu/data/spex/sp209/au2010pr66.sp209.txt","sp[209]",'2017-12-02'],
+                             ['416584','Vis',"http://smass.mit.edu/data/spex/sp210/au2005lw7.sp210.txt","sp[210]",'2015-12-02'],
                             ]
         smass_data = fetch_smass_targets(self.test_smass_page)
         for line in expected_targets:
