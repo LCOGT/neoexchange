@@ -97,6 +97,17 @@ class TestGetMountLimits(TestCase):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('TFN-AQWA-0M4A')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
+    def test_point4m_by_site7(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('LSC-AQWB-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site9(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('ELP-AQWA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site8(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('CPT-AQWA-0M4A')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
     def test_point4m_by_site_code(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z21')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
@@ -119,6 +130,22 @@ class TestGetMountLimits(TestCase):
 
     def test_point4m_by_site_code6(self):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('Z17')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code7(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('W89')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code8(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('V38')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code9(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('L09')
+        self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
+
+    def test_point4m_by_site_code10(self):
+        (neg_limit, pos_limit, alt_limit) = get_mountlimits('W79')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
     def test_point4m_by_site_code_lowercase(self):
@@ -1165,6 +1192,78 @@ class TestDetermineSlotLength(TestCase):
         with self.assertRaises(MagRangeError):
             slot_length = determine_slot_length(name, mag, site_code)
 
+    def test_slot_length_basic_tfn_0m4_num1(self):
+        site_code = 'Z21'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(name, mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_basic_tfn_0m4_num2(self):
+        site_code = 'Z17'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(name, mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_basic_ogg_0m4_num1(self):
+        site_code = 'T04'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(name, mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_basic_ogg_0m4_num2(self):
+        site_code = 'T03'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(name, mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_basic_lsc_0m4_num1(self):
+        site_code = 'W89'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(name, mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_basic_lsc_0m4_num2(self):
+        site_code = 'W79'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(name, mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_basic_elp_0m4(self):
+        site_code = 'V38'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(name, mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_basic_cpt_0m4(self):
+        site_code = 'L09'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(name, mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
 class TestGetSiteCamParams(TestCase):
 
     twom_setup_overhead = 180.0
@@ -1283,6 +1382,46 @@ class TestGetSiteCamParams(TestCase):
 
     def test_point4m_site6(self):
         site_code = 'T03'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site7(self):
+        site_code = 'W89'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site8(self):
+        site_code = 'V38'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site9(self):
+        site_code = 'L09'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(1.139, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_point4m_site10(self):
+        site_code = 'W79'
         chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
         self.assertEqual(site_code.upper(), chk_site_code)
         self.assertEqual(1.139, pixel_scale)

@@ -88,6 +88,23 @@ SITE_CHOICES = (
                     ('sin','Sinistro cameras')
     )
 
+TAX_SCHEME_CHOICES = (
+                        ('T','Tholen'),
+                        ('Ba','Barucci'),
+                        ('Td','Tedesco'),
+                        ('H','Howell'),
+                        ('S','SMASS'),
+                        ('B','Bus'),
+                        ('3T','S3OS2_TH'),
+                        ('3B','S3OS2_BB'),
+                        ('BD','Bus-DeMeo')
+                     )
+
+TAX_REFERENCE_CHOICES = (
+                        ('PDS6','Neese, Asteroid Taxonomy V6.0. (2010).'),
+                        ('BZ04','Binzel, et al. (2004).'),
+                     )
+
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
@@ -241,6 +258,71 @@ class Body(models.Model):
             and self.name != None and self.name != u'':
             return_name = self.name
         return u'%s is %sactive' % (return_name,text)
+
+class SpectralInfo(models.Model):
+    body                = models.ForeignKey(Body, on_delete=models.CASCADE)
+    taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True,max_length=6)
+    tax_scheme          = models.CharField('Taxonomic Scheme',blank=True,choices=TAX_SCHEME_CHOICES, null=True,max_length=2)
+    tax_reference       = models.CharField('Reference source for Taxonomic data',max_length=6,choices=TAX_REFERENCE_CHOICES,blank=True, null=True)
+    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=20,blank=True, null=True)
+
+    def make_readable_tax_notes(self):
+        text=self.tax_notes
+        text_out=''
+        end=''
+        if self.tax_reference == 'PDS6':
+            if "|" in text:
+                chunks=text.split('|')
+                text=chunks[0]
+                end =chunks[1]
+            if self.tax_scheme in "T,Ba,Td,H,S,B":
+                if  text[0].isdigit():
+                    if len(text) > 1:
+                        if text[1].isdigit():
+                            text_out=text_out + ' %s color indices were used.\n' % (text[0:2])
+                        else:
+                            text_out=text_out + ' %s color indices were used.\n' % (text[0])
+                    else:
+                        text_out=text_out + ' %s color indices were used.\n' % (text[0])
+                if "G" in text:
+                    text_out=text_out + ' Used groundbased radiometric albedo.'
+                if "I" in text:
+                    text_out=text_out + ' Used IRAS radiometric albedo.'
+                if "A" in text:
+                    text_out=text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
+                if "S" in text:
+                    text_out=text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
+                if "s" in text:
+                    text_out=text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
+            elif self.tax_scheme == "BD":
+                if "a" in text:
+                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
+                if "b" in text:
+                    text_out=text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+                if "c" in text:
+                    text_out=text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
+                if "d" in text:
+                    text_out=text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
+                if "e" in text:
+                    text_out=text_out + ' Visible and NIR: DeMeo et al. (2009).'
+                if "f" in text:
+                    text_out=text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
+                if "g" in text:
+                    text_out=text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
+                if "h" in text:
+                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
+                if "i" in text:
+                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).' 
+        text_out=text_out+end
+        return text_out
+
+    class Meta:
+        verbose_name = _('Spectroscopy Detail')
+        verbose_name_plural = _('Spectroscopy Details')
+        db_table = 'ingest_taxonomy'
+
+    def __unicode__(self):
+        return "%s is a %s-Type Asteroid" % (self.body.name, self.taxonomic_class)
 
 class SuperBlock(models.Model):
 
@@ -590,7 +672,11 @@ class Frame(models.Model):
                         'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
                         'F65' : 'LCO OGG Node 2m0 FTN at Haleakala, Maui',
                         'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui',
-                        'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui'
+                        'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui',
+                        'W89' : 'LCO LSC Node Aqawan A 0m4a at Cerro Tololo, Chile',
+                        'W79' : 'LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile',
+                        'V38' : 'LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas',
+                        'L09' : 'LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa',
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
 
@@ -617,7 +703,11 @@ class Frame(models.Model):
                         'E10' : twom_string,
                         'F65' : twom_string,
                         'T04' : point4m_string,
-                        'T03' : point4m_string
+                        'T03' : point4m_string,
+                        'W89' : point4m_string,
+                        'W79' : point4m_string,
+                        'V38' : point4m_string,
+                        'L09' : point4m_string,
                         }
         return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
 

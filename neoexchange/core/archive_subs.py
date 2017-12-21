@@ -91,10 +91,13 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
     for reduction_lvl in red_lvls:
         search_url = archive_url + '&RLEVEL='+ reduction_lvl
 #        print "search_url=%s" % search_url
-        response = requests.get(search_url, headers=auth_header).json()
-        frames_for_red_lvl = { reduction_lvl : response.get('results', []) }
-        frames.update(frames_for_red_lvl)
-
+        resp = requests.get(search_url, headers=auth_header)
+        if resp.status_code in [200,201]:
+            response = resp.json()
+            frames_for_red_lvl = { reduction_lvl : response.get('results', []) }
+            frames.update(frames_for_red_lvl)
+        else:
+            logger.error("Request {} API did not return JSON: {}".format(search_url, resp.status_code))
     return frames
 
 def get_catalog_data(frames, auth_header='', dbg=False):

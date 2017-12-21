@@ -4,6 +4,18 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.1.2
+
+Add support for the 0.4m telescopes at Cerro Tololo, Sutherland and McDonald.
+
+### 2.1.1
+
+Fix for missing absolute magnitudes breaking the diameter calculation.
+
+### 2.1.0
+
+Fixes for non-cadence submitting. Improved error message passthrough from scheduling endpoints. Fixes for block reporting. First part of spectroscopy support for storing spectral taxonomies.
+
 ### 1.9.0
 
 Add cadence support.

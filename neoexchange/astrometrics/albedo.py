@@ -54,6 +54,12 @@ def asteroid_diameter(a=asteroid_albedo(), h=7):
     if a <= 0.00:
         logger.debug("You cannot have a negative albedo")
         return False
+    elif h < -90:
+        logger.warn('Nothing brighter than -90, must be a flag.')
+        return None
     else:
-        diameter = 1329000 * math.sqrt((10 ** (-0.4 * h)) / a)
-        return diameter
+        try:
+            diameter = 1329000 * math.sqrt((10 ** (-0.4 * h)) / a)
+            return diameter
+        except:
+            return None
