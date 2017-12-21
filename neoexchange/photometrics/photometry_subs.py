@@ -181,18 +181,15 @@ def calculate_effective_area(tic_params, dbg=False):
 def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=False):
     '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
     magnitude (mag_i) for the given exposure time <exp_time>.
-    The i' band zeropoint [zp_i] (defaults to 24.0) that gives 1 electron/pixel/s,
-    the sky variance and the readnoise [read_noise] (defaults to 3.7e-/pixel)
-    are also needed.
-    Extinction and variation with airmass are not included nor is the (neglibile)
-    dark current'''
+    The parameters that are also needed are passed in the <tic_params> dictionary.
+    Not included is the (neglibile) dark current'''
 
-    imaging = False
-    pixel_scale = 6.0/14.4
+    if dbg: print
+    imaging = tic_params.get('imaging', False)
     # Photons per second from the source
     m_0 = compute_photon_rate(mag_i, tic_params, emulate_signal)
     eff_area = calculate_effective_area(tic_params, dbg)
-    signal = m_0 * exp_time * eff_area
+    signal = m_0 * (exp_time * u.s) * eff_area
 
     m_0 = compute_photon_rate(0.0, tic_params, emulate_signal)
 
@@ -209,11 +206,20 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
         zp = -u.Magnitude(zp)
         if dbg: print 'ZP (mag+extinct)=', zp
 
-    sky =  10.0 ** ( -0.4 * (tic_params['sky_mag_i'] - tic_params['zp_i']))
-    if dbg: print signal, sky
-    sky = sky / pixel_scale**2
-    noise = signal.value + (sky * exp_time) + tic_params.get('read_noise', 0.0)**2
+    sky = compute_photon_rate(tic_params['sky_mag_i'], tic_params, emulate_signal)
+    sky = sky * eff_area * (exp_time * u.s)
+    if dbg: print 'Object=', signal, 'Sky=', sky
+    if dbg: print tic_params['pixel_scale'] , tic_params['wave_scale']
+
+    # Scale sky (in photons/A/sq.arcsec) to size of slit
+    sky2 = sky * tic_params.get('slit_width', 1.0*u.arcsec) * tic_params['pixel_scale'] * tic_params['wave_scale']
+    seeing = 2.0 * tic_params['fwhm'] / tic_params['pixel_scale']
+    if dbg: print 'Seeing=', seeing, 'Sky2=', sky2
+    signal2 = signal * tic_params['wave_scale']
+    if dbg: print 'Object (photons/pixel-step-in-wavelength)=', signal2
+    noise = signal2.value + seeing.value*(sky2.value + tic_params.get('read_noise', 0.0)**2)
     noise = sqrt(noise)
-    snr = signal.value / noise
+    snr = signal2.value / noise
+    if dbg: print 'SNR/pixel=', snr
 
     return snr

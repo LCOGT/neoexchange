@@ -365,8 +365,11 @@ class SNRTestCase(TestCase):
                                 'filter'    : 'ip',
                                 'num_mirrors' : 3,  # Tertiary fold mirror
                                 'instrument_eff' : 0.42,
-                                'grating_eff' : 0.60,
-                                'ccd_qe'    : 0.70
+                                'grating_eff': 0.60,
+                                'ccd_qe'     : 0.70,
+                                'pixel_scale': 0.337*(u.arcsec/u.pixel),
+                                'wave_scale' : 3.51*(u.angstrom/u.pixel),
+                                'fwhm' : 1.0 * u.arcsec,
                               }
         self.wht_tic_params = { 'zp_i'      : 17.271,
                                 'sky_mag_i' : 20.0,
@@ -378,6 +381,10 @@ class SNRTestCase(TestCase):
                                 'instrument_eff' : 0.42,
                                 'grating_eff' : 0.60,
                                 'ccd_qe'    : 0.80,
+                                'pixel_scale' : 14.9*(u.arcsec/u.mm)*(15*u.micron).to(u.mm)/u.pixel,
+                                'wave_scale' : 121.0*(u.angstrom/u.mm)*(15*u.micron).to(u.mm)/u.pixel,
+                                'fwhm' : 1.0 * u.arcsec,
+                                'slit_width' : 3.0 * u.arcsec,
                               }
 
 class TestComputePhotonRate(SNRTestCase):
@@ -569,7 +576,7 @@ class TestComputeFloydsSNR(SNRTestCase):
        # Override extinction
        self.wht_tic_params['extinction'] = 0.0
 
-       expected_snr = 5.42
+       expected_snr = 5.41718245
 
        snr = compute_floyds_snr(mag_I, exp_time, self.wht_tic_params, emulate_signal=True)
 
