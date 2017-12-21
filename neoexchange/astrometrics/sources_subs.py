@@ -1497,6 +1497,7 @@ def fetch_smass_targets(page=None):
                         i_link = ''
                     date=items[-1].text
                     date=date.strip()
+                    date=datetime.strptime(date,'%Y-%m-%d').date()
                     ref=ref[0].text
                     ref=ref.strip()
                     target_object=[target_name,t_wav,v_link,i_link,ref,date]

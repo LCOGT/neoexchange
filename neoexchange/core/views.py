@@ -1618,7 +1618,7 @@ def update_taxonomy(taxobj,dbg=False):
         return False
     return True
 
-def update_previous_spectra(specobj,source,dbg=False):
+def update_previous_spectra(specobj,source='U',dbg=False):
     '''Update the passed <specobj> for a new external spectroscopy update.
     <specobj> is expected to be a list of:
     designation/provisional designation, wavelength region, data link, reference, date
@@ -1632,16 +1632,22 @@ def update_previous_spectra(specobj,source,dbg=False):
     obj_id = specobj[0].rstrip()
     body_char=Body.objects.filter(active=True).exclude(origin='M')
     try:
-        body = body_char.get(current_name()=obj_id)
+        body = body_char.get(name=obj_id)
     except:
         try:
             body = body_char.get(provisional_name=obj_id)
         except:
             if dbg == True:
-                print "No such Body as %s" % obj_id
-                print "number of bodies: %i" %body_char.count()
+                print "%s is not a Characterization Target" % obj_id
+                print "Number of Characterization Targets: %i" %body_char.count()
             return False
-
+    check_spec = PreviousSpectra.objects.filter(body=body,spec_wav=specobj[1],spec_source=source)
+    if check_spec:
+        for check in check_spec:
+            if check.spec_date >= specobj[5]:
+                if dbg == True:
+                    print "More recent data already in DB"
+                return False
     params = {  'body'          : body,
                 'spec_wav'      : specobj[1],
                 'spec_vis'      : specobj[2],
@@ -1650,6 +1656,11 @@ def update_previous_spectra(specobj,source,dbg=False):
                 'spec_source'   : source,
                 'spec_date'     : specobj[5],
                 }
+    spec, created = PreviousSpectra.objects.get_or_create(**params)
+    if not created:
+        if dbg == True:
+            print "Did not write for some reason."
+        return False
     return True
 
 

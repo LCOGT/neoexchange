@@ -115,6 +115,8 @@ SPECTRAL_WAV_CHOICES = (
 SPECTRAL_SOURCE_CHOICES = (
                         ('S','SMASS'),
                         ('M','MANOS'),
+                        ('U','Unknown'),
+                        ('O','Other')
                      )
 
 class Proposal(models.Model):

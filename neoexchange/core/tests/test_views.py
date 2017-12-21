@@ -42,9 +42,10 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
+    make_new_catalog_entry, generate_new_candidate_id, \
+    update_taxonomy,update_previous_spectra
 from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo, PreviousSpectra
 from core.forms import EphemQuery
 
 # Disable logging during testing
@@ -2878,24 +2879,57 @@ class Test_Add_New_Taxonomy_Data(TestCase):
 
         self.assertEqual(expected_res, new_tax)
 
-class Test_Add_New_Taxonomy_Data(TestCase):
+class Test_Add_External_Spectroscopy_Data(TestCase):
 
     def setUp(self):
 
         params = { 'name' : '980',
                    'provisional_name' : 'LNX0003',
                    'origin' : 'L',
+                   'active' : True,
                  }
         self.body = Body.objects.create(pk=1,**params)
 
         spec_params = {'body'          : self.body,
                 'spec_wav'      : 'Vis',
-                'spec_vis'      : 'something',
-                'spec_ir'       : '',
+                'spec_vis'      : 'spex/sp233/a265962.sp233.txt',
                 'spec_ref'      : 'sp[234]',
                 'spec_source'   : 'S',
                 'spec_date'     : '2017-09-25',
                       }
-        self.test_spectra = SpectralInfo.objects.create(pk=1, **tax_params)
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spec_params)
 
+    def test_same_body_different_wavelength(self):
+        expected_res = True
+        test_obj=['LNX0003','NIR','',"spex/sp233/a416584.sp233.txt","sp[233]",datetime.strptime('2017-09-25','%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj,'S',dbg=True)
 
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_older(self):
+        expected_res = False
+        test_obj=['980','Vis','spex/sp233/a416584.sp234.txt',"","sp[24]",datetime.strptime('2015-09-25','%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj,'S',dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_newer(self):
+        expected_res = True
+        test_obj=['980','Vis','spex/sp233/a416584.sp234.txt',"","sp[24]",datetime.strptime('2017-12-25','%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj,'S',dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_different_source(self):
+        expected_res = True
+        test_obj=['980','Vis','2014/09/1999sh10.png',"","MANOS Site",datetime.strptime('2015-09-25','%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj,'M',dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_new_body(self):
+        expected_res = False
+        test_obj=['9801','Vis','2014/09/1999sh10.png',"","MANOS Site",datetime.strptime('2015-09-25','%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj,'M',dbg=True)
+
+        self.assertEqual(expected_res, new_spec)

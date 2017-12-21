@@ -2213,15 +2213,15 @@ class TestFetchPreviousSpectra(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_smass_targets(self):
-        expected_targets =  [['302'   ,'NIR','',"spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25'],
-                             ['6053'  ,'NIR','',"spex/sp233/a006053.sp233.txt","sp[233]",'2017-09-25'],
-                             ['96631' ,'NIR','',"spex/sp233/a096631.sp233.txt","sp[233]",'2017-09-25'],
-                             ['96631' ,'Vis',"spex/sp234/a096631.sp234.txt",'',"sp[234]",'2017-09-25'],
-                             ['265962','Vis+NIR',"spex/sp233/a265962.sp233.txt","spex/sp233/a265962.sp233.txt","sp[233]",'2017-09-25'],
-                             ['416584','NIR','',"spex/sp233/a416584.sp233.txt","sp[233]",'2017-09-25'],
-                             ['422699','NIR','',"spex/sp233/a422699.sp233.txt","sp[233]",'2017-09-25'],
-                             ['2006 UY64','NIR','',"spex/sp209/au2010pr66.sp209.txt","sp[209]",'2017-12-02'],
-                             ['416584','Vis',"spex/sp210/au2005lw7.sp210.txt",'',"sp[210]",'2015-12-02'],
+        expected_targets =  [['302'   ,'NIR','',"spex/sp233/a000302.sp233.txt","sp[233]",datetime.strptime('2017-09-25','%Y-%m-%d').date()],
+                             ['6053'  ,'NIR','',"spex/sp233/a006053.sp233.txt","sp[233]",datetime.strptime('2017-09-25','%Y-%m-%d').date()],
+                             ['96631' ,'NIR','',"spex/sp233/a096631.sp233.txt","sp[233]",datetime.strptime('2017-09-25','%Y-%m-%d').date()],
+                             ['96631' ,'Vis',"spex/sp234/a096631.sp234.txt",'',"sp[234]",datetime.strptime('2017-09-25','%Y-%m-%d').date()],
+                             ['265962','Vis+NIR',"spex/sp233/a265962.sp233.txt","spex/sp233/a265962.sp233.txt","sp[233]",datetime.strptime('2017-09-25','%Y-%m-%d').date()],
+                             ['416584','NIR','',"spex/sp233/a416584.sp233.txt","sp[233]",datetime.strptime('2017-09-25','%Y-%m-%d').date()],
+                             ['422699','NIR','',"spex/sp233/a422699.sp233.txt","sp[233]",datetime.strptime('2017-09-25','%Y-%m-%d').date()],
+                             ['2006 UY64','NIR','',"spex/sp209/au2010pr66.sp209.txt","sp[209]",datetime.strptime('2017-12-02','%Y-%m-%d').date()],
+                             ['416584','Vis',"spex/sp210/au2005lw7.sp210.txt",'',"sp[210]",datetime.strptime('2015-12-02','%Y-%m-%d').date()],
                             ]
         smass_data = fetch_smass_targets(self.test_smass_page)
         for line in expected_targets:
