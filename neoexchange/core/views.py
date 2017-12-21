@@ -1618,7 +1618,7 @@ def update_taxonomy(taxobj,dbg=False):
         return False
     return True
 
-def update_previous_spectra(specobj,dbg=False):
+def update_previous_spectra(specobj,source,dbg=False):
     '''Update the passed <specobj> for a new external spectroscopy update.
     <specobj> is expected to be a list of:
     designation/provisional designation, wavelength region, data link, reference, date
@@ -1629,8 +1629,9 @@ def update_previous_spectra(specobj,dbg=False):
     params = {  'body'          : body,
                 'spec_wav'      : specobj[1],
                 'spec_vis'      : specobj[2],
-                'spec_ref'      : specobj[3],
-                'spec_source'   : specobj[4],
+                'spec_ir'       : specobj[3],
+                'spec_ref'      : specobj[4],
+                'spec_source'   : source,
                 'spec_date'     : specobj[5],
                 }
     return True

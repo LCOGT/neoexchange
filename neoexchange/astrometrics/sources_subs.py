@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 from socket import error
 from random import randint
 from time import sleep
+from datetime import date
 import requests
 import json
 
@@ -1485,16 +1486,27 @@ def fetch_smass_targets(page=None):
                             t_link = t_link + "txt"
                         else:
                             t_link = t_link + ".txt"
+                    if 'Vis' in t_wav:
+                        v_link = t_link
+                    else:
+                        v_link = ''
+                    if 'NIR' in t_wav:
+                        i_link = t_link
+                    else:
+                        i_link = ''
                     date=items[-1].text
                     date=date.strip()
                     ref=ref[0].text
                     ref=ref.strip()
-                    target_object=[target_name,t_wav,t_link,ref,date]
-                    same_object=[row for row in targets if target_name == row[0]]
+                    target_object=[target_name,t_wav,v_link,i_link,ref,date]
+                    same_object=[row for row in targets if target_name == row[0] and t_wav == row[1]]
                     same_object=[item for sublist in same_object for item in sublist]
-                    if same_object and date <= same_object[4] and t_wav == same_object[1]:
+#                    if same_object:
+#                        print same_object
+#                        print target_object
+                    if same_object and date <= same_object[5]:
                         continue
-                    elif same_object and t_wav == same_object[1]:
+                    elif same_object:
                         targets[targets.index(same_object)]=target_object
                     else:
                         targets.append(target_object)
@@ -1565,7 +1577,7 @@ def fetch_manos_targets(page=None):
                         target_wav = "NA"
                         vislink=''
                         nirlink=''
-                    target_object=[target_name,target_wav,vislink,nirlink]
+                    target_object=[target_name,target_wav,vislink,nirlink,'MANOS Site',date.today()]
                     targets.append(target_object)
     #print targets
     return targets

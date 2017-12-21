@@ -11,14 +11,14 @@ class Command(BaseCommand):
         self.stdout.write("==== Searching MANOS Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         new_manos_data = fetch_manos_targets()
         for m_datum in new_manos_data:
-            resp = update_previous_spectra(m_datum,dbg=False)
+            resp = update_previous_spectra(m_datum,'M',dbg=False)
             if resp:
                 msg = "New MANOS data found for %s" % m_datum[0]
                 self.stdout.write(msg)
         self.stdout.write("==== Searching SMASS Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         new_smass_data = fetch_smass_targets()
         for s_datum in new_smass_data:
-            resp = update_previous_spectra(s_datum,dbg=False)
+            resp = update_previous_spectra(s_datum,'S',dbg=False)
             if resp:
                 msg = "New SMASS data found for %s" % datum[0]
                 self.stdout.write(msg)
