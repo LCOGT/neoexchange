@@ -2213,15 +2213,15 @@ class TestFetchPreviousSpectra(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_smass_targets(self):
-        expected_targets =  [['302'   ,'NIR','',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25'],
-                             ['6053'  ,'NIR','',"http://smass.mit.edu/data/spex/sp233/a006053.sp233.txt","sp[233]",'2017-09-25'],
-                             ['96631' ,'NIR','',"http://smass.mit.edu/data/spex/sp233/a096631.sp233.txt","sp[233]",'2017-09-25'],
-                             ['96631' ,'Vis',"http://smass.mit.edu/data/spex/sp234/a096631.sp234.txt",'',"sp[234]",'2017-09-25'],
-                             ['265962','Vis+NIR',"http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt","http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt","sp[233]",'2017-09-25'],
-                             ['416584','NIR','',"http://smass.mit.edu/data/spex/sp233/a416584.sp233.txt","sp[233]",'2017-09-25'],
-                             ['422699','NIR','',"http://smass.mit.edu/data/spex/sp233/a422699.sp233.txt","sp[233]",'2017-09-25'],
-                             ['2006 UY64','NIR','',"http://smass.mit.edu/data/spex/sp209/au2010pr66.sp209.txt","sp[209]",'2017-12-02'],
-                             ['416584','Vis',"http://smass.mit.edu/data/spex/sp210/au2005lw7.sp210.txt",'',"sp[210]",'2015-12-02'],
+        expected_targets =  [['302'   ,'NIR','',"spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25'],
+                             ['6053'  ,'NIR','',"spex/sp233/a006053.sp233.txt","sp[233]",'2017-09-25'],
+                             ['96631' ,'NIR','',"spex/sp233/a096631.sp233.txt","sp[233]",'2017-09-25'],
+                             ['96631' ,'Vis',"spex/sp234/a096631.sp234.txt",'',"sp[234]",'2017-09-25'],
+                             ['265962','Vis+NIR',"spex/sp233/a265962.sp233.txt","spex/sp233/a265962.sp233.txt","sp[233]",'2017-09-25'],
+                             ['416584','NIR','',"spex/sp233/a416584.sp233.txt","sp[233]",'2017-09-25'],
+                             ['422699','NIR','',"spex/sp233/a422699.sp233.txt","sp[233]",'2017-09-25'],
+                             ['2006 UY64','NIR','',"spex/sp209/au2010pr66.sp209.txt","sp[209]",'2017-12-02'],
+                             ['416584','Vis',"spex/sp210/au2005lw7.sp210.txt",'',"sp[210]",'2015-12-02'],
                             ]
         smass_data = fetch_smass_targets(self.test_smass_page)
         for line in expected_targets:
@@ -2232,7 +2232,7 @@ class TestFetchPreviousSpectra(TestCase):
                              ['1981'     ,'Vis'    ,'','','MANOS Site',date.today()],
                              ['6063'     ,'NA'     ,'','','MANOS Site',date.today()],
                              ['17511'    ,'NA'     ,'','','MANOS Site',date.today()],
-                             ['1999 SH10','Vis'    ,'https://manosobs.files.wordpress.com/2014/09/1999sh10.png','','MANOS Site',date.today()],
+                             ['1999 SH10','Vis'    ,'2014/09/1999sh10.png','','MANOS Site',date.today()],
                              ['1999 TU95','Vis'    ,'','','MANOS Site',date.today()],
                              ['350751'   ,'Vis'    ,'','','MANOS Site',date.today()],
                              ['2004 BZ74','NA'     ,'','','MANOS Site',date.today()],

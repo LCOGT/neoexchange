@@ -2878,5 +2878,24 @@ class Test_Add_New_Taxonomy_Data(TestCase):
 
         self.assertEqual(expected_res, new_tax)
 
+class Test_Add_New_Taxonomy_Data(TestCase):
+
+    def setUp(self):
+
+        params = { 'name' : '980',
+                   'provisional_name' : 'LNX0003',
+                   'origin' : 'L',
+                 }
+        self.body = Body.objects.create(pk=1,**params)
+
+        spec_params = {'body'          : self.body,
+                'spec_wav'      : 'Vis',
+                'spec_vis'      : 'something',
+                'spec_ir'       : '',
+                'spec_ref'      : 'sp[234]',
+                'spec_source'   : 'S',
+                'spec_date'     : '2017-09-25',
+                      }
+        self.test_spectra = SpectralInfo.objects.create(pk=1, **tax_params)
 
 

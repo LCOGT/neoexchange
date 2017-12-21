@@ -657,9 +657,9 @@ def build_characterization_list():
             body_dict['current_name'] = body.current_name()
             body_dict['s_wav']=s_wav
             if s_vis_link:
-                body_dict['s_vis_link']='http://smass.mit.edu/data/spex/'+s_vis_link
+                body_dict['s_vis_link']='http://smass.mit.edu/data/'+s_vis_link
             if s_nir_link:
-                body_dict['s_nir_link']='http://smass.mit.edu/data/spex/'+s_nir_link
+                body_dict['s_nir_link']='http://smass.mit.edu/data/'+s_nir_link
             if m_vis_link:
                 body_dict['m_vis_link']='https://manosobs.files.wordpress.com/'+m_vis_link
             if m_nir_link:
@@ -1625,6 +1625,22 @@ def update_previous_spectra(specobj,source,dbg=False):
     normally produced by the fetch_manos_tagets() or fetch_smass_targets() method.
     Will only add (never remove) spectroscopy details that are not already in spectroscopy 
     database and match Characterization objects in DB.'''
+
+    if len(specobj) != 6:
+        return False
+
+    obj_id = specobj[0].rstrip()
+    body_char=Body.objects.filter(active=True).exclude(origin='M')
+    try:
+        body = body_char.get(current_name()=obj_id)
+    except:
+        try:
+            body = body_char.get(provisional_name=obj_id)
+        except:
+            if dbg == True:
+                print "No such Body as %s" % obj_id
+                print "number of bodies: %i" %body_char.count()
+            return False
 
     params = {  'body'          : body,
                 'spec_wav'      : specobj[1],

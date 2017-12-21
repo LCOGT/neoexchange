@@ -1476,7 +1476,8 @@ def fetch_smass_targets(page=None):
                     t_wav = data[0].text
                     t_wav = t_wav.strip()
                     t_link = row.find_all('a')
-                    t_link= "http://smass.mit.edu/"+t_link[0]['href']
+                    t_link= t_link[0]['href']
+                    t_link=t_link[5:]
                     if t_link[-4:] != ".txt":
                         if t_link[-3:] == ".tx":
                             t_link = t_link + "t"
@@ -1577,6 +1578,10 @@ def fetch_manos_targets(page=None):
                         target_wav = "NA"
                         vislink=''
                         nirlink=''
+                    if vislink:
+                        vislink=vislink[37:]
+                    if nirlink:
+                        nirlink=nirlink[37:]
                     target_object=[target_name,target_wav,vislink,nirlink,'MANOS Site',date.today()]
                     targets.append(target_object)
     #print targets
