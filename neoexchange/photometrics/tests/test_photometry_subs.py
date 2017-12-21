@@ -552,6 +552,8 @@ class TestComputeFloydsSNR(SNRTestCase):
 
        mag_I = 18.0
        exp_time = 100.0
+       # Override extinction
+       self.wht_tic_params['extinction'] = 0.0
 
        expected_snr = 5.42
 
