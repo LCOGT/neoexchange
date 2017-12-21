@@ -370,6 +370,7 @@ class SNRTestCase(TestCase):
                                 'pixel_scale': 0.337*(u.arcsec/u.pixel),
                                 'wave_scale' : 3.51*(u.angstrom/u.pixel),
                                 'fwhm' : 1.0 * u.arcsec,
+                                'slit_width' : 2.0 * u.arcsec,
                               }
         self.wht_tic_params = { 'zp_i'      : 17.271,
                                 'sky_mag_i' : 20.0,
@@ -546,6 +547,18 @@ class TestCalcEffectiveArea(SNRTestCase):
 # Override values to match SIGNAL
         self.ftn_tic_params['extinction'] = 0.06
         self.ftn_tic_params['ccd_qe'] = 0.80
+
+        area = calculate_effective_area(self.ftn_tic_params)
+
+        self.assertAlmostEqual(expected_area.to_value(u.m**2), area.to_value(u.m**2), 6)
+        self.assertEqual(expected_area.unit, area.unit)
+
+    def test_ftn_I_2(self):
+
+        expected_area = 2328.969091176987 * u.cm**2
+# Override values to match SIGNAL
+        self.ftn_tic_params['extinction'] = 0.06
+        self.ftn_tic_params['ccd_qe'] = 0.56
 
         area = calculate_effective_area(self.ftn_tic_params)
 

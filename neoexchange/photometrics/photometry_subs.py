@@ -115,6 +115,9 @@ def compute_photon_rate(mag, tic_params, emulate_signal=False):
     rate = None
     try:
         rate = m_0*10.0**(-0.4*mag)
+    except u.UnitTypeError:
+        # astropy.units Quantity, take value
+        rate = m_0*10.0**(-0.4*mag.value)
     except TypeError:
         pass
 
@@ -178,6 +181,29 @@ def calculate_effective_area(tic_params, dbg=False):
 
     return area
 
+def compute_zp(tic_params, dbg=False, emulate_signal=False):
+
+    # Calculate photons/sec/A/cm^2 for mag=0.0 source
+    m_0 = compute_photon_rate(0.0, tic_params, emulate_signal)
+
+    # Calculate effective capture cross-section
+    eff_area = calculate_effective_area(tic_params, dbg)
+    zp = m_0 * eff_area
+
+    # If imaging, multiply by bandwidth of filter. If spectroscopy, just drop angstrom units
+    if tic_params.get('imaging', False):
+        zp *= tic_params['bandwidth'].to(u.angstrom)
+    else:
+        zp *= u.angstrom
+
+    # Convert to magnitude
+    if zp != 0:
+        zp_mag = -u.Magnitude(zp)
+        if dbg: print 'ZP (photons/sec)=', zp
+        if dbg: print 'ZP (mag+extinct)=', zp_mag
+
+    return zp, zp_mag
+
 def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=False):
     '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
     magnitude (mag_i) for the given exposure time <exp_time>.
@@ -186,33 +212,22 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
 
     if dbg: print
     imaging = tic_params.get('imaging', False)
+
     # Photons per second from the source
     m_0 = compute_photon_rate(mag_i, tic_params, emulate_signal)
     eff_area = calculate_effective_area(tic_params, dbg)
     signal = m_0 * (exp_time * u.s) * eff_area
 
-    m_0 = compute_photon_rate(0.0, tic_params, emulate_signal)
-
-    zp = m_0 * eff_area
-
-    if imaging:
-        zp *= tic_params['bandwidth']
-    else:
-        zp *= u.angstrom
-
-    # Convert to magnitude, subtract extinction
-    if zp != 0:
-        if dbg: print 'ZP (photons/sec)=', zp
-        zp = -u.Magnitude(zp)
-        if dbg: print 'ZP (mag+extinct)=', zp
-
+    # Compute sky brightness in photons/A/s/cm^2/arcsec^2 from sky magnitude (assumed to be a mag/sq. arcsec)
     sky = compute_photon_rate(tic_params['sky_mag_i'], tic_params, emulate_signal)
     sky = sky * eff_area * (exp_time * u.s)
     if dbg: print 'Object=', signal, 'Sky=', sky
-    if dbg: print tic_params['pixel_scale'] , tic_params['wave_scale']
+    if dbg: print tic_params['pixel_scale'] , tic_params['wave_scale'], tic_params.get('slit_width', 1.0*u.arcsec)
 
     # Scale sky (in photons/A/sq.arcsec) to size of slit
     sky2 = sky * tic_params.get('slit_width', 1.0*u.arcsec) * tic_params['pixel_scale'] * tic_params['wave_scale']
+
+    # Calculate size of seeing disk in pixels
     seeing = 2.0 * tic_params['fwhm'] / tic_params['pixel_scale']
     if dbg: print 'Seeing=', seeing, 'Sky2=', sky2
     signal2 = signal * tic_params['wave_scale']
