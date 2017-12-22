@@ -627,9 +627,9 @@ def build_characterization_list():
         unranked = []
         for body in char_targets:
             spectra=PreviousSpectra.objects.filter(body = body)
-            s_wav=s_vis_link=s_nir_link=None
-            m_vis_link=m_nir_link=None
-            m_wav="NO"
+            s_wav=s_vis_link=s_nir_link=''
+            m_vis_link=m_nir_link=''
+            m_wav=""
             if spectra:
                 s_date = date.today()-date(1000,01,01)
                 for spectrum in spectra:
