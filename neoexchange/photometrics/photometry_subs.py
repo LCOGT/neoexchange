@@ -265,3 +265,77 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
     if dbg: print 'SNR/pixel=', snr
 
     return snr
+def construct_tic_params(instrument, passband):
+
+
+    filter_cwave = { 'U': 3600, 'B': 4300, 'V' : 5500, 'R' : 6500, 'I' : 8200, 'Z' : 9500,
+                    'gp' : 4810, 'rp' : 6170, 'ip' : 7520, 'zp' : 8660, 'w' : 6080 }
+    flux_janskys = { 'U': 1810, 'B': 4260, 'V' : 3640, 'R' : 3080, 'I' : 2550, 'Z' : 2200,
+                     'gp': 3631, 'rp': 3631, 'ip': 3631, 'zp': 3631, 'w' : 3631 }
+    sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
+                    'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
+
+    ft_area = 2.84*u.meter**2
+    floyds_read_noise = 3.7
+    tic_params = {}
+
+    wavelength = filter_cwave.get(passband, filter_cwave['ip']) * u.angstrom
+    flux_mag0_Jy = flux_janskys.get(passband, flux_janskys['ip']) * u.Jy
+    sky_mag = sky_mags.get(passband, sky_mags['ip'])
+
+    if instrument.upper() == 'FTN-FLOYDS':
+        tic_params = {
+                       'sky_mag'   : sky_mag,
+                       'read_noise': floyds_read_noise,
+                       'eff_area'  : ft_area,
+                       'flux_mag0' : flux_mag0_Jy,
+                       'wavelength':  wavelength,
+                       'filter'    : passband,
+                       'num_mirrors' : 3,  # Tertiary fold mirror
+                       'instrument_eff' : 0.42,
+                       'grating_eff': 0.87,
+                       'ccd_qe'     : 0.70,
+                       'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
+                       'wave_scale' : 3.51*(u.angstrom/u.pixel),
+                       'fwhm' : 1.3 * u.arcsec,
+                       'slit_width' : 2.0 * u.arcsec,
+                     }
+    elif instrument.upper() == 'FTS-FLOYDS':
+        tic_params = {
+                       'sky_mag'   : sky_mag-0.2,
+                       'read_noise': floyds_read_noise,
+                       'eff_area'  : ft_area,
+                       'flux_mag0' : flux_mag0_Jy,
+                       'wavelength':  wavelength,
+                       'filter'    : passband,
+                       'num_mirrors' : 3,  # Tertiary fold mirror
+                       'instrument_eff' : 0.42,
+                       'grating_eff': 0.87,
+                       'ccd_qe'     : 0.70,
+                       'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
+                       'wave_scale' : 3.51*(u.angstrom/u.pixel),
+                       'fwhm' : 1.7 * u.arcsec,
+                       'slit_width' : 2.0 * u.arcsec,
+                     }
+    return tic_params
+
+def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='FTN-FLOYDS', dbg=False):
+
+    desired_passband = 'i'
+    new_mag = None
+    new_passband = None
+    snr = -99.0
+
+    # If filter is not 'i', map to new passband
+    if passband != desired_passband:
+        new_mag = transform_Vmag(mag, desired_passband, taxonomy)
+        if dbg: print "New mag=", new_mag
+        new_passband = 'ip'
+    else:
+        new_mag = mag
+
+    tic_params = construct_tic_params(instrument, new_passband)
+    if dbg: print tic_params
+
+    snr = compute_floyds_snr(new_mag, exp_time, tic_params, dbg)
+    return new_mag, new_passband, snr
