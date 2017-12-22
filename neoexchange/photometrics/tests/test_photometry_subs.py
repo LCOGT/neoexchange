@@ -637,3 +637,62 @@ class TestComputeFloydsSNR(SNRTestCase):
         snr =  compute_floyds_snr(mag_I, exp_time, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+class TestSlitVignette(SNRTestCase):
+
+    def __init__(self, *args, **kwargs):
+        self.precision = 7
+        super(SNRTestCase, self).__init__(*args, **kwargs)
+
+    def test_imaging(self):
+
+        self.wht_tic_params['imaging'] = True
+
+        expected_vign = 1.0
+
+        vign = slit_vignette(self.wht_tic_params)
+
+        self.assertAlmostEqual(expected_vign, vign, self.precision)
+
+    def test_fwhm2_slit1(self):
+
+        self.wht_tic_params['fwhm'] = 2.0
+        self.wht_tic_params['slit_width'] = 1.0
+
+        expected_vign = 0.434
+
+        vign = slit_vignette(self.wht_tic_params)
+
+        self.assertAlmostEqual(expected_vign, vign, self.precision)
+
+    def test_fwhm1_slit1(self):
+
+        self.wht_tic_params['fwhm'] = 1.0
+        self.wht_tic_params['slit_width'] = 1.0
+
+        expected_vign = 0.763
+
+        vign = slit_vignette(self.wht_tic_params)
+
+        self.assertAlmostEqual(expected_vign, vign, self.precision)
+    def test_fwhm1_slit2(self):
+
+        self.wht_tic_params['fwhm'] = 1.0
+        self.wht_tic_params['slit_width'] = 2.00
+
+        expected_vign = 0.9733
+
+        vign = slit_vignette(self.wht_tic_params)
+
+        self.assertAlmostEqual(expected_vign, vign, self.precision)
+
+    def test_fwhm1_slit2point31(self):
+
+        self.wht_tic_params['fwhm'] = 1.0
+        self.wht_tic_params['slit_width'] = 2.31
+
+        expected_vign = 1.0
+
+        vign = slit_vignette(self.wht_tic_params)
+
+        self.assertAlmostEqual(expected_vign, vign, self.precision)

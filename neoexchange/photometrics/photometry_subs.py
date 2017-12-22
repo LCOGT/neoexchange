@@ -205,6 +205,26 @@ def compute_zp(tic_params, dbg=False, emulate_signal=False):
 
     return zp, zp_mag
 
+def slit_vignette(tic_params, dbg=False):
+    '''Compute the fraction of light entering the slit of width <tic_params['slit_width']>
+    for an object described by a FWHM of <tic_params['fwhm']>
+    In the case of imaging mode, 1.0 is always returned'''
+
+    vign = 1.0
+
+    if tic_params.get('imaging', False)  == False:
+        # Spectroscopy
+        try:
+            ratio = tic_params['slit_width'].to(u.arcsec) / tic_params['fwhm'].to(u.arcsec)
+        except AttributeError:
+            ratio = tic_params['slit_width'] / tic_params['fwhm']
+        if ratio < 0.76: vign=0.868*ratio
+        if ratio >= 0.76 and ratio < 1.40: vign=0.37+0.393*ratio
+        if ratio >= 1.40 and ratio < 2.30: vign=1.00-0.089*(2.3-ratio)
+        if ratio >= 2.3: vign=1.0
+
+    return vign
+
 def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=False):
     '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
     magnitude (mag_i) for the given exposure time <exp_time>.
