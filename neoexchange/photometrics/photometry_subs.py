@@ -212,12 +212,13 @@ def slit_vignette(tic_params, dbg=False):
 
     vign = 1.0
 
-    if tic_params.get('imaging', False)  == False:
+    if tic_params.get('imaging', False) == False:
         # Spectroscopy
         try:
             ratio = tic_params['slit_width'].to(u.arcsec) / tic_params['fwhm'].to(u.arcsec)
         except AttributeError:
             ratio = tic_params['slit_width'] / tic_params['fwhm']
+
         if ratio < 0.76: vign=0.868*ratio
         if ratio >= 0.76 and ratio < 1.40: vign=0.37+0.393*ratio
         if ratio >= 1.40 and ratio < 2.30: vign=1.00-0.089*(2.3-ratio)
@@ -251,7 +252,12 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
     # Calculate size of seeing disk in pixels
     seeing = 2.0 * tic_params['fwhm'] / tic_params['pixel_scale']
     if dbg: print 'Seeing=', seeing, 'Sky2=', sky2
-    signal2 = signal * tic_params['wave_scale']
+
+    # Calculate fraction of light entering slit
+    vignette = slit_vignette(tic_params)
+    if dbg: print "Slit loss fraction=", vignette
+
+    signal2 = signal * tic_params['wave_scale'] * vignette
     if dbg: print 'Object (photons/pixel-step-in-wavelength)=', signal2
     noise = signal2.value + seeing.value*(sky2.value + tic_params.get('read_noise', 0.0)**2)
     noise = sqrt(noise)
