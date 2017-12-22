@@ -63,7 +63,7 @@ class CharacterizationPageTest(FunctionalTest):
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'active'        : True,
                     'origin'        : 'G',
-                    'ingest'        : '2015-05-11 17:20:00',
+                    'ingest'        : '2017-05-11 17:20:00',
                     'score'         : 100,
                     'discovery_date': '2015-05-10 12:00:00',
                     'update_time'   : '2015-05-18 05:00:00',
@@ -110,8 +110,8 @@ class CharacterizationPageTest(FunctionalTest):
             'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'2 V38821zi 23 43 12.75 +19 58 55.6 20.7 LC 21.0 Goldstone Vis+NIR NO',
-                    u'1 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES']
+        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 20.7 LC 21.0 Goldstone Vis+NIR',
+                    u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
 
