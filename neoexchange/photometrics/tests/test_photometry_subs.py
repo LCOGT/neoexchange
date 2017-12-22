@@ -596,8 +596,11 @@ class TestComputeFloydsSNR(SNRTestCase):
 
         mag_i = 18.0
         exp_time = 100.0
+        # Override defaults
+        self.ftn_tic_params['slit_width'] = 3.0 * u.arcsec
+        self.ftn_tic_params['grating_eff']= 0.87
 
-        expected_snr = 42.0
+        expected_snr = 4.47669678294
 
         snr =  compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params)
 
@@ -614,9 +617,22 @@ class TestComputeFloydsSNR(SNRTestCase):
         self.ftn_tic_params['filter']     = 'I'
         self.ftn_tic_params['ccd_qe']     = 0.56
         self.ftn_tic_params['slit_width'] = 3.0 * u.arcsec
-        print self.ftn_tic_params
 
         expected_snr = 12.84996700
+
+        snr =  compute_floyds_snr(mag_I, exp_time, self.ftn_tic_params, emulate_signal=True)
+
+        self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+    def test_signal_ftn_ip(self):
+
+        mag_I = 15.5
+        exp_time = 100.0
+        # Override defaults
+        self.ftn_tic_params['slit_width'] = 3.0 * u.arcsec
+        self.ftn_tic_params['grating_eff']= 0.87
+
+        expected_snr = 23.37279701
 
         snr =  compute_floyds_snr(mag_I, exp_time, self.ftn_tic_params, emulate_signal=True)
 
