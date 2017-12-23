@@ -674,6 +674,25 @@ def build_characterization_list():
             emp_line = body.compute_position()
             if not emp_line:
                 continue
+            obs_dates=body.compute_obs_window()
+            if obs_dates[0]:
+                body_dict['obs_sdate']=obs_dates[0]
+                if obs_dates[0] == obs_dates[2]:
+                    startdate='Now'
+                else:
+                    startdate=obs_dates[0].strftime('%m/%y')
+                if not obs_dates[1]:
+                    body_dict['obs_edate']=obs_dates[2]+timedelta(days=90)
+                    enddate = '>'
+                else:
+                    enddate = obs_dates[1].strftime('%m/%y')
+                    body_dict['obs_edate']=obs_dates[0]
+            else:
+                body_dict['obs_sdate']=body_dict['obs_edate']=obs_dates[2]+timedelta(days=90)
+                startdate='-'
+                enddate = '-'
+            body_dict['obs_start'] = startdate
+            body_dict['obs_end'] = enddate
             body_dict['ra'] = emp_line[0]
             body_dict['dec'] = emp_line[1]
             body_dict['v_mag'] = emp_line[2]

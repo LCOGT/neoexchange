@@ -58,7 +58,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for body in char_targets|dictsortreversed:"ingest" %}
+                {% for body in char_targets|dictsort:"obs_edate"|dictsort:"obs_sdate"%}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
                     <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
@@ -102,7 +102,7 @@
                             <td data-label="MANOS Target?"> {{body.m_wav}}</td>
                         {% endif %}
                     {% endif %}
-                    <td data-label="Observation Window"> </td>
+                    <td data-label="Observation Window">{{body.obs_start}}-{{body.obs_end}} </td>
                     <td data-label="Reported?"></td>
                     </tr>
                 {% empty%}

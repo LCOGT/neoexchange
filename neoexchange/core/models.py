@@ -12,7 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
-from datetime import datetime
+from datetime import datetime,timedelta,date
 from math import pi, log10
 import math
 from collections import Counter
@@ -232,6 +232,33 @@ class Body(models.Model):
             # Catch the case where there is no Epoch
             return False
 
+    def compute_obs_window(self):
+        d = datetime.today()
+        d0=d
+        mag_limit=18
+        dstart=''
+        dend =''
+        if self.epochofel:
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            #print '-----------'
+            while (d <= d0+timedelta(days=90)):
+                emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+                vmag=emp_line[3]
+                #print d,vmag
+                if vmag <0:
+                    return (dstart,dend,d0)
+                if vmag <= mag_limit and not dstart:
+                    dstart = d
+                elif vmag > mag_limit and dstart:
+                    dend = d
+                    return (dstart,dend,d0)
+                d += timedelta(days=10)
+            # Return dates
+            return (dstart,dend,d0)
+        else:
+            # Catch the case where there is no Epoch
+            return False
 
     def compute_FOM(self):
         d = datetime.utcnow()
