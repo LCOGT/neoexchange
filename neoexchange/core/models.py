@@ -242,6 +242,7 @@ class Body(models.Model):
             orbelems = model_to_dict(self)
             sitecode = '500'
             #print '-----------'
+            #print self.name
             while (d <= d0+timedelta(days=90)):
                 emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
                 vmag=emp_line[3]

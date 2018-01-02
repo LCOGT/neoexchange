@@ -58,7 +58,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for body in char_targets|dictsort:"obs_edate"|dictsort:"obs_sdate"%}
+                {% for body in char_targets|dictsort:"priority"%}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
                     <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>

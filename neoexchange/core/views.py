@@ -682,21 +682,27 @@ def build_characterization_list():
                 else:
                     startdate=obs_dates[0].strftime('%m/%y')
                 if not obs_dates[1]:
-                    body_dict['obs_edate']=obs_dates[2]+timedelta(days=90)
+                    body_dict['obs_edate']=obs_dates[2]+timedelta(days=99)
                     enddate = '>'
                 else:
                     enddate = obs_dates[1].strftime('%m/%y')
-                    body_dict['obs_edate']=obs_dates[0]
+                    body_dict['obs_edate']=obs_dates[1]
             else:
-                body_dict['obs_sdate']=body_dict['obs_edate']=obs_dates[2]+timedelta(days=90)
+                body_dict['obs_sdate']=body_dict['obs_edate']=obs_dates[2]+timedelta(days=99)
                 startdate='-'
                 enddate = '-'
+            days_to_start=body_dict['obs_sdate']-obs_dates[2]
+            days_to_end=body_dict['obs_edate']-obs_dates[2]
+            #Define a sorting Priority:
+            # Currently a combination of imminence and window width.
+            body_dict['priority']=days_to_start.days +days_to_end.days
             body_dict['obs_start'] = startdate
             body_dict['obs_end'] = enddate
             body_dict['ra'] = emp_line[0]
             body_dict['dec'] = emp_line[1]
             body_dict['v_mag'] = emp_line[2]
             unranked.append(body_dict)
+            #print body_dict['obs_sdate'],body_dict['obs_edate']
     except Exception, e:
         unranked = None
         logger.error('Characterization list failed on %s' % e)
