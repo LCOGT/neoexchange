@@ -779,13 +779,26 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
     return object_id
 
-def fetch_goldstone_targets(dbg=False):
-    '''Fetches and parses the Goldstone list of radar targets, returning a list
-    of object id's for the current year'''
+def fetch_goldstone_page():
+    '''Fetches the Goldsotne page of radar targets, returning a BeautifulSoup
+    page'''
 
     goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
 
     page = fetchpage_and_make_soup(goldstone_url)
+
+    return page
+
+def fetch_goldstone_targets(page=None, dbg=False):
+    '''Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year.
+    Takes either a BeautifulSoup page version of the Arecibo target page (from
+    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    '''
+
+    if type(page) != BeautifulSoup:
+        page = fetch_goldstone_page()
 
     if page == None:
         return None
