@@ -190,18 +190,18 @@
 							<h5 class="section-title">Spectroscopy Details</h5>
 							<table class="keyvalue-table" id="id_spectralinfo">
 								<tbody>
-                                     {% for s in spectra %}
+                                     {% for t in taxonomies %}
 									<tr>
-										<td class="kv-key"> {{s.get_tax_scheme_display}} Taxonomic Type</td>
-										<td class="kv-value">{{s.taxonomic_class}}</td>
+										<td class="kv-key"> {{t.get_tax_scheme_display}} Taxonomic Type</td>
+										<td class="kv-value">{{t.taxonomic_class}}</td>
 									</tr>	
-									{% if s.tax_notes and s.tax_notes != "*"%}
+									{% if t.tax_notes and t.tax_notes != "*"%}
 									    <tr>
-									    	<td style="font-size:xx-small;text-align:right;" colspan=2>{{s.make_readable_tax_notes}}</td>
+								        	<td style="font-size:xx-small;text-align:right;" colspan=2>{{t.make_readable_tax_notes}}</td>
 									    </tr>
 									{% endif %}
 									<tr>
-										<td style="font-size:xx-small;text-align:right;" colspan=2>{{s.get_tax_reference_display}}</td>
+										<td style="font-size:xx-small;text-align:right;" colspan=2>{{t.get_tax_reference_display}}</td>
 									</tr>	
 								    {% empty %}
 								        <tr>

@@ -3,6 +3,7 @@ from mock import patch
 from neox.tests.mocks import MockDateTime
 from datetime import datetime
 from core.models import Body, PreviousSpectra
+from django.core.urlresolvers import reverse
 
 class CharacterizationPageTest(FunctionalTest):
 
@@ -115,9 +116,36 @@ class CharacterizationPageTest(FunctionalTest):
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
 
-        #He notices that they are ordered somehow
+        #He notices that they are ordered by window
+    @patch('core.models.datetime', MockDateTime)
+    def test_characterization_rank(self):
+
+        MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
+        self.body.origin='N'     ###First target is from NASA
+        self.body.abs_mag=15.5
+        self.body.save()
+        self.insert_extra_test_body()
+        self.insert_another_extra_test_body()
+
+
+        characterization_page_url = self.live_server_url + '/characterization/'
+        self.browser.get(characterization_page_url)
+
+        # Position below computed for 2015-07-01 17:00:00
+        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 15.7 LC 16.0 Goldstone Vis+NIR Now-01/18',
+                    u'3 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---',
+                    u'2 N999r0q 23 43 12.75 +19 58 55.6 15.2 LC 15.5 NASA Vis+NIR NIR Now-02/18']
+        for line in testlines:
+            self.check_for_row_in_table('characterization_targets', line)
         
         #Kildorn notices a link to the body page
+        link = self.browser.find_element_by_link_text('N999r0q')
+        body_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        self.assertIn(link.get_attribute('href'), body_url)
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), body_url)
         
         #He then sees that there is information from other surveys that have already gotten spectra for his targets
 

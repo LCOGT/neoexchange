@@ -127,7 +127,7 @@ class BodyDetailView(DetailView):
         context = super(BodyDetailView, self).get_context_data(**kwargs)
         context['form'] = EphemQuery()
         context['blocks'] = Block.objects.filter(body=self.object).order_by('block_start')
-        context['spectra'] = SpectralInfo.objects.filter(body=self.object)
+        context['taxonomies'] = SpectralInfo.objects.filter(body=self.object)
         return context
 
 
