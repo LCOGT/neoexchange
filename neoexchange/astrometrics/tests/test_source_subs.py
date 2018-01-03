@@ -216,7 +216,7 @@ class TestFetchGoldstoneTargets(TestCase):
         self.maxDiff = None
 
     def test_basics(self):
-        expected_length = 17
+        expected_length = 50
 
         targets = fetch_goldstone_targets(self.test_goldstone_page)
 
