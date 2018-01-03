@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,7 +27,8 @@ from socket import error
 from astrometrics.ephem_subs import determine_darkness_times
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
 #Import module to test
-from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
+from astrometrics.sources_subs import parse_goldstone_chunks, \
+    fetch_arecibo_targets, fetch_goldstone_targets, \
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
@@ -201,6 +202,79 @@ class TestFetchAreciboTargets(TestCase):
                              u'226514']
 
         targets = fetch_arecibo_targets(self.test_arecibo_page_v2)
+
+        self.assertEqual(expected_targets, targets)
+
+class TestFetchGoldstoneTargets(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored version of the Goldstone radar pages
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page.html'), 'r')
+        self.test_goldstone_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.maxDiff = None
+
+    def test_basics(self):
+        expected_length = 17
+
+        targets = fetch_goldstone_targets(self.test_goldstone_page)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_targets(self):
+        expected_targets =  ['3200',
+                             '2017 VT14',
+                             '2017 WX12',
+                             '2017 WZ14',
+                             '418849',
+                             '2017 QL33',
+                             '2007 AG',
+                             '438017',
+                             '306383',
+                             '276055',
+                             '2014 SR339',
+                             '2015 BN509',
+                             '162882',
+                             '96950',
+                             '3752',
+                             '2017 VR12',
+                             '2013 RZ73',
+                             '1981',
+                             '363599',
+                             '444193',
+                             '194126',
+                             '2002 JR100',
+                             '242643',
+                             '2013 US3',
+                             '1999 FN19',
+                             '388945',
+                             '66391',
+                             '68347',
+                             '2014 WG365',
+                             '469737',
+                             '441987',
+                             '2015 DP155',
+                             '1996 AW1',
+                             '13553',
+                             '398188',
+                             '1998 SD9',
+                             '2015 FP118',
+                             '144332',
+                             '475534',
+                             '2013 UG1',
+                             '2002 VE68',
+                             '4953',
+                             '2003 NW1',
+                             'Comet 46P/Wirtanen',
+                             '410088',
+                             '418849',
+                             '2012 MS4',
+                             '163899',
+                             '2004 XK50',
+                             '433']
+
+        targets = fetch_goldstone_targets(self.test_goldstone_page)
 
         self.assertEqual(expected_targets, targets)
 
