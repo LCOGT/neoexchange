@@ -265,8 +265,21 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
     if dbg: print 'SNR/pixel=', snr
 
     return snr
-def construct_tic_params(instrument, passband):
 
+def construct_tic_params(instrument, passband='ip'):
+    '''Builds and returns the dict of telescope, instrument & CCD parameters ("tic_params")
+    for the specified <instrument> (one of {FTN-FLOYDS, FTS-FLOYDS}) and <passband>
+    (defaults to 'ip' for SDSS-i')
+    Note ! Instrument & grating efficiency and CCD QE fixed for ip band at present.
+
+    Filter central wavelengths, flux and sky brightnesses are from SIGNAL V14.5 for UBVRI
+    and Tonry et al. (2012) for grizw. (Sky brightness is degraded by 0.2 mags for FTS)
+    For FLOYDS:
+        Instrument efficiencies are taken from SIGNAL for ISIS (likely wrong by ~20%+)
+        Grating efficiency measured from printout of Richardson Gratings spec sheet (~5%)
+        CCD QE measured from printout of Andor spec sheet (~2%)
+        Readnoise and pixel size from Andor spec sheet
+    '''
 
     filter_cwave = { 'U': 3600, 'B': 4300, 'V' : 5500, 'R' : 6500, 'I' : 8200, 'Z' : 9500,
                     'gp' : 4810, 'rp' : 6170, 'ip' : 7520, 'zp' : 8660, 'w' : 6080 }
@@ -320,6 +333,9 @@ def construct_tic_params(instrument, passband):
     return tic_params
 
 def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='FTN-FLOYDS', dbg=False):
+    '''Wrapper routine to calculate the SNR in <exp_time> seconds for an asteroid of
+    magnitude <mag> in <passband> for the specific [taxonomy] (defaults to 'Mean' for S+C)
+    and the specific instrument [instrument] (defaults to 'FTN-FLOYDS')'''
 
     desired_passband = 'i'
     new_mag = None
