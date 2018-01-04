@@ -1228,6 +1228,12 @@ def configure_defaults(params):
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
+        if params.get('spectroscopy', False) == True:
+            params['exp_type'] = 'SPECTRUM'
+            params['instrument'] =  '2M0-FLOYDS-SCICAM'
+            params['binning'] = 1
+            del(params['filter'])
+            params['spectra_slit'] = 'slit_2.0as'
     elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'

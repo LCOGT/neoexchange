@@ -1818,6 +1818,42 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(params, expected_params)
 
+    def test_2m_ogg_floyds(self):
+        expected_params = { 'spectroscopy': True,
+                            'binning'     : 1,
+                            'spectra_slit': 'slit_2.0as',
+                            'instrument'  : '2M0-FLOYDS-SCICAM',
+                            'observatory' : '',
+                            'exp_type'    : 'SPECTRUM',
+                            'pondtelescope' : '2m0',
+                            'site'        : 'OGG',
+                            'site_code'   : 'F65'}
+
+
+        params = { 'site_code' : 'F65', 'spectroscopy' : True }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_2m_coj_floyds(self):
+        expected_params = { 'spectroscopy': True,
+                            'binning'     : 1,
+                            'spectra_slit': 'slit_2.0as',
+                            'instrument'  : '2M0-FLOYDS-SCICAM',
+                            'observatory' : '',
+                            'exp_type'    :'SPECTRUM',
+                            'pondtelescope': '2m0',
+                            'site'        : 'COJ',
+                            'site_code'   : 'E10'}
+
+
+        params = { 'site_code' : 'E10', 'spectroscopy' : True }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
 class TestMakeCadence(TestCase):
 
     def setUp(self):
