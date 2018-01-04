@@ -1865,7 +1865,7 @@ class TestMakeMolecule(TestCase):
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
                                                             'spectroscopy' : True,
-                                                            'exp_time' : 180.0,s
+                                                            'exp_time' : 180.0,
                                                             'exp_count' : 1})
 
     def test_2m_imaging(self):
@@ -1922,7 +1922,7 @@ class TestMakeMolecule(TestCase):
 
         self.assertEqual(expected_molecule, molecule)
 
-    def test_2m_spectroscopy_no_calibs(self):
+    def test_2m_spectroscopy_spectrum(self):
 
         expected_molecule = {
                              'type' : 'SPECTRUM',
@@ -1933,6 +1933,48 @@ class TestMakeMolecule(TestCase):
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
                              'spectra_slit': 'slit_2.0as',
                              'ag_mode'     : 'ON',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_arc(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'ARC'
+
+        expected_molecule = {
+                             'type' : 'ARC',
+                             'exposure_count' : 1,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'OFF',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_lampflat(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
+
+        expected_molecule = {
+                             'type' : 'LAMP_FLAT',
+                             'exposure_count' : 1,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'WCS'
                             }

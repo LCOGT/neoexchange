@@ -1094,8 +1094,15 @@ def make_molecule(params):
                 }
 
     if params.get('spectroscopy', False) == True:
+        # Autoguider mode, one of ON, OFF, or OPTIONAL.
+        # Must be uppercase now and ON for spectra, and OFF for arcs and lamp flats
+        ag_mode = 'ON'
+        if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
+            ag_mode = 'OFF'
+            molecule['exposure_count'] = 1
+            molecule['exposure_time'] = 60.0
         molecule['spectra_slit'] = params['spectra_slit']
-        molecule['ag_mode'] = 'ON' # ON, OFF, or OPTIONAL. Must be uppercase now and on for specta
+        molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
         molecule['acquire_mode'] = 'WCS'
     else:
