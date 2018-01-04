@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2017 LCO
+Copyright (C) 2016-2018 LCO
 
 archive_subs.py -- Routines for downloading data from the LCO Archive
 

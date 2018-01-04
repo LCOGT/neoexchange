@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -785,13 +785,26 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
     return object_id
 
-def fetch_goldstone_targets(dbg=False):
-    '''Fetches and parses the Goldstone list of radar targets, returning a list
-    of object id's for the current year'''
+def fetch_goldstone_page():
+    '''Fetches the Goldsotne page of radar targets, returning a BeautifulSoup
+    page'''
 
     goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
 
     page = fetchpage_and_make_soup(goldstone_url)
+
+    return page
+
+def fetch_goldstone_targets(page=None, dbg=False):
+    '''Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year.
+    Takes either a BeautifulSoup page version of the Arecibo target page (from
+    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    '''
+
+    if type(page) != BeautifulSoup:
+        page = fetch_goldstone_page()
 
     if page == None:
         return None
@@ -822,6 +835,9 @@ def fetch_goldstone_targets(dbg=False):
                 # hyphens before splitting.
                 if '- ' in line[0:40] or ' -' in line[0:40]:
                     line = line.replace('- ', '-', 1).replace(' -', '-', 1)
+                # Look for ampersands in the line and change to hyphens
+                if '&' in line[0:40] or ' &' in line[0:40] or '& ' in line[0:40] or ' & ' in line[0:40]:
+                    line = line.replace(' & ', '-', 1).replace('& ', '-', 1).replace(' &', '-', 1)
                 chunks = line.lstrip().split()
                 #if dbg: print line
                 # Check if the start of the stripped line is no longer the
