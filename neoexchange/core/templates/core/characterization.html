@@ -38,21 +38,27 @@
                         <span class="sortable" id="obsneeded">Required Observations</span><br>
                         <span style="font-size:75%" >
                         <form action="{% url 'characterization' %}" method="GET">Filter:
+                            <label style="display:inline-block!important;" for="filter_spec">
                             {% if char_filter == 'Spec' %}
-                                <input id='filter_spec' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="Spec" checked><label>Spec</label>
+                                <input id='filter_spec' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="Spec" checked>
                             {% else %}
-                                <input id='filter_spec' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="Spec" >Spec
+                                <input id='filter_spec' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="Spec" >
                             {% endif %}
+                             Spec </label>
+                            <label style="display:inline-block!important;" for="filter_lc">
                             {% if char_filter == 'LC' %}
-                                <input id='filter_lc' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="LC" checked> LC
+                                <input id='filter_lc' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="LC" checked>
                             {% else %}
-                                <input id='filter_lc' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="LC"> LC
+                                <input id='filter_lc' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="LC">
                             {% endif %}
+                             LC </label>
+                            <label style="display:inline-block!important;" for="filter_all">
                             {% if char_filter%}
-                                <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value=""> All
+                                <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="">
                             {% else %}
-                                <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="" checked> All
+                                <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="" checked>
                             {% endif %}
+                             All</label>
 					    </form></span>
                     </th>
                     <th>
@@ -90,25 +96,25 @@
                     {% if body.s_wav == 'Vis+NIR'%}
                         {% if body.s_vis_link%}
                             {% if body.s_nir_link%}
-                                <td style="text-align:left;" data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a></td>
+                                <td data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a></td>
                             {% else %}
-                                <td style="text-align:left;" data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a></td>
+                                <td data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a></td>
                             {% endif %}
                         {% else %}
                             {% if body.s_nir_link%}
-                                <td style="text-align:left;" data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a></td>
+                                <td data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a></td>
                             {% else %}
-                                <td style="text-align:left;" data-label="SMASS Obs">{{body.s_wav}}</td>
+                                <td data-label="SMASS Obs">{{body.s_wav}}</td>
                             {% endif %}
                         {% endif %}
                     {% else %}
                         {% if body.s_vis_link and body.s_wav == 'Vis'%}
-                            <td style="text-align:left;"  data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a> </td>
+                            <td data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a> </td>
                         {% else %}
                             {% if body.s_nir_link and body.s_wav == 'NIR'%}
-                                <td style="text-align:left;" data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a> </td>
+                                <td data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a> </td>
                             {% else %}
-                                <td style="text-align:left;" data-label="SMASS Obs">{{body.s_wav}}</td>
+                                <td data-label="SMASS Obs">{{body.s_wav}}</td>
                             {% endif %}
                         {% endif %}
                     {% endif %}
