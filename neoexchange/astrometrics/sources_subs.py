@@ -1082,6 +1082,8 @@ def make_window(params):
     return window
 
 def make_molecule(params):
+
+    # Common part of a molecule
     molecule = {
                 'type' : params['exp_type'],
                 'exposure_count'  : params['exp_count'],
@@ -1089,11 +1091,18 @@ def make_molecule(params):
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
-                'filter'      : params['filter'],
-                'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
-                'ag_name'     : ''
+                }
 
-    }
+    if params.get('spectroscopy', False) == True:
+        molecule['spectra_slit'] = params['spectra_slit']
+        molecule['ag_mode'] = 'ON' # ON, OFF, or OPTIONAL. Must be uppercase now and on for specta
+        molecule['ag_name'] = ''
+        molecule['acquire_mode'] = 'WCS'
+    else:
+        molecule['filter']  = params['filter']
+        molecule['ag_mode'] = 'OPTIONAL' # ON, OFF, or OPTIONAL. Must be uppercase now...
+        molecule['ag_name'] = ''
+
     return molecule
 
 def make_constraints(params):

@@ -1863,6 +1863,11 @@ class TestMakeMolecule(TestCase):
         self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92', 'exp_time' : 60.0, 'exp_count' : 12})
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21', 'exp_time' : 90.0, 'exp_count' : 18})
 
+        self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
+                                                            'spectroscopy' : True,
+                                                            'exp_time' : 180.0,s
+                                                            'exp_count' : 1})
+
     def test_2m_imaging(self):
 
         expected_molecule = {
@@ -1914,6 +1919,25 @@ class TestMakeMolecule(TestCase):
                             }
 
         molecule = make_molecule(self.params_0m4_imaging)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_no_calibs(self):
+
+        expected_molecule = {
+                             'type' : 'SPECTRUM',
+                             'exposure_count' : 1,
+                             'exposure_time' : 180.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'ON',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy)
 
         self.assertEqual(expected_molecule, molecule)
 
