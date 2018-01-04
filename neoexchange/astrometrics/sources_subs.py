@@ -1119,8 +1119,28 @@ def make_molecules(params):
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
     `params['calibs']` is 'none, 'before'/'after' or 'both'.'''
 
-    molecule = make_molecule(params)
-    molecules = [molecule,]
+    calib_mode = params.get('calibs', 'none').lower()
+    if params.get('spectroscopy', False) == True:
+        # Spectroscopy mode
+        spectrum_molecule = make_molecule(params)
+        if calib_mode != 'none':
+            old_type = params['exp_type']
+            params['exp_type'] = 'ARC'
+            arc_molecule = make_molecule(params)
+            params['exp_type'] = 'LAMP_FLAT'
+            flat_molecule = make_molecule(params)
+            params['exp_type'] = old_type
+        if calib_mode == 'before':
+            molecules = [flat_molecule, arc_molecule, spectrum_molecule]
+        elif calib_mode == 'after':
+            molecules = [spectrum_molecule, arc_molecule, flat_molecule]
+        elif calib_mode == 'both':
+            molecules = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
+        else:
+            molecules = [spectrum_molecule,]
+    else:
+        molecule = make_molecule(params)
+        molecules = [molecule,]
 
     return molecules
 

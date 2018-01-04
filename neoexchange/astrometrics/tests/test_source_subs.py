@@ -2080,6 +2080,44 @@ class TestMakeMolecules(TestCase):
         self.assertEqual(expected_num_molecules, len(molecules))
         self.assertEqual(expected_type, molecules[0]['type'])
 
+    def test_2m_spectroscopy_calibs_before(self):
+
+        self.params_2m0_spectroscopy['calibs'] = 'before'
+        expected_num_molecules = 3
+
+        molecules = make_molecules(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual('LAMP_FLAT', molecules[0]['type'])
+        self.assertEqual('ARC', molecules[1]['type'])
+        self.assertEqual('SPECTRUM', molecules[2]['type'])
+
+    def test_2m_spectroscopy_calibs_after(self):
+
+        self.params_2m0_spectroscopy['calibs'] = 'AFTER'
+        expected_num_molecules = 3
+
+        molecules = make_molecules(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual('LAMP_FLAT', molecules[2]['type'])
+        self.assertEqual('ARC', molecules[1]['type'])
+        self.assertEqual('SPECTRUM', molecules[0]['type'])
+
+    def test_2m_spectroscopy_calibs_both(self):
+
+        self.params_2m0_spectroscopy['calibs'] = 'BoTh'
+        expected_num_molecules = 5
+
+        molecules = make_molecules(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual('LAMP_FLAT', molecules[0]['type'])
+        self.assertEqual('ARC', molecules[1]['type'])
+        self.assertEqual('SPECTRUM', molecules[2]['type'])
+        self.assertEqual('ARC', molecules[3]['type'])
+        self.assertEqual('LAMP_FLAT', molecules[4]['type'])
+
 class TestMakeCadence(TestCase):
 
     def setUp(self):
