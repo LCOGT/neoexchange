@@ -1033,8 +1033,8 @@ def make_target(params):
     '''Make a target dictionary for the request. RA and Dec need to be
     decimal degrees'''
 
-    ra_degs = math.degrees(params['ra_rad'])
-    dec_degs = math.degrees(params['dec_rad'])
+    ra_degs = degrees(params['ra_rad'])
+    dec_degs = degrees(params['dec_rad'])
     target = {
                'name' : params['source_id'],
                'ra'   : ra_degs,
