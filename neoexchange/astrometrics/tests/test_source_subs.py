@@ -299,6 +299,69 @@ class TestFetchGoldstoneTargets(TestCase):
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
 
+    def test_target_with_ampersand2(self):
+
+        html =  '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Goldstone Asteroid Schedule</title><style></style></head>
+                <body>
+                                                                  Needs
+                                                        Needs     Physical
+                                         Target      Astrometry?  Observations?   H
+
+                2018 Jan 13&amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+
+        expected_target = ['438017',]
+
+        targets = fetch_goldstone_targets(page)
+
+        self.assertEqual(1, len(targets))
+        self.assertEqual(expected_target, targets)
+
+    def test_target_with_ampersand3(self):
+
+        html =  '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Goldstone Asteroid Schedule</title><style></style></head>
+                <body>
+                                                                  Needs
+                                                        Needs     Physical
+                                         Target      Astrometry?  Observations?   H
+
+                2018 Jan 13&amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+
+        expected_target = ['438017',]
+
+        targets = fetch_goldstone_targets(page)
+
+        self.assertEqual(1, len(targets))
+        self.assertEqual(expected_target, targets)
+
+    def test_target_with_ampersand4(self):
+
+        html =  '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Goldstone Asteroid Schedule</title><style></style></head>
+                <body>
+                                                                  Needs
+                                                        Needs     Physical
+                                         Target      Astrometry?  Observations?   H
+
+                2018 Jan 13 &amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+
+        expected_target = ['438017',]
+
+        targets = fetch_goldstone_targets(page)
+
+        self.assertEqual(1, len(targets))
+        self.assertEqual(expected_target, targets)
+
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
