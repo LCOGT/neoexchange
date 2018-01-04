@@ -1307,8 +1307,8 @@ def make_userrequest(elements, params):
 # Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
-# Create Molecule
-    molecule = make_molecule(params)
+# Create Molecule(s)
+    molecules = make_molecules(params)
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
@@ -1323,7 +1323,7 @@ def make_userrequest(elements, params):
             "location": location,
             "constraints": constraints,
             "target": target,
-            "molecules": [molecule],
+            "molecules": molecules,
             "windows": [window],
             "observation_note": note,
         }
