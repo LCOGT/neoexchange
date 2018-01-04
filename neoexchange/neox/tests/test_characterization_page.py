@@ -107,8 +107,8 @@ class CharacterizationPageTest(FunctionalTest):
         self.browser.get(characterization_page_url)
         self.assertNotIn('Home | LCO NEOx', self.browser.title)
         self.assertIn('Characterization Page | LCO NEOx', self.browser.title)
-        self.check_for_header_in_table('characterization_targets',\
-            'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
+        #self.check_for_header_in_table('characterization_targets',\
+        #    'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
         testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 15.7 LC 16.0 Goldstone Vis+NIR Now-01/18',
@@ -138,9 +138,17 @@ class CharacterizationPageTest(FunctionalTest):
         for line in testlines:
             self.check_for_row_in_table('characterization_targets', line)
         
+        #Kildorn cares not for ALL Characterization targets. He wants to see only spectroscopy targets!
+        button = self.browser.find_element_by_id('filter_spec')
+        with self.wait_for_page_load(timeout=10):
+            button.click()
+        self.check_for_row_not_in_table('characterization_targets', testlines[0])
+        self.check_for_row_not_in_table('characterization_targets', testlines[2])
+        self.check_for_row_in_table('characterization_targets',u'1 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---')
+
         #Kildorn notices a link to the body page
-        link = self.browser.find_element_by_link_text('N999r0q')
-        body_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        link = self.browser.find_element_by_link_text('q382918r')
+        body_url = self.live_server_url + reverse('target',kwargs={'pk':3})
         self.assertIn(link.get_attribute('href'), body_url)
         with self.wait_for_page_load(timeout=10):
             link.click()
@@ -149,4 +157,4 @@ class CharacterizationPageTest(FunctionalTest):
         
         #He then sees that there is information from other surveys that have already gotten spectra for his targets
 
-        #Now knowing what he must do, Kildorn the Unstoppable takes a lunch break.
+        #Now knowing nothing shall impede his progress, Kildorn the Unstoppable takes a lunch break.

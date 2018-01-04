@@ -616,10 +616,11 @@ def build_unranked_list_params():
 
 def characterization(request):
 
-    params = build_characterization_list()
+    char_filter = request.GET.get("filter","")
+    params = build_characterization_list(char_filter)
     return render(request, 'core/characterization.html',params)
 
-def build_characterization_list():
+def build_characterization_list(disp=None):
     params = {}
     try:
         # If we don't have any Body instances, return None instead of breaking
@@ -701,7 +702,11 @@ def build_characterization_list():
             body_dict['ra'] = emp_line[0]
             body_dict['dec'] = emp_line[1]
             body_dict['v_mag'] = emp_line[2]
-            unranked.append(body_dict)
+            if disp:
+                if disp in body_dict['obs_needed']:
+                    unranked.append(body_dict)
+            else:
+                unranked.append(body_dict)
             #print body_dict['obs_sdate'],body_dict['obs_edate']
     except Exception, e:
         unranked = None
@@ -709,7 +714,8 @@ def build_characterization_list():
     params = {
         'targets': Body.objects.filter(active=True).count(),
         'blocks': Block.objects.filter(active=True).count(),
-        'char_targets': unranked
+        'char_targets': unranked,
+        'char_filter':disp
     }
     return params
 

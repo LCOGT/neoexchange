@@ -20,44 +20,63 @@
             <thead>
                 <tr>
                     <th class="list_project">
-                        <span class="sortable" id="rank">Rank</span>
+                        <span class="sortable" id="rank">Rank</span><br>
                     </th>
                     <th class="list_title">
-                        <span class="sortable" id="name_id">Target Name</span>
+                        <span class="sortable" id="name_id">Target Name</span><br>
                     </th>
                     <th>
-                        <span class="sortable" id="ra">R.A.</span>
+                        <span class="sortable" id="ra">R.A.</span><br>
                     </th>
                     <th>
-                        <span class="sortable" id="dec">Dec.</span>
+                        <span class="sortable" id="dec">Dec.</span><br>
                     </th>
                     <th>
-                        <span class="sortable" id="Vmag">V Mag.</span>
+                        <span class="sortable" id="Vmag">V Mag.</span><br>
                     </th>
                     <th>
-                        <span class="sortable" id="obsneeded">Required Observations</span>
+                        <span class="sortable" id="obsneeded">Required Observations</span><br>
+                        <span style="font-size:75%" >
+                        <form action="{% url 'characterization' %}" method="GET">Filter:
+                            {% if char_filter == 'Spec' %}
+                                <input id='filter_spec' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="Spec" checked><label>Spec</label>
+                            {% else %}
+                                <input id='filter_spec' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="Spec" >Spec
+                            {% endif %}
+                            {% if char_filter == 'LC' %}
+                                <input id='filter_lc' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="LC" checked> LC
+                            {% else %}
+                                <input id='filter_lc' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="LC"> LC
+                            {% endif %}
+                            {% if char_filter%}
+                                <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value=""> All
+                            {% else %}
+                                <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="" checked> All
+                            {% endif %}
+					    </form></span>
                     </th>
                     <th>
-                        <span class="sortable" id="Hmag">H Mag.</span>
+                        <span class="sortable" id="Hmag">H Mag.</span><br>
+
                     </th>
                     <th>
                         <span class="sortable" id="origin">Origin</span>
                     </th>
                     <th>
-                        <span class="sortable" id="SMASS">SMASS Obs</span>
+                        <span class="sortable" id="SMASS">SMASS Obs</span><br>
                     </th>
                     <th>
-                        <span class="sortable" id="MANOS">MANOS Target?</span>
+                        <span class="sortable" id="MANOS">MANOS Target?</span><br>
                     </th>
                     <th>
-                        <span class="sortable" id="obsdate">Observation Window</span>
+                        <span class="sortable" id="obsdate">Observation Window</span><br>
                     </th>
                     <th>
-                        <span class="sortable" id="reported">Reported?</span>
+                        <span class="sortable" id="reported">Reported?</span><br>
                     </th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="char_table">
                 {% for body in char_targets|dictsort:"priority"%}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
