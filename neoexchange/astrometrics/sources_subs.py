@@ -1036,6 +1036,7 @@ def make_target(params):
     ra_degs = degrees(params['ra_rad'])
     dec_degs = degrees(params['dec_rad'])
     target = {
+               'type' : 'SIDEREAL',
                'name' : params['source_id'],
                'ra'   : ra_degs,
                'dec'  : dec_degs
