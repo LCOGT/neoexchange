@@ -1277,12 +1277,22 @@ def get_sitecam_params(site):
     twom_alt_limit = 20.0
     point4m_alt_limit = 15.0
 
-    onem_exp_overhead = 15.5
-    sinistro_exp_overhead = 38.0
-    onem_setup_overhead = 110.0
-    twom_setup_overhead = 180.0
-    twom_exp_overhead = 22.5
-    point4m_exp_overhead = 13.0
+    # Per-Telescope overheads
+    onem_setup_overhead = 90.0 + 2.0    # front padding + filter change time
+    onem_setup_overhead += 5.0 + 11.0   # add "per molecule gap" + "per molecule startup"
+    twom_setup_overhead = 240.0 + 2.0   # front padding + filter change time
+    twom_setup_overhead += 5.0 + 11.0   # add "per molecule gap" + "per molecule startup"
+    point4m_setup_overhead = onem_setup_overhead
+
+    # Per-Instrument overheads
+    onemsbig_exp_overhead = 15.5
+    point4m_exp_overhead = 13.0 + 1.0       # readout + fixed overhead/exposure
+    sinistro_exp_overhead = 37.0 + 1.0      # readout + fixed overhead/exposure
+    twom_exp_overhead = 10.5 + 12.0         # readout + fixed overhead/exposure
+    floyds_exp_overhead = 25.0 + 0.5        # readout + fixed overhead/exposure
+    floyds_config_change_overhead = 30.0
+    floyds_acq_proc_overhead = 60.0
+    floyds_acq_exp_time = 30.0
 
     valid_site_codes = LCOGT_site_codes()
     valid_point4m_codes = ['Z17', 'Z21', 'W89', 'T03', 'T04', 'Q58', 'Q59']
@@ -1306,7 +1316,7 @@ def get_sitecam_params(site):
         alt_limit = twom_alt_limit
     elif site in valid_point4m_codes:
         site_code = site
-        setup_overhead = onem_setup_overhead
+        setup_overhead = point4m_setup_overhead
         exp_overhead = point4m_exp_overhead
         pixel_scale = point4m_pixscale
         fov = arcmins_to_radians(point4m_fov)
