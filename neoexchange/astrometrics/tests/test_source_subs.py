@@ -32,7 +32,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
     make_userrequest, make_cadence_valhalla, make_cadence, fetch_taxonomy_page, \
-    make_molecule
+    make_molecule, make_molecules
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1962,6 +1962,28 @@ class TestMakeMolecule(TestCase):
 
         self.assertEqual(expected_molecule, molecule)
 
+    def test_2m_spectroscopy_arc_multiple_spectra(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'ARC'
+        self.params_2m0_spectroscopy['exp_count'] = 2
+
+        expected_molecule = {
+                             'type' : 'ARC',
+                             'exposure_count' : 1,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'OFF',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
     def test_2m_spectroscopy_lampflat(self):
 
         self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
@@ -1982,6 +2004,81 @@ class TestMakeMolecule(TestCase):
         molecule = make_molecule(self.params_2m0_spectroscopy)
 
         self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_lampflat_multiple_spectra(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
+        self.params_2m0_spectroscopy['exp_count'] = 42
+
+        expected_molecule = {
+                             'type' : 'LAMP_FLAT',
+                             'exposure_count' : 1,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'OFF',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
+class TestMakeMolecules(TestCase):
+
+    def setUp(self):
+
+        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65', 'exp_time' : 60.0, 'exp_count' : 12})
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92', 'exp_time' : 60.0, 'exp_count' : 12})
+        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21', 'exp_time' : 90.0, 'exp_count' : 18})
+
+        self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
+                                                            'spectroscopy' : True,
+                                                            'exp_time' : 180.0,
+                                                            'exp_count' : 1})
+
+    def test_2m_imaging(self):
+
+        expected_num_molecules = 1
+        expected_type = 'EXPOSE'
+
+        molecules = make_molecules(self.params_2m0_imaging)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
+
+    def test_1m_imaging(self):
+
+        expected_num_molecules = 1
+        expected_type = 'EXPOSE'
+
+        molecules = make_molecules(self.params_1m0_imaging)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
+
+    def test_0m4_imaging(self):
+
+        expected_num_molecules = 1
+        expected_type = 'EXPOSE'
+
+        molecules = make_molecules(self.params_0m4_imaging)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
+
+    def test_2m_spectroscopy_nocalibs(self):
+
+        expected_num_molecules = 1
+        expected_type = 'SPECTRUM'
+
+        molecules = make_molecules(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
 
 class TestMakeCadence(TestCase):
 

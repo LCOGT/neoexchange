@@ -1112,6 +1112,18 @@ def make_molecule(params):
 
     return molecule
 
+def make_molecules(params):
+    '''Handles creating the potentially multiple molecules. Returns a list of the molecules.
+    In imaging mode (`params['spectroscopy'] = False` or not present), this just calls
+    the regular make_molecule().
+    In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
+    `params['calibs']` is 'none, 'before'/'after' or 'both'.'''
+
+    molecule = make_molecule(params)
+    molecules = [molecule,]
+
+    return molecules
+
 def make_constraints(params):
     constraints = {
 #                       'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
