@@ -31,7 +31,8 @@ from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targ
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page
+    make_userrequest, make_cadence_valhalla, make_cadence, fetch_taxonomy_page, \
+    make_molecule
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1853,6 +1854,68 @@ class TestConfigureDefaults(TestCase):
         params = configure_defaults(params)
 
         self.assertEqual(params, expected_params)
+
+class TestMakeMolecule(TestCase):
+
+    def setUp(self):
+
+        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65', 'exp_time' : 60.0, 'exp_count' : 12})
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92', 'exp_time' : 60.0, 'exp_count' : 12})
+        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21', 'exp_time' : 90.0, 'exp_count' : 18})
+
+    def test_2m_imaging(self):
+
+        expected_molecule = {
+                             'type' : 'EXPOSE',
+                             'exposure_count' : 12,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 2,
+                             'bin_y'       : 2,
+                             'instrument_name' : '2M0-SCICAM-SPECTRAL',
+                             'filter'      : 'solar',
+                             'ag_mode'     : 'OPTIONAL',
+                             'ag_name'     : ''
+                            }
+
+        molecule = make_molecule(self.params_2m0_imaging)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_1m_imaging(self):
+
+        expected_molecule = {
+                             'type' : 'EXPOSE',
+                             'exposure_count' : 12,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '1M0-SCICAM-SINISTRO',
+                             'filter'      : 'w',
+                             'ag_mode'     : 'OPTIONAL',
+                             'ag_name'     : ''
+                            }
+
+        molecule = make_molecule(self.params_1m0_imaging)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_0m4_imaging(self):
+
+        expected_molecule = {
+                             'type' : 'EXPOSE',
+                             'exposure_count' : 18,
+                             'exposure_time' : 90.0,
+                             'bin_x'       : 2,
+                             'bin_y'       : 2,
+                             'instrument_name' : '0M4-SCICAM-SBIG',
+                             'filter'      : 'w',
+                             'ag_mode'     : 'OPTIONAL',
+                             'ag_name'     : ''
+                            }
+
+        molecule = make_molecule(self.params_0m4_imaging)
+
+        self.assertEqual(expected_molecule, molecule)
 
 class TestMakeCadence(TestCase):
 
