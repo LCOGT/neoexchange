@@ -216,7 +216,7 @@ class TestFetchGoldstoneTargets(TestCase):
         self.maxDiff = None
 
     def test_basics(self):
-        expected_length = 50
+        expected_length = 49
 
         targets = fetch_goldstone_targets(self.test_goldstone_page)
 
@@ -266,7 +266,7 @@ class TestFetchGoldstoneTargets(TestCase):
                              '2002 VE68',
                              '4953',
                              '2003 NW1',
-                             'Comet 46P/Wirtanen',
+#                             'Comet 46P/Wirtanen',
                              '410088',
                              '418849',
                              '2012 MS4',
@@ -277,6 +277,27 @@ class TestFetchGoldstoneTargets(TestCase):
         targets = fetch_goldstone_targets(self.test_goldstone_page)
 
         self.assertEqual(expected_targets, targets)
+
+    def test_target_with_ampersand(self):
+
+        html =  '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Goldstone Asteroid Schedule</title><style></style></head>
+                <body>
+                                                                  Needs
+                                                        Needs     Physical
+                                         Target      Astrometry?  Observations?   H
+
+                2018 Jan 13 &amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+
+        expected_target = ['438017',]
+
+        targets = fetch_goldstone_targets(page)
+
+        self.assertEqual(1, len(targets))
+        self.assertEqual(expected_target, targets)
 
 class TestSubmitBlockToScheduler(TestCase):
 

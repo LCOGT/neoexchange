@@ -829,6 +829,9 @@ def fetch_goldstone_targets(page=None, dbg=False):
                 # hyphens before splitting.
                 if '- ' in line[0:40] or ' -' in line[0:40]:
                     line = line.replace('- ', '-', 1).replace(' -', '-', 1)
+                # Look for ampersands in the line and change to hyphens
+                if '&' in line[0:40] or ' &' in line[0:40] or '& ' in line[0:40] or ' & ' in line[0:40]:
+                    line = line.replace(' & ', '-', 1)
                 chunks = line.lstrip().split()
                 #if dbg: print line
                 # Check if the start of the stripped line is no longer the
