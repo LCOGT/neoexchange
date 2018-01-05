@@ -884,7 +884,7 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
 
     if type(overheads) == dict and exp_overhead > -1:
         slot_length = (exp_time + exp_overhead) * float(exp_count)
-        slot_length += num_molecules * overheads.get('config_change_time', 0.0)
+        slot_length += num_molecules * (overheads.get('config_change_time', 0.0) + overheads.get('per_molecule_time', 0.0))
         slot_length += overheads.get('acquire_exposure_time', 0.0) + overheads.get('acquire_processing_time', 0.0)
         slot_length += overheads.get('front_padding',0.0)
         slot_length = ceil(slot_length)
@@ -1299,10 +1299,12 @@ def get_sitecam_params(site):
     point4m_alt_limit = 15.0
 
     # Per-Telescope overheads
-    onem_setup_overhead = 90.0 + 2.0    # front padding + filter change time
-    onem_setup_overhead += 5.0 + 11.0   # add "per molecule gap" + "per molecule startup"
-    twom_setup_overhead = 240.0 + 2.0   # front padding + filter change time
-    twom_setup_overhead += 5.0 + 11.0   # add "per molecule gap" + "per molecule startup"
+    filter_change = 2.0
+    per_molecule_time =  5.0 + 11.0
+    onem_setup_overhead = 90.0 + filter_change  # front padding + filter change time
+    onem_setup_overhead += per_molecule_time    # add "per molecule gap" + "per molecule startup"
+    twom_setup_overhead = 240.0 + filter_change # front padding + filter change time
+    twom_setup_overhead += per_molecule_time    # add "per molecule gap" + "per molecule startup"
     point4m_setup_overhead = onem_setup_overhead
 
     # Per-Instrument overheads
@@ -1344,10 +1346,11 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(2)
         max_exp_length = 3600.0
         alt_limit = twom_alt_limit
-        setup_overhead = { 'front_padding' : twom_setup_overhead - 2.0,
+        setup_overhead = { 'front_padding' : twom_setup_overhead - filter_change - per_molecule_time,
                            'config_change_time' : floyds_config_change_overhead,
                            'acquire_processing_time' : floyds_acq_proc_overhead,
-                           'acquire_exposure_time': floyds_acq_exp_time
+                           'acquire_exposure_time': floyds_acq_exp_time,
+                           'per_molecule_time' : per_molecule_time
                          }
     elif site in valid_point4m_codes:
         site_code = site
