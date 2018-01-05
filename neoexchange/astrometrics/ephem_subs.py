@@ -17,7 +17,7 @@ GNU General Public License for more details.
 
 import logging
 from datetime import datetime, timedelta, time
-from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10
+from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil
 
 import pyslalib.slalib as S
 from numpy import array, concatenate, zeros
@@ -869,6 +869,27 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins):
 
     return exp_time, exp_count
 
+def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
+
+    site_code = 'FTN-FLOYDS'
+    slot_length = None
+
+    (chk_site_code, overheads, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
+
+    num_molecules = 1
+    if calibs == 'before' or calibs == 'after':
+        num_molecules = 3
+    elif calibs == 'both':
+        num_molecules = 5
+
+    if type(overheads) == dict and exp_overhead > -1:
+        slot_length = (exp_time + exp_overhead) * float(exp_count)
+        slot_length += num_molecules * overheads.get('config_change_time', 0.0)
+        slot_length += overheads.get('acquire_exposure_time', 0.0) + overheads.get('acquire_processing_time', 0.0)
+        slot_length += overheads.get('front_padding',0.0)
+        slot_length = ceil(slot_length)
+    return slot_length
+
 def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
     '''Simple noddy scoring calculation for choosing best slot'''
 
@@ -1314,6 +1335,20 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(10.0)
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
+    elif site == 'FTN-FLOYDS' or site == 'FTS-FLOYDS':
+        site_code = 'F65'
+        if 'FTS' in site:
+            site_code = 'E10'
+        exp_overhead = floyds_exp_overhead
+        pixel_scale = 0.337
+        fov = arcmins_to_radians(2)
+        max_exp_length = 3600.0
+        alt_limit = twom_alt_limit
+        setup_overhead = { 'front_padding' : twom_setup_overhead - 2.0,
+                           'config_change_time' : floyds_config_change_overhead,
+                           'acquire_processing_time' : floyds_acq_proc_overhead,
+                           'acquire_exposure_time': floyds_acq_exp_time
+                         }
     elif site in valid_point4m_codes:
         site_code = site
         setup_overhead = point4m_setup_overhead
