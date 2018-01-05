@@ -190,6 +190,28 @@
 							<h5 class="section-title">Spectroscopy Details</h5>
 							<table class="keyvalue-table" id="id_spectralinfo">
 								<tbody>
+								    {% for s in spectra %}
+								        {% if s.spec_source == 'S' %}
+								            <tr>
+										        <td class="kv-key"> SMASS Spectra</td>
+										        <td class="kv-value"><a href={{s.spec_vis}}>{{s.spec_wav}}</a></td>
+									        </tr>
+								        {% endif %}
+								        {% if s.spec_source == 'M' %}
+								            <tr>
+										        <td class="kv-key"> MANOS Target</td>
+										        {% if s.spec_wav != 'NA' %}
+										            {% if s.spec_vis %}
+										                <td class="kv-value"><a href={{s.spec_vis}}>{{s.spec_wav}}</a></td>
+										            {% else %}
+										                <td class="kv-value">{{s.spec_wav}}</td>
+										            {% endif %}
+										        {% else %}
+										            <td class="kv-value">(No Data Yet)</td>
+										        {% endif %}
+									        </tr>
+								        {% endif %}
+								    {% endfor %}
                                     {% for t in taxonomies %}
 									<tr>
 										<td class="kv-key"> {{t.get_tax_scheme_display}} Taxonomic Type</td>

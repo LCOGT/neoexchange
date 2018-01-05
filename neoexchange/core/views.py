@@ -128,7 +128,37 @@ class BodyDetailView(DetailView):
         context['form'] = EphemQuery()
         context['blocks'] = Block.objects.filter(body=self.object).order_by('block_start')
         context['taxonomies'] = SpectralInfo.objects.filter(body=self.object)
+        context['spectra'] = sort_previous_spectra(self)
         return context
+
+def sort_previous_spectra(self, **kwargs):
+    spectra_of_interest=PreviousSpectra.objects.filter(body=self.object)
+    spectra_out=[]
+    vis_count=0
+    nir_count=0
+    for s in spectra_of_interest:
+        if s.spec_source == 'M':
+            if s.spec_vis:
+                s.spec_vis='https://manosobs.files.wordpress.com/'+s.spec_vis
+            if s.spec_ir:
+                s.spec_vis='https://manosobs.files.wordpress.com/'+s.spec_ir
+            spectra_out.append(s)
+        else:
+            if spectra_of_interest.filter(spec_wav='Vis+NIR').count() >0:
+                if s.spec_wav == 'Vis+NIR':
+                    s.spec_vis='http://smass.mit.edu/data/'+s.spec_vis
+                    spectra_out.append(s)
+            else:
+                if vis_count ==0 and s.spec_wav == 'Vis':
+                    vis_count=1
+                    s.spec_vis='http://smass.mit.edu/data/'+s.spec_vis
+                    spectra_out.append(s)
+                if nir_count ==0 and s.spec_wav == 'NIR':
+                    nir_count=1
+                    s.spec_vis='http://smass.mit.edu/data/'+s.spec_ir
+                    spectra_out.append(s)
+    return spectra_out
+
 
 
 class BodySearchView(ListView):

@@ -156,5 +156,10 @@ class CharacterizationPageTest(FunctionalTest):
         self.assertEqual(str(new_url), body_url)
         
         #He then sees that there is information from other surveys that have already gotten spectra for his targets
+        testlines =['SMASS SPECTRA NIR',
+                    'MANOS TARGET (No Data Yet)',
+                    ]
+        for line in testlines:
+            self.check_for_row_in_table('id_spectralinfo', line)
 
         #Now knowing nothing shall impede his progress, Kildorn the Unstoppable takes a lunch break.
