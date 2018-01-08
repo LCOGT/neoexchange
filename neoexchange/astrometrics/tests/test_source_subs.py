@@ -32,7 +32,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, \
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page
+    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page,fetch_list_targets
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -2424,7 +2424,23 @@ class TestFetchTaxonomyData(TestCase):
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
 
-    #def test_binzel_pull(self):
-    #    expected_line = ['2002 EC','X:',"B","BZ04","*"]
-    #    tax_data = fetch_taxonomy_page()
-    #    self.assertEqual(expected_line, tax_data[-1])
+class TestFetchTargetsFromList(TestCase):
+
+    def test_commad_line_entry(self):
+        test_list=['588', '2759', '4035', '1930_UB', '1989 AL2']
+        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2']
+        self.assertEqual(out_list,fetch_list_targets(test_list))
+
+    def test_text_file_entry(self):
+        test_file = []
+        test_file.append(os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'))
+        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2']
+        self.assertEqual(out_list,fetch_list_targets(test_file))
+
+    def test_file_and_command_entry(self):
+        test_file = []
+        test_file.append(os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'))
+        test_file.append('4063')
+        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2','4063']
+        self.assertEqual(out_list,fetch_list_targets(test_file))
+
