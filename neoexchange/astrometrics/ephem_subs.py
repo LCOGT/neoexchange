@@ -870,6 +870,15 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins):
     return exp_time, exp_count
 
 def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
+    '''Determine the length of time that a planned spectroscopic observation will take.
+    This is based on the <exp_time> and no. of spectrum exposures [exp_count] (defaults
+    to 1) and also on the value of <calibs>, which can be one of ('none', before',
+    'after' or 'both') depending on whether calibrations (arcs and lamp flats) are not
+    wanted, wanted either before or after the spectrum, or both before and after.
+    Values and formulae come from Valhalla and values are encoded in
+    get_sitecam_params(). Currently only FLOYDS is supported and no distinction is
+    made between FTN and FTS.
+    The estimated time, in seconds, is returned.'''
 
     site_code = 'FTN-FLOYDS'
     slot_length = None
@@ -877,6 +886,7 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
     (chk_site_code, overheads, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
 
     num_molecules = 1
+    calibs = calibs.lower()
     if calibs == 'before' or calibs == 'after':
         num_molecules = 3
     elif calibs == 'both':
