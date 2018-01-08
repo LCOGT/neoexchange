@@ -226,6 +226,28 @@ def slit_vignette(tic_params, dbg=False):
 
     return vign
 
+def floyds_throughput(tic_params):
+
+    # Transmission and numbers of optical elements
+    ar_coating = 0.99
+    num_ar_coating = 6
+    ccd_window = 0.9
+    mirror_coating = 0.9925
+    num_mirrors = 4
+
+    # Air-glass interfaces: prism (2 sides), field flattener (4 sides)
+    throughput = ar_coating**num_ar_coating
+    # Fused silica prism
+    throughput *= ccd_window
+    # Fused quartz CCD window
+    throughput *= ccd_window
+    # Mirrors: 	Collimator, Fold, Camera, Grating
+    throughput *= mirror_coating**num_mirrors
+    # Grating efficiency
+    throughput *= tic_params['grating_eff']
+
+    return throughput
+
 def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=False):
     '''Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
     magnitude (mag_i) for the given exposure time <exp_time>.

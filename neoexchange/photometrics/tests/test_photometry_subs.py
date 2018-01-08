@@ -562,6 +562,17 @@ class TestCalcEffectiveArea(SNRTestCase):
         self.assertAlmostEqual(expected_area.to_value(u.m**2), area.to_value(u.m**2), 6)
         self.assertEqual(expected_area.unit, area.unit)
 
+class TestFloydsThroughput(SNRTestCase):
+
+    def test1(self):
+        expected_throughput = 0.6437800300612727
+
+        tic_params = {'grating_eff' : 0.87}
+
+        throughput = floyds_throughput(tic_params)
+
+        self.assertEqual(expected_throughput, throughput)
+
 class TestComputeFloydsSNR(SNRTestCase):
 
 
