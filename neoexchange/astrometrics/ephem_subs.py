@@ -884,6 +884,9 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
 
     if type(overheads) == dict and exp_overhead > -1:
         slot_length = (exp_time + exp_overhead) * float(exp_count)
+        if calibs != 'none':
+            # If we have calibration molecules, add their time and readout to the total
+            slot_length += float(num_molecules-1)*(overheads['calib_exposure_time'] + exp_overhead)
         slot_length += num_molecules * (overheads.get('config_change_time', 0.0) + overheads.get('per_molecule_time', 0.0))
         slot_length += overheads.get('acquire_exposure_time', 0.0) + overheads.get('acquire_processing_time', 0.0)
         slot_length += overheads.get('front_padding',0.0)
@@ -1316,6 +1319,7 @@ def get_sitecam_params(site):
     floyds_config_change_overhead = 30.0
     floyds_acq_proc_overhead = 60.0
     floyds_acq_exp_time = 30.0
+    floyds_calib_time = 60.0
 
     valid_site_codes = LCOGT_site_codes()
     valid_point4m_codes = ['Z17', 'Z21', 'W89', 'T03', 'T04', 'Q58', 'Q59']
@@ -1350,7 +1354,8 @@ def get_sitecam_params(site):
                            'config_change_time' : floyds_config_change_overhead,
                            'acquire_processing_time' : floyds_acq_proc_overhead,
                            'acquire_exposure_time': floyds_acq_exp_time,
-                           'per_molecule_time' : per_molecule_time
+                           'per_molecule_time' : per_molecule_time,
+                           'calib_exposure_time' : floyds_calib_time
                          }
     elif site in valid_point4m_codes:
         site_code = site
