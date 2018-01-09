@@ -139,7 +139,7 @@ class BodySearchView(ListView):
         name = self.request.GET.get("q","")
         if (name != ''):
             if name.isdigit():
-                object_list = self.model.objects.filter(Q(name__exact=name))
+                object_list = self.model.objects.filter(name=name)
             else:
                 object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
