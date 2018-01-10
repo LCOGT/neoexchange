@@ -617,7 +617,6 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lco_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
-        print self.core.frames.lco_api_call
         blockid = self.test_block5.id
         resp = block_status(blockid)
         self.assertFalse(resp)
@@ -707,7 +706,11 @@ class TestSchedule_Check(TestCase):
                         'ra_midpoint': 3.3121839503195525,
                         'dec_midpoint': -0.16049303559750142,
                         'period' : None,
-                        'jitter' : None
+                        'jitter' : None,
+                        'instrument_code' : '',
+                        'snr' : None,
+                        'calibs' : '',
+                        'spectroscopy' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -750,7 +753,11 @@ class TestSchedule_Check(TestCase):
                         'period' : 4.0,
                         'jitter' : 1.0,
                         'num_times' : 3,
-                        'total_time' : 1.0
+                        'total_time' : 1.0,
+                        'instrument_code' : '',
+                        'snr' : None,
+                        'calibs' : '',
+                        'spectroscopy' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -791,7 +798,11 @@ class TestSchedule_Check(TestCase):
                         'period' : 4.0,
                         'jitter' : 1.0,
                         'num_times' : 3,
-                        'total_time' : 1.0
+                        'total_time' : 1.0,
+                        'instrument_code' : '',
+                        'snr' : None,
+                        'calibs' : '',
+                        'spectroscopy' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
