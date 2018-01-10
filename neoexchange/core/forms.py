@@ -33,6 +33,13 @@ SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('Z21','Tenerife, Spain (TFN - Z17,Z21; 0.4m)'),
          ('T04','Maui, Hawaii (OGG - T03-04; 0.4m)'))
 
+SPECTRO_SITES = (('F65-FLOYDS','Maui, Hawaii (FTN - F65)'),
+                 ('E10-FLOYDS','Siding Spring, Aust. (FTS - E10)'))
+
+CALIBS = (('Both', 'Calibrations before and after spectrum'),
+          ('Before', 'Calibrations before spectrum'),
+          ('After', 'Calibrations after spectrum'),
+          ('None', 'No Calibrations (not recommended)'))
 
 class EphemQuery(forms.Form):
 
@@ -119,6 +126,9 @@ class ScheduleBlockForm(forms.Form):
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    spectroscopy = forms.BooleanField(required=False,widget=forms.HiddenInput())
+    calibs = forms.ChoiceField(required=False,widget=forms.HiddenInput(), choices=CALIBS)
+    instrument_code = forms.CharField(max_length=10,widget=forms.HiddenInput(), required=False)
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
@@ -142,6 +152,28 @@ class ScheduleBlockForm(forms.Form):
             raise forms.ValidationError("There must be more than 1 exposure")
         elif self.cleaned_data['exp_length'] < 0.1:
             raise forms.ValidationError("Exposure length is too short")
+
+class ScheduleSpectraForm(forms.Form):
+    proposal_code = forms.ChoiceField(required=True)
+    instrument_code = forms.ChoiceField(required=True, choices=SPECTRO_SITES)
+    utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
+    exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
+    exp_length = forms.FloatField(initial=1800.0, required=True)
+    calibs = forms.ChoiceField(required=True, choices=CALIBS)
+    spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
+
+    def clean_utc_date(self):
+        start = self.cleaned_data['utc_date']
+        if start < datetime.utcnow().date():
+            raise forms.ValidationError("Window cannot start in the past")
+        return start
+
+    def __init__(self, *args, **kwargs):
+        self.proposal_code = kwargs.pop('proposal_code', None)
+        super(ScheduleSpectraForm, self).__init__(*args, **kwargs)
+        proposals = Proposal.objects.filter(active=True)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        self.fields['proposal_code'].choices = proposal_choices
 
 class MPCReportForm(forms.Form):
     block_id = forms.IntegerField(widget=forms.HiddenInput())

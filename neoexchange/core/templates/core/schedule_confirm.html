@@ -18,7 +18,7 @@
           <div class="row">
                   {% for key, error in form.errors.items %}
                           <div class="messages error">
-                              {{ error }}
+                              {{ key }}: {{ error }}
                           </div>
                   {% endfor %}
           </div>
@@ -32,10 +32,17 @@
                         <td class="kv-key">Proposal</td>
                         <td class="kv-value">{{ data.proposal_code }}</td>
                     </tr>
-                    <tr id="id_site">
-                        <td class="kv-key">Site</td>
-                        <td class="kv-value">{{data.site_code}}</td>
-                    </tr>
+                    {% if data.instrument_code %}
+                        <tr id="id_site">
+                            <td class="kv-key">Site/Instrument</td>
+                            <td class="kv-value">{{data.instrument_code}}</td>
+                        </tr>
+                    {% else %}
+                        <tr id="id_site">
+                            <td class="kv-key">Site</td>
+                            <td class="kv-value">{{data.site_code}}</td>
+                        </tr>
+                    {% endif %}
                     <tr id="id_utc_date">
                         <td class="kv-key">UTC date</td>
                         <td class="kv-value">{{ data.utc_date}}</td>
@@ -73,6 +80,12 @@
                         <td class="kv-key">Exposure length</td>
                         <td class="kv-value">{{ data.exp_length|floatformat:1 }} secs</td>
                     </tr>
+                    {% if data.snr %}
+                    <tr id="id_snr">
+                        <td class="kv-key">SNR</td>
+                        <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                    </tr>
+                    {% endif %}
                     <tr id="id_window">
                         <td class="kv-key">Window (UTC)</td>
                         <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
@@ -95,6 +108,16 @@
                         <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
                     </tr>
                     {% endif %}
+                    {% if data.spectroscopy %}
+                    <tr id="id_spectroscopy">
+                        <td class="kv-key">Spectroscopy</td>
+                        <td class="kv-value">{{ data.spectroscopy }}</td>
+                    </tr>
+                    <tr id="id_spectroscopy">
+                        <td class="kv-key">Calibs</td>
+                        <td class="kv-value">{{ data.calibs }}</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         {% endif %}
@@ -112,9 +135,12 @@
           {{form.exp_length}}
           {{form.proposal_code}}
           {{form.site_code}}
+          {{form.instrument_code}}
           {{form.group_id}}
-	  {{form.jitter}}
-	  {{form.period}}
+          {{form.jitter}}
+          {{form.period}}
+          {{form.spectroscopy}}
+          {{form.calibs}}
         </div>
       </div>
 

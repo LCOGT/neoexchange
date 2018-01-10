@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 import os
 from datetime import datetime, timedelta
-from math import floor
+from math import floor, ceil
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
@@ -33,8 +33,10 @@ from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
-from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, MPCReportForm
+    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
+    determine_spectro_slot_length
+from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
+    ScheduleSpectraForm, MPCReportForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
@@ -45,6 +47,7 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
     read_mtds_file
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
+from photometrics.photometry_subs import calc_asteroid_snr
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
@@ -367,7 +370,7 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
 class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     '''
-    Creates a suggested observation request, including time window and molecules
+    Creates a suggested cadenced observation request, including time window and molecules
     '''
     template_name = 'core/schedule.html'
     form_class = ScheduleCadenceForm
@@ -375,6 +378,31 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def post(self, request, *args, **kwargs):
         form = ScheduleCadenceForm(request.POST)
+        if form.is_valid():
+            return self.form_valid(form,request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
+
+class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
+    '''
+    Creates a suggested spectroscopic observation request, including time window,
+    calibrations and molecules
+    '''
+    template_name = 'core/schedule_spectra.html'
+    form_class = ScheduleSpectraForm
+    ok_to_schedule = False
+
+    def get(self, request, *args, **kwargs):
+        form = self.get_form()
+        return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def post(self, request, *args, **kwargs):
+        form = ScheduleSpectraForm(request.POST)
         if form.is_valid():
             return self.form_valid(form,request)
         else:
@@ -434,7 +462,14 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
         return reverse('home')
 
 def schedule_check(data, body, ok_to_schedule=True):
+
+    spectroscopy = data.get('spectroscopy', False)
     body_elements = model_to_dict(body)
+
+    if spectroscopy:
+        data['site_code'] = data['instrument_code'][0:3]
+    else:
+        data['instrument_code'] = ''
 
     # Check if we have a high eccentricity object and it's not of comet type
     if body_elements['eccentricity'] >= 0.9 and body_elements['elements_type'] != 'MPC_COMET':
@@ -474,15 +509,26 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('slot_length'):
         slot_length = data.get('slot_length')
     else:
-        try:
-            slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
-        except MagRangeError:
-            slot_length = 0.
-            ok_to_schedule = False
-    # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
-    if exp_length == None or exp_count == None:
-        ok_to_schedule = False
+        if spectroscopy:
+            slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
+            slot_length /= 60.0
+            slot_length = ceil(slot_length)
+        else:
+	        try:
+	            slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+	        except MagRangeError:
+	            slot_length = 0.
+	            ok_to_schedule = False
+    snr = None
+    if spectroscopy:
+        new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
+        exp_count = data['exp_count']
+        exp_length = data.get('exp_length', 1)
+    else:
+	    # Determine exposure length and count
+	    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
+	    if exp_length == None or exp_count == None:
+	        ok_to_schedule = False
 
     # Get period and jitter for cadence
     period = data.get('period', None)
@@ -509,7 +555,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         if len(body.current_name()) > 7:
              # Name is too long to fit in the groupid field, trim off year part.
              suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%m%d'), datetime.strftime(data['end_time'], '%m%d'))
-
+    elif spectroscopy:
+        suffix += "_spectra"
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
@@ -528,7 +575,11 @@ def schedule_check(data, body, ok_to_schedule=True):
         'ra_midpoint': emp[1],
         'dec_midpoint': emp[2],
         'period' : period,
-        'jitter' : jitter
+        'jitter' : jitter,
+        'snr' : snr,
+        'spectroscopy' : spectroscopy,
+        'calibs' : data.get('calibs', ''),
+        'instrument_code' : data['instrument_code']
     }
 
     if period and jitter:
@@ -564,7 +615,11 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'group_id': data['group_id']
+              'group_id': data['group_id'],
+
+              'spectroscopy' : data.get('spectroscopy', False),
+              'calibs' : data.get('calibs', ''),
+              'instrument_code' : data['instrument_code']
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
