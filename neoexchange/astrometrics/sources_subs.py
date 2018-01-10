@@ -1257,7 +1257,9 @@ def configure_defaults(params):
                   'W87' : 'LSC',
                   'W89' : 'LSC', # Code for 0m4a
                   'F65' : 'OGG',
+                  'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
+                  'E10-FLOYDS' : 'COJ',
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
                   'Q58' : 'COJ', # Code for 0m4a
@@ -1277,7 +1279,7 @@ def configure_defaults(params):
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
         params['filter'] = 'solar'
-        if params.get('spectroscopy', False) == True:
+        if params.get('spectroscopy', False) == True and 'FLOYDS' in params.get('instrument_code', ''):
             params['exp_type'] = 'SPECTRUM'
             params['instrument'] =  '2M0-FLOYDS-SCICAM'
             params['binning'] = 1

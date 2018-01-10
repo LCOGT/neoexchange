@@ -1828,10 +1828,11 @@ class TestConfigureDefaults(TestCase):
                             'exp_type'    : 'SPECTRUM',
                             'pondtelescope' : '2m0',
                             'site'        : 'OGG',
-                            'site_code'   : 'F65'}
+                            'site_code'   : 'F65',
+                            'instrument_code' : 'F65-FLOYDS'}
 
 
-        params = { 'site_code' : 'F65', 'spectroscopy' : True }
+        params = { 'site_code' : 'F65', 'instrument_code' : 'F65-FLOYDS', 'spectroscopy' : True }
 
         params = configure_defaults(params)
 
@@ -1846,10 +1847,11 @@ class TestConfigureDefaults(TestCase):
                             'exp_type'    :'SPECTRUM',
                             'pondtelescope': '2m0',
                             'site'        : 'COJ',
-                            'site_code'   : 'E10'}
+                            'site_code'   : 'E10',
+                            'instrument_code' : 'E10-FLOYDS'}
 
 
-        params = { 'site_code' : 'E10', 'spectroscopy' : True }
+        params = { 'site_code' : 'E10', 'instrument_code' : 'E10-FLOYDS', 'spectroscopy' : True }
 
         params = configure_defaults(params)
 
@@ -1864,6 +1866,7 @@ class TestMakeMolecule(TestCase):
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21', 'exp_time' : 90.0, 'exp_count' : 18})
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
+                                                            'instrument_code' : 'F65-FLOYDS',
                                                             'spectroscopy' : True,
                                                             'exp_time' : 180.0,
                                                             'exp_count' : 1})
@@ -2036,6 +2039,7 @@ class TestMakeMolecules(TestCase):
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21', 'exp_time' : 90.0, 'exp_count' : 18})
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
+                                                            'instrument_code' : 'F65-FLOYDS',
                                                             'spectroscopy' : True,
                                                             'exp_time' : 180.0,
                                                             'exp_count' : 1})
