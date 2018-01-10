@@ -753,11 +753,28 @@ class TestCalcAsteroidSNR(SNRTestCase):
         mag_V = 12.0
         passband = 'V'
         exp_time = 300
-        spectrograph = 'FTN-FLOYDS'
+        spectrograph = 'F65-FLOYDS'
 
         expected_mag = mag_V - 0.39
         expected_passband = 'ip'
         expected_snr = 259.413444738
+
+        mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
+
+        self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_passband, new_passband)
+        self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+    def test_Vmag_default_taxon_FLOYDS(self):
+
+        mag_V = 12.0
+        passband = 'V'
+        exp_time = 300
+        spectrograph = 'E10-FLOYDS'
+
+        expected_mag = mag_V - 0.39
+        expected_passband = 'ip'
+        expected_snr = 244.7622302104532
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
 

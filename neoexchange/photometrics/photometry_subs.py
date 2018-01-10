@@ -290,7 +290,7 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
 
 def construct_tic_params(instrument, passband='ip'):
     '''Builds and returns the dict of telescope, instrument & CCD parameters ("tic_params")
-    for the specified <instrument> (one of {FTN-FLOYDS, FTS-FLOYDS}) and <passband>
+    for the specified <instrument> (one of {F65-FLOYDS, E10-FLOYDS}) and <passband>
     (defaults to 'ip' for SDSS-i')
     Note ! Instrument & grating efficiency and CCD QE fixed for ip band at present.
 
@@ -318,7 +318,7 @@ def construct_tic_params(instrument, passband='ip'):
     flux_mag0_Jy = flux_janskys.get(passband, flux_janskys['ip']) * u.Jy
     sky_mag = sky_mags.get(passband, sky_mags['ip'])
 
-    if instrument.upper() == 'FTN-FLOYDS':
+    if instrument.upper() == 'F65-FLOYDS':
         tic_params = {
                        'sky_mag'   : sky_mag,
                        'read_noise': floyds_read_noise,
@@ -335,7 +335,7 @@ def construct_tic_params(instrument, passband='ip'):
                        'fwhm' : 1.3 * u.arcsec,
                        'slit_width' : 2.0 * u.arcsec,
                      }
-    elif instrument.upper() == 'FTS-FLOYDS':
+    elif instrument.upper() == 'E10-FLOYDS':
         tic_params = {
                        'sky_mag'   : sky_mag-0.2,
                        'read_noise': floyds_read_noise,
@@ -354,10 +354,10 @@ def construct_tic_params(instrument, passband='ip'):
                      }
     return tic_params
 
-def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='FTN-FLOYDS', dbg=False):
+def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', dbg=False):
     '''Wrapper routine to calculate the SNR in <exp_time> seconds for an asteroid of
     magnitude <mag> in <passband> for the specific [taxonomy] (defaults to 'Mean' for S+C)
-    and the specific instrument [instrument] (defaults to 'FTN-FLOYDS')'''
+    and the specific instrument [instrument] (defaults to 'F65-FLOYDS')'''
 
     desired_passband = 'i'
     new_mag = None

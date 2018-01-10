@@ -880,7 +880,7 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
     made between FTN and FTS.
     The estimated time, in seconds, is returned.'''
 
-    site_code = 'FTN-FLOYDS'
+    site_code = 'F65-FLOYDS'
     slot_length = None
 
     (chk_site_code, overheads, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
@@ -1351,10 +1351,8 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(10.0)
         max_exp_length = 300.0
         alt_limit = twom_alt_limit
-    elif site == 'FTN-FLOYDS' or site == 'FTS-FLOYDS':
-        site_code = 'F65'
-        if 'FTS' in site:
-            site_code = 'E10'
+    elif site == 'F65-FLOYDS' or site == 'E10-FLOYDS':
+        site_code = site[0:3]
         exp_overhead = floyds_exp_overhead
         pixel_scale = 0.337
         fov = arcmins_to_radians(2)
