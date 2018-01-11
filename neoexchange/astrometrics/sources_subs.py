@@ -30,7 +30,10 @@ import requests
 import json
 
 from bs4 import BeautifulSoup
-import pyslalib.slalib as S
+try:
+    import pyslalib.slalib as S
+except:
+    pass
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 from django.conf import settings

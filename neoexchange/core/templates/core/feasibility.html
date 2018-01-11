@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block header %}Spectroscopy feasibility{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+					<div class="headingleft">
+						<h1>Spectroscopy feasibility for: {{body.current_name}}</h1>
+					</div>
+{% endblock%}
+
+{% block main-content %}
+    <!-- Main body -->
+    <div class="container" id="main">
+        <div class="section-title">
+        <form action="{% url 'feasibility' body.id %}" method="GET" style="display:inline-block;">
+                <div class="inline-fields">
+                    <div class="compact-field">
+                    {{ form.magnitude }}<label for="id_magnitude">Magnitude</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.exp_length }}<label for="id_exp_length">Exposure length</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.airmass }}<label for="id_airmass">Airmass</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.moon_phase }}<label for="id_moon_phase">Moon phase</label>
+                    </div>
+                    <input type="submit" class="button button-primary" value="Calculate Feasibility" id="id_submit">
+                </div>
+            {% for key, error in form.errors.items %}
+                <div class="messages error">
+                    {{ error }}
+                </div>
+            {% endfor %}
+            </form>
+        </div>
+    </div>
+{% endblock %}

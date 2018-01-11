@@ -5,7 +5,10 @@ from math import degrees, radians
 
 from django.core.management.base import BaseCommand, CommandError
 from django.forms.models import model_to_dict
-import pyslalib.slalib as S
+try:
+    import pyslalib.slalib as S
+except:
+    pass
 import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
 

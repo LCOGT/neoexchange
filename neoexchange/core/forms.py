@@ -41,6 +41,10 @@ CALIBS = (('Both', 'Calibrations before and after spectrum'),
           ('After', 'Calibrations after spectrum'),
           ('None', 'No Calibrations (not recommended)'))
 
+MOON = (('G', 'Grey',),
+        ('B', 'Bright'),
+        ('D', 'Dark'))
+
 class EphemQuery(forms.Form):
 
     target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
@@ -185,3 +189,9 @@ class MPCReportForm(forms.Form):
             self.cleaned_data['block'] = block
         except:
             raise forms.ValidationError('Block ID %s is not valid' % self.cleaned_data['block_id'])
+
+class SpectroFeasibilityForm(forms.Form):
+    magnitude = forms.FloatField()
+    exp_length = forms.FloatField(initial=1800.0, required=True)
+    moon_phase = forms.ChoiceField(choices=MOON, required=True)
+    airmass = forms.FloatField(initial=1.2, required=True)

@@ -19,7 +19,10 @@ from math import degrees
 import time
 import logging
 
-import pyslalib.slalib as S
+try:
+    import pyslalib.slalib as S
+except:
+    pass
 
 logger = logging.getLogger(__name__)
 

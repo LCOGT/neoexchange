@@ -47,6 +47,7 @@
 						        {% endfor %}
 						        </form>
 					        </div>
+                            <a class="button button-primary" href="{% url 'feasibility' body.id %}" id="check-feasibility">Check Feasibility</a>
 							<h5  class="section-title">Recent Blocks Scheduled</h5>
 							<ul class="block-status">
 								{% for b in blocks %}

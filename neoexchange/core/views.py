@@ -36,7 +36,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
@@ -633,6 +633,10 @@ def schedule_submit(data, body, username):
         # Record block and submit to scheduler
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
+
+class SpectroFeasibility(LookUpBodyMixin, FormView):
+    template_name = 'core/feasibility.html'
+    form_class = SpectroFeasibilityForm
 
 def ranking(request):
 

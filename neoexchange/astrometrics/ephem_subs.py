@@ -19,7 +19,10 @@ import logging
 from datetime import datetime, timedelta, time
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil
 
-import pyslalib.slalib as S
+try:
+    import pyslalib.slalib as S
+except:
+    pass
 from numpy import array, concatenate, zeros
 
 # Local imports
