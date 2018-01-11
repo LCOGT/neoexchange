@@ -635,8 +635,21 @@ def schedule_submit(data, body, username):
     return tracking_number, resp_params
 
 class SpectroFeasibility(LookUpBodyMixin, FormView):
+
     template_name = 'core/feasibility.html'
     form_class = SpectroFeasibilityForm
+
+    def get(self, request, *args, **kwargs):
+        form = self.get_form()
+        return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def post(self, request, *args, **kwargs):
+        form = SpectroFeasibilityForm(request.POST)
+        if form.is_valid():
+            return self.form_valid(form,request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
 
 def ranking(request):
 
