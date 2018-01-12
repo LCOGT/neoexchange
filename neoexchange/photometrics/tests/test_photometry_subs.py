@@ -344,6 +344,20 @@ class TestTransformVmag(TestCase):
 
         self.assertEqual(expected_mag, new_mag)
 
+
+class TestSkyBrightness(TestCase):
+
+    def setUp(self):
+        self.dark_sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
+                    'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
+
+    def test_V_dark(self):
+        expected_mag = 21.5 # V'- 0.4
+
+        sky_mag = calc_sky_brightness('V', 'D')
+
+        self.assertEqual(expected_mag, sky_mag)
+
 class SNRTestCase(TestCase):
     def __init__(self, *args, **kwargs):
         super(SNRTestCase, self).__init__(*args, **kwargs)

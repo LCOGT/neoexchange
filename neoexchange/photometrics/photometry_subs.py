@@ -74,6 +74,23 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
 
     return new_mag
 
+def calc_sky_brightness(bandpass, moon_phase, dark_sky_mag=None):
+    '''Calculates the new sky brightness in the given <bandpass> for the
+    given <moon_phase>. The [dark_sky_mag] can be given, or if None, it
+    will be determined from a table of defaults (taken from SIGNAL)'''
+
+    sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
+                    'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
+
+    sky_mag = None
+    if bandpass in sky_mags.keys():
+        if dark_sky_mag == None:
+            dark_sky_mag = sky_mags[bandpass]
+        moon_phase = moon_phase.upper()
+        if moon_phase == 'D':
+            sky_mag = dark_sky_mag - 0.4
+    return sky_mag
+
 def compute_photon_rate(mag, tic_params, emulate_signal=False):
     '''Compute the number of photons/s/cm^2/angstrom for an object of magnitude
     <mag> in a specific passband.
