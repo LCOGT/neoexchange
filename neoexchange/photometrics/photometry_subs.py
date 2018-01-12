@@ -386,7 +386,7 @@ def construct_tic_params(instrument, passband='ip'):
                      }
     return tic_params
 
-def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', dbg=False):
+def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', params={}, dbg=False):
     '''Wrapper routine to calculate the SNR in <exp_time> seconds for an asteroid of
     magnitude <mag> in <passband> for the specific [taxonomy] (defaults to 'Mean' for S+C)
     and the specific instrument [instrument] (defaults to 'F65-FLOYDS')'''
@@ -407,5 +407,14 @@ def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-
     tic_params = construct_tic_params(instrument, new_passband)
     if dbg: print tic_params
 
+    # Apply any overrides from passed params dictionary
+    for key in params:
+        if key == 'moon_phase':
+            if dbg: print "Setting sky background. Was: ", tic_params['sky_mag']
+            tic_params['sky_mag'] = calc_sky_brightness(new_passband, params['moon_phase'])
+            if dbg: print "Now:", tic_params['sky_mag']
+        elif key in tic_params.keys():
+            if dbg: print "Setting %s to %s" % (key, params[key])
+            tic_params[key] = params[key]
     snr = compute_floyds_snr(new_mag, exp_time, tic_params, dbg)
     return new_mag, new_passband, snr

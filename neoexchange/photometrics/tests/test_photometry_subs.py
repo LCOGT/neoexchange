@@ -858,7 +858,7 @@ class TestCalcAsteroidSNR(SNRTestCase):
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
-    def test_Vmag_default_taxon_FLOYDS(self):
+    def test_Vmag_default_taxon_FTS_FLOYDS(self):
 
         mag_V = 12.0
         passband = 'V'
@@ -870,6 +870,24 @@ class TestCalcAsteroidSNR(SNRTestCase):
         expected_snr = 244.7622302104532
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
+
+        self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_passband, new_passband)
+        self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+    def test_Vmag_default_taxon_FLOYDS_Gray(self):
+
+        mag_V = 16.0
+        passband = 'V'
+        exp_time = 300
+        spectrograph = 'F65-FLOYDS'
+        params = { 'moon_phase' : 'G' }
+
+        expected_mag = mag_V - 0.39
+        expected_passband = 'ip'
+        expected_snr = 34.2006627195866
+
+        mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph, params=params)
 
         self.assertEqual(expected_mag, mag)
         self.assertEqual(expected_passband, new_passband)
