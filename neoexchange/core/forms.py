@@ -191,6 +191,7 @@ class MPCReportForm(forms.Form):
             raise forms.ValidationError('Block ID %s is not valid' % self.cleaned_data['block_id'])
 
 class SpectroFeasibilityForm(forms.Form):
+    instrument_code = forms.ChoiceField(required=True, choices=SPECTRO_SITES)
     magnitude = forms.FloatField()
     exp_length = forms.FloatField(initial=1800.0, required=True)
     moon_phase = forms.ChoiceField(choices=MOON, required=True)

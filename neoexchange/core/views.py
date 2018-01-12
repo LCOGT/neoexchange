@@ -643,6 +643,11 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
         form = self.get_form()
         return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
+    def form_valid(self, form, request):
+        data = feasibility_check(form.cleaned_data, self.body)
+        new_form = SpectroFeasibilityForm(data)
+        return render(request, 'core/feasibility.html', {'form': new_form, 'data': data, 'body': self.body})
+
     def post(self, request, *args, **kwargs):
         form = SpectroFeasibilityForm(request.POST)
         if form.is_valid():
@@ -650,6 +655,15 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
+
+def feasibility_check(data, body):
+    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], 'V', data['exp_length'], instrument=data['instrument_code'])
+    calibs = data.get('calibs', 'both')
+    slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
+    slot_length /= 60.0
+    data['slot_length'] = slot_length
+
+    return data
 
 def ranking(request):
 
