@@ -82,13 +82,28 @@ def calc_sky_brightness(bandpass, moon_phase, dark_sky_mag=None):
     sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
                     'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
 
+    # Passbands redder than V are less affected by moonlight. This list is used to lower
+    # the amount of sky brightening later
+    red_bands = ['R', 'I', 'Z', 'w', 'rp', 'ip', 'zp']
+
     sky_mag = None
     if bandpass in sky_mags.keys():
         if dark_sky_mag == None:
             dark_sky_mag = sky_mags[bandpass]
         moon_phase = moon_phase.upper()
+        delta = 0.0
         if moon_phase == 'D':
-            sky_mag = dark_sky_mag - 0.4
+            delta = 0.4
+        elif moon_phase == 'G':
+            delta = 2.15
+            if bandpass in red_bands:
+                delta = 1.3
+        elif moon_phase == 'B':
+            delta = 3.4
+            if bandpass in red_bands:
+                delta = 2.7
+        sky_mag = dark_sky_mag - delta
+
     return sky_mag
 
 def compute_photon_rate(mag, tic_params, emulate_signal=False):

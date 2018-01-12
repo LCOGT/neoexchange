@@ -351,12 +351,91 @@ class TestSkyBrightness(TestCase):
         self.dark_sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
                     'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
 
+        self.precision = 4
+
     def test_V_dark(self):
-        expected_mag = 21.5 # V'- 0.4
+        expected_mag = self.dark_sky_mags['V']-0.4
 
         sky_mag = calc_sky_brightness('V', 'D')
 
-        self.assertEqual(expected_mag, sky_mag)
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_V_gray(self):
+        expected_mag = self.dark_sky_mags['V']-2.15
+
+        sky_mag = calc_sky_brightness('V', 'G')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_V_bright(self):
+        expected_mag = self.dark_sky_mags['V']-3.4
+
+        sky_mag = calc_sky_brightness('V', 'B')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_B_dark(self):
+        expected_mag = self.dark_sky_mags['B']-0.4
+
+        sky_mag = calc_sky_brightness('B', 'D')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_B_gray(self):
+        expected_mag = self.dark_sky_mags['B']-2.15
+
+        sky_mag = calc_sky_brightness('B', 'G')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_B_bright(self):
+        expected_mag = self.dark_sky_mags['B']-3.4
+
+        sky_mag = calc_sky_brightness('B', 'B')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_R_dark(self):
+        expected_mag = 20.6
+
+        sky_mag = calc_sky_brightness('R', 'D')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_R_gray(self):
+        expected_mag = 19.7
+
+        sky_mag = calc_sky_brightness('R', 'G')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_R_bright(self):
+        expected_mag = 18.3
+
+        sky_mag = calc_sky_brightness('R', 'B')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_ip_dark(self):
+        expected_mag = 19.4
+
+        sky_mag = calc_sky_brightness('ip', 'D')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_ip_gray(self):
+        expected_mag = 18.5
+
+        sky_mag = calc_sky_brightness('ip', 'G')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
+
+    def test_ip_bright(self):
+        expected_mag = 17.1
+
+        sky_mag = calc_sky_brightness('ip', 'B')
+
+        self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
 
 class SNRTestCase(TestCase):
     def __init__(self, *args, **kwargs):
