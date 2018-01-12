@@ -47,7 +47,7 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
     read_mtds_file
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
-from photometrics.photometry_subs import calc_asteroid_snr
+from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
@@ -657,7 +657,15 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
 
 
 def feasibility_check(data, body):
-    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], 'V', data['exp_length'], instrument=data['instrument_code'])
+    '''Calculate spectroscopic feasibility
+    '''
+
+    # We assume asteroid magnitudes will be in V and calculate sky
+    # brightness in SDSS-ip as that is where most of the signal will be
+    ast_mag_bandpass = data.get('bandpass', 'V')
+    sky_mag_bandpass = data.get('sky_mag_bandpass', 'ip')
+    data['sky_mag'] = calc_sky_brightness(sky_mag_bandpass, data['moon_phase'])
+    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'])
     calibs = data.get('calibs', 'both')
     slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
     slot_length /= 60.0
