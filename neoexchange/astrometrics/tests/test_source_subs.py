@@ -13,17 +13,18 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from django.test import TestCase
-from django.forms.models import model_to_dict
-from core.models import Body
-from datetime import datetime, timedelta
-from unittest import skipIf
-from bs4 import BeautifulSoup
 import os
 import mock
 import urllib2
 from socket import error
+from datetime import datetime, timedelta
+from unittest import skipIf
 
+from bs4 import BeautifulSoup
+from django.test import TestCase
+from django.forms.models import model_to_dict
+
+from core.models import Body
 from astrometrics.ephem_subs import determine_darkness_times
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
 #Import module to test
