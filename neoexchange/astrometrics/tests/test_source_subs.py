@@ -20,6 +20,7 @@ from socket import error
 from datetime import datetime, timedelta
 from unittest import skipIf
 
+import astropy.units as u
 from bs4 import BeautifulSoup
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -1503,7 +1504,7 @@ class TestSFUFetch(TestCase):
 
     def test(self):
 
-        expected_result = (datetime(2018,1,15,17,44,10), 70.0)
+        expected_result = (datetime(2018,1,15,17,44,10), 0.7*u.MJy)
 
         sfu_result = fetch_sfu(self.test_sfu_page)
 

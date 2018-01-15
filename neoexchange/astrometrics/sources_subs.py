@@ -30,6 +30,7 @@ import requests
 import json
 
 from bs4 import BeautifulSoup
+import astropy.units as u
 try:
     import pyslalib.slalib as S
 except:
@@ -1023,6 +1024,16 @@ def fetch_yarkovsky_targets(yark_targets):
     return yark_target_list
 
 def fetch_sfu(page=None):
+    '''Fetches the solar radio flux from the Solar Radio Monitoring
+    Program run by National Research Council and Natural Resources Canada.
+    The solar radio flux is a measure of the progress through the solar
+    cycle which has been shown to affect the atmospheric airglow - one
+    of the major components of the night sky brightness.
+    Normally this routine is run without any arguments which will fetch
+    the current value (`astropy.units.MJy` (megaJanskys)) and the
+    `datetime` when it was measured. For testing, [page] can be a static
+    BeautifulSoup version of the page. In the event of parsing problems,
+    (None, None) is returned.'''
 
     sfu_url = 'http://www.spaceweather.gc.ca/solarflux/sx-4-en.php'
 
@@ -1041,6 +1052,9 @@ def fetch_sfu(page=None):
             logger.warn("Could not parse flux observation time (" + obs_jd +")")
         try:
             flux_sfu = float(table[2].text)
+            # Flux is in 'solar flux units', equal to 10,000 Jy or 0.01 MJy.
+            # Divide by 100 and add the astropy units
+            flux_sfu = (flux_sfu/100.0) * u.MJy
         except ValueError:
             logger.warn("Could not parse flux (" + table[2].text + ")")
 
