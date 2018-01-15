@@ -1022,6 +1022,30 @@ def fetch_yarkovsky_targets(yark_targets):
 
     return yark_target_list
 
+def fetch_sfu(page=None):
+
+    sfu_url = 'http://www.spaceweather.gc.ca/solarflux/sx-4-en.php'
+
+    flux_datetime = None
+    flux_sfu = None
+
+    if page is None:
+        page = fetchpage_and_make_soup(sfu_url)
+
+    if type(page) == BeautifulSoup:
+        table = page.find_all('td')
+        try:
+            obs_jd = table[0].text
+            flux_datetime = jd_utc2datetime(float(obs_jd))
+        except ValueError:
+            logger.warn("Could not parse flux observation time (" + obs_jd +")")
+        try:
+            flux_sfu = float(table[2].text)
+        except ValueError:
+            logger.warn("Could not parse flux (" + table[2].text + ")")
+
+    return (flux_datetime, flux_sfu)
+
 def make_location(params):
     location = {
         'site'            : params['site'].lower(),

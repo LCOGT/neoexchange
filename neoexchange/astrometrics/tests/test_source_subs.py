@@ -27,12 +27,7 @@ from socket import error
 from astrometrics.ephem_subs import determine_darkness_times
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
 #Import module to test
-from astrometrics.sources_subs import parse_goldstone_chunks, fetch_arecibo_targets,\
-    submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
-    parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
-    fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence, fetch_taxonomy_page, \
-    make_molecule, make_molecules
+from astrometrics.sources_subs import *
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -1497,6 +1492,21 @@ class TestIMAPLogin(TestCase):
         expected_targets = ['2016 TQ11', '2016 SR2', '2016 NP56', '2016 ND1']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
+
+class TestSFUFetch(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_sfu.html'), 'r')
+        self.test_sfu_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+    def test(self):
+
+        expected_result = (datetime(2018,1,15,17,44,10), 70.0)
+
+        sfu_result = fetch_sfu(self.test_sfu_page)
+
+        self.assertEqual(expected_result, sfu_result)
 
 class TestConfigureDefaults(TestCase):
 
