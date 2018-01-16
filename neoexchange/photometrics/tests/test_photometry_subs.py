@@ -437,6 +437,25 @@ class TestSkyBrightness(TestCase):
 
         self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
 
+
+class TestComputeMoonBrightness(TestCase):
+
+    def setUp(self):
+        self.params = { 'bandpass': 'V',
+                        'moon_phase': 171.0,
+                        'moon_target_sep': 60.0,
+                        'moon_zd': 80.0,
+                        'target_zd': 42.7}
+        self.precision = 3
+
+    def test_newmoon_low(self):
+        expected_bkgd = 2.71436524
+
+        moon_bkgd = compute_moon_brightness(self.params)
+
+        self.assertAlmostEqual(expected_bkgd, moon_bkgd, self.precision)
+
+
 class SNRTestCase(TestCase):
     def __init__(self, *args, **kwargs):
         super(SNRTestCase, self).__init__(*args, **kwargs)

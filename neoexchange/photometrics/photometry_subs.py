@@ -15,10 +15,11 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from math import sqrt, log10
+from math import sqrt, log10, sin, cos, exp, radians, degrees
 
 from astropy import units as u
 from astropy.constants import c, h
+from astropy.coordinates import SkyCoord
 
 def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     '''
@@ -105,6 +106,95 @@ def calc_sky_brightness(bandpass, moon_phase, dark_sky_mag=None):
         sky_mag = dark_sky_mag - delta
 
     return sky_mag
+
+def sky_brightness_model(params, dbg=False):
+    '''Calculate a more accurate sky background model based on the
+    contributions from the airglow (a function of the solar radio flux,
+    zodiacal dust (as a function of ecliptic latitude) and background
+    starlight (as a function of galactic latitude'''
+
+    solar_flux = params.get('sfu', 0.8*u.MJy)
+    airmass = params.get('airmass', None)
+    if airmass is None:
+        if params.get('target_zd', None):
+            airmass = compute_airmass(params['target_zd'])
+    q_airglow = (145.0+130.0*((solar_flux.value-0.8)/1.2))*airmass
+    ecliptic_lat = params.get('ecliptic_lat', None)
+    galactic_lat = params.get('galactic_lat', None)
+    if ecliptic_lat is None or galactic_lat is None:
+        if params.get('ra_rad', None) and params.get('dec_rad', None):
+            try:
+                target = SkyCoord(ra=params['ra_rad']*u.rad, dec=params['dec_rad']*u.rad, frame='icrs')
+                ecliptic_lat = target.barycentrictrueecliptic.lat
+                galactic_lat = target.galactic.b
+                if dbg: print target, ecliptic_lat, galactic_lat
+            except ValueError:
+                logger.warn("Could not find/convert co-ordinates")
+    q_zodi = 0.0
+    if ecliptic_lat:
+        if ecliptic_lat.to(u.deg).value < 60.0:
+            q_zodi = 140.0 - 90.0 * sin(radians(ecliptic_lat.value))
+        else:
+            q_zodi = 60.0
+    q_stars = 0.0
+    if galactic_lat:
+        q_stars = 100.0 *exp(-abs(galactic_lat.to(u.deg).value/10.0))
+    q = q_airglow + q_zodi + q_stars
+    q_format = 'Moonless V sky brightness, in S10 units (equivalent 10th-mag stars/deg^2):\n' +\
+        '%6.1f ( = %6.2f airglow + %6.2f zodiacal light + %6.2f starlight)'
+    if dbg: print q_format % ( q, q_airglow, q_zodi, q_stars)
+
+    sky_color_corr = 0.0
+    sky_mag = 27.78-2.5*log10(q) + sky_color_corr
+    q_sky = 10.0**((27.78-sky_mag)/2.5)
+
+    q_moon = compute_moon_brightness(params)
+    if dbg: print 'Moonlight', q_moon, ' S10 units'
+    q_total = q_sky + q_moon
+
+    sky_mag = 27.78-2.5*log10(q_total)
+
+    return sky_mag
+
+def compute_airmass(zd):
+    '''Calculate the airmass from the passed zenith distance <zd> (specified
+    in degrees). This version behaves properly at large zenith
+    distances/high airmasses'''
+
+    return 1.0 / sqrt(1.0-0.96*(sin(radians(zd)))**2.0)
+
+def compute_moon_brightness(params, dbg=False):
+    '''Calculate the increase in brightness due to the Moon via the
+    prescription of Krisciunas & Schaefer (1991). The needed keys in the
+    <params> dictionary are:
+    'moon_target_sep' : separation between the Moon and the target (as a
+                        `astropy.units` angle or a float (in degrees)
+    'moon_phase'      : Sun-Moon Separation (Moon Phase)
+    'moon_zd'         : Zenith distance of the Moon (degrees)
+    'bandpass'        : Filter in use
+    '''
+    r = params['moon_target_sep']
+    try:
+        r = r.to(u.rad).value
+    except AttributeError:
+        r = radians(r)
+
+    # Compute surface brightness of the Moon
+    s = 10.0**(-0.4*(3.84+0.026*params['moon_phase'] + 4e-9 * params['moon_phase']**4))
+    # Compute Rayleigh and Mie scattering
+    fr = 10.0**5.36*(1.06+(cos(r)**2))+10.0**(6.15-(degrees(r)/40.0))
+
+    moon_airmass = compute_airmass(params['moon_zd'])
+    extinct = extinction_in_band(params['bandpass'])
+    airmass = params.get('airmass', None)
+    if airmass is None:
+        if params.get('target_zd', None):
+            airmass = compute_airmass(params['target_zd'])
+    if dbg: print 'airmass, extinct ', airmass, extinct
+    bkgd_nl = s * fr * 10.0**(-0.4*extinct*moon_airmass) * (1.0-10.0**(-0.4*extinct*airmass))
+    bkgd_s10 = bkgd_nl * 3.8
+    if dbg: print 's,fr,xz,xzm,bnl,bs10 ',s,fr,airmass,moon_airmass,bkgd_nl,bkgd_s10
+    return bkgd_s10
 
 def compute_photon_rate(mag, tic_params, emulate_signal=False):
     '''Compute the number of photons/s/cm^2/angstrom for an object of magnitude
