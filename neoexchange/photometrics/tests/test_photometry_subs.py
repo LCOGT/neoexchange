@@ -13,6 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
+from math import acos
 from django.test import TestCase
 from astropy import units as u
 
@@ -442,7 +443,7 @@ class TestComputeMoonBrightness(TestCase):
 
     def setUp(self):
         self.params = { 'bandpass': 'V',
-                        'moon_phase': 171.0,
+                        'moon_phase_angle': 171.0,
                         'moon_target_sep': 60.0,
                         'moon_zd': 80.0,
                         'target_zd': 42.7}
@@ -455,6 +456,17 @@ class TestComputeMoonBrightness(TestCase):
 
         self.assertAlmostEqual(expected_bkgd, moon_bkgd, self.precision)
 
+    def test_newmoon_low_with_fli(self):
+        expected_bkgd = 2.71436524
+
+        alpha = 180.0-self.params['moon_phase_angle']
+        fli = (1.0 - cos(radians(alpha)))/2.0
+        self.assertAlmostEqual(0.0061558297024311703, fli, 7)
+        self.params['moon_phase'] = fli
+        del(self.params['moon_phase_angle'])
+        moon_bkgd = compute_moon_brightness(self.params)
+
+        self.assertAlmostEqual(expected_bkgd, moon_bkgd, self.precision)
 
 class SNRTestCase(TestCase):
     def __init__(self, *args, **kwargs):

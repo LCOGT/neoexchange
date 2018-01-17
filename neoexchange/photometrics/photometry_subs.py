@@ -15,11 +15,14 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from math import sqrt, log10, sin, cos, exp, radians, degrees
+from math import sqrt, log10, sin, cos, exp, acos, radians, degrees
+import logging
 
 from astropy import units as u
 from astropy.constants import c, h
 from astropy.coordinates import SkyCoord
+
+logger = logging.getLogger(__name__)
 
 def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     '''
@@ -169,7 +172,9 @@ def compute_moon_brightness(params, dbg=False):
     <params> dictionary are:
     'moon_target_sep' : separation between the Moon and the target (as a
                         `astropy.units` angle or a float (in degrees)
-    'moon_phase'      : Sun-Moon Separation (Moon Phase)
+    'moon_phase'      : Moon Fractional lunar illumination (from ephem_subs.moonphase())
+    OR
+    'moon_phase_angle' : Lunar phase angle (0 = full, 90 = 7-day old moon, 180 = new moon)
     'moon_zd'         : Zenith distance of the Moon (degrees)
     'bandpass'        : Filter in use
     '''
@@ -179,10 +184,22 @@ def compute_moon_brightness(params, dbg=False):
     except AttributeError:
         r = radians(r)
 
+    if params.get('moon_phase_angle', None):
+        phi = params['moon_phase_angle']
+    else:
+        if params.get('moon_phase', None) is not None:
+            # Retrieve lunar phase angle
+            alpha = acos(1.0-2.0*params['moon_phase'])
+            phi = 180.0 - degrees(alpha)
+        else:
+            logger.error("Need either 'moon_phase_angle' or 'moon_phase' (fractional lunar illumination")
+            return None
     # Compute surface brightness of the Moon
-    s = 10.0**(-0.4*(3.84+0.026*params['moon_phase'] + 4e-9 * params['moon_phase']**4))
+    s = 10.0**(-0.4*(3.84+0.026*phi + 4e-9 * phi**4))
     # Compute Rayleigh and Mie scattering
-    fr = 10.0**5.36*(1.06+(cos(r)**2))+10.0**(6.15-(degrees(r)/40.0))
+    f_rayleigh = 10.0**5.36*(1.06+(cos(r)**2))
+    f_mie = 10.0**(6.15-(degrees(r)/40.0))
+    fr = f_rayleigh + f_mie
 
     moon_airmass = compute_airmass(params['moon_zd'])
     extinct = extinction_in_band(params['bandpass'])
@@ -191,6 +208,7 @@ def compute_moon_brightness(params, dbg=False):
         if params.get('target_zd', None):
             airmass = compute_airmass(params['target_zd'])
     if dbg: print 'airmass, extinct ', airmass, extinct
+    # Calculate background due to Moon in nanoLamberts, convert to S10 units
     bkgd_nl = s * fr * 10.0**(-0.4*extinct*moon_airmass) * (1.0-10.0**(-0.4*extinct*airmass))
     bkgd_s10 = bkgd_nl * 3.8
     if dbg: print 's,fr,xz,xzm,bnl,bs10 ',s,fr,airmass,moon_airmass,bkgd_nl,bkgd_s10
