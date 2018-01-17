@@ -1176,7 +1176,7 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 
 # Full formula for phase angle, i. Requires r (Earth-Sun distance) and del(ta) (the
 # Earth-Moon distance) neither of which we have with our methods. However Meeus
-# _Astronomical Algorithms_ p 316 reckons we can "put cos(i) = -cos(phi) and k (the
+# _Astronomical Algorithms_ p 345 reckons we can "put cos(i) = -cos(phi) and k (the
 # Moon phase) will never be in error by more than 0.0014"
 #    i = atan2( r * sin(phi), del - r * cos(phi) )
 
