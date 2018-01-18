@@ -264,7 +264,7 @@ class SpectralInfo(models.Model):
     taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True,max_length=6)
     tax_scheme          = models.CharField('Taxonomic Scheme',blank=True,choices=TAX_SCHEME_CHOICES, null=True,max_length=2)
     tax_reference       = models.CharField('Reference source for Taxonomic data',max_length=6,choices=TAX_REFERENCE_CHOICES,blank=True, null=True)
-    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=20,blank=True, null=True)
+    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=30,blank=True, null=True)
 
     def make_readable_tax_notes(self):
         text=self.tax_notes
