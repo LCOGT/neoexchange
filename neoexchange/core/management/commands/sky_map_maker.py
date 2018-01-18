@@ -6,10 +6,11 @@ from math import degrees, radians
 from django.core.management.base import BaseCommand, CommandError
 from django.forms.models import model_to_dict
 import pyslalib.slalib as S
-from astrometrics.sky_map_test import plot_skymap, frame_stacker
+from astrometrics.sky_map_test import plot_skymap
 import matplotlib.pyplot as plt
 from astropy.wcs import WCS
 from astropy import units as u
+from astropy.time import Time
 from astropy.coordinates import SkyCoord
 from matplotlib.dates import HourLocator, DateFormatter
 from core.models import Block, Frame, Body, WCSField
@@ -23,7 +24,8 @@ class Command(BaseCommand):
         frames = Frame.objects.exclude(block__body__origin = 'M').filter(frametype = 91).exclude(wcs=None)
 #        frames = Frame.objects.filter(frametype = 91).exclude(wcs=None)
         self.stdout.write("Found %d frames" % (len(frames)))
-
+        
+        lambda_flag=1
         if len(frames) != 0:
             obs_len = []
             ra = []
@@ -34,7 +36,11 @@ class Command(BaseCommand):
                 k=0
                 ra_temp = wcs.wcs.crval[0]
                 dec_temp = wcs.wcs.crval[1]
+                time = frame.midpoint
                 on_sky=SkyCoord(ra=ra_temp*u.degree,dec=dec_temp*u.degree)
+                if lambda_flag:
+                    time = Time(time, format='utc')
+                
                 for spot in ra:
                     if abs(spot-ra_temp) < sep_limit:
                         test_spot = SkyCoord(ra=spot*u.degree,dec=dec[k]*u.degree)
@@ -47,6 +53,7 @@ class Command(BaseCommand):
                     dec.append(dec_temp)
                     obs_len.append(frame.exptime)
                     print "New position %i: (%d,%d)" % (k+1, ra_temp, dec_temp)
+                    print time
             c_radec=SkyCoord(ra=ra*u.degree,dec=dec*u.degree)
             plot_skymap(c_radec, obs_len, title='')
         else:
