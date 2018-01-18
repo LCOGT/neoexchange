@@ -47,7 +47,7 @@ def convert_coordinates(coordinates, ref_frame, x_ref, y_ref, line=False):
         out_x, out_y = coord_trans_x.radian, coord_trans_y.radian
     return out_x, out_y
 
-def plot_skymap( c_radec, obs_len, colors='r', title=''):
+def plot_skymap( c_radec, obs_len, colors='r', title='', lambda_flag = None):
     #convert exposure times into minutes
     obs_len = [x / 60. for x in obs_len]
 
@@ -62,75 +62,106 @@ def plot_skymap( c_radec, obs_len, colors='r', title=''):
     #Register the Aitoff_Hammer projection
     register_projection(HammerAxes)
 
-    #Set up 1st plot in Equatorial Space
-    fig = plt.figure(figsize=(10,15))
-#    ax = fig.add_subplot(411, projection="mollweide")
-    ax = fig.add_subplot(311, projection="custom_hammer")
-    ax.set_autoscale_on(False)
-    plt.title("Equatorial")
-    ax.set_xticklabels(['14h','16h','18h','20h','22h','0h','2h','4h','6h','8h','10h'])
-    frame_name, frame_x, frame_y = 'icrs','ra','dec'
-    ecliptic_icrs_ra, ecliptic_icrs_dec = convert_coordinates(ecliptic, frame_name, frame_x, frame_y, True)
-    ax.plot(ecliptic_icrs_ra, ecliptic_icrs_dec, "-", color='r', label='Ecliptic')
-    galaxy_icrs_ra, galaxy_icrs_dec = convert_coordinates(galaxy, frame_name, frame_x, frame_y, True)
-    ax.plot(galaxy_icrs_ra, galaxy_icrs_dec, "-", color='g', label='Galactic Plane')
-    equator_ra, equator_dec = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
-    ax.plot(equator_ra, equator_dec, "-", color='b', label='Equator')
-    c_radec_ra, c_radec_dec = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
-    ax.grid(True)
-    ax.scatter(c_radec_ra, c_radec_dec, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
+    if not lambda_flag:
+        #Set up 1st plot in Equatorial Space
+        fig = plt.figure(figsize=(10,15))
+    #    ax = fig.add_subplot(411, projection="mollweide")
+        ax = fig.add_subplot(311, projection="custom_hammer")
+        ax.set_autoscale_on(False)
+        plt.title("Equatorial")
+        ax.set_xticklabels(['14h','16h','18h','20h','22h','0h','2h','4h','6h','8h','10h'])
+        frame_name, frame_x, frame_y = 'icrs','ra','dec'
+        ecliptic_icrs_ra, ecliptic_icrs_dec = convert_coordinates(ecliptic, frame_name, frame_x, frame_y, True)
+        ax.plot(ecliptic_icrs_ra, ecliptic_icrs_dec, "-", color='r', label='Ecliptic')
+        galaxy_icrs_ra, galaxy_icrs_dec = convert_coordinates(galaxy, frame_name, frame_x, frame_y, True)
+        ax.plot(galaxy_icrs_ra, galaxy_icrs_dec, "-", color='g', label='Galactic Plane')
+        equator_ra, equator_dec = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
+        ax.plot(equator_ra, equator_dec, "-", color='b', label='Equator')
+        c_radec_ra, c_radec_dec = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
+        ax.grid(True)
+        ax.scatter(c_radec_ra, c_radec_dec, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
 
-    #Set up 2nd plot in Galactic Space
-    ax3 = fig.add_subplot(312, projection="custom_hammer")
-    ax3.set_autoscale_on(False)
-    plt.title("Galactic")
-    ax3.set_xticklabels(['$150^\circ$','$120^\circ$','$90^\circ$','$60^\circ$','$30^\circ$','$360^\circ$','$330^\circ$','$300^\circ$','$270^\circ$','$240^\circ$','$210^\circ$'])
-    frame_name, frame_x, frame_y = 'galactic','l','b'
-    ecliptic_galactic_l, ecliptic_galactic_b = convert_coordinates(ecliptic, frame_name, frame_x, frame_y, True)
-    ecliptic_galactic_l = [-x for x in ecliptic_galactic_l]
-    ax3.plot(ecliptic_galactic_l, ecliptic_galactic_b,"-",color='r')
-    galaxy_l, galaxy_b = convert_coordinates(galaxy, frame_name, frame_x, frame_y, True)
-    galaxy_l = [-x for x in galaxy_l]
-    ax3.plot(galaxy_l, galaxy_b,"-",color='g')
-    equator_galactic_l, equator_galactic_b = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
-    equator_galactic_l = [-x for x in equator_galactic_l]
-    ax3.plot(equator_galactic_l, equator_galactic_b, "-", color='b')
-    c_galactic_l, c_galactic_b = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
-    c_galactic_l=[-x for x in c_galactic_l]
-    im = ax3.scatter(c_galactic_l, c_galactic_b, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
-    ax3.grid(True)
+        #Set up 2nd plot in Galactic Space
+        ax3 = fig.add_subplot(312, projection="custom_hammer")
+        ax3.set_autoscale_on(False)
+        plt.title("Galactic")
+        ax3.set_xticklabels(['$150^\circ$','$120^\circ$','$90^\circ$','$60^\circ$','$30^\circ$','$360^\circ$','$330^\circ$','$300^\circ$','$270^\circ$','$240^\circ$','$210^\circ$'])
+        frame_name, frame_x, frame_y = 'galactic','l','b'
+        ecliptic_galactic_l, ecliptic_galactic_b = convert_coordinates(ecliptic, frame_name, frame_x, frame_y, True)
+        ecliptic_galactic_l = [-x for x in ecliptic_galactic_l]
+        ax3.plot(ecliptic_galactic_l, ecliptic_galactic_b,"-",color='r')
+        galaxy_l, galaxy_b = convert_coordinates(galaxy, frame_name, frame_x, frame_y, True)
+        galaxy_l = [-x for x in galaxy_l]
+        ax3.plot(galaxy_l, galaxy_b,"-",color='g')
+        equator_galactic_l, equator_galactic_b = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
+        equator_galactic_l = [-x for x in equator_galactic_l]
+        ax3.plot(equator_galactic_l, equator_galactic_b, "-", color='b')
+        c_galactic_l, c_galactic_b = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
+        c_galactic_l=[-x for x in c_galactic_l]
+        im = ax3.scatter(c_galactic_l, c_galactic_b, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
+        ax3.grid(True)
 
-    #Set up final plot in Equatorial Space
-    ax4 = fig.add_subplot(313, projection="custom_hammer")
-    ax4.set_autoscale_on(False)
-    plt.title("Ecliptic")
-    ax4.set_xticklabels(['$210^\circ$','$240^\circ$','$270^\circ$','$300^\circ$','$330^\circ$','$0^\circ$','$30^\circ$','$60^\circ$','$90^\circ$','$120^\circ$','$150^\circ$'])
-    frame_name, frame_x, frame_y = 'barycentrictrueecliptic','lon','lat'
-    ecliptic_lon, ecliptic_lat = convert_coordinates(ecliptic, frame_name, frame_x, frame_y, True)
-    ax4.plot(ecliptic_lon, ecliptic_lat,"-",color='r')
-    galaxy_ecliptic_lon, galaxy_ecliptic_lat = convert_coordinates(galaxy, frame_name, frame_x, frame_y, True)
-    ax4.plot(galaxy_ecliptic_lon, galaxy_ecliptic_lat,"-",color='g')
-    equator_ecliptic_lon, equator_ecliptic_lat = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
-    ax4.plot(equator_ecliptic_lon, equator_ecliptic_lat, "-", color='b')
-    c_ecliptic_lon, c_ecliptic_lat = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
-    ax4.scatter(c_ecliptic_lon, c_ecliptic_lat, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
-    ax4.grid(True)
+        #Set up final plot in Ecliptic Space
+        ax4 = fig.add_subplot(313, projection="custom_hammer")
+        ax4.set_autoscale_on(False)
+        plt.title("Ecliptic")
+        ax4.set_xticklabels(['$210^\circ$','$240^\circ$','$270^\circ$','$300^\circ$','$330^\circ$','$0^\circ$','$30^\circ$','$60^\circ$','$90^\circ$','$120^\circ$','$150^\circ$'])
+        frame_name, frame_x, frame_y = 'barycentrictrueecliptic','lon','lat'
+        ecliptic_lon, ecliptic_lat = convert_coordinates(ecliptic, frame_name, frame_x, frame_y, True)
+        ax4.plot(ecliptic_lon, ecliptic_lat,"-",color='r')
+        galaxy_ecliptic_lon, galaxy_ecliptic_lat = convert_coordinates(galaxy, frame_name, frame_x, frame_y, True)
+        ax4.plot(galaxy_ecliptic_lon, galaxy_ecliptic_lat,"-",color='g')
+        equator_ecliptic_lon, equator_ecliptic_lat = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
+        ax4.plot(equator_ecliptic_lon, equator_ecliptic_lat, "-", color='b')
+        c_ecliptic_lon, c_ecliptic_lat = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
+        ax4.scatter(c_ecliptic_lon, c_ecliptic_lat, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
+        ax4.grid(True)
 
-    #set up color bar
-    axins = inset_axes(ax3,
-                       width="5%",  # width = 10% of parent_bbox width
-                       height="100%",  # height : 50%
-                       loc=3,
-                       bbox_to_anchor=(1.02, 0., 1, 1),
-                       bbox_transform=ax3.transAxes,
-                       borderpad=0,
-                       )
-    cbar=plt.colorbar(im, cax=axins)
-    cbar.set_label('(min)')
+        #set up color bar
+        axins = inset_axes(ax3,
+                           width="5%",
+                           height="100%",
+                           loc=3,
+                           bbox_to_anchor=(1.02, 0., 1, 1),
+                           bbox_transform=ax3.transAxes,
+                           borderpad=0,
+                           )
+        cbar=plt.colorbar(im, cax=axins)
+        cbar.set_label('(min)')
 
-    #set up Legend
-    ax.legend(bbox_to_anchor=(-0.1, -0), loc=2, borderaxespad=0.)
-    
+        #set up Legend
+        ax.legend(bbox_to_anchor=(-0.1, -0), loc=2, borderaxespad=0.)
+    else:
+        fig = plt.figure(figsize=(15,10))
+        #Set up final plot in Ecliptic Space
+        ax4 = fig.add_subplot(111, projection="custom_hammer")
+        ax4.set_autoscale_on(False)
+        plt.title("Ecliptic")
+        ax4.set_xticklabels(['$210^\circ$','$240^\circ$','$270^\circ$','$300^\circ$','$330^\circ$','$0^\circ$','$30^\circ$','$60^\circ$','$90^\circ$','$120^\circ$','$150^\circ$'])
+        frame_name, frame_x, frame_y = 'barycentrictrueecliptic','lon','lat'
+        ecliptic_lon, ecliptic_lat = convert_coordinates(ecliptic, frame_name, frame_x, frame_y, True)
+        ax4.plot(ecliptic_lon, ecliptic_lat,"-",color='r', label='Ecliptic')
+        galaxy_ecliptic_lon, galaxy_ecliptic_lat = convert_coordinates(galaxy, frame_name, frame_x, frame_y, True)
+        ax4.plot(galaxy_ecliptic_lon, galaxy_ecliptic_lat,"-",color='g',  label='Galactic Plane')
+        equator_ecliptic_lon, equator_ecliptic_lat = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
+        ax4.plot(equator_ecliptic_lon, equator_ecliptic_lat, "-", color='b',  label='Equator')
+        c_ecliptic_lon, c_ecliptic_lat = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
+        im = ax4.scatter(c_ecliptic_lon, c_ecliptic_lat, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
+        ax4.grid(True)
+        #set up color bar
+        axins = inset_axes(ax4,
+                           width="5%",
+                           height="100%",
+                           loc=3,
+                           bbox_to_anchor=(1.02, 0., 1, 1),
+                           bbox_transform=ax4.transAxes,
+                           borderpad=0,
+                           )
+        cbar=plt.colorbar(im, cax=axins)
+        cbar.set_label('(min)')
+
+        #set up Legend
+        ax4.legend(bbox_to_anchor=(-0.0, .08), loc=2, borderaxespad=0.)
     #Save and plot figure
     if title:
         fig.savefig(title)
@@ -169,4 +200,4 @@ if __name__ == '__main__':
     c_radec=SkyCoord(ra=test_ra*u.degree, dec=test_dec*u.degree)
     c_radec2, obs_len2 = frame_stacker(c_radec, obs_len)
     print c_radec2, obs_len2
-    plot_skymap(c_radec2, obs_len2, title='test')
+    plot_skymap(c_radec2, obs_len2, title='',lambda_flag=1)

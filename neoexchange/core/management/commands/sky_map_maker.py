@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from astropy.wcs import WCS
 from astropy import units as u
 from astropy.time import Time
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, get_sun
 from matplotlib.dates import HourLocator, DateFormatter
 from core.models import Block, Frame, Body, WCSField
 
@@ -21,10 +21,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         frames=[]
-        frames = Frame.objects.exclude(block__body__origin = 'M').filter(frametype = 91).exclude(wcs=None)
-#        frames = Frame.objects.filter(frametype = 91).exclude(wcs=None)
+#        frames = Frame.objects.exclude(block__body__origin = 'M').filter(frametype = 91).exclude(wcs=None)
+        frames = Frame.objects.filter(frametype = 91).exclude(wcs=None)
         self.stdout.write("Found %d frames" % (len(frames)))
-        
+
         lambda_flag=1
         if len(frames) != 0:
             obs_len = []
@@ -39,23 +39,44 @@ class Command(BaseCommand):
                 time = frame.midpoint
                 on_sky=SkyCoord(ra=ra_temp*u.degree,dec=dec_temp*u.degree)
                 if lambda_flag:
-                    time = Time(time, format='utc')
-                
-                for spot in ra:
-                    if abs(spot-ra_temp) < sep_limit:
-                        test_spot = SkyCoord(ra=spot*u.degree,dec=dec[k]*u.degree)
-                        if on_sky.separation(test_spot).degree < sep_limit:
-                            obs_len[k]+=frame.exptime
-                            break
-                    k+=1
-                if k == len(obs_len):
-                    ra.append(ra_temp)
-                    dec.append(dec_temp)
-                    obs_len.append(frame.exptime)
-                    print "New position %i: (%d,%d)" % (k+1, ra_temp, dec_temp)
-                    print time
-            c_radec=SkyCoord(ra=ra*u.degree,dec=dec*u.degree)
-            plot_skymap(c_radec, obs_len, title='')
+                    time = Time(time)
+                    obj_lon = on_sky.barycentrictrueecliptic.lon.degree
+                    obj_lat = on_sky.barycentrictrueecliptic.lat.degree
+                    sun_pos = get_sun(time)
+                    sun_lon = sun_pos.barycentrictrueecliptic.lon.degree
+                    new_lon = obj_lon-sun_lon
+                    on_sky = SkyCoord(lon=(new_lon)*u.degree, lat=obj_lat*u.degree, frame='barycentrictrueecliptic')
+                    for spot in ra:
+                        if abs(spot-new_lon) < sep_limit:
+                            test_spot = SkyCoord(lon=spot*u.degree,lat=dec[k]*u.degree, frame='barycentrictrueecliptic')
+                            if on_sky.separation(test_spot).degree < sep_limit:
+                                obs_len[k]+=frame.exptime
+                                break
+                        k+=1
+                    if k == len(obs_len):
+                        ra.append(obj_lon-sun_lon)
+                        dec.append(obj_lat)
+                        obs_len.append(frame.exptime)
+                        print "New position %i: (%d,%d)" % (k+1, ra_temp, dec_temp)
+                else:
+                    for spot in ra:
+                        if abs(spot-ra_temp) < sep_limit:
+                            test_spot = SkyCoord(ra=spot*u.degree,dec=dec[k]*u.degree)
+                            if on_sky.separation(test_spot).degree < sep_limit:
+                                obs_len[k]+=frame.exptime
+                                break
+                        k+=1
+                    if k == len(obs_len):
+                        ra.append(ra_temp)
+                        dec.append(dec_temp)
+                        obs_len.append(frame.exptime)
+                        print "New position %i: (%d,%d)" % (k+1, ra_temp, dec_temp)
+            if lambda_flag:
+                c_lonlat=SkyCoord(lon=ra*u.degree, lat=dec*u.degree, frame='barycentrictrueecliptic')
+                plot_skymap(c_lonlat, obs_len, title='test', lambda_flag=lambda_flag)
+            else:
+                c_radec=SkyCoord(ra=ra*u.degree,dec=dec*u.degree)
+                plot_skymap(c_radec, obs_len, title='')
         else:
             test_ra=[0,100,260]
             test_dec=[0,0,0]
@@ -63,6 +84,4 @@ class Command(BaseCommand):
             obs_len=[1,1,1]
             plot_skymap(c_radec, obs_len, title='')
 
-            
-              
 
