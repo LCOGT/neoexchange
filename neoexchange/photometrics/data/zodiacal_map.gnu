@@ -37,7 +37,7 @@ set format cb "% h"
 set format r "% h" 
 set ttics format "% h"
 set timefmt "%d/%m/%y,%H:%M"
-set angles radians
+set angles degrees
 set tics back
 unset grid
 unset raxis
@@ -65,8 +65,8 @@ unset parametric
 unset decimalsign
 unset micro
 unset minussign
-set view 53, 134, 1, 1
-set view azimuth 0
+set view 58, 139, 0.993769, 1
+set view azimuth -2.25
 set rgbmax 255
 set samples 100, 100
 set isosamples 10, 10
@@ -104,7 +104,7 @@ set xtics  norangelimit autofreq
 set ytics border in scale 1,0.5 nomirror norotate  autojustify
 set ytics  norangelimit autofreq 
 set ztics border in scale 1,0.5 nomirror norotate  autojustify
-set ztics  norangelimit logscale autofreq 
+set ztics  norangelimit autofreq 
 unset x2tics
 set y2tics border in scale 1,0.5 nomirror norotate  autojustify
 set y2tics  norangelimit autofreq 
@@ -131,9 +131,9 @@ set ylabel "Ecliptic longitude"
 set ylabel  font "" textcolor lt -1 rotate
 set y2label "" 
 set y2label  font "" textcolor lt -1 rotate
-set yrange [ 0.00000 : 180.000 ] noreverse nowriteback
+set yrange [ 60.0000 : 180.000 ] noreverse nowriteback
 set y2range [ 8.42000 : 9.82000 ] noreverse nowriteback
-set zlabel "S10_{#x2299;}" 
+set zlabel "S10_⊙" 
 set zlabel  font "" textcolor lt -1 norotate
 set zrange [ * : * ] noreverse nowriteback
 set cblabel "" 
@@ -143,7 +143,6 @@ set rlabel ""
 set rlabel  font "" textcolor lt -1 norotate
 set rrange [ * : * ] noreverse nowriteback
 unset logscale
-set logscale z 10
 unset jitter
 set zero 1e-008
 set lmargin  -1
@@ -165,11 +164,12 @@ set fontpath
 set psdir
 set fit brief errorvariables nocovariancevariables errorscaling prescale nowrap v5
 f(x)=a0
+signal(x,y)=140-90*sin(x)
 GNUTERM = "wxt"
-mult = 1000000.0
-x = 0.0
 a0 = 0.392854783263295
 GPFUN_f = "f(x)=a0"
+mult = 1000000.0
+x = 0.0
 FIT_CONVERGED = 1
 FIT_NDF = 77166
 FIT_STDFIT = 0.0216624700809358
@@ -177,7 +177,7 @@ FIT_WSSR = 36.2111185638341
 FIT_P = 1.0
 FIT_NITER = 2
 a0_err = 7.79816046562186e-005
-## Last datafile plotted: "/Users/Tim/NEOexchange\neoexchange\photometrics\data\zodiacal_map.dat"
-splot '/Users/Tim/NEOexchange\neoexchange\photometrics\data\zodiacal_map.dat' nonuniform matrix using 1:2:($3 > 0? $3:1/0) t 'Zodiacal light' w l
-## fit f(x) 'd:/Tim Lister/Time/clockstats_GPGGA' u (($2/86400.0)+0):5 via a0
+GPFUN_signal = "signal(x,y)=140-90*sin(x)"
+## Last datafile plotted: "/Users/Tim/NEOexchange\neoexchange\photometrics\data\signal_func.dat"
+splot '/Users/Tim/NEOexchange\neoexchange\photometrics\data\zodiacal_map.dat' nonuniform matrix using 1:2:($3 > 0? $3:1/0) t 'Zodiacal light' w pm3d ,  '/Users/Tim/NEOexchange\neoexchange\photometrics\data\signal_func.dat' u 1:(140):3 t 'SIGNAL'  w l lc 0
 #    EOF
