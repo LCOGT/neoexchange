@@ -87,7 +87,8 @@ class AnalyserTest(FunctionalTest):
         self.assertIn('Cadence details | LCO NEOx', self.browser.title)
 
         # Click the analyse images button
-        self.browser.find_element_by_xpath('//a[@id="analyse-btn"]').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('analyse-btn').click()
 
         # Wait until response is recieved
         self.wait_for_element_with_id('page')

@@ -25,7 +25,7 @@ class BlockSummaryTest(FunctionalTest):
         self.browser.get(self.live_server_url)
 
 	# He sees a link to EFFICIENCY on the front page.
-        link = self.browser.find_element_by_link_text('EFFICIENCY')
+        link = self.browser.find_element_by_link_text('Efficiency')
         url = self.live_server_url + '/block/' + 'summary/'
         self.assertEqual(link.get_attribute('href'), url)
 
@@ -38,7 +38,8 @@ class BlockSummaryTest(FunctionalTest):
         username_input.send_keys(self.username)
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
-        self.browser.find_element_by_xpath('//button[@id="login-btn"]').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
         self.assertEqual(str(new_url), url)

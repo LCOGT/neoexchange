@@ -85,7 +85,7 @@ class RankingPageTest(FunctionalTest):
         self.check_for_row_in_table('id_ranked_targets', testlines[2])
         # Because we can't find the Updated icon with a simple text search
         # we look for the data-label for 'Updated?'
-        updated_statuses = ['false','true','false']
+        updated_statuses = ['False','True','False']
         data_label = 'Updated?'
         self.check_icon_status_elements('id_ranked_targets', data_label, updated_statuses)
 
