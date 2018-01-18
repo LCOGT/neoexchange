@@ -1,6 +1,8 @@
 from datetime import datetime as real_datetime
 from datetime import datetime
 
+from django.contrib.auth import authenticate
+
 # Adapted from http://www.ryangallen.com/wall/11/mock-today-django-testing/
 # and changed to datetime and python 2.x
 
@@ -553,8 +555,11 @@ def mock_check_for_images_bad_date(request_id):
 def mock_ingest_frames(images, block):
     return ['99999']
 
-def mock_rbauth_login(email, password, request=None):
-    profile = {'username': 'bsimpson',
+def mock_lco_authenticate(request, username, password):
+    return None
+
+def mock_lco_login(email, password, request=None):
+    profile = {'username': 'bart',
     'first_name': 'Bart',
     'last_name': 'Simpson',
     'email': 'bsimpson@lcogt.net',

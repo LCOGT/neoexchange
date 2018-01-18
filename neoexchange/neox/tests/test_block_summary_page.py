@@ -1,10 +1,8 @@
 from .base import FunctionalTest
 from django.test import TestCase
 from django.core.urlresolvers import reverse
-from selenium import webdriver
-from mock import patch
-from neox.tests.mocks import MockDateTime, mock_rbauth_login
 from django.contrib.auth.models import User
+from selenium import webdriver
 
 class BlockSummaryTest(FunctionalTest):
 

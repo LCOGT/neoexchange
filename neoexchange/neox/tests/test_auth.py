@@ -23,7 +23,7 @@ from django.test.client import RequestFactory, Client
 from unittest import skipIf
 import os
 from mock import patch
-from neox.tests.mocks import mock_rbauth_login
+from neox.tests.mocks import mock_lco_login
 from core.models import Proposal, ProposalPermission
 from neox.auth_backend import checkUserObject, rbauth_login, parse_proposals, \
     update_proposal_permissions, LCOAuthBackend
@@ -67,11 +67,11 @@ class Test_Auth(TestCase):
         self.proposal2 = p2
         self.proposal_inactive = p3
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_user_login(self):
         self.assertTrue(self.client.login(username='bart', password='simpson'))
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_login_proposals(self):
         # When Bart logs in, he gets 1 proposal, LCOTEST1
         self.client.login(username='bsimpson', password='simpson')
@@ -80,7 +80,7 @@ class Test_Auth(TestCase):
         # Check the same proposals go in as come out
         self.assertEqual(set([self.proposal1]), set(saved_proposals))
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_adding_user_to_proposal(self):
         # Add Bart to a different proposal to the one he already had
         self.client.login(username='bsimpson', password='simpson')
@@ -92,7 +92,7 @@ class Test_Auth(TestCase):
         # Check the same proposals go in as come out
         self.assertEqual(set([self.proposal2]), set(saved_proposals))
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_adding_user_two_proposal(self):
         # Add Bart to 2 proposals, he's already a member of 1
         self.client.login(username='bsimpson', password='simpson')
@@ -104,7 +104,7 @@ class Test_Auth(TestCase):
         # Check the same proposals go in as come out
         self.assertEqual(set([self.proposal1, self.proposal2]), set(saved_proposals))
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_adding_user_two_proposal_inactive(self):
         # Add Bart to 2 proposals, he's already a member of 1, the other is inactive
         self.client.login(username='bsimpson', password='simpson')

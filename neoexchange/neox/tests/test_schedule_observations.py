@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_rbauth_login
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate
 
 from datetime import datetime
 from django.test.client import Client
@@ -11,10 +11,13 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
 
+from neox.auth_backend import update_proposal_permissions
+
 class ScheduleObservations(FunctionalTest):
 
     def setUp(self):
         # Create a user to test login
+        self.insert_test_proposals()
         self.username = 'bart'
         self.password = 'simpson'
         self.email = 'bart@simpson.org'
@@ -23,26 +26,28 @@ class ScheduleObservations(FunctionalTest):
         self.bart.last_name = 'Simpson'
         self.bart.is_active=1
         self.bart.save()
+        # Add Bart to the right proposal
+        update_proposal_permissions(self.bart, [{'code':self.neo_proposal.code}])
         super(ScheduleObservations,self).setUp()
 
     def tearDown(self):
         self.bart.delete()
         super(ScheduleObservations,self).tearDown()
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
         test_login = self.client.login(username=self.username, password=self.password)
         self.assertEqual(test_login, True)
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_login(self):
         self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
-        username_input = self.browser.find_element_by_id("email")
+        username_input = self.browser.find_element_by_id("username")
         username_input.send_keys(self.username)
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
         with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_xpath('//button[@id="login-btn"]').click()
+            self.browser.find_element_by_id('login-btn').click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
@@ -100,7 +105,8 @@ class ScheduleObservations(FunctionalTest):
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
-        datebox.send_keys(Keys.ENTER)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('single-submit').click()
 
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
@@ -111,7 +117,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('11', num_exp)
+        self.assertIn('12', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
         self.assertIn('60.0 secs', exp_length)
 
@@ -180,6 +186,8 @@ class ScheduleObservations(FunctionalTest):
         datebox.clear()
         datebox.send_keys('2015-04-21')
         datebox.send_keys(Keys.ENTER)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('single-submit').click()
 
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
@@ -190,7 +198,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('11', num_exp)
+        self.assertIn('12', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
         self.assertIn('60.0 secs', exp_length)
 
@@ -248,7 +256,8 @@ class ScheduleObservations(FunctionalTest):
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
-        datebox.send_keys(Keys.ENTER)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('single-submit').click()
 
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
@@ -259,7 +268,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('11', num_exp)
+        self.assertIn('12', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
         self.assertIn('60.0 secs', exp_length)
 

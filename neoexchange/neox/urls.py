@@ -16,18 +16,18 @@ from django.conf import settings
 from django.conf.urls import include, url
 from django.contrib.staticfiles import views
 from django.contrib import admin
+from django.contrib.auth.views import login, logout
 from django.views.generic import ListView, DetailView
 from django.core.urlresolvers import reverse_lazy
+
 from core.models import Body, Block, SourceMeasurement, SuperBlock
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     SuperBlockListView, SuperBlockDetailView
-
 from analyser.views import BlockFramesView, ProcessCandidates
 
-from django.contrib.auth.views import login, logout
 
 admin.autodiscover()
 
@@ -57,7 +57,6 @@ urlpatterns = [
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     url(r'^schedule/(?P<pk>\d+)/cadence/$', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
-    url(r'^accounts/login/api/$', login, {'template_name': 'core/login-api.html'}, name='auth_login_api'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout' ),
     url(r'^admin/', include(admin.site.urls)),
 ]

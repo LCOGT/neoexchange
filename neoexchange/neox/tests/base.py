@@ -9,9 +9,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.expected_conditions import \
     staleness_of
 
+
 class FunctionalTest(StaticLiveServerTestCase):
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
+        
         if settings.DEBUG == False:
             settings.DEBUG = True
 
