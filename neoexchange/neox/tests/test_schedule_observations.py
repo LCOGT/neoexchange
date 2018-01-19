@@ -185,7 +185,6 @@ class ScheduleObservations(FunctionalTest):
         datebox = self.get_item_input_box('id_utc_date')
         datebox.clear()
         datebox.send_keys('2015-04-21')
-        datebox.send_keys(Keys.ENTER)
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id('single-submit').click()
 
