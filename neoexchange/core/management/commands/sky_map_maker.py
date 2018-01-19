@@ -14,6 +14,8 @@ from astropy.time import Time
 from astropy.coordinates import SkyCoord, get_sun
 from matplotlib.dates import HourLocator, DateFormatter
 from core.models import Block, Frame, Body, WCSField
+import astropy.coordinates as coord
+
 
 class Command(BaseCommand):
 
@@ -37,19 +39,19 @@ class Command(BaseCommand):
                 ra_temp = wcs.wcs.crval[0]
                 dec_temp = wcs.wcs.crval[1]
                 time = frame.midpoint
-                on_sky=SkyCoord(ra=ra_temp*u.degree,dec=dec_temp*u.degree)
+                on_sky=SkyCoord(ra=ra_temp*u.degree,dec=dec_temp*u.degree, frame='gcrs', obstime=time, equinox=time)
                 if lambda_flag:
                     time = Time(time)
-                    obj_lon = on_sky.barycentrictrueecliptic.lon.degree
-                    obj_lat = on_sky.barycentrictrueecliptic.lat.degree
+                    obj_lon = on_sky.geocentrictrueecliptic.lon.degree
+                    obj_lat = on_sky.geocentrictrueecliptic.lat.degree
                     sun_pos = get_sun(time)
-                    sun_lon = sun_pos.barycentrictrueecliptic.lon.degree
+                    sun_lon = sun_pos.transform_to(coord.GeocentricTrueEcliptic(equinox=time)).lon.degree
                     new_lon = obj_lon-sun_lon
-                    on_sky = SkyCoord(lon=(new_lon)*u.degree, lat=obj_lat*u.degree, frame='barycentrictrueecliptic')
+                    on_sky2 = SkyCoord(lon=(new_lon)*u.degree, lat=obj_lat*u.degree, frame='geocentrictrueecliptic', equinox=time)
                     for spot in ra:
                         if abs(spot-new_lon) < sep_limit:
-                            test_spot = SkyCoord(lon=spot*u.degree,lat=dec[k]*u.degree, frame='barycentrictrueecliptic')
-                            if on_sky.separation(test_spot).degree < sep_limit:
+                            test_spot = SkyCoord(lon=spot*u.degree,lat=dec[k]*u.degree, frame='geocentrictrueecliptic', equinox=time)
+                            if on_sky2.separation(test_spot).degree < sep_limit:
                                 obs_len[k]+=frame.exptime
                                 break
                         k+=1
@@ -57,7 +59,17 @@ class Command(BaseCommand):
                         ra.append(obj_lon-sun_lon)
                         dec.append(obj_lat)
                         obs_len.append(frame.exptime)
-                        print "New position %i: (%d,%d)" % (k+1, ra_temp, dec_temp)
+                        print "New position %i: (%d,%d)" % (k+1, new_lon, obj_lat)
+#                        print "Old position %i: (%d,%d)" % (k+1, obj_lon, obj_lat)
+#                        print sun_pos.barycentrictrueecliptic
+                        if abs(new_lon) < 10:
+                            print '------------------------------'
+#                            print "New position %i: (%d,%d)" % (k+1, new_lon, obj_lat)
+                            print obj_lon, obj_lat
+                            print sun_pos.transform_to(coord.GeocentricTrueEcliptic(equinox=time)).lon.degree, sun_pos.transform_to(coord.GeocentricTrueEcliptic(equinox=time)).lat.degree
+                            print on_sky
+                            print sun_pos
+                            print on_sky.separation(sun_pos)
                 else:
                     for spot in ra:
                         if abs(spot-ra_temp) < sep_limit:

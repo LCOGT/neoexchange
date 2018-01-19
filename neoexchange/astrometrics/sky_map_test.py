@@ -15,7 +15,8 @@ import astropy.coordinates as coord
 from matplotlib.dates import HourLocator, DateFormatter
 from matplotlib.projections import register_projection
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-import matplotlib.colors as colors
+from matplotlib import colors
+from matplotlib.ticker import LogFormatter
 
 def untangle_lines(x_coords, y_coords):
     ''' Remove the crossover from one side of the plot to the other by sorting the datapoints 
@@ -47,7 +48,7 @@ def convert_coordinates(coordinates, ref_frame, x_ref, y_ref, line=False):
         out_x, out_y = coord_trans_x.radian, coord_trans_y.radian
     return out_x, out_y
 
-def plot_skymap( c_radec, obs_len, colors='r', title='', lambda_flag = None):
+def plot_skymap( c_radec, obs_len, title='', lambda_flag = None):
     #convert exposure times into minutes
     obs_len = [x / 60. for x in obs_len]
 
@@ -79,7 +80,7 @@ def plot_skymap( c_radec, obs_len, colors='r', title='', lambda_flag = None):
         ax.plot(equator_ra, equator_dec, "-", color='b', label='Equator')
         c_radec_ra, c_radec_dec = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
         ax.grid(True)
-        ax.scatter(c_radec_ra, c_radec_dec, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
+        ax.scatter(c_radec_ra, c_radec_dec, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10, norm=colors.LogNorm())
 
         #Set up 2nd plot in Galactic Space
         ax3 = fig.add_subplot(312, projection="custom_hammer")
@@ -98,7 +99,7 @@ def plot_skymap( c_radec, obs_len, colors='r', title='', lambda_flag = None):
         ax3.plot(equator_galactic_l, equator_galactic_b, "-", color='b')
         c_galactic_l, c_galactic_b = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
         c_galactic_l=[-x for x in c_galactic_l]
-        im = ax3.scatter(c_galactic_l, c_galactic_b, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
+        im = ax3.scatter(c_galactic_l, c_galactic_b, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10, norm=colors.LogNorm())
         ax3.grid(True)
 
         #Set up final plot in Ecliptic Space
@@ -114,7 +115,7 @@ def plot_skymap( c_radec, obs_len, colors='r', title='', lambda_flag = None):
         equator_ecliptic_lon, equator_ecliptic_lat = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
         ax4.plot(equator_ecliptic_lon, equator_ecliptic_lat, "-", color='b')
         c_ecliptic_lon, c_ecliptic_lat = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
-        ax4.scatter(c_ecliptic_lon, c_ecliptic_lat, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
+        ax4.scatter(c_ecliptic_lon, c_ecliptic_lat, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10, norm=colors.LogNorm())
         ax4.grid(True)
 
         #set up color bar
@@ -126,7 +127,8 @@ def plot_skymap( c_radec, obs_len, colors='r', title='', lambda_flag = None):
                            bbox_transform=ax3.transAxes,
                            borderpad=0,
                            )
-        cbar=plt.colorbar(im, cax=axins)
+        formatter = LogFormatter(10, labelOnlyBase=False)
+        cbar=plt.colorbar(im, cax=axins, format=formatter)
         cbar.set_label('(min)')
 
         #set up Legend
@@ -138,15 +140,11 @@ def plot_skymap( c_radec, obs_len, colors='r', title='', lambda_flag = None):
         ax4.set_autoscale_on(False)
         plt.title("Ecliptic")
         ax4.set_xticklabels(['$210^\circ$','$240^\circ$','$270^\circ$','$300^\circ$','$330^\circ$','$0^\circ$','$30^\circ$','$60^\circ$','$90^\circ$','$120^\circ$','$150^\circ$'])
-        frame_name, frame_x, frame_y = 'barycentrictrueecliptic','lon','lat'
+        frame_name, frame_x, frame_y = 'geocentrictrueecliptic','lon','lat'
         ecliptic_lon, ecliptic_lat = convert_coordinates(ecliptic, frame_name, frame_x, frame_y, True)
         ax4.plot(ecliptic_lon, ecliptic_lat,"-",color='r', label='Ecliptic')
-        galaxy_ecliptic_lon, galaxy_ecliptic_lat = convert_coordinates(galaxy, frame_name, frame_x, frame_y, True)
-        ax4.plot(galaxy_ecliptic_lon, galaxy_ecliptic_lat,"-",color='g',  label='Galactic Plane')
-        equator_ecliptic_lon, equator_ecliptic_lat = convert_coordinates(equator, frame_name, frame_x, frame_y, True)
-        ax4.plot(equator_ecliptic_lon, equator_ecliptic_lat, "-", color='b',  label='Equator')
         c_ecliptic_lon, c_ecliptic_lat = convert_coordinates(c_radec, frame_name, frame_x, frame_y)
-        im = ax4.scatter(c_ecliptic_lon, c_ecliptic_lat, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10)
+        im = ax4.scatter(c_ecliptic_lon, c_ecliptic_lat, c=obs_len, cmap='binary', edgecolors='black', marker = 's', zorder=10, norm=colors.LogNorm())
         ax4.grid(True)
         #set up color bar
         axins = inset_axes(ax4,
@@ -157,7 +155,8 @@ def plot_skymap( c_radec, obs_len, colors='r', title='', lambda_flag = None):
                            bbox_transform=ax4.transAxes,
                            borderpad=0,
                            )
-        cbar=plt.colorbar(im, cax=axins)
+        formatter = LogFormatter(10, labelOnlyBase=False)
+        cbar=plt.colorbar(im, cax=axins, format=formatter)
         cbar.set_label('(min)')
 
         #set up Legend
@@ -196,7 +195,7 @@ def frame_stacker(coords, obs_len):
 if __name__ == '__main__':
     test_ra=[0,100,260,0,100,0]
     test_dec=[0,0,0,0,0,0]
-    obs_len=[60,60,60,60,60,60]
+    obs_len=[60,60,600,60,60,6000]
     c_radec=SkyCoord(ra=test_ra*u.degree, dec=test_dec*u.degree)
     c_radec2, obs_len2 = frame_stacker(c_radec, obs_len)
     print c_radec2, obs_len2
