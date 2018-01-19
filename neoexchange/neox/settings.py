@@ -205,7 +205,7 @@ LOGGING = {
         'django.request': {
             'handlers':['console'],
             'propagate': True,
-            'level':'DEBUG',
+            'level':'ERROR',
         },
         'core' : {
             'handlers' : ['console'],
@@ -221,7 +221,7 @@ LOGGING = {
         },
         'neox': {
             'handlers':['console'],
-            'level' : 'DEBUG'
+            'level' : 'ERROR'
         }
     }
 }
