@@ -1,13 +1,14 @@
+from subprocess import check_output
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
+from contextlib import contextmanager
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.expected_conditions import staleness_of
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
 from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo
-from contextlib import contextmanager
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.expected_conditions import \
-    staleness_of
 
 
 class FunctionalTest(StaticLiveServerTestCase):
@@ -162,7 +163,21 @@ class FunctionalTest(StaticLiveServerTestCase):
         fp.set_preference("startup.homepage_welcome_url.additional", "about:blank");
 
         if not hasattr(self, 'browser'):
-            self.browser = webdriver.Firefox(firefox_profile=fp)
+            firefox_capabilities = DesiredCapabilities.FIREFOX
+            # Marionette does not work on Firefox ~< 57. Try and determine the
+            # version and check it. Hopefully this code is robust and platform-
+            # independent...
+            try:
+                version = check_output(["firefox", "--version"])
+            except OSError:
+                version = None
+            if version and 'Firefox' in version:
+                version_num = version.rstrip().split(' ')[-1]
+                major_version = version_num.split('.')[0]
+                if major_version.isdigit() and int(major_version) <= 52:
+                    firefox_capabilities['marionette'] = False
+
+            self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
         self.browser.implicitly_wait(5)
         self.insert_test_body()
         self.insert_test_proposals()
