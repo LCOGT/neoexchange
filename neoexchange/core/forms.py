@@ -19,6 +19,7 @@ from django.db.models import Q
 from .models import Body, Proposal, Block
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
+from astrometrics.sources_subs import fetch_sfu
 import logging
 logger = logging.getLogger(__name__)
 
@@ -196,3 +197,16 @@ class SpectroFeasibilityForm(forms.Form):
     exp_length = forms.FloatField(initial=1800.0, required=True)
     moon_phase = forms.ChoiceField(choices=MOON, required=True)
     airmass = forms.FloatField(initial=1.2, required=True)
+    sfu = forms.FloatField(disabled=True, required=True)
+
+    def __init__(self, *args, **kwargs):
+        sfu_values = fetch_sfu()
+        body = kwargs.pop('body', None)
+        mag = None
+        if body:
+            emp = body.compute_position()
+            if emp != False:
+                mag = round(emp[2],1)
+        super(SpectroFeasibilityForm, self).__init__(*args, **kwargs)
+        self.fields['magnitude'].initial = mag
+        self.fields['sfu'].initial = sfu_values[1].value

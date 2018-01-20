@@ -640,16 +640,16 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
     form_class = SpectroFeasibilityForm
 
     def get(self, request, *args, **kwargs):
-        form = self.get_form()
+        form = SpectroFeasibilityForm(body=self.body)
         return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def form_valid(self, form, request):
         data = feasibility_check(form.cleaned_data, self.body)
-        new_form = SpectroFeasibilityForm(data)
+        new_form = SpectroFeasibilityForm(data, body=self.body)
         return render(request, 'core/feasibility.html', {'form': new_form, 'data': data, 'body': self.body})
 
     def post(self, request, *args, **kwargs):
-        form = SpectroFeasibilityForm(request.POST)
+        form = SpectroFeasibilityForm(request.POST,body=self.body)
         if form.is_valid():
             return self.form_valid(form,request)
         else:

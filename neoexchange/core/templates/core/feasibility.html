@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load staticfiles basic_tags %}
 
 {% block header %}Spectroscopy feasibility{% endblock %}
 
@@ -16,6 +17,7 @@
         <div class="section-title">
             <form action="{% url 'feasibility' body.id %}" method="POST" style="display:inline-block;">
                 {% csrf_token %}
+                Right Ascension: {{ body.compute_position.0|radianstohms:" "}} Declination: {{ body.compute_position.1|radianstodms:" " }}
                 <div class="inline-fields">
                     <div class="compact-field">
                     {{ form.instrument_code }}<label for="id_instrument_code">Instrument</label>
@@ -31,6 +33,9 @@
                     </div>
                     <div class="compact-field">
                     {{ form.moon_phase }}<label for="id_moon_phase">Moon phase</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.sfu }}<label for="id_sfu">Solar Flux Unit</label>
                     </div>
                     <input type="submit" class="button button-primary" value="Calculate Feasibility" id="id_submit">
                 </div>
