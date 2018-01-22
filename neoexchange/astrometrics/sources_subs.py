@@ -1030,7 +1030,8 @@ def fetch_sfu(page=None):
     cycle which has been shown to affect the atmospheric airglow - one
     of the major components of the night sky brightness.
     Normally this routine is run without any arguments which will fetch
-    the current value (`astropy.units.MJy` (megaJanskys)) and the
+    the current value in 'solar flux units (sfu)'s' (scaled from
+    `astropy.units.Jy` (Janskys) where 1 sfu = 10,000 Jy) and the
     `datetime` when it was measured. For testing, [page] can be a static
     BeautifulSoup version of the page. In the event of parsing problems,
     (None, None) is returned.'''
@@ -1039,6 +1040,8 @@ def fetch_sfu(page=None):
 
     flux_datetime = None
     flux_sfu = None
+    # Define new 'sfu' (solar flux unit)
+    sfu = u.def_unit(['sfu', 'solar flux unit'], 10000.0*u.Jy)
 
     if page is None:
         page = fetchpage_and_make_soup(sfu_url)
@@ -1053,8 +1056,8 @@ def fetch_sfu(page=None):
         try:
             flux_sfu = float(table[2].text)
             # Flux is in 'solar flux units', equal to 10,000 Jy or 0.01 MJy.
-            # Divide by 100 and add the astropy units
-            flux_sfu = (flux_sfu/100.0) * u.MJy
+            # Add in our custom astropy unit declared above.
+            flux_sfu = flux_sfu * sfu
         except ValueError:
             logger.warn("Could not parse flux (" + table[2].text + ")")
 

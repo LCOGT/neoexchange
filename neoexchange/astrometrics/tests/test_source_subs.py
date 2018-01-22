@@ -1502,13 +1502,19 @@ class TestSFUFetch(TestCase):
         self.test_sfu_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        self.sfu = u.def_unit(['sfu', 'solar flux unit'], 10000.0*u.Jy)
+        u.add_enabled_units([self.sfu])
+
     def test(self):
 
-        expected_result = (datetime(2018,1,15,17,44,10), 0.7*u.MJy)
+        expected_result = (datetime(2018,1,15,17,44,10), 70*self.sfu)
 
         sfu_result = fetch_sfu(self.test_sfu_page)
 
-        self.assertEqual(expected_result, sfu_result)
+        self.assertEqual(expected_result[0], sfu_result[0])
+        self.assertEqual(expected_result[1].value, sfu_result[1].value)
+        self.assertEqual(expected_result[1].unit, sfu_result[1].unit)
+        self.assertEqual(expected_result[1].to(u.MJy), sfu_result[1].to(u.MJy))
 
 class TestConfigureDefaults(TestCase):
 
