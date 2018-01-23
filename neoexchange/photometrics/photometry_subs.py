@@ -118,7 +118,7 @@ def sky_brightness_model(params, dbg=False):
     solar_flux = params.get('sfu', 0.8*u.MJy)
     airmass = params.get('airmass', None)
     if airmass is None:
-        if params.get('target_zd', None):
+        if params.get('target_zd', None) is not None:
             airmass = compute_airmass(params['target_zd'])
     q_airglow = (145.0+130.0*((solar_flux.to(u.MJy).value-0.8)/1.2))*airmass
     ecliptic_lat = params.get('ecliptic_lat', None)
@@ -212,7 +212,7 @@ def compute_moon_brightness(params, dbg=False):
     extinct = extinction_in_band('V')
     airmass = params.get('airmass', None)
     if airmass is None:
-        if params.get('target_zd', None):
+        if params.get('target_zd', None) is not None:
             airmass = compute_airmass(params['target_zd'])
     if dbg: print 'airmass, extinct ', airmass, extinct
     # Calculate background due to Moon in nanoLamberts, convert to S10 units

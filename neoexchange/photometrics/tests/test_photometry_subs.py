@@ -553,6 +553,21 @@ class TestSkyBrightnessModel(TestCase):
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
+    def test_l_sfu_h_elat_h_glat_new_moon_zenith(self):
+
+        expected_sky_mag = 21.9947014
+
+        self.params['moon_zd'] = 60.0
+        self.params['moon_target_sep'] = 60
+        self.params['moon_phase_angle'] = 180.0
+        self.params['ecliptic_lat'] = 75.0 * u.deg
+        self.params['galactic_lat'] = 75.0 * u.deg
+        self.params['target_zd'] = 0.0
+
+        sky_mag = sky_brightness_model(self.params)
+
+        self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
+
     def test_l_sfu_l_elat_l_glat_full_moon_near_I(self):
 
         expected_sky_mag = 18.0458622
