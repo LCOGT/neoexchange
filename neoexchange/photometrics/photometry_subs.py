@@ -83,8 +83,7 @@ def calc_sky_brightness(bandpass, moon_phase, dark_sky_mag=None):
     given <moon_phase>. The [dark_sky_mag] can be given, or if None, it
     will be determined from a table of defaults (taken from SIGNAL)'''
 
-    sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
-                    'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
+    sky_mags = default_dark_sky_mags()
 
     # Passbands redder than V are less affected by moonlight. This list is used to lower
     # the amount of sky brightening later
@@ -435,6 +434,17 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
 
     return snr
 
+def default_dark_sky_mags():
+    '''Returns a dictionary of the baseline (darkest possible) sky magnitudes
+    in each passband.
+    The sky brightnesses are from SIGNAL V14.5 for UBVRI
+    and Tonry et al. (2012) for grizw.'''
+
+    sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
+                    'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
+
+    return sky_mags
+
 def construct_tic_params(instrument, passband='ip'):
     '''Builds and returns the dict of telescope, instrument & CCD parameters ("tic_params")
     for the specified <instrument> (one of {F65-FLOYDS, E10-FLOYDS}) and <passband>
@@ -454,8 +464,7 @@ def construct_tic_params(instrument, passband='ip'):
                     'gp' : 4810, 'rp' : 6170, 'ip' : 7520, 'zp' : 8660, 'w' : 6080 }
     flux_janskys = { 'U': 1810, 'B': 4260, 'V' : 3640, 'R' : 3080, 'I' : 2550, 'Z' : 2200,
                      'gp': 3631, 'rp': 3631, 'ip': 3631, 'zp': 3631, 'w' : 3631 }
-    sky_mags = { 'U': 22.0, 'B': 22.7, 'V' : 21.9, 'R' : 21.0, 'I' : 20.0, 'Z' : 18.8,
-                    'gp' : 21.9, 'rp' : 20.8, 'ip' : 19.8, 'zp' : 19.2, 'w' : 20.6 }
+    sky_mags = default_dark_sky_mags()
 
     ft_area = 2.84*u.meter**2
     floyds_read_noise = 3.7
