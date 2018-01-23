@@ -446,7 +446,7 @@ class TestSkyBrightnessModel(TestCase):
                         'moon_target_sep': 60.0,
                         'moon_zd': 80.0,
                         'target_zd': 42.7}
-        self.precision = 5
+        self.precision = 3
 
     def test_l_sfu_h_elat_h_glat(self):
 
