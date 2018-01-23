@@ -456,7 +456,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['moon_zd'] = 110.0
         self.params['moon_target_sep'] = 120
 
-        sky_mag = sky_brightness_model(self.params, dbg=True)
+        sky_mag = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -469,7 +469,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['moon_target_sep'] = 120
         self.params['ecliptic_lat'] = 10.0
 
-        sky_mag = sky_brightness_model(self.params, dbg=True)
+        sky_mag = sky_brightness_model(self.params)
 
     def test_l_sfu_l_elat_h_glat_new_moon2(self):
 
@@ -480,7 +480,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['moon_target_sep'] = 120
         self.params['ecliptic_lat'] = 10.0 * u.deg
 
-        sky_mag = sky_brightness_model(self.params, dbg=True)
+        sky_mag = sky_brightness_model(self.params)
 
     def test_l_sfu_l_elat_l_glat_new_moon(self):
 
@@ -492,7 +492,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0
         self.params['galactic_lat'] = 15.0
 
-        sky_mag = sky_brightness_model(self.params, dbg=True)
+        sky_mag = sky_brightness_model(self.params)
 
     def test_l_sfu_l_elat_l_glat_new_moon2(self):
 
@@ -504,7 +504,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0 * u.deg
         self.params['galactic_lat'] = 15.0 * u.deg
 
-        sky_mag = sky_brightness_model(self.params, dbg=True)
+        sky_mag = sky_brightness_model(self.params)
 
     def test_l_sfu_l_elat_l_glat_1stqtr_moon(self):
 
@@ -517,7 +517,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0
         self.params['galactic_lat'] = 15.0
 
-        sky_mag = sky_brightness_model(self.params, dbg=True)
+        sky_mag = sky_brightness_model(self.params)
 
     def test_l_sfu_l_elat_l_glat_full_moon_far(self):
 
@@ -530,7 +530,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0
         self.params['galactic_lat'] = 15.0
 
-        sky_mag = sky_brightness_model(self.params, dbg=True)
+        sky_mag = sky_brightness_model(self.params)
 
     def test_l_sfu_l_elat_l_glat_full_moon_near(self):
 
@@ -543,7 +543,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0
         self.params['galactic_lat'] = 15.0
 
-        sky_mag = sky_brightness_model(self.params, dbg=True)
+        sky_mag = sky_brightness_model(self.params)
 
 class TestComputeMoonBrightness(TestCase):
 
@@ -570,6 +570,35 @@ class TestComputeMoonBrightness(TestCase):
         self.assertAlmostEqual(0.0061558297024311703, fli, 7)
         self.params['moon_phase'] = fli
         del(self.params['moon_phase_angle'])
+        moon_bkgd = compute_moon_brightness(self.params)
+
+        self.assertAlmostEqual(expected_bkgd, moon_bkgd, self.precision)
+
+    def test_1stqtrmoon_low(self):
+        expected_bkgd = 346.073914
+
+        self.params['moon_phase_angle'] = 90
+
+        moon_bkgd = compute_moon_brightness(self.params)
+
+        self.assertAlmostEqual(expected_bkgd, moon_bkgd, self.precision)
+
+    def test_1stqtrmoon_high(self):
+        expected_bkgd = 505.812622
+
+        self.params['moon_phase_angle'] = 90
+        self.params['moon_zd'] = 20.0
+
+        moon_bkgd = compute_moon_brightness(self.params)
+
+        self.assertAlmostEqual(expected_bkgd, moon_bkgd, self.precision)
+
+    def test_fullmoon_high(self):
+        expected_bkgd = 5558.60344
+
+        self.params['moon_phase_angle'] = 0.0
+        self.params['moon_zd'] = 20.0
+
         moon_bkgd = compute_moon_brightness(self.params)
 
         self.assertAlmostEqual(expected_bkgd, moon_bkgd, self.precision)

@@ -189,7 +189,7 @@ def compute_moon_brightness(params, dbg=False):
     except AttributeError:
         r = radians(r)
 
-    if params.get('moon_phase_angle', None):
+    if params.get('moon_phase_angle', None) is not None:
         phi = params['moon_phase_angle']
     else:
         if params.get('moon_phase', None) is not None:
