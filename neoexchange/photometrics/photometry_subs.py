@@ -38,8 +38,8 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     Table 2. Asteroid magnitude transformations from Pan-STARRS1 AB filter magnitudes to the
     Johnson-Cousin V system based on Tonry et al. (2012). Solar colors are also included for
     reference.
-    Taxonomy   	V-gP1   V-rP1   V-iP1   V-zP1   V-yP1   V-wP1
-    Sun	        -0.217  0.183   0.293   0.311   0.311   0.114
+    Taxonomy    V-gP1   V-rP1   V-iP1   V-zP1   V-yP1   V-wP1
+    Sun         -0.217  0.183   0.293   0.311   0.311   0.114
     Q           -0.312  0.252   0.379   0.238   0.158   0.156
     S           -0.325  0.275   0.470   0.416   0.411   0.199
     C           -0.238  0.194   0.308   0.320   0.316   0.120
@@ -137,11 +137,15 @@ def sky_brightness_model(params, dbg=False):
     # latitude wasn't given or calculatable
     q_zodi = 60.0
     if ecliptic_lat:
+        if type(ecliptic_lat) == float:
+            ecliptic_lat = ecliptic_lat * u.deg
         if ecliptic_lat.to(u.deg).value < 60.0:
             q_zodi = 140.0 - 90.0 * sin(radians(ecliptic_lat.value))
 
     q_stars = 0.0
     if galactic_lat:
+        if type(galactic_lat) == float:
+            galactic_lat = galactic_lat * u.deg
         q_stars = 100.0 *exp(-abs(galactic_lat.to(u.deg).value/10.0))
     q = q_airglow + q_zodi + q_stars
     q_format = 'Moonless V sky brightness, in S10 units (equivalent 10th-mag stars/deg^2):\n' +\
@@ -384,7 +388,7 @@ def floyds_throughput(tic_params):
     throughput *= ccd_window
     # Fused quartz CCD window
     throughput *= ccd_window
-    # Mirrors: 	Collimator, Fold, Camera, Grating
+    # Mirrors:  Collimator, Fold, Camera, Grating
     throughput *= mirror_coating**num_mirrors
     # Grating efficiency
     throughput *= tic_params['grating_eff']
