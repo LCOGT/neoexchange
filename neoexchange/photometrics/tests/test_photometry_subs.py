@@ -438,6 +438,27 @@ class TestSkyBrightness(TestCase):
 
         self.assertAlmostEqual(expected_mag, sky_mag, self.precision)
 
+class TestSkyBrightnessModel(TestCase):
+
+    def setUp(self):
+        self.params = { 'bandpass': 'V',
+                        'moon_phase_angle': 171.0,
+                        'moon_target_sep': 60.0,
+                        'moon_zd': 80.0,
+                        'target_zd': 42.7}
+        self.precision = 5
+
+    def test_l_sfu_h_elat_h_glat(self):
+
+        expected_sky_mag = 21.7556267
+
+        self.params['sfu'] = 0.8 * u.MJy
+        self.params['moon_zd'] = 110.0
+        self.params['moon_target_sep'] = 120
+
+        sky_mag = sky_brightness_model(self.params, dbg=True)
+
+        self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
 class TestComputeMoonBrightness(TestCase):
 

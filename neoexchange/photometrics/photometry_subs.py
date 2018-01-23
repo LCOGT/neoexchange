@@ -121,7 +121,7 @@ def sky_brightness_model(params, dbg=False):
     if airmass is None:
         if params.get('target_zd', None):
             airmass = compute_airmass(params['target_zd'])
-    q_airglow = (145.0+130.0*((solar_flux.value-0.8)/1.2))*airmass
+    q_airglow = (145.0+130.0*((solar_flux.to(u.MJy).value-0.8)/1.2))*airmass
     ecliptic_lat = params.get('ecliptic_lat', None)
     galactic_lat = params.get('galactic_lat', None)
     if ecliptic_lat is None or galactic_lat is None:
@@ -133,12 +133,13 @@ def sky_brightness_model(params, dbg=False):
                 if dbg: print target, ecliptic_lat, galactic_lat
             except ValueError:
                 logger.warn("Could not find/convert co-ordinates")
-    q_zodi = 0.0
+    # Assume a value of 60.0 in S10 units for the zodiacal light if the
+    # latitude wasn't given or calculatable
+    q_zodi = 60.0
     if ecliptic_lat:
         if ecliptic_lat.to(u.deg).value < 60.0:
             q_zodi = 140.0 - 90.0 * sin(radians(ecliptic_lat.value))
-        else:
-            q_zodi = 60.0
+
     q_stars = 0.0
     if galactic_lat:
         q_stars = 100.0 *exp(-abs(galactic_lat.to(u.deg).value/10.0))
@@ -371,6 +372,8 @@ def floyds_throughput(tic_params):
     # Transmission and numbers of optical elements
     ar_coating = 0.99
     num_ar_coating = 6
+    # Fused silica (for the prism) and fused quartz (for the CCD window)
+    # turn out to have the same transmission...
     ccd_window = 0.9
     mirror_coating = 0.9925
     num_mirrors = 4
