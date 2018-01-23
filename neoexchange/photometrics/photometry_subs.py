@@ -151,7 +151,11 @@ def sky_brightness_model(params, dbg=False):
         '%6.1f ( = %6.2f airglow + %6.2f zodiacal light + %6.2f starlight)'
     if dbg: print q_format % ( q, q_airglow, q_zodi, q_stars)
 
-    sky_color_corr = 0.0
+    # Determine the difference in sky color between the given bandpass and
+    # V band
+    default_sky_mags = default_dark_sky_mags()
+    sky_color_corr = default_sky_mags.get(params['bandpass'], default_sky_mags['V']) - default_sky_mags['V']
+    if dbg: print 'Color correction',sky_color_corr
     sky_mag = 27.78-2.5*log10(q) + sky_color_corr
     q_sky = 10.0**((27.78-sky_mag)/2.5)
 
@@ -171,7 +175,7 @@ def compute_airmass(zd):
     return 1.0 / sqrt(1.0-0.96*(sin(radians(zd)))**2.0)
 
 def compute_moon_brightness(params, dbg=False):
-    '''Calculate the increase in brightness due to the Moon via the
+    '''Calculate the increase in brightness in V due to the Moon via the
     prescription of Krisciunas & Schaefer (1991). The needed keys in the
     <params> dictionary are:
     'moon_target_sep' : separation between the Moon and the target (as a
@@ -180,7 +184,6 @@ def compute_moon_brightness(params, dbg=False):
     OR
     'moon_phase_angle' : Lunar phase angle (0 = full, 90 = 7-day old moon, 180 = new moon)
     'moon_zd'         : Zenith distance of the Moon (degrees)
-    'bandpass'        : Filter in use
     '''
     r = params['moon_target_sep']
     try:
@@ -206,7 +209,7 @@ def compute_moon_brightness(params, dbg=False):
     fr = f_rayleigh + f_mie
 
     moon_airmass = compute_airmass(params['moon_zd'])
-    extinct = extinction_in_band(params['bandpass'])
+    extinct = extinction_in_band('V')
     airmass = params.get('airmass', None)
     if airmass is None:
         if params.get('target_zd', None):
