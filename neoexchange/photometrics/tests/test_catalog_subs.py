@@ -1385,7 +1385,7 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_uncomp_banzai_catalog_read_length(self):
-        expected_hdr_len = 251
+        expected_hdr_len = 252
         expected_tbl_len = len(self.test_uncomp_banzaitable)
         expected_cattype = 'BANZAI'
 
