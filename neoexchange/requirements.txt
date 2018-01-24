@@ -15,13 +15,13 @@ wsgiref
 pycparser==2.13
 requests[security]
 selenium>=2.53,<3.0
-#reqdbclient==0.6.34
+reqdbclient==0.6.34
 pytest-django
 mock>=1.0.1
 opbeat
 django-oauth-toolkit
 requests_oauthlib
 matplotlib
-#fits2image
+fits2image
 panoptes-client
 pillow
