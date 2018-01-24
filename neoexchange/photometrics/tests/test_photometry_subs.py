@@ -920,14 +920,25 @@ class TestCalcEffectiveArea(SNRTestCase):
         self.assertAlmostEqual(expected_area.to_value(u.m**2), area.to_value(u.m**2), 6)
         self.assertEqual(expected_area.unit, area.unit)
 
-class TestFloydsThroughput(SNRTestCase):
+class TestInstThroughput(SNRTestCase):
 
-    def test1(self):
-        expected_throughput = 0.6437800300612727
+    def test_floyds_defaults(self):
+        expected_throughput = 0.6659793414426959
 
-        tic_params = {'grating_eff' : 0.87}
+        tic_params = {}
 
-        throughput = floyds_throughput(tic_params)
+        throughput = instrument_throughput(tic_params)
+
+        self.assertEqual(expected_throughput, throughput)
+
+    def test_vary_surfaces(self):
+        expected_throughput = 0.6846361911280793
+
+        tic_params = {
+                      'num_ar_coatings' : 4,
+                      'num_inst_mirrors' : 3}
+
+        throughput = instrument_throughput(tic_params)
 
         self.assertEqual(expected_throughput, throughput)
 
@@ -1115,7 +1126,7 @@ class TestCalcAsteroidSNR(SNRTestCase):
 
         expected_mag = mag_V - 0.39
         expected_passband = 'ip'
-        expected_snr = 259.413444738
+        expected_snr = 326.7555814430913
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
 
@@ -1132,7 +1143,7 @@ class TestCalcAsteroidSNR(SNRTestCase):
 
         expected_mag = mag_V - 0.39
         expected_passband = 'ip'
-        expected_snr = 244.7622302104532
+        expected_snr = 308.3417990703913
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
 
@@ -1150,7 +1161,7 @@ class TestCalcAsteroidSNR(SNRTestCase):
 
         expected_mag = mag_V - 0.39
         expected_passband = 'ip'
-        expected_snr = 34.2006627195866
+        expected_snr = 43.41149179276889
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph, params=params)
 

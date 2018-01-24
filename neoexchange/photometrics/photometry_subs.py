@@ -379,27 +379,41 @@ def slit_vignette(tic_params, dbg=False):
 
     return vign
 
-def floyds_throughput(tic_params):
+def instrument_throughput(tic_params):
+    '''Calculate the throughput of a spectrograph instrument, excluding
+    telescope, atmosphere, grating and detector.
+    This model assumes a number of air-glass interfaces (given by
+    [num_ar_coatings]; defaults to 6) with AR coatings, a number of coated
+    reflective surfaces (given by [num_inst_mirrors]; defaults to 4),
+    transmission through prism (2 passes) and a CCD window.
 
-    # Transmission and numbers of optical elements
+    The reflectance vs wavelength data for the AR coating comes from
+    http://intranet.lco.gtn/FLOYDS_Optical_Elements#AR_Coating
+    That for the mirrors comes from:
+    http://intranet.lco.gtn/FLOYDS_Optical_Elements#Reflective_Coating
+    but both are typical of commercial broadband coatings.
+    Fused quartz and fused silica data comes from:
+    https://www.newport.com/n/optical-materials
+    No variation with wavelength is assumed as this is typically very
+    small (excluding the grating).'''
+
+    # Transmission/Reflection values of optical elements
     ar_coating = 0.99
-    num_ar_coating = 6
     # Fused silica (for the prism) and fused quartz (for the CCD window)
     # turn out to have the same transmission...
     ccd_window = 0.9
     mirror_coating = 0.9925
-    num_mirrors = 4
 
     # Air-glass interfaces: prism (2 sides), field flattener (4 sides)
+    num_ar_coating = tic_params.get('num_ar_coatings', 6)
     throughput = ar_coating**num_ar_coating
-    # Fused silica prism
-    throughput *= ccd_window
+    # Fused silica prism (two passes)
+    throughput *= ccd_window**2
     # Fused quartz CCD window
     throughput *= ccd_window
     # Mirrors:  Collimator, Fold, Camera, Grating
+    num_mirrors = tic_params.get('num_inst_mirrors', 4)
     throughput *= mirror_coating**num_mirrors
-    # Grating efficiency
-    throughput *= tic_params['grating_eff']
 
     return throughput
 
@@ -458,12 +472,11 @@ def construct_tic_params(instrument, passband='ip'):
     '''Builds and returns the dict of telescope, instrument & CCD parameters ("tic_params")
     for the specified <instrument> (one of {F65-FLOYDS, E10-FLOYDS}) and <passband>
     (defaults to 'ip' for SDSS-i')
-    Note ! Instrument & grating efficiency and CCD QE fixed for ip band at present.
 
     Filter central wavelengths, flux and sky brightnesses are from SIGNAL V14.5 for UBVRI
     and Tonry et al. (2012) for grizw. (Sky brightness is degraded by 0.2 mags for FTS)
     For FLOYDS:
-        Instrument efficiencies are taken from SIGNAL for ISIS (likely wrong by ~20%+)
+        Instrument efficiencies are calculated from the optical prescription and elements
         Grating efficiency measured from printout of Richardson Gratings spec sheet (~5%)
         CCD QE measured from printout of Andor spec sheet (~2%)
         Readnoise and pixel size from Andor spec sheet
@@ -502,8 +515,9 @@ def construct_tic_params(instrument, passband='ip'):
                        'flux_mag0' : flux_mag0_Jy,
                        'wavelength':  wavelength,
                        'filter'    : passband,
-                       'num_mirrors' : 3,  # Tertiary fold mirror
-                       'instrument_eff' : 0.42,
+                       'num_mirrors' : 3,  # M1, M2 plus Tertiary fold mirror
+                       'num_ar_coatings' : 6,
+                       'num_inst_mirrors' : 4, # No. of reflective surfaces inside instrument
                        'grating_eff': grating_eff,
                        'ccd_qe'     : ccd_qe,
                        'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
@@ -519,8 +533,9 @@ def construct_tic_params(instrument, passband='ip'):
                        'flux_mag0' : flux_mag0_Jy,
                        'wavelength':  wavelength,
                        'filter'    : passband,
-                       'num_mirrors' : 3,  # Tertiary fold mirror
-                       'instrument_eff' : 0.42,
+                       'num_mirrors' : 3,  # M1, M2 plus Tertiary fold mirror
+                       'num_ar_coatings' : 6,
+                       'num_inst_mirrors' : 4, # No. of reflective surfaces inside instrument
                        'grating_eff': grating_eff,
                        'ccd_qe'     : ccd_qe,
                        'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
@@ -528,6 +543,9 @@ def construct_tic_params(instrument, passband='ip'):
                        'fwhm' : 1.7 * u.arcsec,
                        'slit_width' : 2.0 * u.arcsec,
                      }
+    # Calculate and store instrument efficiency
+    tic_params['instrument_eff'] = instrument_throughput(tic_params)
+
     return tic_params
 
 def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', params={}, dbg=False):
