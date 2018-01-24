@@ -14,8 +14,7 @@ six>=1.10.0
 wsgiref
 pycparser
 requests[security]
-selenium>=3.0,<4.0
-reqdbclient==0.6.34
+selenium>=3.8,<4.0
 pytest-django
 mock
 opbeat
