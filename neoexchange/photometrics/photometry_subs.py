@@ -477,7 +477,10 @@ def construct_tic_params(instrument, passband='ip'):
     # CCD QE for Andor Newton 940-BU (values interpolated from printout of datasheet)
     ccd_qe_percent = { 'U' : 76.0,  'B' : 92.5, 'V' : 84.0, 'R' : 79.0, 'I' : 57.0, 'Z' : 23.0,
               'gp' : 90.0, 'rp' : 81.0, 'ip': 70.0, 'zp': 48.0, 'w' : 81.5 }
-
+    # Grating efficiency for Richardson Gratings 53-*-790R 235 lines/mm grating
+    # (Values interpolated midway between S- and P-polarization curves)
+    grating_eff_percent = { 'U' :  2.6,  'B' : 15.5, 'V' : 60.0, 'R' : 84.0, 'I' : 87.5, 'Z' : 82.5,
+              'gp' : 33.5, 'rp' : 78.0, 'ip': 87.0, 'zp': 85.5, 'w' : 76.5 }
 
     ft_area = 2.84*u.meter**2
     floyds_read_noise = 3.7
@@ -488,6 +491,8 @@ def construct_tic_params(instrument, passband='ip'):
     sky_mag = sky_mags.get(passband, sky_mags['ip'])
     ccd_qe = ccd_qe_percent.get(passband, ccd_qe_percent['ip'])
     ccd_qe /= 100.0
+    grating_eff = grating_eff_percent.get(passband, grating_eff_percent['ip'])
+    grating_eff /= 100.0
 
     if instrument.upper() == 'F65-FLOYDS':
         tic_params = {
@@ -499,7 +504,7 @@ def construct_tic_params(instrument, passband='ip'):
                        'filter'    : passband,
                        'num_mirrors' : 3,  # Tertiary fold mirror
                        'instrument_eff' : 0.42,
-                       'grating_eff': 0.87,
+                       'grating_eff': grating_eff,
                        'ccd_qe'     : ccd_qe,
                        'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
                        'wave_scale' : 3.51*(u.angstrom/u.pixel),
@@ -516,7 +521,7 @@ def construct_tic_params(instrument, passband='ip'):
                        'filter'    : passband,
                        'num_mirrors' : 3,  # Tertiary fold mirror
                        'instrument_eff' : 0.42,
-                       'grating_eff': 0.87,
+                       'grating_eff': grating_eff,
                        'ccd_qe'     : ccd_qe,
                        'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
                        'wave_scale' : 3.51*(u.angstrom/u.pixel),
