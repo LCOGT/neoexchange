@@ -583,6 +583,67 @@ class TestSkyBrightnessModel(TestCase):
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
+    def test_l_sfu_l_elat_l_glat_full_moon_near_ip(self):
+
+        expected_sky_mag = 17.9922104
+
+        self.params['moon_zd'] = 60
+        self.params['moon_phase_angle'] = 10.0
+        self.params['moon_target_sep'] = 40
+        self.params['ecliptic_lat'] = 10.0
+        self.params['galactic_lat'] = 15.0
+        self.params['bandpass'] = 'ip'
+
+        sky_mag, moon_delta = sky_brightness_model(self.params)
+
+        self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
+
+    def test_l_sfu_l_elat_l_glat_full_moon_far_ip(self):
+
+        expected_sky_mag = 18.5381088
+
+        self.params['moon_zd'] = 80
+        self.params['moon_phase_angle'] = 10.0
+        self.params['moon_target_sep'] = 120
+        self.params['ecliptic_lat'] = 10.0
+        self.params['galactic_lat'] = 15.0
+        self.params['bandpass'] = 'ip'
+
+        sky_mag, moon_delta = sky_brightness_model(self.params)
+
+        self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
+
+    def test_l_sfu_l_elat_l_glat_new_moon_ip(self):
+
+        expected_sky_mag = 19.3478661
+
+        self.params['moon_zd'] = 80
+        self.params['moon_phase_angle'] = 170.0
+        self.params['moon_target_sep'] = 120
+        self.params['ecliptic_lat'] = 10.0
+        self.params['galactic_lat'] = 15.0
+        self.params['bandpass'] = 'ip'
+
+        sky_mag, moon_delta = sky_brightness_model(self.params)
+
+        self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
+
+    def test_h_sfu_l_elat_l_glat_new_moon_ip(self):
+
+        expected_sky_mag = 19.0301094
+
+        self.params['sfu'] = 1.6 * u.MJy # 160 sfu (approx. value at last maximum)
+        self.params['moon_zd'] = 80
+        self.params['moon_phase_angle'] = 170.0
+        self.params['moon_target_sep'] = 120
+        self.params['ecliptic_lat'] = 10.0
+        self.params['galactic_lat'] = 15.0
+        self.params['bandpass'] = 'ip'
+
+        sky_mag, moon_delta = sky_brightness_model(self.params)
+
+        self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
+
 class TestComputeMoonBrightness(TestCase):
 
     def setUp(self):
