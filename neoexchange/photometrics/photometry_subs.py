@@ -474,6 +474,10 @@ def construct_tic_params(instrument, passband='ip'):
     flux_janskys = { 'U': 1810, 'B': 4260, 'V' : 3640, 'R' : 3080, 'I' : 2550, 'Z' : 2200,
                      'gp': 3631, 'rp': 3631, 'ip': 3631, 'zp': 3631, 'w' : 3631 }
     sky_mags = default_dark_sky_mags()
+    # CCD QE for Andor Newton 940-BU (values interpolated from printout of datasheet)
+    ccd_qe_percent = { 'U' : 76.0,  'B' : 92.5, 'V' : 84.0, 'R' : 79.0, 'I' : 57.0, 'Z' : 23.0,
+              'gp' : 90.0, 'rp' : 81.0, 'ip': 70.0, 'zp': 48.0, 'w' : 81.5 }
+
 
     ft_area = 2.84*u.meter**2
     floyds_read_noise = 3.7
@@ -482,6 +486,8 @@ def construct_tic_params(instrument, passband='ip'):
     wavelength = filter_cwave.get(passband, filter_cwave['ip']) * u.angstrom
     flux_mag0_Jy = flux_janskys.get(passband, flux_janskys['ip']) * u.Jy
     sky_mag = sky_mags.get(passband, sky_mags['ip'])
+    ccd_qe = ccd_qe_percent.get(passband, ccd_qe_percent['ip'])
+    ccd_qe /= 100.0
 
     if instrument.upper() == 'F65-FLOYDS':
         tic_params = {
@@ -494,7 +500,7 @@ def construct_tic_params(instrument, passband='ip'):
                        'num_mirrors' : 3,  # Tertiary fold mirror
                        'instrument_eff' : 0.42,
                        'grating_eff': 0.87,
-                       'ccd_qe'     : 0.70,
+                       'ccd_qe'     : ccd_qe,
                        'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
                        'wave_scale' : 3.51*(u.angstrom/u.pixel),
                        'fwhm' : 1.3 * u.arcsec,
@@ -511,7 +517,7 @@ def construct_tic_params(instrument, passband='ip'):
                        'num_mirrors' : 3,  # Tertiary fold mirror
                        'instrument_eff' : 0.42,
                        'grating_eff': 0.87,
-                       'ccd_qe'     : 0.70,
+                       'ccd_qe'     : ccd_qe,
                        'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
                        'wave_scale' : 3.51*(u.angstrom/u.pixel),
                        'fwhm' : 1.7 * u.arcsec,
