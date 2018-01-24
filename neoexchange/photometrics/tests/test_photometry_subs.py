@@ -1143,7 +1143,7 @@ class TestCalcAsteroidSNR(SNRTestCase):
 
         expected_mag = mag_V - 0.39
         expected_passband = 'ip'
-        expected_snr = 308.3417990703913
+        expected_snr = 217.8744397575648
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
 

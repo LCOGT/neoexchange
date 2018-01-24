@@ -542,6 +542,7 @@ def construct_tic_params(instrument, passband='ip'):
                        'wave_scale' : 3.51*(u.angstrom/u.pixel),
                        'fwhm' : 1.7 * u.arcsec,
                        'slit_width' : 2.0 * u.arcsec,
+                       'true_vs_pred' : 0.5
                      }
     # Calculate and store instrument efficiency
     tic_params['instrument_eff'] = instrument_throughput(tic_params)
