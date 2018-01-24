@@ -163,9 +163,9 @@ def sky_brightness_model(params, dbg=False):
     if dbg: print 'Moonlight', q_moon, ' S10 units'
     q_total = q_sky + q_moon
 
-    sky_mag = 27.78-2.5*log10(q_total)
+    sky_mag_all = 27.78-2.5*log10(q_total)
 
-    return sky_mag
+    return sky_mag_all, sky_mag-sky_mag_all
 
 def compute_airmass(zd):
     '''Calculate the airmass from the passed zenith distance <zd> (specified
@@ -185,6 +185,12 @@ def compute_moon_brightness(params, dbg=False):
     'moon_phase_angle' : Lunar phase angle (0 = full, 90 = 7-day old moon, 180 = new moon)
     'moon_zd'         : Zenith distance of the Moon (degrees)
     '''
+
+    # For comparison against SIGNAL, uncomment the following (normalization
+    # factor for measured values at the Jacobus Kapteyn Telescope (in 1998)
+#    fudge = 2.4
+    fudge = 1.0
+
     r = params['moon_target_sep']
     try:
         r = r.to(u.rad).value

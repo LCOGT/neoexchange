@@ -457,7 +457,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['moon_zd'] = 110.0
         self.params['moon_target_sep'] = 120
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -469,7 +469,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['moon_target_sep'] = 120
         self.params['ecliptic_lat'] = 10.0
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -481,7 +481,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['moon_target_sep'] = 120
         self.params['ecliptic_lat'] = 10.0 * u.deg
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -494,7 +494,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0
         self.params['galactic_lat'] = 15.0
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -507,7 +507,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0 * u.deg
         self.params['galactic_lat'] = 15.0 * u.deg
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -521,7 +521,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0
         self.params['galactic_lat'] = 15.0
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -535,7 +535,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0
         self.params['galactic_lat'] = 15.0
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -549,7 +549,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['ecliptic_lat'] = 10.0
         self.params['galactic_lat'] = 15.0
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -564,7 +564,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['galactic_lat'] = 75.0 * u.deg
         self.params['target_zd'] = 0.0
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
@@ -579,7 +579,7 @@ class TestSkyBrightnessModel(TestCase):
         self.params['galactic_lat'] = 15.0
         self.params['bandpass'] = 'I'
 
-        sky_mag = sky_brightness_model(self.params)
+        sky_mag, moon_delta = sky_brightness_model(self.params)
 
         self.assertAlmostEqual(expected_sky_mag, sky_mag, self.precision)
 
