@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -783,13 +783,26 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
     return object_id
 
-def fetch_goldstone_targets(dbg=False):
-    '''Fetches and parses the Goldstone list of radar targets, returning a list
-    of object id's for the current year'''
+def fetch_goldstone_page():
+    '''Fetches the Goldsotne page of radar targets, returning a BeautifulSoup
+    page'''
 
     goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
 
     page = fetchpage_and_make_soup(goldstone_url)
+
+    return page
+
+def fetch_goldstone_targets(page=None, dbg=False):
+    '''Fetches and parses the Goldstone list of radar targets, returning a list
+    of object id's for the current year.
+    Takes either a BeautifulSoup page version of the Arecibo target page (from
+    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    '''
+
+    if type(page) != BeautifulSoup:
+        page = fetch_goldstone_page()
 
     if page == None:
         return None
@@ -820,6 +833,9 @@ def fetch_goldstone_targets(dbg=False):
                 # hyphens before splitting.
                 if '- ' in line[0:40] or ' -' in line[0:40]:
                     line = line.replace('- ', '-', 1).replace(' -', '-', 1)
+                # Look for ampersands in the line and change to hyphens
+                if '&' in line[0:40] or ' &' in line[0:40] or '& ' in line[0:40] or ' & ' in line[0:40]:
+                    line = line.replace(' & ', '-', 1).replace('& ', '-', 1).replace(' &', '-', 1)
                 chunks = line.lstrip().split()
                 #if dbg: print line
                 # Check if the start of the stripped line is no longer the
@@ -1299,7 +1315,8 @@ def configure_defaults(params):
                   'W85' : 'LSC',
                   'W86' : 'LSC',
                   'W87' : 'LSC',
-                  'W89' : 'LSC', # Code for 0m4a
+                  'W89' : 'LSC', # Code for aqwa-0m4a
+                  'W79' : 'LSC', # Code for aqwb-0m4a
                   'F65' : 'OGG',
                   'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
@@ -1307,7 +1324,9 @@ def configure_defaults(params):
                   'Z21' : 'TFN',
                   'T04' : 'OGG',
                   'Q58' : 'COJ', # Code for 0m4a
-                  'Q59' : 'COJ'} # Code for 0m4b
+                  'Q59' : 'COJ',
+                  'V38' : 'ELP',
+                  'L09' : 'CPT'} # Code for 0m4a
 
 
     params['pondtelescope'] = '1m0'
@@ -1329,11 +1348,21 @@ def configure_defaults(params):
             params['binning'] = 1
             del(params['filter'])
             params['spectra_slit'] = 'slit_2.0as'
-    elif params['site_code'] == 'Z21' or params['site_code'] == 'W89' or params['site_code'] == 'T04' or params['site_code'] == 'Q58' or params['site_code'] == 'Q59':
+    elif params['site_code'] in ['Z21', 'W89', 'W79', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['filter'] = 'w'
         params['binning'] = 2 # 1 is the Right Answer...
+# We are not currently doing Aqawan-specific binding for LSC (or TFN or OGG) but
+# the old code is here if needed again
+#        if params['site_code'] == 'W89':
+#            params['observatory'] = 'aqwa'
+#        if params['site_code'] == 'W79':
+#            params['observatory'] = 'aqwb'
+        if params['site_code'] == 'V38':
+            # elp-aqwa-0m4a kb80
+            params['observatory'] = 'aqwa'
+
 
     return params
 

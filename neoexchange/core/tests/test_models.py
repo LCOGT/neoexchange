@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2015-2017 LCO
+Copyright (C) 2015-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -180,6 +180,23 @@ class TestBody(TestCase):
         result = self.body5.get_block_info()
 
         self.assertEqual(expected, result)
+
+    def test_no_absmag(self):
+        test_body=self.body
+        test_body.abs_mag = None
+        test_body.save()
+
+        diameter = test_body.diameter()
+        self.assertEqual(None, diameter)
+
+    def test_bad_absmag(self):
+        test_body=self.body
+        test_body.abs_mag = -99
+        test_body.save()
+
+        diameter = test_body.diameter()
+        self.assertEqual(None, diameter)
+
 
 @patch('core.models.datetime', MockDateTime)
 class TestComputeFOM(TestCase):

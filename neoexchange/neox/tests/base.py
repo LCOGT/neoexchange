@@ -126,7 +126,7 @@ class FunctionalTest(StaticLiveServerTestCase):
         sblock_params = {
                          'cadence'  : False,
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
+                         'proposal' : self.test_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-22 13:00:00',
                          'tracking_number' : '00043',

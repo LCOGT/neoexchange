@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -141,7 +141,10 @@ class BodySearchView(ListView):
     def get_queryset(self):
         name = self.request.GET.get("q","")
         if (name != ''):
-            object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
+            if name.isdigit():
+                object_list = self.model.objects.filter(name=name)
+            else:
+                object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
         return object_list
@@ -726,12 +729,14 @@ def check_for_block(form_data, params, new_body):
                       'Q63' : 'COJ',
                       'W85' : 'LSC',
                       'W86' : 'LSC',
+                      'W89' : 'LSC',
                       'F65' : 'OGG',
                       'E10' : 'COJ',
                       'Z21' : 'TFN',
                       'Q58' : 'COJ',
                       'Q59' : 'COJ',
-                      'T04' : 'OGG'  }
+                      'T04' : 'OGG',
+                      'V99' : 'ELP'  }
 
         try:
             block_id = SuperBlock.objects.get(body=new_body.id,

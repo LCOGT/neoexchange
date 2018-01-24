@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -227,7 +227,11 @@ def block_status(block_id):
     status = False
     try:
         block = Block.objects.get(id=block_id)
-        tracking_num = block.superblock.tracking_number
+        try:
+            tracking_num = block.superblock.tracking_number
+        except AttributeError:
+            logger.error("Superblock for Block with id %s does not exist" % block_id)
+            return False
     except ObjectDoesNotExist:
         logger.error("Block with id %s does not exist" % block_id)
         return False
