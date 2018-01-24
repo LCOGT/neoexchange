@@ -66,6 +66,7 @@ Diffs
 
 neox.db
 neox.log
+geckodriver.log
 
 lightcurve.png
 lightcurve_data.txt

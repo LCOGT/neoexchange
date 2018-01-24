@@ -2,6 +2,7 @@
 .git
 */Diffs
 */neox.log
+*/geckodriver.log
 */.coveragerc
 */htmlcov
 */comet
