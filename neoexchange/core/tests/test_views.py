@@ -14,6 +14,7 @@ GNU General Public License for more details.
 '''
 
 import os
+import shutil
 from datetime import datetime, timedelta
 from unittest import skipIf
 import tempfile
@@ -2481,16 +2482,22 @@ class TestCheckCatalogAndRefitNew(TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
 
-        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
-        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
+#        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+#        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
         self.configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
 
         self.debug_print = False
 
-        self.test_banzai_fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
-        self.test_cat_bad_wcs = os.path.abspath(os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits'))
+        original_test_banzai_fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        original_test_cat_bad_wcs = os.path.abspath(os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits'))
         self.test_cat_good_wcs_not_BANZAI = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
         self.test_fits_e10 = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+
+        self.test_banzai_fits = os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'))
+        self.test_cat_bad_wcs = os.path.abspath(os.path.join(self.temp_dir, 'oracdr_test_catalog.fits'))
+
+        shutil.copyfile(original_test_banzai_fits, self.test_banzai_fits)
+        shutil.copyfile(original_test_cat_bad_wcs, self.test_cat_bad_wcs)
 
         body_params = {     'provisional_name': 'P10w5z5',
                             'origin': 'M',
@@ -2612,7 +2619,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_fits_file = None
 
-        fits_file = find_matching_image_file(self.test_banzai_fits.replace('photometrics', 'photometric'))
+        fits_file = find_matching_image_file(self.test_banzai_fits.replace('neox', 'neoxs'))
 
         self.assertEqual(expected_fits_file, fits_file)
 
@@ -2626,7 +2633,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_status_and_num_frames = (-1, 0)
 
-        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('photometrics', 'photometric'))
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('neox', 'neoxs'))
 
         self.assertEqual(expected_status_and_num_frames, status)
 
