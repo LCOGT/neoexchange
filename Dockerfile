@@ -50,9 +50,8 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # Install the LCO NEO exchange Python required packages
 # Upgrade pip first
 # Then the LCO packages which have to be installed after the normal pip install
-# numpy needs to be explicitly installed first otherwise pySLALIB (pulled in by
-# newer reqdbclient) fails with a missing numpy.distutils.core reference
-# for...reasons...
+# numpy needs to be explicitly installed first otherwise pySLALIB
+# fails with a missing numpy.distutils.core reference for...reasons...
 RUN pip install --upgrade pip \
     && pip install -U numpy \
     && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
