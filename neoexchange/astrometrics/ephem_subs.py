@@ -17,7 +17,7 @@ GNU General Public License for more details.
 
 import logging
 from datetime import datetime, timedelta, time
-from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10
+from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, log
 
 import pyslalib.slalib as S
 from numpy import array, concatenate, zeros
@@ -46,7 +46,7 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     logger.debug("Phase angle, beta (deg)=%s %s" % (beta, degrees(beta)))
     return beta
 
-def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
+def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False, detailed=False):
     '''Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
     from a dictionary of orbital elements.
@@ -279,7 +279,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
 # geometric distance, delta (AU)
         delta = sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2])
-
+        delta_dot = ((vel[0]*pos[0]+vel[1]*pos[1]+vel[2]*pos[2])/delta)*86400.0
         logger.debug("Geometric distance, delta (AU)=%s" % delta)
 
 # Light travel time to asteroid
@@ -307,6 +307,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     cposy = pv[1] - (ltt * pv[4])
     cposz = pv[2] - (ltt * pv[5])
     r = sqrt(cposx*cposx + cposy*cposy + cposz*cposz)
+    r_dot = ((pv[3]*cposx+pv[4]*cposy+pv[5]*cposz)/r)*86400.0
 
     logger.debug("r (AU) =%s" % r)
 
@@ -325,19 +326,26 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     total_motion, sky_pa, ra_motion, dec_motion = compute_sky_motion(sky_vel, delta, dbg)
 
     mag = -99
+    mag_dot = 0
+    beta = 0
     if comet == True:
     # Calculate magnitude of comet
     # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
     # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the elements
         if p_orbelems['H'] and p_orbelems['G']:
             mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
+            mag_dot = 5.0 * delta_dot / log(10) / delta + 2.5 * p_orbelems['G'] * r_dot / log(10) / r
 
     else:
     # Compute phase angle, beta (Sun-Target-Earth angle)
         beta = compute_phase_angle(r, delta, es_Rsq)
+        beta_dot=-1/sqrt(1-(cos(beta))**2)*(r*(delta**2-r**2+1)*delta_dot-delta*(delta**2-r**2-1)*r_dot)/(2*delta*delta*r*r)
 
         phi1 = exp(-3.33 * (tan(beta/2.0))**0.63)
         phi2 = exp(-1.87 * (tan(beta/2.0))**1.22)
+
+        phi1_dot = phi1 * -3.33 * 0.63 * (tan(beta/2.0))**(0.63-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
+        phi2_dot = phi1 * -1.87 * 1.22 * (tan(beta/2.0))**(1.22-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
 
     #    logger.debug("Phi1, phi2=%s" % phi1,phi2)
 
@@ -346,6 +354,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
             try:
                 mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
                     (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
+                mag_dot = 5 * (delta * r_dot + r * delta_dot) / (r * delta * log(10)) - \
+                    2.5 * ((1.0 - p_orbelems['G'])*phi1_dot + p_orbelems['G']*phi2_dot) / \
+                    (log(10) * ((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
             except ValueError:
                 logger.error("Error computing magnitude")
                 logger.error("{")
@@ -375,6 +386,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         spd = None
 
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
+    if detailed:
+        return emp_line, mag_dot
 
     return emp_line
 

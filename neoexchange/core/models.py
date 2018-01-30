@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 from datetime import datetime,timedelta,date
-from math import pi, log10
+from math import pi, log10, sqrt, cos
 import math
 from collections import Counter
 import reversion
@@ -234,28 +234,66 @@ class Body(models.Model):
 
     def compute_obs_window(self):
         d = datetime.today()
-        d0=d
-        mag_limit=18
-        dstart=''
-        dend =''
+        d0 = d
+        df = 90
+        delta_t = 10
+        mag_limit = 18
+        vmag = []
+        i=0
+        dstart = ''
+        dend = ''
         if self.epochofel:
             orbelems = model_to_dict(self)
             sitecode = '500'
-            #print '-----------'
-            #print self.name
-            while (d <= d0+timedelta(days=90)):
-                emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
-                vmag=emp_line[3]
-                #print d,vmag
-                if vmag <0:
+
+            while (i <= df / delta_t ):
+
+                emp_line, mag_dot = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+                vmag.append(emp_line[3])
+
+                #Eliminate bad magnitudes
+                if vmag[i] < 0:
                     return (dstart,dend,d0)
-                if vmag <= mag_limit and not dstart:
-                    dstart = d
-                elif vmag > mag_limit and dstart:
+
+                #Calculate time since/until reaching Magnitude limit
+                t_diff = (mag_limit - vmag[i]) / mag_dot
+
+                '''Filter likely results based on Mag/mag_dot to speed results.
+                    Cuts load time by 60% will ocasionally and temporarily miss
+                    objects with either really short windows or unusual behavior 
+                    at the edges. These objects will be found as the date changes.'''
+                if d == d0 + timedelta(days=df) and i == 1:
+                    if vmag [i] <= mag_limit and dstart:
+                        dend = d
+                        return (dstart,dend,d0)
+                    elif vmag[i] > mag_limit:
+                        if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                            return (dstart,dend,d0)
+                        else:
+                            d = d0 + timedelta(days=delta_t)
+                    else:
+                        d = d0 + timedelta(days=delta_t)
+                if vmag[i] > mag_limit and dstart:
                     dend = d
                     return (dstart,dend,d0)
-                d += timedelta(days=10)
+                elif vmag [i] <= mag_limit and not dstart:
+                    dstart = d
+                    if i == 0:
+                        d += timedelta(days=df)
+                    else:
+                        d += timedelta(days=delta_t)
+                elif vmag[i] > mag_limit and i == 0:
+                    if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                        d += timedelta(days=df)
+                    else:
+                        d += timedelta(days=delta_t)
+                else:
+                    d += timedelta(days=delta_t)
+                i += 1
             # Return dates
+            if dstart and not dend:
+                dend = d0 + timedelta(days=df)
+            print i
             return (dstart,dend,d0)
         else:
             # Catch the case where there is no Epoch
