@@ -233,7 +233,7 @@ class Body(models.Model):
             return False
 
     def compute_obs_window(self):
-        d = datetime.today()
+        d = datetime.utcnow()
         d0 = d
         df = 90
         delta_t = 10

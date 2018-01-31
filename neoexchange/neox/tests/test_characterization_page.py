@@ -51,7 +51,7 @@ class CharacterizationPageTest(FunctionalTest):
 
     def insert_another_extra_test_body(self):
         params = {  'name'          : 'V38821zi',
-                    'abs_mag'       : 16.0,
+                    'abs_mag'       : 19.0,
                     'slope'         : 0.15,
                     'epochofel'     : '2015-03-19 00:00:00',
                     'meananom'      : 325.2636,
@@ -111,7 +111,7 @@ class CharacterizationPageTest(FunctionalTest):
         #    'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 15.7 LC 16.0 Goldstone Vis+NIR Now-01/18',
+        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
                     u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
@@ -132,9 +132,9 @@ class CharacterizationPageTest(FunctionalTest):
         self.browser.get(characterization_page_url)
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 15.7 LC 16.0 Goldstone Vis+NIR Now-01/18',
+        testlines =[u'2 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
                     u'3 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---',
-                    u'2 N999r0q 23 43 12.75 +19 58 55.6 15.2 LC 15.5 NASA Vis+NIR NIR Now-02/18']
+                    u'1 N999r0q 23 43 12.75 +19 58 55.6 15.2 LC 15.5 NASA Vis+NIR NIR Now->']
         for line in testlines:
             self.check_for_row_in_table('characterization_targets', line)
         
