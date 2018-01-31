@@ -245,7 +245,8 @@ class Body(models.Model):
         if self.epochofel:
             orbelems = model_to_dict(self)
             sitecode = '500'
-
+#            print "--------------------"
+#            print self.name
             while (i <= df / delta_t ):
 
                 emp_line, mag_dot = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
@@ -257,16 +258,15 @@ class Body(models.Model):
 
                 #Calculate time since/until reaching Magnitude limit
                 t_diff = (mag_limit - vmag[i]) / mag_dot
-
+#                print emp_line[3], t_diff
                 '''Filter likely results based on Mag/mag_dot to speed results.
                     Cuts load time by 60% will ocasionally and temporarily miss
                     objects with either really short windows or unusual behavior 
                     at the edges. These objects will be found as the date changes.'''
                 if d == d0 + timedelta(days=df) and i == 1:
                     if vmag [i] <= mag_limit and dstart:
-                        dend = d
                         return (dstart,dend,d0)
-                    elif vmag[i] > mag_limit:
+                    elif not dstart:
                         if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
                             return (dstart,dend,d0)
                         else:
@@ -291,9 +291,6 @@ class Body(models.Model):
                     d += timedelta(days=delta_t)
                 i += 1
             # Return dates
-            if dstart and not dend:
-                dend = d0 + timedelta(days=df)
-            print i
             return (dstart,dend,d0)
         else:
             # Catch the case where there is no Epoch
