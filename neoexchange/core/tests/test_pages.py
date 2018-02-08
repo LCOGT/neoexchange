@@ -88,7 +88,7 @@ class EphemPageTest(TestCase):
         )
         self.assertIn(u'N999r0q', response.content.decode('utf-8'))
         body_elements = model_to_dict(self.body)
-        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
+        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '10m' )
         expected_html = render_to_string(
             'core/ephem.html',
             {'target' : self.body,
