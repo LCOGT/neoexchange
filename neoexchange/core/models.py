@@ -258,7 +258,7 @@ class Body(models.Model):
 
                 #Calculate time since/until reaching Magnitude limit
                 t_diff = (mag_limit - vmag[i]) / mag_dot
-#                print emp_line[3], t_diff
+#                print d, emp_line[1],emp_line[2], emp_line[3], t_diff
                 '''Filter likely results based on Mag/mag_dot to speed results.
                     Cuts load time by 60% will ocasionally and temporarily miss
                     objects with either really short windows or unusual behavior 
@@ -289,6 +289,7 @@ class Body(models.Model):
                         d += timedelta(days=delta_t)
                 else:
                     d += timedelta(days=delta_t)
+#                d += timedelta(days=delta_t)
                 i += 1
             # Return dates
             return (dstart,dend,d0)
