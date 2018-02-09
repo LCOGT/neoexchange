@@ -68,7 +68,8 @@ ORIGINS = (
             ('A','Arecibo'),
             ('R','Goldstone & Arecibo'),
             ('L','LCOGT'),
-            ('Y','Yarkovsky')
+            ('Y','Yarkovsky'),
+            ('T', 'Trojan')
             )
 
 TELESCOPE_CHOICES = (
