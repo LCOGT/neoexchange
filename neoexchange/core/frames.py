@@ -253,32 +253,33 @@ def block_status(block_id):
     exposure_count = 0
 
     for r in data['requests']:
-        images = check_for_archive_images(request_id=r['id'])
-        logger.debug('Request no. %s x %s images' % (r['id'],len(images)))
-        if images:
-            if len(images) >= 3:
-                exposure_count = sum([x['exposure_count'] for x in r['molecules']])
-                # Look in the archive at the header of the most recent frame for a timestamp of the observation
-                last_image_dict = images[0]
-                last_image_header = lco_api_call(last_image_dict.get('headers', None))
-                if last_image_header == None:
-                    logger.error('Image header was not returned for %s' % last_image_dict)
-                    return False
-                try:
-                    last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19],'%Y-%m-%dT%H:%M:%S')
-                except ValueError:
-                    logger.error('Image datetime stamp is badly formatted %s' % last_image_header['data']['DATE_OBS'])
-                    return False
-                if (not block.when_observed or last_image > block.when_observed):
-                    block.when_observed = last_image
-                if block.block_end < datetime.utcnow():
-                    block.active = False
-                # Add frames and get list of scheduler block IDs used
-                block_ids = ingest_frames(images, block)
-                block.num_observed = len(block_ids)
-                block.save()
-                status = True
-                logger.debug("Block %s updated" % block)
-            else:
-                logger.debug("No update to block %s" % block)
+        if r['id'] == int(block.tracking_number):
+            images = check_for_archive_images(request_id=r['id'])
+            logger.debug('Request no. %s x %s images' % (r['id'],len(images)))
+            if images:
+                if len(images) >= 3:
+                    exposure_count = sum([x['exposure_count'] for x in r['molecules']])
+                    # Look in the archive at the header of the most recent frame for a timestamp of the observation
+                    last_image_dict = images[0]
+                    last_image_header = lco_api_call(last_image_dict.get('headers', None))
+                    if last_image_header == None:
+                        logger.error('Image header was not returned for %s' % last_image_dict)
+                        return False
+                    try:
+                        last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19],'%Y-%m-%dT%H:%M:%S')
+                    except ValueError:
+                        logger.error('Image datetime stamp is badly formatted %s' % last_image_header['data']['DATE_OBS'])
+                        return False
+                    if (not block.when_observed or last_image > block.when_observed):
+                        block.when_observed = last_image
+                    if block.block_end < datetime.utcnow():
+                        block.active = False
+                    # Add frames and get list of scheduler block IDs used
+                    block_ids = ingest_frames(images, block)
+                    block.num_observed = len(block_ids)
+                    block.save()
+                    status = True
+                    logger.debug("Block %s updated" % block)
+                else:
+                    logger.debug("No update to block %s" % block)
     return status
