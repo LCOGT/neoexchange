@@ -249,9 +249,10 @@ def block_status(block_id):
     if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
         logger.error("No VALHALLA_TOKEN set")
         return False
-    # Although this is a loop, we should only have a single request so it is executed once
-    exposure_count = 0
 
+    # This loops through all BLOCKS in the SUPERBLOCK so we need to filter out 
+    #only the one block used to call this procedure.
+    exposure_count = 0
     for r in data['requests']:
         if r['id'] == int(block.tracking_number):
             images = check_for_archive_images(request_id=r['id'])
