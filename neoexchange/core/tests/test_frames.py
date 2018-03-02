@@ -119,6 +119,10 @@ class TestBlockStatus(TestCase):
                          'reported' : False
                        }
         self.test_block4 = Block.objects.create(**block_params4)
+
+    #Create Mocked output to image request from Valhala.
+    #Header URL and Reqnum have been changed for easy tracking.
+    #no images for last block
     def mock_check_for_archive_images(request_id):
         result_images_out = [{u'BLKUID': 226770074,
                               u'DATE_OBS': u'2018-02-27T04:10:51.702000Z',
@@ -219,6 +223,8 @@ class TestBlockStatus(TestCase):
         else:
             return result_images_out
 
+    #Mock Header output read from Valhalla
+    #modified Origname for easy tracking
     def mock_lco_api_call(link):
         header_out= {u'data': {u'AGCAM': u'kb80',
                               u'AGDEC': u'',
@@ -475,7 +481,8 @@ class TestBlockStatus(TestCase):
 
         return header_out
 
-
+    #Mock block records output from Valhalla
+    #One for each block in superblock. Changed block id's to match blocks
     def mock_check_result_status(tracking_num):
         result_status_out = {u'created': u'2018-02-23T23:56:01.695109Z',
                          u'group_id': u'N999r0q_V38-cad-0223-0227',
@@ -708,6 +715,7 @@ class TestBlockStatus(TestCase):
                          u'state': u'COMPLETED',
                          u'submitter': u'neox_robot'}
         return result_status_out
+
     @patch('core.frames.lco_api_call', side_effect=mock_lco_api_call)
     @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
     @patch('core.frames.check_for_archive_images', side_effect=mock_check_for_archive_images)
