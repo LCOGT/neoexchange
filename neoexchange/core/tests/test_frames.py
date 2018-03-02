@@ -708,19 +708,19 @@ class TestBlockStatus(TestCase):
                          u'state': u'COMPLETED',
                          u'submitter': u'neox_robot'}
         return result_status_out
-#    @patch('core.frames.lco_api_call', side_effect=mock_lco_api_call)
-#    @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
-#    @patch('core.frames.check_for_archive_images', side_effect=mock_check_for_archive_images)
-#    def test_block_status_updates_num_observed(self,check_request_status,check_for_archive_images,lco_api_call):
-#        expected = ('3/4', '0/4')
+    @patch('core.frames.lco_api_call', side_effect=mock_lco_api_call)
+    @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
+    @patch('core.frames.check_for_archive_images', side_effect=mock_check_for_archive_images)
+    def test_block_status_updates_num_observed(self,check_request_status,check_for_archive_images,lco_api_call):
+        expected = ('3/4', '0/4')
 
-#        blocks = Block.objects.filter(active=True)
-#        self.assertEqual(4,blocks.count())
-#        for block in blocks:
-#            block_status(block.id)
+        blocks = Block.objects.filter(active=True)
+        self.assertEqual(4,blocks.count())
+        for block in blocks:
+            block_status(block.id)
 
-#        result = self.body.get_block_info()
-#        self.assertEqual(expected, result)
+        result = self.body.get_block_info()
+        self.assertEqual(expected, result)
 
     @patch('core.frames.lco_api_call', side_effect=mock_lco_api_call)
     @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
@@ -743,7 +743,4 @@ class TestBlockStatus(TestCase):
             frame_names_blk2.append(frame.filename)
         for element in expected:
             self.assertNotIn(element,frame_names_blk2)
-        
-
-
 
