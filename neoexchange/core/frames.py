@@ -254,7 +254,7 @@ def block_status(block_id):
     #only the one block used to call this procedure.
     exposure_count = 0
     for r in data['requests']:
-        if r['id'] == int(block.tracking_number):
+        if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
             images = check_for_archive_images(request_id=r['id'])
             logger.debug('Request no. %s x %s images' % (r['id'],len(images)))
             if images:
