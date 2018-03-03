@@ -685,6 +685,7 @@ def record_block(tracking_number, params, form_data, body):
                          'active'   : True,
                        }
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
+        i = 0
         for request in params.get('request_numbers', []):
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
@@ -692,14 +693,15 @@ def record_block(tracking_number, params, form_data, body):
                              'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'groupid'  : form_data['group_id'],
-                             'block_start' : form_data['start_time'],
-                             'block_end'   : form_data['end_time'],
+                             'block_start' : datetime.strptime(params['request_windows'][i][0]['start'], '%Y-%m-%dT%H:%M:%SZ'),
+                             'block_end'   : datetime.strptime(params['request_windows'][i][0]['end'], '%Y-%m-%dT%H:%M:%SZ'),
                              'tracking_number' : request,
                              'num_exposures'   : form_data['exp_count'],
                              'exp_length'      : form_data['exp_length'],
                              'active'   : True
                            }
             pk = Block.objects.create(**block_kwargs)
+            i += 1
         return True
     else:
         return False

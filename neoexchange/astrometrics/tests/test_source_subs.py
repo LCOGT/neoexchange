@@ -446,7 +446,8 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(block_resp,True)
 
         blocks = Block.objects.filter(active=True)
-        print len(blocks)
+
+        #test Block dates are indipendent from Superblock dates
         for block in blocks:
             if block != blocks[0]:
                 self.assertNotEqual(block.block_start,block.superblock.block_start)
