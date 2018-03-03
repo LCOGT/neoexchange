@@ -1200,7 +1200,6 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
     }
 # Submit the UserRequest with the cadence
     status, cadence_user_request = expand_cadence(user_request)
-
     if debug and status == True:
         print('Cadence generated {} requests'.format(len(cadence_user_request['requests'])))
         i = 1
@@ -1208,7 +1207,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
             print('Request {0} window start: {1} window end: {2}'.format(
                 i, request['windows'][0]['start'], request['windows'][0]['end']
             ))
-        i = i + 1
+            i = i + 1
 
     return cadence_user_request
 
@@ -1359,6 +1358,10 @@ def submit_block_to_scheduler(elements, params):
 
     request_numbers =  [_['id'] for _ in request_items]
 
+    request_windows = []
+    for r in user_request['requests']:
+        request_windows.append(r['windows'])
+
     if not tracking_number or not request_numbers:
         msg = "No Tracking/Request number received"
         logger.error(msg)
@@ -1366,6 +1369,7 @@ def submit_block_to_scheduler(elements, params):
         return False, params
     params['request_numbers'] = request_numbers
     params['block_duration'] = sum([float(_['duration']) for _ in request_items])
+    params['request_windows'] = request_windows
 
     request_number_string = ", ".join([str(x) for x in request_numbers])
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))

@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
-from core.models import Body
+from core.models import Body, Proposal, Block
 from datetime import datetime, timedelta
 from unittest import skipIf
 from bs4 import BeautifulSoup
@@ -26,6 +26,7 @@ from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
+from core.views import record_block
 #Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, \
     fetch_arecibo_targets, fetch_goldstone_targets, \
@@ -382,6 +383,11 @@ class TestSubmitBlockToScheduler(TestCase):
                     }
         self.body, created = Body.objects.get_or_create(**params)
 
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
     @mock.patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
@@ -407,6 +413,45 @@ class TestSubmitBlockToScheduler(TestCase):
         resp, params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, '999')
 
+    @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
+    @mock.patch('astrometrics.sources_subs.requests.post')
+    def test_submit_cadence(self,mock_post):
+        mock_post.return_value.status_code = 200
+
+        mock_post.return_value.json.return_value = {'id':'999', 'requests' : [{'id':'111', 'duration' : 1820},{'id':'222', 'duration' : 1820},{'id':'333', 'duration' : 1820}]}
+
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'V38'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'period'    : 2.0,
+                    'jitter'    : 0.25
+                 }
+        tracking_num, sched_params = submit_block_to_scheduler(body_elements, params)
+
+        data = params
+        data['proposal_code'] = 'LCO2015A-009'
+        data['exp_length'] = 91
+        block_resp = record_block(tracking_num, sched_params, data, self.body)
+        self.assertEqual(block_resp,True)
+
+        blocks = Block.objects.filter(active=True)
+        print len(blocks)
+        for block in blocks:
+            if block != blocks[0]:
+                self.assertNotEqual(block.block_start,block.superblock.block_start)
+            if block != blocks[2]:
+                self.assertNotEqual(block.block_end,block.superblock.block_end)
 
     def test_make_userrequest(self):
         body_elements = model_to_dict(self.body)
