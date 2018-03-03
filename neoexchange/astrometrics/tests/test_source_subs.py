@@ -410,8 +410,21 @@ class TestSubmitBlockToScheduler(TestCase):
                     'user_id'  : 'bsimpson'
                  }
 
-        resp, params = submit_block_to_scheduler(body_elements, params)
+        resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, '999')
+
+        #store block
+        data = params
+        data['proposal_code'] = 'LCO2015A-009'
+        data['exp_length'] = 91
+        block_resp = record_block(resp, sched_params, data, self.body)
+        self.assertEqual(block_resp,True)
+
+        #Test that block has same start/end as superblock
+        blocks = Block.objects.filter(active=True)
+        for block in blocks:
+            self.assertEqual(block.block_start,block.superblock.block_start)
+            self.assertEqual(block.block_end,block.superblock.block_end)
 
     @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     @mock.patch('astrometrics.sources_subs.requests.post')
@@ -439,6 +452,7 @@ class TestSubmitBlockToScheduler(TestCase):
                  }
         tracking_num, sched_params = submit_block_to_scheduler(body_elements, params)
 
+        #store Blocks
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91

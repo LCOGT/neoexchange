@@ -1200,6 +1200,11 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
     }
 # Submit the UserRequest with the cadence
     status, cadence_user_request = expand_cadence(user_request)
+    #cut off json UTC timezone remnant
+    for request in cadence_user_request['requests']:
+        request['windows'][0]['start'] = request['windows'][0]['start'][:-1]
+        request['windows'][0]['end'] = request['windows'][0]['end'][:-1]
+
     if debug and status == True:
         print('Cadence generated {} requests'.format(len(cadence_user_request['requests'])))
         i = 1
