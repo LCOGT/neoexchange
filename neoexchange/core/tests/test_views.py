@@ -2250,6 +2250,28 @@ class TestClean_crossid(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_hyperbolic_asteroid1(self):
+        crossid = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Nov. 4.95 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'A/2018 C2',
+                            'source_type' : 'H'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_hyperbolic_asteroid2(self):
+        crossid = [u'P10EwQh', u'A/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'A/2017 U7',
+                            'source_type' : 'H'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
     def test_new_year_switchover(self):
         MockDateTime.change_datetime(2016, 1, 1, 0, 30, 0)
         crossid =  [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
@@ -2905,6 +2927,7 @@ class TestUpdate_Crossids(TestCase):
         crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
 
         self.body.origin = u'M'
+        self.assertEqual(True, self.body.active)
         self.body.save()
 
         status = update_crossids(crossid_info, dbg=False)
@@ -2960,6 +2983,30 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('J', body.source_type)
         self.assertEqual('M', body.origin)
         self.assertEqual('', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_check_inactive_comet(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
+        crossid_info = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC82561'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('H', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('A/2018 C2', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
 
 class TestStoreDetections(TestCase):
 

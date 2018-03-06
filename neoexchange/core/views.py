@@ -970,8 +970,10 @@ def update_crossids(astobj, dbg=False):
         # Find out if the details have changed, if they have, save a revision
         # But first check if it is a comet or NEO and came from somewhere other
         # than the MPC. In this case, leave it active.
-        if body.source_type in ['N', 'C'] and body.origin != 'M':
+        if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
             kwargs['active'] = True
+        if kwargs['source_type'] in ['C', 'H']:
+            kwargs['elements_type'] = 'MPC_COMET'
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
@@ -1045,6 +1047,9 @@ def clean_crossid(astobj, dbg=False):
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
             objtype = 'N'
+            if 'A/' in desig:
+                # Check if it is an inactive hyperbolic asteroid
+                objtype = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
         else:
