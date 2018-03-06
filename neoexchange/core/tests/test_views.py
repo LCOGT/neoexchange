@@ -2858,6 +2858,7 @@ class TestUpdate_Crossids(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_goldstone_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2876,6 +2877,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_arecibo_comet_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2898,6 +2900,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('C/2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_jointradar_neo_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2919,6 +2922,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_old_mpc_neo_is_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2941,6 +2945,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_new_mpc_neo_is_not_overridden(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
@@ -2962,6 +2967,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_artsat(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
@@ -2985,6 +2991,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_inactive_comet(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
