@@ -311,7 +311,7 @@ def ephemeris(request):
         dark_start, dark_end = determine_darkness_times(
             data['site_code'], data['utc_date'])
         ephem_lines = call_compute_ephem(
-            body_elements, dark_start, dark_end, data['site_code'], 600, data['alt_limit'])
+            body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
     else:
         return render(request, 'core/home.html', {'form': form})
     return render(request, 'core/ephem.html',
