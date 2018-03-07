@@ -311,7 +311,7 @@ def ephemeris(request):
         dark_start, dark_end = determine_darkness_times(
             data['site_code'], data['utc_date'])
         ephem_lines = call_compute_ephem(
-            body_elements, dark_start, dark_end, data['site_code'], 600, data['alt_limit'])
+            body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
     else:
         return render(request, 'core/home.html', {'form': form})
     return render(request, 'core/ephem.html',
@@ -970,8 +970,10 @@ def update_crossids(astobj, dbg=False):
         # Find out if the details have changed, if they have, save a revision
         # But first check if it is a comet or NEO and came from somewhere other
         # than the MPC. In this case, leave it active.
-        if body.source_type in ['N', 'C'] and body.origin != 'M':
+        if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
             kwargs['active'] = True
+        if kwargs['source_type'] in ['C', 'H']:
+            kwargs['elements_type'] = 'MPC_COMET'
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
@@ -1045,6 +1047,9 @@ def clean_crossid(astobj, dbg=False):
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
             objtype = 'N'
+            if 'A/' in desig:
+                # Check if it is an inactive hyperbolic asteroid
+                objtype = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
         else:
@@ -1114,6 +1119,8 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             # Comet, update/overwrite a bunch of things
             params['elements_type'] = 'MPC_COMET'
             params['source_type'] = 'C'
+            if 'A/2' in elements.get('obj_id', ''):
+                params['source_type'] = 'H'
             # The MPC never seems to have H values for comets so we remove it
             # from the dictionary to avoid replacing what was there before.
             if params['abs_mag'] == None:

@@ -20,7 +20,7 @@ import urllib2, os
 import imaplib
 import email
 from urlparse import urljoin
-from re import sub
+from re import sub, compile
 from math import degrees
 from datetime import datetime, timedelta
 from socket import error
@@ -112,6 +112,8 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
 
 def parse_previous_NEOCP_id(items, dbg=False):
     crossmatch = ['', '', '', '']
+
+    ast = compile('^\s+A/\d{4}')
     if len(items) == 1:
 # Is of the form "<foo> does not exist" or "<foo> was not confirmed". But can
 # now apparently include comets...
@@ -131,13 +133,14 @@ def parse_previous_NEOCP_id(items, dbg=False):
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
 # Is of the form "<foo> = <bar>(<date> UT)"
-        if items[0].find('Comet') != 1:
+        if items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
             newid = str(items[0]).lstrip()+items[1].string.strip()
             provid_date = items[2].split('(')
             provid = provid_date[0].replace(' = ', '')
             date = '('+provid_date[1].strip()
             mpec = ''
         else:
+            # Now matches comets and 'A/<YYYY>' type objects
             if dbg: print "Comet found, parsing"
             if dbg: print "Items=",items
 
@@ -151,10 +154,17 @@ def parse_previous_NEOCP_id(items, dbg=False):
             items[0] = sub(r"^\s+Comet\s+(?=\d+)", r"Comet C/", items[0])
             subitems = items[0].lstrip().split()
             if dbg: print "Subitems=", subitems
-            newid = subitems[1] + ' ' + subitems[2]
-            provid_date = subitems[4].split('(')
+            if len(subitems) == 7:
+                # Of the form 'A/2017 U2 = ZC82561 etc"
+                newid = subitems[0] + ' ' + subitems[1]
+                index = 3
+            else:
+                # Comet form
+                newid = subitems[1] + ' ' + subitems[2]
+                index = 4
+            provid_date = subitems[index].split('(')
             provid = provid_date[0]
-            date = '('+provid_date[1] + ' ' + subitems[5] + ' ' + subitems[6]
+            date = '('+provid_date[1] + ' ' + subitems[index+1] + ' ' + subitems[index+2]
             mpec = items[1].contents[0].string + items[1].contents[1].string
 
         crossmatch = [provid, newid, mpec, date]
