@@ -1317,6 +1317,35 @@ class TestClean_mpcorbit(TestCase):
 
         self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
 
+        self.test_hyperbolic_elements = {
+                                         'argument of perihelion': '325.96205',
+                                         'ascending node': '276.22261',
+                                         'eccentricity': '1.0014825',
+                                         'epoch': '2018-03-23.0',
+                                         'epoch JD': '2458200.5',
+                                         'first observation date used': '2017-09-18.0',
+                                         'inclination': '142.63838',
+                                         'last observation date used': '2018-02-10.0',
+                                         'mean anomaly': None,
+                                         'mean daily motion': None,
+                                         'obj_id': u'A/2017 U7',
+                                         'observations used': '87',
+                                         'perihelion JD': '2458737.02791',
+                                         'perihelion date': '2019-09-10.52791',
+                                         'perihelion distance': '6.4186788',
+                                         'period': None,
+                                         'perturbers coarse indicator': None,
+                                         'perturbers precise indicator': '0000',
+                                         'radial non-grav. param.': None,
+                                         'recip semimajor axis error': None,
+                                         'recip semimajor axis future': '-0.00000374',
+                                         'recip semimajor axis orig': '0.00011957',
+                                         'reference': 'MPEC 2018-E17',
+                                         'residual rms': '0.2',
+                                         'semimajor axis': None,
+                                         'transverse non-grav. param.': None}
+
+
         self.expected_params = {
                              'elements_type': 'MPC_MINOR_PLANET',
                              'abs_mag' : '26.6',
@@ -1359,6 +1388,28 @@ class TestClean_mpcorbit(TestCase):
                                         'arc_length': '10',
                                         'not_seen' : 6.75,
                                         'update_time' : datetime(2016, 2, 18, 0),
+                                        'updated' : True
+                                     }
+        self.expected_hyperbolic_params = {
+                                        'elements_type': 'MPC_COMET',
+                                        'argofperih': '325.96205',
+                                        'longascnode' : '276.22261',
+                                        'eccentricity' : '1.0014825',
+                                        'epochofel': datetime(2018, 03, 23, 0),
+                                        'meandist' : None,
+                                        'orbinc' : '142.63838',
+                                        'meananom': None,
+                                        'perihdist' : '6.4186788',
+                                        'epochofperih': datetime(2019, 9, 10, 12, 40, 11, int(0.424*1e6)),
+                                        'slope': '4.0',
+                                        'origin' : 'M',
+                                        'active' : True,
+                                        'source_type' : 'H',
+                                        'discovery_date': datetime(2017, 9, 18, 0),
+                                        'num_obs': '87',
+                                        'arc_length': '145',
+                                        'not_seen' : 23.75,
+                                        'update_time' : datetime(2018, 2, 10, 0),
                                         'updated' : True
                                      }
 
@@ -1413,6 +1464,14 @@ class TestClean_mpcorbit(TestCase):
         params = clean_mpcorbit(self.test_comet_elements)
 
         self.assertEqual(self.expected_comet_params, params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_A_2017U7(self):
+
+        MockDateTime.change_datetime(2018, 3, 5, 18, 0, 0)
+        params = clean_mpcorbit(self.test_hyperbolic_elements)
+
+        self.assertEqual(self.expected_hyperbolic_params, params)
 
 class TestCreate_sourcemeasurement(TestCase):
 
@@ -2250,6 +2309,28 @@ class TestClean_crossid(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_hyperbolic_asteroid1(self):
+        crossid = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Nov. 4.95 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'A/2018 C2',
+                            'source_type' : 'H'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_hyperbolic_asteroid2(self):
+        crossid = [u'P10EwQh', u'A/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'A/2017 U7',
+                            'source_type' : 'H'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
     def test_new_year_switchover(self):
         MockDateTime.change_datetime(2016, 1, 1, 0, 30, 0)
         crossid =  [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
@@ -2836,6 +2917,7 @@ class TestUpdate_Crossids(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_goldstone_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2854,6 +2936,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_arecibo_comet_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2876,6 +2959,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('C/2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_jointradar_neo_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2897,6 +2981,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_old_mpc_neo_is_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2905,6 +2990,7 @@ class TestUpdate_Crossids(TestCase):
         crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
 
         self.body.origin = u'M'
+        self.assertEqual(True, self.body.active)
         self.body.save()
 
         status = update_crossids(crossid_info, dbg=False)
@@ -2918,6 +3004,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_new_mpc_neo_is_not_overridden(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
@@ -2939,6 +3026,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_artsat(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
@@ -2960,6 +3048,31 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('J', body.source_type)
         self.assertEqual('M', body.origin)
         self.assertEqual('', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_inactive_comet(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
+        crossid_info = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC82561'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('H', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('A/2018 C2', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
 
 class TestStoreDetections(TestCase):
 
