@@ -10,7 +10,7 @@ import time
 
 class AnalyserTest(FunctionalTest):
     def setUp(self):
-        self.browser = webdriver.Firefox()
+#        self.browser = webdriver.Firefox()
 
         super(AnalyserTest,self).setUp()
 
