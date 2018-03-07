@@ -687,14 +687,17 @@ def record_block(tracking_number, params, form_data, body):
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
         for request in params.get('request_numbers', []):
+            #cut off json UTC timezone remnant
+            no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
+            no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : params['site'].lower(),
                              'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'groupid'  : form_data['group_id'],
-                             'block_start' : datetime.strptime(params['request_windows'][i][0]['start'], '%Y-%m-%dT%H:%M:%S'),
-                             'block_end'   : datetime.strptime(params['request_windows'][i][0]['end'], '%Y-%m-%dT%H:%M:%S'),
+                             'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
+                             'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
                              'tracking_number' : request,
                              'num_exposures'   : form_data['exp_count'],
                              'exp_length'      : form_data['exp_length'],
