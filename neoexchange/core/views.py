@@ -1119,6 +1119,8 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             # Comet, update/overwrite a bunch of things
             params['elements_type'] = 'MPC_COMET'
             params['source_type'] = 'C'
+            if 'A/2' in elements.get('obj_id', ''):
+                params['source_type'] = 'H'
             # The MPC never seems to have H values for comets so we remove it
             # from the dictionary to avoid replacing what was there before.
             if params['abs_mag'] == None:
