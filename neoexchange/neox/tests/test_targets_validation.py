@@ -8,7 +8,7 @@ class TargetsValidationTest(FunctionalTest):
         self.browser.get(self.live_server_url)
 
         # She sees a link to TARGETS
-        link = self.browser.find_element_by_link_text('Targets')
+        link = self.browser.find_element_by_xpath(u'//a[text()="Targets"]')
         target_url = "{0}{1}".format(self.live_server_url, '/target/')
         self.assertEqual(link.get_attribute('href'), target_url)
 
