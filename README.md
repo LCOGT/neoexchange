@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.1.3
+
+Add support and new object type for hyperbolic asteroids such as A/2017 U7 and A/2018 C2. Increase ephemeris spacing to 15 mins prevent timeouts.
+
 ### 2.1.2
 
 Add support for the 0.4m telescopes at Cerro Tololo, Sutherland and McDonald.
