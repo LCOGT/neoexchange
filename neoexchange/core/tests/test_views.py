@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 import os
 import shutil
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from unittest import skipIf
 import tempfile
 from glob import glob
@@ -741,7 +741,7 @@ class TestSchedule_Check(TestCase):
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
                         'group_id': '2009 HA_Q63-cad-20160406-0406',
-                        'utc_date': data['utc_date'].date().isoformat(),
+                        'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
                         'mid_time': '2016-04-06T16:00:00',
@@ -763,7 +763,7 @@ class TestSchedule_Check(TestCase):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 
         data = { 'site_code' : 'Q63',
-                 'utc_date' : datetime(2016, 4, 6),
+                 'utc_date' : date(2016, 4, 6),
                  'proposal_code' : self.neo_proposal.code,
                  'period' : 4.0,
                  'jitter' : 1.0,
@@ -782,7 +782,7 @@ class TestSchedule_Check(TestCase):
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
                         'group_id': '2009 HA21_Q63-cad-0406-0406',
-                        'utc_date': data['utc_date'].date().isoformat(),
+                        'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
                         'mid_time': '2016-04-06T16:00:00',
@@ -804,7 +804,7 @@ class TestSchedule_Check(TestCase):
         MockDateTime.change_datetime(2016, 3, 31, 22, 0, 0)
 
         data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2016, 4, 1),
+                 'utc_date' : date(2016, 4, 1),
                  'proposal_code' : self.neo_proposal.code
                }
 

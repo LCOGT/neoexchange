@@ -409,7 +409,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def form_valid(self, form, request):
         if 'edit' in request.POST:
-            # Recalculate the parameters with by amending the block length
+            # Recalculate the parameters by amending the block length
             data = schedule_check(form.cleaned_data, self.object)
             new_form = ScheduleBlockForm(data)
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
@@ -451,7 +451,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
-        utc_date = dark_start.date()
+        utc_date = data.get('utc_date', dark_start.date())
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
@@ -576,7 +576,11 @@ def schedule_submit(data, body, username):
     tracking_number = None
     resp_params = None
     if check_for_block(data, params, body) == 1:
+        # Append another suffix to allow 2 versions of the block. Must
+        # do this to both `data` (so the next Block check works) and to
+        # `params` so the correct group_id will go to the Valhalla/scheduler
         data['group_id'] = data['group_id'] + '_2'
+        params['group_id'] = data['group_id']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
         resp_params = { 'error_msg' : 'Multiple Blocks for same day and site found' }
