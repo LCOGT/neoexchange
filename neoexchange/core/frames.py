@@ -236,14 +236,16 @@ def block_status(block_id):
         logger.error("Block with id %s does not exist" % block_id)
         return False
 
-    # Get authentication token for ODIN
-    logger.debug("Checking request status for %s" % block_id)
+    # Get authentication token for Valhalla
+    logger.info("Checking request status for block/track# %s / %s" % (block_id, tracking_num))
     data = check_request_status(tracking_num)
-    # data is a full LCOGT request dict for this tracking number (now called 'id').
+    # data is a full LCO request dict for this tracking number (now called 'id').
     if not data:
+        logger.warn("Got no data for block/track# %s / %s" % (block_id, tracking_num))
         return False
     # Check if the request was not found
     if data.get('detail', 'None') == u'Not found.':
+        logger.warn("Request not found for block/track# %s / %s" % (block_id, tracking_num))
         return False
     # Check if credentials provided
     if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
@@ -256,31 +258,39 @@ def block_status(block_id):
     for r in data['requests']:
         if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
             images = check_for_archive_images(request_id=r['id'])
-            logger.debug('Request no. %s x %s images' % (r['id'],len(images)))
+            logger.info('Request no. %s x %s images' % (r['id'],len(images)))
             if images:
-                if len(images) >= 3:
-                    exposure_count = sum([x['exposure_count'] for x in r['molecules']])
-                    # Look in the archive at the header of the most recent frame for a timestamp of the observation
-                    last_image_dict = images[0]
-                    last_image_header = lco_api_call(last_image_dict.get('headers', None))
-                    if last_image_header == None:
-                        logger.error('Image header was not returned for %s' % last_image_dict)
-                        return False
-                    try:
-                        last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19],'%Y-%m-%dT%H:%M:%S')
-                    except ValueError:
-                        logger.error('Image datetime stamp is badly formatted %s' % last_image_header['data']['DATE_OBS'])
-                        return False
-                    if (not block.when_observed or last_image > block.when_observed):
-                        block.when_observed = last_image
-                    if block.block_end < datetime.utcnow():
-                        block.active = False
-                    # Add frames and get list of scheduler block IDs used
-                    block_ids = ingest_frames(images, block)
+                exposure_count = sum([x['exposure_count'] for x in r['molecules']])
+                # Look in the archive at the header of the most recent frame for a timestamp of the observation
+                last_image_dict = images[0]
+                last_image_header = lco_api_call(last_image_dict.get('headers', None))
+                if last_image_header == None:
+                    logger.error('Image header was not returned for %s' % last_image_dict)
+                    return False
+                try:
+                    last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19],'%Y-%m-%dT%H:%M:%S')
+                except ValueError:
+                    logger.error('Image datetime stamp is badly formatted %s' % last_image_header['data']['DATE_OBS'])
+                    return False
+                if (not block.when_observed or last_image > block.when_observed):
+                    block.when_observed = last_image
+                # If the block end time has passed and we got all of the images, set to inactive.
+                # N.B. we don't check against acceptability_threshold x expected no. of frames
+                # to avoid race conditions where we have more than e.g. 90% of the frames but
+                # there has been a delay in getting data back, the block_end has passed and
+                # there may be more frames still to come in.
+                if block.block_end < datetime.utcnow() and len(images) == exposure_count:
+                    block.active = False
+                # Add frames and get list of scheduler block IDs used
+                block_ids = ingest_frames(images, block)
+                # If we got at least 3 frames (i.e. usable for astrometry reporting) and
+                # at least frames for at least one block were ingested, update the blocks'
+                # observed count.
+                if len(images) >= 3 and len(block_ids) >= 1:
                     block.num_observed = len(block_ids)
-                    block.save()
-                    status = True
-                    logger.debug("Block %s updated" % block)
-                else:
-                    logger.debug("No update to block %s" % block)
+                block.save()
+                status = True
+                logger.info("Block %s updated" % block)
+            else:
+                logger.info("No update to block %s" % block)
     return status
