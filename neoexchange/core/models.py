@@ -442,6 +442,15 @@ class Block(models.Model):
     def num_frames(self):
         return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
 
+    def num_exposures_found(self):
+        reduced_frames = Frame.objects.filter(block=self.id, frametype=91)
+        ql_frames = Frame.objects.filter(block=self.id, frametype=11)
+        if reduced_frames.count() >= ql_frames.count():
+            exposures = reduced_frames.count()
+        else:
+            exposures = ql_frames.count()
+        return exposures
+
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
 
