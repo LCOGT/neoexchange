@@ -33,7 +33,7 @@ ENV PREFIX /neoexchange
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx python-pip python-devel \
                 supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
-                MySQL-python gcc gcc-gfortran openssl-devel ImageMagick \
+                mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
                 less wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
         && yum -y update
 

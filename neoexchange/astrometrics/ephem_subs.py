@@ -1306,7 +1306,7 @@ def get_sitecam_params(site):
     sinistro_exp_overhead = 38.0
     onem_setup_overhead = 110.0
     twom_setup_overhead = 180.0
-    twom_exp_overhead = 22.5
+    twom_exp_overhead = 10.7+8.5
     point4m_exp_overhead = 13.0
 
     valid_site_codes = LCOGT_site_codes()

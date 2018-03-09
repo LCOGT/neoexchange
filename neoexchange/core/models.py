@@ -54,7 +54,8 @@ OBJECT_TYPES = (
                 ('X','Did not exist'),
                 ('W','Was not interesting'),
                 ('D','Discovery, non NEO'),
-                ('J','Artificial satellite')
+                ('J','Artificial satellite'),
+                ('H','Hyperbolic asteroids')
             )
 
 ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))

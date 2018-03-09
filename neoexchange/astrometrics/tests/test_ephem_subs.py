@@ -1267,7 +1267,7 @@ class TestDetermineSlotLength(TestCase):
 class TestGetSiteCamParams(TestCase):
 
     twom_setup_overhead = 180.0
-    twom_exp_overhead = 22.5
+    twom_exp_overhead = 19.2
     twom_fov = radians(10.0/60.0)
     onem_sbig_fov = radians(15.5/60.0)
     onem_setup_overhead = 110.0
@@ -1497,7 +1497,7 @@ class TestDetermineExpTimeCount(TestCase):
         slot_len = 15
 
         expected_exptime = 1.0
-        expected_expcount = 30
+        expected_expcount = 35
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
 
