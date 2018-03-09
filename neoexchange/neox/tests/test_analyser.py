@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from selenium import webdriver
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_find_images_for_block
-from core.models import Frame, SourceMeasurement
+from core.models import Frame, SourceMeasurement, Candidate
 import time
 
 class AnalyserTest(FunctionalTest):
@@ -29,6 +29,7 @@ class AnalyserTest(FunctionalTest):
                     'filename'      : 'file1.fits',
                     'exptime'       : 40.0,
                     'midpoint'      : '2017-01-01 21:09:51',
+                    'frametype'     : 91,
                     'block'         : self.test_block,
                     'frameid'       : 1
                  }
@@ -39,6 +40,7 @@ class AnalyserTest(FunctionalTest):
                     'filename'      : 'file2.fits',
                     'exptime'       : 40.0,
                     'midpoint'      : '2017-01-01 21:20:00',
+                    'frametype'     : 91,
                     'block'         : self.test_block,
                     'frameid'       : 2
                  }
@@ -62,6 +64,20 @@ class AnalyserTest(FunctionalTest):
 
         self.test_block.num_observed = 1
         self.test_block.save()
+
+        params3 = {
+            'block'   : self.test_block,
+            'cand_id' : 1,
+            'score'   : 17.47,
+            'avg_midpoint': '2017-01-01 21:20:00',
+            'avg_x'     : 2029.354,
+            'avg_y'     : 2066.806,
+            'avg_ra'    : 18.6,
+            'avg_dec'   : -29.1,
+            'speed'     : 0.72,
+            'sky_motion_pa' : 286.2
+        }
+        self.candidate = Candidate.objects.create(**params3)
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
