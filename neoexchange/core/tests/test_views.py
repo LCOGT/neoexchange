@@ -591,11 +591,23 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.views.ingest_frames', mock_ingest_frames)
     @patch('core.frames.lco_api_call', mock_archive_frame_header)
-    def test_block_update_check_status_change(self):
+    def test_block_update_check_status_change_not_enough_frames(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
         myblock = Block.objects.get(id=blockid)
-        self.assertFalse(myblock.active)
+        self.assertTrue(myblock.active)
+
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
+    @patch('core.views.ingest_frames', mock_ingest_frames)
+    @patch('core.frames.lco_api_call', mock_archive_frame_header)
+    def test_block_update_check_status_change_enough_frames(self):
+        self.test_block6.num_exposures = 3
+        self.test_block6.save()
+        blockid = self.test_block6.id
+        resp = block_status(blockid)
+        myblock = Block.objects.get(id=blockid)
+        self.assertTrue(myblock.active)
 
     @patch('core.frames.check_request_status', mock_check_request_status_null)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
