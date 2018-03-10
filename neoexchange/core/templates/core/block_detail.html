@@ -104,7 +104,7 @@
                               <span class="block-status-item">{{blk.block_start|date:"Y-m-d"}}<br/>{{blk.block_start|date:"H:i"}}</span>
                               <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
                               <span class="block-status-item">{{blk.block_end|date:"Y-m-d"}}<br/>{{blk.block_end|date:"H:i"}}</span>
-                              {% if blk.num_observed > 0 and blk.num_frames < 10 and blk.num_candidates > 0 %}
+                              {% if blk.num_observed > 0 and blk.num_exposures_found < 10 and blk.num_candidates > 0 %}
                               <div class="block-control"><a href="{% url 'block-ast' blk.id %}" id="analyse-btn">Analyse Images</a></div>
                               {% if not blk.reported %}
                               <div class="block-control"><a href="{% url 'block-report' blk.id %}">Report</a></div>
