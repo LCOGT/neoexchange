@@ -443,13 +443,13 @@ class Block(models.Model):
         return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
 
     def num_exposures_found(self):
-        reduced_frames = Frame.objects.filter(block=self.id, frametype=91)
-        ql_frames = Frame.objects.filter(block=self.id, frametype=11)
+        reduced_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+        ql_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_QL_FRAMETYPE)
         if reduced_frames.count() >= ql_frames.count():
-            exposures = reduced_frames.count()
+            total_exposure_number = reduced_frames.count()
         else:
-            exposures = ql_frames.count()
-        return exposures
+            total_exposure_number = ql_frames.count()
+        return total_exposure_number
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()

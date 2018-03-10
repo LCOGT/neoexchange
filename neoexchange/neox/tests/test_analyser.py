@@ -29,7 +29,7 @@ class AnalyserTest(FunctionalTest):
                     'filename'      : 'file1.fits',
                     'exptime'       : 40.0,
                     'midpoint'      : '2017-01-01 21:09:51',
-                    'frametype'     : 91,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'block'         : self.test_block,
                     'frameid'       : 1
                  }
@@ -40,7 +40,7 @@ class AnalyserTest(FunctionalTest):
                     'filename'      : 'file2.fits',
                     'exptime'       : 40.0,
                     'midpoint'      : '2017-01-01 21:20:00',
-                    'frametype'     : 91,
+                    'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'block'         : self.test_block,
                     'frameid'       : 2
                  }
