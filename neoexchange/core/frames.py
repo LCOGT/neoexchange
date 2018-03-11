@@ -280,6 +280,7 @@ def block_status(block_id):
                 # there has been a delay in getting data back, the block_end has passed and
                 # there may be more frames still to come in.
                 if block.block_end < datetime.utcnow() and num_archive_frames == exposure_count * 2:
+                    logger.info("All reduced frames found and block end passed - setting to inactive")
                     block.active = False
                 # Add frames and get list of scheduler block IDs used
                 block_ids = ingest_frames(images, block)
@@ -287,6 +288,7 @@ def block_status(block_id):
                 # at least frames for at least one block were ingested, update the blocks'
                 # observed count.
                 if len(images) >= 3 and len(block_ids) >= 1:
+                    logger.info("More than 3 reduced frames found - setting to observed")
                     block.num_observed = len(block_ids)
                 block.save()
                 status = True
