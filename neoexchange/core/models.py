@@ -439,10 +439,12 @@ class Block(models.Model):
             url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
         return url
 
-    def num_frames(self):
+    def num_red_frames(self):
+        '''Returns the total number of reduced frames (quicklook and fully reduced)'''
         return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
 
-    def num_exposures_found(self):
+    def num_unique_red_frames(self):
+        '''Returns the number of *unique* reduced frames (quicklook OR fully reduced)'''
         reduced_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
         ql_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_QL_FRAMETYPE)
         if reduced_frames.count() >= ql_frames.count():
