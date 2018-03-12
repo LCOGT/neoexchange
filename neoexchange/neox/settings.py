@@ -92,7 +92,8 @@ MIDDLEWARE_CLASSES = (
 )
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
+    'neox.auth_backend.ValhallaBackend',
+    'django.contrib.auth.backends.ModelBackend'
     )
 
 ROOT_URLCONF = 'neox.urls'
@@ -196,12 +197,12 @@ LOGGING = {
         }
     },
     'loggers': {
+        # 'django.request': {
+        #     'handlers': ['mail_admins'],
+        #     'level': 'ERROR',
+        #     'propagate': True,
+        # },
         'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'django': {
             'handlers':['console'],
             'propagate': True,
             'level':'ERROR',
@@ -220,7 +221,7 @@ LOGGING = {
         },
         'neox': {
             'handlers':['console'],
-            'level' : 'DEBUG'
+            'level' : 'ERROR'
         }
     }
 }
@@ -253,21 +254,6 @@ DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
 EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
 
-
-###############################
-# DEPRECATED LCO Api settings #
-###############################
-
-REQUEST_API_URL = 'https://lco.global/observe/api/user_requests/%s/requests/'
-FRAMES_API_URL = 'https://lco.global/observe/api/requests/%s/frames/'
-REQUEST_AUTH_API_URL = 'https://lco.global/observe/api/api-token-auth/'
-
-CLIENT_ID = os.environ.get('NEOX_RBAUTH_ID','')
-CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
-RBAUTH_TOKEN_URL = 'https://lco.global/observe/o/token/'
-RBAUTH_PROFILE_API = 'https://lco.global/observe/api/profile/'
-RBAUTH_PROPOSAL_API = 'https://lco.global/observe/api/proposals/'
-
 ####################
 # LCO Api settings #
 ####################
@@ -287,6 +273,7 @@ PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
 PORTAL_REQUEST_URL = 'https://observe.lco.global/userrequests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
 PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN','')
+PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
 
 ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER','')
 ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD','')

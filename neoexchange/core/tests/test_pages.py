@@ -22,11 +22,13 @@ from django.views.generic import ListView
 from django.forms.models import model_to_dict
 from django.contrib.auth.models import User
 from unittest import skipIf
+from mock import patch
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.models import Body, Proposal, Block
 from neox.settings import VERSION
+from neox.tests.mocks import mock_lco_authenticate
 
 class HomePageTest(TestCase):
 
@@ -185,6 +187,7 @@ class ScheduleTargetsPageTest(TestCase):
         self.bart.is_active=1
         self.bart.save()
 
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
         self.assertTrue(self.client.login(username='bart', password='simpson'))
 

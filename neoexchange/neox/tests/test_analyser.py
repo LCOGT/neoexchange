@@ -13,6 +13,7 @@ import time
 
 class AnalyserTest(FunctionalTest):
     def setUp(self):
+#        self.browser = webdriver.Firefox()
 
         super(AnalyserTest,self).setUp()
 
@@ -108,11 +109,12 @@ class AnalyserTest(FunctionalTest):
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
         with self.wait_for_page_load(timeout=10):
-            self.browser.find_element_by_xpath('//button[@id="login-btn"]').click()
+            self.browser.find_element_by_id("login-btn").click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
     @patch('core.frames.find_images_for_block', mock_find_images_for_block)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_analyser_appears(self):
         self.login()
         analyser_url = reverse('block-view', kwargs={'pk':self.test_block.pk})
@@ -120,17 +122,18 @@ class AnalyserTest(FunctionalTest):
 
         self.wait_for_element_with_id('page')
         # Make sure we are on the Block details page
-        self.assertIn('Block details | LCO NEOx', self.browser.title)
+        self.assertIn('Cadence details | LCO NEOx', self.browser.title)
 
         # Click the analyse images button
-        self.browser.find_element_by_xpath('//a[@id="analyse-btn"]').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('analyse-btn').click()
 
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
         # Make sure we are back to the Block details page
         self.assertIn('Light Monitor', self.browser.title)
 
-
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_analyser_not_available(self):
         self.login()
         analyser_url = reverse('block-ast', kwargs={'pk':self.test_block2.pk})

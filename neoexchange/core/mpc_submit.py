@@ -13,7 +13,6 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 from django.template.loader import get_template
-from django.template import Context
 from django.core.mail import send_mail
 from django.conf import settings
 
@@ -22,7 +21,7 @@ from core.frames import measurements_from_block
 def generate_message(blockid, bodyid):
     t = get_template('core/mpc_email.txt')
     data = measurements_from_block(blockid,bodyid)
-    message = t.render(Context(data))
+    message = t.render(data)
 
     # Strip off last double newline but put one back again
     return message.rstrip() + '\n'

@@ -118,7 +118,7 @@ class Test_Panoptes(TestCase):
 
     @patch('core.zoo.download_image', mock_download_image)
     @patch('core.zoo.create_mosaic', mock_create_mosaic)
-    def test_download_images_block(self):
+    def _download_images_block(self):
         frames = [
             {'id':1,},
             {'id':2,}
@@ -127,7 +127,7 @@ class Test_Panoptes(TestCase):
         self.assertEqual(mosaicfiles,['myfile1.jpg','myfile2.jpg','myfile1.jpg','myfile2.jpg'])
         return
 
-    def test_download_image(self):
+    def _download_image(self):
         download_dir = tempfile.mkdtemp()
         current_files = []
         frame = {'id':1, 'url':'https://lco.global/files/null/.thumbnails/feature-spacebook2.jpg/feature-spacebook2-144x81.jpg'}
@@ -148,7 +148,7 @@ class Test_Panoptes(TestCase):
     @patch('core.zoo.Subject', Mock())
     @patch('core.zoo.SubjectSet', Mock())
     @patch('core.zoo.Project', autospec=True)
-    def test_panoptes_add_set(self, mock_project):
+    def _panoptes_add_set(self, mock_project):
         mock_project.list = Mock()
         mock_project.list.workspace = Mock(return_value=[{'id':1}])
         files = ['myfile-1.jpg','myfile2-1.jpg']
@@ -157,14 +157,14 @@ class Test_Panoptes(TestCase):
         self.assertEqual(subject_ids, [])
         return
 
-    def test_convert_coords(self):
+    def _convert_coords(self):
 
         coord_range = convert_coords(200,300,0,640,640, 640,640)
         coord_range_test = (195.0, 205.0, 335.0, 345.0)
         self.assertEqual(coord_range, coord_range_test)
 
 
-    def test_create_panoptes_report(self):
+    def _create_panoptes_report(self):
         subjects = [
             {'quad':4,'id':1},
             {'quad':4,'id':2}
@@ -177,7 +177,7 @@ class Test_Panoptes(TestCase):
         return
 
     @patch('core.zoo.convert_coords',mock_convert_coords)
-    def test_identify_sources(self):
+    def _identify_sources(self):
         subjects = {
             '1': [{'frame':'frame-99-x.fits','x':200,'y':200,'quad':3}],
             '2': [{'frame':'frame-99-x.fits','x':200,'y':200,'quad':3}]
