@@ -603,7 +603,7 @@ def mock_check_for_images(request_id):
       u'id': 4028223,
       u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/bbd6/ogg0m406-kb27-20160531-0063-e00'},
      ]
-    return images
+    return images, 3
 
 def mock_archive_frame_header(archive_headers):
     header = { "data": {
