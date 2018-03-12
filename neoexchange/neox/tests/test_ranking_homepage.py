@@ -92,7 +92,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_row_in_table('id_neo_targets', testlines[1])
         # Because we can't find the Updated icon with a simple text search
         # we look for the data-label for 'Updated?'
-        updated_statuses = ['true','false']
+        updated_statuses = ['Yes','No']
         data_label = 'Updated?'
         self.check_icon_status_elements('id_neo_targets', data_label, updated_statuses)
 
@@ -132,7 +132,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_row_in_table('id_neo_targets', testlines[0])
         # Because we can't find the Updated icon with a simple text search
         # we look for the data-label for 'Updated?'
-        updated_statuses = ['true',]
+        updated_statuses = ['Yes',]
         data_label = 'Updated?'
         self.check_icon_status_elements('id_neo_targets', data_label, updated_statuses)
 

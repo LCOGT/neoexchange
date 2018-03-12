@@ -265,7 +265,7 @@ class SpectralInfo(models.Model):
     taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True,max_length=6)
     tax_scheme          = models.CharField('Taxonomic Scheme',blank=True,choices=TAX_SCHEME_CHOICES, null=True,max_length=2)
     tax_reference       = models.CharField('Reference source for Taxonomic data',max_length=6,choices=TAX_REFERENCE_CHOICES,blank=True, null=True)
-    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=20,blank=True, null=True)
+    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=30,blank=True, null=True)
 
     def make_readable_tax_notes(self):
         text=self.tax_notes
@@ -439,8 +439,19 @@ class Block(models.Model):
             url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
         return url
 
-    def num_frames(self):
+    def num_red_frames(self):
+        '''Returns the total number of reduced frames (quicklook and fully reduced)'''
         return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
+
+    def num_unique_red_frames(self):
+        '''Returns the number of *unique* reduced frames (quicklook OR fully reduced)'''
+        reduced_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+        ql_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_QL_FRAMETYPE)
+        if reduced_frames.count() >= ql_frames.count():
+            total_exposure_number = reduced_frames.count()
+        else:
+            total_exposure_number = ql_frames.count()
+        return total_exposure_number
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()

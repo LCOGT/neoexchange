@@ -219,9 +219,9 @@ class TestBlockStatus(TestCase):
                                 u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/28d0/elp0m411-kb80-20180226-0075-e91?versionId=hZF3yaFjXBvVWpHhQeiYSPKLJIPeHOnD&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=FxTVEMMOT24%2FzLemz1vYennkko4%3D&Expires=1520120748'}]}
                              ]
         if request_id == 9:
-            return []
+            return [], 0
         else:
-            return result_images_out
+            return result_images_out, 3
 
     #Mock Header output read from Valhalla
     #modified Origname for easy tracking
