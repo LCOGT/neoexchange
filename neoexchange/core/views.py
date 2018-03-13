@@ -476,8 +476,11 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Determine filter pattern
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
+    elif data['site_code'] == 'E10' or data['site_code'] == 'F65':
+        filter_pattern = 'solar'
     else:
         filter_pattern = 'w'
+
 
     #Get string of available filters
     available_filters = ''
@@ -498,6 +501,12 @@ def schedule_check(data, body, ok_to_schedule=True):
     exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
+
+    # Determine patern iterations
+    if data.get('pattern_iterations'):
+        pattern_iterations = data.get('pattern_iterations')
+    else:
+        pattern_iterations = exp_count
 
     # Get period and jitter for cadence
     period = data.get('period', None)
@@ -530,8 +539,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'magnitude': magnitude,
         'speed': speed,
         'slot_length': slot_length,
-        'filter_pattern':filter_pattern,
-        'available_filters':available_filters,
+        'filter_pattern': filter_pattern,
+        'pattern_iterations': pattern_iterations,
+        'available_filters': available_filters,
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,

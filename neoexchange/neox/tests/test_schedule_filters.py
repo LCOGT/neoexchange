@@ -124,7 +124,21 @@ class ScheduleObservations(FunctionalTest):
         self.assertEqual(expected_filters,filter_help)
 
         #There is a spot to input the number of iterations (default = number of exposures)
+        pattern_iterations = self.browser.find_element_by_name('pattern_iterations').get_attribute("value")
+        self.assertIn(num_exp, pattern_iterations)
+
+        #cannot update filter pattern with unacceptable filters with incorrect syntax
+        filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
+        filter_pattern_box.clear()
+        filter_pattern_box.send_keys('42,V,v,W,w,gp fg, hj, k-t/g/h')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        # The page refreshes and we get an error
+        error_msg = self.browser.find_element_by_class_name('errorlist').text
+        self.assertIn('Filter Pattern Unacceptable',error_msg)
+
         #Updating filter pattern and number of iterations updates slot length and number of exposures
         #changing slot length changes number of iterations to nearest set 
         #throws warning if cutting off part of iteration, but allows for the block to be submitted.
+        #Default value for Filter = 'solar' when 2m selected
 
