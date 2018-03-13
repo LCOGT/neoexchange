@@ -62,7 +62,8 @@
                         <td class="kv-value">{{ data.speed|floatformat:2 }} '/min</td>
                     </tr>
                     <tr id="id_filter_pattern">
-                        <td class="kv-key">Filter Pattern</td>
+                        <td class="kv-key"><div class="tooltip">Filter Pattern
+                            <span class="tooltiptext">Coma Separated Pattern <br>e.g.: g,r,i,r,g<br> <u>Filters Available at {{data.site_code}}:</u><br></span></div></td>
                         <td class="kv-value">{{ form.filter_pattern }}</td>
                     </tr>
                     <tr id="id_slot_length">

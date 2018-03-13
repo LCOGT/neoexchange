@@ -1293,6 +1293,7 @@ def make_userrequest(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule
+#Split params['filter'] make_molecules, define array here, remove below
     molecule = make_molecule(params)
 
     submitter = ''
