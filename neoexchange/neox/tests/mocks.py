@@ -1,6 +1,7 @@
 from datetime import datetime as real_datetime
 from datetime import datetime
 
+import astropy.units as u
 from django.contrib.auth import authenticate
 
 # Adapted from http://www.ryangallen.com/wall/11/mock-today-django-testing/
@@ -742,3 +743,10 @@ def mock_expand_cadence(user_request):
                      u'start': u'2017-09-02T11:52:30Z'}]}],
                  u'submitter': u'tlister@lcogt.net'}
     return True, cadence
+
+def mock_fetch_sfu(sfu_value=None):
+    if sfu_value is None:
+        sfu = u.def_unit(['sfu', 'solar flux unit'], 10000.0*u.Jy)
+        sfu_value = 42.0 * sfu
+
+    return datetime(2018, 4, 20, 5, 0, 0), sfu_value

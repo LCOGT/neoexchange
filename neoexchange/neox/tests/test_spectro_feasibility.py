@@ -4,7 +4,12 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 
 from django.core.urlresolvers import reverse
+from mock import patch
 
+from neox.tests.mocks import mock_fetch_sfu
+
+# Imported in the form creation so need to patch there
+@patch('core.forms.fetch_sfu', mock_fetch_sfu)
 class SpectroscopicFeasibility(FunctionalTest):
 
     def tearDown(self):
@@ -29,7 +34,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # He clicks the link to go to the Spectroscopy Feasibility page
         with self.wait_for_page_load(timeout=10):
             link.click()
-        self.browser.implicitly_wait(10)
+        self.browser.implicitly_wait(5)
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
@@ -40,6 +45,10 @@ class SpectroscopicFeasibility(FunctionalTest):
         self.assertEqual(len(self.browser.find_elements_by_id('id_slot_length')), 0)
         self.assertEqual(len(self.browser.find_elements_by_link_text('SNR')), 0)
         self.assertEqual(len(self.browser.find_elements_by_link_text('Slot length')), 0)
+
+        # Check the mock is working
+        sfu = self.browser.find_element_by_id('id_sfu').get_attribute("value")
+        self.assertEqual('42.0', sfu)
 
         # He adjusts the settings and calculates the feasibility
         site_choices = Select(self.browser.find_element_by_id('id_instrument_code'))
@@ -54,12 +63,13 @@ class SpectroscopicFeasibility(FunctionalTest):
         self.assertIn('Dark', [option.text for option in moon_choices.options])
 
         moon_choices.select_by_visible_text('Dark')
+        self.browser.implicitly_wait(5)
         magbox.send_keys(Keys.ENTER)
 
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('259.4', snr)
+        self.assertIn('326.5', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
         self.assertIn('11.6', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
@@ -86,7 +96,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('259.4', snr)
+        self.assertIn('321.6', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
         self.assertIn('11.6', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
