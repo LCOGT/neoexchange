@@ -286,7 +286,7 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.views.datetime', MockDateTime)
     def test_schedule_spectroscopy(self):
         MockDateTime.change_date(2015, 4, 20)
-#        self.test_login()
+        self.test_login()
 
         # Bart has heard about a new website for NEOs. He goes to the
         # page of the first target
