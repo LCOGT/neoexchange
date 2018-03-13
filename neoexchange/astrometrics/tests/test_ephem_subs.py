@@ -16,7 +16,6 @@ GNU General Public License for more details.
 from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
-from rise_set.angle import Angle
 from math import radians
 
 #Import module to test
@@ -199,22 +198,22 @@ class TestComputeEphem(TestCase):
         self.comet, created = Body.objects.get_or_create(**comet_params)
 
 
-        self.elements = {'G': 0.15,
-                         'H': 21.0,
-                         'MDM': Angle(degrees=0.74394528),
-                         'arg_perihelion': Angle(degrees=85.19251),
+        self.elements = {'slope': 0.15,
+                         'abs_mag': 21.0,
+                         'MDM': 0.74394528,
+                         'argofperih': 85.19251,
                          'eccentricity': 0.1896865,
-                         'epoch': 57100.0,
-                         'inclination': Angle(degrees=8.34739),
-                         'long_node': Angle(degrees=147.81325),
-                         'mean_anomaly': Angle(degrees=325.2636),
+                         'epochofel': datetime(2015, 3, 19, 0, 0, 0),
+                         'orbinc': 8.34739,
+                         'longascnode': 147.81325,
+                         'meananom': 325.2636,
                          'n_nights': 3,
                          'n_obs': 17,
                          'n_oppos': 1,
                          'name': 'N007r0q',
                          'reference': '',
                          'residual': 0.53,
-                         'semi_axis': 1.2176312,
+                         'meandist': 1.2176312,
                          'type': 'MPC_MINOR_PLANET',
                          'uncertainty': 'U'}
 
@@ -1263,7 +1262,7 @@ class TestDetermineSlotLength(TestCase):
 class TestGetSiteCamParams(TestCase):
 
     twom_setup_overhead = 180.0
-    twom_exp_overhead = 22.5
+    twom_exp_overhead = 19.2
     twom_fov = radians(10.0/60.0)
     onem_sbig_fov = radians(15.5/60.0)
     onem_setup_overhead = 110.0
@@ -1493,7 +1492,7 @@ class TestDetermineExpTimeCount(TestCase):
         slot_len = 15
 
         expected_exptime = 1.0
-        expected_expcount = 30
+        expected_expcount = 35
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
 

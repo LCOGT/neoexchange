@@ -632,6 +632,9 @@ class TestUpdateFITSWCS(TestCase):
         self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
         self.assertEqual(expected_wcserr, wcserr)
 
+        #Clean up outputfile
+        os.remove(fits_file_output)
+
 class TestGetSCAMPXMLInfo(TestCase):
 
     def setUp(self):

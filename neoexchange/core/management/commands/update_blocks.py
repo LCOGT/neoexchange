@@ -7,6 +7,7 @@ class Command(BaseCommand):
     help = 'Update pending blocks if observation requests have been made'
 
     def handle(self, *args, **options):
+        delta = 240
         now = datetime.utcnow()
         now_string = now.strftime('%Y-%m-%d %H:%M')
         blocks = Block.objects.filter(active=True, block_start__lte=now, block_end__lte=now)
@@ -27,11 +28,13 @@ class Command(BaseCommand):
                 sblock.active = False
                 sblock.save()
 
-        # Check for Blocks and SuperBlocks whose end time is more than 2 hours
+        # Check for Blocks and SuperBlocks whose end time is more than delta minutes ago
         # ago and set them inactive
-        inconsistent_blocks = Block.objects.filter(active=True, block_end__lt=now-timedelta(minutes=120))
-        self.stdout.write("==== Clean up %s blocks ====" % inconsistent_blocks.count())
+        inconsistent_blocks = Block.objects.filter(active=True, block_end__lt=now-timedelta(minutes=delta))
+        delta_dt = now-timedelta(minutes=delta)
+        delta_string = delta_dt.strftime("%Y-%m-%d %H:%M")
+        self.stdout.write("==== Clean up %s blocks more than %s mins old (%s)====" % (inconsistent_blocks.count(), delta, delta_string))
         inconsistent_blocks.update(active=False)
-        completed_sblocks = SuperBlock.objects.filter(active=True, block_end__lt=now-timedelta(minutes=120))
-        self.stdout.write("==== Clean up %s SuperBlocks ====" % completed_sblocks.count())
+        completed_sblocks = SuperBlock.objects.filter(active=True, block_end__lt=now-timedelta(minutes=delta))
+        self.stdout.write("==== Clean up %s SuperBlocks more than %s mins old (%s) ====" % (completed_sblocks.count(), delta, delta_string))
         completed_sblocks.update(active=False)
