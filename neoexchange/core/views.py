@@ -472,6 +472,12 @@ def schedule_check(data, body, ok_to_schedule=True):
         emp = [-99 for x in range(5)]
     magnitude = emp[3]
     speed = emp[4]
+    
+    # Determine filter pattern
+    if data.get('filter_pattern'):
+        filter_pattern = data.get('filter_pattern')
+    else:
+        filter_pattern = 'w'
 
     # Determine slot length
     if data.get('slot_length'):
@@ -518,6 +524,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'magnitude': magnitude,
         'speed': speed,
         'slot_length': slot_length,
+        'filter_pattern':filter_pattern,
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,

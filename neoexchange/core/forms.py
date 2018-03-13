@@ -117,6 +117,7 @@ class ScheduleBlockForm(forms.Form):
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     exp_length = forms.FloatField(widget=forms.HiddenInput(), required=False)
     slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
+    filter_pattern = forms.CharField(max_length=20, widget=forms.TextInput(attrs={'size':'10'}))
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())

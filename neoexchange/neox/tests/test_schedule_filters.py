@@ -115,7 +115,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('Schedule this Object',submit)
 
         # there is an option to input a filter Pattern with a default value of 'w'
-        filter_pattern = self.browser.find_element_by_id('id_filter_pattern').get_attribute("value")
+        filter_pattern = self.browser.find_element_by_name('filter_pattern').get_attribute("value")
         self.assertIn('w',filter_pattern)
         
         #There is a help option listing the proper input format and available filters
