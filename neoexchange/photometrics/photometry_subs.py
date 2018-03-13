@@ -312,10 +312,10 @@ def calculate_effective_area(tic_params, dbg=False):
     5) CCD detector efficiency (QE)
     '''
     extinction = extinction_in_band(tic_params)
-    if dbg: print "Extinction per airmass (mag)   %.3f" % (extinction,)
+    if dbg: print "Extinction per airmass (mag), airmass, total ext.   %.3f %.3f %.4f" % (extinction, tic_params.get('airmass', 1.0), extinction*tic_params.get('airmass', 1.0))
 
     area = tic_params['eff_area'].to(u.cm**2)
-    thru_atm  = 10.0**(-extinction/(2.5*tic_params.get('airmass', 1.0)))
+    thru_atm  = 10.0**(-(extinction/2.5)*tic_params.get('airmass', 1.0))
     thru_tel  = tic_params.get('mirror_eff', 0.85)**float(tic_params.get('num_mirrors', 2))
     thru_inst = tic_params['instrument_eff'] * tic_params.get('true_vs_pred', 1.0)
     if tic_params.get('imaging', False) == True:
@@ -550,9 +550,11 @@ def construct_tic_params(instrument, passband='ip'):
     return tic_params
 
 def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', params={}, dbg=False):
-    '''Wrapper routine to calculate the SNR in <exp_time> seconds for an asteroid of
+    """Wrapper routine to calculate the SNR in <exp_time> seconds for an asteroid of
     magnitude <mag> in <passband> for the specific [taxonomy] (defaults to 'Mean' for S+C)
-    and the specific instrument [instrument] (defaults to 'F65-FLOYDS')'''
+    and the specific instrument [instrument] (defaults to 'F65-FLOYDS'). Airmass defaults to 1.2
+    if not specified in `[params['airmass']]`
+    """
 
     desired_passband = 'i'
     new_mag = None
@@ -562,12 +564,14 @@ def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-
     # If filter is not 'i', map to new passband
     if passband != desired_passband:
         new_mag = transform_Vmag(mag, desired_passband, taxonomy)
-        if dbg: print "New mag=", new_mag
+        if dbg: print "New object mag=", new_mag
         new_passband = 'ip'
     else:
         new_mag = mag
 
     tic_params = construct_tic_params(instrument, new_passband)
+    # Add default airmass
+    tic_params['airmass'] = 1.2
     if dbg: print tic_params
 
     # Apply any overrides from passed params dictionary

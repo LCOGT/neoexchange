@@ -675,7 +675,10 @@ def feasibility_check(data, body):
     ast_mag_bandpass = data.get('bandpass', 'V')
     sky_mag_bandpass = data.get('sky_mag_bandpass', 'ip')
     data['sky_mag'] = calc_sky_brightness(sky_mag_bandpass, data['moon_phase'])
-    snr_params = { 'moon_phase' : data['moon_phase'] }
+    snr_params = {
+                    'moon_phase' : data['moon_phase'],
+                    'airmass'    : data['airmass']
+                 }
     data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params)
     calibs = data.get('calibs', 'both')
     slot_length = determine_spectro_slot_length(data['exp_length'], calibs)

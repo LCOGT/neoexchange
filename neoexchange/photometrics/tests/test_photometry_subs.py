@@ -913,7 +913,22 @@ class TestCalcEffectiveArea(SNRTestCase):
         expected_area = 2328.969091176987 * u.cm**2
 # Override values to match SIGNAL
         self.ftn_tic_params['extinction'] = 0.06
+        self.ftn_tic_params['instrument_eff'] = 0.42
         self.ftn_tic_params['ccd_qe'] = 0.56
+
+        area = calculate_effective_area(self.ftn_tic_params)
+
+        self.assertAlmostEqual(expected_area.to_value(u.m**2), area.to_value(u.m**2), 6)
+        self.assertEqual(expected_area.unit, area.unit)
+
+    def test_ftn_I_3(self):
+
+        expected_area = 2203.75689942 * u.cm**2
+# Override values to match SIGNAL
+        self.ftn_tic_params['extinction'] = 0.06
+        self.ftn_tic_params['ccd_qe'] = 0.56
+        self.ftn_tic_params['instrument_eff'] = 0.42
+        self.ftn_tic_params['airmass'] = 2.0
 
         area = calculate_effective_area(self.ftn_tic_params)
 
@@ -1126,7 +1141,7 @@ class TestCalcAsteroidSNR(SNRTestCase):
 
         expected_mag = mag_V - 0.39
         expected_passband = 'ip'
-        expected_snr = 326.7555814430913
+        expected_snr = 324.5039962191117
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
 
@@ -1143,7 +1158,7 @@ class TestCalcAsteroidSNR(SNRTestCase):
 
         expected_mag = mag_V - 0.39
         expected_passband = 'ip'
-        expected_snr = 217.8744397575648
+        expected_snr = 216.37029315891593
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph)
 
@@ -1161,7 +1176,25 @@ class TestCalcAsteroidSNR(SNRTestCase):
 
         expected_mag = mag_V - 0.39
         expected_passband = 'ip'
-        expected_snr = 43.41149179276889
+        expected_snr = 43.1044168884843
+
+        mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph, params=params)
+
+        self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_passband, new_passband)
+        self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+    def test_Vmag_default_taxon_FLOYDS_Gray_high_airmass(self):
+
+        mag_V = 16.0
+        passband = 'V'
+        exp_time = 300
+        spectrograph = 'F65-FLOYDS'
+        params = { 'moon_phase' : 'G', 'airmass' : 2.0 }
+
+        expected_mag = mag_V - 0.39
+        expected_passband = 'ip'
+        expected_snr = 41.8965892271482
 
         mag, new_passband, snr = calc_asteroid_snr(mag_V, passband, exp_time, instrument=spectrograph, params=params)
 

@@ -69,7 +69,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('326.5', snr)
+        self.assertIn('324.3', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
         self.assertIn('11.6', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
@@ -96,7 +96,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('321.6', snr)
+        self.assertIn('319.4', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
         self.assertIn('11.6', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
@@ -106,5 +106,33 @@ class SpectroscopicFeasibility(FunctionalTest):
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('17.1', sky_mag)
 
-        # Satisfied that the observations will be possible no matter the Moon,
+        # He decides to see if the observations would be feasible at higher airmass
+
+        # This requires a browser refresh otherwise everything disappears from
+        # selenium's cache and we die with a StaleElementReferenceException.
+        # But *that* triggers Firefox's 'you must resend the
+        # data' POST handling, so we need to suppress that Alert otherwise we
+        # die due to UnexpectedAlertPresentException...Grrr....
+        self.browser.refresh()
+        self.browser.switch_to.alert.accept()
+        moon_choices = Select(self.browser.find_element_by_id('id_moon_phase'))
+        moon_choices.select_by_visible_text('Bright')
+        airmassbox = self.get_item_input_box_and_clear('id_airmass')
+        airmassbox.send_keys('2.0')
+        airmassbox.send_keys(Keys.ENTER)
+
+        # The page refreshes and a series of values for SNR, new transformed
+        # magnitude, new passband and slot length appear
+        snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
+        self.assertIn('310.7', snr)
+        magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
+        self.assertIn('11.6', magnitude)
+        new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
+        self.assertIn('ip', new_passband)
+        slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
+        self.assertIn('20.5', slot_length)
+        sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
+        self.assertIn('17.1', sky_mag)
+
+        # Satisfied that the observations will be possible no matter the Moon or altitude,
         # he goes ahead and schedules the observations
