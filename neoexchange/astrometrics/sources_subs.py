@@ -1386,6 +1386,78 @@ def submit_block_to_scheduler(elements, params):
 
     return tracking_number, params
 
+def fetch_filter_list(site,page=None):
+    '''Fetches the camera mappings page'''
+
+    if page == None:
+        camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
+        data_file = urllib2.urlopen(camera_mappings)
+        data_out=parse_filter_file(site,data_file)
+        data_file.close
+    else:
+        with open(page, 'r') as input_file:
+            data_out = parse_filter_file(site, input_file)
+    return data_out
+
+def parse_filter_file(site, camera_list=None):
+    '''Parses the camera mappings page and sends back a list of filters at the given site code.
+    '''
+    filter_list=[   "air",
+                    "clear",
+                    "ND",
+                    "Astrodon-UV",
+                    "U",
+                    "B",
+                    "V",
+                    "R",
+                    "I",
+                    "B*ND",
+                    "V*ND",
+                    "R*ND",
+                    "I*ND",
+                    "up",
+                    "gp",
+                    "rp",
+                    "ip",
+                    "Skymapper-VS",
+                    "solar",
+                    "zs",
+                    "Y",
+                    "w"
+                ]
+    site_list = {
+                    'K91' : 'fl16',
+                    'K92' : 'fl14',
+                    'K93' : 'fl06',
+                    'W85' : 'fl15',
+                    'W86' : 'fl04',
+                    'W87' : 'fl03',
+                    'V37' : 'fl05',
+                    'Z21' : 'kb99',
+                    'Z17' : 'kb88',
+                    'Q58' : 'kb98',
+                    'Q59' : 'kb97',
+                    'Q63' : 'fl12',
+                    'Q64' : 'fl11',
+                    'E10' : 'fs01',
+                    'F65' : 'fs02',
+                    'T04' : 'kb27',
+                    'T03' : 'kb82',
+                    'W89' : 'kb95',
+                    'W79' : 'kb26',
+                    'V38' : 'kb80',
+                    'L09' : 'kb96',
+                    }
+    site_filters=[]
+    for line in camera_list:
+        if line[0] !='#':
+            if line[32:36] == site_list[site]:
+                chunks = line[191:].split(',')
+                for filt in filter_list:
+                    if filt in chunks:
+                      site_filters.append(filt)
+    return site_filters
+
 def fetch_taxonomy_page(page=None):
     '''Fetches Taxonomy data to be compared against database. First from PDS, then from Binzel 2004'''
 

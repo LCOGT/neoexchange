@@ -38,7 +38,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockF
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError
+    fetch_NEOCP_observations, PackedError, fetch_filter_list
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -479,6 +479,12 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         filter_pattern = 'w'
 
+    #Get string of available filters
+    available_filters = ''
+    for filt in fetch_filter_list(data['site_code']):
+        available_filters = available_filters + filt + ', '
+    available_filters = available_filters[:-2]
+
     # Determine slot length
     if data.get('slot_length'):
         slot_length = data.get('slot_length')
@@ -525,6 +531,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'speed': speed,
         'slot_length': slot_length,
         'filter_pattern':filter_pattern,
+        'available_filters':available_filters,
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
@@ -595,66 +602,6 @@ def schedule_submit(data, body, username):
         # Record block and submit to scheduler
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
-
-def filter_list_check(site):
-    filter_list=[   "100um-Pinhole",
-                    "150um-Pinhole",
-                    "200um-Pinhole",
-                    "400um-Pinhole",
-                    "air",
-                    "clear",
-                    "ND",
-                    "opaque",
-                    "Astrodon-UV",
-                    "U",
-                    "B",
-                    "V",
-                    "R",
-                    "I",
-                    "B*ND",
-                    "V*ND",
-                    "R*ND",
-                    "I*ND",
-                    "D51",
-                    "Ha",
-                    "H-Alpha",
-                    "H-Beta",
-                    "OIII",
-                    "up",
-                    "gp",
-                    "rp",
-                    "ip",
-                    "Skymapper-VS",
-                    "solar",
-                    "zs",
-                    "Y",
-                    "w"
-                ]
-    site_lists = {
-                        'K91' : [4,9,10,11,12,13,23,24,25,26,29,30,31],
-                        'K92' : [],
-                        'K93' : [4,9,10,11,12,13,23,24,25,26,29,30,31],
-                        'W85' : [4,6,9,10,11,12,13,23,24,25,26,29,30,31],
-                        'W86' : [],
-                        'W87' : [4,9,10,11,12,13,23,24,25,26,29,30,31],
-                        'V37' : [4,6,9,10,11,12,13,14,15,16,17,23,24,25,26,29,30,31],
-                        'Z21' : [4,7,10,11,23,24,25,26,29,31],
-                        'Z17' : [4,7,10,11,23,24,25,26,29,31],
-                        'Q58' : [4,7,10,11,23,24,25,26,29,31],
-                        'Q59' : [4,7,10,11,23,24,25,26,29,31],
-                        'Q63' : [4,9,10,11,12,13,23,24,25,26,29,30,31],
-                        'Q64' : [],
-                        'E10' : [4,8,10,11,12,13,18,20,21,22,23,24,25,26,27,28,29,30],
-                        'F65' : [4,8,10,11,12,13,18,20,21,22,23,24,25,26,27,28,29,30],
-                        'T04' : [4,7,10,11,23,24,25,26,29,31],
-                        'T03' : [4,7,10,11,23,24,25,26,29,31],
-                        'W89' : [4,7,10,11,23,24,25,26,29,31],
-                        'W79' : [4,7,10,11,23,24,25,26,29,31],
-                        'V38' : [4,7,10,11,23,24,25,26,29,31],
-                        'L09' : [4,7,10,11,23,24,25,26,29,31],
-                        }
-    site_filters = [filter_list[x] for x in site_lists[site]]
-    return site_filters
 
 def ranking(request):
 

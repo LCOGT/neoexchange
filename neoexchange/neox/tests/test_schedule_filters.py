@@ -119,6 +119,9 @@ class ScheduleObservations(FunctionalTest):
         self.assertIn('w',filter_pattern)
         
         #There is a help option listing the proper input format and available filters
+        expected_filters = 'air, ND, U, B, V, R, I, B*ND, V*ND, R*ND, I*ND, up, gp, rp, ip, zs, Y, w'
+        filter_help = self.browser.find_element_by_id('id_filter_pattern').find_element_by_class_name('kv-key').get_attribute("name")
+        self.assertEqual(expected_filters,filter_help)
 
         #There is a spot to input the number of iterations (default = number of exposures)
         #Updating filter pattern and number of iterations updates slot length and number of exposures
