@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.1.5
+
+Update selenium; get tests working again; add functionality to ingest targets from text file list of target names.
+
 ### 2.1.4
 
 Better separate Block Registration from SuperBlock Registation so that Blocks only see frames taken during that individual Block and Block times are separate from SuperBlock Start and End times.
