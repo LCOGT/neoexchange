@@ -5,18 +5,21 @@ from django.db.models import Q
 from sys import argv
 from astrometrics.sources_subs import fetch_list_targets, random_delay
 from core.views import update_MPC_orbit
+from core.models import ORIGINS
 
+origin_help = '['+', '.join(['"{}":{}'.format(i[0],i[1]) for i in ORIGINS])+']'
 
 class Command(BaseCommand):
     help = 'Fetch targets text file or command line list'
 
     def add_arguments(self, parser):
         parser.add_argument('list_targets', nargs='+', help='Filenames and/or List of Targets to Ingest')
-        parser.add_argument('--origin', help='Origin code for Target list: "M": Minor Planet Center, "N":NASA, "S":Spaceguard, "D":NEODSYS, "G":Goldstone, "A":Arecibo, "R":Goldstone & Arecibo, "L":LCOGT, "Y":Yarkovsky, "T":Trojan')
+        parser.add_argument('--origin', help='Origin code for Target list: '+ origin_help)
 
     def handle(self, *args, **options):
-        usage = 'Incorrect usage. Usage must include: --origin ["M": Minor Planet Center, "N":NASA, "S":Spaceguard, "D":NEODSYS, "G":Goldstone, "A":Arecibo, "R":Goldstone & Arecibo, "L":LCOGT, "Y":Yarkovsky, "T":Trojan]'
-        if options['origin'] not in ["M","N","S","D","G","A","R","L","Y","T"]:
+        usage = 'Incorrect usage. Usage must include: --origin ' + origin_help
+        origin_choices = [x[0] for x in ORIGINS]
+        if options['origin'] not in origin_choices:
             raise CommandError(usage)
         self.stdout.write("==== Fetching New Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         list_targets = fetch_list_targets(options['list_targets'])
