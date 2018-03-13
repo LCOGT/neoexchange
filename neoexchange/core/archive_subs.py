@@ -145,10 +145,11 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
             reduced_data.append(datum)
         elif datum['RLEVEL'] == 11:
             quicklook_data.append(datum)
+    num_total_frames = len(quicklook_data) + len(reduced_data)
     if len(reduced_data) >= len(quicklook_data):
-        return reduced_data
+        return reduced_data, num_total_frames
     else:
-        return quicklook_data
+        return quicklook_data, num_total_frames
 
 def fetch_observations(tracking_num):
     '''

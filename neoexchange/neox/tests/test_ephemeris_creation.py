@@ -141,7 +141,7 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 21 11:30 20 10 38.15 +29 56 52.1 20.4 2.45 89.0 +20 0.09 108 -47 -999 -05:09'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 21 11:35 20 10 39.09 +29 56 52.4 20.4 2.45 89.0 +21 0.09 108 -48 -999 -05:04'
+            '2015 04 21 11:45 20 10 40.97 +29 56 52.8 20.4 2.44 89.0 +24 0.10 108 -49 -999 -04:54'
         )
 
 
@@ -197,10 +197,10 @@ class NewVisitorTest(FunctionalTest):
 
         # Check the values are correct for F65
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 28 10:20 20 40 36.53 +29 36 33.1 20.6 2.08 93.4 +52 0.72 136 -15 +058 -02:53'
+            '2015 04 28 10:15 20 40 35.73 +29 36 33.7 20.6 2.09 93.3 +51 0.72 136 -14 +056 -02:58'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 28 10:25 20 40 37.32 +29 36 32.5 20.6 2.08 93.4 +54 0.72 136 -16 +059 -02:48'
+            '2015 04 28 10:30 20 40 38.12 +29 36 31.9 20.6 2.08 93.5 +55 0.72 136 -17 +060 -02:43'
         )
 
 
@@ -262,15 +262,12 @@ class NewVisitorTest(FunctionalTest):
         # Check the default settings are not present
         self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 89.2 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
         # Check values before the altitude cutoff are not present
-        self.assertNotIn('2015 09 03 17:20 23 53 43.05 -12 42 22.9 19.3 1.84 211.7 +2 0.68 56 -53 -999 Limits', [row.text for row in rows])
+        self.assertNotIn('2015 09 03 17:30 23 53 42.39 -12 42 38.6 19.3 1.84 211.8 +4 0.68 56 -51 -999 Limits', [row.text for row in rows])
 
         # Check the values are correct for K92
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 03 19:35 23 53 33.81 -12 45 53.8 19.3 1.87 213.7 +30 0.67 57 -26 +039 -04:05'
+            '2015 09 03 19:45 23 53 33.10 -12 46 09.4 19.3 1.87 213.8 +33 0.67 58 -24 +041 -03:55'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 03 19:40 23 53 33.46 -12 46 01.6 19.3 1.87 213.7 +32 0.67 58 -25 +040 -04:00'
-        )
-        self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 04 03:20 23 52 59.34 -12 57 44.9 19.3 1.83 215.1 +35 0.64 61 +41 +022 +03:41'
+            '2015 09 04 03:30 23 52 58.62 -12 57 59.8 19.3 1.83 215.0 +33 0.64 62 +41 +019 +03:51'
         )

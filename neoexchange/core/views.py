@@ -314,7 +314,7 @@ def ephemeris(request):
         dark_start, dark_end = determine_darkness_times(
             data['site_code'], data['utc_date'])
         ephem_lines = call_compute_ephem(
-            body_elements, dark_start, dark_end, data['site_code'], 300, data['alt_limit'])
+            body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
     else:
         return render(request, 'core/home.html', {'form': form})
     return render(request, 'core/ephem.html',
@@ -437,7 +437,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def form_valid(self, form, request):
         if 'edit' in request.POST:
-            # Recalculate the parameters with by amending the block length
+            # Recalculate the parameters by amending the block length
             data = schedule_check(form.cleaned_data, self.object)
             new_form = ScheduleBlockForm(data)
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
@@ -486,7 +486,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
-        utc_date = dark_start.date()
+        utc_date = data.get('utc_date', dark_start.date())
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
@@ -631,7 +631,14 @@ def schedule_submit(data, body, username):
     tracking_number = None
     resp_params = None
     if check_for_block(data, params, body) == 1:
+        # Append another suffix to allow 2 versions of the block. Must
+        # do this to both `data` (so the next Block check works) and to
+        # `params` so the correct group_id will go to the Valhalla/scheduler
         data['group_id'] = data['group_id'] + '_2'
+        params['group_id'] = data['group_id']
+    elif check_for_block(data, params, body) >= 2:
+        # Multiple blocks found
+        resp_params = { 'error_msg' : 'Multiple Blocks for same day and site found' }
     if check_for_block(data, params, body) == 0:
         # Record block and submit to scheduler
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
@@ -779,21 +786,26 @@ def record_block(tracking_number, params, form_data, body):
                          'active'   : True,
                        }
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
+        i = 0
         for request in params.get('request_numbers', []):
+            #cut off json UTC timezone remnant
+            no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
+            no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : params['site'].lower(),
                              'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'groupid'  : form_data['group_id'],
-                             'block_start' : form_data['start_time'],
-                             'block_end'   : form_data['end_time'],
+                             'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
+                             'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
                              'tracking_number' : request,
                              'num_exposures'   : form_data['exp_count'],
                              'exp_length'      : form_data['exp_length'],
                              'active'   : True
                            }
             pk = Block.objects.create(**block_kwargs)
+            i += 1
         return True
     else:
         return False
@@ -1064,8 +1076,10 @@ def update_crossids(astobj, dbg=False):
         # Find out if the details have changed, if they have, save a revision
         # But first check if it is a comet or NEO and came from somewhere other
         # than the MPC. In this case, leave it active.
-        if body.source_type in ['N', 'C'] and body.origin != 'M':
+        if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
             kwargs['active'] = True
+        if kwargs['source_type'] in ['C', 'H']:
+            kwargs['elements_type'] = 'MPC_COMET'
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
@@ -1139,6 +1153,9 @@ def clean_crossid(astobj, dbg=False):
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
             objtype = 'N'
+            if 'A/' in desig:
+                # Check if it is an inactive hyperbolic asteroid
+                objtype = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
         else:
@@ -1208,6 +1225,8 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             # Comet, update/overwrite a bunch of things
             params['elements_type'] = 'MPC_COMET'
             params['source_type'] = 'C'
+            if 'A/2' in elements.get('obj_id', ''):
+                params['source_type'] = 'H'
             # The MPC never seems to have H values for comets so we remove it
             # from the dictionary to avoid replacing what was there before.
             if params['abs_mag'] == None:

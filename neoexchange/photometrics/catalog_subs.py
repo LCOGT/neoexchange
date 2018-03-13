@@ -202,10 +202,13 @@ def cross_match(FITS_table, cat_table, cat_name = "UCAC4", cross_match_diff_thre
                             rmag_cat_1 = rmag_table_1_temp
                             rmag_cat_2 = rmag_table_2_temp
                             rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
+                            rmag_error = None
                             if table1_has_errs:
-                                rmag_error = rmag_err_table_1[y] / 100.0
+                                if rmag_table_1[y] != '--':
+                                    rmag_error = float(rmag_err_table_1[y]) / 100.0
                             else:
-                                rmag_error = rmag_err_table_2[z] / 100.0
+                                if rmag_table_2[z] != '--':
+                                    rmag_error = float(rmag_err_table_2[z]) / 100.0
                 z += 1
         if ra_min_diff < cross_match_diff_threshold and dec_min_diff < cross_match_diff_threshold:
             cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_error, rmag_diff))

@@ -132,6 +132,7 @@ class ScheduleBlockForm(forms.Form):
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
+    utc_date = forms.DateField(input_formats=['%Y-%m-%d',], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
     spectroscopy = forms.BooleanField(required=False,widget=forms.HiddenInput())
@@ -160,6 +161,8 @@ class ScheduleBlockForm(forms.Form):
             raise forms.ValidationError("There must be more than 1 exposure")
         elif self.cleaned_data['exp_length'] < 0.1:
             raise forms.ValidationError("Exposure length is too short")
+        elif self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
+            raise forms.ValidationError("Jitter must be larger than slot length")
 
 class ScheduleSpectraForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
