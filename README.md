@@ -6,7 +6,7 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ### 2.1.5
 
-Update selenium; get tests working again; add functionality to ingest targets from text file list of target names.
+Update Selenium to 3.11 and Django to 1.11. Refactor functional tests for Valhalla/JavaScript-based authentication. Add functionality to ingest targets from text file list of target names.
 
 ### 2.1.4
 
