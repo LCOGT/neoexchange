@@ -18,7 +18,9 @@ from django import forms
 from django.db.models import Q
 from .models import Body, Proposal, Block
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
+from astrometrics.sources_subs import fetch_filter_list
 import logging
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,6 @@ SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
          ('W89','CTIO, Chile (LSC - W89,W79; 0.4m)'),
          ('V38','McDonald, Texas (ELP - V38; 0.4m)'),
          ('L09','Sutherland, S. Africa (CPT - L09; 0.4m)'))
-
 
 class EphemQuery(forms.Form):
 
@@ -117,8 +118,8 @@ class ScheduleBlockForm(forms.Form):
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     exp_length = forms.FloatField(widget=forms.HiddenInput(), required=False)
     slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
-    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size':'30'}))
-    pattern_iterations = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
+    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size':'20'}))
+    pattern_iterations = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}))
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
@@ -141,12 +142,22 @@ class ScheduleBlockForm(forms.Form):
         else:
             return self.cleaned_data['end_time']
 
-#    def clean_filters(self):
-#        pattern = self.cleaned_data['filter_pattern']
-#        if pattern != 'w':
-#            raise forms.ValidationError("Unacceptable Filter Patern")
+    def clean_filter_pattern(self):
+        pattern = self.cleaned_data['filter_pattern']
+        stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
+        chunks = stripped_pattern.split(',')
+        chunks=filter(None, chunks)
+        return ",".join(chunks)
 
     def clean(self):
+        pattern = self.cleaned_data['filter_pattern']
+        site = self.cleaned_data['site_code']
+        stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
+        chunks = stripped_pattern.split(',')
+        chunks=filter(None, chunks)
+        for chunk in chunks:
+            if chunk not in fetch_filter_list(site):
+                raise ValidationError(_('%(chunk)s is not an acceptable filter at this site.'), params={'chunk': chunk}, )
         if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:
@@ -166,3 +177,7 @@ class MPCReportForm(forms.Form):
             self.cleaned_data['block'] = block
         except:
             raise forms.ValidationError('Block ID %s is not valid' % self.cleaned_data['block_id'])
+
+
+
+
