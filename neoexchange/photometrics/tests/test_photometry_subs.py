@@ -345,6 +345,41 @@ class TestTransformVmag(TestCase):
 
         self.assertEqual(expected_mag, new_mag)
 
+    def test_taxon_Dtype_to_r(self):
+
+        V = 15.1
+        new_passband = 'r'
+        taxonomy = 'D'
+
+        expected_mag = V-0.246
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Dtype_to_i(self):
+
+        V = 12.5
+        new_passband = 'i'
+        taxonomy = 'd'
+
+        expected_mag = V-0.460
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
+
+    def test_taxon_Dtype_to_w(self):
+
+        V = 14
+        new_passband = 'w'
+        taxonomy = 'D'
+
+        expected_mag = V-0.191
+
+        new_mag = transform_Vmag(V, new_passband, taxonomy)
+
+        self.assertEqual(expected_mag, new_mag)
 
 class TestSkyBrightness(TestCase):
 
