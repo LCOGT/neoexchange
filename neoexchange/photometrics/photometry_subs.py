@@ -36,7 +36,7 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
     's', 'c', 'q', 'x' - individual taxonomies
 
     Table 2. Asteroid magnitude transformations from Pan-STARRS1 AB filter magnitudes to the
-    Johnson-Cousin V system based on Tonry et al. (2012). Solar colors are also included for
+    Johnson-Cousin V system based on Veres et al. (2015). Solar colors are also included for
     reference.
     Taxonomy    V-gP1   V-rP1   V-iP1   V-zP1   V-yP1   V-wP1
     Sun         -0.217  0.183   0.293   0.311   0.311   0.114
