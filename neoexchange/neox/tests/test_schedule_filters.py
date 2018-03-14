@@ -135,7 +135,7 @@ class ScheduleObservations(FunctionalTest):
             self.browser.find_element_by_id("id_edit_button").click()
         # The page refreshes and we get an error
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('42 is not an acceptable filter at this site.',error_msg)
+        self.assertIn('42,v,W,fg,hj,k-t,g,h are not acceptable filters at this site.',error_msg)
 
         #Updating filter pattern and number of iterations updates slot length and number of exposures
         #changing slot length changes number of iterations to nearest set 

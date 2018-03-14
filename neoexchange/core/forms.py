@@ -154,10 +154,13 @@ class ScheduleBlockForm(forms.Form):
         site = self.cleaned_data['site_code']
         stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
         chunks = stripped_pattern.split(',')
-        chunks=filter(None, chunks)
-        for chunk in chunks:
-            if chunk not in fetch_filter_list(site):
-                raise ValidationError(_('%(chunk)s is not an acceptable filter at this site.'), params={'chunk': chunk}, )
+        chunks = filter(None, chunks)
+        bad_filters = [x for x in chunks if x not in fetch_filter_list(site)]
+        if len(bad_filters) > 0:
+            if len(bad_filters) == 1:
+                raise ValidationError(_('%(bad)s is not an acceptable filter at this site.'), params={'bad': ",".join(bad_filters)}, )
+            else:
+                raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
         if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:
