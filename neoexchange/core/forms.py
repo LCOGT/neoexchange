@@ -119,7 +119,7 @@ class ScheduleBlockForm(forms.Form):
     exp_length = forms.FloatField(widget=forms.HiddenInput(), required=False)
     slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
     filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size':'20'}))
-    pattern_iterations = forms.IntegerField(widget=forms.NumberInput(attrs={'size': '5'}))
+    pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
@@ -152,9 +152,7 @@ class ScheduleBlockForm(forms.Form):
     def clean(self):
         pattern = self.cleaned_data['filter_pattern']
         site = self.cleaned_data['site_code']
-        stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
-        chunks = stripped_pattern.split(',')
-        chunks = filter(None, chunks)
+        chunks = pattern.split(',')
         bad_filters = [x for x in chunks if x not in fetch_filter_list(site)]
         if len(bad_filters) > 0:
             if len(bad_filters) == 1:

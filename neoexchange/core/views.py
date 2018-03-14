@@ -455,6 +455,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
+        if dark_end <= datetime.utcnow():
+            dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
+            utc_date = data['utc_date'] + timedelta(days=1)
     # Determine the semester boundaries for the current time and truncate the dark time and
     # therefore the windows appropriately.
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
@@ -481,7 +484,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         filter_pattern = 'w'
 
-
     #Get string of available filters
     available_filters = ''
     for filt in fetch_filter_list(data['site_code']):
@@ -503,10 +505,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         ok_to_schedule = False
 
     # Determine patern iterations
-    if data.get('pattern_iterations'):
-        pattern_iterations = data.get('pattern_iterations')
-    else:
-        pattern_iterations = exp_count
+    pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
 
     # Get period and jitter for cadence
     period = data.get('period', None)
