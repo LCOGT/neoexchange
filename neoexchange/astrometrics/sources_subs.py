@@ -1164,7 +1164,7 @@ def make_molecule(params):
                 'instrument_name'   : params['instrument'],
                 }
 
-    if params.get('spectroscopy', False) == True:
+    if params.get('spectroscopy', False):
         # Autoguider mode, one of ON, OFF, or OPTIONAL.
         # Must be uppercase now and ON for spectra, and OFF for arcs and lamp flats
         ag_mode = 'ON'
@@ -1372,7 +1372,6 @@ def configure_defaults(params):
         if params['site_code'] == 'V38':
             # elp-aqwa-0m4a kb80
             params['observatory'] = 'aqwa'
-
 
     return params
 

@@ -82,7 +82,13 @@ def transform_Vmag(mag_V, passband, taxonomy='Mean'):
 def calc_sky_brightness(bandpass, moon_phase, dark_sky_mag=None):
     '''Calculates the new sky brightness in the given <bandpass> for the
     given <moon_phase>. The [dark_sky_mag] can be given, or if None, it
-    will be determined from a table of defaults (taken from SIGNAL)'''
+    will be determined from a table of defaults (taken from SIGNAL).
+    Changes in magnitude with sky brightness come from the IAC and SIGNAL.
+
+    References
+    ----------
+    http://www.ing.iac.es/Astronomy/observing/conditions/#sky
+    '''
 
     sky_mags = default_dark_sky_mags()
 
@@ -92,7 +98,7 @@ def calc_sky_brightness(bandpass, moon_phase, dark_sky_mag=None):
 
     sky_mag = None
     if bandpass in sky_mags.keys():
-        if dark_sky_mag == None:
+        if dark_sky_mag is None:
             dark_sky_mag = sky_mags[bandpass]
         moon_phase = moon_phase.upper()
         delta = 0.0
