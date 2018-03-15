@@ -141,7 +141,7 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
     for datum in data:
         headers_url = u'%s%d/headers' % (settings.ARCHIVE_FRAMES_URL, datum['id'])
         datum[u'headers'] = headers_url
-        if datum['RLEVEL'] == 91:
+        if (datum['RLEVEL'] == 91 and obstype=='EXPOSE') or (datum['RLEVEL'] in [90,0] and obstype=='SPECTRUM'):
             reduced_data.append(datum)
         elif datum['RLEVEL'] == 11:
             quicklook_data.append(datum)

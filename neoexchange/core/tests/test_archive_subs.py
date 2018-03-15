@@ -216,8 +216,13 @@ class TestCheckArchiveImages(TestCase):
         obstype = 'SPECTRUM'
 
         expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
-                          'redlevels' : [90, 0]}
+                          'redlevels' : [90, 0],
+                          'files' : ['LCOEngineering_0001391169_ftn_20180111_58130.tar.gz', 'ogg2m001-en06-20180110-0005-e00.fits.fz',]
+                          }
+
         frames, num_frames = check_for_archive_images(request_id, obstype)
 
         self.assertEqual(2, num_frames)
-        self.assertEqual(expected_data, frames)
+        self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in frames])
+        self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in frames])
+        self.assertEqual(expected_data['files'], [x['filename'] for x in frames])
