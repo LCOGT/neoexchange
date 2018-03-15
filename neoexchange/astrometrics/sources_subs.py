@@ -1449,13 +1449,17 @@ def parse_filter_file(site, camera_list=None):
                     'L09' : 'kb96',
                     }
     site_filters=[]
-    for line in camera_list:
-        if line[0] !='#':
-            if line[32:36] == site_list[site]:
-                chunks = line[191:].split(',')
-                for filt in filter_list:
-                    if filt in chunks:
-                      site_filters.append(filt)
+    try:
+        for line in camera_list:
+            if line[0] !='#':
+                if line[32:36] == site_list[site]:
+                    chunks = line[191:].split(',')
+                    for filt in filter_list:
+                        if filt in chunks:
+                          site_filters.append(filt)
+    except:
+        msg = "Could not find filter list"
+        logger.error(msg)
     return site_filters
 
 def fetch_taxonomy_page(page=None):
