@@ -193,3 +193,31 @@ class TestFetchArchiveFrames(TestCase):
         self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in data])
         self.assertEqual([request_id, request_id], [x['REQNUM'] for x in data])
         self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in data])
+
+@patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+class TestCheckArchiveImages(TestCase):
+
+    def test_fetch_imaging(self):
+        request_id = 42
+
+        expected_data = { 'obstypes' : ['EXPOSE',],
+                          'redlevels' : [91, ],
+                          'files' : ['ogg0m406-kb27-20160531-0063-e91.fits.fz',]
+                        }
+        frames, num_frames = check_for_archive_images(request_id)
+
+        self.assertEqual(2, num_frames)
+        self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in frames])
+        self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in frames])
+        self.assertEqual(expected_data['files'], [x['filename'] for x in frames])
+
+    def test_fetch_spectra(self):
+        request_id = 1391169
+        obstype = 'SPECTRUM'
+
+        expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
+                          'redlevels' : [90, 0]}
+        frames, num_frames = check_for_archive_images(request_id, obstype)
+
+        self.assertEqual(2, num_frames)
+        self.assertEqual(expected_data, frames)
