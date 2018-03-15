@@ -388,8 +388,6 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
-
-
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     '''
     Takes the hidden form input from ScheduleParameters, validates them as a double check.

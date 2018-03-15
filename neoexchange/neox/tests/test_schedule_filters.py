@@ -124,18 +124,20 @@ class ScheduleObservations(FunctionalTest):
         self.assertEqual(expected_filters,filter_help)
 
         #There is a spot to input the number of iterations (default = number of exposures)
-        pattern_iterations = self.browser.find_element_by_name('pattern_iterations').get_attribute("value")
+        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
         self.assertIn(num_exp, pattern_iterations)
 
         #Updating filter pattern updates the number of iterations
-        itterations_expected = 4
+        iterations_expected = u'4.0'
         filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
         filter_pattern_box.clear()
         filter_pattern_box.send_keys('V,I,R')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
-        pattern_iterations = self.browser.find_element_by_name('pattern_iterations').get_attribute("value")
-        self.assertIn(itterations_expects,pattern_iterations)
+        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
+        self.assertEqual(iterations_expected,pattern_iterations)
+
+
 
         #cannot update filter pattern with unacceptable filters with incorrect syntax
         filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
@@ -148,7 +150,4 @@ class ScheduleObservations(FunctionalTest):
         error_msg = self.browser.find_element_by_class_name('errorlist').text
         self.assertIn('42,v,W,fg,hj,k-t,g,h are not acceptable filters at this site.',error_msg)
 
-        #changing slot length changes number of iterations to nearest set 
-        #throws warning if cutting off part of iteration, but allows for the block to be submitted.
-        #Default value for Filter = 'solar' when 2m selected
 

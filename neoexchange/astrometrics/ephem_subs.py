@@ -787,7 +787,7 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
     (round_exptime, full_exptime) =  estimate_exptime(speed, pixel_scale, 5.0)
 
     if ( round_exptime > max_exp_time ):
-        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds" % \
+        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % \
             (round_exptime, max_exp_time))
         round_exptime = full_exptime = max_exp_time
     if ( round_exptime < 10.0 ):
