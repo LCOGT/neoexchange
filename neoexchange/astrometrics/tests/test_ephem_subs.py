@@ -1451,11 +1451,28 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 2.52
         site_code = 'W85'
         slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = 60.0
         expected_expcount = 12
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_bright_1m(self):
+        speed = 2.52
+        site_code = 'W85'
+        slot_len = 10.0
+        name = 'WH2845B'
+        mag = 12.58
+
+        expected_exptime = 35.0
+        expected_expcount = 6
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1464,11 +1481,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 23.5
         site_code = 'K91'
         slot_len = 20
+        name = 'WH2845B'
+        mag = 16.58
 
         expected_exptime = 6.5
         expected_expcount = 24
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1477,11 +1496,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 0.235
         site_code = 'W85'
         slot_len = 20
+        name = 'WH2845B'
+        mag = 21.2
 
         expected_exptime = 234.5
         expected_expcount = 4
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1490,11 +1511,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 1800.0
         site_code = 'E10'
         slot_len = 15
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = 1.0
         expected_expcount = 35
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1503,11 +1526,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 0.18
         site_code = 'F65'
         slot_len = 2
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = None
         expected_expcount = None
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1516,11 +1541,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 2.52
         site_code = 'Z21'
         slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = 20.0
         expected_expcount = 37
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1529,11 +1556,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 23.5
         site_code = 'Z21'
         slot_len = 20
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = 2.0
         expected_expcount = 72
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)

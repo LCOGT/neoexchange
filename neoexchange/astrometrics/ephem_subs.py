@@ -695,8 +695,8 @@ BRIGHTEST_ALLOWABLE_MAG = 10
 
 def get_mag_mapping(site_code):
     '''Defines the site-specific mappings from target magnitude to desired
-    slot length (in minutes). A null dictionary is returned if the site name
-    isn't recognized'''
+    slot length (in minutes) assuming minimum exposure count is 4. A null
+    dictionary is returned if the site name isn't recognized'''
 
     twom_site_codes = ['F65', 'E10']
     good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
@@ -709,6 +709,9 @@ def get_mag_mapping(site_code):
     if site_code in twom_site_codes:
 # Mappings for FTN/FTS. Assumes Spectral+Solar filter
         mag_mapping = {
+                17   : 5.5,
+                17.5 : 7.5,
+                18   : 10,
                 19   : 15,
                 20   : 20,
                 20.5 : 22.5,
@@ -720,6 +723,10 @@ def get_mag_mapping(site_code):
     elif site_code in good_onem_site_codes:
 # Mappings for McDonald. Assumes kb74+w
         mag_mapping = {
+                16.0 : 5.5,
+                16.5 : 6.5,
+                17   : 9.5,
+                17.5 : 12,
                 18   : 15,
                 20   : 20,
                 20.5 : 22.5,
@@ -731,6 +738,10 @@ def get_mag_mapping(site_code):
     elif site_code in bad_onem_site_codes:
 # COJ normally has bad seeing, allow more time
         mag_mapping = {
+                16.0 : 6.5,
+                16.5 : 9.5,
+                17   : 12,
+                17.5 : 15,
                 18   : 17.5,
                 19.5 : 20,
                 20   : 22.5,
@@ -797,18 +808,26 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
 
     return round_exptime
 
-def determine_exp_time_count(speed, site_code, slot_length_in_mins):
+def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name, mag):
     exp_time = None
     exp_count = None
+    min_exp_count = 4
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
+
+    slot_length = slot_length_in_mins * 60.0
+
+    #Set maximum exposure time to value that will achieve approximately S/N = 100 for objects fainter than 18 in V,R,I,gp,rp,ip.
+    #This allows for LC with reasonable cadence for bright, slow moving objects.
+    max_exp_time = min(2*(determine_slot_length(target_name, mag, site_code)*60. - setup_overhead - (exp_overhead * float(min_exp_count))) / min_exp_count, site_max_exp_time)
+    #pretify max exposure time to nearest 5 seconds
+    max_exp_time = int(round(max_exp_time/5))*5
 
     exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
 
-    slot_length = slot_length_in_mins * 60.0
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
-    if exp_count < 4:
-        exp_count = 4
+    if exp_count < min_exp_count:
+        exp_count = min_exp_count
         exp_time = (slot_length - setup_overhead - (exp_overhead * float(exp_count))) / exp_count
         logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count ))
     logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % \

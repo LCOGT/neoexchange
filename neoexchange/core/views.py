@@ -498,12 +498,15 @@ def schedule_check(data, body, ok_to_schedule=True):
             slot_length = 0.
             ok_to_schedule = False
     # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, body_elements['provisional_name'], magnitude)
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
     # Determine patern iterations
-    pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
+    if exp_count:
+        pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
+    else:
+        pattern_iterations = None
 
     # Get period and jitter for cadence
     period = data.get('period', None)
