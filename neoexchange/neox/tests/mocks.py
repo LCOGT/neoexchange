@@ -44,6 +44,42 @@ class MockDateTime(datetime):
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
 
+def mock_odin_login(username, password):
+    return {}
+
+def mock_lco_authenticate(request, username, password):
+    return None
+
+def mock_lco_login(email, password, request=None):
+    profile = {'username': 'bart',
+    'first_name': 'Bart',
+    'last_name': 'Simpson',
+    'email': 'bsimpson@lcogt.net',
+    'id': 24,
+    'userprofile': {'user_title': 'Mx',
+        'onsky': False,
+        'institution_name': 'LCOGT',
+        'timezone': 'UTC'}
+    }
+    proposals = [{'allocation': [
+            {'semester_code': '2015B',
+            'std_allocation': 100.0,
+            'telescope_class': '1m0',
+            'too_allocation': 0.0,
+            'too_time_used': 0.0,
+            'std_time_used': 0.02},
+            {'semester_code': '2015B',
+            'std_allocation': 100.0,
+            'telescope_class': '2m0',
+            'too_allocation': 0.0,
+            'too_time_used': 0.0,
+            'std_time_used': 1.57055555555556}],
+        'code': 'LCO2015A-009',
+        'id': 4,
+        'name': 'LCOGT NEO Follow-up Network'}
+        ]
+    return profile, proposals
+
 def mock_check_request_status(tracking_num):
     status = { u'created' : u'2015-10-21T19:07:26.023049Z',
                 u'group_id' : u'Fake group',
@@ -506,18 +542,6 @@ def mock_check_request_status_cadence(tracking_num):
 
     return status
 
-class MockCandidate(object):
-
-    def __init__(cls, id=None, block=None, cand_id=None):
-        pass
-
-    @classmethod
-    def unpack_dets(cls):
-        detections = [ (1, 1, 308, 2457652.799609, 22.753496, -21.67525, 1278.9119873046875, 1086.0040283203125, 21.280000686645508, 1.190000057220459, 1.0110000371932983, -37.599998474121094, 0.019999999552965164, 3.7699999809265137, 1, 2.130000114440918, 0.1979999989271164, 41.400001525878906, 4.599999904632568, 4.5),
-       (1, 2, 321, 2457652.80265, 22.753466, -21.67479, 1278.9820556640625, 1086.0469970703125, 21.06999969482422, 1.2999999523162842, 1.0770000219345093, 42.79999923706055, 0.019999999552965164, 3.890000104904175, 1, 2.130000114440918, 0.1979999989271164, 41.400001525878906, 4.599999904632568, 4.5)]
-        return detections
-
-
 def mock_check_request_status_null(tracking_num):
     return []
 
@@ -555,55 +579,78 @@ def mock_check_for_images_bad_date(request_id):
 def mock_ingest_frames(images, block):
     return ['99999']
 
-def mock_lco_authenticate(request, username, password):
-    return None
+def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
+    if 'SPECTRUM' in archive_url:
+        data = [{
+                  u'OBSTYPE': u'SPECTRUM',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 90,
+                  u'basename': u'LCOEngineering_0001391169_ftn_20180111_58130',
+                  u'filename': u'LCOEngineering_0001391169_ftn_20180111_58130.tar.gz',
+                  u'id': 7783593,
+                  u'related_frames': [7780755],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/372a/LCOEngineering_0001391169_ftn_20180111_58130?versionId=eK7.aDucOKWaiM3AhTPZ8AGDMxBFdNtH&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=x8mve2svKirG7BAiWaEBTyFsHrY%3D&Expires=1521319897',
+                 },
+                 {
+                  u'OBSTYPE': u'SPECTRUM',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 0,
+                  u'basename': u'ogg2m001-en06-20180110-0005-e00',
+                  u'filename': u'ogg2m001-en06-20180110-0005-e00.fits.fz',
+                  u'id': 7780755,
+                  u'related_frames': [7783593],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/dd9f/ogg2m001-en06-20180110-0005-e00?versionId=c1X8nfL_LSwptv_c0m7dultGCOfVJJr3&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=fjmzi9KK%2FqNi3DnvjyEjSP%2BJG8o%3D&Expires=1521319897',
+                 }]
+    else:
+        data = [
+                 {u'OBSTYPE': u'EXPOSE',
+                  u'RLEVEL': 91,
+                  u'filename': u'ogg0m406-kb27-20160531-0063-e91.fits.fz',
+                  u'id': 4029371,
+                  u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/32de/ogg0m406-kb27-20160531-0063-e91'},
+                 {u'OBSTYPE': u'EXPOSE',
+                  u'RLEVEL': 11,
+                  u'filename': u'ogg0m406-kb27-20160531-0063-e11.fits.fz',
+                  u'id': 4029372,
+                  u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/e00c/ogg0m406-kb27-20160531-0063-e11'},
+                 {u'OBSTYPE': u'EXPOSE',
+                  u'RLEVEL': 00,
+                  u'filename': u'ogg0m406-kb27-20160531-0063-e00.fits.fz',
+                  u'id': 4028223,
+                  u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/bbd6/ogg0m406-kb27-20160531-0063-e00'},
+                ]
+    return data
 
-def mock_lco_login(email, password, request=None):
-    profile = {'username': 'bart',
-    'first_name': 'Bart',
-    'last_name': 'Simpson',
-    'email': 'bsimpson@lcogt.net',
-    'id': 24,
-    'userprofile': {'user_title': 'Mx',
-        'onsky': False,
-        'institution_name': 'LCOGT',
-        'timezone': 'UTC'}
-    }
-    proposals = [{'allocation': [
-            {'semester_code': '2015B',
-            'std_allocation': 100.0,
-            'telescope_class': '1m0',
-            'too_allocation': 0.0,
-            'too_time_used': 0.0,
-            'std_time_used': 0.02},
-            {'semester_code': '2015B',
-            'std_allocation': 100.0,
-            'telescope_class': '2m0',
-            'too_allocation': 0.0,
-            'too_time_used': 0.0,
-            'std_time_used': 1.57055555555556}],
-        'code': 'LCO2015A-009',
-        'id': 4,
-        'name': 'LCOGT NEO Follow-up Network'}
-        ]
-    return profile, proposals
+def mock_check_for_images(request_id, obstype='EXPOSE'):
 
-def mock_check_for_images(request_id):
-    images = [
-    {u'filename': u'ogg0m406-kb27-20160531-0063-e90_cat.fits',
-      u'headers': u'https://archive-api.lcogt.net/frames/4029371/headers/',
-      u'id': 4029371,
-      u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/32de/ogg0m406-kb27-20160531-0063-e90_cat'},
-     {u'filename': u'ogg0m406-kb27-20160531-0063-e90.fits',
-      u'headers': u'https://archive-api.lcogt.net/frames/4029372/headers/',
-      u'id': 4029372,
-      u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/e00c/ogg0m406-kb27-20160531-0063-e90'},
-     {u'filename': u'ogg0m406-kb27-20160531-0063-e00.fits.fz',
-      u'headers': u'https://archive-api.lcogt.net/frames/4028223/headers/',
-      u'id': 4028223,
-      u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/bbd6/ogg0m406-kb27-20160531-0063-e00'},
-     ]
-    return images, 3
+    if obstype == 'SPECTRUM':
+        images = [
+                  {u'filename': u'LCOEngineering_0001391169_ftn_20180111_58130.tar.gz',
+                   u'id': 7783593,
+                   u'headers': u'https://archive-api.lcogt.net/frames/7783593/headers/',
+                   u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/372a/LCOEngineering_0001391169_ftn_20180111_58130?versionId=eK7.aDucOKWaiM3AhTPZ8AGDMxBFdNtH&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=x8mve2svKirG7BAiWaEBTyFsHrY%3D&Expires=1521319897',
+                  },
+                  {u'filename': u'ogg2m001-en06-20180110-0005-e00.fits.fz',
+                   u'id': 7780755,
+                   u'headers': u'https://archive-api.lcogt.net/frames/7780755/headers/',
+                   u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/dd9f/ogg2m001-en06-20180110-0005-e00?versionId=c1X8nfL_LSwptv_c0m7dultGCOfVJJr3&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=fjmzi9KK%2FqNi3DnvjyEjSP%2BJG8o%3D&Expires=1521319897',
+                  }]
+    else:
+        images = [
+                  {u'filename': u'ogg0m406-kb27-20160531-0063-e90_cat.fits',
+                   u'headers': u'https://archive-api.lcogt.net/frames/4029371/headers/',
+                   u'id': 4029371,
+                   u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/32de/ogg0m406-kb27-20160531-0063-e90_cat'},
+                  {u'filename': u'ogg0m406-kb27-20160531-0063-e90.fits',
+                   u'headers': u'https://archive-api.lcogt.net/frames/4029372/headers/',
+                   u'id': 4029372,
+                   u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/e00c/ogg0m406-kb27-20160531-0063-e90'},
+                  {u'filename': u'ogg0m406-kb27-20160531-0063-e00.fits.fz',
+                   u'headers': u'https://archive-api.lcogt.net/frames/4028223/headers/',
+                   u'id': 4028223,
+                   u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/bbd6/ogg0m406-kb27-20160531-0063-e00'},
+                 ]
+    return images, len(images)
 
 def mock_archive_frame_header(archive_headers):
     header = { "data": {
@@ -625,9 +672,6 @@ def mock_find_images_for_block(blockid):
     data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
     return data
 
-def mock_odin_login(username, password):
-    return {}
-
 def mock_fetch_observations(tracking_num):
     images = ['1','2','3']
     return images
@@ -635,6 +679,17 @@ def mock_fetch_observations(tracking_num):
 def mock_run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 
     return -1, None
+
+class MockCandidate(object):
+
+    def __init__(cls, id=None, block=None, cand_id=None):
+        pass
+
+    @classmethod
+    def unpack_dets(cls):
+        detections = [ (1, 1, 308, 2457652.799609, 22.753496, -21.67525, 1278.9119873046875, 1086.0040283203125, 21.280000686645508, 1.190000057220459, 1.0110000371932983, -37.599998474121094, 0.019999999552965164, 3.7699999809265137, 1, 2.130000114440918, 0.1979999989271164, 41.400001525878906, 4.599999904632568, 4.5),
+       (1, 2, 321, 2457652.80265, 22.753466, -21.67479, 1278.9820556640625, 1086.0469970703125, 21.06999969482422, 1.2999999523162842, 1.0770000219345093, 42.79999923706055, 0.019999999552965164, 3.890000104904175, 1, 2.130000114440918, 0.1979999989271164, 41.400001525878906, 4.599999904632568, 4.5)]
+        return detections
 
 def mock_expand_cadence(user_request):
 

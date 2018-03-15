@@ -231,7 +231,7 @@ class SpectroBlocksListValidationTest(FunctionalTest):
     def test_can_view_blocks(self):
         self.insert_spectro_blocks()
 
-        # A new user, Timo, comes along to the site
+        # A new user, Jose, comes along to the site
         self.browser.get(self.live_server_url)
 
         # He sees a link to 'active blocks'
