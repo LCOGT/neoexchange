@@ -261,6 +261,7 @@ def block_status(block_id):
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
+                obs_types = [x['type'] for x in r['molecules']]
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
                 last_image_header = lco_api_call(last_image_dict.get('headers', None))
@@ -290,9 +291,12 @@ def block_status(block_id):
                 if len(images) >= 3 and len(block_ids) >= 1:
                     logger.info("More than 3 reduced frames found - setting to observed")
                     block.num_observed = len(block_ids)
+                elif len(images) >=1 and 'SPECTRUM' in obs_types and len(block_ids) >= 1:
+                    logger.info("Spectra data found - setting to observed")
+                    block.num_observed = len(block_ids)
                 block.save()
                 status = True
-                logger.info("Block %s updated" % block)
+                logger.info("Block #%d (%s) updated" % (block.id, block))
             else:
                 logger.info("No update to block %s" % block)
     return status
