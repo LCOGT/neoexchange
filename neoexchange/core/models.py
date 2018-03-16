@@ -416,11 +416,19 @@ class SuperBlock(models.Model):
 
 class Block(models.Model):
 
+    OPT_IMAGING = 0
+    OPT_SPECTRA = 1
+    OBSTYPE_CHOICES = (
+                        (OPT_IMAGING, 'Optical imaging'),
+                        (OPT_SPECTRA, 'Optical spectra'),
+                      )
+
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES)
     body            = models.ForeignKey(Body)
     proposal        = models.ForeignKey(Proposal)
     superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
+    obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)

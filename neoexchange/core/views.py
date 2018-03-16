@@ -697,11 +697,15 @@ def record_block(tracking_number, params, form_data, body):
             #cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
+            obstype = Block.OPT_IMAGING
+            if params.get('spectroscopy', False):
+                obstype = Block.OPT_SPECTRA
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : params['site'].lower(),
                              'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                             'obstype'  : obstype,
                              'groupid'  : form_data['group_id'],
                              'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
                              'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),

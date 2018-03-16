@@ -45,7 +45,8 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     run_sextractor_make_catalog, find_block_for_frame, \
     make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
 from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, \
+    Candidate, SuperBlock, SpectralInfo
 from core.forms import EphemQuery
 
 # Disable logging during testing
@@ -731,6 +732,7 @@ class TestRecordBlock(TestCase):
         blocks = Block.objects.all()
         self.assertEqual(1, sblocks.count())
         self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_SPECTRA, blocks[0].obstype)
         # Check the SuperBlock has the broader time window but the Block(s) have
         # the (potentially) narrower per-Request windows
         self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
@@ -749,6 +751,7 @@ class TestRecordBlock(TestCase):
         blocks = Block.objects.all()
         self.assertEqual(1, sblocks.count())
         self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
         # Check the SuperBlock has the broader time window but the Block(s) have
         # the (potentially) narrower per-Request windows
         self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
