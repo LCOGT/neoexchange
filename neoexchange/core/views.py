@@ -565,6 +565,10 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     return resp
 
+def split_filter_data(filter_pattern):
+    filter_array = filter_pattern.split(',')
+    filter_array = filter(None, filter_array)
+    return filter_array
 
 def schedule_submit(data, body, username):
 
@@ -587,6 +591,7 @@ def schedule_submit(data, body, username):
               'priority': data.get('priority', 15),
               'submitter_id': username,
 
+              'filter_pattern': split_filter_data(data['filter_pattern']),
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],
               'site_code': data['site_code'],

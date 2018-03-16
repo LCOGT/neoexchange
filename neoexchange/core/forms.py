@@ -143,22 +143,29 @@ class ScheduleBlockForm(forms.Form):
             return self.cleaned_data['end_time']
 
     def clean_filter_pattern(self):
-        pattern = self.cleaned_data['filter_pattern']
-        stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
-        chunks = stripped_pattern.split(',')
-        chunks=filter(None, chunks)
-        return ",".join(chunks)
+        try:
+            pattern = self.cleaned_data['filter_pattern']
+            stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
+            chunks = stripped_pattern.split(',')
+            chunks=filter(None, chunks)
+            cleaned_filter_pattern = ",".join(chunks)
+        except KeyError as e:
+            cleaned_filter_pattern = ','
+        return cleaned_filter_pattern
 
     def clean(self):
-        pattern = self.cleaned_data['filter_pattern']
         site = self.cleaned_data['site_code']
-        chunks = pattern.split(',')
-        bad_filters = [x for x in chunks if x not in fetch_filter_list(site)]
-        if len(bad_filters) > 0:
-            if len(bad_filters) == 1:
-                raise ValidationError(_('%(bad)s is not an acceptable filter at this site.'), params={'bad': ",".join(bad_filters)}, )
-            else:
-                raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
+        try:
+            pattern = self.cleaned_data['filter_pattern']
+            chunks = pattern.split(',')
+            bad_filters = [x for x in chunks if x not in fetch_filter_list(site)]
+            if len(bad_filters) > 0:
+                if len(bad_filters) == 1:
+                    raise ValidationError(_('%(bad)s is not an acceptable filter at this site.'), params={'bad': ",".join(bad_filters)}, )
+                else:
+                    raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
+        except KeyError as e:
+            raise ValidationError(_('Dude, you had to actively input a bunch of spaces here to see this. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site))}, )
         if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:

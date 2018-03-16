@@ -1107,7 +1107,7 @@ def make_window(params):
 
     return window
 
-def make_molecule(params):
+def make_molecule(params, exp_filter):
     molecule = {
                 'type' : params['exp_type'],
                 'exposure_count'  : params['exp_count'],
@@ -1115,7 +1115,7 @@ def make_molecule(params):
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
-                'filter'      : params['filter'],
+                'filter'      : exp_filter,
                 'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
@@ -1226,9 +1226,11 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
 def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
+                  'K91' : 'CPT',
                   'K92' : 'CPT',
                   'K93' : 'CPT',
                   'Q63' : 'COJ',
+                  'Q64' : 'COJ',
                   'W85' : 'LSC',
                   'W86' : 'LSC',
                   'W87' : 'LSC',
@@ -1236,7 +1238,9 @@ def configure_defaults(params):
                   'W79' : 'LSC', # Code for aqwb-0m4a
                   'F65' : 'OGG',
                   'E10' : 'COJ',
+                  'Z17' : 'TFN',
                   'Z21' : 'TFN',
+                  'T03' : 'OGG',
                   'T04' : 'OGG',
                   'Q58' : 'COJ', # Code for 0m4a
                   'Q59' : 'COJ',
@@ -1249,18 +1253,15 @@ def configure_defaults(params):
     params['site'] = site_list[params['site_code']]
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-    params['filter'] = 'w'
     params['exp_type'] = 'EXPOSE'
 
     if params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
-        params['filter'] = 'solar'
-    elif params['site_code'] in ['Z21', 'W89', 'W79', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
+    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
-        params['filter'] = 'w'
         params['binning'] = 2 # 1 is the Right Answer...
 # We are not currently doing Aqawan-specific binding for LSC (or TFN or OGG) but
 # the old code is here if needed again
@@ -1294,7 +1295,10 @@ def make_userrequest(elements, params):
     logger.debug("Window=%s" % window)
 # Create Molecule
 #Split params['filter'] make_molecules, define array here, remove below
-    molecule = make_molecule(params)
+    molecule_list = []
+#    if len(params['filter_pattern']) > 1:
+#    for exp in params['exp_count']
+#        make_molecule(params,)
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
