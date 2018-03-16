@@ -130,7 +130,8 @@ table.datatable  tr:hover {
     position: absolute;
     z-index: 1;
     bottom: 125%;
-    left: 50%;
+    left: 100%;
+    font-size: 11px;
     margin-left: -60px;
     opacity: 0;
     transition: opacity 0.5s;
@@ -138,10 +139,11 @@ table.datatable  tr:hover {
 }
 
 .tooltip .tooltiptext::after {
+
     content: "";
     position: absolute;
     top: 100%;
-    left: 15%;
+    left: 25%;
     margin-left: -5px;
     border-width: 5px;
     border-style: solid;

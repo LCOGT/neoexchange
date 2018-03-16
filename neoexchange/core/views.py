@@ -505,6 +505,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Determine patern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
+        pattern_iterations = round(pattern_iterations,2)
     else:
         pattern_iterations = None
 

@@ -137,7 +137,15 @@ class ScheduleObservations(FunctionalTest):
         pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
         self.assertEqual(iterations_expected,pattern_iterations)
 
-
+        #updating the slot length increases the number of iterations
+        iterations_expected = u'20.0'
+        filter_pattern_box = self.browser.find_element_by_name('slot_length')
+        filter_pattern_box.clear()
+        filter_pattern_box.send_keys('100')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
+        self.assertEqual(iterations_expected,pattern_iterations)
 
         #cannot update filter pattern with unacceptable filters with incorrect syntax
         filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
