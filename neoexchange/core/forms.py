@@ -148,6 +148,8 @@ class ScheduleBlockForm(forms.Form):
             stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
             chunks = stripped_pattern.split(',')
             chunks=filter(None, chunks)
+            if chunks.count(chunks[0]) == len(chunks):
+                chunks = [chunks[0]]
             cleaned_filter_pattern = ",".join(chunks)
         except KeyError as e:
             cleaned_filter_pattern = ','
@@ -165,7 +167,7 @@ class ScheduleBlockForm(forms.Form):
                 else:
                     raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
         except KeyError as e:
-            raise ValidationError(_('Dude, you had to actively input a bunch of spaces here to see this. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site))}, )
+            raise ValidationError(_('Dude, you had to actively input a bunch of spaces and nothing else to see this error. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site))}, )
         if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:

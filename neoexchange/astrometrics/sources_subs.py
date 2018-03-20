@@ -1107,10 +1107,10 @@ def make_window(params):
 
     return window
 
-def make_molecule(params, exp_filter):
+def make_molecule(params, exp_filter, exp_count):
     molecule = {
                 'type' : params['exp_type'],
-                'exposure_count'  : params['exp_count'],
+                'exposure_count'  : exp_count,
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
@@ -1294,11 +1294,15 @@ def make_userrequest(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule
-#Split params['filter'] make_molecules, define array here, remove below
+#Split params['filter'] make_molecules, define list here, remove below
+    filter_list=params['filter_pattern']
     molecule_list = []
-#    if len(params['filter_pattern']) > 1:
-#    for exp in params['exp_count']
-#        make_molecule(params,)
+    molecule_list.append(make_molecule(params))
+#    if len(filter_list) == 1:
+#        molecule_list.append(make_molecule(params, filter_list[0], params['exp_count']))
+#    else:
+#        for exp in params['exp_count']
+#            molecule_list.append(make_molecule(params,))
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
@@ -1313,7 +1317,7 @@ def make_userrequest(elements, params):
             "location": location,
             "constraints": constraints,
             "target": target,
-            "molecules": [molecule],
+            "molecules": molecule_list,
             "windows": [window],
             "observation_note": note,
         }

@@ -21,6 +21,7 @@ from math import radians
 #Import module to test
 from astrometrics.ephem_subs import *
 from core.models import Body
+from core.views import split_filter_data
 
 
 class TestGetMountLimits(TestCase):
@@ -1113,7 +1114,7 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'f65'
         name = 'WH2845B'
         mag = 17.58
-        expected_length = 15
+        expected_length = 10
         slot_length = determine_slot_length(name, mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
@@ -1121,7 +1122,7 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'E10'
         name = 'WH2845B'
         mag = 17.58
-        expected_length = 15
+        expected_length = 10
         slot_length = determine_slot_length(name, mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
@@ -1261,17 +1262,17 @@ class TestDetermineSlotLength(TestCase):
 
 class TestGetSiteCamParams(TestCase):
 
-    twom_setup_overhead = 180.0
-    twom_exp_overhead = 19.2
+    twom_setup_overhead = 240.0
+    twom_exp_overhead = 19.0
     twom_fov = radians(10.0/60.0)
     onem_sbig_fov = radians(15.5/60.0)
-    onem_setup_overhead = 110.0
+    onem_setup_overhead = 90.0
     onem_exp_overhead = 15.5
     sinistro_exp_overhead = 38.0
     onem_sinistro_fov = radians(26.4/60.0)
     point4m_fov = radians(29.1/60.0)
-    point4m_exp_overhead = 13.0
-    point4m_setup_overhead = 110.0
+    point4m_exp_overhead = 14.0
+    point4m_setup_overhead = 90.0
     max_exp = 300.0
 
     def test_bad_site(self):
@@ -1457,7 +1458,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 60.0
         expected_expcount = 12
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, ['V'])
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1472,7 +1473,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 35.0
         expected_expcount = 6
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, ['V'])
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1487,7 +1488,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 6.5
         expected_expcount = 24
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, ['V'])
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1499,10 +1500,10 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 21.2
 
-        expected_exptime = 234.5
+        expected_exptime = 235.0
         expected_expcount = 4
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, ['V'])
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1515,9 +1516,9 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 17.58
 
         expected_exptime = 1.0
-        expected_expcount = 35
+        expected_expcount = 32
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, ['V'])
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1532,7 +1533,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = None
         expected_expcount = None
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, ['V'])
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1545,9 +1546,9 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 17.58
 
         expected_exptime = 20.0
-        expected_expcount = 37
+        expected_expcount = 36
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, ['V'])
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1560,9 +1561,9 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 17.58
 
         expected_exptime = 2.0
-        expected_expcount = 72
+        expected_expcount = 68
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, ['V'])
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1723,3 +1724,145 @@ class TestLCOGT_domes_to_site_codes(TestCase):
         code = LCOGT_domes_to_site_codes('ogg', 'clma', '0m4c')
 
         self.assertEqual(expected_code, code)
+
+class Testmolecule_overhead(TestCase):
+
+    def test_single_filter(self):
+        filter_pattern = 'V'
+        filter_list = split_filter_data(filter_pattern)
+        expected_overhead = (2. + 5. + 11.)*1
+        self.assertEqual(expected_overhead,molecule_overhead(filter_list, 10))
+
+    def test_multiple_individual_filters(self):
+        filter_pattern = 'V,R,I'
+        filter_list = split_filter_data(filter_pattern)
+        expected_overhead = (2. + 5. + 11.)*10.
+        self.assertEqual(expected_overhead,molecule_overhead(filter_list, 10))
+
+    def test_multiple_repeated_filters(self):
+        filter_pattern = 'V,R,I,V,R,I'
+        filter_list = split_filter_data(filter_pattern)
+        expected_overhead =  (2. + 5. + 11.)*10.
+        self.assertEqual(expected_overhead,molecule_overhead(filter_list, 10))
+
+    def test_multiple_filter_strings(self):
+        filter_pattern = 'V,V,V,R,R,R,I,I,I,'
+        filter_list = split_filter_data(filter_pattern)
+        expected_overhead = (2. + 5. + 11.)*5.
+        self.assertEqual(expected_overhead,molecule_overhead(filter_list, 14))
+
+    def test_short_block(self):
+        filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
+        filter_list = split_filter_data(filter_pattern)
+        expected_overhead = (2. + 5. + 11.)*2.
+        self.assertEqual(expected_overhead,molecule_overhead(filter_list, 5))
+
+    def test_start_end_loop(self):
+        filter_pattern = 'V,V,R,R,V,V'
+        filter_list = split_filter_data(filter_pattern)
+        expected_overhead = (2. + 5. + 11.)*7.
+        self.assertEqual(expected_overhead,molecule_overhead(filter_list, 19))
+
+class TestDetermineExpTimeCount_WithFilters(TestCase):
+
+    def test_1m_alternating(self):
+        speed = 2.52
+        site_code = 'W85'
+        slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
+        filter_pattern = 'V,I'
+        filter_list = split_filter_data(filter_pattern)
+
+        expected_exptime = 60.0
+        expected_expcount = 10
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_list)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_1m_long_pattern(self):
+        speed = 2.52
+        site_code = 'W85'
+        slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
+        filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
+        filter_list = split_filter_data(filter_pattern)
+
+        expected_exptime = 60.0
+        expected_expcount = 12
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_list)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_1m_short_pattern(self):
+            speed = 2.52
+            site_code = 'W85'
+            slot_len = 22.5
+            name = 'WH2845B'
+            mag = 17.58
+            filter_pattern = 'V,V,I,I'
+            filter_list = split_filter_data(filter_pattern)
+
+            expected_exptime = 60.0
+            expected_expcount = 11
+
+            exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_list)
+
+            self.assertEqual(expected_exptime, exp_time)
+            self.assertEqual(expected_expcount, exp_count)
+
+    def test_0m4_alternating_pattern(self):
+            speed = 23.5
+            site_code = 'Z21'
+            slot_len = 20
+            name = 'WH2845B'
+            mag = 17.58
+            filter_pattern = 'V,I,V,I'
+            filter_list = split_filter_data(filter_pattern)
+
+            expected_exptime = 2.0
+            expected_expcount = 32
+
+            exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_list)
+
+            self.assertEqual(expected_exptime, exp_time)
+            self.assertEqual(expected_expcount, exp_count)
+
+    def test_0m4_long_pattern(self):
+            speed = 23.5
+            site_code = 'Z21'
+            slot_len = 20
+            name = 'WH2845B'
+            mag = 17.58
+            filter_pattern = 'V,V,V,V,V,V,R,R,R,R,R,R,I,I,I,I,I,I,I'
+            filter_list = split_filter_data(filter_pattern)
+
+            expected_exptime = 2.0
+            expected_expcount = 58
+
+            exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_list)
+
+            self.assertEqual(expected_exptime, exp_time)
+            self.assertEqual(expected_expcount, exp_count)
+
+    def test_0m4_short_pattern(self):
+            speed = 23.5
+            site_code = 'Z21'
+            slot_len = 20
+            name = 'WH2845B'
+            mag = 17.58
+            filter_pattern = 'V,V,I,I'
+            filter_list = split_filter_data(filter_pattern)
+
+            expected_exptime = 2.0
+            expected_expcount = 43
+
+            exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_list)
+
+            self.assertEqual(expected_exptime, exp_time)
+            self.assertEqual(expected_expcount, exp_count)

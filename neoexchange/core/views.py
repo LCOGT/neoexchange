@@ -55,6 +55,7 @@ import requests
 from urlparse import urljoin
 import numpy as np
 from django.conf import settings
+from itertools import groupby
 
 logger = logging.getLogger(__name__)
 
@@ -498,7 +499,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             slot_length = 0.
             ok_to_schedule = False
     # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, body_elements['provisional_name'], magnitude)
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, body_elements['provisional_name'], magnitude, split_filter_data(filter_pattern))
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
@@ -566,9 +567,12 @@ def schedule_check(data, body, ok_to_schedule=True):
     return resp
 
 def split_filter_data(filter_pattern):
-    filter_array = filter_pattern.split(',')
-    filter_array = filter(None, filter_array)
-    return filter_array
+    filter_bits = filter_pattern.split(',')
+    filter_bits = filter(None, filter_bits)
+    filter_list = []
+    for f, m in groupby(filter_bits):
+       filter_list.append(list(m))
+    return filter_list
 
 def schedule_submit(data, body, username):
 
