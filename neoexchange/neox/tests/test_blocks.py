@@ -218,13 +218,14 @@ class SpectroBlocksListValidationTest(FunctionalTest):
                          'site'     : 'ogg',
                          'body'     : self.body,
                          'proposal' : self.test_proposal,
+                         'superblock' : self.test_sblock,
+                         'obstype'  : Block.OPT_SPECTRA,
                          'block_start' : '2015-04-20 13:00:00',
                          'block_end'   : '2015-04-21 03:00:00',
                          'tracking_number' : '12345',
                          'num_exposures' : 1,
                          'exp_length' : 1800.0,
                          'active'   : True,
-                         'superblock' : self.test_sblock
                        }
         self.test_block = Block.objects.create(**block_params)
 
@@ -257,5 +258,5 @@ class SpectroBlocksListValidationTest(FunctionalTest):
             'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
         testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
                      u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
-                     u'3 N999r0q OGG 2m0-Spec LCOEngineering 4242 1x1800.0 secs No Active 1 / 1 1 / 1']
+                     u'3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 0 / 1 0 / 1']
         self.check_for_row_in_table('id_blocks', testlines[2])

@@ -353,9 +353,12 @@ class SuperBlock(models.Model):
         return ", ".join(qs)
 
     def get_telclass(self):
-        qs = Block.objects.filter(superblock=self.id).values_list('telclass', flat=True).distinct()
+        qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
-        return ", ".join(qs)
+        # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
+        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_IMAGING), '') for x in qs]
+
+        return ", ".join(class_obstype)
 
     def get_obsdetails(self):
         qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
@@ -400,6 +403,12 @@ class SuperBlock(models.Model):
             last_reported = qs.latest('when_reported').when_reported
 
         return last_reported
+
+    def get_obstypes(self):
+        obstype = []
+        obstypes = Block.objects.filter(superblock=self.id).values_list('obstype', flat=True).distinct()
+
+        return ",".join([str(x) for x in obstypes])
 
     class Meta:
         verbose_name = _('SuperBlock')

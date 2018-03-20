@@ -27,8 +27,8 @@ from mock import patch
 from neox.tests.mocks import MockDateTime
 
 #Import module to test
-from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources, Candidate, WCSField
+from core.models import Body, Proposal, SuperBlock, Block, Frame, \
+    SourceMeasurement, CatalogSources, Candidate, WCSField
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -319,6 +319,110 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+class TestSuperBlock(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'LCOEngineering',
+                   'title' : 'Engineering proposal'
+                 }
+        self.proposal = Proposal.objects.create(**params)
+
+        sblock_params = {   'cadence' : False,
+                            'body' : self.body,
+                            'proposal' : self.proposal,
+                            'block_start' : datetime(2015, 4, 20, 3),
+                            'block_end' : datetime(2015, 4, 20, 23),
+                            'active' : True
+                        }
+        self.sblock = SuperBlock.objects.create(**sblock_params)
+
+        params1 = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'tracking_number' : '1',
+                    'num_exposures' : 1,
+                    'exp_length' : 1800
+                  }
+        self.block1 = Block.objects.create(**params1)
+
+        params2 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 6, 15),
+                    'block_end' : datetime(2015, 4, 20, 6, 30),
+                    'tracking_number' : '2',
+                    'num_exposures' : 4,
+                    'exp_length' : 120.0
+                  }
+        self.block2 = Block.objects.create(**params2)
+
+        params3 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 8, 0),
+                    'block_end' : datetime(2015, 4, 20, 10, 15),
+                    'tracking_number' : '3',
+                    'num_exposures' : 120,
+                    'exp_length' : 60.0
+                  }
+        self.block3 = Block.objects.create(**params3)
+
+    def test_telclass(self):
+        expected_telclass = "2m0(S), 1m0"
+
+        tel_class = self.sblock.get_telclass()
+
+        self.assertEqual(expected_telclass, tel_class)
+
+    def test_telclass_spectro_only(self):
+        # Remove non spectroscopic blocks
+        self.block2.delete()
+        self.block3.delete()
+
+        expected_telclass = "2m0(S)"
+
+        tel_class = self.sblock.get_telclass()
+
+        self.assertEqual(expected_telclass, tel_class)
+
+    def test_obstypes(self):
+        expected_obstypes = "1,0"
+
+        obs_types = self.sblock.get_obstypes()
+
+        self.assertEqual(expected_obstypes, obs_types)
 
 class TestFrame(TestCase):
 
