@@ -601,6 +601,47 @@ def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
                   u'related_frames': [7783593],
                   u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/dd9f/ogg2m001-en06-20180110-0005-e00?versionId=c1X8nfL_LSwptv_c0m7dultGCOfVJJr3&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=fjmzi9KK%2FqNi3DnvjyEjSP%2BJG8o%3D&Expires=1521319897',
                  }]
+    elif archive_url.rfind("OBSTYPE=") > 0:
+        data = [{
+                  u'OBSTYPE': u'SPECTRUM',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 90,
+                  u'basename': u'LCOEngineering_0001391169_ftn_20180111_58130',
+                  u'filename': u'LCOEngineering_0001391169_ftn_20180111_58130.tar.gz',
+                  u'id': 7783593,
+                  u'related_frames': [7780755],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/372a/LCOEngineering_0001391169_ftn_20180111_58130?versionId=eK7.aDucOKWaiM3AhTPZ8AGDMxBFdNtH&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=x8mve2svKirG7BAiWaEBTyFsHrY%3D&Expires=1521319897',
+                 },
+                 {
+                  u'OBSTYPE': u'SPECTRUM',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 0,
+                  u'basename': u'ogg2m001-en06-20180110-0005-e00',
+                  u'filename': u'ogg2m001-en06-20180110-0005-e00.fits.fz',
+                  u'id': 7780755,
+                  u'related_frames': [7783593],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/dd9f/ogg2m001-en06-20180110-0005-e00?versionId=c1X8nfL_LSwptv_c0m7dultGCOfVJJr3&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=fjmzi9KK%2FqNi3DnvjyEjSP%2BJG8o%3D&Expires=1521319897',
+                 },
+                 {
+                  u'OBSTYPE': u'LAMPFLAT',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 0,
+                  u'basename': u'ogg2m001-en06-20180110-0003-w00',
+                  u'filename': u'ogg2m001-en06-20180316-0003-w00.fits.fz',
+                  u'id': 7780711,
+                  u'related_frames': [],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/f0b3/ogg2m001-en06-20180110-0003-w00?versionId=5_5KtN4yTb1HETGb3SOMkkZdVW2vxOpd&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=vwaE37UFo8gnn46IKWuRZKpSoEA%3D&Expires=1521844038',
+                 },
+                 {
+                  u'OBSTYPE': u'ARC',
+                  u'REQNUM': 1391169,
+                  u'RLEVEL': 0,
+                  u'basename': u'ogg2m001-en06-20180110-0004-a00',
+                  u'filename': u'ogg2m001-en06-20180110-0004-a00.fits.fz',
+                  u'id': 7780725,
+                  u'related_frames': [],
+                  u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/292d/ogg2m001-en06-20180110-0004-a00?versionId=6cU5D5EC7Zq1tVEb7OZlR7WFEeXyqGp8&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=o6l5GeCbm%2FgHa7LRI3ycNyFnhQY%3D&Expires=1521844038',
+                 }]
     else:
         data = [
                  {u'OBSTYPE': u'EXPOSE',

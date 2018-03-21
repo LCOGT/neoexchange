@@ -1,6 +1,11 @@
 from .base import FunctionalTest
+from mock import patch
+
 from django.core.urlresolvers import reverse
-#from selenium import webdriver
+from django.contrib.auth.models import User
+
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames
+from neox.auth_backend import update_proposal_permissions
 from core.models import Block, SuperBlock
 
 class BlocksListValidationTest(FunctionalTest):
@@ -260,3 +265,130 @@ class SpectroBlocksListValidationTest(FunctionalTest):
                      u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
                      u'3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 0 / 1 0 / 1']
         self.check_for_row_in_table('id_blocks', testlines[2])
+
+class SpectroBlocksDetailValidationTest(FunctionalTest):
+
+    def setUp(self):
+        # Create a user to test login
+        self.insert_test_proposals()
+        self.username = 'bart'
+        self.password = 'simpson'
+        self.email = 'bart@simpson.org'
+        self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
+        self.bart.first_name= 'Bart'
+        self.bart.last_name = 'Simpson'
+        self.bart.is_active=1
+        self.bart.save()
+        # Add Bart to the right proposal
+        update_proposal_permissions(self.bart, [{'code':self.neo_proposal.code}])
+        super(SpectroBlocksDetailValidationTest,self).setUp()
+
+        sblock_params = {
+                         'cadence' : False,
+                         'body'     : self.body,
+                         'proposal' : self.test_proposal,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-22 03:00:00',
+                         'tracking_number' : '4242',
+                         'active'   : True
+                       }
+        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+
+        block_params = { 'telclass' : '2m0',
+                         'site'     : 'ogg',
+                         'body'     : self.body,
+                         'proposal' : self.test_proposal,
+                         'superblock' : self.test_sblock,
+                         'obstype'  : Block.OPT_SPECTRA,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'tracking_number' : '12345',
+                         'num_exposures' : 1,
+                         'exp_length' : 1800.0,
+                         'active'   : True,
+                         'num_observed' : 1,
+                         'when_observed' : '2015-04-21 12:13:14'
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def login(self):
+        test_login = self.client.login(username=self.username, password=self.password)
+        self.assertEqual(test_login, True)
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def login_user(self):
+        self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
+        username_input = self.browser.find_element_by_id("username")
+        username_input.send_keys(self.username)
+        password_input = self.browser.find_element_by_id("password")
+        password_input.send_keys(self.password)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
+        # Wait until response is recieved
+
+    @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    def test_can_view_block_detail(self):
+        self.login_user()
+
+        # A new user, Jose, comes along to the site
+        self.browser.get(self.live_server_url)
+
+        # He sees a link to 'active blocks'
+        link = self.browser.find_element_by_partial_link_text('active blocks')
+        target_url = "{0}{1}".format(self.live_server_url, '/block/list/')
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the blocks page
+        with self.wait_for_page_load(timeout=20):
+            link.click()
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions current targets
+        self.assertIn('Blocks | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Observing Blocks', header_text)
+
+        # He sees that there are both spectroscopic and non-spectroscopic Blocks scheduled.
+        self.check_for_header_in_table('id_blocks',
+            'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
+        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
+                     u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
+                     u'3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 1 / 1 0 / 1']
+        self.check_for_row_in_table('id_blocks', testlines[2])
+
+        # He wishes to get more details on the spectroscopic block that is scheduled
+        link = self.browser.find_element_by_link_text('3')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view',kwargs={'pk':3}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the block details page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, target_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions block details
+        self.assertIn('Block details', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Block: 3', header_text)
+
+        # He notices there is a table which lists a lot more details about
+        # the Block.
+
+        testlines = [u'TELESCOPE CLASS ' + self.test_block.telclass + '(S)',
+                     u'SITE ' + self.test_block.site.upper()]
+        for line in testlines:
+            self.check_for_row_in_table('id_blockdetail', line)
+
+        side_text = self.browser.find_element_by_class_name('block-status').text
+        block_lines = side_text.splitlines()
+        testlines = [u'ARC: 1, SPECTRUM: 2, LAMPFLAT: 1',
+                    ]
+        for line in testlines:
+            self.assertIn(line, block_lines)

@@ -127,7 +127,9 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
     '''
     Call Archive API to obtain all frames for request_id
     Follow links to get all frames and filter out non-reduced frames and returns
-    fully-reduced data in preference to quicklook data
+    fully-reduced data in preference to quicklook data.
+    For spectroscopic data, set `obstype=EXPOSE` will return the actual spectrum
+    and the tarball of results; setting `obstype=''` will return all frame types.
     '''
     reduced_data = []
     quicklook_data = []
@@ -141,7 +143,7 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
     for datum in data:
         headers_url = u'%s%d/headers' % (settings.ARCHIVE_FRAMES_URL, datum['id'])
         datum[u'headers'] = headers_url
-        if (datum['RLEVEL'] == 91 and obstype=='EXPOSE') or (datum['RLEVEL'] in [90,0] and obstype=='SPECTRUM'):
+        if (datum['RLEVEL'] == 91 and obstype=='EXPOSE') or (datum['RLEVEL'] in [90,0] and obstype in ['SPECTRUM','']):
             reduced_data.append(datum)
         elif datum['RLEVEL'] == 11:
             quicklook_data.append(datum)

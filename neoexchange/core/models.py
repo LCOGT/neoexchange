@@ -41,6 +41,7 @@ from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params,
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+from core.archive_subs import check_for_archive_images
 
 
 OBJECT_TYPES = (
@@ -470,6 +471,16 @@ class Block(models.Model):
         else:
             total_exposure_number = ql_frames.count()
         return total_exposure_number
+
+    def num_spectro_frames(self):
+        '''Returns the numbers of different types of spectroscopic frames'''
+        num_moltypes_string = 'No data'
+        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] for x in data]
+            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes_string = ", ".join([x+": "+str(num_moltypes[x]) for x in num_moltypes])
+        return num_moltypes_string
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
