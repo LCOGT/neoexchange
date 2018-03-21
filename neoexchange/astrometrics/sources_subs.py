@@ -1474,7 +1474,6 @@ def parse_filter_file(site, camera_list=None):
             if line[0] !='#':
                 if line[32:36] == site_list[site]:
                     chunks = line[191:].replace("\n", "").split(',')
-                    print chunks
                     for filt in filter_list:
                         if filt in chunks:
                           site_filters.append(filt)
