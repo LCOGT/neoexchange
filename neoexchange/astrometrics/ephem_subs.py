@@ -693,7 +693,7 @@ class MagRangeError(Exception):
     def __str__(self):
         return self.value
 
-BRIGHTEST_ALLOWABLE_MAG = 10
+BRIGHTEST_ALLOWABLE_MAG = 6
 
 def get_mag_mapping(site_code):
     '''Defines the site-specific mappings from target magnitude to desired

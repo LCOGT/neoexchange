@@ -1396,11 +1396,14 @@ def submit_block_to_scheduler(elements, params):
 
 def split_filter_data(filter_pattern):
     '''Properly split filter Pattenrn string into nested list'''
-    filter_bits = filter_pattern.split(',')
-    filter_bits = filter(None, filter_bits)
-    filter_list = []
-    for f, m in groupby(filter_bits):
-       filter_list.append(list(m))
+    try:
+        filter_bits = filter_pattern.split(',')
+        filter_bits = filter(None, filter_bits)
+        filter_list = []
+        for f, m in groupby(filter_bits):
+           filter_list.append(list(m))
+    except:
+        filter_list = filter_pattern
     return filter_list
 
 def fetch_filter_list(site,page=None):
@@ -1470,7 +1473,8 @@ def parse_filter_file(site, camera_list=None):
         for line in camera_list:
             if line[0] !='#':
                 if line[32:36] == site_list[site]:
-                    chunks = line[191:].split(',')
+                    chunks = line[191:].replace("\n", "").split(',')
+                    print chunks
                     for filt in filter_list:
                         if filt in chunks:
                           site_filters.append(filt)
