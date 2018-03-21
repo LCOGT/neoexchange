@@ -38,7 +38,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockF
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list
+    fetch_NEOCP_observations, PackedError, fetch_filter_list, split_filter_data
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -55,7 +55,6 @@ import requests
 from urlparse import urljoin
 import numpy as np
 from django.conf import settings
-from itertools import groupby
 
 logger = logging.getLogger(__name__)
 
@@ -565,14 +564,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         resp['total_time'] = total_time
 
     return resp
-
-def split_filter_data(filter_pattern):
-    filter_bits = filter_pattern.split(',')
-    filter_bits = filter(None, filter_bits)
-    filter_list = []
-    for f, m in groupby(filter_bits):
-       filter_list.append(list(m))
-    return filter_list
 
 def schedule_submit(data, body, username):
 

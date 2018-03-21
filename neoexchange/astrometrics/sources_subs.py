@@ -28,6 +28,8 @@ from random import randint
 from time import sleep
 import requests
 import json
+from itertools import groupby
+import copy
 
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
@@ -1107,7 +1109,11 @@ def make_window(params):
 
     return window
 
-def make_molecule(params, exp_filter, exp_count):
+def make_molecule(params, exp_filter):
+    if len(params['filter_pattern']) == 1:
+        exp_count = params['exp_count']
+    else:
+        exp_count = len(exp_filter)
     molecule = {
                 'type' : params['exp_type'],
                 'exposure_count'  : exp_count,
@@ -1115,7 +1121,7 @@ def make_molecule(params, exp_filter, exp_count):
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
-                'filter'      : exp_filter,
+                'filter'      : exp_filter[0],
                 'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
@@ -1294,15 +1300,41 @@ def make_userrequest(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule
-#Split params['filter'] make_molecules, define list here, remove below
-    filter_list=params['filter_pattern']
-    molecule_list = []
-    molecule_list.append(make_molecule(params))
-#    if len(filter_list) == 1:
-#        molecule_list.append(make_molecule(params, filter_list[0], params['exp_count']))
-#    else:
-#        for exp in params['exp_count']
-#            molecule_list.append(make_molecule(params,))
+    filter_list = split_filter_data(params['filter_pattern'])
+
+    if filter_list > 1:
+        #Determine how many times (or what fraction of a time) we will be looping through the filter list
+        mol_exposures = len([exposures for molecule in filter_list for exposures in molecule])
+        iterations = params['exp_count'] / mol_exposures
+        remainder = params['exp_count'] % mol_exposures
+
+        #Append appropriate itterations to list
+        filter_list_add = copy.deepcopy(filter_list)
+        if iterations >= 1:
+            filter_list_final = copy.deepcopy(filter_list)
+        else:
+            filter_list_final = []
+        while iterations > 1:
+            if filter_list_final[-1][0] == filter_list_add[0][0]:
+                filter_list_final[-1] = filter_list[-1] + filter_list_add[0]
+                filter_list_final = filter_list_final + filter_list_add[1:]
+            else:
+                filter_list_final = filter_list_final + filter_list_add
+            iterations -= 1
+
+        for filt in filter_list:
+            if remainder <=0:
+                break
+            if filter_list_final and filter_list_final[-1][0] == filt[0]:
+                filter_list_final[-1] = filter_list[-1] + filt[0:remainder]
+            else:
+                filter_list_final = filter_list_final + [filt[0:remainder]]
+            remainder -= len(filt)
+
+        print filter_list_final
+        molecule_list = [make_molecule(params,filt) for filt in filter_list_final]
+    else:
+        molecule_list = [make_molecule(params,filter_list)]
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
@@ -1393,6 +1425,15 @@ def submit_block_to_scheduler(elements, params):
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
 
     return tracking_number, params
+
+def split_filter_data(filter_pattern):
+    '''Properly split filter Pattenrn string into nested list'''
+    filter_bits = filter_pattern.split(',')
+    filter_bits = filter(None, filter_bits)
+    filter_list = []
+    for f, m in groupby(filter_bits):
+       filter_list.append(list(m))
+    return filter_list
 
 def fetch_filter_list(site,page=None):
     '''Fetches the camera mappings page'''

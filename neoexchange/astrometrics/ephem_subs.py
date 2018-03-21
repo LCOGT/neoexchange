@@ -820,8 +820,7 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name,
 
     #Set maximum exposure time to value that will achieve approximately S/N = 100 for objects fainter than 18 in V,R,I,gp,rp,ip.
     #This allows for LC with reasonable cadence for bright, slow moving objects.
-    max_exp_time = min(2*(determine_slot_length(target_name, mag, site_code)*60. - setup_overhead - molecule_overhead(filter_list, min_exp_count) \
-                    - (exp_overhead * float(min_exp_count))) / min_exp_count, site_max_exp_time)
+    max_exp_time = min((determine_slot_length(target_name, mag, site_code)*60.) / min_exp_count, site_max_exp_time)
     #pretify max exposure time to nearest 5 seconds
     max_exp_time = int(round(max_exp_time/5))*5
 
@@ -870,10 +869,11 @@ def molecule_overhead(filter_list, exp_count):
 
         # take care of any remaining exposures that don't complete a sequence
         for molecule in filter_list:
-            extra_overhead += single_mol_overhead
-            remainder -= len(molecule)
             if remainder <=0:
                 break
+            extra_overhead += single_mol_overhead
+            remainder -= len(molecule)
+
         #sum up everything and add it to the setup_overhead
 #        setup_overhead += mol_overhead * iterations + extra_overhead
         setup_overhead =  single_mol_overhead * len(filter_list) * iterations + extra_overhead
