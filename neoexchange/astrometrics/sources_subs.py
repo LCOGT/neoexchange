@@ -35,6 +35,7 @@ from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from astrometrics.ephem_subs import build_filter_blocks
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -1301,40 +1302,7 @@ def make_userrequest(elements, params):
     logger.debug("Window=%s" % window)
 # Create Molecule
     filter_list = split_filter_data(params['filter_pattern'])
-
-    if filter_list > 1:
-        #Determine how many times (or what fraction of a time) we will be looping through the filter list
-        mol_exposures = len([exposures for molecule in filter_list for exposures in molecule])
-        iterations = params['exp_count'] / mol_exposures
-        remainder = params['exp_count'] % mol_exposures
-
-        #Append appropriate itterations to list
-        filter_list_add = copy.deepcopy(filter_list)
-        if iterations >= 1:
-            filter_list_final = copy.deepcopy(filter_list)
-        else:
-            filter_list_final = []
-        while iterations > 1:
-            if filter_list_final[-1][0] == filter_list_add[0][0]:
-                filter_list_final[-1] = filter_list[-1] + filter_list_add[0]
-                filter_list_final = filter_list_final + filter_list_add[1:]
-            else:
-                filter_list_final = filter_list_final + filter_list_add
-            iterations -= 1
-
-        for filt in filter_list:
-            if remainder <=0:
-                break
-            if filter_list_final and filter_list_final[-1][0] == filt[0]:
-                filter_list_final[-1] = filter_list[-1] + filt[0:remainder]
-            else:
-                filter_list_final = filter_list_final + [filt[0:remainder]]
-            remainder -= len(filt)
-
-        print filter_list_final
-        molecule_list = [make_molecule(params,filt) for filt in filter_list_final]
-    else:
-        molecule_list = [make_molecule(params,filter_list)]
+    molecule_list = [make_molecule(params,filt) for filt in build_filter_blocks(filter_list, params['exp_count'])]
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
