@@ -821,7 +821,10 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name,
 
     #Set maximum exposure time to value that will achieve approximately S/N = 100 for objects fainter than 18 in V,R,I,gp,rp,ip.
     #This allows for LC with reasonable cadence for bright, slow moving objects.
-    max_exp_time = min((determine_slot_length(target_name, mag, site_code)*60.) / min_exp_count, site_max_exp_time)
+    try:
+        max_exp_time = min((determine_slot_length(target_name, mag, site_code)*60.) / min_exp_count, site_max_exp_time)
+    except MagRangeError:
+        max_exp_time = site_max_exp_time
     #pretify max exposure time to nearest 5 seconds
     max_exp_time = int(round(max_exp_time/5))*5
 
