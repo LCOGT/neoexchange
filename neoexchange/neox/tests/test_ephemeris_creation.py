@@ -252,7 +252,7 @@ class NewVisitorTest(FunctionalTest):
         eduardo_ephem_url = self.browser.current_url
         self.assertRegexpMatches(eduardo_ephem_url, '/ephemeris/.+')
         menu = self.browser.find_element_by_id('extramenu').text
-        self.assertIn('Ephemeris for N999r0q at K92', menu)
+        self.assertIn('Ephemeris for N999r0q at K91', menu)
 
         # Check the results for default date are not in the table
         table = self.browser.find_element_by_id('id_ephemeris_table')
@@ -264,7 +264,7 @@ class NewVisitorTest(FunctionalTest):
         # Check values before the altitude cutoff are not present
         self.assertNotIn('2015 09 03 17:30 23 53 42.39 -12 42 38.6 19.3 1.84 211.8 +4 0.68 56 -51 -999 Limits', [row.text for row in rows])
 
-        # Check the values are correct for K92
+        # Check the values are correct for K91
         self.check_for_row_in_table('id_ephemeris_table',
             '2015 09 03 19:45 23 53 33.10 -12 46 09.4 19.3 1.87 213.8 +33 0.67 58 -24 +041 -03:55'
         )
