@@ -22,6 +22,7 @@ from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, f
 import pyslalib.slalib as S
 from numpy import array, concatenate, zeros
 import copy
+from itertools import groupby
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -810,7 +811,7 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
 
     return round_exptime
 
-def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name, mag, filter_list):
+def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name, mag, filter_pattern):
     exp_time = None
     exp_count = None
     min_exp_count = 4
@@ -833,15 +834,15 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name,
     #Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     #Reduce exposure count by number of exposures necessary to accomidate molecule overhead
-    mol_overhead = molecule_overhead(build_filter_blocks(filter_list, exp_count))
+    mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
     exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
     #Safety while loop for edge cases
-    while setup_overhead + molecule_overhead(build_filter_blocks(filter_list, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
+    while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
         exp_count -= 1
 
     if exp_count < min_exp_count:
         exp_count = min_exp_count
-        exp_time = (slot_length - setup_overhead - molecule_overhead(build_filter_blocks(filter_list, min_exp_count)) - (exp_overhead * float(exp_count))) / exp_count
+        exp_time = (slot_length - setup_overhead - molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)) - (exp_overhead * float(exp_count))) / exp_count
         logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count ))
     logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % \
         ( slot_length/60.0, slot_length, exp_count, exp_time))
@@ -852,43 +853,24 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name,
 
     return exp_time, exp_count
 
-def molecule_overhead(filter_list_block):
+def molecule_overhead(filter_blocks):
     single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
-    molecule_setup_overhead =  single_mol_overhead * len(filter_list_block)
+    molecule_setup_overhead =  single_mol_overhead * len(filter_blocks)
     return molecule_setup_overhead
 
-def build_filter_blocks(filter_list, exp_count):
-    if len(filter_list) > 1:
-        #Determine how many times (or what fraction of a time) we will be looping through the filter list
-        mol_exposures = len([exposures for molecule in filter_list for exposures in molecule])
-        iterations = exp_count / mol_exposures
-        remainder = exp_count % mol_exposures
-
-        #Append appropriate itterations to list
-        filter_list_add = copy.deepcopy(filter_list)
-        if iterations >= 1:
-            filter_list_final = copy.deepcopy(filter_list)
-        else:
-            filter_list_final = []
-        while iterations > 1:
-            if filter_list_final[-1][0] == filter_list_add[0][0]:
-                filter_list_final[-1] = filter_list_final[-1] + filter_list_add[0]
-                filter_list_final = filter_list_final + filter_list_add[1:]
-            else:
-                filter_list_final = filter_list_final + filter_list_add
-            iterations -= 1
-
-        for filt in filter_list:
-            if remainder <=0:
-                break
-            if filter_list_final and filter_list_final[-1][0] == filt[0]:
-                filter_list_final[-1] = filter_list[-1] + filt[0:remainder]
-            else:
-                filter_list_final = filter_list_final + [filt[0:remainder]]
-            remainder -= len(filt)
-        return filter_list_final
-    else:
-        return filter_list
+def build_filter_blocks(filter_pattern, exp_count):
+    filter_bits = filter_pattern.split(',')
+    filter_bits = filter(None, filter_bits)
+    filter_list = []
+    filter_blocks = []
+    while exp_count > 0:
+        filter_list += filter_bits[:exp_count]
+        exp_count -= len(filter_bits)
+    for f, m in groupby(filter_list):
+        filter_blocks.append(list(m))
+    if len(filter_blocks) == 0:
+        filter_blocks = [filter_bits]
+    return filter_blocks
 
 def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
     '''Simple noddy scoring calculation for choosing best slot'''

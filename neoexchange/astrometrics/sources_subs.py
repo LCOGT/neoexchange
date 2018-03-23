@@ -28,7 +28,6 @@ from random import randint
 from time import sleep
 import requests
 import json
-from itertools import groupby
 import copy
 
 from bs4 import BeautifulSoup
@@ -1111,10 +1110,7 @@ def make_window(params):
     return window
 
 def make_molecule(params, exp_filter):
-    if len(params['filter_pattern']) == 1:
-        exp_count = params['exp_count']
-    else:
-        exp_count = len(exp_filter)
+    exp_count = len(exp_filter)
     molecule = {
                 'type' : params['exp_type'],
                 'exposure_count'  : exp_count,
@@ -1301,8 +1297,7 @@ def make_userrequest(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule
-    filter_list = split_filter_data(params['filter_pattern'])
-    molecule_list = [make_molecule(params,filt) for filt in build_filter_blocks(filter_list, params['exp_count'])]
+    molecule_list = [make_molecule(params,filt) for filt in build_filter_blocks(params['filter_pattern'], params['exp_count'])]
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
@@ -1393,18 +1388,6 @@ def submit_block_to_scheduler(elements, params):
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
 
     return tracking_number, params
-
-def split_filter_data(filter_pattern):
-    '''Properly split filter Pattenrn string into nested list'''
-    try:
-        filter_bits = filter_pattern.split(',')
-        filter_bits = filter(None, filter_bits)
-        filter_list = []
-        for f, m in groupby(filter_bits):
-           filter_list.append(list(m))
-    except:
-        filter_list = filter_pattern
-    return filter_list
 
 def fetch_filter_list(site,page=None):
     '''Fetches the camera mappings page'''

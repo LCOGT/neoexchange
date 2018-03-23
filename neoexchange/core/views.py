@@ -38,7 +38,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockF
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list, split_filter_data
+    fetch_NEOCP_observations, PackedError, fetch_filter_list
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -498,7 +498,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             slot_length = 0.
             ok_to_schedule = False
     # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, body_elements['provisional_name'], magnitude, split_filter_data(filter_pattern))
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, body_elements['provisional_name'], magnitude, filter_pattern)
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 
@@ -586,7 +586,7 @@ def schedule_submit(data, body, username):
               'priority': data.get('priority', 15),
               'submitter_id': username,
 
-              'filter_pattern': split_filter_data(data['filter_pattern']),
+              'filter_pattern': data['filter_pattern'],
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],
               'site_code': data['site_code'],
