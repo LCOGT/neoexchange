@@ -493,12 +493,12 @@ def schedule_check(data, body, ok_to_schedule=True):
         slot_length = data.get('slot_length')
     else:
         try:
-            slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+            slot_length = determine_slot_length(magnitude, data['site_code'])
         except MagRangeError:
             slot_length = 0.
             ok_to_schedule = False
     # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, body_elements['provisional_name'], magnitude, filter_pattern)
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
     if exp_length == None or exp_count == None:
         ok_to_schedule = False
 

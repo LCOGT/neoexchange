@@ -959,7 +959,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 17.58
         expected_length = 0
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_good1m_lc(self):
@@ -967,7 +967,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 17.58
         expected_length = 15
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_good1m(self):
@@ -975,7 +975,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 17.58
         expected_length = 15
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_good1m(self):
@@ -983,7 +983,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 19.9
         expected_length = 20
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_good1m(self):
@@ -991,7 +991,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.1
         expected_length = 22.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_good1m(self):
@@ -999,7 +999,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.6
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_good1m(self):
@@ -1007,7 +1007,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.0
         expected_length = 30
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_good1m(self):
@@ -1015,7 +1015,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.51
         expected_length = 40
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_reallyfaint_nonNEOWISE_good1m(self):
@@ -1023,7 +1023,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 22.1
         expected_length = 45
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_nonNEOWISE_good1m(self):
@@ -1031,21 +1031,21 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 23.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_good1m(self):
         site_code = 'W87'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_very_bright_nonNEOWISE_bad1m(self):
         site_code = 'Q63'
         name = 'WH2845B'
         mag = 17.58
         expected_length = 17.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_bad1m(self):
@@ -1053,7 +1053,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 19.9
         expected_length = 22.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_bad1m(self):
@@ -1061,7 +1061,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.1
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_bad1m(self):
@@ -1069,7 +1069,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.6
         expected_length = 27.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_bad1m(self):
@@ -1077,7 +1077,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.0
         expected_length = 32.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_bad1m(self):
@@ -1085,7 +1085,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.51
         expected_length = 35
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_for_coj_nonNEOWISE_bad1m(self):
@@ -1093,28 +1093,28 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 22.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toofaint_nonNEOWISE_bad1m(self):
         site_code = 'Q64'
         name = 'WH2845B'
         mag = 23.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_bad1m(self):
         site_code = 'Q64'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_very_bright_nonNEOWISE_2m_lc(self):
         site_code = 'f65'
         name = 'WH2845B'
         mag = 17.58
         expected_length = 10
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_2m(self):
@@ -1122,7 +1122,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 17.58
         expected_length = 10
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_2m(self):
@@ -1130,7 +1130,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 19.9
         expected_length = 20
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_2m(self):
@@ -1138,7 +1138,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.1
         expected_length = 22.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_2m(self):
@@ -1146,7 +1146,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.6
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_2m(self):
@@ -1154,7 +1154,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.0
         expected_length = 27.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_2m(self):
@@ -1162,7 +1162,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.51
         expected_length = 30
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_reallyfaint_nonNEOWISE_2m(self):
@@ -1170,7 +1170,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 23.2
         expected_length = 35
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_nonNEOWISE_2m(self):
@@ -1178,14 +1178,14 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 23.4
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_2m(self):
         site_code = 'F65'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_basic_tfn_0m4_num1(self):
         site_code = 'Z21'
@@ -1193,7 +1193,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_tfn_0m4_num2(self):
@@ -1202,7 +1202,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_ogg_0m4_num1(self):
@@ -1211,7 +1211,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_ogg_0m4_num2(self):
@@ -1220,7 +1220,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_lsc_0m4_num1(self):
@@ -1229,7 +1229,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_lsc_0m4_num2(self):
@@ -1238,7 +1238,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_elp_0m4(self):
@@ -1247,7 +1247,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_cpt_0m4(self):
@@ -1256,7 +1256,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
 class TestGetSiteCamParams(TestCase):
@@ -1457,7 +1457,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 60.0
         expected_expcount = 12
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, 'V')
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1472,7 +1472,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 85.0
         expected_expcount = 4
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, 'V')
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1487,7 +1487,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 6.5
         expected_expcount = 24
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, 'V')
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1502,7 +1502,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 235.0
         expected_expcount = 4
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, 'V')
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1517,7 +1517,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 1.0
         expected_expcount = 32
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, 'V')
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1532,7 +1532,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = None
         expected_expcount = None
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, 'V')
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1547,7 +1547,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 20.0
         expected_expcount = 36
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, 'V')
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1562,7 +1562,7 @@ class TestDetermineExpTimeCount(TestCase):
         expected_exptime = 2.0
         expected_expcount = 68
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, 'V')
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1774,7 +1774,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         expected_exptime = 60.0
         expected_expcount = 10
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_pattern)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1790,7 +1790,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         expected_exptime = 60.0
         expected_expcount = 12
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_pattern)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1806,7 +1806,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         expected_exptime = 60.0
         expected_expcount = 11
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_pattern)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1822,7 +1822,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         expected_exptime = 2.0
         expected_expcount = 32
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_pattern)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1838,7 +1838,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         expected_exptime = 2.0
         expected_expcount = 58
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_pattern)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1854,7 +1854,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         expected_exptime = 2.0
         expected_expcount = 44
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, name, mag, filter_pattern)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)

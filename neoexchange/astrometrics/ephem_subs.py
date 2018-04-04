@@ -770,7 +770,7 @@ def get_mag_mapping(site_code):
     return mag_mapping
 
 
-def determine_slot_length(target_name, mag, site_code, debug=False):
+def determine_slot_length(mag, site_code, debug=False):
 
     if mag < BRIGHTEST_ALLOWABLE_MAG:
         raise MagRangeError("Target too bright")
@@ -811,7 +811,7 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
 
     return round_exptime
 
-def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name, mag, filter_pattern):
+def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_pattern):
     exp_time = None
     exp_count = None
     min_exp_count = 4
@@ -823,7 +823,7 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, target_name,
     #Set maximum exposure time to value that will achieve approximately S/N = 100 for objects fainter than 18 in V,R,I,gp,rp,ip.
     #This allows for LC with reasonable cadence for bright, slow moving objects.
     try:
-        max_exp_time = min((determine_slot_length(target_name, mag, site_code)*60.) / min_exp_count, site_max_exp_time)
+        max_exp_time = min((determine_slot_length(mag, site_code)*60.) / min_exp_count, site_max_exp_time)
     except MagRangeError:
         max_exp_time = site_max_exp_time
     #pretify max exposure time to nearest 5 seconds
