@@ -1724,6 +1724,54 @@ class TestLCOGT_domes_to_site_codes(TestCase):
 
         self.assertEqual(expected_code, code)
 
+
+class TestMPC_site_codes_to_domes(TestCase):
+
+    def test_point4m_tfn_1(self):
+        e_siteid, e_encid, e_telid = 'tfn', 'aqwa', '0m4a'
+
+        siteid, encid, telid = MPC_site_code_to_domes('Z21')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+    def test_point4m_tfn_2(self):
+        e_siteid, e_encid, e_telid = 'tfn', 'aqwa', '0m4b'
+
+        siteid, encid, telid = MPC_site_code_to_domes('Z17')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+    def test_1m_cpt_1(self):
+        e_siteid, e_encid, e_telid = 'cpt', 'doma', '1m0a'
+
+        siteid, encid, telid = MPC_site_code_to_domes('K91')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+    def test_point4m_elp_1(self):
+        e_siteid, e_encid, e_telid = 'elp', 'aqwa', '0m4a'
+
+        siteid, encid, telid = MPC_site_code_to_domes('V38')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+    def test_point4m_ogg_2(self):
+        e_siteid, e_encid, e_telid = 'ogg', 'clma', '0m4b'
+
+        siteid, encid, telid = MPC_site_code_to_domes('T04')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
 class Testmolecule_overhead(TestCase):
 
     def test_single_filter(self):

@@ -33,7 +33,7 @@ from astrometrics.sources_subs import parse_goldstone_chunks, \
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page
+    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page, fetch_filter_list
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -724,6 +724,44 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(len(molecules), expected_molecule_num)
             self.assertEqual(molecules[6].get('exposure_count'), expected_exp_count)
             self.assertEqual(molecules[6].get('filter'), expected_filter)
+
+class TestFetchFilterList(TestCase):
+    '''Unit test for getting current filters from configdb'''
+
+    def setUp(self):
+        # Read stored version of camera mappings file
+        self.test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
+
+    def test_1m_cpt(self):
+        expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+
+        filter_list = fetch_filter_list('K91',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_0m4_ogg(self):
+        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+
+        filter_list = fetch_filter_list('T04',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_2m_ogg(self):
+        expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
+
+        filter_list = fetch_filter_list('F65',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_1m_lsc_domeb(self):
+        expected_filter_list = ['air', 'ND' , 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+
+        filter_list = fetch_filter_list('W86',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_unavailable_telescope(self):
+        expected_filter_list = []
+
+        filter_list = fetch_filter_list('V37',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
 
 class TestPreviousNEOCPParser(TestCase):
     '''Unit tests for the sources_subs.parse_previous_NEOCP_id() method'''

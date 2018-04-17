@@ -34,7 +34,7 @@ from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -1428,37 +1428,17 @@ def parse_filter_file(site, camera_list=None):
                     "Y",
                     "w"
                 ]
-    site_list = {
-                    'K91' : 'fl16',
-                    'K92' : 'fl14',
-                    'K93' : 'fl06',
-                    'W85' : 'fl15',
-                    'W86' : 'fl04',
-                    'W87' : 'fl03',
-                    'V37' : 'fl05',
-                    'Z21' : 'kb99',
-                    'Z17' : 'kb88',
-                    'Q58' : 'kb98',
-                    'Q59' : 'kb97',
-                    'Q63' : 'fl12',
-                    'Q64' : 'fl11',
-                    'E10' : 'fs01',
-                    'F65' : 'fs02',
-                    'T04' : 'kb27',
-                    'T03' : 'kb82',
-                    'W89' : 'kb95',
-                    'W79' : 'kb26',
-                    'V38' : 'kb80',
-                    'L09' : 'kb96',
-                    }
+
+    siteid, encid, telid = MPC_site_code_to_domes(site)
+
     site_filters=[]
     try:
         for line in camera_list:
             if line[0] !='#':
-                if line[32:36] == site_list[site]:
+                if line[2:5] == siteid and line[21:24] == telid[:-1]:
                     chunks = line[191:].replace("\n", "").split(',')
                     for filt in filter_list:
-                        if filt in chunks:
+                        if filt in chunks and filt not in site_filters:
                           site_filters.append(filt)
     except:
         msg = "Could not find filter list"

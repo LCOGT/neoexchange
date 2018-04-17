@@ -484,7 +484,8 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     #Get string of available filters
     available_filters = ''
-    for filt in fetch_filter_list(data['site_code']):
+    filter_list = fetch_filter_list(data['site_code'])
+    for filt in filter_list:
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
 

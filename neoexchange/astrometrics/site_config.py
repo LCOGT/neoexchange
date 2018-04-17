@@ -39,3 +39,32 @@ inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'floyds_acq_exp_time'           : 30.0,
                     'floyds_calib_time'             : 60.0
                 }
+
+# Telescope sites
+valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
+                     'LSC-DOMA-1M0A' : 'W85',
+                     'LSC-DOMB-1M0A' : 'W86',
+                     'LSC-DOMC-1M0A' : 'W87',
+                     'CPT-DOMA-1M0A' : 'K91',
+                     'CPT-DOMB-1M0A' : 'K92',
+                     'CPT-DOMC-1M0A' : 'K93',
+                     'COJ-DOMA-1M0A' : 'Q63',
+                     'COJ-DOMB-1M0A' : 'Q64',
+                     'OGG-CLMA-2M0A' : 'F65',
+                     'COJ-CLMA-2M0A' : 'E10',
+                     'TFN-AQWA-0M4A' : 'Z21',
+                     'TFN-AQWA-0M4B' : 'Z17',
+                     'COJ-CLMA-0M4A' : 'Q58',
+                     'COJ-CLMA-0M4B' : 'Q59',
+                     'OGG-CLMA-0M4B' : 'T04',
+                     'OGG-CLMA-0M4C' : 'T03',
+                     'LSC-AQWA-0M4A' : 'W89',
+                     'LSC-AQWB-0M4A' : 'W79',
+                     'ELP-AQWA-0M4A' : 'V38',
+                     'CPT-AQWA-0M4A' : 'L09',
+                     'SQA-DOMA-0M8A' : 'G51'}
+
+# Reverse site code dictionary
+valid_telescope_codes = {v: k for k, v in valid_site_codes.items()}
+
+
