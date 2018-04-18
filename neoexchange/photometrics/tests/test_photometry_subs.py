@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from math import acos
 from django.test import TestCase
 from astropy import units as u
+from astropy.tests.helper import assert_quantity_allclose
 
 #Import module to test
 from photometrics.photometry_subs import *
@@ -1440,6 +1441,105 @@ class TestSlitVignette(SNRTestCase):
         vign = slit_vignette(self.wht_tic_params)
 
         self.assertAlmostEqual(expected_vign, vign, self.precision)
+
+class TestComputeFWHMTel(SNRTestCase):
+
+    def __init__(self, *args, **kwargs):
+        self.tolerance = 1e-7
+        super(SNRTestCase, self).__init__(*args, **kwargs)
+
+    def test_NTT_670nm(self):
+
+        tic_params = {
+                       'wavelength' : 670 * u.nm,
+                       'm1_diameter' : 3.58 * u.m
+                      }
+        expected_fwhm = 1.028*degrees(670e-9/3.58) * 3600.0 * u.arcsec
+
+        fwhm = compute_fwhm_tel(tic_params)
+
+        assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
+
+    def test_2m_550nm(self):
+
+        tic_params = {
+                       'wavelength' : 550 * u.nm,
+                       'm1_diameter' : 2.00 * u.m
+                      }
+        expected_fwhm = 1.028*degrees(550e-9/2.00) * 3600.0 * u.arcsec
+
+        fwhm = compute_fwhm_tel(tic_params)
+
+        assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
+
+    def test_1m_700nm(self):
+
+        tic_params = {
+                       'wavelength' : 700 * u.nm,
+                       'm1_diameter' : 1.00 * u.m
+                      }
+        expected_fwhm = 0.0002120402 * (700.0/1.0) * u.arcsec
+
+        fwhm = compute_fwhm_tel(tic_params)
+
+        assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
+
+    def test_0p4m_0p8um(self):
+
+        tic_params = {
+                       'wavelength' : 0.9 * u.um,
+                       'm1_diameter' : 0.4 * u.m
+                      }
+        expected_fwhm = 0.0002120402 * (900.0/0.4) * u.arcsec
+
+        fwhm = compute_fwhm_tel(tic_params)
+
+        assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
+
+class TestComputeFWHM(SNRTestCase):
+
+    def __init__(self, *args, **kwargs):
+        self.tolerance = 1e-7
+        super(SNRTestCase, self).__init__(*args, **kwargs)
+
+    def test_NTT_670nm(self):
+
+        tic_params = { 'seeing' : 1.0 * u.arcsec,
+                       'airmass' : 1.17,
+                       'wavelength' : 670 * u.nm,
+                       'm1_diameter' : 3.58 * u.m
+                      }
+        expected_fwhm = 0.8931926562782991 * u.arcsec
+
+        fwhm = compute_fwhm(tic_params)
+
+        assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
+
+    def test_2m_800nm_zenith(self):
+
+        tic_params = { 'seeing' : 1.5 * u.arcsec,
+                       'airmass' : 1.0,
+                       'wavelength' : 800 * u.nm,
+                       'm1_diameter' : 2.0 * u.m
+                      }
+        expected_fwhm = 1.1919218709313633 * u.arcsec
+
+        fwhm = compute_fwhm(tic_params)
+
+        assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
+
+    def test_2m_800nm_high_airmass(self):
+
+        tic_params = { 'seeing' : 1.5 * u.arcsec,
+                       'airmass' : 2.0,
+                       'wavelength' : 800 * u.nm,
+                       'm1_diameter' : 2.0 * u.m
+                      }
+        expected_fwhm = 1.843117846704643 * u.arcsec
+
+        fwhm = compute_fwhm(tic_params)
+
+        assert_quantity_allclose(fwhm, expected_fwhm, self.tolerance)
 
 class TestCalcAsteroidSNR(SNRTestCase):
 

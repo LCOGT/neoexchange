@@ -386,6 +386,47 @@ def slit_vignette(tic_params, dbg=False):
 
     return vign
 
+def compute_fwhm_tel(tic_params):
+    '''Compute the diffraction-limited PSF FWHM for the telescope with diameter
+    given by <tic_params['m1_diameter']> at observing wavelength <tic_params['wavelength']>
+    '''
+
+    ang_res = (tic_params['wavelength'].to(u.m) / tic_params['m1_diameter'].to(u.m)) * u.radian
+    fwhm_tel = 1.028 * ang_res
+    fwhm_tel = fwhm_tel.to(u.arcsec)
+
+    return fwhm_tel
+
+def compute_fwhm(tic_params):
+    '''Compute the FWHM image quality (returned as an astropy Quantity in arcsec).
+    This is the combination of the diffraction limit set by the telescope (a function
+    of telescope diameter and wavelength) and that of the atmosphere (a function of the
+    seeing, airmass and wavelength and the wavefront outerscale.
+    Formulae from http://www.eso.org/observing/etc/doc/helpfors.html
+
+    Values needed from the tic_params dictionary:
+    seeing: seeing at zenith at 500 nm (as an astropy Quantity in arcsec),
+    airmass: airmass of observation (1...X),
+    wavelength: wavelength of observation (as an astropy Quantity, normally in nm but anything convertable to nm will work),
+    m1_diameter: diameter of primary mirror (as an astropy Quantity, normally in meters but anything convertable to meters will work)
+    '''
+
+    # L_0 is the wave-front outer-scale. We have adopted a value of L_0=46m (van den Ancker et al. 2016, Proc.SPIE, Volume 9910, 111). 
+    L_0 = 46.0 * u.m
+
+    fwhm_tel = compute_fwhm_tel(tic_params)
+    fwhm_atm = tic_params['seeing'] * tic_params['airmass']**0.6
+    fwhm_atm *= (tic_params['wavelength'].to(u.nm) / (500.0*u.nm))**-0.2
+    f_kolb = (1.0/(1+300.0*tic_params['m1_diameter']/L_0))-1.0
+    # Fried parameter
+    r_0  = (0.1*(u.arcsec*u.m)) * tic_params['seeing']**-1.0 * ((tic_params['wavelength'].to(u.nm)/(500.0*u.nm))**1.2) * tic_params['airmass']**-0.6
+
+    fwhm_atm *= sqrt(1.0 + f_kolb * 2.183 * ((r_0/L_0)**0.356))
+
+    fwhm_iq = sqrt(fwhm_atm.value**2 + fwhm_tel.value**2)
+
+    return fwhm_iq * u.arcsec
+
 def instrument_throughput(tic_params):
     '''Calculate the throughput of a spectrograph instrument, excluding
     telescope, atmosphere, grating and detector.
