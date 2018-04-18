@@ -112,7 +112,7 @@ class EphemQueryFormTest(TestCase):
     def test_form_handles_save(self):
         form = EphemQuery(data = {'target' : 'N999r0q',
                                   'utc_date' : '2015-04-20',
-                                  'site_code' : 'K91',
+                                  'site_code' : 'K92',
                                   'alt_limit' : 30.0
                                   })
         self.assertTrue(form.is_valid())
@@ -127,9 +127,9 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('Siding Spring, Aust. (FTS - E10)', form.as_p())
         self.assertIn('value="E10"', form.as_p())
         self.assertIn('CTIO, Chile (LSC - W85-87; Sinistro)', form.as_p())
-        self.assertIn('value="W85"', form.as_p())
+        self.assertIn('value="W86"', form.as_p())
         self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', form.as_p())
-        self.assertIn('value="K91"', form.as_p())
+        self.assertIn('value="K92"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q58-59; 0.4m)', form.as_p())
@@ -148,7 +148,7 @@ class EphemQueryFormTest(TestCase):
     def test_form_handles_save_with_long_name(self):
         form = EphemQuery(data = {'target' : 'P/2016 BA141',
                                   'utc_date' : '2016-03-11',
-                                  'site_code' : 'K91',
+                                  'site_code' : 'K92',
                                   'alt_limit' : 30.0
                                   })
         self.assertTrue(form.is_valid())
@@ -156,7 +156,7 @@ class EphemQueryFormTest(TestCase):
     def test_form_returns_correct_target(self):
         form = EphemQuery(data = {'target' : '2016 GS2',
                                   'utc_date' : '2016-05-11',
-                                  'site_code' : 'K91',
+                                  'site_code' : 'K92',
                                   'alt_limit' : 30.0
                                   })
         self.assertTrue(form.is_valid())
@@ -227,9 +227,9 @@ class TestScheduleForm(TestCase):
         self.assertIn('Siding Spring, Aust. (FTS - E10)', form.as_p())
         self.assertIn('value="E10"', form.as_p())
         self.assertIn('CTIO, Chile (LSC - W85-87; Sinistro)', form.as_p())
-        self.assertIn('value="W85"', form.as_p())
+        self.assertIn('value="W86"', form.as_p())
         self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', form.as_p())
-        self.assertIn('value="K91"', form.as_p())
+        self.assertIn('value="K92"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q63-64; Sinistro)', form.as_p())
         self.assertIn('value="Q63"', form.as_p())
         self.assertIn('Siding Spring, Aust. (COJ - Q58-59; 0.4m)', form.as_p())

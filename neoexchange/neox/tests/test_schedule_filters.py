@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list
 from unittest import skipIf
 
 from datetime import datetime
@@ -14,6 +14,8 @@ from core.models import Body, Proposal
 
 from neox.auth_backend import update_proposal_permissions
 
+@patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+@patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
 class ScheduleObservations(FunctionalTest):
 
     def setUp(self):

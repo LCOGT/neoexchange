@@ -113,7 +113,7 @@ class EphemPageTest(TestCase):
     def test_uses_ephem_template(self):
         response = self.client.get('/ephemeris/',
             data = {'target' : 'N999r0q',
-                    'site_code' : 'W85',
+                    'site_code' : 'W86',
                     'utc_date'  : '2015-04-20',
                     'alt_limit' : 40.0
                     }

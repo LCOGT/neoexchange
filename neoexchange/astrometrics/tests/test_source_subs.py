@@ -759,7 +759,7 @@ class TestFetchFilterList(TestCase):
     def test_unavailable_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('V37',self.test_filter_map)
+        filter_list = fetch_filter_list('Z21',self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
 

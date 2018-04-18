@@ -158,7 +158,7 @@ class ScheduleBlockForm(forms.Form):
     def clean(self):
         site = self.cleaned_data['site_code']
         if not fetch_filter_list(site):
-            raise forms.ValidationError("Site/Telescope combination is not currently available.")
+            raise forms.ValidationError("This Site/Telescope combination is not currently available.")
         try:
             pattern = self.cleaned_data['filter_pattern']
             chunks = pattern.split(',')
