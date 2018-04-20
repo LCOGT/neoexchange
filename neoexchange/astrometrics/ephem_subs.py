@@ -1337,8 +1337,8 @@ def comp_FOM(orbelems, emp_line):
 def determine_sites_to_schedule(sched_date = datetime.utcnow()):
     '''Determines which sites should be attempted for scheduling based on the
     time of day.
-    Returns a dictionary with keys of 'north' and 'south', each of which will 
-    have two keys of '0m4' and '1m0' which will contain a list of sites (or an 
+    Returns a dictionary with keys of 'north' and 'south', each of which will
+    have two keys of '0m4' and '1m0' which will contain a list of sites (or an
     empty list) that can be scheduled.'''
 
     N_point4m_sites = N_onem_sites = S_point4m_sites = S_onem_sites = []
@@ -1458,4 +1458,3 @@ def compute_max_altitude(emp_dark_and_up):
         prev_max_alt = max_alt
 
     return max_alt
-

@@ -1657,7 +1657,7 @@ class TestGetSitePos(TestCase):
 class TestDetermineSitesToSchedule(TestCase):
 
     def test_CA_morning(self):
-        '''Morning in CA so CPT and TFN should be open, ELP should be 
+        '''Morning in CA so CPT and TFN should be open, ELP should be
         schedulable for Northern targets'''
         d = datetime(2017, 3,  9,  19, 27, 5)
 
@@ -1670,7 +1670,7 @@ class TestDetermineSitesToSchedule(TestCase):
         self.assertEqual(expected_sites, sites)
 
     def test_CA_afternoon1(self):
-        '''Afternoon in CA (pre UTC date roll) so LSC should be opening, ELP 
+        '''Afternoon in CA (pre UTC date roll) so LSC should be opening, ELP
         should be schedulable for Northern targets, OGG for bright targets'''
         d = datetime(2017, 3,  9,  23, 27, 5)
 
@@ -1683,9 +1683,9 @@ class TestDetermineSitesToSchedule(TestCase):
         self.assertEqual(expected_sites, sites)
 
     def test_CA_afternoon2(self):
-        '''Afternoon in CA (post UTC date roll) so LSC should be opening, ELP 
+        '''Afternoon in CA (post UTC date roll) so LSC should be opening, ELP
         should be schedulable for Northern targets, OGG for bright targets'''
- 
+
         d = datetime(2017, 3, 10,  00, 2, 5)
 
         expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38'], '1m0' : ['V37',] },
