@@ -52,8 +52,8 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # Then the LCO packages which have to be installed after the normal pip install
 # numpy needs to be explicitly installed first otherwise pySLALIB
 # fails with a missing numpy.distutils.core reference for...reasons...
-RUN pip install --upgrade pip \
-    && pip install -U numpy \
+RUN pip install -U numpy \
+    && pip install -U pip \
     && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
     && rm -rf ~/.cache/pip
 

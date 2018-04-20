@@ -1522,3 +1522,28 @@ def parse_taxonomy_data(tax_text=None):
                 row=[obj_id,chunks[16],"3B","PDS6",out]
                 tax_table.append(row)
     return tax_table
+
+def fetch_list_targets(list_targets):
+    '''Fetches targets from command line and/or text file and returns a list of targets'''
+
+    new_target_list = []
+
+    for obj_id in list_targets:
+        if os.path.isfile(obj_id):
+            with open(obj_id, 'r') as input_file:
+                for line in input_file:
+                    if '_' in line:
+                        line = str(line).replace('_', ' ')
+                    if ',' in line:
+                        line = str(line).replace(',', '')
+                    if '\n' in line:
+                        line = str(line).replace('\n', '')
+                    new_target_list.append(line)
+            continue
+        if '_' in obj_id:
+            obj_id = str(obj_id).replace('_', ' ')
+        new_target_list.append(obj_id)
+
+    return new_target_list
+
+
