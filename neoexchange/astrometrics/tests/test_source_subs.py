@@ -762,6 +762,18 @@ class TestFetchFilterList(TestCase):
         filter_list = fetch_filter_list('Z21',self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
+    def test_lowercase_telescope(self):
+        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+
+        filter_list = fetch_filter_list('t04',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_misspelled_telescope(self):
+        expected_filter_list = []
+
+        filter_list = fetch_filter_list('BESTtelescope',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
 
 class TestPreviousNEOCPParser(TestCase):
     '''Unit tests for the sources_subs.parse_previous_NEOCP_id() method'''

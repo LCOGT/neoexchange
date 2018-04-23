@@ -1261,7 +1261,7 @@ def LCOGT_domes_to_site_codes(siteid, encid, telid):
 def MPC_site_code_to_domes(site):
     ''' Returns the mapped value of the MPC site code to LCO Site, Eclosure, and telescope'''
 
-    key = cfg.valid_telescope_codes[site]
+    key = cfg.valid_telescope_codes.get(site.upper(),'--')
 
     key = key.split('-')
     siteid = key[0].lower()
