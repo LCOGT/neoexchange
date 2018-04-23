@@ -28,11 +28,13 @@ from random import randint
 from time import sleep
 import requests
 import json
+import copy
 
 from bs4 import BeautifulSoup
 import pyslalib.slalib as S
 
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -1107,15 +1109,16 @@ def make_window(params):
 
     return window
 
-def make_molecule(params):
+def make_molecule(params, exp_filter):
+    exp_count = len(exp_filter)
     molecule = {
                 'type' : params['exp_type'],
-                'exposure_count'  : params['exp_count'],
+                'exposure_count'  : exp_count,
                 'exposure_time' : params['exp_time'],
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
-                'filter'      : params['filter'],
+                'filter'      : exp_filter[0],
                 'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
@@ -1226,9 +1229,11 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
 def configure_defaults(params):
 
     site_list = { 'V37' : 'ELP',
+                  'K91' : 'CPT',
                   'K92' : 'CPT',
                   'K93' : 'CPT',
                   'Q63' : 'COJ',
+                  'Q64' : 'COJ',
                   'W85' : 'LSC',
                   'W86' : 'LSC',
                   'W87' : 'LSC',
@@ -1236,7 +1241,9 @@ def configure_defaults(params):
                   'W79' : 'LSC', # Code for aqwb-0m4a
                   'F65' : 'OGG',
                   'E10' : 'COJ',
+                  'Z17' : 'TFN',
                   'Z21' : 'TFN',
+                  'T03' : 'OGG',
                   'T04' : 'OGG',
                   'Q58' : 'COJ', # Code for 0m4a
                   'Q59' : 'COJ',
@@ -1249,18 +1256,15 @@ def configure_defaults(params):
     params['site'] = site_list[params['site_code']]
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
-    params['filter'] = 'w'
     params['exp_type'] = 'EXPOSE'
 
     if params['site_code'] == 'F65' or params['site_code'] == 'E10':
         params['instrument'] =  '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
-        params['filter'] = 'solar'
-    elif params['site_code'] in ['Z21', 'W89', 'W79', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
+    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
         params['instrument'] =  '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
-        params['filter'] = 'w'
         params['binning'] = 2 # 1 is the Right Answer...
 # We are not currently doing Aqawan-specific binding for LSC (or TFN or OGG) but
 # the old code is here if needed again
@@ -1293,7 +1297,7 @@ def make_userrequest(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule
-    molecule = make_molecule(params)
+    molecule_list = [make_molecule(params,filt) for filt in build_filter_blocks(params['filter_pattern'], params['exp_count'])]
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
@@ -1308,7 +1312,7 @@ def make_userrequest(elements, params):
             "location": location,
             "constraints": constraints,
             "target": target,
-            "molecules": [molecule],
+            "molecules": molecule_list,
             "windows": [window],
             "observation_note": note,
         }
@@ -1384,6 +1388,67 @@ def submit_block_to_scheduler(elements, params):
     logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
 
     return tracking_number, params
+
+def fetch_filter_list(site,page=None):
+    '''Fetches the camera mappings page'''
+
+    if page == None:
+        camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
+        data_file = urllib2.urlopen(camera_mappings)
+        data_out=parse_filter_file(site,data_file)
+        data_file.close
+    else:
+        with open(page, 'r') as input_file:
+            data_out = parse_filter_file(site, input_file)
+    return data_out
+
+def parse_filter_file(site, camera_list=None):
+    '''Parses the camera mappings page and sends back a list of filters at the given site code.
+    '''
+    filter_list=[   "air",
+                    "clear",
+                    "ND",
+                    "Astrodon-UV",
+                    "U",
+                    "B",
+                    "V",
+                    "R",
+                    "I",
+                    "B*ND",
+                    "V*ND",
+                    "R*ND",
+                    "I*ND",
+                    "up",
+                    "gp",
+                    "rp",
+                    "ip",
+                    "Skymapper-VS",
+                    "solar",
+                    "zs",
+                    "Y",
+                    "w"
+                ]
+
+    siteid, encid, telid = MPC_site_code_to_domes(site)
+
+    site_filters=[]
+    try:
+        for line in camera_list:
+            chunks = line.replace("\n", "").split(' ')
+            chunks = filter(None, chunks)
+            if chunks[0] != '#' and len(chunks) != 13:
+                logger.error('{} has incorrect number of columns'.format(line))
+            if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
+                filt_list = chunks[12].split(',')
+                for filt in filter_list:
+                    if filt in filt_list and filt not in site_filters:
+                        site_filters.append(filt)
+    except:
+        msg = "Could not read camera mappings file"
+        logger.error(msg)
+    if not site_filters:
+        logger.error('Could not find any filters for {}'.format(site))
+    return site_filters
 
 def fetch_taxonomy_page(page=None):
     '''Fetches Taxonomy data to be compared against database. First from PDS, then from Binzel 2004'''

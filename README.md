@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.2.0
+
+Added capability of requesting multiple filters when making a user request. 
+
 ### 2.1.6
 
 Reduce connection maximum age to 60 seconds. Switch off perturbations in ephemeris computation calls.
