@@ -768,7 +768,7 @@ class TestFetchFilterList(TestCase):
         filter_list = fetch_filter_list('t04',self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
-    def test_misspelled_telescope(self):
+    def test_invalid_telescope(self):
         expected_filter_list = []
 
         filter_list = fetch_filter_list('BESTtelescope',self.test_filter_map)
