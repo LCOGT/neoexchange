@@ -1434,15 +1434,20 @@ def parse_filter_file(site, camera_list=None):
     site_filters=[]
     try:
         for line in camera_list:
-            if line[0] !='#':
-                if line[2:5] == siteid and line[21:24] == telid[:-1]:
-                    chunks = line[191:].replace("\n", "").split(',')
-                    for filt in filter_list:
-                        if filt in chunks and filt not in site_filters:
-                          site_filters.append(filt)
+            chunks = line.replace("\n", "").split(' ')
+            chunks = filter(None, chunks)
+            if chunks[0] != '#' and len(chunks) != 13:
+                logger.error('{} has incorrect number of columns'.format(line))
+            if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
+                filt_list = chunks[12].split(',')
+                for filt in filter_list:
+                    if filt in filt_list and filt not in site_filters:
+                        site_filters.append(filt)
     except:
-        msg = "Could not find filter list"
+        msg = "Could not read camera mappings file"
         logger.error(msg)
+    if not site_filters:
+        logger.error('Could not find any filters for {}'.format(site))
     return site_filters
 
 def fetch_taxonomy_page(page=None):
