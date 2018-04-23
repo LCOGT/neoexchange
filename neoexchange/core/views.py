@@ -468,7 +468,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
-        dbg=False, perturb=True, display=False)
+        dbg=False, perturb=False, display=False)
     if emp == []:
         emp = [-99 for x in range(5)]
     magnitude = emp[3]
