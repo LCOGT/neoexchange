@@ -18,6 +18,9 @@ MAINTAINER LCOGT <webmaster@lco.global>
 # nginx runs on port 80, uwsgi is linked in the nginx conf
 EXPOSE 80
 
+# Add path to python3.6
+ENV PATH=/opt/lcogt-python36/bin:$PATH
+
 # The entry point is our init script, which runs startup tasks, then
 # execs the supervisord daemon
 ENTRYPOINT [ "/init" ]
@@ -52,9 +55,9 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # Then the LCO packages which have to be installed after the normal pip install
 # numpy needs to be explicitly installed first otherwise pySLALIB
 # fails with a missing numpy.distutils.core reference for...reasons...
-RUN /opt/lcogt-python36/bin/pip3 install -U numpy \
-    && /opt/lcogt-python36/bin/pip3 install -U pip \
-    && /opt/lcogt-python36/bin/pip3 install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
+RUN pip3 install -U numpy \
+    && pip3 install -U pip \
+    && pip3 install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
     && rm -rf ~/.cache/pip
 
 # Ensure crond will run on all host operating systems
