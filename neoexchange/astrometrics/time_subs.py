@@ -102,11 +102,11 @@ def parse_neocp_date(neocp_datestr, dbg=False):
                   'Dec' : 12 }
 
     chunks = neocp_datestr.split()
-    if dbg: print chunks
+    if dbg: print(chunks)
     if len(chunks) != 3: return None
     month_str = chunks[0].replace('(', '').replace('.', '')
     day_chunks = chunks[1].split('.')
-    if dbg: print day_chunks
+    if dbg: print(day_chunks)
     month_num = month_map[month_str[0:3]]
     day_num = int(day_chunks[0])
     try:
@@ -124,10 +124,10 @@ def parse_neocp_decimal_date(neocp_datestr, dbg=False):
     '''Parse decimal dates from the NEOCP (e.g. '2015 09 22.5' ) into a datetime
     object and return this. No sanity checking of the input is done'''
     chunks = neocp_datestr.split(' ')
-    if dbg: print chunks
+    if dbg: print(chunks)
     if len(chunks) != 3: return None
     day_chunks = chunks[2].split('.')
-    if dbg: print day_chunks
+    if dbg: print(day_chunks)
     neocp_datetime = datetime(year=int(chunks[0]), month=int(chunks[1]), day=int(day_chunks[0]))
 
     decimal_day = float('0.' + day_chunks[1].split()[0])
@@ -232,11 +232,11 @@ def mjd_utc2mjd_tt(mjd_utc, dbg=False):
                          TAI->TT  = 32.184s fixed offset'''
 # UTC->TT offset
     tt_utc = S.sla_dtt(mjd_utc)
-    if dbg: print 'TT-UTC(s)=', tt_utc
+    if dbg: print('TT-UTC(s)=', tt_utc)
 
 # Correct MJD to MJD(TT)
     mjd_tt = mjd_utc + (tt_utc/86400.0)
-    if dbg: print 'MJD(TT)  =  ', mjd_tt
+    if dbg: print('MJD(TT)  =  ', mjd_tt)
 
     return mjd_tt
 
@@ -257,12 +257,12 @@ def datetime2mjd_tdb(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     (r, z) = S.sla_geoc(obsvr_lat, obsvr_hgt)
 
     ut1 = compute_ut1(mjd_utc, dbg)
-    if dbg: print "UT1=", ut1
+    if dbg: print("UT1=", ut1)
 
 # Compute relativistic clock correction TDB->TT
     tdb_tt = S.sla_rcc(mjd_tt, ut1, -obsvr_long, r*auinkm, z*auinkm)
-    if dbg: print "(TDB-TT)=", tdb_tt
-    if dbg: print "(CT-UT)=", S.sla_dtt(mjd_utc)+tdb_tt
+    if dbg: print("(TDB-TT)=", tdb_tt)
+    if dbg: print("(CT-UT)=", S.sla_dtt(mjd_utc)+tdb_tt)
 
     mjd_tdb = mjd_tt + (tdb_tt/86400.0)
 
@@ -287,7 +287,7 @@ def compute_ut1(mjd_utc, dbg=False):
     to +/- 0.9s until they do away with leapseconds.'''
 
     dut = ut1_minus_utc(mjd_utc)
-    if dbg: print "DUT=", dut
+    if dbg: print("DUT=", dut)
     ut1 = (mjd_utc - int(mjd_utc)) + (dut/86400.0)
 
     return ut1
@@ -414,8 +414,8 @@ def timeit(method):
         result = method(*args, **kw)
         te = time.time()
 
-        print '%r (%r, %r) %2.2f sec' % \
-              (method.__name__, args, kw, te-ts)
+        print('%r (%r, %r) %2.2f sec' % \
+              (method.__name__, args, kw, te-ts))
         logger.debug("%r (%r, %r) %2.2f sec" % \
               (method.__name__, args, kw, te-ts))
         return result

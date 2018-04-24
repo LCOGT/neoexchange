@@ -51,14 +51,14 @@ def download_file(url, file_to_save):
                 file_handle.write(line)
             url_handle.close()
             file_handle.close()
-            print "Downloaded:", file_to_save
+            print("Downloaded:", file_to_save)
             break
         except urllib2.HTTPError, e:
             attempts += 1
             if hasattr(e, 'reason'):
-                print "HTTP Error %d: %s, retrying" % (e.code, e.reason)
+                print("HTTP Error %d: %s, retrying" % (e.code, e.reason))
             else:
-                print "HTTP Error: %s" % (e.code,)
+                print("HTTP Error: %s" % (e.code,))
 
 def random_delay(lower_limit=10, upper_limit=20):
     '''Waits a random number of integer seconds between [lower_limit; default 10]
@@ -101,7 +101,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     except urllib2.URLError as e:
         if not hasattr(e, "code"):
             raise
-        print "Page retrieval failed:", e
+        print("Page retrieval failed:", e)
         return None
 
   # Suck the HTML down
@@ -143,8 +143,8 @@ def parse_previous_NEOCP_id(items, dbg=False):
             mpec = ''
         else:
             # Now matches comets and 'A/<YYYY>' type objects
-            if dbg: print "Comet found, parsing"
-            if dbg: print "Items=",items
+            if dbg: print("Comet found, parsing")
+            if dbg: print("Items=",items)
 
             items[0] = sub(r"\s+\(", r"(", items[0])
             # Occasionally we get things of the form " Comet 2015 TQ209 = LM02L2J(Oct. 24.07 UT)"
@@ -155,7 +155,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
             # regexp that follows
             items[0] = sub(r"^\s+Comet\s+(?=\d+)", r"Comet C/", items[0])
             subitems = items[0].lstrip().split()
-            if dbg: print "Subitems=", subitems
+            if dbg: print("Subitems=", subitems)
             if len(subitems) == 7:
                 # Of the form 'A/2017 U2 = ZC82561 etc"
                 newid = subitems[0] + ' ' + subitems[1]
@@ -199,7 +199,7 @@ def fetch_previous_NEOCP_desigs(dbg=False):
     crossids = []
     for row in divs[0].find_all('li'):
         items = row.contents
-        if dbg: print items,len(items)
+        if dbg: print(items,len(items))
 # Skip the first "Processing" list item
         if items[0].strip() == 'Processing':
             continue
@@ -267,7 +267,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
         if len(cols) != 0:
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
-            if dbg: print "Cols=",cols, len(cols)
+            if dbg: print("Cols=",cols, len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -327,10 +327,10 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
                 if pccp_page == None:
                     pccp_page = fetchpage_and_make_soup(PCCP_url)
                 comet_objects = parse_PCCP(pccp_page)
-                if dbg: print comet_objects
+                if dbg: print(comet_objects)
                 for comet in comet_objects:
                     obj_id = comet[0]
-                    if dbg: print "obj_id=", obj_id
+                    if dbg: print("obj_id=", obj_id)
                     if obj_id not in object_list:
                         object_list.append(obj_id)
                         new_object = (obj_id, comet[1])
@@ -359,7 +359,7 @@ def parse_PCCP(pccp_page, dbg=False):
         if len(cols) != 0:
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
-            if dbg: print "Cols=",cols, len(cols)
+            if dbg: print("Cols=",cols, len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -449,7 +449,7 @@ def fetch_mpcobs(asteroid, debug=False):
     if page == None:
         return None
 
-    if debug: print page
+    if debug: print(page)
 # Find all the '<a foo' tags in the page. This will contain the links we need,
 # plus other junk
     refs = page.findAll('a')
@@ -578,7 +578,7 @@ def parse_mpcobs(line):
 
     if obs_type == 'C' or obs_type == 'S':
         # Regular CCD observations or first line of satellite observations
-#        print "Date=",line[15:32]
+#        print("Date=",line[15:32])
         params = {  'body'     : body,
                     'flags'    : flag,
                     'obs_type' : obs_type,
@@ -590,7 +590,7 @@ def parse_mpcobs(line):
                  }
         ptr = 1
         ra_dec_string = line[32:56]
-#        print "RA/Dec=", ra_dec_string
+#        print("RA/Dec=", ra_dec_string)
         ptr, ra_radians, status = S.sla_dafin(ra_dec_string, ptr)
         params['obs_ra'] = degrees(ra_radians) * 15.0
         ptr, dec_radians, status = S.sla_dafin(ra_dec_string, ptr)
@@ -628,16 +628,16 @@ def fetch_mpcdb_page(asteroid, dbg=False):
 
     #Strip off any leading or trailing space and replace internal space with a
     # plus sign
-    if dbg: print "Asteroid before=", asteroid
+    if dbg: print("Asteroid before=", asteroid)
     asteroid = asteroid.strip().replace(' ', '+')
-    if dbg: print "Asteroid  after=", asteroid
+    if dbg: print("Asteroid  after=", asteroid)
     query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
     page = fetchpage_and_make_soup(query_url)
     if page == None:
         return None
 
-#    if dbg: print page
+#    if dbg: print(page)
     return page
 
 def parse_mpcorbit(page, dbg=False):
@@ -734,7 +734,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
     to extract the object id. Could also parse the date of radar observation
     and whether astrometry or photometry is needed'''
 
-    if dbg: print chunks
+    if dbg: print(chunks)
     # Try to convert the 2nd field (counting from 0...) to an integer and if
     # that suceeds, check it's greater than 31. If yes, it's an asteroid number
     # (we assume asteroid #1-31 will never be observed with radar..)
@@ -743,7 +743,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
     try:
         astnum = int(chunks[2])
     except ValueError:
-        if dbg: print "Could not convert", chunks[2], "to asteroid number. Will try different method."
+        if dbg: print("Could not convert", chunks[2], "to asteroid number. Will try different method.")
         astnum = -1
 
     if astnum > 31:
@@ -751,19 +751,19 @@ def parse_goldstone_chunks(chunks, dbg=False):
         # Check if the next 2 characters are uppercase in which it's a
         # designation, not a name
         if chunks[3][0].isupper() and chunks[3][1].isupper():
-            if dbg: print "In case 1"
+            if dbg: print("In case 1")
             object_id = object_id + ' ' + str(chunks[3])
     else:
-        if dbg: print "Specific date of observation"
+        if dbg: print("Specific date of observation")
         # We got an error or a too small number (day of the month)
         if astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isdigit():
             # We have something of the form [20, 2014, YB35; only need first
             # bit
-            if dbg: print "In case 2a"
+            if dbg: print("In case 2a")
             object_id = str(chunks[3])
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isalnum():
             # We have something that straddles months
-            if dbg: print "In case 2b"
+            if dbg: print("In case 2b")
             if chunks[5].isdigit() or chunks[5][0:2].isupper() == False:
                 # Of the form '2017 May 29-Jun 02 418094 2007 WV4' or number and
                 # name e.g.  '2017 May 29-Jun 02 6063 Jason'
@@ -780,13 +780,13 @@ def parse_goldstone_chunks(chunks, dbg=False):
             # Hopefully some at Goldstone won't shout the name of the object
             # e.g. '(99942) APOPHIS'! or we're hosed...
             if chunks[4][0:2].isupper():
-                if dbg: print "In case 3a"
+                if dbg: print("In case 3a")
                 object_id = str(chunks[3] + ' ' + chunks[4])
             else:
-                if dbg: print "In case 3b"
+                if dbg: print("In case 3b")
                 object_id = str(chunks[3])
         elif chunks[3].isdigit() and chunks[4].isalpha():
-            if dbg: print "In case 4"
+            if dbg: print("In case 4")
             object_id = str(chunks[3] + ' ' + chunks[4])
 
     return object_id
@@ -845,7 +845,7 @@ def fetch_goldstone_targets(page=None, dbg=False):
                 if '&' in line[0:40] or ' &' in line[0:40] or '& ' in line[0:40] or ' & ' in line[0:40]:
                     line = line.replace(' & ', '-', 1).replace('& ', '-', 1).replace(' &', '-', 1)
                 chunks = line.lstrip().split()
-                #if dbg: print line
+                #if dbg: print(line)
                 # Check if the start of the stripped line is no longer the
                 # current year.
                 # <sigh> we also need to check if the year goes backwards due
@@ -1073,7 +1073,7 @@ def make_target(params):
 def make_moving_target(elements):
     '''Make a target dictionary for the request from an element set'''
 
-#    print elements
+#    print(elements)
     # Generate initial dictionary of things in common
     target = {
                   'name'                : elements['current_name'],

@@ -311,11 +311,11 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     airmass = S.sla_airmas((pi/2.0)-alt_rad)
     alt_deg = degrees(alt_rad)
 
-#    if display: print "  %02.2dh %02.2dm %02.2d.%02.2ds %s%02.2dd %02.2d\' %02.2d.%01.1d\"  V=%.1f  %5.2f %.1f % 7.3f %8.4f" % ( ra_geo_deg[0],
-    if display: print "  %02.2d %02.2d %02.2d.%02.2d %s%02.2d %02.2d %02.2d.%01.1d  V=%.1f  %5.2f %.1f % 7.3f %8.4f" % ( ra_geo_deg[0],
+#    if display: print("  %02.2dh %02.2dm %02.2d.%02.2ds %s%02.2dd %02.2d\' %02.2d.%01.1d\"  V=%.1f  %5.2f %.1f % 7.3f %8.4f" % ( ra_geo_deg[0],
+    if display: print("  %02.2d %02.2d %02.2d.%02.2d %s%02.2d %02.2d %02.2d.%01.1d  V=%.1f  %5.2f %.1f % 7.3f %8.4f" % ( ra_geo_deg[0],
         ra_geo_deg[1], ra_geo_deg[2], ra_geo_deg[3],
         dsign, dec_geo_deg[0], dec_geo_deg[1], dec_geo_deg[2], dec_geo_deg[3],
-        mag, total_motion, sky_pa, alt_deg, airmass )
+        mag, total_motion, sky_pa, alt_deg, airmass ))
 
 # Compute South Polar Distance from Dec
     dec_arcsec_decimal = dec_geo_deg[2] + dec_geo_deg[3]
@@ -597,7 +597,7 @@ def crude_astro_darkness(sitecode, utc_date):
         ad_start = utc_date + timedelta(hours=0, minutes=0)
         ad_end = utc_date + timedelta(hours=4, minutes=39)
     else:
-        print "Unsupported sitecode", sitecode
+        print("Unsupported sitecode", sitecode)
         return (None, None)
 
     return ad_start, ad_end
@@ -651,8 +651,8 @@ def accurate_astro_darkness(sitecode, utc_date, debug=False):
     solarnoon = (720-4*degrees(site_long)-eqtime)/1440
     sunrise = (solarnoon - hourangle*4/1440) % 1
     sunset = (solarnoon + hourangle*4/1440) % 1
-    if debug: print solarnoon + hourangle*4/1440, solarnoon - hourangle*4/1440
-    if debug: print sunset, sunrise
+    if debug: print(solarnoon + hourangle*4/1440, solarnoon - hourangle*4/1440)
+    if debug: print(sunset, sunrise)
 
     if sunrise < sunset:
         sunrise = sunrise + 1
@@ -660,7 +660,7 @@ def accurate_astro_darkness(sitecode, utc_date, debug=False):
         to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent, \
             sun_true_long, degrees(omega), sun_app_long, degrees(eps0), eps, \
             degrees(sun_app_ra), degrees(sun_app_dec), eqtime, hourangle]
-        print to_return
+        print(to_return)
 
     else:
         to_return = (utc_date+timedelta(days=sunset), utc_date+timedelta(days=sunrise))
@@ -680,7 +680,7 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
         if  (x[0]>=dark_start and x[0]<=dark_end-timedelta(minutes=slot_length)) and x[5] >= float(alt_limit):
             visible = True
             dark_up_emp.append(x)
-        if debug: print x[0].date(), x[0].time(), (x[0]>=dark_start and x[0]<dark_end-timedelta(minutes=slot_length)), x[5], alt_limit, visible
+        if debug: print(x[0].date(), x[0].time(), (x[0]>=dark_start and x[0]<dark_end-timedelta(minutes=slot_length)), x[5], alt_limit, visible)
 
 
     return dark_up_emp
@@ -777,7 +777,7 @@ def determine_slot_length(mag, site_code, debug=False):
 
 # Obtain magnitude->slot length mapping dictionary
     mag_mapping = get_mag_mapping(site_code)
-    if debug: print mag_mapping
+    if debug: print(mag_mapping)
     if mag_mapping == {}: return 0
 
     # Derive your tuple from the magnitude->slot length mapping data structure

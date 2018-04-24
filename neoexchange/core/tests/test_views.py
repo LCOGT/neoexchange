@@ -2668,12 +2668,12 @@ class TestCheckCatalogAndRefitNew(TestCase):
                 for file_to_rm in files_to_remove:
                     os.remove(file_to_rm)
             except OSError:
-                print "Error removing files in temporary test directory", self.temp_dir
+                print("Error removing files in temporary test directory", self.temp_dir)
             try:
                 os.rmdir(self.temp_dir)
-                if self.debug_print: print "Removed", self.temp_dir
+                if self.debug_print: print("Removed", self.temp_dir)
             except OSError:
-                print "Error removing temporary test directory", self.temp_dir
+                print("Error removing temporary test directory", self.temp_dir)
 
     def test_check_catalog_and_refit_new_good(self):
 

@@ -362,7 +362,7 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
 
     cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files )
     cmdline = cmdline.rstrip()
-    print cmdline
+    print(cmdline)
 
     if dbg == True:
         retcode_or_cmdline = cmdline
@@ -522,7 +522,7 @@ def read_mtds_file(mtdsfile, dbg=False):
     frames = []
     while frame < num_frames:
         frame_string = mtds_fh.readline()
-        if dbg: print frame, frame_string
+        if dbg: print(frame, frame_string)
         frame_chunks = frame_string.split(' ')
         frame_filename = frame_chunks[0]
         frame_jd = float(frame_chunks[1])
@@ -552,7 +552,7 @@ def read_mtds_file(mtdsfile, dbg=False):
             dets_array = empty( shape=(0, 0) )
 
     # Check for correct number of entries
-    if dbg: print dets_array.shape
+    if dbg: print(dets_array.shape)
     num_detections = dets_array.shape[0] / num_frames
     if num_detections == 0:
         logger.warn("Found 0 detection entries")

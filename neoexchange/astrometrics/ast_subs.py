@@ -93,7 +93,7 @@ def normal_to_packed(obj_name, dbg=False):
         obj_name = obj_name[2:]
     
     buff = obj_name.replace(" ", "")
-    if dbg: print "len(buff)=", len(buff)
+    if dbg: print("len(buff)=", len(buff))
     
     # If the name starts with four digits followed by an uppercase letter, it's
     # a provisional (un-numbered) designation e.g. '1984 DA' or '2015 BM510'
@@ -109,7 +109,7 @@ def normal_to_packed(obj_name, dbg=False):
             i = i+1
         
         sub_designator_str = re.sub('(\d*)([a-zA-Z]*)$', r'\1', buff[i:])
-        if dbg: print 'sub_designator_str=', sub_designator_str,len(sub_designator_str)
+        if dbg: print('sub_designator_str=', sub_designator_str,len(sub_designator_str))
         sub_designator = 0
         if sub_designator_str != '':
             sub_designator = int(sub_designator_str)

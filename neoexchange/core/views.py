@@ -1004,7 +1004,7 @@ def update_crossids(astobj, dbg=False):
     kwargs = clean_crossid(astobj, dbg)
     if not created:
         if dbg:
-            print "Did not create new Body"
+            print("Did not create new Body")
         # Find out if the details have changed, if they have, save a revision
         # But first check if it is a comet or NEO and came from somewhere other
         # than the MPC. In this case, leave it active.
@@ -1100,7 +1100,7 @@ def clean_crossid(astobj, dbg=False):
                   'active': active
                   }
         if dbg:
-            print "%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active'])
+            print("%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active']))
     else:
         logger.warn("Unparseable cross-identification: %s" % astobj)
         params = {}
@@ -1524,9 +1524,9 @@ def store_detections(mtdsfile, dbg=False):
                             'sky_motion_pa' : sky_position_angle,
                             'detections' : candidate.tostring()
                         }
-                if dbg: print params
+                if dbg: print(params)
                 cand, created = Candidate.objects.get_or_create(**params)
-                if dbg: print cand, created
+                if dbg: print(cand, created)
                 if created:
                     num_candidates += 1
 
@@ -1580,14 +1580,14 @@ def update_taxonomy(taxobj,dbg=False):
             body = Body.objects.get(provisional_name=obj_id)
         except:
             if dbg == True:
-                print "No such Body as %s" % obj_id
-                print "number of bodies: %i" %body_all.count()
+                print("No such Body as %s" % obj_id)
+                print("number of bodies: %i" %body_all.count())
             return False
     #Must be a better way to do this next bit, but I don't know what it is off the top of my head.
     check_tax = SpectralInfo.objects.filter(body=body,taxonomic_class=taxobj[1],tax_scheme=taxobj[2],tax_reference=taxobj[3],tax_notes=taxobj[4])
     if check_tax.count() != 0:
         if dbg == True:
-            print "Data already in DB"
+            print("Data already in DB")
         return False
     params = {  'body'          : body,
                 'taxonomic_class' : taxobj[1],
@@ -1598,6 +1598,6 @@ def update_taxonomy(taxobj,dbg=False):
     tax, created = SpectralInfo.objects.get_or_create(**params)
     if not created:
         if dbg == True:
-            print "Did not write for some reason."
+            print("Did not write for some reason.")
         return False
     return True

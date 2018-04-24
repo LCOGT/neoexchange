@@ -65,12 +65,12 @@ class ExternalCodeUnitTest(TestCase):
                 for file_to_rm in files_to_remove:
                     os.remove(file_to_rm)
             except OSError:
-                print "Error removing files in temporary test directory", self.test_dir
+                print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print "Removed", self.test_dir
+                if self.debug_print: print("Removed", self.test_dir)
             except OSError:
-                print "Error removing temporary test directory", self.test_dir
+                print("Error removing temporary test directory", self.test_dir)
 
 class TestMTDLINKRunner(ExternalCodeUnitTest):
 
@@ -170,7 +170,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-        if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
         input_fits_1 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.fits')
         self.assertTrue(os.path.exists(input_fits_1))
         input_fits_2 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0099-e90.fits')
@@ -272,7 +272,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-        if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
         input_fits_1 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.fits')
         self.assertTrue(os.path.exists(input_fits_1))
         input_fits_2 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0096-e90.fits')
@@ -406,7 +406,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-        if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
         output_cat = os.path.join(self.test_dir, 'test.cat')
         self.assertTrue(os.path.exists(output_cat))
         test_fh = open(output_cat, 'r')
@@ -439,7 +439,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
 
         self.assertEqual(expected_status, status)
-        if self.debug_print: print glob(os.path.join(self.test_dir, '*'))
+        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
 
         header_file = os.path.basename(self.test_fits_catalog).replace('fits', 'head')
         output_header = os.path.join(self.test_dir, header_file)

@@ -2104,12 +2104,12 @@ class ExternalCodeUnitTest(TestCase):
                 for file_to_rm in files_to_remove:
                     os.remove(file_to_rm)
             except OSError:
-                print "Error removing files in temporary test directory", self.test_dir
+                print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print "Removed", self.test_dir
+                if self.debug_print: print("Removed", self.test_dir)
             except OSError:
-                print "Error removing temporary test directory", self.test_dir
+                print("Error removing temporary test directory", self.test_dir)
 
 
 class UpdateFrameZeropointTest(FITSUnitTest):

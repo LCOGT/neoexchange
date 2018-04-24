@@ -90,7 +90,7 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
     frames = {}
     for reduction_lvl in red_lvls:
         search_url = archive_url + '&RLEVEL='+ reduction_lvl
-#        print "search_url=%s" % search_url
+#        print("search_url=%s" % search_url)
         resp = requests.get(search_url, headers=auth_header)
         if resp.status_code in [200,201]:
             response = resp.json()
@@ -198,29 +198,29 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                 new_path2 = os.path.join(path, new_filename2)
                 uncomp_filepath2 = os.path.splitext(new_path2)[0]
                 if os.path.exists(new_path) or os.path.exists(new_path2):
-                    if verbose: print "Higher level reduction file exists"
+                    if verbose: print("Higher level reduction file exists")
                     return True
                 if os.path.exists(uncomp_filepath2):
-                    if verbose: print "Uncompressed higher level reduction file exists"
+                    if verbose: print("Uncompressed higher level reduction file exists")
                     return True
                 if os.path.exists(uncomp_filepath):
-                    if verbose: print "Uncompressed reduction file exists"
+                    if verbose: print("Uncompressed reduction file exists")
                     return True
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
                     logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
                     if md5sum == archive_md5:
-                        if verbose: print "File exists with correct MD5 sum"
+                        if verbose: print("File exists with correct MD5 sum")
                         return True
             else:
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
                     logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
                     if md5sum == archive_md5:
-                        if verbose: print "-91 level reduction file already exists with correct MD5 sum."
+                        if verbose: print("-91 level reduction file already exists with correct MD5 sum.")
                         return True
                 if os.path.exists(uncomp_filepath):
-                    if verbose: print "Uncompressed -91 level reduction file already exists."
+                    if verbose: print("Uncompressed -91 level reduction file already exists.")
                     return True
 
     return False
