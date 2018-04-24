@@ -923,24 +923,24 @@ def get_sitepos(site_code, dbg=False):
 # MPC code for FTS. Positions from JPL HORIZONS ( 149d04'13.0''E, 31d16'23.4''S, 1111.8 m )
         (site_lat, status)  =  (S.sla_daf2r(31, 16, 23.4))
         site_lat = -site_lat
-        (site_long, status) = S.sla_daf2r(149, 04, 13.0)
+        (site_long, status) = S.sla_daf2r(149, 4., 13.0)
         site_hgt = 1111.8
         site_name = 'Siding Spring-Faulkes Telescope South (FTS)'
     elif site_code == 'SQA' or site_code == 'G51':
         (site_lat, status)  =  S.sla_daf2r(34, 41, 29.23)
-        (site_long, status) =  S.sla_daf2r(120, 02, 32.0)
+        (site_long, status) =  S.sla_daf2r(120, 2., 32.0)
         site_long = -site_long
         site_hgt = 328.0
         site_name = 'Sedgwick Observatory (SQA)'
     elif site_code == 'ELP-DOMA' or site_code == 'V37':
         (site_lat, status)  =  S.sla_daf2r(30, 40, 47.53)
-        (site_long, status) =  S.sla_daf2r(104, 00, 54.63)
+        (site_long, status) =  S.sla_daf2r(104, 0., 54.63)
         site_long = -site_long
         site_hgt = 2010.0
         site_name = 'LCO Node at McDonald Observatory (ELP)'
     elif site_code == 'ELP-AQWA-0M4A' or site_code == 'V38':
         (site_lat, status)  =  S.sla_daf2r(30, 40, 48.15)
-        (site_long, status) =  S.sla_daf2r(104, 00, 54.24)
+        (site_long, status) =  S.sla_daf2r(104, 0., 54.24)
         site_long = -site_long
         site_hgt = 2027.0
         site_name = 'LCO Node at McDonald Observatory (ELP)'
@@ -1022,7 +1022,7 @@ def get_sitepos(site_code, dbg=False):
 # corrected by +3m for telescope height from Vince.
         (site_lat, status)  =  S.sla_daf2r(31, 16, 22.56)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 04, 14.33)
+        (site_long, status) =  S.sla_daf2r(149, 4., 14.33)
         site_hgt = 1168.0
         site_name = 'LCO COJ Node 1m0 Dome A at Siding Spring'
     elif site_code == 'COJ-DOMB-1M0A' or site_code == 'Q64':
@@ -1030,7 +1030,7 @@ def get_sitepos(site_code, dbg=False):
 # corrected by +3m for telescope height from Vince.
         (site_lat, status)  =  S.sla_daf2r(31, 16, 22.89)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 04, 14.75)
+        (site_long, status) =  S.sla_daf2r(149, 4., 14.75)
         site_hgt = 1168.0
         site_name = 'LCO COJ Node 1m0 Dome B at Siding Spring'
     elif site_code == 'TFN-AQWA-0M4A' or site_code == 'Z21':
@@ -1051,14 +1051,14 @@ def get_sitepos(site_code, dbg=False):
 # Latitude, longitude from Google Earth, SE corner of clamshell, probably wrong
         (site_lat, status)  =  S.sla_daf2r(31, 16, 22.38)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 04, 15.05)
+        (site_long, status) =  S.sla_daf2r(149, 4., 15.05)
         site_hgt = 1191.0
         site_name = 'LCO COJ Node 0m4a at Siding Spring'
     elif site_code == 'COJ-CLMA-0M4B' or site_code == 'Q59':
 # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
         (site_lat, status)  =  S.sla_daf2r(31, 16, 22.48)
         site_lat = -site_lat   # Southern hemisphere !
-        (site_long, status) =  S.sla_daf2r(149, 04, 14.91)
+        (site_long, status) =  S.sla_daf2r(149, 4., 14.91)
         site_hgt = 1191.0
         site_name = 'LCO COJ Node 0m4b at Siding Spring'
     elif site_code == 'CPT-AQWA-0M4A' or site_code == 'L09':

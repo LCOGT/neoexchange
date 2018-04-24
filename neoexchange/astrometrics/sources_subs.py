@@ -16,10 +16,12 @@ GNU General Public License for more details.
 '''
 
 import logging
-import urllib2, os
+import os
+import urllib.request
+import urllib.error
 import imaplib
 import email
-from urlparse import urljoin
+from urllib.parse import urljoin
 from re import sub, compile
 from math import degrees
 from datetime import datetime, timedelta
@@ -45,7 +47,7 @@ def download_file(url, file_to_save):
     attempts = 0
     while attempts < 3:
         try:
-            url_handle = urllib2.urlopen(url)
+            url_handle = urllib.request.urlopen(url)
             file_handle = open(file_to_save, 'wb')
             for line in url_handle:
                 file_handle.write(line)
@@ -53,7 +55,7 @@ def download_file(url, file_to_save):
             file_handle.close()
             print("Downloaded:", file_to_save)
             break
-        except urllib2.HTTPError, e:
+        except urllib.error.HTTPError as e:
             attempts += 1
             if hasattr(e, 'reason'):
                 print("HTTP Error %d: %s, retrying" % (e.code, e.reason))
@@ -94,11 +96,11 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     if fakeagent == True:
         req_headers = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0",
                       }
-    req_page = urllib2.Request(url, headers=req_headers)
-    opener = urllib2.build_opener() # create an opener object
+    req_page = urllib.request.Request(url, headers=req_headers)
+    opener = urllib.error.build_opener() # create an opener object
     try:
         response = opener.open(req_page)
-    except urllib2.URLError as e:
+    except urllib.URLError as e:
         if not hasattr(e, "code"):
             raise
         print("Page retrieval failed:", e)
@@ -1394,7 +1396,7 @@ def fetch_filter_list(site,page=None):
 
     if page == None:
         camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
-        data_file = urllib2.urlopen(camera_mappings)
+        data_file = urllib.request.urlopen(camera_mappings)
         data_out=parse_filter_file(site,data_file)
         data_file.close
     else:
@@ -1455,7 +1457,7 @@ def fetch_taxonomy_page(page=None):
 
     if page == None:
         taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
-        data_file = urllib2.urlopen(taxonomy_url)
+        data_file = urllib.request.urlopen(taxonomy_url)
         data_out=parse_taxonomy_data(data_file)
         data_file.close
         ####Binzel_taxonomy_page appears to be completely included within PDS Version6.0
