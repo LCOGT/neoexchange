@@ -31,15 +31,15 @@ ENV PREFIX /neoexchange
 
 # Install packages and update base system
 RUN yum -y install epel-release \
-        && yum -y install cronie libjpeg-devel nginx python-pip python-devel \
+        && yum -y install cronie libjpeg-devel nginx \
                 supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
                 mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
-                less wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
+                less wget tcsh plplot plplot-libs plplot-devel \
         && yum -y update
 
 # Enable LCO repo and install extra packages
 COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
-RUN yum -y install sextractor cdsclient scamp mtdlink\
+RUN yum -y install lcogt-python36 sextractor cdsclient scamp mtdlink\
         && yum clean all
 
 ENV PIP_TRUSTED_HOST buildsba.lco.gtn
@@ -52,9 +52,9 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # Then the LCO packages which have to be installed after the normal pip install
 # numpy needs to be explicitly installed first otherwise pySLALIB
 # fails with a missing numpy.distutils.core reference for...reasons...
-RUN pip install -U numpy \
-    && pip install -U pip \
-    && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
+RUN /opt/lcogt-python36/bin/pip3 install -U numpy \
+    && /opt/lcogt-python36/bin/pip3 install -U pip \
+    && /opt/lcogt-python36/bin/pip3 install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
     && rm -rf ~/.cache/pip
 
 # Ensure crond will run on all host operating systems
