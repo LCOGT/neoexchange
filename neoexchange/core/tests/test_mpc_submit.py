@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2017-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime
 
@@ -22,6 +22,7 @@ from core.models import Body, Proposal, Block, Frame, SourceMeasurement
 
 #Import module to test
 from core.mpc_submit import *
+
 
 class Test_Generate_Message(TestCase):
 
@@ -142,7 +143,7 @@ class Test_Generate_Message(TestCase):
                     'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
                     'filename'      : 'cpt1m012-kb75-20150713-0130-e91.fits',
                     'exptime'       : 40.0,
-                    'midpoint'      : datetime(2015,07,13,21,9,51),
+                    'midpoint'      : datetime(2015, 7, 13, 21, 9, 51),
                     'block'         : self.test_block,
                     'astrometric_catalog' : "UCAC-4"
                  }
@@ -157,7 +158,7 @@ class Test_Generate_Message(TestCase):
                     'instrument'    : 'fl03',
                     'filter'        : 'R',
                     'frametype'     : Frame.STACK_FRAMETYPE,
-                    'midpoint'      : datetime(2015,12,05,01,10,49,int(0.9*1e6)),
+                    'midpoint'      : datetime(2015, 12, 5, 1, 10, 49, int(0.9*1e6)),
                     'block'         : self.test_block2,
                     'astrometric_catalog' : "2MASS",
                  }
@@ -167,7 +168,7 @@ class Test_Generate_Message(TestCase):
                     'instrument'    : 'kb29',
                     'filter'        : 'w',
                     'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
-                    'midpoint'      : datetime(2015,12,05,01,10,49,int(0.9*1e6)),
+                    'midpoint'      : datetime(2015, 12, 5, 1, 10, 49, int(0.9*1e6)),
                     'block'         : self.test_block3,
                     'astrometric_catalog' : "2MASS",
                  }
@@ -177,7 +178,7 @@ class Test_Generate_Message(TestCase):
                     'instrument'    : 'fs02',
                     'filter'        : 'solar',
                     'frametype'     : Frame.BANZAI_RED_FRAMETYPE,
-                    'midpoint'      : datetime(2015,12,05,9,50,49),
+                    'midpoint'      : datetime(2015, 12, 5, 9, 50, 49),
                     'block'         : self.test_block4,
                     'astrometric_catalog' : "PPMXL",
                  }
@@ -186,7 +187,7 @@ class Test_Generate_Message(TestCase):
         frame_params = {  'sitecode'      : 'C51',
                     'filter'        : 'R',
                     'frametype'     : Frame.SATELLITE_FRAMETYPE,
-                    'midpoint'      : datetime(2016,2,8,21,24,22,int(0.752*1e6)),
+                    'midpoint'      : datetime(2016, 2, 8, 21, 24, 22, int(0.752*1e6)),
                     'block'         : None,
                     'extrainfo'     : '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
                  }
@@ -196,7 +197,7 @@ class Test_Generate_Message(TestCase):
                     'instrument'    : 'fl03',
                     'filter'        : 'V',
                     'frametype'     : Frame.BANZAI_QL_FRAMETYPE,
-                    'midpoint'      : datetime(2015,12,05,01,10,49,int(0.9*1e6)),
+                    'midpoint'      : datetime(2015, 12, 5, 1, 10, 49, int(0.9*1e6)),
                     'filename'      : 'lsc1m003-fl03-20151205-0130-e11.fits',
                     'block'         : self.test_block2ql,
                     'astrometric_catalog' : "2MASS",
@@ -511,7 +512,6 @@ class Test_Generate_Message(TestCase):
         self.assertEqual(expected_message, message)
 
     def test_W86_QL(self):
-
 
         expected_message = (u'COD W86\n'
                             u'CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117\n'

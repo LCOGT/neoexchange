@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2016-2018 LCO
 
@@ -13,14 +13,14 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime, timedelta
 import os, sys
 from hashlib import md5
 import glob
 import logging
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 import requests
 from django.conf import settings
@@ -32,17 +32,18 @@ logger = logging.getLogger(__name__)
 
 ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings
-if sys.version_info < (2,7,9):
+if sys.version_info < (2, 7, 9):
     requests.packages.urllib3.disable_warnings()
     ssl_verify = False # Danger, danger !
 
 
 def archive_login(username, password):
-    '''
+    """
     Wrapper function to get API token for Archive
-    '''
+    """
     archive_url = settings.ARCHIVE_TOKEN_URL
     return get_lcogt_headers(archive_url, username, password)
+
 
 def lco_api_call(url):
     if 'archive' in url:
@@ -54,14 +55,15 @@ def lco_api_call(url):
     try:
         resp = requests.get(url, headers=headers, timeout=20, verify=ssl_verify)
         data = resp.json()
-    except requests.exceptions.InvalidSchema, err:
+    except requests.exceptions.InvalidSchema as err:
         data = None
         logger.error("Request call to %s failed with: %s" % (url, err))
-    except ValueError, err:
+    except ValueError:
         logger.error("Request {} API did not return JSON: {}".format(url, resp.status_code))
     except requests.exceptions.Timeout:
         logger.error("Request API timed out")
     return data
+
 
 def determine_archive_start_end(dt=None):
 

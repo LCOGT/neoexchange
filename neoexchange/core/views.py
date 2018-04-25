@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 import os
 from datetime import datetime, timedelta
@@ -28,7 +28,7 @@ from django.views.generic import DetailView, ListView, FormView, TemplateView, V
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404, HttpResponse, HttpResponseRedirect
-from httplib import REQUEST_TIMEOUT, HTTPSConnection
+from http.client import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
@@ -52,7 +52,6 @@ import logging
 import reversion
 import json
 import requests
-from urlparse import urljoin
 import numpy as np
 from django.conf import settings
 
@@ -68,6 +67,7 @@ class LoginRequiredMixin(object):
         view = super(LoginRequiredMixin, cls).as_view(**initkwargs)
         return login_required(view)
 
+
 def user_proposals(user):
     '''
     Returns active proposals the given user has permissions for
@@ -81,6 +81,7 @@ def user_proposals(user):
     proposals = Proposal.objects.filter(proposalpermission__user=user, active=True)
 
     return proposals
+
 
 class MyProposalsMixin(object):
 
@@ -102,6 +103,7 @@ class BlockTimeSummary(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         block_summary = summarise_block_efficiency(block_filter=10)
         return render(request, 'core/block_time_summary.html', {'summary':json.dumps(block_summary)})
+
 
 def summarise_block_efficiency(block_filter=0):
     summary = []
@@ -136,8 +138,8 @@ class BodySearchView(ListView):
     model = Body
 
     def get_queryset(self):
-        name = self.request.GET.get("q","")
-        if (name != ''):
+        name = self.request.GET.get("q", "")
+        if name != '':
             if name.isdigit():
                 object_list = self.model.objects.filter(name=name)
             else:
@@ -145,6 +147,7 @@ class BodySearchView(ListView):
         else:
             object_list = self.model.objects.all()
         return object_list
+
 
 class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
@@ -155,6 +158,7 @@ class SuperBlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = SuperBlock
 
+
 class BlockListView(ListView):
     model = Block
     template_name = 'core/block_list.html'
@@ -162,12 +166,14 @@ class BlockListView(ListView):
     context_object_name="block_list"
     paginate_by = 20
 
+
 class SuperBlockListView(ListView):
     model = SuperBlock
     template_name = 'core/block_list.html'
     queryset=SuperBlock.objects.order_by('-block_start')
     context_object_name="block_list"
     paginate_by = 20
+
 
 class BlockReport(LoginRequiredMixin, View):
 
@@ -180,15 +186,16 @@ class BlockReport(LoginRequiredMixin, View):
             block.save()
             return redirect(reverse('blocklist'))
         else:
-            messages.error(request,'Block does not have any observations')
+            messages.error(request, 'Block does not have any observations')
             return HttpResponseRedirect(reverse('block-view', kwargs={'pk':block.superblock.id}))
+
 
 class BlockReportMPC(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        if block.reported == True:
-            messages.error(request,'Block has already been reported')
+        if block.reported is True:
+            messages.error(request, 'Block has already been reported')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
         if request.user.is_authenticated:
             email = request.user.email
@@ -204,6 +211,7 @@ class BlockReportMPC(LoginRequiredMixin, View):
         else:
             messages.error(request,'It was not possible to email report to MPC')
             return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
+
 
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'
@@ -645,7 +653,7 @@ def build_unranked_list_params():
             body_dict['observed'], body_dict['reported'] = body.get_block_info()
             body_dict['type'] = body.get_source_type_display()
             unranked.append(body_dict)
-    except Exception, e:
+    except Exception as e:
         latest = None
         unranked = None
         logger.error('Ranking failed on %s' % e)
@@ -1109,11 +1117,11 @@ def clean_crossid(astobj, dbg=False):
 
 
 def clean_mpcorbit(elements, dbg=False, origin='M'):
-    '''Takes a list of (proto) element lines from fetch_mpcorbit() and plucks
-    out the appropriate bits. origin defaults to 'M'(PC) if not specified'''
+    """Takes a list of (proto) element lines from fetch_mpcorbit() and plucks
+    out the appropriate bits. origin defaults to 'M'(PC) if not specified"""
 
     params = {}
-    if elements != None:
+    if elements is not None:
 
         try:
             last_obs = datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d')

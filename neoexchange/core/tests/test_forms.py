@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime
 from django.test import TestCase
@@ -19,11 +19,11 @@ from django.forms.models import model_to_dict
 
 from core.models import Body, Proposal
 
-#Import module to test
+# Import module to test
 from core.forms import EphemQuery, ScheduleForm
 
-class EphemQueryFormTest(TestCase):
 
+class EphemQueryFormTest(TestCase):
 
     def setUp(self):
 
@@ -32,7 +32,7 @@ class EphemQueryFormTest(TestCase):
         params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
-                    'epochofel'     : datetime(2015, 3, 19, 00,00,00),
+                    'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
                     'meananom'      : 325.2636,
                     'argofperih'    : 85.19251,
                     'longascnode'   : 147.81325,
@@ -56,12 +56,12 @@ class EphemQueryFormTest(TestCase):
 
         params['provisional_name'] = 'P10uJHG'
         params['name'] = '2016 GS216'
-        params['source_type']= 'N'
+        params['source_type'] = 'N'
         self.body_similar_name3, created = Body.objects.get_or_create(**params)
 
         params['provisional_name'] = u'P10ucyy'
         params['name'] = u'2016 GS2'
-        params['source_type']= u'N'
+        params['source_type'] = u'N'
         params['origin'] = u'G'
         self.body_similar_name4, created = Body.objects.get_or_create(**params)
 
@@ -77,13 +77,13 @@ class EphemQueryFormTest(TestCase):
                          'meandist': 3.0251663,
                          'name': 'P/2016 BA141',
                          'not_seen': 24.8857164222,
-                         'num_obs': 151L,
+                         'num_obs': 151,
                          'orbinc': 18.89365,
                          'origin': u'G',
                          'perihdist': 1.0128244,
                          'provisional_name': u'P10rI5K',
                          'provisional_packed': u'',
-                         'score': 100L,
+                         'score': 100,
                          'slope': 6.4,
                          'source_type': u'C',
                          'updated': True,
@@ -96,21 +96,21 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('Site code:', form.as_p())
 
     def test_form_validation_for_blank_target(self):
-        form = EphemQuery(data = {'target' : ''})
+        form = EphemQuery(data={'target' : ''})
         self.assertFalse(form.is_valid())
         self.assertEqual(form.errors['target'],
             ['Target name is required']
         )
 
     def test_form_validation_for_blank_date(self):
-        form = EphemQuery(data = {'utc_date' : ''})
+        form = EphemQuery(data={'utc_date' : ''})
         self.assertFalse(form.is_valid())
         self.assertEqual(form.errors['utc_date'],
             ['UTC date is required']
         )
 
     def test_form_handles_save(self):
-        form = EphemQuery(data = {'target' : 'N999r0q',
+        form = EphemQuery(data={'target' : 'N999r0q',
                                   'utc_date' : '2015-04-20',
                                   'site_code' : 'K92',
                                   'alt_limit' : 30.0
@@ -146,23 +146,24 @@ class EphemQueryFormTest(TestCase):
         self.assertIn('value="L09"', form.as_p())
 
     def test_form_handles_save_with_long_name(self):
-        form = EphemQuery(data = {'target' : 'P/2016 BA141',
-                                  'utc_date' : '2016-03-11',
-                                  'site_code' : 'K92',
-                                  'alt_limit' : 30.0
-                                  })
+        form = EphemQuery(data={'target' : 'P/2016 BA141',
+                                'utc_date' : '2016-03-11',
+                                'site_code' : 'K92',
+                                'alt_limit' : 30.0
+                                })
         self.assertTrue(form.is_valid())
 
     def test_form_returns_correct_target(self):
-        form = EphemQuery(data = {'target' : '2016 GS2',
+        form = EphemQuery(data={'target' : '2016 GS2',
                                   'utc_date' : '2016-05-11',
                                   'site_code' : 'K92',
                                   'alt_limit' : 30.0
-                                  })
+                               })
         self.assertTrue(form.is_valid())
         data = form.cleaned_data
         body_elements = model_to_dict(data['target'])
         self.assertEqual(model_to_dict(self.body_similar_name4), body_elements)
+
 
 class TestScheduleForm(TestCase):
 

@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 import os
 import shutil
@@ -172,9 +172,8 @@ class TestClean_NEOCP_Object(TestCase):
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
-
     def save_N007riz(self):
-        obj_id ='N007riz'
+        obj_id = 'N007riz'
         elements = { 'abs_mag'     : 23.9,
                       'slope'       : 0.15,
                       'epochofel'   : datetime(2015, 3, 19, 0, 0, 0),
@@ -191,14 +190,14 @@ class TestClean_NEOCP_Object(TestCase):
                     }
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # We are creating this object
-        self.assertEqual(True,created)
-        resp = save_and_make_revision(body,elements)
+        self.assertEqual(True, created)
+        resp = save_and_make_revision(body, elements)
         # We are saving all the detailing elements
-        self.assertEqual(True,resp)
+        self.assertEqual(True, resp)
 
     def test_revise_N007riz(self):
         self.save_N007riz()
-        obj_id ='N007riz'
+        obj_id = 'N007riz'
         elements = { 'abs_mag'     : 23.9,
                       'slope'       : 0.15,
                       'epochofel'   : datetime(2015, 4, 19, 0, 0, 0),
@@ -216,13 +215,13 @@ class TestClean_NEOCP_Object(TestCase):
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # Created should now be false
         self.assertEqual(False, created)
-        resp = save_and_make_revision(body,elements)
+        resp = save_and_make_revision(body, elements)
         # Saving the new elements
         self.assertEqual(True,resp)
 
     def test_update_MPC_duplicate(self):
         self.save_N007riz()
-        obj_id ='N007riz'
+        obj_id = 'N007riz'
         update_MPC_orbit(obj_id)
 
     def test_create_discovered_object(self):
@@ -244,12 +243,12 @@ class TestClean_NEOCP_Object(TestCase):
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # We are creating this object
         self.assertEqual(True,created)
-        resp = save_and_make_revision(body,elements)
+        resp = save_and_make_revision(body, elements)
         # Need to call full_clean() to validate the fields as this is not
         # done on save() (called by get_or_create() or save_and_make_revision())
         body.full_clean()
         # We are saving all the detailing elements
-        self.assertEqual(True,resp)
+        self.assertEqual(True, resp)
 
         # Test it came from LCOGT as a discovery
         self.assertEqual('L', body.origin)
@@ -285,7 +284,6 @@ class TestClean_NEOCP_Object(TestCase):
             self.assertEqual(expected_elements[element], elements[element])
 
 class TestCheck_for_block(TestCase):
-
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
@@ -443,13 +441,13 @@ class TestCheck_for_block(TestCase):
         self.test_block2 = Block.objects.create(**block_params2)
 
     def test_db_storage(self):
-        expected_body_count = 5 # Pew, pew, bang, bang...
+        expected_body_count = 5  # Pew, pew, bang, bang...
         expected_block_count = 7
         expected_sblock_count = 7
 
         body_count = Body.objects.count()
-        block_count =  Block.objects.count()
-        sblock_count =  SuperBlock.objects.count()
+        block_count = Block.objects.count()
+        sblock_count = SuperBlock.objects.count()
 
         self.assertEqual(expected_body_count, body_count)
         self.assertEqual(expected_block_count, block_count)
@@ -1172,11 +1170,11 @@ class TestUpdate_MPC_orbit(TestCase):
                              'argofperih': 222.91160,
                              'longascnode': 24.87559,
                              'eccentricity': 0.0120915,
-                             'epochofel': datetime(2016,01,13,0),
+                             'epochofel': datetime(2016, 1, 13, 0),
                              'meandist': 0.9967710,
                              'orbinc': 8.25708,
                              'meananom': 221.74204,
-                             'num_obs': None , # '147',
+                             'num_obs': None ,  # '147',
                              'epochofperih': None,
                              'perihdist': None,
                              'slope': 0.15,
@@ -1216,7 +1214,7 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.assertEqual(len(self.expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in self.expected_elements:
-            if key not in self.nocheck_keys and key !='id':
+            if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(self.expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
@@ -1373,7 +1371,7 @@ class TestClean_mpcorbit(TestCase):
                              'argofperih': '222.91160',
                              'longascnode': '24.87559',
                              'eccentricity': '0.0120915',
-                             'epochofel': datetime(2016,01,13,0),
+                             'epochofel': datetime(2016,1,13,0),
                              'meandist': '0.9967710',
                              'orbinc': '8.25708',
                              'meananom': '221.74204',
@@ -1394,7 +1392,7 @@ class TestClean_mpcorbit(TestCase):
                                         'argofperih': '214.01052',
                                         'longascnode' : '24.55858',
                                         'eccentricity' : '1.0000000',
-                                        'epochofel': datetime(2016, 04, 19, 0),
+                                        'epochofel': datetime(2016, 4, 19, 0),
                                         'meandist' : None,
                                         'orbinc' : '38.19233',
                                         'meananom': None,
@@ -1416,7 +1414,7 @@ class TestClean_mpcorbit(TestCase):
                                         'argofperih': '325.96205',
                                         'longascnode' : '276.22261',
                                         'eccentricity' : '1.0014825',
-                                        'epochofel': datetime(2018, 03, 23, 0),
+                                        'epochofel': datetime(2018, 3, 23, 0),
                                         'meandist' : None,
                                         'orbinc' : '142.63838',
                                         'meananom': None,
@@ -2917,13 +2915,14 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_num_new_frames, num_new_frames)
 
+
 class TestUpdate_Crossids(TestCase):
 
     def setUp(self):
         params = {  'provisional_name' : 'LM05OFG',
                     'abs_mag'       : 24.7,
                     'slope'         : 0.15,
-                    'epochofel'     : datetime(2016,07,31,00,00,00),
+                    'epochofel'     : datetime(2016, 7, 31, 00, 0, 0),
                     'meananom'      :   8.5187,
                     'argofperih'    : 227.23234,
                     'longascnode'   :  57.83134,

@@ -65,7 +65,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name = "UCAC4",
         if "UCAC4" in cat_name:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         else:
-		    query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag":rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
 
         #resulting catalog table
