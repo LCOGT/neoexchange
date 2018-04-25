@@ -100,7 +100,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
         req_headers = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0",
                       }
     req_page = urllib.request.Request(url, headers=req_headers)
-    opener = urllib.request.build_opener() # create an opener object
+    opener = urllib.error.build_opener()  # create an opener object
     try:
         response = opener.open(req_page)
     except urllib.URLError as e:

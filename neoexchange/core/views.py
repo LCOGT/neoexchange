@@ -30,7 +30,7 @@ from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from http.client import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
-
+import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
@@ -52,7 +52,6 @@ import logging
 import reversion
 import json
 import requests
-from urllib.parse import urljoin
 import numpy as np
 from django.conf import settings
 
