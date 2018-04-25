@@ -757,7 +757,6 @@ class Frame(models.Model):
             name = "%s@%s" % ( self.midpoint, self.sitecode.rstrip() )
         return name
 
-@python_2_unicode_compatible
 class SourceMeasurement(models.Model):
     '''Class to represent the measurements (RA, Dec, Magnitude and errors)
     performed on a Frame (having site code, date/time etc.).
@@ -827,7 +826,6 @@ class SourceMeasurement(models.Model):
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
 
-@python_2_unicode_compatible
 class CatalogSources(models.Model):
     '''Class to represent the measurements (X, Y, RA, Dec, Magnitude, shape and
     errors) extracted from a catalog extraction performed on a Frame (having
