@@ -20,7 +20,7 @@ import os, sys
 from hashlib import md5
 import glob
 import logging
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 import requests
 from django.conf import settings
@@ -54,10 +54,10 @@ def lco_api_call(url):
     try:
         resp = requests.get(url, headers=headers, timeout=20, verify=ssl_verify)
         data = resp.json()
-    except requests.exceptions.InvalidSchema, err:
+    except requests.exceptions.InvalidSchema as err:
         data = None
         logger.error("Request call to %s failed with: %s" % (url, err))
-    except ValueError, err:
+    except ValueError as err:
         logger.error("Request {} API did not return JSON: {}".format(url, resp.status_code))
     except requests.exceptions.Timeout:
         logger.error("Request API timed out")

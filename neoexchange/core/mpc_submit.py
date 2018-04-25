@@ -42,7 +42,7 @@ def email_report_to_mpc(blockid, bodyid, email_sender=None, receipients=['egomez
             recipient_list = receipients,
             fail_silently = False,
         )
-    except Exception, e:
+    except Exception as e:
         print(e)
         return False
     return True

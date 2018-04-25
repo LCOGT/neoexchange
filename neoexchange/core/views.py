@@ -28,9 +28,8 @@ from django.views.generic import DetailView, ListView, FormView, TemplateView, V
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404, HttpResponse, HttpResponseRedirect
-from httplib import REQUEST_TIMEOUT, HTTPSConnection
 from bs4 import BeautifulSoup
-import urllib
+
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
@@ -52,7 +51,7 @@ import logging
 import reversion
 import json
 import requests
-from urlparse import urljoin
+from urllib.parse import urljoin
 import numpy as np
 from django.conf import settings
 
@@ -645,7 +644,7 @@ def build_unranked_list_params():
             body_dict['observed'], body_dict['reported'] = body.get_block_info()
             body_dict['type'] = body.get_source_type_display()
             unranked.append(body_dict)
-    except Exception, e:
+    except Exception as e:
         latest = None
         unranked = None
         logger.error('Ranking failed on %s' % e)
