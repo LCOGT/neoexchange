@@ -12,9 +12,9 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
+from __future__ import unicode_literals
 from datetime import datetime
 from math import pi, log10
-import math
 from collections import Counter
 import reversion
 
@@ -23,7 +23,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import force_text
+from django.utils.encoding import force_text, python_2_unicode_compatible
 from django.forms.models import model_to_dict
 from astropy.time import Time
 from astropy.wcs import WCS
@@ -107,6 +107,7 @@ TAX_REFERENCE_CHOICES = (
                         ('BZ04','Binzel, et al. (2004).'),
                      )
 
+@python_2_unicode_compatible
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
@@ -118,7 +119,7 @@ class Proposal(models.Model):
         db_table = 'ingest_proposal'
         ordering = ['-id',]
 
-    def __unicode__(self):
+    def __str__(self):
         if len(self.title)>=10:
             title = "%s..." % self.title[0:9]
         else:
@@ -126,6 +127,7 @@ class Proposal(models.Model):
         return "%s %s"  % (self.code, title)
 
 
+@python_2_unicode_compatible
 class Body(models.Model):
     provisional_name    = models.CharField('Provisional MPC designation',max_length=15,blank=True, null=True)
     provisional_packed  = models.CharField('MPC name in packed format', max_length=7,blank=True, null=True)
@@ -250,7 +252,7 @@ class Body(models.Model):
         db_table = 'ingest_body'
         ordering = ['-ingest', '-active']
 
-    def __unicode__(self):
+    def __str__(self):
         if self.active:
             text = ''
         else:
@@ -261,6 +263,7 @@ class Body(models.Model):
             return_name = self.name
         return u'%s is %sactive' % (return_name,text)
 
+@python_2_unicode_compatible
 class SpectralInfo(models.Model):
     body                = models.ForeignKey(Body, on_delete=models.CASCADE)
     taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True,max_length=6)
@@ -323,9 +326,10 @@ class SpectralInfo(models.Model):
         verbose_name_plural = _('Spectroscopy Details')
         db_table = 'ingest_taxonomy'
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s is a %s-Type Asteroid" % (self.body.name, self.taxonomic_class)
 
+@python_2_unicode_compatible
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
@@ -406,14 +410,16 @@ class SuperBlock(models.Model):
         verbose_name_plural = _('SuperBlocks')
         db_table = 'ingest_superblock'
 
-    def __unicode__(self):
+    def __str__(self):
         if self.active:
             text = ''
         else:
             text = 'not '
 
-        return u'%s is %sactive' % (self.tracking_number,text)
+        return '%s is %sactive' % (self.tracking_number,text)
 
+
+@python_2_unicode_compatible
 class Block(models.Model):
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
@@ -477,13 +483,13 @@ class Block(models.Model):
         verbose_name_plural = _('Observation Blocks')
         db_table = 'ingest_block'
 
-    def __unicode__(self):
+    def __str__(self):
         if self.active:
             text = ''
         else:
             text = 'not '
 
-        return u'%s is %sactive' % (self.tracking_number,text)
+        return '%s is %sactive' % (self.tracking_number,text)
 
 def unpickle_wcs(wcs_string):
     '''Takes a pickled string and turns into an astropy WCS object'''
@@ -569,6 +575,7 @@ class WCSField(models.Field):
     def get_internal_type(self):
         return 'TextField'
 
+@python_2_unicode_compatible
 class Frame(models.Model):
     ''' Model to represent (FITS) frames of data from observations successfully
     made and filename of data which resulted.
@@ -742,7 +749,7 @@ class Frame(models.Model):
         verbose_name_plural = _('Observed Frames')
         db_table = 'ingest_frame'
 
-    def __unicode__(self):
+    def __str__(self):
 
         if self.filename:
             name= self.filename
@@ -750,6 +757,7 @@ class Frame(models.Model):
             name = "%s@%s" % ( self.midpoint, self.sitecode.rstrip() )
         return name
 
+@python_2_unicode_compatible
 class SourceMeasurement(models.Model):
     '''Class to represent the measurements (RA, Dec, Magnitude and errors)
     performed on a Frame (having site code, date/time etc.).
@@ -819,6 +827,7 @@ class SourceMeasurement(models.Model):
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
 
+@python_2_unicode_compatible
 class CatalogSources(models.Model):
     '''Class to represent the measurements (X, Y, RA, Dec, Magnitude, shape and
     errors) extracted from a catalog extraction performed on a Frame (having
@@ -891,6 +900,7 @@ def detections_array_dtypes():
 
     return dtypes
 
+@python_2_unicode_compatible
 class Candidate(models.Model):
     '''Class to hold candidate moving object detections found by the moving
     object code'''
@@ -940,9 +950,10 @@ class Candidate(models.Model):
     class Meta:
         verbose_name = _('Candidate')
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s#%04d" % (self.block.tracking_number, self.cand_id)
 
+@python_2_unicode_compatible
 class ProposalPermission(models.Model):
     '''
     Linking a user to proposals in NEOx to control their access
@@ -953,9 +964,10 @@ class ProposalPermission(models.Model):
     class Meta:
         verbose_name = _('Proposal Permission')
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s is a member of %s" % (self.user, self.proposal)
 
+@python_2_unicode_compatible
 class PanoptesReport(models.Model):
     '''
     Status of block
@@ -972,5 +984,5 @@ class PanoptesReport(models.Model):
     class Meta:
         verbose_name = _('Zooniverse Report')
 
-    def __unicode__(self):
+    def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
