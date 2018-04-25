@@ -367,7 +367,7 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
     vel = zeros(3)
     i = 0
     while (i < 9):
-        vel[i / 3] = matrix[i] * j2000_vel[0] + matrix[i+1] * j2000_vel[1] + matrix[i+2] * j2000_vel[2]
+        vel[i // 3] = matrix[i] * j2000_vel[0] + matrix[i+1] * j2000_vel[1] + matrix[i+2] * j2000_vel[2]
         i += 3
 
     return vel
