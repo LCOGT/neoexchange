@@ -50,6 +50,7 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     logger.debug("Phase angle, beta (deg)=%s %s" % (beta, degrees(beta)))
     return beta
 
+
 def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
     """Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
@@ -322,9 +323,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     dec_arcsec_decimal = dec_geo_deg[2] + dec_geo_deg[3]
     dec_arcmin_decimal = dec_geo_deg[1] + (dec_arcsec_decimal/60.)
     dec_deg_decimal = dec_geo_deg[0] + (dec_arcmin_decimal/60.)
-    if '+' in dsign:
+    if b'+' in dsign:
         spd = 90. + dec_deg_decimal
-    elif '-' in dsign:
+    elif b'-' in dsign:
         spd = 90. - dec_deg_decimal
     else:
         spd = None
@@ -873,13 +874,13 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
 
 def molecule_overhead(filter_blocks):
     single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
-    molecule_setup_overhead =  single_mol_overhead * len(filter_blocks)
+    molecule_setup_overhead = single_mol_overhead * len(filter_blocks)
     return molecule_setup_overhead
 
 
 def build_filter_blocks(filter_pattern, exp_count):
     filter_bits = filter_pattern.split(',')
-    filter_bits = filter(None, filter_bits)
+    filter_bits = list(filter(None, filter_bits))
     filter_list = []
     filter_blocks = []
     while exp_count > 0:

@@ -40,7 +40,7 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement, clean_crossid, create_frame, \
     schedule_check, summarise_block_efficiency, \
-    store_detections, update_crossids, \
+    store_detections, update_crossids, convert_byte_to_text,\
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
     make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
@@ -1316,8 +1316,9 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in expected_elements:
-            if key not in self.nocheck_keys and key !='id':
+            if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
+
 
 class TestClean_mpcorbit(TestCase):
 
@@ -1328,13 +1329,13 @@ class TestClean_mpcorbit(TestCase):
         test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
-        self.test_elements = parse_mpcorbit(test_mpcdb_page)
+        self.test_elements = convert_byte_to_text(parse_mpcorbit(test_mpcdb_page))
 
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2016C2.html'), 'r')
         test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
-        self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
+        self.test_comet_elements = convert_byte_to_text(parse_mpcorbit(test_mpcdb_page))
 
         self.test_hyperbolic_elements = {
                                          'argument of perihelion': '325.96205',
@@ -1371,7 +1372,7 @@ class TestClean_mpcorbit(TestCase):
                              'argofperih': '222.91160',
                              'longascnode': '24.87559',
                              'eccentricity': '0.0120915',
-                             'epochofel': datetime(2016,1,13,0),
+                             'epochofel': datetime(2016, 1, 13, 0),
                              'meandist': '0.9967710',
                              'orbinc': '8.25708',
                              'meananom': '221.74204',
@@ -1379,7 +1380,7 @@ class TestClean_mpcorbit(TestCase):
                              'origin' : 'M',
                              'active' : True,
                              'source_type' : 'N',
-                             'discovery_date': datetime(2014,10,17,0),
+                             'discovery_date': datetime(2014, 10, 17, 0),
                              'num_obs': '147',
                              'arc_length': '357',
                              'not_seen' : 5.5,
@@ -1491,6 +1492,7 @@ class TestClean_mpcorbit(TestCase):
         params = clean_mpcorbit(self.test_hyperbolic_elements)
 
         self.assertEqual(self.expected_hyperbolic_params, params)
+
 
 class TestCreate_sourcemeasurement(TestCase):
 

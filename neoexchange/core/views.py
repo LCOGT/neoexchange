@@ -71,15 +71,18 @@ class LoginRequiredMixin(object):
 def convert_byte_to_text(data):
     """Decode byte type data into text"""
 
-    data_type = type(data)
-    if data_type == bytes:
-        return data.decode()
-    if data_type in (str, int):
-        return str(data)
+    if data:
+        data_type = type(data)
+        if data_type == bytes:
+            return data.decode()
+        if data_type in (str, int):
+            return str(data)
 
-    if data_type == dict:
-        data = data.items()
-    return data_type(map(convert_byte_to_text, data))
+        if data_type == dict:
+            data = data.items()
+        return data_type(map(convert_byte_to_text, data))
+    else:
+        return None
 
 
 def user_proposals(user):
