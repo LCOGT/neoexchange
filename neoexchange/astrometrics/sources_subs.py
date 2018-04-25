@@ -100,7 +100,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
         req_headers = {'User-Agent': "Mozilla/5.0 (X11; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0",
                       }
     req_page = urllib.request.Request(url, headers=req_headers)
-    opener = urllib.error.build_opener()  # create an opener object
+    opener = urllib.request.build_opener()  # create an opener object
     try:
         response = opener.open(req_page)
     except urllib.URLError as e:
@@ -1435,13 +1435,13 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 
-def fetch_filter_list(site,page=None):
+def fetch_filter_list(site, page=None):
     """Fetches the camera mappings page"""
 
     if page is None:
         camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
         data_file = urllib.request.urlopen(camera_mappings)
-        data_out = parse_filter_file(site,data_file)
+        data_out = parse_filter_file(site, data_file)
         data_file.close
     else:
         with open(page, 'r') as input_file:
