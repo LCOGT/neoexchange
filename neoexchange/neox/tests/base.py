@@ -168,8 +168,8 @@ class FunctionalTest(StaticLiveServerTestCase):
             # version and check it. Hopefully this code is robust and platform-
             # independent...
             try:
-                version = check_output(["firefox", "--version"])
-            except OSError:
+                version = check_output(["firefox", "--version"], universal_newlines=True)
+            except (OSError, subprocess.CalledProcessError):
                 version = None
             if version and 'Firefox' in version:
                 version_num = version.rstrip().split(' ')[-1]
