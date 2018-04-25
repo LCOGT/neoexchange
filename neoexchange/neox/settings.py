@@ -23,6 +23,7 @@ if PREFIX != '':
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SESSION_COOKIE_NAME='neox.sessionid'
+X_FRAME_OPTIONS='DENY'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -87,6 +88,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 )
