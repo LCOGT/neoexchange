@@ -40,7 +40,7 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement, clean_crossid, create_frame, \
     schedule_check, summarise_block_efficiency, \
-    store_detections, update_crossids, convert_byte_to_text,\
+    store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
     make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
@@ -1329,13 +1329,13 @@ class TestClean_mpcorbit(TestCase):
         test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
-        self.test_elements = convert_byte_to_text(parse_mpcorbit(test_mpcdb_page))
+        self.test_elements = parse_mpcorbit(test_mpcdb_page)
 
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet2016C2.html'), 'r')
         test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
-        self.test_comet_elements = convert_byte_to_text(parse_mpcorbit(test_mpcdb_page))
+        self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
 
         self.test_hyperbolic_elements = {
                                          'argument of perihelion': '325.96205',

@@ -42,6 +42,23 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+def convert_byte_to_text(data):
+    """Decode byte type data into text"""
+
+    if data:
+        data_type = type(data)
+        if data_type == bytes:
+            return data.decode()
+        if data_type in (str, int):
+            return str(data)
+
+        if data_type == dict:
+            data = data.items()
+        return data_type(map(convert_byte_to_text, data))
+    else:
+        return None
+
+
 def download_file(url, file_to_save):
     """Helper routine to download from a URL and save into a file with error trapping"""
 
@@ -632,13 +649,13 @@ def parse_mpcobs(line):
 
 def clean_element(element):
     """Cleans an element (passed) by converting to ascii and removing any units"""
-    key = element[0].encode('ascii', 'ignore')
+    key = element[0].encode('ascii', 'ignore').decode()
     value = None
     if len(element) == 2:
-        value = element[1].encode('ascii', 'ignore')
+        value = element[1].encode('ascii', 'ignore').decode()
     # Match a open parenthesis followed by 0 or more non-whitespace followed by
     # a close parenthesis and replace it with a blank string
-    key = sub(b' \(\S*\)', b'', key)
+    key = sub(' \(\S*\)', '', key)
 
     return key, value
 
@@ -1442,7 +1459,6 @@ def fetch_filter_list(site, page=None):
         camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
         data_file = urllib.request.urlopen(camera_mappings)
         data_out = parse_filter_file(site, data_file)
-        data_file.close
     else:
         with open(page, 'r') as input_file:
             data_out = parse_filter_file(site, input_file)
@@ -1482,7 +1498,7 @@ def parse_filter_file(site, camera_list=None):
     try:
         for line in camera_list:
             chunks = line.replace("\n", "").split(' ')
-            chunks = filter(None, chunks)
+            chunks = list(filter(None, chunks))
             if chunks[0] != '#' and len(chunks) != 13:
                 logger.error('{} has incorrect number of columns'.format(line))
             if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:

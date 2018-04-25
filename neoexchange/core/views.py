@@ -68,23 +68,6 @@ class LoginRequiredMixin(object):
         return login_required(view)
 
 
-def convert_byte_to_text(data):
-    """Decode byte type data into text"""
-
-    if data:
-        data_type = type(data)
-        if data_type == bytes:
-            return data.decode()
-        if data_type in (str, int):
-            return str(data)
-
-        if data_type == dict:
-            data = data.items()
-        return data_type(map(convert_byte_to_text, data))
-    else:
-        return None
-
-
 def user_proposals(user):
     """
     Returns active proposals the given user has permissions for
@@ -1243,7 +1226,6 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         page = obj_id_or_page
 
     elements = parse_mpcorbit(page, dbg)
-    elements = convert_byte_to_text(elements)
     if elements == {}:
         logger.warning("Could not parse elements from page for %s" % obj_id)
         return False
