@@ -63,7 +63,7 @@ def panoptes_add_set_mtd(candidates, blockid):
         except AttributeError:
             logger.error('Could not upload {}'.format(filename))
             continue
-        except Exception, e:
+        except Exception as e:
             logger.error(''.format(e))
         logger.debug('saved subject {}'.format(subject.id))
         subject_ids.append({'id':subject.id, 'candidate':candidate['id']})
