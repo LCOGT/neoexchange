@@ -1520,9 +1520,10 @@ def fetch_taxonomy_page(page=None):
 
     if page is None:
         taxonomy_url = 'https://sbn.psi.edu/archive/bundles/ast_taxonomy/data/taxonomy10.tab'
-        data_file = urllib.request.urlopen(taxonomy_url)
-        data_out=parse_taxonomy_data(data_file)
-        data_file.close
+        data_file = fetchpage_and_make_soup(taxonomy_url)
+        # data_file = urllib.request.urlopen(taxonomy_url)
+        data_out = parse_taxonomy_data(data_file)
+
         # Binzel_taxonomy_page appears to be completely included within PDS Version6.0
         # binzel_taxonomy_page = os.path.join('astrometrics', 'binzel_tax.dat')
         # with open(binzel_taxonomy_page, 'r') as input_file:
@@ -1530,7 +1531,7 @@ def fetch_taxonomy_page(page=None):
         # data_out=data_out+binzel_out
     else:
         with open(page, 'r') as input_file:
-            data_out = parse_taxonomy_data(input_file)
+            data_out = parse_taxonomy_data(input_file.read())
     return data_out
 
 
@@ -1538,7 +1539,7 @@ def parse_binzel_data(tax_text=None):
     """Parses the Binzel taxonomy database for targets and pulls a list
     of these targets back.
     """
-    tax_table=[]
+    tax_table = []
     for line in tax_text:
         if line[0] != '#':
             line = line.split('\n')
@@ -1554,7 +1555,11 @@ def parse_taxonomy_data(tax_text=None):
     """Parses the online taxonomy database for targets and pulls a list
     of these targets back.
     """
-    tax_scheme=['T',
+
+    tax_text = str(tax_text).replace("\r", '\n').split("\n")
+    tax_text = list(filter(None, tax_text))
+    # print(len(tax_text))
+    tax_scheme = ['T',
                 'Ba',
                 'Td',
                 'H',
@@ -1569,8 +1574,8 @@ def parse_taxonomy_data(tax_text=None):
         end = line[103:]
         line = line[:8]+line[26:104]
         chunks = line.split(' ')
-        chunks = filter(None, chunks)
-        if chunks[0] != '\n':
+        chunks = list(filter(None, chunks))
+        if chunks[0] != '':
             if chunks[1] != '-':
                 chunks[1] = chunks[1]+' '+chunks[2]
                 del chunks[2]
@@ -1587,22 +1592,21 @@ def parse_taxonomy_data(tax_text=None):
             # Build Taxonomy reference table. This is clunky. Better to search table for matching values first?
             index = range(1, 7)
             index = [2*x+1 for x in index]+[17]
-  #          print(index)
             for i in index:
                 if chunks[i] != '-':
-                    if chunks[19] != '-':
+                    if end[0] != '-':
                         chunks[i+1] = chunks[i+1] + "|" + end
                     row = [obj_id, chunks[i], tax_scheme[(i-1)//2-1], "PDS6", chunks[i+1]]
                     tax_table.append(row)
             if chunks[15] != '-':
-                if chunks[19] != '-':
+                if end[0] != '-':
                     out = end
                 else:
                     out = ' '
                 row = [obj_id, chunks[15], "3T", "PDS6", out]
                 tax_table.append(row)
             if chunks[16] != '-':
-                if chunks[19] != '-':
+                if end[0] != '-':
                     out = end
                 else:
                     out = ' '
