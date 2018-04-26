@@ -101,7 +101,7 @@ class TestCheckForExistingFile(TestCase):
 
         md5sum = None
         with open(filename, "wb") as f:
-            f.write("Delete me!")
+            f.write(b"Delete me!")
             f.close()
             md5sum = md5(open(filename, 'rb').read()).hexdigest()
             return md5sum
