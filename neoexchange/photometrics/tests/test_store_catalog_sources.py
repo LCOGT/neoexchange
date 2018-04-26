@@ -166,8 +166,8 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
     def test_store_catalog_sources_frame_update_no_zeropoint(self):
 
-	frame = Frame.objects.last()
-	frame.delete()
+        frame = Frame.objects.last()
+        frame.delete()
 
         frame_params3 = {   'sitecode':'K92',
                             'instrument':'kb76',
@@ -197,11 +197,11 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         self.assertLess(last_catsrc.obs_mag, 21.62)
 
-	last_frame=Frame.objects.last()
+        last_frame=Frame.objects.last()
 
-	self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
-	self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
-	self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
+        self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
+        self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
+        self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
 
 #    def test_store_catalog_sources_multiple_frames(self):
 
@@ -231,8 +231,8 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
 #    def test_store_catalog_sources_frame_DNE(self):
 
-#	frame = Frame.objects.last()
-#	frame.delete()
+#       frame = Frame.objects.last()
+#       frame.delete()
 
 #        expected_num_sources_created = -3
 #        expected_num_in_table = -3
@@ -256,16 +256,16 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         self.assertLess(last_catsrc.obs_mag, 21.62)
 
-	last_frame=Frame.objects.last()
+        last_frame=Frame.objects.last()
 
-	self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
-	self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
-	self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
+        self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
+        self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
+        self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
 
     def test_store_catalog_sources_update_frames_zeropoint_gt0(self):
 
-	frame = Frame.objects.last()
-	frame.delete()
+        frame = Frame.objects.last()
+        frame.delete()
 
         frame_params3 = {   'sitecode':'K92',
                             'instrument':'kb76',
@@ -295,8 +295,8 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         self.assertLess(last_catsrc.obs_mag, 21.62)
 
-	last_frame=Frame.objects.last()
+        last_frame=Frame.objects.last()
 
-	self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
-	self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
-	self.assertEqual(last_frame.photometric_catalog, 'UCAC4')
+        self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
+        self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
+        self.assertEqual(last_frame.photometric_catalog, 'UCAC4')

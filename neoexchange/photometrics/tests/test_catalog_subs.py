@@ -1026,7 +1026,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 12
 
-	expected_cat_name = "PPMXL"
+        expected_cat_name = "PPMXL"
 
         expected_len_cross_match_table = 21
 
@@ -1051,7 +1051,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 26
 
-	expected_cat_name = "UCAC4"
+        expected_cat_name = "UCAC4"
 
         expected_len_cross_match_table = 56
 
@@ -1077,7 +1077,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 9
 
-	expected_cat_name = "UCAC4"
+        expected_cat_name = "UCAC4"
 
         expected_len_cross_match_table = 19
 
@@ -1103,7 +1103,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 8
 
-	expected_cat_name = "UCAC4"
+        expected_cat_name = "UCAC4"
 
         expected_len_cross_match_table = 16
 
@@ -1129,7 +1129,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 5
 
-	expected_cat_name = "PPMXL"
+        expected_cat_name = "PPMXL"
 
         expected_len_cross_match_table = 8
 
