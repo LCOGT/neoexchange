@@ -27,7 +27,7 @@ import astropy.units as u
 from numpy import where
 
 from core.models import Body, Proposal, Block, CatalogSources
-from test_catalog_subs import FITSUnitTest
+from .test_catalog_subs import FITSUnitTest
 
 #Import module to test
 from photometrics.catalog_subs import *

@@ -2149,7 +2149,7 @@ class UpdateFrameZeropointTest(FITSUnitTest):
                          'block_start' : '2017-03-08 05:05:00',
                          'block_end'   : '2017-03-08 05:22:36',
                          'tracking_number' : '0000358587',
-                         'num_exposures' : 6L,
+                         'num_exposures' : 6,
                          'exp_length' : 120.0,
                          'active'   : False
                        }
