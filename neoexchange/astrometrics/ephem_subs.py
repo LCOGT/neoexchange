@@ -199,7 +199,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         logger.error("Perturbing error=%s" % j)
         return []
 
-
     r3 = -100.
     delta = 0.0
     ltt = 0.0
@@ -247,7 +246,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     logger.debug("Earth->Asteroid [x,y,z]=%s" % pos)
     logger.debug("Earth->Asteroid [x,y,z]= %20.15E %20.15E %20.15E" % (pos[0], pos[1], pos[2]))
-    logger.debug("Earth->Asteroid [xdot,ydot,zdot]=%s %s %s" % (vel[0]*86400.0,vel[1]*86400.0,vel[2]*86400.0))
+    logger.debug("Earth->Asteroid [xdot,ydot,zdot]=%s %s %s" % (vel[0]*86400.0, vel[1]*86400.0, vel[2]*86400.0))
 
 # Convert Cartesian to RA, Dec
     (ra, dec) = S.sla_dcc2s(pos)
@@ -280,7 +279,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     total_motion, sky_pa, ra_motion, dec_motion = compute_sky_motion(sky_vel, delta, dbg)
 
     mag = -99
-    if comet == True:
+    if comet is True:
         # Calculate magnitude of comet
         # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
         # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the elements
@@ -307,7 +306,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 for key in p_orbelems:
                     logger.error("'%s': %s" % (key, str(p_orbelems[key])))
                 logger.error("}")
-                logger.error("r, delta=%f %f" % (r,delta))
+                logger.error("r, delta=%f %f" % (r, delta))
     az_rad, alt_rad = moon_alt_az(d, ra, dec, site_long, site_lat, site_hgt)
     airmass = S.sla_airmas((pi/2.0)-alt_rad)
     alt_deg = degrees(alt_rad)
@@ -435,7 +434,7 @@ def format_emp_line(emp_line, site_code):
         if ha_in_deg >= ha_pos_limit or ha_in_deg <= ha_neg_limit:
             ha_string = 'Limits'
         else:
-            (ha_string,junk) = radec2strings(ha, ha, ':')
+            (ha_string, junk) = radec2strings(ha, ha, ':')
             ha_string = ha_string[0:6]
 
 # Calculate slot score
@@ -690,10 +689,11 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
 
     for x in emp:
         visible = False
-        if  (x[0]>=dark_start and x[0]<=dark_end-timedelta(minutes=slot_length)) and x[5] >= float(alt_limit):
+        if (dark_start <= x[0] <= dark_end - timedelta(minutes=slot_length)) and x[5] >= float(alt_limit):
             visible = True
             dark_up_emp.append(x)
-        if debug: print(x[0].date(), x[0].time(), (x[0]>=dark_start and x[0]<dark_end-timedelta(minutes=slot_length)), x[5], alt_limit, visible)
+        if debug:
+            print(x[0].date(), x[0].time(), (dark_start <= x[0] < dark_end - timedelta(minutes=slot_length)), x[5], alt_limit, visible)
 
     return dark_up_emp
 
@@ -1242,6 +1242,10 @@ def radec2strings(ra_radians, dec_radians, seperator=' '):
 
     (rsign, ra ) = S.sla_dr2tf(2, ra_radians)
     (dsign, dec) = S.sla_dr2af(1, dec_radians)
+
+    # Remove the byte bits on the signs imposed by S.sla
+    rsign = rsign.decode()
+    dsign = dsign.decode()
 
     if rsign == '+' and ra_radians != dec_radians:
         rsign = ''
