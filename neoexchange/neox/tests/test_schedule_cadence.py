@@ -13,6 +13,7 @@ from core.models import Body, Proposal
 
 import time
 
+
 @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
 @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
 class ScheduleCadence(FunctionalTest):

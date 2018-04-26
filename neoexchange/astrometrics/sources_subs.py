@@ -1457,18 +1457,18 @@ def fetch_filter_list(site, page=None):
 
     if page is None:
         camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
-        data_file = urllib.request.urlopen(camera_mappings)
+        data_file = fetchpage_and_make_soup(camera_mappings)
         data_out = parse_filter_file(site, data_file)
     else:
         with open(page, 'r') as input_file:
-            data_out = parse_filter_file(site, input_file)
+            data_out = parse_filter_file(site, input_file.read())
     return data_out
 
 
 def parse_filter_file(site, camera_list=None):
     """Parses the camera mappings page and sends back a list of filters at the given site code.
     """
-    filter_list=[   "air",
+    filter_list = [   "air",
                     "clear",
                     "ND",
                     "Astrodon-UV",
@@ -1494,10 +1494,11 @@ def parse_filter_file(site, camera_list=None):
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
 
+    camera_list = str(camera_list).split("\n")
     site_filters = []
     try:
         for line in camera_list:
-            chunks = line.replace("\n", "").split(' ')
+            chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if chunks[0] != '#' and len(chunks) != 13:
                 logger.error('{} has incorrect number of columns'.format(line))

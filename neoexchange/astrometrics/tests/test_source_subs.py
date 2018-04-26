@@ -370,7 +370,7 @@ class TestSubmitBlockToScheduler(TestCase):
         params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
-                    'epochofel'     : datetime(2015,03,19,00,00,00),
+                    'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
                     'meananom'      : 325.2636,
                     'argofperih'    : 85.19251,
                     'longascnode'   : 147.81325,
@@ -727,7 +727,7 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(molecules[6].get('filter'), expected_filter)
 
 class TestFetchFilterList(TestCase):
-    '''Unit test for getting current filters from configdb'''
+    """Unit test for getting current filters from configdb"""
 
     def setUp(self):
         # Read stored version of camera mappings file
@@ -1620,7 +1620,7 @@ class TestParseMPCObsFormat(TestCase):
         expected_params = { 'body'  : '01566',
                             'flags' : 't',
                             'obs_type'  : 'C',
-                            'obs_date'  : datetime(2002, 07, 31, 13, 9, 33, int(0.984*1e6)),
+                            'obs_date'  : datetime(2002, 7, 31, 13, 9, 33, int(0.984*1e6)),
                             'obs_ra'    : 307.6231666666667,
                             'obs_dec'   : -47.82069444444445,
                             'obs_mag'   : 18.1,

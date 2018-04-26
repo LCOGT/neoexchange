@@ -623,25 +623,31 @@ def mock_archive_frame_header(archive_headers):
         }
     return header
 
+
 def mock_find_images_for_block(blockid):
     data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
     return data
 
+
 def mock_odin_login(username, password):
     return {}
+
 
 def mock_fetch_observations(tracking_num):
     images = ['1','2','3']
     return images
 
+
 def mock_run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 
     return -1, None
+
 
 def mock_fetch_filter_list(site):
     test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
 
     return fetch_filter_list(site, test_filter_map)
+
 
 def mock_expand_cadence(user_request):
 
