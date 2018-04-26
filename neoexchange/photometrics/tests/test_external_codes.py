@@ -106,7 +106,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         catalog_type = 'LCOGT'
 
-        expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+        expected_cmdline = 'time mtdlink -verbose -paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.40'
         cmdline = run_mtdlink(self.source_dir, self.test_dir, [], 8, param_file, pa_rate_dict, catalog_type, binary='mtdlink', dbg=True)
 
         self.assertEqual(expected_cmdline, cmdline)
@@ -532,6 +532,7 @@ class TestUpdateFITSWCS(TestCase):
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
         self.test_scamp_headfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.head'))
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
+        self.precision = 7
 
     def test_read_FITS_header(self):
 
@@ -620,7 +621,7 @@ class TestUpdateFITSWCS(TestCase):
         self.assertEqual(expected_cd1_2, cd1_2)
         self.assertEqual(expected_cd2_1, cd2_1)
         self.assertEqual(expected_cd2_2, cd2_2)
-        self.assertEqual(expected_secpix, secpix)
+        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
         self.assertEqual(expected_wcssolvr, wcssolvr)
         self.assertEqual(expected_wcsrfcat, wcsrfcat)
         self.assertEqual(expected_wcsimcat, wcsimcat)
