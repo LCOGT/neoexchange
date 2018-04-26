@@ -563,7 +563,7 @@ def translate_catalog_code(code_or_name):
     if len(code_or_name) == 1:
         catalog_or_code = catalog_codes.get(code_or_name, '')
     else:
-        for code, catalog in catalog_codes.iteritems():
+        for code, catalog in catalog_codes.items():
             if code_or_name == catalog:
                 catalog_or_code = code
 

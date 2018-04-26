@@ -21,7 +21,6 @@ from unittest import skipIf
 from bs4 import BeautifulSoup
 import os
 import mock
-import urllib2
 from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
