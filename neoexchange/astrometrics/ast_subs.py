@@ -64,6 +64,8 @@ def int_to_mutant_hex_char(number):
     and a...z for 36...61.
     This routine turns an integer into a mutant hex char.'''
 
+    if type(number) != int:
+        raise MutantError("Not an integer")
     if number < 0 or number > 61:
         raise MutantError("Number out of range 0...61")
     
@@ -115,13 +117,13 @@ def normal_to_packed(obj_name, dbg=False):
             sub_designator = int(sub_designator_str)
         pack10 = chr(ord('0')  + sub_designator % 10)
         if sub_designator < 100:
-            pack9 = chr(ord('0')  + sub_designator / 10)
+            pack9 = chr(ord('0')  + sub_designator // 10)
         elif sub_designator < 360:
-            pack9 = chr(ord('A')  + sub_designator / 10 - 10)
+            pack9 = chr(ord('A')  + sub_designator // 10 - 10)
         else:
-            pack9 = chr(ord('a')  + sub_designator / 10 - 36)
+            pack9 = chr(ord('a')  + sub_designator // 10 - 36)
         packed_desig = "    %c%c%02d%c%c%c%c" % ( comet_type, 
-            ord('A') - 10 + year / 100, year % 100,
+            ord('A') - 10 + year // 100, year % 100,
             str(buff[4]).upper(), pack9, pack10, pack11)
     elif buff.isdigit():
         # Simple numbered asteroid or comet
@@ -130,7 +132,7 @@ def normal_to_packed(obj_name, dbg=False):
         if comet:
             packed_desig = "%04d%c       " % ( number, comet_type)
         else:
-            packed_desig = "%c%04d       " % ( int_to_mutant_hex_char( number / 10000), number % 10000);
+            packed_desig = "%c%04d       " % ( int_to_mutant_hex_char( number // 10000), number % 10000);
     else:
         # Bad id
         packed_desig = ' ' * 12
