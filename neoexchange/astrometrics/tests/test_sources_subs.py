@@ -2669,15 +2669,15 @@ class TestFetchTaxonomyData(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_targets(self):
-        expected_targets =  [['980','SU',"T","PDS6",'7G'],
-                             ['980','S3',"Ba","PDS6",'7I'],
-                             ['980','S',"Td","PDS6",'2I'],
-                             ['980','T',"H","PDS6",'65'],
-                             ['980','L',"B","PDS6",'s'],
-                             ['4713','A',"B","PDS6",'s'],
-                             ['4713','A',"3T","PDS6",' '],
-                             ['4713','Sl',"3B","PDS6",' '],
-                             ['4713','Sw',"BD","PDS6",'a'],
+        expected_targets = [ ['980', 'SU', "T", "PDS6", '7G'],
+                             ['980', 'S3', "Ba", "PDS6", '7I'],
+                             ['980', 'S', "Td", "PDS6", '2I'],
+                             ['980', 'T', "H", "PDS6", '65'],
+                             ['980', 'L', "B", "PDS6", 's'],
+                             ['4713', 'A', "B", "PDS6", 's'],
+                             ['4713', 'A', "3T", "PDS6", ' '],
+                             ['4713', 'Sl', "3B", "PDS6", ' '],
+                             ['4713', 'Sw', "BD", "PDS6", 'a'],
                             ]
         tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
         for line in expected_targets:
@@ -2719,31 +2719,28 @@ class TestFetchTaxonomyData(TestCase):
                          'V',
                           ]
         tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
-        taxonomy=[row[1] for row in tax_data]
+        taxonomy = [row[1] for row in tax_data]
         self.assertEqual(expected_tax, taxonomy)
 
     def test_tax_site_pull(self):
-        expected_line = ['1','G',"T","PDS6","7G"]
+        expected_line = ['1', 'G', "T", "PDS6", "7G"]
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
 
 class TestFetchTargetsFromList(TestCase):
 
     def test_commad_line_entry(self):
-        test_list=['588', '2759', '4035', '1930_UB', '1989 AL2']
+        test_list = ['588', '2759', '4035', '1930_UB', '1989 AL2']
         out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2']
-        self.assertEqual(out_list,fetch_list_targets(test_list))
+        self.assertEqual(out_list, fetch_list_targets(test_list))
 
     def test_text_file_entry(self):
-        test_file = []
-        test_file.append(os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'))
+        test_file = [os.path.join('astrometrics', 'tests', 'test_target_list_page.txt')]
         out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2']
-        self.assertEqual(out_list,fetch_list_targets(test_file))
+        self.assertEqual(out_list, fetch_list_targets(test_file))
 
     def test_file_and_command_entry(self):
-        test_file = []
-        test_file.append(os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'))
-        test_file.append('4063')
-        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2','4063']
-        self.assertEqual(out_list,fetch_list_targets(test_file))
+        test_file = [os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'), '4063']
+        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2', '4063']
+        self.assertEqual(out_list, fetch_list_targets(test_file))
 
