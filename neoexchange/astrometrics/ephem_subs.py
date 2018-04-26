@@ -815,7 +815,7 @@ def estimate_exptime(rate, pixscale=0.304, roundtime=10.0):
 
 
 def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
-    (round_exptime, full_exptime) =  estimate_exptime(speed, pixel_scale, 5.0)
+    (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 5.0)
 
     if round_exptime > max_exp_time:
         logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % \
@@ -824,7 +824,7 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
     if round_exptime < 10.0 :
         # If under 10 seconds, re-round to nearest half second
         (round_exptime, full_exptime) = estimate_exptime(speed, pixel_scale, 0.5)
-    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime ,full_exptime))
+    logger.debug("Estimated exptime=%.1f seconds (%.1f)" % (round_exptime , full_exptime))
 
     return round_exptime
 
@@ -845,7 +845,8 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     except MagRangeError:
         max_exp_time = site_max_exp_time
     # pretify max exposure time to nearest 5 seconds
-    max_exp_time = int(round(max_exp_time/5))*5
+
+    max_exp_time = ceil(max_exp_time/5)*5
 
     exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
 
@@ -1096,7 +1097,7 @@ def get_sitepos(site_code, dbg=False):
         # Obtain latitude, longitude of the observing site.
         # Reverse longitude to get the more normal East-positive convention
         (site_num, site_name, site_long, site_lat, site_hgt) = S.sla_obs(0, site_code)
-        site_name = site_name.rstrip()
+        site_name = site_name.rstrip().decode()
         site_long = -site_long
 
     logger.debug("Site name, lat/long/height=%s %f %f %.1f" % (site_name, site_long, site_lat, site_hgt))
@@ -1299,7 +1300,7 @@ def LCOGT_domes_to_site_codes(siteid, encid, telid):
 def MPC_site_code_to_domes(site):
     """ Returns the mapped value of the MPC site code to LCO Site, Eclosure, and telescope"""
 
-    key = cfg.valid_telescope_codes.get(site.upper(),'--')
+    key = cfg.valid_telescope_codes.get(site.upper(), '--')
 
     key = key.split('-')
     siteid = key[0].lower()
