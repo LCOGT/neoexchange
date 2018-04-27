@@ -25,3 +25,4 @@ matplotlib
 fits2image
 panoptes-client
 pillow
+gunicorn
