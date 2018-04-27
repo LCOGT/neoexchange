@@ -8,12 +8,13 @@ from django.contrib.auth import authenticate
 # Adapted from http://www.ryangallen.com/wall/11/mock-today-django-testing/
 # and changed to datetime and python 2.x
 
+
 class MockDateTimeType(type):
 
     def __init__(cls, name, bases, d):
         type.__init__(cls, name, bases, d)
         cls.year = 2015
-        cls.month =  4
+        cls.month = 4
         cls.day = 1
         cls.hour = 17
         cls.minute = 0
@@ -23,9 +24,7 @@ class MockDateTimeType(type):
         return isinstance(instance, real_datetime)
 
 
-class MockDateTime(datetime):
-
-    __metaclass__ = MockDateTimeType
+class MockDateTime(datetime, metaclass=MockDateTimeType):
 
     @classmethod
     def change_date(cls, year, month, day):
@@ -45,6 +44,7 @@ class MockDateTime(datetime):
     @classmethod
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
+
 
 def mock_check_request_status(tracking_num):
     status = { u'created' : u'2015-10-21T19:07:26.023049Z',
@@ -81,7 +81,7 @@ def mock_check_request_status(tracking_num):
                        'priority': 1,
                        'request': 617292,
                        'type': 'EXPOSE'}],
-                     u'target': {'acquire_mode': 'OPTIONAL',
+                    u'target': {'acquire_mode': 'OPTIONAL',
                        'argofperih': None,
                        'coordinate_system': 'ICRS',
                        'dailymot': None,
@@ -112,9 +112,10 @@ def mock_check_request_status(tracking_num):
              }
     return status
 
+
 def mock_check_request_status_cadence(tracking_num):
 
-    status ={u'created': u'2017-08-15T19:18:24.869792Z',
+    status = {u'created': u'2017-08-15T19:18:24.869792Z',
              u'group_id': u'3122_COJ_cad_20170816-0819',
              u'id': 472636,
              u'ipp_value': 1.0,
@@ -508,6 +509,7 @@ def mock_check_request_status_cadence(tracking_num):
 
     return status
 
+
 class MockCandidate(object):
 
     def __init__(cls, id=None, block=None, cand_id=None):
@@ -523,15 +525,17 @@ class MockCandidate(object):
 def mock_check_request_status_null(tracking_num):
     return []
 
+
 def mock_check_request_status_notfound(tracking_num):
     return {u'detail': u'Not found.'}
+
 
 def mock_check_for_images_no_millisecs(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43:28",
                     "ENCID": "clma",
-                    "SITEID":"lsc",
-                    "TELID":"1m0a",
+                    "SITEID" : "lsc",
+                    "TELID" : "1m0a",
                     "FILTER": "rp",
                     "INSTRUME" : "kb27",
                     "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
@@ -539,13 +543,14 @@ def mock_check_for_images_no_millisecs(request_id):
             }
         }
     return header
+
 
 def mock_check_for_images_bad_date(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43",
                     "ENCID": "clma",
-                    "SITEID":"lsc",
-                    "TELID":"1m0a",
+                    "SITEID" : "lsc",
+                    "TELID" : "1m0a",
                     "FILTER": "rp",
                     "INSTRUME" : "kb27",
                     "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
@@ -554,11 +559,14 @@ def mock_check_for_images_bad_date(request_id):
         }
     return header
 
+
 def mock_ingest_frames(images, block):
     return ['99999']
 
+
 def mock_lco_authenticate(request, username, password):
     return None
+
 
 def mock_lco_login(email, password, request=None):
     profile = {'username': 'bart',
@@ -590,9 +598,9 @@ def mock_lco_login(email, password, request=None):
         ]
     return profile, proposals
 
+
 def mock_check_for_images(request_id):
-    images = [
-    {u'filename': u'ogg0m406-kb27-20160531-0063-e90_cat.fits',
+    images = [{u'filename': u'ogg0m406-kb27-20160531-0063-e90_cat.fits',
       u'headers': u'https://archive-api.lcogt.net/frames/4029371/headers/',
       u'id': 4029371,
       u'url': u'https://s3-us-west-2.amazonaws.com/archive.lcogt.net/32de/ogg0m406-kb27-20160531-0063-e90_cat'},
@@ -607,12 +615,13 @@ def mock_check_for_images(request_id):
      ]
     return images, 3
 
+
 def mock_archive_frame_header(archive_headers):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43:28.067",
                     "ENCID": "clma",
-                    "SITEID":"lsc",
-                    "TELID":"1m0a",
+                    "SITEID" : "lsc",
+                    "TELID" : "1m0a",
                     "FILTER": "rp",
                     "INSTRUME" : "kb27",
                     "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
@@ -634,7 +643,7 @@ def mock_odin_login(username, password):
 
 
 def mock_fetch_observations(tracking_num):
-    images = ['1','2','3']
+    images = ['1', '2', '3']
     return images
 
 
