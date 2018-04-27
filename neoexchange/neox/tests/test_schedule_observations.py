@@ -70,7 +70,6 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.views.datetime', MockDateTime)
     def test_can_schedule_observations(self):
         self.test_login()
-
         # Bart has heard about a new website for NEOs. He goes to the
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in

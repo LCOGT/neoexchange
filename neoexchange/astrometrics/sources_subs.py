@@ -375,7 +375,7 @@ def parse_PCCP(pccp_page, dbg=False):
         return None
 
 # Find the table with the objects
-    table = pccp_page.find("table", { "class" : "tablesorter" })
+    table = pccp_page.find("table", {"class" : "tablesorter"})
     if table is None:
         return None
     table_body = table.find("tbody")
@@ -442,7 +442,6 @@ def parse_PCCP(pccp_page, dbg=False):
                 new_objects.append(new_object)
 
     return new_objects
-
 
 def fetch_NEOCP_observations(obj_id_or_page):
     """Query the MPC's showobs service with the specified <obj_id_or_page>. If
@@ -800,16 +799,19 @@ def parse_goldstone_chunks(chunks, dbg=False):
             if dbg: print("In case 1")
             object_id = object_id + ' ' + str(chunks[3])
     else:
-        if dbg: print("Specific date of observation")
+        if dbg:
+            print("Specific date of observation")
         # We got an error or a too small number (day of the month)
         if astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isdigit():
             # We have something of the form [20, 2014, YB35; only need first
             # bit
-            if dbg: print("In case 2a")
+            if dbg:
+                print("In case 2a")
             object_id = str(chunks[3])
         elif astnum <= 31 and chunks[3].isdigit() and chunks[4].isdigit() and chunks[2][-1].isalnum():
             # We have something that straddles months
-            if dbg: print("In case 2b")
+            if dbg:
+                print("In case 2b")
             if chunks[5].isdigit() or chunks[5][0:2].isupper() == False:
                 # Of the form '2017 May 29-Jun 02 418094 2007 WV4' or number and
                 # name e.g.  '2017 May 29-Jun 02 6063 Jason'
@@ -826,13 +828,16 @@ def parse_goldstone_chunks(chunks, dbg=False):
             # Hopefully some at Goldstone won't shout the name of the object
             # e.g. '(99942) APOPHIS'! or we're hosed...
             if chunks[4][0:2].isupper():
-                if dbg: print("In case 3a")
+                if dbg:
+                    print("In case 3a")
                 object_id = str(chunks[3] + ' ' + chunks[4])
             else:
-                if dbg: print("In case 3b")
+                if dbg:
+                    print("In case 3b")
                 object_id = str(chunks[3])
         elif chunks[3].isdigit() and chunks[4].isalpha():
-            if dbg: print("In case 4")
+            if dbg:
+                print("In case 4")
             object_id = str(chunks[3] + ' ' + chunks[4])
 
     return object_id
@@ -1500,16 +1505,16 @@ def parse_filter_file(site, camera_list=None):
         for line in camera_list:
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
-            if chunks[0] != '#' and len(chunks) != 13:
-                logger.error('{} has incorrect number of columns'.format(line))
-            if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
-                filt_list = chunks[12].split(',')
-                for filt in filter_list:
-                    if filt in filt_list and filt not in site_filters:
-                        site_filters.append(filt)
-    except:
+            if len(chunks) == 13:
+                if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
+                    filt_list = chunks[12].split(',')
+                    for filt in filter_list:
+                        if filt in filt_list and filt not in site_filters:
+                            site_filters.append(filt)
+    except Exception as e:
         msg = "Could not read camera mappings file"
         logger.error(msg)
+        logger.error(e)
     if not site_filters:
         logger.error('Could not find any filters for {}'.format(site))
     return site_filters
