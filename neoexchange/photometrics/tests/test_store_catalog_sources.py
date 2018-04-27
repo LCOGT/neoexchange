@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2016-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime, timedelta
 from unittest import skipIf
@@ -29,8 +29,9 @@ from numpy import where
 from core.models import Body, Proposal, Block, CatalogSources
 from .test_catalog_subs import FITSUnitTest
 
-#Import module to test
+# Import module to test
 from photometrics.catalog_subs import *
+
 
 class StoreCatalogSourcesTest(FITSUnitTest):
 
@@ -43,7 +44,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.table_firstitem_ldac = self.test_ldactable[0:1]
         self.table_lastitem_ldac = self.test_ldactable[-1:]
         self.table_item_flags24_ldac = self.test_ldactable[2:3]
-        self.table_num_flags0_ldac = len(where(self.test_ldactable['flags']==0)[0])
+        self.table_num_flags0_ldac = len(where(self.test_ldactable['flags'] == 0)[0])
 
         body_params = {    'provisional_name': '67P',
                             'origin': 'M',
@@ -64,7 +65,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
         proposal_params = { 'code': 'test',
                             'title': 'test',
-                            'pi':'sgreenstreet@lcogt.net',
+                            'pi': 'sgreenstreet@lcogt.net',
                             'tag': 'LCOGT',
                             'active': True
                           }
@@ -75,7 +76,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                             'body': self.test_body,
                             'proposal': self.test_proposal,
                             'groupid': None,
-                            'block_start': datetime(2016, 5, 5,19),
+                            'block_start': datetime(2016, 5, 5, 19),
                             'block_end': datetime(2016, 5, 5, 21),
                             'tracking_number': '0009',
                             'num_exposures': 6,
@@ -84,23 +85,23 @@ class StoreCatalogSourcesTest(FITSUnitTest):
                             'when_observed': datetime(2016, 5, 5, 20, 12, 44),
                             'active': False,
                             'reported': False,
-                            'when_reported':None
+                            'when_reported': None
                         }
         self.test_block, created = Block.objects.get_or_create(**block_params)
 
-        frame_params = {   'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'ldac_test_catalog.fits',
-                            'exptime':60.0,
-                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.825,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':3.0,
+        frame_params = {   'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'ldac_test_catalog.fits',
+                            'exptime': 60.0,
+                            'midpoint': datetime(2016, 5, 5, 20, 2, 29),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.825,
+                            'frametype': 0,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': 3.0,
                         }
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
 
@@ -112,7 +113,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertEqual(num_sources_created, self.table_num_flags0_ldac)
         self.assertEqual(num_in_table, self.table_num_flags0_ldac)
 
-        last_catsrc=CatalogSources.objects.last()
+        last_catsrc = CatalogSources.objects.last()
 
         self.assertAlmostEqual(last_catsrc.obs_x, 1758.0390, 4)
         self.assertAlmostEqual(last_catsrc.obs_y, 2024.9652, 4)
@@ -135,7 +136,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertGreater(header['zeropoint'], 0.0)
         self.assertGreater(header['zeropoint_err'], 0.0)
 
-        first_catsrc=CatalogSources.objects.first()
+        first_catsrc = CatalogSources.objects.first()
 
         self.assertGreater(first_catsrc.obs_mag, 0.0)
         self.assertAlmostEqual(first_catsrc.err_obs_mag, 0.0023, 4)
@@ -156,7 +157,7 @@ class StoreCatalogSourcesTest(FITSUnitTest):
 
     def test_bad_catalog(self):
 
-        bad_filename = os.path.join('photometrics','tests','__init__.py')
+        bad_filename = os.path.join('photometrics', 'tests', '__init__.py')
 
         num_sources_created, num_in_table = store_catalog_sources(bad_filename, catalog_type='FITS_LDAC', std_zeropoint_tolerance=0.1)
 
@@ -169,19 +170,19 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         frame = Frame.objects.last()
         frame.delete()
 
-        frame_params3 = {   'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'ldac_test_catalog.fits',
-                            'exptime':60.0,
-                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
-                            'block':self.test_block,
-                            'zeropoint':None,
-                            'zeropoint_err':None,
-                            'fwhm':2.825,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':3.0,
+        frame_params3 = {   'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'ldac_test_catalog.fits',
+                            'exptime': 60.0,
+                            'midpoint': datetime(2016, 5, 5, 20, 2, 29),
+                            'block': self.test_block,
+                            'zeropoint': None,
+                            'zeropoint_err': None,
+                            'fwhm': 2.825,
+                            'frametype': 0,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': 3.0,
                         }
         self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
 
@@ -193,11 +194,11 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertEqual(expected_num_sources_created, num_sources_created)
         self.assertEqual(expected_num_in_table, num_in_table)
 
-        last_catsrc=CatalogSources.objects.last()
+        last_catsrc = CatalogSources.objects.last()
 
         self.assertLess(last_catsrc.obs_mag, 21.62)
 
-        last_frame=Frame.objects.last()
+        last_frame = Frame.objects.last()
 
         self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
@@ -252,11 +253,11 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertEqual(expected_num_sources_created, num_sources_created)
         self.assertEqual(expected_num_in_table, num_in_table)
 
-        last_catsrc=CatalogSources.objects.last()
+        last_catsrc = CatalogSources.objects.last()
 
         self.assertLess(last_catsrc.obs_mag, 21.62)
 
-        last_frame=Frame.objects.last()
+        last_frame = Frame.objects.last()
 
         self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
@@ -267,19 +268,19 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         frame = Frame.objects.last()
         frame.delete()
 
-        frame_params3 = {   'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'ldac_test_catalog.fits',
-                            'exptime':60.0,
-                            'midpoint':datetime(2016, 5, 5, 20, 2, 29),
-                            'block':self.test_block,
-                            'zeropoint':27.3926,
-                            'zeropoint_err':0.0382,
-                            'fwhm':2.825,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':3.0,
+        frame_params3 = {   'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'ldac_test_catalog.fits',
+                            'exptime': 60.0,
+                            'midpoint': datetime(2016, 5, 5, 20, 2, 29),
+                            'block': self.test_block,
+                            'zeropoint': 27.3926,
+                            'zeropoint_err': 0.0382,
+                            'fwhm': 2.825,
+                            'frametype': 0,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': 3.0,
                         }
         self.test_frame3, created = Frame.objects.get_or_create(**frame_params3)
 
@@ -291,11 +292,11 @@ class StoreCatalogSourcesTest(FITSUnitTest):
         self.assertEqual(expected_num_sources_created, num_sources_created)
         self.assertEqual(expected_num_in_table, num_in_table)
 
-        last_catsrc=CatalogSources.objects.last()
+        last_catsrc = CatalogSources.objects.last()
 
         self.assertLess(last_catsrc.obs_mag, 21.62)
 
-        last_frame=Frame.objects.last()
+        last_frame = Frame.objects.last()
 
         self.assertAlmostEqual(last_frame.zeropoint, 28.2732, 4)
         self.assertAlmostEqual(last_frame.zeropoint_err, 0.0641, 4)
