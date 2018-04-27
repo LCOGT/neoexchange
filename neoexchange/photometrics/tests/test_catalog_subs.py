@@ -1232,9 +1232,11 @@ class FITSUnitTest(TestCase):
 
     def compare_tables(self, expected_catalog, catalog, precision=4):
         for column in expected_catalog.colnames:
-            self.assertAlmostEqual(expected_catalog[column], catalog[column], precision,
-                msg="Failure on %s (%.*f != %.*f)" % (column, precision, expected_catalog[column],
-                    precision, catalog[column]))
+            expected_column_value = float(expected_catalog[column].quantity)
+            catalog_column_value = float(catalog[column].quantity)
+            self.assertAlmostEqual(expected_column_value, catalog_column_value, precision,
+                msg="Failure on %s (%.*f != %.*f)" % (column, precision, expected_column_value,
+                    precision, catalog_column_value))
 
 
 class OpenFITSCatalog(FITSUnitTest):
@@ -1678,7 +1680,7 @@ class FITSLDACToHeader(FITSUnitTest):
                                    'NAXIS2  =                 2038',
                                    "COMMENT   FITS (Flexible Image Transport System) format is defined in 'Astronomy",
                                    "COMMENT   and Astrophysics', volume 376, page 359; bibcode: 2001A&A...376..359H"], 
-                                   dtype='|S80')
+                                   dtype='|U80')
 
     def test_nocomment(self):
 
@@ -1803,9 +1805,8 @@ class FITSReadCatalog(FITSUnitTest):
 
         catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
 
-        for column in expected_catalog.colnames:
-            self.assertAlmostEqual(expected_catalog[column], catalog_items[column], 9,
-                msg="Failure on %s (%s != %s)" % (column, expected_catalog[column], catalog_items[column]))
+        self.compare_tables(expected_catalog, catalog_items, 9)
+
 
     def test_first_item_with_bad_zeropoint(self):
 
@@ -1905,7 +1906,6 @@ class FITSReadCatalog(FITSUnitTest):
         header, table, cattype = open_fits_catalog(self.test_ldacfilename)
         header_items = get_catalog_header(header, cattype)
         catalog_items = get_catalog_items(header_items, self.ldac_table_firstitem, "FITS_LDAC")
-
         self.compare_tables(expected_catalog, catalog_items, 4)
 
 

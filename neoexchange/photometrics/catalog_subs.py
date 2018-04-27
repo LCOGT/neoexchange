@@ -906,7 +906,7 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     # Write out new catalog file
     new_fits_catalog = fits_catalog
     to_overwrite = True
-    if overwrite is True:
+    if overwrite is not True:
         new_fits_catalog = new_fits_catalog + '.new'
         to_overwrite = False
     hdulist.writeto(new_fits_catalog, checksum=True, overwrite=to_overwrite)
