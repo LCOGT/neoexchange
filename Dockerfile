@@ -35,9 +35,9 @@ ENV PREFIX /neoexchange
 # Install packages and update base system
 RUN yum -y install epel-release \
         && yum -y install cronie libjpeg-devel nginx \
-                supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
+                supervisor libssl libffi libffi-devel \
                 mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
-                less wget tcsh plplot plplot-libs plplot-devel \
+                less wget which tcsh plplot plplot-libs plplot-devel \
         && yum -y update
 
 # Enable LCO repo and install extra packages
@@ -57,7 +57,7 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # fails with a missing numpy.distutils.core reference for...reasons...
 RUN pip3 install -U numpy \
     && pip3 install -U pip \
-    && pip3 install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
+    && pip3 install --trusted-host $PIP_TRUSTED_HOST -r /var/www/apps/neoexchange/requirements.txt \
     && rm -rf ~/.cache/pip
 
 # Ensure crond will run on all host operating systems

@@ -481,7 +481,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
 
     def test_nofile(self):
-        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.40'
 
         param_file = 'mtdi.lcogt.param'
 
@@ -496,7 +496,7 @@ class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_options, options)
 
     def test_badfile(self):
-        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.40'
 
         param_file = 'mtdi.lcogt.param'
 
@@ -511,7 +511,7 @@ class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
         self.assertEqual(expected_options, options)
 
     def test1(self):
-        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.4'
+        expected_options = '-paramfile mtdi.lcogt.param -CPUTIME 1600 -MAXMISSES 3 -FILTER_PA 255.0 -FILTER_DELTAPA 10.0 -FILTER_MINRATE 0.38 -FILTER_MAXRATE 0.40'
 
         param_file = 'mtdi.lcogt.param'
 
