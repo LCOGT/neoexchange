@@ -184,8 +184,9 @@ class ScheduleBlockForm(forms.Form):
             raise forms.ValidationError("There must be more than 1 exposure")
         elif self.cleaned_data['exp_length'] < 0.1:
             raise forms.ValidationError("Exposure length is too short")
-        elif self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
-            raise forms.ValidationError("Jitter must be larger than slot length")
+        elif self.cleaned_data['period'] is not None and self.cleaned_data['jitter'] is not None:
+            if self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
+                raise forms.ValidationError("Jitter must be larger than slot length")
 
 
 class MPCReportForm(forms.Form):
