@@ -95,6 +95,7 @@ class MyProposalsMixin(object):
 
 def home(request):
     params = build_unranked_list_params()
+
     return render(request, 'core/home.html', params)
 
 
@@ -113,7 +114,7 @@ def summarise_block_efficiency(block_filter=0):
         observed = blocks.filter(num_observed__isnull=False)
         if len(blocks) > block_filter:
             proposal_summary = {
-                                 'proposal':proposal.code,
+                                 'proposal': proposal.code,
                                  'Observed' : observed.count(),
                                  'Not Observed' : blocks.count() - observed.count()
                                }
@@ -655,7 +656,7 @@ def build_unranked_list_params():
         unranked = []
         for body in newest:
             body_dict = model_to_dict(body)
-            body_dict['FOM'] = body.compute_FOM
+            body_dict['FOM'] = body.compute_FOM()
             body_dict['current_name'] = body.current_name()
             emp_line = body.compute_position()
             if not emp_line:
