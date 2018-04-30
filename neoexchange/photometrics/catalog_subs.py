@@ -214,7 +214,7 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
             table1_has_errs = False
 
     y = 0
-    print ("Table lengths: {} {}".format(len(Dec_table_1), len(Dec_table_2)))
+    logger.debug("TIME: Table lengths: {} {}".format(len(Dec_table_1), len(Dec_table_2)))
     for value in Dec_table_1:
         if flags_table_1[y] < 1:
             rmag_table_1_temp = rmag_table_1[y]
