@@ -22,6 +22,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
 from collections import OrderedDict
+import time
 
 from astropy.io import fits
 from astropy.table import Table
@@ -38,6 +39,13 @@ from core.models import CatalogSources, Frame
 
 logger = logging.getLogger(__name__)
 
+def reset_database_connection():
+    """Reset the Django DB connection. This will cause Django to reconnect and
+    get around the OperationalError: (2006, 'MySQL server has gone away')
+    problems from timeouts on long-running processes"""
+
+    from django import db
+    db.close_old_connections()
 
 def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance=0.1, cat_name="UCAC4",  set_row_limit=10000, rmag_limit="<=15.0"):
 
@@ -49,11 +57,26 @@ def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance=0.1, cat_nam
 
         header, table = (catfile[0], catfile[1])
 
+    start = time.time()
     cat_table, cat_name = get_vizier_catalog_table(header['field_center_ra'], header['field_center_dec'], header['field_width'], header['field_height'], cat_name, set_row_limit, rmag_limit)
+    end = time.time()
+    logger.debug("TIME: get_vizier_catalog took {:.1f} seconds".format(end-start))
 
+    start = time.time()
     cross_match_table = cross_match(table, cat_table, cat_name)
+    end = time.time()
+    logger.debug("TIME: cross_match took {:.1f} seconds".format(end-start))
 
+    # cross_match can be a very slow process (tens of minutes) which can cause
+    # the DB connection to time out. If we reset and explicitly close the
+    # connection, Django will auto-reconnect.
+    reset_database_connection()
+
+
+    start = time.time()
     avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance)
+    end = time.time()
+    logger.debug("TIME: get_zeropoint took {:.1f} seconds".format(end-start))
 
     return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name
 
@@ -191,10 +214,12 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
             table1_has_errs = False
 
     y = 0
+    print ("Table lengths: {} {}".format(len(Dec_table_1), len(Dec_table_2)))
     for value in Dec_table_1:
         if flags_table_1[y] < 1:
             rmag_table_1_temp = rmag_table_1[y]
             z = 0
+            start = time.time()
             for source in Dec_table_2:
                 if flags_table_2[z] < 1:
                     rmag_table_2_temp = rmag_table_2[z]
@@ -219,6 +244,8 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
                                 if rmag_table_2[z] != '--':
                                     rmag_error = float(rmag_err_table_2[z]) / 100.0
                 z += 1
+            end = time.time()
+            if y <= 10: logger.debug("TIME: inner loop took {:.2f} seconds".format(end-start))
         if ra_min_diff < cross_match_diff_threshold and dec_min_diff < cross_match_diff_threshold:
             cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_error, rmag_diff))
         y += 1
@@ -995,7 +1022,10 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
     num_sources_created = 0
 
     # read the catalog file
+    start = time.time()
     header, table = extract_catalog(catfile, catalog_type)
+    end = time.time()
+    logger.debug("TIME: extract_catalog took {:.1f} seconds".format(end-start))
 
     if header and table:
 
@@ -1003,7 +1033,10 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
         if header.get('zeropoint', -99) == -99 or header.get('zeropoint_err', -99) == -99:
             # if bad, determine new zeropoint
             logger.debug("Refitting zeropoint, tolerance set to {}".format(std_zeropoint_tolerance))
+            start = time.time()
             header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
+            end = time.time()
+            logger.debug("TIME: compute_zeropoint took {:.1f} seconds".format(end-start))
             logger.debug("New zp={} {} {} {}".format(avg_zeropoint, std_zeropoint, count, num_in_calc))
             # if crossmatch is good, update new zeropoint
             if std_zeropoint < std_zeropoint_tolerance:
@@ -1327,7 +1360,7 @@ def search_box(frame, ra, dec, box_halfwidth=3.0, dbg=False):
     dec_min = min(box_dec_min, box_dec_max)
     dec_max = max(box_dec_min, box_dec_max)
     if dbg: 
-        print("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max , frame.filename))
+        logger.debug("Searching %.4f->%.4f, %.4f->%.4f in %s" % (ra_min, ra_max, dec_min, dec_max , frame.filename))
     sources = CatalogSources.objects.filter(frame=frame, obs_ra__range=(ra_min, ra_max), obs_dec__range=(dec_min, dec_max))
 
     return sources
