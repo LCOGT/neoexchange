@@ -228,7 +228,7 @@ LOGGING = {
 }
 
 chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-SECRET_KEY = get_random_string(50, chars)
+SECRET_KEY = os.environ.get('SECRET_KEY', get_random_string(50, chars))
 
 DATABASES = {
     "default": {
