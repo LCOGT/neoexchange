@@ -17,7 +17,7 @@ import os
 #print("Python version=",sys.version)
 
 # Astropy needs to write config and cache files into its home directory. When
-# running under uwsgi and the uwsgi user, it doesn't have a home (aaah). Need
+# running under nginx+gunicorn and the nginx user, it doesn't have a home (aaah). Need
 # to set environment variables to give these files somewhere to go.
 
 try:
