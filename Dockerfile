@@ -1,12 +1,15 @@
 ################################################################################
 #
-# Runs the LCO Python Django NEO Exchange webapp using nginx + uwsgi
+# Runs the LCO Python Django NEO Exchange webapp using nginx + gunicorn
 #
-# The decision to run both nginx and uwsgi in the same container was made because
+# The change from uwsgi to gunicorn was made to support python 3.6. Since usgi is 
+# linked against the python libraries, it is hard to support the non-system python
+# we want to use.
+# The decision to run both nginx and gunicorn in the same container was made because
 # it avoids duplicating all of the Python code and static files in two containers.
 # It is convenient to have the whole webapp logically grouped into the same container.
 #
-# You can choose to expose the nginx and uwsgi ports separately, or you can
+# You can choose to expose the nginx and gunicorn ports separately, or you can
 # just default to using the nginx port only (recommended). There is no
 # requirement to map all exposed container ports onto host ports.
 #
@@ -15,7 +18,7 @@
 FROM centos:7
 MAINTAINER LCOGT <webmaster@lco.global>
 
-# nginx runs on port 80, uwsgi is linked in the nginx conf
+# nginx runs on port 80, gunicorn is linked in the nginx conf
 EXPOSE 80
 
 # Add path to python3.6
