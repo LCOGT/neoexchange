@@ -39,6 +39,7 @@ from core.models import CatalogSources, Frame
 
 logger = logging.getLogger(__name__)
 
+
 def reset_database_connection():
     """Reset the Django DB connection. This will cause Django to reconnect and
     get around the OperationalError: (2006, 'MySQL server has gone away')
@@ -46,6 +47,7 @@ def reset_database_connection():
 
     from django import db
     db.close_old_connections()
+
 
 def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance=0.1, cat_name="UCAC4",  set_row_limit=10000, rmag_limit="<=15.0"):
 
@@ -72,7 +74,6 @@ def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance=0.1, cat_nam
     # connection, Django will auto-reconnect.
     reset_database_connection()
 
-
     start = time.time()
     avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance)
     end = time.time()
@@ -94,7 +95,8 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
 
         # resulting catalog table
-        # if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo the query; if the resulting catalog table is still empty, fill the table with zeros
+        # if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo
+        # the query; if the resulting catalog table is still empty, fill the table with zeros
         if cat_name == "UCAC4":
             rmag = 'rmag'
         else:
@@ -102,7 +104,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         if (len(result) < 1) or (np.sum(~result[0][rmag].mask) < 1):
             if "PPMXL" in cat_name:
                 cat_name = "UCAC4"
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
                 result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
                 if len(result) > 0:
                     cat_table = result[0]
@@ -120,7 +122,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
                     zeros_list = list(0.0 for i in range(0, 100000))
                     zeros_int_list = list(0 for i in range(0, 100000))
                     cat_table = Table([zeros_list, zeros_list, zeros_list, zeros_int_list], names=('RAJ2000', 'DEJ2000', 'r2mag', 'fl'))
-     # if the resulting table is neither empty nor missing columns values, set the cat_table
+        # if the resulting table is neither empty nor missing columns values, set the cat_table
         else:
             cat_table = result[0]
 
@@ -128,9 +130,9 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         if len(cat_table) == set_row_limit:
             set_row_limit += 10000
             if "UCAC4" in cat_name:
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
             else:
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag":rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=[cat_name])
 
             # resulting catalog table
@@ -245,7 +247,8 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
                                     rmag_error = float(rmag_err_table_2[z]) / 100.0
                 z += 1
             end = time.time()
-            if y <= 10: logger.debug("TIME: inner loop took {:.2f} seconds".format(end-start))
+            if y <= 10:
+                logger.debug("TIME: inner loop took {:.2f} seconds".format(end-start))
         if ra_min_diff < cross_match_diff_threshold and dec_min_diff < cross_match_diff_threshold:
             cross_match_list.append((ra_cat_1, ra_cat_2, ra_min_diff, dec_cat_1, dec_cat_2, dec_min_diff, rmag_cat_1, rmag_cat_2, rmag_error, rmag_diff))
         y += 1
