@@ -214,12 +214,15 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
             flags_table_2 = table_2['RAJ2000'] * 0  # UCAC4 does not have flags, so copy RA table column and turn values all to zeros
             rmag_err_table_2 = table_2['e_rmag']
             table1_has_errs = False
-
     y = 0
     logger.debug("TIME: Table lengths: {} {}".format(len(Dec_table_1), len(Dec_table_2)))
     for value in Dec_table_1:
         if flags_table_1[y] < 1:
-            rmag_table_1_temp = rmag_table_1[y]
+            # Convert masked elements to None to avoid warning error from Table.
+            if not np.ma.is_masked(rmag_table_1[y]):
+                rmag_table_1_temp = rmag_table_1[y]
+            else:
+                rmag_table_1_temp = None
             z = 0
             start = time.time()
             for source in Dec_table_2:
@@ -237,14 +240,19 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
                             ra_cat_2 = ra_table_2_temp
                             rmag_cat_1 = rmag_table_1_temp
                             rmag_cat_2 = rmag_table_2_temp
-                            rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
-                            rmag_error = None
-                            if table1_has_errs:
-                                if rmag_table_1[y] != '--':
-                                    rmag_error = float(rmag_err_table_1[y]) / 100.0
+                            if rmag_cat_1 is not None and rmag_cat_2 is not None:
+                                rmag_diff = abs(rmag_cat_1 - rmag_cat_2)
                             else:
-                                if rmag_table_2[z] != '--':
+                                rmag_diff = None
+                            rmag_error = None
+                            # Calculate errors when possible, ignore when not.
+                            try:
+                                if table1_has_errs:
+                                    rmag_error = float(rmag_err_table_1[y]) / 100.0
+                                else:
                                     rmag_error = float(rmag_err_table_2[z]) / 100.0
+                            except ValueError:
+                                rmag_error = None
                 z += 1
             end = time.time()
             if y <= 10:
