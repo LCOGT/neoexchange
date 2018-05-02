@@ -634,13 +634,13 @@ def parse_mpcobs(line):
 
 def clean_element(element):
     """Cleans an element (passed) by converting to ascii and removing any units"""
-    key = element[0].encode('ascii', 'ignore').decode()
+    key = element[0]
     value = None
     if len(element) == 2:
-        value = element[1].encode('ascii', 'ignore').decode()
+        value = element[1]  # .encode('ascii', 'ignore').decode()
     # Match a open parenthesis followed by 0 or more non-whitespace followed by
     # a close parenthesis and replace it with a blank string
-    key = sub(' \(\S*\)', '', key)
+    key = key.split(' (', 1)[0]
 
     return key, value
 

@@ -1416,7 +1416,7 @@ class TestFetchMPCOrbit(TestCase):
                              'Q-vector [y]': '-0.29869255',
                              'Q-vector [z]': '-0.24414360',
                              'Tisserand w.r.t. Jupiter': '6.1',
-                             'V w.r.t. Earth': '6.0',
+                             'ΔV w.r.t. Earth': '6.0',
                              'absolute magnitude': '26.6',
                              'aphelion distance': '1.009',
                              'arc length': '357',
