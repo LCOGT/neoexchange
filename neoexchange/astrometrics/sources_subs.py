@@ -42,23 +42,6 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def convert_byte_to_text(data):
-    """Decode byte type data into text"""
-
-    if data:
-        data_type = type(data)
-        if data_type == bytes:
-            return data.decode()
-        if data_type in (str, int):
-            return str(data)
-
-        if data_type == dict:
-            data = data.items()
-        return data_type(map(convert_byte_to_text, data))
-    else:
-        return None
-
-
 def download_file(url, file_to_save):
     """Helper routine to download from a URL and save into a file with error trapping"""
 
@@ -442,6 +425,7 @@ def parse_PCCP(pccp_page, dbg=False):
                 new_objects.append(new_object)
 
     return new_objects
+
 
 def fetch_NEOCP_observations(obj_id_or_page):
     """Query the MPC's showobs service with the specified <obj_id_or_page>. If
