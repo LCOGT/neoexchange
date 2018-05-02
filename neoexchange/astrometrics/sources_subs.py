@@ -1025,7 +1025,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
             # Look for messages to the mailing list but without specifying a charset
             status, msgs = mailbox.search(None, 'TO', list_address,
                                           'FROM', author)
-            msgs = [msgs[0], ]
+            msgs = [msgs[0].decode('utf-8'), ]
             if status == 'OK' and len(msgs) > 0 and msgs[0] != '':
                 msgnums = [msgnums[0] + ' ' + msgs[0], ]
         # Messages numbers come back in a space-separated string inside a
@@ -1040,7 +1040,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
                     else:
                         # Convert message and see if it has the right things
                         raw_email = data[0][1]
-                        raw_email_string = raw_email
+                        raw_email_string = raw_email.decode('utf-8')
                         msg = email.message_from_string(raw_email_string)
                         # Strip off any "Fwd: " parts
                         msg_subject = msg['Subject'].replace('Fwd: ', '')
