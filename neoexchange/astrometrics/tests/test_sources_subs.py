@@ -2126,21 +2126,6 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(expected_params, params)
 
-    def test_1m_sinistro_lsc_doma(self):
-        expected_params = { 'binning': 1,
-                            'instrument': '1M0-SCICAM-SINISTRO',
-                            'observatory': 'doma',
-                            'exp_type': 'EXPOSE',
-                            'pondtelescope': '1m0a',
-                            'site': 'LSC',
-                            'site_code': 'W85'}
-
-        params = {'site_code' : 'W85'}
-
-        params = configure_defaults(test_params)
-
-        self.assertEqual(expected_params, params)
-
     def test_lsc_sinistro(self):
         test_params = {
               'exp_count': 42,
