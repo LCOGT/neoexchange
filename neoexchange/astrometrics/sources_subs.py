@@ -130,7 +130,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         body = chunks[0]
         if chunks[1].find('does') >= 0:
             none_id = 'doesnotexist'
-        elif chunks[0].find('Comet') >=0:
+        elif chunks[0].find('Comet') >= 0:
             body = chunks[4]
             none_id = chunks[1] + ' ' + chunks[2]
         if len(chunks) >= 5:
@@ -278,7 +278,8 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
         if len(cols) != 0:
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
-            if dbg: print("Cols=",cols, len(cols))
+            if dbg:
+                print("Cols=", cols, len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -373,7 +374,8 @@ def parse_PCCP(pccp_page, dbg=False):
         if len(cols) != 0:
             # Turn the HTML non-breaking spaces (&nbsp;) into regular spaces
             cols = [ele.text.replace(u'\xa0', u' ').strip() for ele in cols]
-            if dbg: print("Cols=",cols, len(cols))
+            if dbg:
+                print("Cols=", cols, len(cols))
             pccp = False
             try:
                 update_date = cols[6].split()[0]
@@ -763,7 +765,8 @@ def parse_goldstone_chunks(chunks, dbg=False):
     to extract the object id. Could also parse the date of radar observation
     and whether astrometry or photometry is needed"""
 
-    if dbg: print(chunks)
+    if dbg:
+        print(chunks)
     # Try to convert the 2nd field (counting from 0...) to an integer and if
     # that suceeds, check it's greater than 31. If yes, it's an asteroid number
     # (we assume asteroid #1-31 will never be observed with radar..)
@@ -772,7 +775,8 @@ def parse_goldstone_chunks(chunks, dbg=False):
     try:
         astnum = int(chunks[2])
     except ValueError:
-        if dbg: print("Could not convert", chunks[2], "to asteroid number. Will try different method.")
+        if dbg:
+            print("Could not convert", chunks[2], "to asteroid number. Will try different method.")
         astnum = -1
 
     if astnum > 31:
@@ -780,7 +784,8 @@ def parse_goldstone_chunks(chunks, dbg=False):
         # Check if the next 2 characters are uppercase in which it's a
         # designation, not a name
         if chunks[3][0].isupper() and chunks[3][1].isupper():
-            if dbg: print("In case 1")
+            if dbg:
+                print("In case 1")
             object_id = object_id + ' ' + str(chunks[3])
     else:
         if dbg:
@@ -796,15 +801,15 @@ def parse_goldstone_chunks(chunks, dbg=False):
             # We have something that straddles months
             if dbg:
                 print("In case 2b")
-            if chunks[5].isdigit() or chunks[5][0:2].isupper() == False:
+            if chunks[5].isdigit() or chunks[5][0:2].isupper() is False:
                 # Of the form '2017 May 29-Jun 02 418094 2007 WV4' or number and
                 # name e.g.  '2017 May 29-Jun 02 6063 Jason'
                 object_id = str(chunks[4])
             else:
                 # Of the form '2017 May 29-Jun 02 2017 CS'
                 object_id = str(chunks[4]) + ' ' + chunks[5]
-        elif astnum <= 31 and (chunks[3].isdigit() or chunks[3][0:2] == 'P/' \
-        or chunks[3][0:2] == 'C/') and chunks[4].isalnum():
+        elif astnum <= 31 and (chunks[3].isdigit() or chunks[3][0:2] == 'P/'
+                               or chunks[3][0:2] == 'C/') and chunks[4].isalnum():
             # We have a date range e.g. '2016 Mar 17-23'
             # Test if the first 2 characters of chunks[4] are uppercase
             # If yes then we have a desigination e.g. [2014] 'UR' or [2015] 'FW117'
@@ -957,7 +962,7 @@ def fetch_arecibo_targets(page=None):
                         split_char = ')'
                         if target_object[0] != '(':
                             split_char = '('
-                        target_object = target_object.split(split_char)[0].replace('(','')
+                        target_object = target_object.split(split_char)[0].replace('(', '')
                         target_object = target_object.strip()
                     else:
                         # No parentheses, either just a number or a number and name
@@ -1005,9 +1010,9 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
     [date_cutoff] days old (default is 1 day) will not be looked at."""
 
     list_address = '"small-bodies-observations@lists.nasa.gov"'
-    list_authors  = [ '"paul.a.abell@nasa.gov"',
-                      '"paul.w.chodas@jpl.nasa.gov"',
-                      '"brent.w.barbee@nasa.gov"']
+    list_authors = [ '"paul.a.abell@nasa.gov"',
+                        '"paul.w.chodas@jpl.nasa.gov"',
+                        '"brent.w.barbee@nasa.gov"']
     list_prefix = '[' + list_address.replace('"', '').split('@')[0] + ']'
     list_suffix = 'Observations Requested'
 
@@ -1018,14 +1023,14 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         msgnums = ['']
         for author in list_authors:
             # Look for messages to the mailing list but without specifying a charset
-            status, msgs = mailbox.search(None, 'TO', list_address,\
-                                                'FROM', author)
-            msgs = [msgs[0].decode('utf-8'),]
+            status, msgs = mailbox.search(None, 'TO', list_address,
+                                          'FROM', author)
+            msgs = [msgs[0], ]
             if status == 'OK' and len(msgs) > 0 and msgs[0] != '':
-                msgnums = [msgnums[0] + ' '+ msgs[0],]
+                msgnums = [msgnums[0] + ' ' + msgs[0], ]
         # Messages numbers come back in a space-separated string inside a
         # 1-element list in msgnums
-        if status == "OK" and len(msgnums) >0 and msgnums[0] != '':
+        if status == "OK" and len(msgnums) > 0 and msgnums[0] != '':
 
             for num in msgnums[0].split():
                 try:
@@ -1035,7 +1040,7 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
                     else:
                         # Convert message and see if it has the right things
                         raw_email = data[0][1]
-                        raw_email_string = raw_email.decode('utf-8')
+                        raw_email_string = raw_email
                         msg = email.message_from_string(raw_email_string)
                         # Strip off any "Fwd: " parts
                         msg_subject = msg['Subject'].replace('Fwd: ', '')
@@ -1067,11 +1072,12 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
                             else:
                                 if target not in NASA_targets:
                                     NASA_targets.append(target)
-                except:
+                except Exception as e:
+                    logger.error(e)
                     logger.error("Error decoding message %s", num)
                     return NASA_targets
         else:
-            logger.warn("No mailing list messages found")
+            logger.warning("No mailing list messages found")
             return []
     else:
         logger.error("Could not open folder/label %s on %s" % (folder, mailbox.host))
@@ -1138,8 +1144,8 @@ def make_moving_target(elements):
         target['epochofperih'] = elements['epochofperih_mjd']
         target['perihdist'] = elements['perihdist']
     else:
-        target['meandist']  = elements['meandist']
-        target['meananom']  = elements['meananom']
+        target['meandist'] = elements['meandist']
+        target['meananom'] = elements['meananom']
 
     return target
 
@@ -1168,7 +1174,7 @@ def make_molecule(params, exp_filter):
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
                 'filter'      : exp_filter[0],
-                'ag_mode'     : 'OPTIONAL', # ON, OFF, or OPTIONAL. Must be uppercase now...
+                'ag_mode'     : 'OPTIONAL',  # ON, OFF, or OPTIONAL. Must be uppercase now...
                 'ag_name'     : ''
 
     }
@@ -1233,7 +1239,7 @@ def expand_cadence(user_request):
         logger.error(msg)
         return False, msg
 
-    if resp.status_code not in [200,201]:
+    if resp.status_code not in [200, 201]:
         msg = "Cadence generation error"
         logger.error(msg)
         logger.error(resp.json())
@@ -1248,7 +1254,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
     """Create a user_request for a cadence observation"""
 
     # Add cadence parameters into Request
-    request['cadence']= {
+    request['cadence'] = {
                             'start' : datetime.strftime(params['start_time'], '%Y-%m-%dT%H:%M:%S'),
                             'end'   : datetime.strftime(params['end_time'], '%Y-%m-%dT%H:%M:%S'),
                             'period': params['period'],
@@ -1404,7 +1410,7 @@ def submit_block_to_scheduler(elements, params):
         params['error_msg'] = msg
         return False, params
 
-    if resp.status_code not in [200,201]:
+    if resp.status_code not in [200, 201]:
         msg = "Parsing error"
         logger.error(msg)
         logger.error(resp.json())
@@ -1438,7 +1444,7 @@ def submit_block_to_scheduler(elements, params):
     params['request_windows'] = request_windows
 
     request_number_string = ", ".join([str(x) for x in request_numbers])
-    logger.info("Tracking, Req number=%s, %s" % (tracking_number,request_number_string))
+    logger.info("Tracking, Req number=%s, %s" % (tracking_number, request_number_string))
 
     return tracking_number, params
 
@@ -1628,5 +1634,4 @@ def fetch_list_targets(list_targets):
         new_target_list.append(obj_id)
 
     return new_target_list
-
 
