@@ -308,7 +308,7 @@ if 'test' in sys.argv:
 # defined per machine.
 if not CURRENT_PATH.startswith('/var/www'):
     try:
-        from local_settings import *
+        from .local_settings import *
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
