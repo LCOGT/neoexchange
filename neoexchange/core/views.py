@@ -163,16 +163,16 @@ class SuperBlockDetailView(DetailView):
 class BlockListView(ListView):
     model = Block
     template_name = 'core/block_list.html'
-    queryset=Block.objects.order_by('-block_start')
-    context_object_name="block_list"
+    queryset = Block.objects.order_by('-block_start')
+    context_object_name = "block_list"
     paginate_by = 20
 
 
 class SuperBlockListView(ListView):
     model = SuperBlock
     template_name = 'core/block_list.html'
-    queryset=SuperBlock.objects.order_by('-block_start')
-    context_object_name="block_list"
+    queryset = SuperBlock.objects.order_by('-block_start')
+    context_object_name = "block_list"
     paginate_by = 20
 
 
@@ -221,13 +221,13 @@ class UploadReport(LoginRequiredMixin, FormView):
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        form = MPCReportForm(initial={'block_id':block.id})
-        return render(request, 'core/uploadreport.html', {'form': form, 'slot':block})
+        form = MPCReportForm(initial={'block_id': block.id})
+        return render(request, 'core/uploadreport.html', {'form': form, 'slot': block})
 
     def form_invalid(self, form, **kwargs):
         context = self.get_context_data(**kwargs)
         slot = Block.objects.get(pk=form['block_id'].value())
-        return render(context['view'].request, 'core/uploadreport.html', {'form':form,'slot':slot})
+        return render(context['view'].request, 'core/uploadreport.html', {'form': form, 'slot': slot})
 
     def form_valid(self, form):
         obslines = form.cleaned_data['report'].splitlines()
@@ -438,10 +438,10 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
             if tracking_num:
-                messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
+                messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
                 block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
                 if block_resp:
-                    messages.success(self.request,"Block recorded")
+                    messages.success(self.request, "Block recorded")
                 else:
                     messages.warning(self.request, "Record not created")
             else:
@@ -631,7 +631,7 @@ def schedule_submit(data, body, username):
         params['group_id'] = data['group_id']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
-        resp_params = { 'error_msg' : 'Multiple Blocks for same day and site found' }
+        resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}
     if check_for_block(data, params, body) == 0:
         # Record block and submit to scheduler
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
@@ -699,7 +699,8 @@ def check_for_block(form_data, params, new_body):
                   'Q58' : 'COJ',
                   'Q59' : 'COJ',
                   'T04' : 'OGG',
-                  'V99' : 'ELP'  }
+                  'V99' : 'ELP'
+                  }
 
     try:
         block_id = SuperBlock.objects.get(body=new_body.id,
@@ -775,7 +776,7 @@ def return_fields_for_saving():
 
     fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
               'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'eccentricity', 'argofperih', 'meandist', 'meananom',
-              'score', 'discovery_date', 'num_obs', 'arc_length' ]
+              'score', 'discovery_date', 'num_obs', 'arc_length']
 
     return fields
 
@@ -795,8 +796,8 @@ def save_and_make_revision(body, kwargs):
 
     body_dict = model_to_dict(body)
     for k, v in kwargs.items():
-        param = body_dict.get(k,'')
-        if type(param) == type(float()) and v is not None:
+        param = body_dict.get(k, '')
+        if isinstance(param, float) and v is not None:
             v = float(v)
         if v != param:
             setattr(body, k, v)
@@ -877,7 +878,7 @@ def update_NEOCP_observations(obj_id, extra_params={}):
                 if measure is False:
                     msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
                 else:
-                    if len(measure) >0:
+                    if len(measure) > 0:
                         msg = "Created source measurements for object %s" % obj_id
                     elif len(measure) == 0:
                         msg = "Source measurements already exist for object %s" % obj_id
@@ -992,7 +993,7 @@ def clean_NEOCP_object(page_list):
                 params['arc_length'] = arc_length
             try:
                 not_seen = datetime.utcnow() - datetime.strptime(current[-1], '%Y%m%d')
-                params['not_seen'] = not_seen.total_seconds() / 86400.0 # Leap seconds can go to hell...
+                params['not_seen'] = not_seen.total_seconds() / 86400.0  # Leap seconds can go to hell...
             except:
                 pass
         else:
@@ -1266,7 +1267,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
 def create_source_measurement(obs_lines, block=None):
     measures = []
     if type(obs_lines) != list:
-        obs_lines = [obs_lines,]
+        obs_lines = [obs_lines, ]
 
     for obs_line in obs_lines:
         logger.debug(obs_line.rstrip())
@@ -1289,7 +1290,7 @@ def create_source_measurement(obs_lines, block=None):
                         logger.info("Found %s blocks for %s" % (blocks.count(), obs_body))
                         block = blocks[0]
                     else:
-                        logger.warning("No blocks for %s" % (obs_body))
+                        logger.warning("No blocks for %s" % obs_body)
                 if params['obs_type'] == 's':
                     # If we have an obs_type of 's', then we have the second line
                     # of a satellite measurement and we need to find the matching
@@ -1307,9 +1308,9 @@ def create_source_measurement(obs_lines, block=None):
                             # updated version
                             measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:
-                        logger.warning("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'],params['site_code']))
+                        logger.warning("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'], params['site_code']))
                     except Frame.MultipleObjectsReturned:
-                        logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'],params['site_code']))
+                        logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                 else:
                     # Otherwise, make a new Frame and SourceMeasurement
                     frame = create_frame(params, block)
@@ -1327,7 +1328,7 @@ def create_source_measurement(obs_lines, block=None):
                 logger.debug("Body %s does not exist" % params['body'])
                 measures = False
             except Body.MultipleObjectsReturned:
-                logger.warn("Multiple versions of Body %s exist" % params['body'])
+                logger.warning("Multiple versions of Body %s exist" % params['body'])
                 measures = False
 
     return measures
@@ -1604,7 +1605,7 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 
-def update_taxonomy(taxobj,dbg=False):
+def update_taxonomy(taxobj, dbg=False):
     """Update the passed <taxobj> for a new taxonomy update.
     <taxobj> is expected to be a list of:
     designation/provisional designation, taxonomy, taxonomic scheme, reference, notes
