@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load staticfiles basic_tags %}
 
-{% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
+{% block css-content %}<link rel="stylesheet" href="{% static 'core/css/forms.css' %}">{% endblock %}
 
 {% block header %}Home{% endblock %}
 
@@ -29,9 +29,9 @@
             </div>
             <div class="home-button">
                   <svg id="moon"  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 170 55" preserveAspectRatio="xMidYMin slice"
-   style="padding-bottom: 40%; height: 1px; overflow: visible" />
+   style="padding-bottom: 40%; height: 1px; overflow: visible" ></svg>
                   <div id="moonphase">Moon phase <span id="mooncent"></span></div>
-                  <script type="text/javascript" src="{% static "core/js/moon-phase.js" %}" charset="UTF-8"></script>
+                  <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
                   <script type="text/javascript" charset="UTF-8">
                       var today = today || new Date();
                       document.getElementById('mooncent').innerHTML += (moon_day(today)*100).toFixed(1) + "%";
@@ -81,7 +81,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for body in newest|dictsortreversed:"FOM" %}
+                {% for body in newest|dictsortreversed_with_none:"FOM" %}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
                     <td class="list_title" data-label="Body Name"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>

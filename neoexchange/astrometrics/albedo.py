@@ -51,6 +51,12 @@ def asteroid_diameter(a=asteroid_albedo(), h=7):
     returned is in meters.
     See Wright et al. The Astronomical Journal, 2016, 152, 79'''
 
+    try:
+        h = float(h)
+    except (TypeError, ValueError):
+        logger.warn("Could not convert H magnitude to a float")
+        return None
+
     if a <= 0.00:
         logger.debug("You cannot have a negative albedo")
         return False
