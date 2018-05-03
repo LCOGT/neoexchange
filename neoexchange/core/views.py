@@ -40,7 +40,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockF
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError
+    fetch_NEOCP_observations, PackedError, fetch_filter_list
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -490,6 +490,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
+        if dark_end <= datetime.utcnow():
+            dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
+            utc_date = data['utc_date'] + timedelta(days=1)
     # Determine the semester boundaries for the current time and truncate the dark time and
     # therefore the windows appropriately.
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
@@ -502,11 +505,26 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
     emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
-        dbg=False, perturb=True, display=False)
+        dbg=False, perturb=False, display=False)
     if emp == []:
         emp = [-99 for x in range(5)]
     magnitude = emp[3]
     speed = emp[4]
+    
+    # Determine filter pattern
+    if data.get('filter_pattern'):
+        filter_pattern = data.get('filter_pattern')
+    elif data['site_code'] == 'E10' or data['site_code'] == 'F65':
+        filter_pattern = 'solar'
+    else:
+        filter_pattern = 'w'
+
+    #Get string of available filters
+    available_filters = ''
+    filter_list = fetch_filter_list(data['site_code'])
+    for filt in filter_list:
+        available_filters = available_filters + filt + ', '
+    available_filters = available_filters[:-2]
 
     # Determine slot length
     if data.get('slot_length'):
@@ -517,21 +535,28 @@ def schedule_check(data, body, ok_to_schedule=True):
             slot_length /= 60.0
             slot_length = ceil(slot_length)
         else:
-	        try:
-	            slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
-	        except MagRangeError:
-	            slot_length = 0.
-	            ok_to_schedule = False
+            try:
+                slot_length = determine_slot_length(magnitude, data['site_code'])
+            except MagRangeError:
+                slot_length = 0.
+                ok_to_schedule = False
     snr = None
     if spectroscopy:
         new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
         exp_count = data['exp_count']
         exp_length = data.get('exp_length', 1)
     else:
-	    # Determine exposure length and count
-	    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
-	    if exp_length == None or exp_count == None:
-	        ok_to_schedule = False
+        # Determine exposure length and count
+        exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
+        if exp_length == None or exp_count == None:
+            ok_to_schedule = False
+
+    # Determine pattern iterations
+    if exp_count:
+        pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
+        pattern_iterations = round(pattern_iterations,2)
+    else:
+        pattern_iterations = None
 
     # Get period and jitter for cadence
     period = data.get('period', None)
@@ -565,6 +590,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'magnitude': magnitude,
         'speed': speed,
         'slot_length': slot_length,
+        'filter_pattern': filter_pattern,
+        'pattern_iterations': pattern_iterations,
+        'available_filters': available_filters,
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
@@ -591,7 +619,6 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     return resp
 
-
 def schedule_submit(data, body, username):
 
     # Assemble request
@@ -613,6 +640,7 @@ def schedule_submit(data, body, username):
               'priority': data.get('priority', 15),
               'submitter_id': username,
 
+              'filter_pattern': data['filter_pattern'],
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],
               'site_code': data['site_code'],

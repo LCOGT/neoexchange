@@ -24,9 +24,12 @@ try:
 except:
     pass
 from numpy import array, concatenate, zeros
+import copy
+from itertools import groupby
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
+import astrometrics.site_config as cfg
 #from astsubs import mpc_8lineformat
 
 logger = logging.getLogger(__name__)
@@ -694,12 +697,12 @@ class MagRangeError(Exception):
     def __str__(self):
         return self.value
 
-BRIGHTEST_ALLOWABLE_MAG = 10
+BRIGHTEST_ALLOWABLE_MAG = 6
 
 def get_mag_mapping(site_code):
     '''Defines the site-specific mappings from target magnitude to desired
-    slot length (in minutes). A null dictionary is returned if the site name
-    isn't recognized'''
+    slot length (in minutes) assuming minimum exposure count is 4. A null
+    dictionary is returned if the site name isn't recognized'''
 
     twom_site_codes = ['F65', 'E10']
     good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
@@ -712,6 +715,9 @@ def get_mag_mapping(site_code):
     if site_code in twom_site_codes:
 # Mappings for FTN/FTS. Assumes Spectral+Solar filter
         mag_mapping = {
+                17   : 5.5,
+                17.5 : 7.5,
+                18   : 10,
                 19   : 15,
                 20   : 20,
                 20.5 : 22.5,
@@ -723,6 +729,10 @@ def get_mag_mapping(site_code):
     elif site_code in good_onem_site_codes:
 # Mappings for McDonald. Assumes kb74+w
         mag_mapping = {
+                16.0 : 5.5,
+                16.5 : 6.5,
+                17   : 9.5,
+                17.5 : 12,
                 18   : 15,
                 20   : 20,
                 20.5 : 22.5,
@@ -734,6 +744,10 @@ def get_mag_mapping(site_code):
     elif site_code in bad_onem_site_codes:
 # COJ normally has bad seeing, allow more time
         mag_mapping = {
+                16.0 : 6.5,
+                16.5 : 9.5,
+                17   : 12,
+                17.5 : 15,
                 18   : 17.5,
                 19.5 : 20,
                 20   : 22.5,
@@ -759,7 +773,7 @@ def get_mag_mapping(site_code):
     return mag_mapping
 
 
-def determine_slot_length(target_name, mag, site_code, debug=False):
+def determine_slot_length(mag, site_code, debug=False):
 
     if mag < BRIGHTEST_ALLOWABLE_MAG:
         raise MagRangeError("Target too bright")
@@ -790,7 +804,7 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
     (round_exptime, full_exptime) =  estimate_exptime(speed, pixel_scale, 5.0)
 
     if ( round_exptime > max_exp_time ):
-        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds" % \
+        logger.debug("Capping exposure time at %.1f seconds (Was %1.f seconds)" % \
             (round_exptime, max_exp_time))
         round_exptime = full_exptime = max_exp_time
     if ( round_exptime < 10.0 ):
@@ -800,19 +814,38 @@ def determine_exptime(speed, pixel_scale, max_exp_time=300.0):
 
     return round_exptime
 
-def determine_exp_time_count(speed, site_code, slot_length_in_mins):
+def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_pattern):
     exp_time = None
     exp_count = None
+    min_exp_count = 4
 
-    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
+
+    slot_length = slot_length_in_mins * 60.0
+
+    #Set maximum exposure time to value that will achieve approximately S/N = 100 for objects fainter than 18 in V,R,I,gp,rp,ip.
+    #This allows for LC with reasonable cadence for bright, slow moving objects.
+    try:
+        max_exp_time = min((determine_slot_length(mag, site_code)*60.) / min_exp_count, site_max_exp_time)
+    except MagRangeError:
+        max_exp_time = site_max_exp_time
+    #pretify max exposure time to nearest 5 seconds
+    max_exp_time = int(round(max_exp_time/5))*5
 
     exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
 
-    slot_length = slot_length_in_mins * 60.0
+    #Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
-    if exp_count < 4:
-        exp_count = 4
-        exp_time = (slot_length - setup_overhead - (exp_overhead * float(exp_count))) / exp_count
+    #Reduce exposure count by number of exposures necessary to accomidate molecule overhead
+    mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    #Safety while loop for edge cases
+    while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
+        exp_count -= 1
+
+    if exp_count < min_exp_count:
+        exp_count = min_exp_count
+        exp_time = (slot_length - setup_overhead - molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)) - (exp_overhead * float(exp_count))) / exp_count
         logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count ))
     logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % \
         ( slot_length/60.0, slot_length, exp_count, exp_time))
@@ -856,6 +889,25 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
         slot_length += overheads.get('front_padding',0.0)
         slot_length = ceil(slot_length)
     return slot_length
+
+def molecule_overhead(filter_blocks):
+    single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
+    molecule_setup_overhead =  single_mol_overhead * len(filter_blocks)
+    return molecule_setup_overhead
+
+def build_filter_blocks(filter_pattern, exp_count):
+    filter_bits = filter_pattern.split(',')
+    filter_bits = filter(None, filter_bits)
+    filter_list = []
+    filter_blocks = []
+    while exp_count > 0:
+        filter_list += filter_bits[:exp_count]
+        exp_count -= len(filter_bits)
+    for f, m in groupby(filter_list):
+        filter_blocks.append(list(m))
+    if len(filter_blocks) == 0:
+        filter_blocks = [filter_bits]
+    return filter_blocks
 
 def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
     '''Simple noddy scoring calculation for choosing best slot'''
@@ -1228,48 +1280,32 @@ def get_mountlimits(site_code_or_name):
 
     return (ha_neg_limit, ha_pos_limit, alt_limit)
 
-def return_LCOGT_site_codes_mapping():
-    '''Return a mapping of LCOGT Site-Enclosure-Telescope to site codes'''
-
-    valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
-                         'LSC-DOMA-1M0A' : 'W85',
-                         'LSC-DOMB-1M0A' : 'W86',
-                         'LSC-DOMC-1M0A' : 'W87',
-                         'CPT-DOMA-1M0A' : 'K91',
-                         'CPT-DOMB-1M0A' : 'K92',
-                         'CPT-DOMC-1M0A' : 'K93',
-                         'COJ-DOMA-1M0A' : 'Q63',
-                         'COJ-DOMB-1M0A' : 'Q64',
-                         'OGG-CLMA-2M0A' : 'F65',
-                         'COJ-CLMA-2M0A' : 'E10',
-                         'TFN-AQWA-0M4A' : 'Z21',
-                         'TFN-AQWA-0M4B' : 'Z17',
-                         'COJ-CLMA-0M4A' : 'Q58',
-                         'COJ-CLMA-0M4B' : 'Q59',
-                         'OGG-CLMA-0M4B' : 'T04',
-                         'OGG-CLMA-0M4C' : 'T03',
-                         'LSC-AQWA-0M4A' : 'W89',
-                         'LSC-AQWB-0M4A' : 'W79',
-                         'ELP-AQWA-0M4A' : 'V38',
-                         'CPT-AQWA-0M4A' : 'L09',
-                         'SQA-DOMA-0M8A' : 'G51'}
-
-    return valid_site_codes
-
 def LCOGT_site_codes():
     '''Return a list of LCOGT site codes'''
 
-    valid_site_codes = return_LCOGT_site_codes_mapping()
+    valid_site_codes = cfg.valid_site_codes
 
     return valid_site_codes.values()
 
 def LCOGT_domes_to_site_codes(siteid, encid, telid):
     '''Returns the mapped value of LCOGT Site-Enclosure-Telescope to site code'''
 
-    valid_site_codes = return_LCOGT_site_codes_mapping()
+    valid_site_codes = cfg.valid_site_codes
 
     instance = "%s-%s-%s" % (siteid.strip().upper(), encid.strip().upper(), telid.strip().upper())
     return valid_site_codes.get(instance, 'XXX')
+
+def MPC_site_code_to_domes(site):
+    ''' Returns the mapped value of the MPC site code to LCO Site, Eclosure, and telescope'''
+
+    key = cfg.valid_telescope_codes.get(site.upper(),'--')
+
+    key = key.split('-')
+    siteid = key[0].lower()
+    encid = key[1].lower()
+    telid = key[2].lower()
+
+    return siteid, encid, telid
 
 def get_sitecam_params(site):
     '''Translates <site> (e.g. 'FTN') to MPC site code, pixel scale, maximum
@@ -1277,88 +1313,55 @@ def get_sitecam_params(site):
     site_code is set to 'XXX' and the others are set to -1 in the event of an
     unrecognized site.'''
 
-    # Field of view is in arcmin, pixel scale is in arcsec, overheads are in
-    # seconds.
-    onem_fov = 15.5
-    onem_pixscale = 0.464
-    onem_sinistro_fov = 26.4
-    onem_sinistro_pixscale = 0.389
-    point4m_pixscale = 1.139 # bin 2, from average kb29 values
-    point4m_fov = 29.1
-    normal_alt_limit = 30.0
-    twom_alt_limit = 20.0
-    point4m_alt_limit = 15.0
-
-
-    # Per-Telescope overheads
-    filter_change = 2.0
-    per_molecule_time =  5.0 + 11.0
-    onem_setup_overhead = 90.0 + filter_change  # front padding + filter change time
-    onem_setup_overhead += per_molecule_time    # add "per molecule gap" + "per molecule startup"
-    twom_setup_overhead = 240.0 + filter_change # front padding + filter change time
-    twom_setup_overhead += per_molecule_time    # add "per molecule gap" + "per molecule startup"
-    point4m_setup_overhead = onem_setup_overhead
-
-    # Per-Instrument overheads
-    onemsbig_exp_overhead = 15.5
-    point4m_exp_overhead = 13.0 + 1.0       # readout + fixed overhead/exposure
-    sinistro_exp_overhead = 37.0 + 1.0      # readout + fixed overhead/exposure
-    twom_exp_overhead = 10.5 + 8.5          # readout + fixed overhead/exposure
-    floyds_exp_overhead = 25.0 + 0.5        # readout + fixed overhead/exposure
-    floyds_config_change_overhead = 30.0
-    floyds_acq_proc_overhead = 60.0
-    floyds_acq_exp_time = 30.0
-    floyds_calib_time = 60.0
-
     valid_site_codes = LCOGT_site_codes()
     valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']
 
     site = site.upper()
     if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
         site_code = 'F65'
-        setup_overhead = twom_setup_overhead
-        exp_overhead = twom_exp_overhead
-        pixel_scale = 0.304
-        fov = arcmins_to_radians(10.0)
+        setup_overhead = cfg.tel_overhead['twom_setup_overhead']
+        exp_overhead = cfg.inst_overhead['twom_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
         max_exp_length = 300.0
-        alt_limit = twom_alt_limit
+        alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':
         site_code = 'E10'
-        setup_overhead = twom_setup_overhead
-        exp_overhead = twom_exp_overhead
-        pixel_scale = 0.304
-        fov = arcmins_to_radians(10.0)
+        setup_overhead = cfg.tel_overhead['twom_setup_overhead']
+        exp_overhead = cfg.inst_overhead['twom_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
         max_exp_length = 300.0
-        alt_limit = twom_alt_limit
+        alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site == 'F65-FLOYDS' or site == 'E10-FLOYDS':
         site_code = site[0:3]
-        exp_overhead = floyds_exp_overhead
-        pixel_scale = 0.337
-        fov = arcmins_to_radians(2)
+        exp_overhead = cfg.inst_overhead['floyds_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_floyds_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_floyds_fov'])
         max_exp_length = 3600.0
-        alt_limit = twom_alt_limit
-        setup_overhead = { 'front_padding' : twom_setup_overhead - filter_change - per_molecule_time,
-                           'config_change_time' : floyds_config_change_overhead,
-                           'acquire_processing_time' : floyds_acq_proc_overhead,
-                           'acquire_exposure_time': floyds_acq_exp_time,
-                           'per_molecule_time' : per_molecule_time,
-                           'calib_exposure_time' : floyds_calib_time
+        alt_limit = cfg.tel_alt['twom_alt_limit']
+        setup_overhead = { 'front_padding' : cfg.tel_overhead['twom_setup_overhead'],
+                           'config_change_time' : cfg.inst_overhead['floyds_config_change_overhead'],
+                           'acquire_processing_time' : cfg.inst_overhead['floyds_acq_proc_overhead'],
+                           'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
+                           'per_molecule_time' : cfg.molecule_overhead['per_molecule_time'],
+                           'calib_exposure_time' : cfg.inst_overhead['floyds_calib_exp_time']
                          }
     elif site in valid_point4m_codes:
         site_code = site
-        setup_overhead = point4m_setup_overhead
-        exp_overhead = point4m_exp_overhead
-        pixel_scale = point4m_pixscale
-        fov = arcmins_to_radians(point4m_fov)
+        setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
+        exp_overhead = cfg.inst_overhead['point4m_exp_overhead']
+        pixel_scale = cfg.tel_field['point4m_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['point4m_fov'])
         max_exp_length = 300.0
-        alt_limit = point4m_alt_limit
+        alt_limit = cfg.tel_alt['point4m_alt_limit']
     elif site in valid_site_codes:
-        setup_overhead = onem_setup_overhead
-        pixel_scale = onem_sinistro_pixscale
-        fov = arcmins_to_radians(onem_sinistro_fov)
-        exp_overhead = sinistro_exp_overhead
+        setup_overhead = cfg.tel_overhead['onem_setup_overhead']
+        exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
+        pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['onem_sinistro_fov'])
         max_exp_length = 300.0
-        alt_limit = normal_alt_limit
+        alt_limit = cfg.tel_alt['normal_alt_limit']
         site_code = site
     else:
 # Unrecognized site

@@ -68,6 +68,24 @@
                         <td class="kv-key">Speed</td>
                         <td class="kv-value">{{ data.speed|floatformat:2 }} '/min</td>
                     </tr>
+                    <tr id="id_filter_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                            <div class="tooltip">Filter Pattern
+                            <span class="tooltiptext" style="left:75%">Comma Separated Pattern
+                            <br>(e.g.: rp,gp,rp,ip,rp)<br>
+                            <br><u>Filters Available at {{data.site_code}}:</u>
+                            <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
+                        <td class="kv-value">{{ form.filter_pattern }}</td>
+                    </tr>
+                    <tr id="id_pattern_iterations">
+                        <td class="kv-key">Pattern Iterations</td>
+                        {% if data.pattern_iterations < 1 %}
+                        <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">{{ data.pattern_iterations }}
+                            <span class="tooltiptext" style="width: 150px;"><u>Too Few Exposures To Finish Sequence</u>
+                            <br>Consider Increasing Slot Length <br></span></div></td></tr></table></td>
+                        {% else %}
+                        <td class="kv-value">{{ data.pattern_iterations }}</td>
+                        {% endif %}
+                    </tr>
                     <tr id="id_slot_length">
                         <td class="kv-key">Slot length</td>
                         <td class="kv-value">{{ form.slot_length }} mins</td>

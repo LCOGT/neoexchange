@@ -1,5 +1,7 @@
 from datetime import datetime as real_datetime
 from datetime import datetime
+import os
+from astrometrics.sources_subs import fetch_filter_list
 
 import astropy.units as u
 from django.contrib.auth import authenticate
@@ -636,6 +638,11 @@ def mock_fetch_observations(tracking_num):
 def mock_run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 
     return -1, None
+
+def mock_fetch_filter_list(site):
+    test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
+
+    return fetch_filter_list(site, test_filter_map)
 
 def mock_expand_cadence(user_request):
 

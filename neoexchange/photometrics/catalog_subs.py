@@ -1315,7 +1315,7 @@ def sort_rocks(fits_files):
         object_name = fits_header.get('OBJECT', None)
         block_id = fits_header.get('BLKUID', '').replace('/', '')
         if object_name:
-            object_directory = object_name.replace(' ', '')
+            object_directory = object_name.replace(' ', '').replace('/', '')
             if block_id != '':
                 object_directory = object_directory + '_' + str(block_id)
             if object_directory not in objects:

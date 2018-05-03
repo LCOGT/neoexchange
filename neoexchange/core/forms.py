@@ -18,8 +18,9 @@ from django import forms
 from django.db.models import Q
 from .models import Body, Proposal, Block
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
-from astrometrics.sources_subs import fetch_sfu
+from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
 import logging
 logger = logging.getLogger(__name__)
 
@@ -129,6 +130,8 @@ class ScheduleBlockForm(forms.Form):
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     exp_length = forms.FloatField(widget=forms.HiddenInput(), required=False)
     slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
+    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size':'20'}))
+    pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
@@ -154,7 +157,34 @@ class ScheduleBlockForm(forms.Form):
         else:
             return self.cleaned_data['end_time']
 
+    def clean_filter_pattern(self):
+        try:
+            pattern = self.cleaned_data['filter_pattern']
+            stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
+            chunks = stripped_pattern.split(',')
+            chunks=filter(None, chunks)
+            if chunks.count(chunks[0]) == len(chunks):
+                chunks = [chunks[0]]
+            cleaned_filter_pattern = ",".join(chunks)
+        except KeyError as e:
+            cleaned_filter_pattern = ','
+        return cleaned_filter_pattern
+
     def clean(self):
+        site = self.cleaned_data['site_code']
+        if not fetch_filter_list(site):
+            raise forms.ValidationError("This Site/Telescope combination is not currently available.")
+        try:
+            pattern = self.cleaned_data['filter_pattern']
+            chunks = pattern.split(',')
+            bad_filters = [x for x in chunks if x not in fetch_filter_list(site)]
+            if len(bad_filters) > 0:
+                if len(bad_filters) == 1:
+                    raise ValidationError(_('%(bad)s is not an acceptable filter at this site.'), params={'bad': ",".join(bad_filters)}, )
+                else:
+                    raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
+        except KeyError as e:
+            raise ValidationError(_('Dude, you had to actively input a bunch of spaces and nothing else to see this error. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site))}, )
         if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:

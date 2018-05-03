@@ -403,6 +403,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
+                    'filter_pattern' : 'w',
                     'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson'
                  }
@@ -442,6 +443,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
+                    'filter_pattern' : 'w',
                     'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'period'    : 2.0,
@@ -479,7 +481,8 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson'
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
                  }
 
         user_request = make_userrequest(body_elements, params)
@@ -504,7 +507,8 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson'
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
                  }
 
         user_request = make_userrequest(body_elements, params)
@@ -514,6 +518,258 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
         self.assertEqual(user_request['requests'][0]['location']['observatory'], 'doma')
+
+    def test_multi_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 18,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,R,I,I'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 9
+            expected_exp_count = 2
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[3].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[3].get('filter'), expected_filter)
+
+    def test_uneven_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 18,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,I'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 13
+            expected_exp_count = 1
+            expected_filter = 'I'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[2].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[2].get('filter'), expected_filter)
+
+    def test_single_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 18,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 1
+            expected_exp_count = 18
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[0].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[0].get('filter'), expected_filter)
+
+    def test_overlap_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 18,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,R,I,I,V'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 8
+            expected_exp_count = 3
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[3].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[3].get('filter'), expected_filter)
+
+    def test_overlap_nooverlap_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 15,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,I,V'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 10
+            expected_exp_count = 1
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[9].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[9].get('filter'), expected_filter)
+
+    def test_partial_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 15,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 3
+            expected_exp_count = 4
+            expected_filter = 'I'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[2].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[2].get('filter'), expected_filter)
+
+    def test_partial_overlap_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 15,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,R,I,V'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 8
+            expected_exp_count = 3
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[6].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[6].get('filter'), expected_filter)
+
+class TestFetchFilterList(TestCase):
+    '''Unit test for getting current filters from configdb'''
+
+    def setUp(self):
+        # Read stored version of camera mappings file
+        self.test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
+
+    def test_1m_cpt(self):
+        expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+
+        filter_list = fetch_filter_list('K91',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_0m4_ogg(self):
+        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+
+        filter_list = fetch_filter_list('T04',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_2m_ogg(self):
+        expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
+
+        filter_list = fetch_filter_list('F65',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_1m_lsc_domeb(self):
+        expected_filter_list = ['air', 'ND' , 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+
+        filter_list = fetch_filter_list('W86',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_unavailable_telescope(self):
+        expected_filter_list = []
+
+        filter_list = fetch_filter_list('Z21',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_lowercase_telescope(self):
+        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+
+        filter_list = fetch_filter_list('t04',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_invalid_telescope(self):
+        expected_filter_list = []
+
+        filter_list = fetch_filter_list('BESTtelescope',self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
 
 
 class TestPreviousNEOCPParser(TestCase):
@@ -1757,7 +2013,6 @@ class TestConfigureDefaults(TestCase):
                             'pondtelescope' :'0m4',
                             'observatory' : '',
                             'site' : 'TFN',
-                            'filter' : 'w',
                             'exp_type':'EXPOSE',
                             'binning' : 2}
         expected_params.update(test_params)
@@ -1778,7 +2033,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'OGG',
-                            'filter' : 'w',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1798,7 +2052,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'COJ',
-                            'filter' : 'w',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1818,7 +2071,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'CPT',
-                            'filter' : 'w',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1838,7 +2090,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : 'aqwa',
                             'exp_type':'EXPOSE',
                             'site' : 'ELP',
-                            'filter' : 'w',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1858,7 +2109,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'LSC',
-                            'filter' : 'w',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1878,7 +2128,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'LSC',
-                            'filter' : 'w',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1888,7 +2137,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_lsc_doma(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': 'doma',
                             'exp_type':'EXPOSE',
@@ -1916,7 +2164,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'LSC',
-                            'filter' : 'w',
                             'binning' : 1}
         expected_params.update(test_params)
 
@@ -1936,7 +2183,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'LSC',
-                            'filter' : 'w',
                             'binning' : 1,
                             'site_code' : 'W87',
                             'exp_count' : 42,
@@ -1958,7 +2204,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'OGG',
-                            'filter' : 'solar',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1978,7 +2223,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'COJ',
-                            'filter' : 'solar',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1998,7 +2242,6 @@ class TestConfigureDefaults(TestCase):
                             'observatory' : '',
                             'exp_type':'EXPOSE',
                             'site' : 'ELP',
-                            'filter' : 'w',
                             'binning' : 1}
         expected_params.update(test_params)
 
@@ -2008,7 +2251,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_cpt(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
@@ -2025,7 +2267,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_lsc_doma(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
@@ -2042,7 +2283,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_lsc(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
@@ -2059,7 +2299,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_elp(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
@@ -2076,7 +2315,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_lsc_domec(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
@@ -2093,7 +2331,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_cpt_domec(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
                             'exp_type':'EXPOSE',
@@ -2110,7 +2347,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_2m_ogg(self):
         expected_params = { 'binning': 2,
-                            'filter': 'solar',
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
                             'exp_type':'EXPOSE',
@@ -2127,7 +2363,6 @@ class TestConfigureDefaults(TestCase):
 
     def test_2m_coj(self):
         expected_params = { 'binning': 2,
-                            'filter': 'solar',
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
                             'exp_type':'EXPOSE',
@@ -2184,15 +2419,32 @@ class TestMakeMolecule(TestCase):
 
     def setUp(self):
 
-        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65', 'exp_time' : 60.0, 'exp_count' : 12})
-        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92', 'exp_time' : 60.0, 'exp_count' : 12})
-        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21', 'exp_time' : 90.0, 'exp_count' : 18})
+        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'solar'})
+        self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
+                                                    self.params_2m0_imaging['exp_count'])[0]
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'w'})
+        self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
+                                                    self.params_1m0_imaging['exp_count'])[0]
+        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
+                                                       'exp_time' : 90.0,
+                                                       'exp_count' : 18,
+                                                       'filter_pattern' : 'w'})
+        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
+                                                    self.params_0m4_imaging['exp_count'])[0]
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
                                                             'instrument_code' : 'F65-FLOYDS',
                                                             'spectroscopy' : True,
                                                             'exp_time' : 180.0,
                                                             'exp_count' : 1})
+        self.filt_2m0_spectroscopy = ['slit_2.0as',]
 
     def test_2m_imaging(self):
 
@@ -2208,7 +2460,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : ''
                             }
 
-        molecule = make_molecule(self.params_2m0_imaging)
+        molecule = make_molecule(self.params_2m0_imaging, self.filt_2m0_imaging)
 
         self.assertEqual(expected_molecule, molecule)
 
@@ -2226,7 +2478,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : ''
                             }
 
-        molecule = make_molecule(self.params_1m0_imaging)
+        molecule = make_molecule(self.params_1m0_imaging, self.filt_1m0_imaging)
 
         self.assertEqual(expected_molecule, molecule)
 
@@ -2244,7 +2496,7 @@ class TestMakeMolecule(TestCase):
                              'ag_name'     : ''
                             }
 
-        molecule = make_molecule(self.params_0m4_imaging)
+        molecule = make_molecule(self.params_0m4_imaging, self.filt_0m4_imaging)
 
         self.assertEqual(expected_molecule, molecule)
 
@@ -2263,7 +2515,7 @@ class TestMakeMolecule(TestCase):
                              'acquire_mode': 'WCS'
                             }
 
-        molecule = make_molecule(self.params_2m0_spectroscopy)
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
 
         self.assertEqual(expected_molecule, molecule)
 
@@ -2284,7 +2536,7 @@ class TestMakeMolecule(TestCase):
                              'acquire_mode': 'WCS'
                             }
 
-        molecule = make_molecule(self.params_2m0_spectroscopy)
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
 
         self.assertEqual(expected_molecule, molecule)
 
@@ -2306,7 +2558,7 @@ class TestMakeMolecule(TestCase):
                              'acquire_mode': 'WCS'
                             }
 
-        molecule = make_molecule(self.params_2m0_spectroscopy)
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
 
         self.assertEqual(expected_molecule, molecule)
 
@@ -2327,7 +2579,7 @@ class TestMakeMolecule(TestCase):
                              'acquire_mode': 'WCS'
                             }
 
-        molecule = make_molecule(self.params_2m0_spectroscopy)
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
 
         self.assertEqual(expected_molecule, molecule)
 
@@ -2349,7 +2601,7 @@ class TestMakeMolecule(TestCase):
                              'acquire_mode': 'WCS'
                             }
 
-        molecule = make_molecule(self.params_2m0_spectroscopy)
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
 
         self.assertEqual(expected_molecule, molecule)
 
@@ -2357,15 +2609,33 @@ class TestMakeMolecules(TestCase):
 
     def setUp(self):
 
-        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65', 'exp_time' : 60.0, 'exp_count' : 12})
-        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92', 'exp_time' : 60.0, 'exp_count' : 12})
-        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21', 'exp_time' : 90.0, 'exp_count' : 18})
+        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'solar'})
+        self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
+                                                    self.params_2m0_imaging['exp_count'])[0]
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'w'})
+        self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
+                                                    self.params_1m0_imaging['exp_count'])[0]
+        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
+                                                       'exp_time' : 90.0,
+                                                       'exp_count' : 18,
+                                                       'filter_pattern' : 'w'})
+        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
+                                                    self.params_0m4_imaging['exp_count'])[0]
 
         self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
                                                             'instrument_code' : 'F65-FLOYDS',
                                                             'spectroscopy' : True,
                                                             'exp_time' : 180.0,
-                                                            'exp_count' : 1})
+                                                            'exp_count' : 1,
+                                                            'filter_pattern' : 'slit_2.0as'})
+        self.filt_2m0_spectroscopy = ['slit_2.0as',]
 
     def test_2m_imaging(self):
 
@@ -2813,7 +3083,23 @@ class TestFetchTaxonomyData(TestCase):
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
 
-    #def test_binzel_pull(self):
-    #    expected_line = ['2002 EC','X:',"B","BZ04","*"]
-    #    tax_data = fetch_taxonomy_page()
-    #    self.assertEqual(expected_line, tax_data[-1])
+class TestFetchTargetsFromList(TestCase):
+
+    def test_commad_line_entry(self):
+        test_list=['588', '2759', '4035', '1930_UB', '1989 AL2']
+        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2']
+        self.assertEqual(out_list,fetch_list_targets(test_list))
+
+    def test_text_file_entry(self):
+        test_file = []
+        test_file.append(os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'))
+        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2']
+        self.assertEqual(out_list,fetch_list_targets(test_file))
+
+    def test_file_and_command_entry(self):
+        test_file = []
+        test_file.append(os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'))
+        test_file.append('4063')
+        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2','4063']
+        self.assertEqual(out_list,fetch_list_targets(test_file))
+

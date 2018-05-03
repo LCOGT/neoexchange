@@ -8,7 +8,7 @@ pyslalib
 beautifulsoup4
 django-reversion>=2.0
 html5lib
-ipython
+ipython<6
 nose
 pytz
 six>=1.10.0
