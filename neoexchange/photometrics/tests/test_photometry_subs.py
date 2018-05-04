@@ -1418,7 +1418,7 @@ class TestSlitVignette(SNRTestCase):
 
         vign = slit_vignette(self.wht_tic_params)
 
-        self.assertAlmostEqual(expected_vign, vign, self.precision)
+        self.assertAlmostEqual(expected_vign, vign.value, self.precision)
 
     def test_fwhm1_slit2point31(self):
 
@@ -1440,7 +1440,7 @@ class TestSlitVignette(SNRTestCase):
 
         vign = slit_vignette(self.wht_tic_params)
 
-        self.assertAlmostEqual(expected_vign, vign, self.precision)
+        self.assertAlmostEqual(expected_vign, vign.value, self.precision)
 
 class TestComputeFWHMTel(SNRTestCase):
 
