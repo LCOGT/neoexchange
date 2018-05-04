@@ -535,7 +535,10 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
     elif data['site_code'] == 'E10' or data['site_code'] == 'F65':
-        filter_pattern = 'solar'
+        if spectroscopy:
+            filter_pattern = 'slit_6.0as'
+        else:
+            filter_pattern = 'solar'
     else:
         filter_pattern = 'w'
 

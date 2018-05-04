@@ -39,8 +39,8 @@ SITES = (('V37', 'McDonald, Texas (ELP - V37; Sinistro)'),
          ('L09', 'Sutherland, S. Africa (CPT - L09; 0.4m)'))
 
 
-SPECTRO_SITES = (('F65-FLOYDS','Maui, Hawaii (FTN - F65)'),
-                 ('E10-FLOYDS','Siding Spring, Aust. (FTS - E10)'))
+SPECTRO_SITES = (('F65-FLOYDS', 'Maui, Hawaii (FTN - F65)'),
+                 ('E10-FLOYDS', 'Siding Spring, Aust. (FTS - E10)'))
 
 CALIBS = (('Both', 'Calibrations before and after spectrum'),
           ('Before', 'Calibrations before spectrum'),
@@ -50,6 +50,7 @@ CALIBS = (('Both', 'Calibrations before and after spectrum'),
 MOON = (('G', 'Grey',),
         ('B', 'Bright'),
         ('D', 'Dark'))
+
 
 class EphemQuery(forms.Form):
 
@@ -146,9 +147,9 @@ class ScheduleBlockForm(forms.Form):
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
-    spectroscopy = forms.BooleanField(required=False,widget=forms.HiddenInput())
-    calibs = forms.ChoiceField(required=False,widget=forms.HiddenInput(), choices=CALIBS)
-    instrument_code = forms.CharField(max_length=10,widget=forms.HiddenInput(), required=False)
+    spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
+    instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
@@ -168,7 +169,8 @@ class ScheduleBlockForm(forms.Form):
     def clean_filter_pattern(self):
         try:
             pattern = self.cleaned_data['filter_pattern']
-            stripped_pattern = pattern.replace(" ", ",").replace(";", ",").replace("/", ",").replace(".", ",")
+            stripped_pattern = pattern.replace(" ", ",").replace(";", ",").replace("/", ",")
+
             chunks = stripped_pattern.split(',')
             chunks = list(filter(None, chunks))
             if chunks.count(chunks[0]) == len(chunks):
@@ -207,7 +209,7 @@ class ScheduleBlockForm(forms.Form):
 class ScheduleSpectraForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
     instrument_code = forms.ChoiceField(required=True, choices=SPECTRO_SITES)
-    utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
+    utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'UTC date is required')})
     exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
     exp_length = forms.FloatField(initial=1800.0, required=True)
     calibs = forms.ChoiceField(required=True, choices=CALIBS)
@@ -226,6 +228,7 @@ class ScheduleSpectraForm(forms.Form):
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         self.fields['proposal_code'].choices = proposal_choices
 
+
 class MPCReportForm(forms.Form):
     block_id = forms.IntegerField(widget=forms.HiddenInput())
     report = forms.CharField(widget=forms.Textarea)
@@ -236,6 +239,7 @@ class MPCReportForm(forms.Form):
             self.cleaned_data['block'] = block
         except:
             raise forms.ValidationError('Block ID %s is not valid' % self.cleaned_data['block_id'])
+
 
 class SpectroFeasibilityForm(forms.Form):
     instrument_code = forms.ChoiceField(required=True, choices=SPECTRO_SITES)
@@ -251,8 +255,8 @@ class SpectroFeasibilityForm(forms.Form):
         mag = None
         if body:
             emp = body.compute_position()
-            if emp != False:
-                mag = round(emp[2],1)
+            if emp is not False:
+                mag = round(emp[2], 1)
         super(SpectroFeasibilityForm, self).__init__(*args, **kwargs)
         self.fields['magnitude'].initial = mag
         self.fields['sfu'].initial = sfu_values[1].value
