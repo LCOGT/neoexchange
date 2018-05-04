@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime, date, timedelta
 from django import forms
@@ -25,18 +25,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-SITES = (('V37','McDonald, Texas (ELP - V37; Sinistro)'),
-         ('F65','Maui, Hawaii (FTN - F65)'),
-         ('E10','Siding Spring, Aust. (FTS - E10)'),
-         ('W86','CTIO, Chile (LSC - W85-87; Sinistro)'),
-         ('K92','Sutherland, S. Africa (CPT - K91-93; Sinistro)'),
-         ('Q63','Siding Spring, Aust. (COJ - Q63-64; Sinistro)'),
-         ('Q58','Siding Spring, Aust. (COJ - Q58-59; 0.4m)'),
-         ('Z21','Tenerife, Spain (TFN - Z17,Z21; 0.4m)'),
-         ('T04','Maui, Hawaii (OGG - T03-04; 0.4m)'),
-         ('W89','CTIO, Chile (LSC - W89,W79; 0.4m)'),
-         ('V38','McDonald, Texas (ELP - V38; 0.4m)'),
-         ('L09','Sutherland, S. Africa (CPT - L09; 0.4m)'))
+SITES = (('V37', 'McDonald, Texas (ELP - V37; Sinistro)'),
+         ('F65', 'Maui, Hawaii (FTN - F65)'),
+         ('E10', 'Siding Spring, Aust. (FTS - E10)'),
+         ('W86', 'CTIO, Chile (LSC - W85-87; Sinistro)'),
+         ('K92', 'Sutherland, S. Africa (CPT - K91-93; Sinistro)'),
+         ('Q63', 'Siding Spring, Aust. (COJ - Q63-64; Sinistro)'),
+         ('Q58', 'Siding Spring, Aust. (COJ - Q58-59; 0.4m)'),
+         ('Z21', 'Tenerife, Spain (TFN - Z17,Z21; 0.4m)'),
+         ('T04', 'Maui, Hawaii (OGG - T03-04; 0.4m)'),
+         ('W89', 'CTIO, Chile (LSC - W89,W79; 0.4m)'),
+         ('V38', 'McDonald, Texas (ELP - V38; 0.4m)'),
+         ('L09', 'Sutherland, S. Africa (CPT - L09; 0.4m)'))
+
 
 SPECTRO_SITES = (('F65-FLOYDS','Maui, Hawaii (FTN - F65)'),
                  ('E10-FLOYDS','Siding Spring, Aust. (FTS - E10)'))
@@ -52,29 +53,33 @@ MOON = (('G', 'Grey',),
 
 class EphemQuery(forms.Form):
 
-    target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Target name is required')})
+    target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size': '10'}),
+                             error_messages={'required': _(u'Target name is required')})
     site_code = forms.ChoiceField(required=True, choices=SITES)
-    utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
-    alt_limit = forms.FloatField(initial=30.0, required=True, widget=forms.TextInput(attrs={'size':'4'}))
+    utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
+                               error_messages={'required': _(u'UTC date is required')})
+    alt_limit = forms.FloatField(initial=30.0, required=True, widget=forms.TextInput(attrs={'size': '4'}))
 
     def clean_target(self):
         name = self.cleaned_data['target']
-        body = Body.objects.filter(Q(provisional_name__startswith = name )|Q(provisional_packed__startswith = name)|Q(name__startswith = name))
+        body = Body.objects.filter(Q(provisional_name__startswith=name) | Q(provisional_packed__startswith=name) | Q(name__startswith=name))
         if body.count() == 1 :
             return body[0]
         elif body.count() == 0:
             raise forms.ValidationError("Object not found.")
         elif body.count() > 1:
-            newbody = Body.objects.filter(Q(provisional_name__exact = name )|Q(provisional_packed__exact = name)|Q(name__exact = name))
+            newbody = Body.objects.filter(Q(provisional_name__exact=name) | Q(provisional_packed__exact=name) | Q(name__exact=name))
             if newbody.count() == 1:
                 return newbody[0]
             else:
                 raise forms.ValidationError("Multiple objects found.")
 
+
 class ScheduleForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)
     site_code = forms.ChoiceField(required=True, choices=SITES)
-    utc_date = forms.DateField(input_formats=['%Y-%m-%d',], initial=date.today, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'UTC date is required')})
+    utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
+                               error_messages={'required': _(u'UTC date is required')})
 
     def clean_utc_date(self):
         start = self.cleaned_data['utc_date']
@@ -91,12 +96,14 @@ class ScheduleForm(forms.Form):
 
 
 class ScheduleCadenceForm(forms.Form):
-    proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad',}))
-    site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad',}))
-    start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'], initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
-    end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'], initial=datetime.today, required=True, error_messages={'required': _(u'UTC end date is required')})
-    period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Period is required')})
-    jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size':'10'}), error_messages={'required': _(u'Jitter is required')})
+    proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad', }))
+    site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad', }))
+    start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
+                                     initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
+    end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
+                                   initial=datetime.today, required=True, error_messages={'required': _(u'UTC end date is required')})
+    period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
+    jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
 
     # def clean_start_time(self):
     #     start = self.cleaned_data['start_time']
@@ -124,18 +131,19 @@ class ScheduleCadenceForm(forms.Form):
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         self.fields['proposal_code'].choices = proposal_choices
 
+
 class ScheduleBlockForm(forms.Form):
     start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     exp_length = forms.FloatField(widget=forms.HiddenInput(), required=False)
     slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
-    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size':'20'}))
+    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size': '20'}))
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
-    proposal_code = forms.CharField(max_length=20,widget=forms.HiddenInput())
-    site_code = forms.CharField(max_length=5,widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=30,widget=forms.HiddenInput())
-    utc_date = forms.DateField(input_formats=['%Y-%m-%d',], widget=forms.HiddenInput(), required=False)
+    proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
+    site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
+    group_id = forms.CharField(max_length=30, widget=forms.HiddenInput())
+    utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
     spectroscopy = forms.BooleanField(required=False,widget=forms.HiddenInput())
@@ -160,13 +168,13 @@ class ScheduleBlockForm(forms.Form):
     def clean_filter_pattern(self):
         try:
             pattern = self.cleaned_data['filter_pattern']
-            stripped_pattern = pattern.replace(" ",",").replace(";",",").replace("/",",").replace(".",",")
+            stripped_pattern = pattern.replace(" ", ",").replace(";", ",").replace("/", ",").replace(".", ",")
             chunks = stripped_pattern.split(',')
-            chunks=filter(None, chunks)
+            chunks = list(filter(None, chunks))
             if chunks.count(chunks[0]) == len(chunks):
                 chunks = [chunks[0]]
             cleaned_filter_pattern = ",".join(chunks)
-        except KeyError as e:
+        except KeyError:
             cleaned_filter_pattern = ','
         return cleaned_filter_pattern
 
@@ -183,7 +191,7 @@ class ScheduleBlockForm(forms.Form):
                     raise ValidationError(_('%(bad)s is not an acceptable filter at this site.'), params={'bad': ",".join(bad_filters)}, )
                 else:
                     raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
-        except KeyError as e:
+        except KeyError:
             raise ValidationError(_('Dude, you had to actively input a bunch of spaces and nothing else to see this error. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site))}, )
         if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
@@ -191,8 +199,10 @@ class ScheduleBlockForm(forms.Form):
             raise forms.ValidationError("There must be more than 1 exposure")
         elif self.cleaned_data['exp_length'] < 0.1:
             raise forms.ValidationError("Exposure length is too short")
-        elif self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
-            raise forms.ValidationError("Jitter must be larger than slot length")
+        elif self.cleaned_data['period'] is not None and self.cleaned_data['jitter'] is not None:
+            if self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
+                raise forms.ValidationError("Jitter must be larger than slot length")
+
 
 class ScheduleSpectraForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True)

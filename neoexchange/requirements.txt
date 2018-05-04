@@ -2,17 +2,17 @@
 --trusted-host buildsba.lco.gtn
 Django>=1.11,<2.0
 mysqlclient
-astropy>=1.3.1,<3.0
+astropy>=1.3.1
 astroquery
 pyslalib
 beautifulsoup4
 django-reversion>=2.0
 html5lib
-ipython<6
+ipython
 nose
 pytz
 six>=1.10.0
-wsgiref
+#wsgiref
 pycparser
 requests[security]
 selenium>=3.8,<4.0
@@ -25,3 +25,4 @@ matplotlib
 fits2image
 panoptes-client
 pillow
+gunicorn

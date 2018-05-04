@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,14 +11,14 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from math import radians
 
-#Import module to test
+# Import module to test
 from astrometrics.ephem_subs import *
 from core.models import Body
 
@@ -147,6 +147,7 @@ class TestGetMountLimits(TestCase):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('z21')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
+
 class TestComputeEphem(TestCase):
 
     def setUp(self):
@@ -196,7 +197,6 @@ class TestComputeEphem(TestCase):
                          'updated': False,
                          'urgency': None}
         self.comet, created = Body.objects.get_or_create(**comet_params)
-
 
         self.elements = {'slope': 0.15,
                          'abs_mag': 21.0,
@@ -327,6 +327,7 @@ class TestComputeEphem(TestCase):
         expected_ephem_lines = [['2015 04 21 08:45', '20 10 05.99', '+29 56 57.5', '20.4', ' 2.43', ' 89.2', '+33', '0.09', '107', '-42', '+047', '-04:25'],
                                 ['2015 04 21 08:50', '20 10 06.92', '+29 56 57.7', '20.4', ' 2.42', ' 89.2', '+34', '0.09', '107', '-42', '+048', '-04:20']]
         ephem_lines = call_compute_ephem(body_elements, start, end, site_code, step_size)
+
         line = 0
         self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
         while line < len(expected_ephem_lines):
@@ -335,7 +336,7 @@ class TestComputeEphem(TestCase):
 
     def test_call_compute_ephem_with_body_F65(self):
         start = datetime(2015, 4, 21, 11, 30, 00)
-        end = datetime(2015, 4, 21, 11, 35, 01)
+        end = datetime(2015, 4, 21, 11, 35, 1)
         site_code = 'F65'
         step_size = 300
         body_elements = model_to_dict(self.body)
@@ -351,7 +352,7 @@ class TestComputeEphem(TestCase):
 
     def test_call_compute_ephem_with_date(self):
         start = datetime(2015, 4, 28, 10, 20, 00)
-        end = datetime(2015, 4, 28, 10, 25, 01)
+        end = datetime(2015, 4, 28, 10, 25, 1)
         site_code = 'V37'
         step_size = 300
         body_elements = model_to_dict(self.body)
@@ -367,7 +368,7 @@ class TestComputeEphem(TestCase):
 
     def test_call_compute_ephem_with_altlimit(self):
         start = datetime(2015, 9, 1, 17, 20, 00)
-        end = datetime(2015, 9, 1, 19, 50, 01)
+        end = datetime(2015, 9, 1, 19, 50, 1)
         site_code = 'K91'
         step_size = 300
         alt_limit = 30.0
@@ -390,7 +391,7 @@ class TestComputeEphem(TestCase):
         step_size = 60
         alt_limit = 0
         body_elements = model_to_dict(self.body)
-        expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20',  '121.1', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'],]
+        expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20',  '121.1', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'], ]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -407,7 +408,7 @@ class TestComputeEphem(TestCase):
         step_size = 600
         alt_limit = 0
         body_elements = model_to_dict(self.comet)
-        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '14.7', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '14.7', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'], ]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -426,7 +427,7 @@ class TestComputeEphem(TestCase):
         body_elements = model_to_dict(self.comet)
         body_elements['abs_mag'] = None
         body_elements['slope'] = None
-        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '-99.0', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '-99.0', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'], ]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -541,6 +542,7 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+
 class TestLongTermScheduling(TestCase):
 
     def setUp(self):
@@ -645,8 +647,8 @@ class TestLongTermScheduling(TestCase):
         self.body5, created = Body.objects.get_or_create(**params)
 
     def test_LongTermScheduling_with_body(self):
-        #Body is only up for a few days starting at the
-        #beginning of the search.
+        # Body is only up for a few days starting at the
+        # beginning of the search.
         site_code = 'V37'
         body_elements = model_to_dict(self.body)
 
@@ -677,9 +679,9 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body2(self):
-        #Body is up for a couple days when gets faint enough,
-        #but then moon gets full. Body becomes observable again
-        #after moon "fades" until no longer up for at least 3 hrs.
+        # Body is up for a couple days when gets faint enough,
+        # but then moon gets full. Body becomes observable again
+        # after moon "fades" until no longer up for at least 3 hrs.
         site_code = 'V37'
         body_elements = model_to_dict(self.body2)
 
@@ -690,9 +692,9 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body2_shorter_time_limit(self):
-        #Body is up for a couple days when gets faint enough,
-        #but then moon gets full. Body becomes observable again
-        #after moon "fades" until no longer up for at least 3 hrs.
+        # Body is up for a couple days when gets faint enough,
+        # but then moon gets full. Body becomes observable again
+        # after moon "fades" until no longer up for at least 3 hrs.
         site_code = 'V37'
         body_elements = model_to_dict(self.body2)
 
@@ -703,9 +705,9 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body3(self):
-        #Body is not observable (because not up for >3 hrs) until
-        #sometime after start of search and then until the end of
-        #the date range.
+        # Body is not observable (because not up for >3 hrs) until
+        # sometime after start of search and then until the end of
+        # the date range.
         site_code = 'V37'
         body_elements = model_to_dict(self.body3)
 
@@ -716,9 +718,9 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body4(self):
-        #Body is not observable (because too faint) until
-        #sometime after start of search and then until the end of
-        #the date range.
+        # Body is not observable (because too faint) until
+        # sometime after start of search and then until the end of
+        # the date range.
         site_code = 'V37'
         body_elements = model_to_dict(self.body4)
 
@@ -729,8 +731,8 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body5(self):
-        #Body is not observable (because too faint) at
-        #any time in the date range.
+        # Body is not observable (because too faint) at
+        # any time in the date range.
         site_code = 'V37'
         body_elements = model_to_dict(self.body5)
 
@@ -748,7 +750,7 @@ class TestLongTermScheduling(TestCase):
         expected_emp_dark_and_up = []
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
         dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
@@ -762,7 +764,7 @@ class TestLongTermScheduling(TestCase):
         expected_emp_dark_and_up_first_line = ['2017 01 06 01:20', '02 13 50.14', '+31 54 14.0', '21.0', ' 4.69', '240.8', '+79', '0.52', ' 31', '+62', '+059', '-00:47']
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
         dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
@@ -775,7 +777,7 @@ class TestLongTermScheduling(TestCase):
         expected_max_alt = 88
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
         dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
@@ -789,12 +791,13 @@ class TestLongTermScheduling(TestCase):
         expected_max_alt = 0
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
         dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
 
         self.assertEqual(expected_max_alt, max_alt)
+
 
 class TestDetermineRatesAndPA(TestCase):
 
@@ -887,7 +890,7 @@ class TestDetermineRatesAndPA(TestCase):
                          'meandist': 0.8280978,
                          'name': u'2011 EP51',
                          'not_seen': 4.95316023288194,
-                         'num_obs': 34L,
+                         'num_obs': 34,
                          'orbinc': 3.4119,
                          'origin': u'M',
                          'perihdist': None,
@@ -937,8 +940,8 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
     def test_yark_target_bad_pa(self):
-        expected_minrate = 5.048257569072863  - (0.01*5.048257569072863)
-        expected_maxrate = 5.072223332592448  + (0.01*5.072223332592448)
+        expected_minrate = 5.048257569072863 - (0.01*5.048257569072863)
+        expected_maxrate = 5.072223332592448 + (0.01*5.072223332592448)
         expected_pa = (295.5850631246814+295.56445469665186)/2.0
         expected_deltapa = 10.0
 
@@ -951,6 +954,7 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_maxrate, maxrate, self.precision)
         self.assertAlmostEqual(expected_pa, pa, self.precision)
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
+
 
 class TestDetermineSlotLength(TestCase):
 
@@ -1259,6 +1263,7 @@ class TestDetermineSlotLength(TestCase):
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
+
 class TestGetSiteCamParams(TestCase):
 
     twom_setup_overhead = 240.0
@@ -1445,6 +1450,7 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
 
+
 class TestDetermineExpTimeCount(TestCase):
 
     def test_slow_1m(self):
@@ -1567,6 +1573,7 @@ class TestDetermineExpTimeCount(TestCase):
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
 
+
 class TestDetermineSpectroSlotLength(TestCase):
 
     def test_bright_no_calibs(self):
@@ -1623,6 +1630,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
         self.assertEqual(expected_slot_length, slot_length)
+
 
 class TestGetSitePos(TestCase):
 
@@ -1737,6 +1745,7 @@ class TestGetSitePos(TestCase):
         self.assertLess(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
 
+
 class TestLCOGT_domes_to_site_codes(TestCase):
 
     def test_point4m_tfn_1(self):
@@ -1829,42 +1838,44 @@ class TestMPC_site_codes_to_domes(TestCase):
         self.assertEqual(e_encid, encid)
         self.assertEqual(e_telid, telid)
 
+
 class Testmolecule_overhead(TestCase):
 
     def test_single_filter(self):
         filter_pattern = 'V'
         expected_overhead = (2. + 5. + 11.)*1
-        self.assertEqual(expected_overhead,molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
 
     def test_multiple_individual_filters(self):
         filter_pattern = 'V,R,I'
         expected_overhead = (2. + 5. + 11.)*10.
-        self.assertEqual(expected_overhead,molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
 
     def test_multiple_repeated_filters(self):
         filter_pattern = 'V,R,I,V,R,I'
-        expected_overhead =  (2. + 5. + 11.)*10.
-        self.assertEqual(expected_overhead,molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+        expected_overhead = (2. + 5. + 11.)*10.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
 
     def test_multiple_filter_strings(self):
         filter_pattern = 'V,V,V,R,R,R,I,I,I,'
         expected_overhead = (2. + 5. + 11.)*5.
-        self.assertEqual(expected_overhead,molecule_overhead(build_filter_blocks(filter_pattern, 14)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 14)))
 
     def test_short_block(self):
         filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
         expected_overhead = (2. + 5. + 11.)*2.
-        self.assertEqual(expected_overhead,molecule_overhead(build_filter_blocks(filter_pattern, 5)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 5)))
 
     def test_start_end_loop(self):
         filter_pattern = 'V,V,R,R,V,V'
         expected_overhead = (2. + 5. + 11.)*7.
-        self.assertEqual(expected_overhead,molecule_overhead(build_filter_blocks(filter_pattern, 19)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 19)))
 
     def test_exact_loop(self):
         filter_pattern = 'V,V,R,R,I,I'
         expected_overhead = (2. + 5. + 11.)*9.
-        self.assertEqual(expected_overhead,molecule_overhead(build_filter_blocks(filter_pattern, 18)))
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 18)))
+
 
 class TestDetermineExpTimeCount_WithFilters(TestCase):
 

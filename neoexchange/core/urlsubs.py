@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 import requests
 import sys
 
@@ -19,14 +19,15 @@ from django.conf import settings
 
 ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings and SNI verification
-if sys.version_info < (2,7,9):
+if sys.version_info < (2, 7, 9):
     requests.packages.urllib3.disable_warnings()
-    ssl_verify = False # Danger, danger !
+    ssl_verify = False  # Danger, danger !
+
 
 def authenticate_to_lco(auth_url, username, password):
     token = ''
     response = requests.post(auth_url,
-        data = { 'username' : username,
+        data={ 'username' : username,
                  'password' : password
         }
     )
@@ -34,6 +35,7 @@ def authenticate_to_lco(auth_url, username, password):
         token = response.json()['token']
 
     return token
+
 
 def get_lcogt_headers(auth_url, username, password):
     #  Get the authentication token

@@ -88,28 +88,28 @@ class BackFillBlocksTest(TestCase):
                 for file_to_rm in files_to_remove:
                     os.remove(file_to_rm)
             except OSError:
-                print "Error removing files in temporary test directory", path
+                print("Error removing files in temporary test directory", path)
             try:
                 path = os.path.join(self.temp_dir, self.test_date)
                 files_to_remove = glob(os.path.join(path, '*'))
                 for file_to_rm in files_to_remove:
                     os.rmdir(file_to_rm)
             except OSError:
-                print "Error removing files in temporary test directory", path
+                print("Error removing files in temporary test directory", path)
             try:
                 files_to_remove = glob(os.path.join(self.temp_dir, '*'))
                 for file_to_rm in files_to_remove:
                     os.rmdir(file_to_rm)
             except OSError:
-                print "Error removing files in temporary test directory", self.temp_dir
+                print("Error removing files in temporary test directory", self.temp_dir)
             try:
                 os.rmdir(self.temp_dir)
-                if self.debug_print: print "Removed", self.temp_dir
+                if self.debug_print: print("Removed", self.temp_dir)
             except OSError:
-                print "Error removing temporary test directory", self.temp_dir
+                print("Error removing temporary test directory", self.temp_dir)
         else:
             files_to_remove = glob(os.path.join(self.temp_dir, '*'))
-            print "Would try to remove:", files_to_remove
+            print("Would try to remove:", files_to_remove)
 
     @skipIf(True, "Needs fix to avoid finding real DB")
     def test_no_superblock(self):
@@ -119,8 +119,7 @@ class BackFillBlocksTest(TestCase):
 
         out = StringIO()
         call_command('backfill_blocks', datadir=self.temp_dir, date=self.test_date, stdout=out)
-        print
-        print out.getvalue()
+        print(out.getvalue())
         expected = 'Processing target %s/%s in %s' % (self.test_dataroot, self.test_rockblocknum, self.test_dataroot)
         self.assertIn(expected, out.getvalue())
 
@@ -130,7 +129,7 @@ class BackFillBlocksTest(TestCase):
         blocks = Block.objects.filter(body=self.test_body)
         self.assertEqual(1, blocks.count())
 
-        print blocks, blocks[0].id
+        print(blocks, blocks[0].id)
         frames = Frame.objects.filter(block=blocks[0])
-        print frames
+        print(frames)
         self.assertEqual(2, frames.count())

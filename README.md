@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.3.6
+
+Bite the Bullet and Update to Python 3.6
+
 ### 2.2.0
 
 Added capability of requesting multiple filters when making a user request. 

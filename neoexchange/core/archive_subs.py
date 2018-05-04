@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2016-2018 LCO
 
@@ -13,14 +13,14 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime, timedelta
 import os, sys
 from hashlib import md5
 import glob
 import logging
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 import requests
 from django.conf import settings
@@ -32,17 +32,18 @@ logger = logging.getLogger(__name__)
 
 ssl_verify = True
 # Check if Python version is less than 2.7.9. If so, disable SSL warnings
-if sys.version_info < (2,7,9):
+if sys.version_info < (2, 7, 9):
     requests.packages.urllib3.disable_warnings()
     ssl_verify = False # Danger, danger !
 
 
 def archive_login(username, password):
-    '''
+    """
     Wrapper function to get API token for Archive
-    '''
+    """
     archive_url = settings.ARCHIVE_TOKEN_URL
     return get_lcogt_headers(archive_url, username, password)
+
 
 def lco_api_call(url):
     if 'archive' in url:
@@ -54,14 +55,15 @@ def lco_api_call(url):
     try:
         resp = requests.get(url, headers=headers, timeout=20, verify=ssl_verify)
         data = resp.json()
-    except requests.exceptions.InvalidSchema, err:
+    except requests.exceptions.InvalidSchema as err:
         data = None
         logger.error("Request call to %s failed with: %s" % (url, err))
-    except ValueError, err:
+    except ValueError:
         logger.error("Request {} API did not return JSON: {}".format(url, resp.status_code))
     except requests.exceptions.Timeout:
         logger.error("Request API timed out")
     return data
+
 
 def determine_archive_start_end(dt=None):
 
@@ -90,7 +92,7 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
     frames = {}
     for reduction_lvl in red_lvls:
         search_url = archive_url + '&RLEVEL='+ reduction_lvl
-#        print "search_url=%s" % search_url
+#        print("search_url=%s" % search_url)
         resp = requests.get(search_url, headers=auth_header)
         if resp.status_code in [200,201]:
             response = resp.json()
@@ -198,29 +200,29 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                 new_path2 = os.path.join(path, new_filename2)
                 uncomp_filepath2 = os.path.splitext(new_path2)[0]
                 if os.path.exists(new_path) or os.path.exists(new_path2):
-                    if verbose: print "Higher level reduction file exists"
+                    if verbose: print("Higher level reduction file exists")
                     return True
                 if os.path.exists(uncomp_filepath2):
-                    if verbose: print "Uncompressed higher level reduction file exists"
+                    if verbose: print("Uncompressed higher level reduction file exists")
                     return True
                 if os.path.exists(uncomp_filepath):
-                    if verbose: print "Uncompressed reduction file exists"
+                    if verbose: print("Uncompressed reduction file exists")
                     return True
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
                     logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
                     if md5sum == archive_md5:
-                        if verbose: print "File exists with correct MD5 sum"
+                        if verbose: print("File exists with correct MD5 sum")
                         return True
             else:
                 if os.path.exists(filename) and archive_md5 != None:
                     md5sum = md5(open(filename, 'rb').read()).hexdigest()
                     logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
                     if md5sum == archive_md5:
-                        if verbose: print "-91 level reduction file already exists with correct MD5 sum."
+                        if verbose: print("-91 level reduction file already exists with correct MD5 sum.")
                         return True
                 if os.path.exists(uncomp_filepath):
-                    if verbose: print "Uncompressed -91 level reduction file already exists."
+                    if verbose: print("Uncompressed -91 level reduction file already exists.")
                     return True
 
     return False

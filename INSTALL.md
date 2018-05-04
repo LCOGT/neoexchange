@@ -2,7 +2,7 @@
 
 Construct a Python Virtual Environment (virtualenv) by executing:  
 ```bash
-virtualenv <path to virtualenv>
+python3 -m venv <path to virtualenv>
 source <path to virtualenv>/bin/activate # for bash-shells
 ```
 
@@ -12,7 +12,7 @@ or:
 
 then:
 
-`pip install -r neoexchange/requirements.txt`
+`pip3 install -r neoexchange/requirements.txt`
 
 You will need to create a `neox/local_settings.py` file which has details of your database setup and local filesystem e.g.
 

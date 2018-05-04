@@ -15,7 +15,7 @@ class FunctionalTest(StaticLiveServerTestCase):
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
 
-        if settings.DEBUG == False:
+        if settings.DEBUG is False:
             settings.DEBUG = True
 
     @contextmanager
@@ -125,7 +125,6 @@ class FunctionalTest(StaticLiveServerTestCase):
                        }
         self.test_block = Block.objects.create(pk=1, **block_params)
 
-
         sblock_params = {
                          'cadence'  : False,
                          'body'     : self.body,
@@ -158,9 +157,9 @@ class FunctionalTest(StaticLiveServerTestCase):
     def setUp(self):
 
         fp = webdriver.FirefoxProfile()
-        fp.set_preference("browser.startup.homepage", "about:blank");
-        fp.set_preference("startup.homepage_welcome_url", "about:blank");
-        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank");
+        fp.set_preference("browser.startup.homepage", "about:blank")
+        fp.set_preference("startup.homepage_welcome_url", "about:blank")
+        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
 
         if not hasattr(self, 'browser'):
             firefox_capabilities = DesiredCapabilities.FIREFOX
@@ -168,8 +167,8 @@ class FunctionalTest(StaticLiveServerTestCase):
             # version and check it. Hopefully this code is robust and platform-
             # independent...
             try:
-                version = check_output(["firefox", "--version"])
-            except OSError:
+                version = check_output(["firefox", "--version"], universal_newlines=True)
+            except (OSError, subprocess.CalledProcessError):
                 version = None
             if version and 'Firefox' in version:
                 version_num = version.rstrip().split(' ')[-1]
@@ -209,7 +208,7 @@ class FunctionalTest(StaticLiveServerTestCase):
     def check_icon_status_elements(self, table_id, data_label, statuses):
         table = self.browser.find_element_by_id(table_id)
         table_body = table.find_element_by_tag_name('tbody')
-        rows = self.browser.find_elements(By.XPATH,"//td[@data-label='%s']//i" % data_label )
+        rows = self.browser.find_elements(By.XPATH, "//td[@data-label='%s']//i" % data_label)
         row_vals = [r.get_attribute("title") for r in rows]
         self.assertEqual(row_vals, statuses)
 

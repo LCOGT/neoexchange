@@ -13,6 +13,7 @@ from core.models import Body, Proposal
 
 from neox.auth_backend import update_proposal_permissions
 
+
 @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
 @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
 class ScheduleObservations(FunctionalTest):
@@ -24,17 +25,17 @@ class ScheduleObservations(FunctionalTest):
         self.password = 'simpson'
         self.email = 'bart@simpson.org'
         self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
-        self.bart.first_name= 'Bart'
+        self.bart.first_name = 'Bart'
         self.bart.last_name = 'Simpson'
-        self.bart.is_active=1
+        self.bart.is_active = 1
         self.bart.save()
         # Add Bart to the right proposal
-        update_proposal_permissions(self.bart, [{'code':self.neo_proposal.code}])
-        super(ScheduleObservations,self).setUp()
+        update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
+        super(ScheduleObservations, self).setUp()
 
     def tearDown(self):
         self.bart.delete()
-        super(ScheduleObservations,self).tearDown()
+        super(ScheduleObservations, self).tearDown()
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
@@ -69,17 +70,16 @@ class ScheduleObservations(FunctionalTest):
     @patch('core.views.datetime', MockDateTime)
     def test_can_schedule_observations(self):
         self.test_login()
-
         # Bart has heard about a new website for NEOs. He goes to the
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -89,7 +89,6 @@ class ScheduleObservations(FunctionalTest):
         self.browser.implicitly_wait(10)
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
-
 
         # He notices a new selection for the proposal and site code and
         # chooses the NEO Follow-up Network and ELP (V37)
@@ -125,7 +124,7 @@ class ScheduleObservations(FunctionalTest):
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
-        self.assertIn('Schedule this Object',submit)
+        self.assertIn('Schedule this Object', submit)
 
     def test_cannot_schedule_observations(self):
         self.test_logout()
@@ -133,7 +132,7 @@ class ScheduleObservations(FunctionalTest):
         # Bart tries the same as above but forgets to login
         # This has to be pk=2 as get_or_create in setUp makes new objects each
         # time for...reasons...
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
         self.wait_for_element_with_id('main')
         link = self.browser.find_element_by_id('schedule-obs')
@@ -155,12 +154,12 @@ class ScheduleObservations(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -169,7 +168,6 @@ class ScheduleObservations(FunctionalTest):
             link.click()
         new_url = self.browser.current_url
         self.assertEqual(new_url, actual_url)
-
 
         # He notices a new selection for the proposal and site code and
         # chooses the NEO Follow-up Network and ELP (V37)
@@ -213,7 +211,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('25.', slot_length)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
-        self.assertIn('Schedule this Object',submit)
+        self.assertIn('Schedule this Object', submit)
 
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
@@ -225,12 +223,12 @@ class ScheduleObservations(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -281,7 +279,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get an error
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('The slot length is too short',error_msg)
+        self.assertIn('The slot length is too short', error_msg)
 
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
@@ -293,12 +291,12 @@ class ScheduleObservations(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -318,7 +316,7 @@ class ScheduleObservations(FunctionalTest):
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
         self.assertIn('Tenerife, Spain (TFN - Z17,Z21; 0.4m)', [option.text for option in site_choices.options])
 
-        #He tries to use a telescope and site group that are currently unavailable
+        # He tries to use a telescope and site group that are currently unavailable
         site_choices.select_by_visible_text('Tenerife, Spain (TFN - Z17,Z21; 0.4m)')
 
         MockDateTime.change_date(2015, 4, 20)

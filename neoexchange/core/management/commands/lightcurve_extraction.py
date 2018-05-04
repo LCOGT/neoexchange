@@ -78,7 +78,7 @@ class Command(BaseCommand):
                 if len(sources) != 0:
                     if len(sources) == 1:
                         best_source = sources[0]
-    #                    print "%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag)
+    #                    print("%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag))
                     elif len(sources) > 1:
                         min_sep = options['boxwidth'] * options['boxwidth']
                         best_source = None

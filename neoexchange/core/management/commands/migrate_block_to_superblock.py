@@ -15,7 +15,7 @@ class Command(BaseCommand):
 	printcounter = 0
         for block in blocks:
 	    if printcounter % 100==0:
-		print "Migrated Block #%d" % printcounter
+		print("Migrated Block #%d" % printcounter)
             cadence = False
             if 'cad' in block.groupid:
                 cadence = True
