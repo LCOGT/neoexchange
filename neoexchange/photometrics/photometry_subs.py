@@ -136,7 +136,7 @@ def sky_brightness_model(params, dbg=False):
                 target = SkyCoord(ra=params['ra_rad']*u.rad, dec=params['dec_rad']*u.rad, frame='icrs')
                 ecliptic_lat = target.barycentrictrueecliptic.lat
                 galactic_lat = target.galactic.b
-                if dbg: print target, ecliptic_lat, galactic_lat
+                if dbg: print(target, ecliptic_lat, galactic_lat)
             except ValueError:
                 logger.warn("Could not find/convert co-ordinates")
     # Assume a value of 60.0 in S10 units for the zodiacal light if the
@@ -156,18 +156,18 @@ def sky_brightness_model(params, dbg=False):
     q = q_airglow + q_zodi + q_stars
     q_format = 'Moonless V sky brightness, in S10 units (equivalent 10th-mag stars/deg^2):\n' +\
         '%6.1f ( = %6.2f airglow + %6.2f zodiacal light + %6.2f starlight)'
-    if dbg: print q_format % ( q, q_airglow, q_zodi, q_stars)
+    if dbg: print(q_format % ( q, q_airglow, q_zodi, q_stars))
 
     # Determine the difference in sky color between the given bandpass and
     # V band
     default_sky_mags = default_dark_sky_mags()
     sky_color_corr = default_sky_mags.get(params['bandpass'], default_sky_mags['V']) - default_sky_mags['V']
-    if dbg: print 'Color correction',sky_color_corr
+    if dbg: print('Color correction',sky_color_corr)
     sky_mag = 27.78-2.5*log10(q) + sky_color_corr
     q_sky = 10.0**((27.78-sky_mag)/2.5)
 
     q_moon = compute_moon_brightness(params)
-    if dbg: print 'Moonlight', q_moon, ' S10 units'
+    if dbg: print('Moonlight', q_moon, ' S10 units')
     q_total = q_sky + q_moon
 
     sky_mag_all = 27.78-2.5*log10(q_total)
@@ -227,11 +227,11 @@ def compute_moon_brightness(params, dbg=False):
     if airmass is None:
         if params.get('target_zd', None) is not None:
             airmass = compute_airmass(params['target_zd'])
-    if dbg: print 'airmass, extinct ', airmass, extinct
+    if dbg: print('airmass, extinct ', airmass, extinct)
     # Calculate background due to Moon in nanoLamberts, convert to S10 units
     bkgd_nl = s * fr * 10.0**(-0.4*extinct*moon_airmass) * (1.0-10.0**(-0.4*extinct*airmass))
     bkgd_s10 = bkgd_nl * 3.8
-    if dbg: print 's,fr,xz,xzm,bnl,bs10 ',s,fr,airmass,moon_airmass,bkgd_nl,bkgd_s10
+    if dbg: print('s,fr,xz,xzm,bnl,bs10 ',s,fr,airmass,moon_airmass,bkgd_nl,bkgd_s10)
     return bkgd_s10
 
 def compute_photon_rate(mag, tic_params, emulate_signal=False):
@@ -319,7 +319,7 @@ def calculate_effective_area(tic_params, dbg=False):
     5) CCD detector efficiency (QE)
     '''
     extinction = extinction_in_band(tic_params)
-    if dbg: print "Extinction per airmass (mag), airmass, total ext.   %.3f %.3f %.4f" % (extinction, tic_params.get('airmass', 1.0), extinction*tic_params.get('airmass', 1.0))
+    if dbg: print("Extinction per airmass (mag), airmass, total ext.   %.3f %.3f %.4f" % (extinction, tic_params.get('airmass', 1.0), extinction*tic_params.get('airmass', 1.0)))
 
     area = tic_params['eff_area'].to(u.cm**2)
     thru_atm  = 10.0**(-(extinction/2.5)*tic_params.get('airmass', 1.0))
@@ -335,7 +335,7 @@ def calculate_effective_area(tic_params, dbg=False):
 
     if dbg:
         fmt = "Atm*tel*inst*%4s throughput   %.2f =  %.2f *  %.2f *  %.2f *  %.2f"
-        print fmt % (filt_grat_string, throughput, thru_atm, thru_tel, thru_inst, thru_filt_grat)
+        print(fmt % (filt_grat_string, throughput, thru_atm, thru_tel, thru_inst, thru_filt_grat))
 
     area = area * throughput
     area = area * tic_params['ccd_qe']
@@ -360,8 +360,8 @@ def compute_zp(tic_params, dbg=False, emulate_signal=False):
     # Convert to magnitude
     if zp != 0:
         zp_mag = -u.Magnitude(zp)
-        if dbg: print 'ZP (photons/sec)=', zp
-        if dbg: print 'ZP (mag+extinct)=', zp_mag
+        if dbg: print('ZP (photons/sec)=', zp)
+        if dbg: print('ZP (mag+extinct)=', zp_mag)
 
     return zp, zp_mag
 
@@ -482,26 +482,26 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
     # Compute sky brightness in photons/A/s/cm^2/arcsec^2 from sky magnitude (assumed to be a mag/sq. arcsec)
     sky = compute_photon_rate(tic_params['sky_mag'], tic_params, emulate_signal)
     sky = sky * eff_area * (exp_time * u.s)
-    if dbg: print 'Object=', signal, 'Sky=', sky
-    if dbg: print tic_params['pixel_scale'] , tic_params['wave_scale'], tic_params.get('slit_width', 1.0*u.arcsec)
+    if dbg: print('Object=', signal, 'Sky=', sky)
+    if dbg: print(tic_params['pixel_scale'] , tic_params['wave_scale'], tic_params.get('slit_width', 1.0*u.arcsec))
 
     # Scale sky (in photons/A/sq.arcsec) to size of slit
     sky2 = sky * tic_params.get('slit_width', 1.0*u.arcsec) * tic_params['pixel_scale'] * tic_params['wave_scale']
 
     # Calculate size of seeing disk in pixels
     seeing = 2.0 * tic_params['fwhm'] / tic_params['pixel_scale']
-    if dbg: print 'Seeing=', seeing, 'Sky2=', sky2
+    if dbg: print('Seeing=', seeing, 'Sky2=', sky2)
 
     # Calculate fraction of light entering slit
     vignette = slit_vignette(tic_params)
-    if dbg: print "Slit loss fraction=", vignette
+    if dbg: print("Slit loss fraction=", vignette)
 
     signal2 = signal * tic_params['wave_scale'] * vignette
-    if dbg: print 'Object (photons/pixel-step-in-wavelength)=', signal2
+    if dbg: print('Object (photons/pixel-step-in-wavelength)=', signal2)
     noise = signal2.value + seeing.value*(sky2.value + tic_params.get('read_noise', 0.0)**2)
     noise = sqrt(noise)
     snr = signal2.value / noise
-    if dbg: print 'SNR/pixel=', snr
+    if dbg: print('SNR/pixel=', snr)
 
     return snr
 
@@ -612,7 +612,7 @@ def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-
     # If filter is not 'i', map to new passband
     if passband != desired_passband:
         new_mag = transform_Vmag(mag, desired_passband, taxonomy)
-        if dbg: print "New object mag=", new_mag
+        if dbg: print("New object mag=", new_mag)
         new_passband = 'ip'
     else:
         new_mag = mag
@@ -620,16 +620,16 @@ def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-
     tic_params = construct_tic_params(instrument, new_passband)
     # Add default airmass
     tic_params['airmass'] = 1.2
-    if dbg: print tic_params
+    if dbg: print(tic_params)
 
     # Apply any overrides from passed params dictionary
     for key in params:
         if key == 'moon_phase':
-            if dbg: print "Setting sky background. Was: ", tic_params['sky_mag']
+            if dbg: print("Setting sky background. Was: ", tic_params['sky_mag'])
             tic_params['sky_mag'] = calc_sky_brightness(new_passband, params['moon_phase'])
-            if dbg: print "Now:", tic_params['sky_mag']
+            if dbg: print("Now:", tic_params['sky_mag'])
         elif key in tic_params.keys():
-            if dbg: print "Setting %s to %s" % (key, params[key])
+            if dbg: print("Setting %s to %s" % (key, params[key]))
             tic_params[key] = params[key]
     snr = compute_floyds_snr(new_mag, exp_time, tic_params, dbg)
     return new_mag, new_passband, snr
