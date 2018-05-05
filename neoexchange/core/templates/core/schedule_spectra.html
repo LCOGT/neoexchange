@@ -13,7 +13,7 @@
     <div class="container">
         <div id="main">
             {% if body.id  and form %}
-            <h5 class="section-title">Parameters for: {{body.current_name}}</h5>
+            <h5 class="section-title">Parameters for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h5>
             <div  id="single_request" class="mode-container">
             <form action="{% url 'schedule-body-spectra' body.id %}" method="POST" style="display:inline-block;">
             <div class="row">

@@ -7,7 +7,7 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>{{body.current_name}}: Confirm Scheduling</h1>
+        <h1><a href="{% url 'target' body.id %}">{{body.current_name}}</a>: Confirm Scheduling</h1>
     </div>
 {% endblock%}
 
