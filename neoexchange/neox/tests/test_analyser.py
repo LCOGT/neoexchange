@@ -11,19 +11,20 @@ from astropy.wcs import WCS
 from numpy import array
 import time
 
+
 class AnalyserTest(FunctionalTest):
     def setUp(self):
-#        self.browser = webdriver.Firefox()
+        # self.browser = webdriver.Firefox()
 
-        super(AnalyserTest,self).setUp()
+        super(AnalyserTest, self).setUp()
 
         self.username = 'marge'
         self.password = 'simpson'
         self.email = 'marge@simpson.org'
         self.marge = User.objects.create_user(username=self.username, password=self.password, email=self.email)
-        self.marge.first_name= 'Marge'
+        self.marge.first_name = 'Marge'
         self.marge.last_name = 'Simpson'
-        self.marge.is_active=1
+        self.marge.is_active = 1
         self.marge.save()
 
         null_wcs = WCS()
@@ -74,20 +75,20 @@ class AnalyserTest(FunctionalTest):
         # Build Candidate --- WHY??? This cannot be the best way...
         self.dtypes =\
              {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'sky_pos_angle', 'pixels_frame', 'streak_length'),
-                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
+                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4')
              }
 
-        self.dets_array = array([(0001, 1, 3283, 2457444.656045, 10.924317, 39.27700, 2103.245, 2043.026, 19.26, 12.970, 1.764, -60.4, 0.27, 1.39, 34, 1.10, 0.497, 0.2, 9.0, 6.7),
-                                (0001, 2,    0, 2457444.657980, 10.924298, 39.27793, 2103.468, 2043.025,  0.00,  1.000, 1.000,   0.0, 0.27, 0.00,  0, 1.10, 0.497, 0.2, 9.0, 6.7),
-                                (0001, 3, 3409, 2457444.659923, 10.924271, 39.27887, 2104.491, 2043.034, 19.20, 11.350, 1.373, -57.3, 0.27, 1.38, 52, 1.10, 0.497, 0.2, 9.0, 6.7),
-                                (0001, 4, 3176, 2457444.661883, 10.924257, 39.27990, 2104.191, 2043.844, 19.01, 10.680, 1.163, -41.5, 0.27, 1.52, 52, 1.10, 0.497, 0.2, 9.0, 6.7),
-                                (0001, 5, 3241, 2457444.663875, 10.924237, 39.28087, 2104.365, 2043.982, 19.17, 12.940, 1.089, -31.2, 0.27, 1.27, 55, 1.10, 0.497, 0.2, 9.0, 6.7),
-                                (0001, 6, 3319, 2457444.665812, 10.924220, 39.28172, 2104.357, 2043.175, 18.82, 12.910, 1.254, -37.8, 0.27, 1.38, 69, 1.10, 0.497, 0.2, 9.0, 6.7),],
+        self.dets_array = array([(1, 1, 3283, 2457444.656045, 10.924317, 39.27700, 2103.245, 2043.026, 19.26, 12.970, 1.764, -60.4, 0.27, 1.39, 34, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (1, 2,    0, 2457444.657980, 10.924298, 39.27793, 2103.468, 2043.025,  0.00,  1.000, 1.000,   0.0, 0.27, 0.00,  0, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (1, 3, 3409, 2457444.659923, 10.924271, 39.27887, 2104.491, 2043.034, 19.20, 11.350, 1.373, -57.3, 0.27, 1.38, 52, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (1, 4, 3176, 2457444.661883, 10.924257, 39.27990, 2104.191, 2043.844, 19.01, 10.680, 1.163, -41.5, 0.27, 1.52, 52, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (1, 5, 3241, 2457444.663875, 10.924237, 39.28087, 2104.365, 2043.982, 19.17, 12.940, 1.089, -31.2, 0.27, 1.27, 55, 1.10, 0.497, 0.2, 9.0, 6.7),
+                                (1, 6, 3319, 2457444.665812, 10.924220, 39.28172, 2104.357, 2043.175, 18.82, 12.910, 1.254, -37.8, 0.27, 1.38, 69, 1.10, 0.497, 0.2, 9.0, 6.7), ],
                                 dtype=self.dtypes)
         self.dets_byte_array = self.dets_array.tostring()
         params3 = {
             'block'   : self.test_block,
-            'cand_id' : 0001,
+            'cand_id' : 1,
             'score'  : 1.42,
             'avg_midpoint' : datetime(2016, 2, 26, 3, 53, 7),
             'avg_x'  : 1024.0,
@@ -117,7 +118,7 @@ class AnalyserTest(FunctionalTest):
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_analyser_appears(self):
         self.login()
-        analyser_url = reverse('block-view', kwargs={'pk':self.test_block.pk})
+        analyser_url = reverse('block-view', kwargs={'pk': self.test_block.pk})
         self.browser.get(self.live_server_url + analyser_url)
 
         self.wait_for_element_with_id('page')
@@ -136,7 +137,7 @@ class AnalyserTest(FunctionalTest):
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_analyser_not_available(self):
         self.login()
-        analyser_url = reverse('block-ast', kwargs={'pk':self.test_block2.pk})
+        analyser_url = reverse('block-ast', kwargs={'pk': self.test_block2.pk})
         self.browser.get(self.live_server_url + analyser_url)
 
         # Marge should be returned to the block details page because test_block2

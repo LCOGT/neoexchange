@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2016-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime, timedelta
 from unittest import skipIf
@@ -22,8 +22,9 @@ import mock
 from django.test import TestCase
 
 from neox.tests.mocks import MockDateTime
-#Import module to test
+# Import module to test
 from core.archive_subs import *
+
 
 class Test_Determine_Archive_Start_End(TestCase):
 
@@ -72,7 +73,7 @@ class Test_Determine_Archive_Start_End(TestCase):
         self.assertEqual(expected_end, end)
 
     def test_date_just_past_day_rollover(self):
-        dt = datetime(2016, 4, 13, 17, 00, 01)
+        dt = datetime(2016, 4, 13, 17, 00, 1)
 
         expected_start = datetime(2016, 4, 13, 17, 0, 0)
         expected_end = datetime(2016, 4, 14, 16, 0, 0)
@@ -93,13 +94,14 @@ class Test_Determine_Archive_Start_End(TestCase):
         self.assertEqual(expected_start, start)
         self.assertEqual(expected_end, end)
 
+
 class TestCheckForExistingFile(TestCase):
 
     def create_temp(self, filename):
 
         md5sum = None
         with open(filename, "wb") as f:
-            f.write("Delete me!")
+            f.write(b"Delete me!")
             f.close()
             md5sum = md5(open(filename, 'rb').read()).hexdigest()
             return md5sum

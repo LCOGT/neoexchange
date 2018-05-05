@@ -107,7 +107,7 @@ def schedule_target_list(bodies_list, form_details, username):
             data['start_time'] = datetime.strptime(data['start_time'],'%Y-%m-%dT%H:%M:%S')
             data['end_time'] = datetime.strptime(data['end_time'],'%Y-%m-%dT%H:%M:%S')
 
-            print "%s@%s for %s->%s" % (target.current_name(), data['site_code'], data['start_time'], data['end_time'])
+            print("%s@%s for %s->%s" % (target.current_name(), data['site_code'], data['start_time'], data['end_time']))
             tracking_num, sched_params = schedule_submit(data, target, username)
             block_resp = record_block(tracking_num, sched_params, data, target)
 
