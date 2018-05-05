@@ -38,7 +38,7 @@ try:
     import pyslalib.slalib as S
 except:
     pass
-
+import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
 from django.conf import settings
@@ -1550,45 +1550,26 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 
-def fetch_filter_list(site, page=None):
+def fetch_filter_list(site, spec, page=None):
     """Fetches the camera mappings page"""
 
     if page is None:
         camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
         data_file = fetchpage_and_make_soup(camera_mappings)
-        data_out = parse_filter_file(site, data_file)
+        data_out = parse_filter_file(site, spec, data_file)
     else:
         with open(page, 'r') as input_file:
-            data_out = parse_filter_file(site, input_file.read())
+            data_out = parse_filter_file(site, spec, input_file.read())
     return data_out
 
 
-def parse_filter_file(site, camera_list=None):
+def parse_filter_file(site, spec, camera_list=None):
     """Parses the camera mappings page and sends back a list of filters at the given site code.
     """
-    filter_list = [   "air",
-                    "clear",
-                    "ND",
-                    "Astrodon-UV",
-                    "U",
-                    "B",
-                    "V",
-                    "R",
-                    "I",
-                    "B*ND",
-                    "V*ND",
-                    "R*ND",
-                    "I*ND",
-                    "up",
-                    "gp",
-                    "rp",
-                    "ip",
-                    "Skymapper-VS",
-                    "solar",
-                    "zs",
-                    "Y",
-                    "w"
-                ]
+    if spec is not True:
+        filter_list = cfg.phot_filters
+    else:
+        filter_list = cfg.spec_filters
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
 

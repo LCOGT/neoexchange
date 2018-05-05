@@ -544,7 +544,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # Get string of available filters
     available_filters = ''
-    filter_list = fetch_filter_list(data['site_code'])
+    filter_list = fetch_filter_list(data['site_code'], spectroscopy)
     for filt in filter_list:
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
@@ -571,7 +571,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         # Determine exposure length and count
         exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
-        if exp_length == None or exp_count == None:
+        if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
     # Determine pattern iterations

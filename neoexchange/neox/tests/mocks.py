@@ -653,10 +653,10 @@ def mock_run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
     return -1, None
 
 
-def mock_fetch_filter_list(site):
+def mock_fetch_filter_list(site, spec):
     test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
 
-    return fetch_filter_list(site, test_filter_map)
+    return fetch_filter_list(site, spec, test_filter_map)
 
 
 def mock_expand_cadence(user_request):

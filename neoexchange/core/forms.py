@@ -182,19 +182,20 @@ class ScheduleBlockForm(forms.Form):
 
     def clean(self):
         site = self.cleaned_data['site_code']
-        if not fetch_filter_list(site):
+        spectra = self.cleaned_data['spectroscopy']
+        if not fetch_filter_list(site, spectra):
             raise forms.ValidationError("This Site/Telescope combination is not currently available.")
         try:
             pattern = self.cleaned_data['filter_pattern']
             chunks = pattern.split(',')
-            bad_filters = [x for x in chunks if x not in fetch_filter_list(site)]
+            bad_filters = [x for x in chunks if x not in fetch_filter_list(site, spectra)]
             if len(bad_filters) > 0:
                 if len(bad_filters) == 1:
                     raise ValidationError(_('%(bad)s is not an acceptable filter at this site.'), params={'bad': ",".join(bad_filters)}, )
                 else:
                     raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
         except KeyError:
-            raise ValidationError(_('Dude, you had to actively input a bunch of spaces and nothing else to see this error. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site))}, )
+            raise ValidationError(_('Dude, you had to actively input a bunch of spaces and nothing else to see this error. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site, spectra))}, )
         if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:

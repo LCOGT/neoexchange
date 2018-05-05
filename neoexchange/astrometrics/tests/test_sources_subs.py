@@ -737,43 +737,49 @@ class TestFetchFilterList(TestCase):
     def test_1m_cpt(self):
         expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = fetch_filter_list('K91', self.test_filter_map)
+        filter_list = fetch_filter_list('K91', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_0m4_ogg(self):
         expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
 
-        filter_list = fetch_filter_list('T04', self.test_filter_map)
+        filter_list = fetch_filter_list('T04', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_2m_ogg(self):
         expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
 
-        filter_list = fetch_filter_list('F65', self.test_filter_map)
+        filter_list = fetch_filter_list('F65', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_1m_lsc_domeb(self):
         expected_filter_list = ['air', 'ND' , 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = fetch_filter_list('W86', self.test_filter_map)
+        filter_list = fetch_filter_list('W86', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_unavailable_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('Z21', self.test_filter_map)
+        filter_list = fetch_filter_list('Z21', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_lowercase_telescope(self):
         expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
 
-        filter_list = fetch_filter_list('t04', self.test_filter_map)
+        filter_list = fetch_filter_list('t04', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_invalid_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('BESTtelescope', self.test_filter_map)
+        filter_list = fetch_filter_list('BESTtelescope', False, self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_spectra_telescope(self):
+        expected_filter_list = ['slit_1.2as', 'slit_1.6as', 'slit_2.0as', 'slit_6.0as']
+
+        filter_list = fetch_filter_list('F65', True, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
 
