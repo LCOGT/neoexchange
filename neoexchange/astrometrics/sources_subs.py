@@ -1100,8 +1100,9 @@ def fetch_yarkovsky_targets(yark_targets):
 
     return yark_target_list
 
+
 def fetch_sfu(page=None):
-    '''Fetches the solar radio flux from the Solar Radio Monitoring
+    """Fetches the solar radio flux from the Solar Radio Monitoring
     Program run by National Research Council and Natural Resources Canada.
     The solar radio flux is a measure of the progress through the solar
     cycle which has been shown to affect the atmospheric airglow - one
@@ -1111,7 +1112,7 @@ def fetch_sfu(page=None):
     `astropy.units.Jy` (Janskys) where 1 sfu = 10,000 Jy) and the
     `datetime` when it was measured. For testing, [page] can be a static
     BeautifulSoup version of the page. In the event of parsing problems,
-    (None, None) is returned.'''
+    (None, None) is returned."""
 
     sfu_url = 'http://www.spaceweather.gc.ca/solarflux/sx-4-en.php'
 
@@ -1129,16 +1130,17 @@ def fetch_sfu(page=None):
             obs_jd = table[0].text
             flux_datetime = jd_utc2datetime(float(obs_jd))
         except ValueError:
-            logger.warn("Could not parse flux observation time (" + obs_jd +")")
+            logger.warning("Could not parse flux observation time (" + obs_jd + ")")
         try:
             flux_sfu = float(table[2].text)
             # Flux is in 'solar flux units', equal to 10,000 Jy or 0.01 MJy.
             # Add in our custom astropy unit declared above.
             flux_sfu = flux_sfu * sfu
         except ValueError:
-            logger.warn("Could not parse flux (" + table[2].text + ")")
+            logger.warning("Could not parse flux (" + table[2].text + ")")
 
-    return (flux_datetime, flux_sfu)
+    return flux_datetime, flux_sfu
+
 
 def make_location(params):
     location = {
@@ -1233,23 +1235,24 @@ def make_molecule(params, exp_filter):
         molecule['ag_name'] = ''
         molecule['acquire_mode'] = 'WCS'
     else:
-        molecule['filter']  = exp_filter[0]
-        molecule['ag_mode'] = 'OPTIONAL' # ON, OFF, or OPTIONAL. Must be uppercase now...
+        molecule['filter'] = exp_filter[0]
+        molecule['ag_mode'] = 'OPTIONAL'  # ON, OFF, or OPTIONAL. Must be uppercase now...
         molecule['ag_name'] = ''
 
     return molecule
 
+
 def make_molecules(params):
-    '''Handles creating the potentially multiple molecules. Returns a list of the molecules.
+    """Handles creating the potentially multiple molecules. Returns a list of the molecules.
     In imaging mode (`params['spectroscopy'] = False` or not present), this just calls
     the regular make_molecule().
     In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
-    `params['calibs']` is 'none, 'before'/'after' or 'both'.'''
+    `params['calibs']` is 'none, 'before'/'after' or 'both'."""
 
     filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'])
 
     calib_mode = params.get('calibs', 'none').lower()
-    if params.get('spectroscopy', False) == True:
+    if params.get('spectroscopy', False) is True:
         # Spectroscopy mode
         spectrum_molecule = make_molecule(params, filt_list[0])
         if calib_mode != 'none':
@@ -1266,11 +1269,12 @@ def make_molecules(params):
         elif calib_mode == 'both':
             molecules = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
         else:
-            molecules = [spectrum_molecule,]
+            molecules = [spectrum_molecule, ]
     else:
-        molecules = [make_molecule(params,filt) for filt in filt_list]
+        molecules = [make_molecule(params, filt) for filt in filt_list]
 
     return molecules
+
 
 def make_constraints(params):
     constraints = {
@@ -1415,9 +1419,9 @@ def configure_defaults(params):
         params['instrument'] = '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
-        if params.get('spectroscopy', False) == True and 'FLOYDS' in params.get('instrument_code', ''):
+        if params.get('spectroscopy', False) is True and 'FLOYDS' in params.get('instrument_code', ''):
             params['exp_type'] = 'SPECTRUM'
-            params['instrument'] =  '2M0-FLOYDS-SCICAM'
+            params['instrument'] = '2M0-FLOYDS-SCICAM'
             params['binning'] = 1
             if params.get('filter', None):
                 del(params['filter'])
@@ -1457,7 +1461,7 @@ def make_userrequest(elements, params):
     window = make_window(params)
     logger.debug("Window=%s" % window)
 # Create Molecule(s)
-    molecule_list = [make_molecule(params,filt) for filt in build_filter_blocks(params['filter_pattern'], params['exp_count'])]
+    molecule_list = make_molecules(params)
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
