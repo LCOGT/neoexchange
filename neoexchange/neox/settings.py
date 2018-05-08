@@ -4,7 +4,7 @@
 import os, sys
 from django.utils.crypto import get_random_string
 
-VERSION = '2.1.5'
+VERSION = '2.3.6'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -89,6 +89,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
 AUTHENTICATION_BACKENDS = (
@@ -227,7 +228,7 @@ LOGGING = {
 }
 
 chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-SECRET_KEY = get_random_string(50, chars)
+SECRET_KEY = os.environ.get('SECRET_KEY', get_random_string(50, chars))
 
 DATABASES = {
     "default": {
@@ -237,7 +238,7 @@ DATABASES = {
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "CONN_MAX_AGE" : 1800,
+        "CONN_MAX_AGE" : 60,
         "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
 
     }
@@ -307,7 +308,7 @@ if 'test' in sys.argv:
 # defined per machine.
 if not CURRENT_PATH.startswith('/var/www'):
     try:
-        from local_settings import *
+        from .local_settings import *
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e

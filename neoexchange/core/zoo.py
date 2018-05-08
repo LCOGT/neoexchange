@@ -34,7 +34,7 @@ def panoptes_add_set_mtd(candidates, blockid):
         subject_set.save()
     except PanoptesAPIException:
         if settings.ZOONIVERSE_USER == '' or settings.ZOONIVERSE_PASSWD == '':
-            logger.warn('ZOONIVERSE_USER and/or ZOONIVERSE_PASSWD environment variables not set')
+            logger.warning('ZOONIVERSE_USER and/or ZOONIVERSE_PASSWD environment variables not set')
         else:            
             logger.debug('Subject set {} already exists'.format(subject_set.display_name))
         return False
@@ -63,16 +63,16 @@ def panoptes_add_set_mtd(candidates, blockid):
         except AttributeError:
             logger.error('Could not upload {}'.format(filename))
             continue
-        except Exception, e:
+        except Exception as e:
             logger.error(''.format(e))
         logger.debug('saved subject {}'.format(subject.id))
-        subject_ids.append({'id':subject.id, 'candidate':candidate['id']})
+        subject_ids.append({'id': subject.id, 'candidate': candidate['id']})
         subject_list.append(subject)
 
     # add subjects to subject set
     subject_set.add(subject_list)
 
-    # Added these subjects to the 1st Workflow because thats all we have
+    # Added these subjects to the 1st Workflow because that's all we have
     workflow = Workflow.find(_id='4154')
 
     resp, error = workflow.http_post(
@@ -85,11 +85,12 @@ def panoptes_add_set_mtd(candidates, blockid):
         logger.error('Manually attach {} to workflow: {}'.format(subject_set.display_name, e))
         return False
 
+
 def create_panoptes_report(block, subject_ids):
     now = datetime.now()
     for subject in subject_ids:
         candidate = Candidate.objects.get(id = int(subject['candidate']))
-        pr, created = PanoptesReport.objects.get_or_create(block = block, candidate = candidate)
+        pr, created = PanoptesReport.objects.get_or_create(block=block, candidate=candidate)
         if not created:
             continue
         pr.when_submitted = now
@@ -98,6 +99,7 @@ def create_panoptes_report(block, subject_ids):
         pr.subject_id = int(subject['id'])
         pr.save()
     return
+
 
 def reorder_candidates(candidates):
     # Change candidates list from by candidate to by image
@@ -111,11 +113,12 @@ def reorder_candidates(candidates):
         new_cands.append(cands_by_img)
     return new_cands
 
+
 def download_images_block(blockid, frames, scale, download_dir):
-    '''
+    """
     Finds all thumbnails for frames list, downloads them, adds markers for candidates,
     creates a mosaic of each frame see we can see more detail.
-    '''
+    """
     current_files = glob.glob(download_dir+"*.jpg")
     mosaic_files = []
     for i, frame in enumerate(frames):
@@ -131,26 +134,29 @@ def download_images_block(blockid, frames, scale, download_dir):
 
     return mosaic_files
 
+
 def create_mosaic(filename, frameid, download_dir):
     # Create a  3 x 3 mosaic of each image so we get better detail of where the moving object is
     # WARNING 640x640 will only work with 1m and 2m data NOT 0m4 data
     # 0m4 523x352
-    full_filename =os.path.join(download_dir, filename)
-    mosaic_options = "convert {} -crop 640x640 {}frame-{}-%d.jpg".format(full_filename,download_dir,frameid)
+    full_filename = os.path.join(download_dir, filename)
+    mosaic_options = "convert {} -crop 640x640 {}frame-{}-%d.jpg".format(full_filename, download_dir, frameid)
     logger.debug("Creating mosaic for {}".format(frameid))
     subprocess.call(mosaic_options, shell=True)
-    files = ['frame-{}-{}.jpg'.format(frameid,i) for i in range(0,9)]
+    files = ['frame-{}-{}.jpg'.format(frameid, i) for i in range(0, 9)]
     return files
+
 
 def add_markers_to_image(filename):
     logger.debug("Adding marker to {}".format(filename))
     img = Image.open(filename)
     image = img.convert('RGB')
     draw = ImageDraw.Draw(image, 'RGBA')
-    draw.line((135, 150, 110, 150), fill=(0,255,0,128), width=3)
-    draw.line((150, 135, 150, 110), fill=(0,255,0,128), width=3)
+    draw.line((135, 150, 110, 150), fill=(0, 255, 0, 128), width=3)
+    draw.line((150, 135, 150, 110), fill=(0, 255, 0, 128), width=3)
     image.save(filename, 'jpeg')
     return
+
 
 def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir, ymax):
     for candidate in candidates:
@@ -169,6 +175,7 @@ def make_cutouts(candidates, frameids, jpg_files, blockid, download_dir, ymax):
             add_markers_to_image(outfile)
         candidate['cutouts'] = cutouts
     return candidates
+
 
 def download_image(frame, current_files, download_dir, blockid):
     # Download thumbnail images only if they do not exist
@@ -195,12 +202,13 @@ def download_image(frame, current_files, download_dir, blockid):
 
     return full_filename
 
+
 def read_classification_report(filename):
-    '''
+    """
     Read classificiation report from Zooniverse, extracting position information
     for possible targets
     :param filename: full path to report file
-    '''
+    """
     contents = []
     with open(filename, 'rb') as csvfile:
         report = csv.DictReader(csvfile, delimiter=',', quotechar='"')
@@ -212,12 +220,13 @@ def read_classification_report(filename):
     # sources = identify_sources(subjects)
     return subjects
 
+
 def parse_classifications(contents):
-    '''
+    """
     Take the parsed Zooniverse classification report, find all the retired subject sets
     and match them to blocks and frames using PanoptesReport model
     :param contents: a list of the classification data
-    '''
+    """
     active_subjects = PanoptesReport.objects.filter(active=True).values_list('subject_id', flat=True)
     subjects = {str(a):[] for a in active_subjects}
     for content in contents:
@@ -235,6 +244,7 @@ def parse_classifications(contents):
                     subjects[keys[0]].append(data)
     return subjects
 
+
 def identify_sources(sources):
     for k, source in sources.items():
         users = [dict(t) for t in set([tuple(d.items()) for d in source])]
@@ -242,13 +252,15 @@ def identify_sources(sources):
             print(k, users)
     return
 
+
 def retire_subjects(subjects):
-    for k,v in subjects.iteritems():
+    for k, v in subjects.iteritems():
         if v and k:
             active_subjects = PanoptesReport.objects.filter(id=k)
             active_subjects.update(active=False)
             logger.debug('Retired {}'.format(active_subjects))
     return
+
 
 def fix_panoptes_reports():
     Panoptes.connect(username=settings.ZOONIVERSE_USER, password=settings.ZOONIVERSE_PASSWD)
@@ -263,15 +275,15 @@ def fix_panoptes_reports():
              u'12497': u'7946'}
 
     for k,v in ssids.items():
-     report[v] = []
+        report[v] = []
 
     for k in ssids.keys():
         for ss in SubjectSet.find(_id=k).subjects():
-             sr = ss.raw
-             if not sr['metadata'].get('quadrant',None) and sr['metadata'].get('candidate_id',None):
-                report[ssids[k]].append({'candidate':sr['metadata']['candidate_id'],'id':sr['id']})
+            sr = ss.raw
+            if not sr['metadata'].get('quadrant', None) and sr['metadata'].get('candidate_id', None):
+                report[ssids[k]].append({'candidate': sr['metadata']['candidate_id'], 'id': sr['id']})
 
-    for k,v in report.items():
+    for k, v in report.items():
         block = Block.objects.get(id=k)
         cz.create_panoptes_report(block, v)
 

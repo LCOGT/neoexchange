@@ -1,7 +1,11 @@
 from datetime import datetime as real_datetime
 from datetime import datetime
+import os
 
 from django.contrib.auth import authenticate
+
+from astrometrics.sources_subs import fetch_filter_list
+
 
 # Adapted from http://www.ryangallen.com/wall/11/mock-today-django-testing/
 # and changed to datetime and python 2.x
@@ -11,7 +15,7 @@ class MockDateTimeType(type):
     def __init__(cls, name, bases, d):
         type.__init__(cls, name, bases, d)
         cls.year = 2015
-        cls.month =  4
+        cls.month = 4
         cls.day = 1
         cls.hour = 17
         cls.minute = 0
@@ -21,9 +25,7 @@ class MockDateTimeType(type):
         return isinstance(instance, real_datetime)
 
 
-class MockDateTime(datetime):
-
-    __metaclass__ = MockDateTimeType
+class MockDateTime(datetime, metaclass=MockDateTimeType):
 
     @classmethod
     def change_date(cls, year, month, day):
@@ -44,41 +46,6 @@ class MockDateTime(datetime):
     def utcnow(cls):
         return cls(cls.year, cls.month, cls.day, cls.hour, cls.minute, cls.second)
 
-def mock_odin_login(username, password):
-    return {}
-
-def mock_lco_authenticate(request, username, password):
-    return None
-
-def mock_lco_login(email, password, request=None):
-    profile = {'username': 'bart',
-    'first_name': 'Bart',
-    'last_name': 'Simpson',
-    'email': 'bsimpson@lcogt.net',
-    'id': 24,
-    'userprofile': {'user_title': 'Mx',
-        'onsky': False,
-        'institution_name': 'LCOGT',
-        'timezone': 'UTC'}
-    }
-    proposals = [{'allocation': [
-            {'semester_code': '2015B',
-            'std_allocation': 100.0,
-            'telescope_class': '1m0',
-            'too_allocation': 0.0,
-            'too_time_used': 0.0,
-            'std_time_used': 0.02},
-            {'semester_code': '2015B',
-            'std_allocation': 100.0,
-            'telescope_class': '2m0',
-            'too_allocation': 0.0,
-            'too_time_used': 0.0,
-            'std_time_used': 1.57055555555556}],
-        'code': 'LCO2015A-009',
-        'id': 4,
-        'name': 'LCOGT NEO Follow-up Network'}
-        ]
-    return profile, proposals
 
 def mock_check_request_status(tracking_num):
     status = { u'created' : u'2015-10-21T19:07:26.023049Z',
@@ -115,7 +82,7 @@ def mock_check_request_status(tracking_num):
                        'priority': 1,
                        'request': 617292,
                        'type': 'EXPOSE'}],
-                     u'target': {'acquire_mode': 'OPTIONAL',
+                    u'target': {'acquire_mode': 'OPTIONAL',
                        'argofperih': None,
                        'coordinate_system': 'ICRS',
                        'dailymot': None,
@@ -146,9 +113,10 @@ def mock_check_request_status(tracking_num):
              }
     return status
 
+
 def mock_check_request_status_cadence(tracking_num):
 
-    status ={u'created': u'2017-08-15T19:18:24.869792Z',
+    status = {u'created': u'2017-08-15T19:18:24.869792Z',
              u'group_id': u'3122_COJ_cad_20170816-0819',
              u'id': 472636,
              u'ipp_value': 1.0,
@@ -552,8 +520,8 @@ def mock_check_for_images_no_millisecs(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43:28",
                     "ENCID": "clma",
-                    "SITEID":"lsc",
-                    "TELID":"1m0a",
+                    "SITEID" : "lsc",
+                    "TELID" : "1m0a",
                     "FILTER": "rp",
                     "INSTRUME" : "kb27",
                     "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
@@ -566,8 +534,8 @@ def mock_check_for_images_bad_date(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43",
                     "ENCID": "clma",
-                    "SITEID":"lsc",
-                    "TELID":"1m0a",
+                    "SITEID" : "lsc",
+                    "TELID" : "1m0a",
                     "FILTER": "rp",
                     "INSTRUME" : "kb27",
                     "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
@@ -693,12 +661,52 @@ def mock_check_for_images(request_id, obstype='EXPOSE'):
                  ]
     return images, len(images)
 
+# Authentication/login related mocks
+
+def mock_odin_login(username, password):
+    return {}
+
+def mock_lco_authenticate(request, username, password):
+    return None
+
+def mock_lco_login(email, password, request=None):
+    profile = {'username': 'bart',
+    'first_name': 'Bart',
+    'last_name': 'Simpson',
+    'email': 'bsimpson@lcogt.net',
+    'id': 24,
+    'userprofile': {'user_title': 'Mx',
+        'onsky': False,
+        'institution_name': 'LCOGT',
+        'timezone': 'UTC'}
+    }
+    proposals = [{'allocation': [
+            {'semester_code': '2015B',
+            'std_allocation': 100.0,
+            'telescope_class': '1m0',
+            'too_allocation': 0.0,
+            'too_time_used': 0.0,
+            'std_time_used': 0.02},
+            {'semester_code': '2015B',
+            'std_allocation': 100.0,
+            'telescope_class': '2m0',
+            'too_allocation': 0.0,
+            'too_time_used': 0.0,
+            'std_time_used': 1.57055555555556}],
+        'code': 'LCO2015A-009',
+        'id': 4,
+        'name': 'LCOGT NEO Follow-up Network'}
+        ]
+    return profile, proposals
+
+# Data download/processing mocks
+
 def mock_archive_frame_header(archive_headers):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43:28.067",
                     "ENCID": "clma",
-                    "SITEID":"lsc",
-                    "TELID":"1m0a",
+                    "SITEID" : "lsc",
+                    "TELID" : "1m0a",
                     "FILTER": "rp",
                     "INSTRUME" : "kb27",
                     "ORIGNAME" : "ogg0m406-kb27-20160531-0063-e00",
@@ -714,7 +722,7 @@ def mock_find_images_for_block(blockid):
     return data
 
 def mock_fetch_observations(tracking_num):
-    images = ['1','2','3']
+    images = ['1', '2', '3']
     return images
 
 def mock_run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
@@ -731,6 +739,14 @@ class MockCandidate(object):
         detections = [ (1, 1, 308, 2457652.799609, 22.753496, -21.67525, 1278.9119873046875, 1086.0040283203125, 21.280000686645508, 1.190000057220459, 1.0110000371932983, -37.599998474121094, 0.019999999552965164, 3.7699999809265137, 1, 2.130000114440918, 0.1979999989271164, 41.400001525878906, 4.599999904632568, 4.5),
        (1, 2, 321, 2457652.80265, 22.753466, -21.67479, 1278.9820556640625, 1086.0469970703125, 21.06999969482422, 1.2999999523162842, 1.0770000219345093, 42.79999923706055, 0.019999999552965164, 3.890000104904175, 1, 2.130000114440918, 0.1979999989271164, 41.400001525878906, 4.599999904632568, 4.5)]
         return detections
+
+
+# Submission-related mocks
+
+def mock_fetch_filter_list(site):
+    test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
+
+    return fetch_filter_list(site, test_filter_map)
 
 def mock_expand_cadence(user_request):
 

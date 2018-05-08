@@ -186,14 +186,17 @@ def make_pa_rate_dict(pa, deltapa, minrate, maxrate):
 
 def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
 
+    min_rate_str = '{:.2f}'.format(pa_rate_dict['filter_minrate'])
+    max_rate_str = '{:.2f}'.format(pa_rate_dict['filter_maxrate'])
+
     options = ''
     options += '-paramfile' + ' ' + str(param_file) + ' '
     options += '-CPUTIME' + ' ' + str(num_fits_files*200) + ' '
     options += '-MAXMISSES' + ' ' + str(int(floor(num_fits_files/2.5))) + ' '
     options += '-FILTER_PA' + ' ' + str(pa_rate_dict['filter_pa']) + ' '
     options += '-FILTER_DELTAPA' + ' ' + str(pa_rate_dict['filter_deltapa']) + ' '
-    options += '-FILTER_MINRATE' + ' ' + str(pa_rate_dict['filter_minrate']) + ' '
-    options += '-FILTER_MAXRATE' + ' ' + str(pa_rate_dict['filter_maxrate']) + ' '
+    options += '-FILTER_MINRATE' + ' ' + min_rate_str + ' '
+    options += '-FILTER_MAXRATE' + ' ' + max_rate_str + ' '
     options = options.rstrip()
     return options
 
@@ -362,7 +365,7 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
 
     cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files )
     cmdline = cmdline.rstrip()
-    print cmdline
+    print(cmdline)
 
     if dbg == True:
         retcode_or_cmdline = cmdline
@@ -393,12 +396,13 @@ def get_scamp_xml_info(scamp_xml_file):
     fgroups_table = votable.get_table_by_id('FGroups')
 
     reference_catalog = fgroups_table.array['AstRef_Catalog'].data[0]
+    reference_catalog = reference_catalog.decode("utf-8")
     reference_catalog = reference_catalog.replace('-', '')
     info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
              'num_refstars' : fields_table.array['NDetect'].data[0],
              'wcs_refcat'   : "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower(),
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
-             'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0],
+             'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0].decode("utf-8"),
              'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean()
            }
 
@@ -522,7 +526,7 @@ def read_mtds_file(mtdsfile, dbg=False):
     frames = []
     while frame < num_frames:
         frame_string = mtds_fh.readline()
-        if dbg: print frame, frame_string
+        if dbg: print(frame, frame_string)
         frame_chunks = frame_string.split(' ')
         frame_filename = frame_chunks[0]
         frame_jd = float(frame_chunks[1])
@@ -552,7 +556,7 @@ def read_mtds_file(mtdsfile, dbg=False):
             dets_array = empty( shape=(0, 0) )
 
     # Check for correct number of entries
-    if dbg: print dets_array.shape
+    if dbg: print(dets_array.shape)
     num_detections = dets_array.shape[0] / num_frames
     if num_detections == 0:
         logger.warn("Found 0 detection entries")

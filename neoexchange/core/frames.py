@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 from datetime import datetime, timedelta
 from math import ceil
 import sys
@@ -19,7 +19,7 @@ import sys
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from astropy.wcs import WCS
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
@@ -43,10 +43,10 @@ def measurements_from_block(blockid, bodyid=None):
     return {'body' : block.body, 'measures' : measures, 'slot' : block,'extra_bodies':extra_bodies}
 
 def find_images_for_block(blockid):
-    '''
+    """
     Look up Frames and Candidates in Block.
     Output all candidates coords for each frame for Light Monitor to display
-    '''
+    """
     red_frames = Frame.objects.filter(block__id=blockid, frametype=Frame.BANZAI_RED_FRAMETYPE).order_by('midpoint')
     ql_frames = Frame.objects.filter(block__id=blockid, frametype=Frame.BANZAI_QL_FRAMETYPE).order_by('midpoint')
     if red_frames.count() > 0 and red_frames.count() >= ql_frames.count():

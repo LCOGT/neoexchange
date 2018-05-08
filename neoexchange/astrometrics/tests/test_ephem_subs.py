@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,14 +11,14 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from math import radians
 
-#Import module to test
+# Import module to test
 from astrometrics.ephem_subs import *
 from core.models import Body
 
@@ -147,6 +147,7 @@ class TestGetMountLimits(TestCase):
         (neg_limit, pos_limit, alt_limit) = get_mountlimits('z21')
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
+
 class TestComputeEphem(TestCase):
 
     def setUp(self):
@@ -196,7 +197,6 @@ class TestComputeEphem(TestCase):
                          'updated': False,
                          'urgency': None}
         self.comet, created = Body.objects.get_or_create(**comet_params)
-
 
         self.elements = {'slope': 0.15,
                          'abs_mag': 21.0,
@@ -327,6 +327,7 @@ class TestComputeEphem(TestCase):
         expected_ephem_lines = [['2015 04 21 08:45', '20 10 05.99', '+29 56 57.5', '20.4', ' 2.43', ' 89.2', '+33', '0.09', '107', '-42', '+047', '-04:25'],
                                 ['2015 04 21 08:50', '20 10 06.92', '+29 56 57.7', '20.4', ' 2.42', ' 89.2', '+34', '0.09', '107', '-42', '+048', '-04:20']]
         ephem_lines = call_compute_ephem(body_elements, start, end, site_code, step_size)
+
         line = 0
         self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
         while line < len(expected_ephem_lines):
@@ -335,7 +336,7 @@ class TestComputeEphem(TestCase):
 
     def test_call_compute_ephem_with_body_F65(self):
         start = datetime(2015, 4, 21, 11, 30, 00)
-        end = datetime(2015, 4, 21, 11, 35, 01)
+        end = datetime(2015, 4, 21, 11, 35, 1)
         site_code = 'F65'
         step_size = 300
         body_elements = model_to_dict(self.body)
@@ -351,7 +352,7 @@ class TestComputeEphem(TestCase):
 
     def test_call_compute_ephem_with_date(self):
         start = datetime(2015, 4, 28, 10, 20, 00)
-        end = datetime(2015, 4, 28, 10, 25, 01)
+        end = datetime(2015, 4, 28, 10, 25, 1)
         site_code = 'V37'
         step_size = 300
         body_elements = model_to_dict(self.body)
@@ -367,7 +368,7 @@ class TestComputeEphem(TestCase):
 
     def test_call_compute_ephem_with_altlimit(self):
         start = datetime(2015, 9, 1, 17, 20, 00)
-        end = datetime(2015, 9, 1, 19, 50, 01)
+        end = datetime(2015, 9, 1, 19, 50, 1)
         site_code = 'K91'
         step_size = 300
         alt_limit = 30.0
@@ -390,7 +391,7 @@ class TestComputeEphem(TestCase):
         step_size = 60
         alt_limit = 0
         body_elements = model_to_dict(self.body)
-        expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20',  '121.1', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'],]
+        expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20',  '121.1', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'], ]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -407,7 +408,7 @@ class TestComputeEphem(TestCase):
         step_size = 600
         alt_limit = 0
         body_elements = model_to_dict(self.comet)
-        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '14.7', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '14.7', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'], ]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -426,7 +427,7 @@ class TestComputeEphem(TestCase):
         body_elements = model_to_dict(self.comet)
         body_elements['abs_mag'] = None
         body_elements['slope'] = None
-        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '-99.0', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'],]
+        expected_ephem_lines = [['2015 10 30 12:20', '10 44 56.44', '+14 13 30.6', '-99.0', ' 1.44', '107.6', '+1', '0.87', ' 79', '+79', '-999', '-06:16'], ]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -541,6 +542,7 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+
 class TestLongTermScheduling(TestCase):
 
     def setUp(self):
@@ -645,8 +647,8 @@ class TestLongTermScheduling(TestCase):
         self.body5, created = Body.objects.get_or_create(**params)
 
     def test_LongTermScheduling_with_body(self):
-        #Body is only up for a few days starting at the
-        #beginning of the search.
+        # Body is only up for a few days starting at the
+        # beginning of the search.
         site_code = 'V37'
         body_elements = model_to_dict(self.body)
 
@@ -677,9 +679,9 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body2(self):
-        #Body is up for a couple days when gets faint enough,
-        #but then moon gets full. Body becomes observable again
-        #after moon "fades" until no longer up for at least 3 hrs.
+        # Body is up for a couple days when gets faint enough,
+        # but then moon gets full. Body becomes observable again
+        # after moon "fades" until no longer up for at least 3 hrs.
         site_code = 'V37'
         body_elements = model_to_dict(self.body2)
 
@@ -690,9 +692,9 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body2_shorter_time_limit(self):
-        #Body is up for a couple days when gets faint enough,
-        #but then moon gets full. Body becomes observable again
-        #after moon "fades" until no longer up for at least 3 hrs.
+        # Body is up for a couple days when gets faint enough,
+        # but then moon gets full. Body becomes observable again
+        # after moon "fades" until no longer up for at least 3 hrs.
         site_code = 'V37'
         body_elements = model_to_dict(self.body2)
 
@@ -703,9 +705,9 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body3(self):
-        #Body is not observable (because not up for >3 hrs) until
-        #sometime after start of search and then until the end of
-        #the date range.
+        # Body is not observable (because not up for >3 hrs) until
+        # sometime after start of search and then until the end of
+        # the date range.
         site_code = 'V37'
         body_elements = model_to_dict(self.body3)
 
@@ -716,9 +718,9 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body4(self):
-        #Body is not observable (because too faint) until
-        #sometime after start of search and then until the end of
-        #the date range.
+        # Body is not observable (because too faint) until
+        # sometime after start of search and then until the end of
+        # the date range.
         site_code = 'V37'
         body_elements = model_to_dict(self.body4)
 
@@ -729,8 +731,8 @@ class TestLongTermScheduling(TestCase):
         self.assertEqual(expected_returned_params, returned_params)
 
     def test_LongTermScheduling_with_body5(self):
-        #Body is not observable (because too faint) at
-        #any time in the date range.
+        # Body is not observable (because too faint) at
+        # any time in the date range.
         site_code = 'V37'
         body_elements = model_to_dict(self.body5)
 
@@ -748,7 +750,7 @@ class TestLongTermScheduling(TestCase):
         expected_emp_dark_and_up = []
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
         dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
@@ -762,7 +764,7 @@ class TestLongTermScheduling(TestCase):
         expected_emp_dark_and_up_first_line = ['2017 01 06 01:20', '02 13 50.14', '+31 54 14.0', '21.0', ' 4.69', '240.8', '+79', '0.52', ' 31', '+62', '+059', '-00:47']
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
         dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
 
         self.assertEqual(expected_dark_and_up_time, dark_and_up_time)
@@ -775,7 +777,7 @@ class TestLongTermScheduling(TestCase):
         expected_max_alt = 88
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
         dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
@@ -789,12 +791,13 @@ class TestLongTermScheduling(TestCase):
         expected_max_alt = 0
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
-        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size = '5 m', alt_limit=30)
+        emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, ephem_step_size='5 m', alt_limit=30)
         dark_and_up_time = compute_dark_and_up_time(emp)
 
         max_alt = compute_max_altitude(emp)
 
         self.assertEqual(expected_max_alt, max_alt)
+
 
 class TestDetermineRatesAndPA(TestCase):
 
@@ -887,7 +890,7 @@ class TestDetermineRatesAndPA(TestCase):
                          'meandist': 0.8280978,
                          'name': u'2011 EP51',
                          'not_seen': 4.95316023288194,
-                         'num_obs': 34L,
+                         'num_obs': 34,
                          'orbinc': 3.4119,
                          'origin': u'M',
                          'perihdist': None,
@@ -937,8 +940,8 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
     def test_yark_target_bad_pa(self):
-        expected_minrate = 5.048257569072863  - (0.01*5.048257569072863)
-        expected_maxrate = 5.072223332592448  + (0.01*5.072223332592448)
+        expected_minrate = 5.048257569072863 - (0.01*5.048257569072863)
+        expected_maxrate = 5.072223332592448 + (0.01*5.072223332592448)
         expected_pa = (295.5850631246814+295.56445469665186)/2.0
         expected_deltapa = 10.0
 
@@ -952,6 +955,7 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_pa, pa, self.precision)
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
+
 class TestDetermineSlotLength(TestCase):
 
     def test_bad_site_code(self):
@@ -959,7 +963,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 17.58
         expected_length = 0
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_good1m_lc(self):
@@ -967,7 +971,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 17.58
         expected_length = 15
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_good1m(self):
@@ -975,7 +979,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 17.58
         expected_length = 15
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_good1m(self):
@@ -983,7 +987,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 19.9
         expected_length = 20
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_good1m(self):
@@ -991,7 +995,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.1
         expected_length = 22.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_good1m(self):
@@ -999,7 +1003,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.6
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_good1m(self):
@@ -1007,7 +1011,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.0
         expected_length = 30
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_good1m(self):
@@ -1015,7 +1019,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.51
         expected_length = 40
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_reallyfaint_nonNEOWISE_good1m(self):
@@ -1023,7 +1027,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 22.1
         expected_length = 45
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_nonNEOWISE_good1m(self):
@@ -1031,21 +1035,21 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 23.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_good1m(self):
         site_code = 'W87'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_very_bright_nonNEOWISE_bad1m(self):
         site_code = 'Q63'
         name = 'WH2845B'
         mag = 17.58
         expected_length = 17.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_bad1m(self):
@@ -1053,7 +1057,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 19.9
         expected_length = 22.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_bad1m(self):
@@ -1061,7 +1065,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.1
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_bad1m(self):
@@ -1069,7 +1073,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.6
         expected_length = 27.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_bad1m(self):
@@ -1077,7 +1081,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.0
         expected_length = 32.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_bad1m(self):
@@ -1085,7 +1089,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.51
         expected_length = 35
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_for_coj_nonNEOWISE_bad1m(self):
@@ -1093,36 +1097,36 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 22.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toofaint_nonNEOWISE_bad1m(self):
         site_code = 'Q64'
         name = 'WH2845B'
         mag = 23.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_bad1m(self):
         site_code = 'Q64'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_very_bright_nonNEOWISE_2m_lc(self):
         site_code = 'f65'
         name = 'WH2845B'
         mag = 17.58
-        expected_length = 15
-        slot_length = determine_slot_length(name, mag, site_code)
+        expected_length = 10
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_2m(self):
         site_code = 'E10'
         name = 'WH2845B'
         mag = 17.58
-        expected_length = 15
-        slot_length = determine_slot_length(name, mag, site_code)
+        expected_length = 10
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_2m(self):
@@ -1130,7 +1134,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 19.9
         expected_length = 20
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_2m(self):
@@ -1138,7 +1142,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.1
         expected_length = 22.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_2m(self):
@@ -1146,7 +1150,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 20.6
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_2m(self):
@@ -1154,7 +1158,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.0
         expected_length = 27.5
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_2m(self):
@@ -1162,7 +1166,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 21.51
         expected_length = 30
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_reallyfaint_nonNEOWISE_2m(self):
@@ -1170,7 +1174,7 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 23.2
         expected_length = 35
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_nonNEOWISE_2m(self):
@@ -1178,14 +1182,14 @@ class TestDetermineSlotLength(TestCase):
         name = 'WH2845B'
         mag = 23.4
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_2m(self):
         site_code = 'F65'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(name, mag, site_code)
+            slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_basic_tfn_0m4_num1(self):
         site_code = 'Z21'
@@ -1193,7 +1197,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_tfn_0m4_num2(self):
@@ -1202,7 +1206,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_ogg_0m4_num1(self):
@@ -1211,7 +1215,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_ogg_0m4_num2(self):
@@ -1220,7 +1224,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_lsc_0m4_num1(self):
@@ -1229,7 +1233,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_lsc_0m4_num2(self):
@@ -1238,7 +1242,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_elp_0m4(self):
@@ -1247,7 +1251,7 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_cpt_0m4(self):
@@ -1256,22 +1260,23 @@ class TestDetermineSlotLength(TestCase):
         mag = 19.0
 
         expected_length = 25
-        slot_length = determine_slot_length(name, mag, site_code)
+        slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
+
 
 class TestGetSiteCamParams(TestCase):
 
-    twom_setup_overhead = 180.0
-    twom_exp_overhead = 19.2
+    twom_setup_overhead = 240.0
+    twom_exp_overhead = 19.0
     twom_fov = radians(10.0/60.0)
     onem_sbig_fov = radians(15.5/60.0)
-    onem_setup_overhead = 110.0
+    onem_setup_overhead = 90.0
     onem_exp_overhead = 15.5
     sinistro_exp_overhead = 38.0
     onem_sinistro_fov = radians(26.4/60.0)
     point4m_fov = radians(29.1/60.0)
-    point4m_exp_overhead = 13.0
-    point4m_setup_overhead = 110.0
+    point4m_exp_overhead = 14.0
+    point4m_setup_overhead = 90.0
     max_exp = 300.0
 
     def test_bad_site(self):
@@ -1445,17 +1450,35 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
 
+
 class TestDetermineExpTimeCount(TestCase):
 
     def test_slow_1m(self):
         speed = 2.52
         site_code = 'W85'
         slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = 60.0
         expected_expcount = 12
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_bright_1m(self):
+        speed = 0.52
+        site_code = 'W85'
+        slot_len = 10.0
+        name = 'WH2845B'
+        mag = 12.58
+
+        expected_exptime = 85.0
+        expected_expcount = 4
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1464,11 +1487,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 23.5
         site_code = 'K91'
         slot_len = 20
+        name = 'WH2845B'
+        mag = 16.58
 
         expected_exptime = 6.5
         expected_expcount = 24
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1477,11 +1502,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 0.235
         site_code = 'W85'
         slot_len = 20
+        name = 'WH2845B'
+        mag = 21.2
 
-        expected_exptime = 234.5
+        expected_exptime = 235.0
         expected_expcount = 4
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1490,11 +1517,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 1800.0
         site_code = 'E10'
         slot_len = 15
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = 1.0
-        expected_expcount = 35
+        expected_expcount = 32
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1503,11 +1532,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 0.18
         site_code = 'F65'
         slot_len = 2
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = None
         expected_expcount = None
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1516,11 +1547,13 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 2.52
         site_code = 'Z21'
         slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = 20.0
-        expected_expcount = 37
+        expected_expcount = 36
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
@@ -1529,14 +1562,17 @@ class TestDetermineExpTimeCount(TestCase):
         speed = 23.5
         site_code = 'Z21'
         slot_len = 20
+        name = 'WH2845B'
+        mag = 17.58
 
         expected_exptime = 2.0
-        expected_expcount = 72
+        expected_expcount = 68
 
-        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len)
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
+
 
 class TestGetSitePos(TestCase):
 
@@ -1651,6 +1687,7 @@ class TestGetSitePos(TestCase):
         self.assertLess(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
 
+
 class TestLCOGT_domes_to_site_codes(TestCase):
 
     def test_point4m_tfn_1(self):
@@ -1694,3 +1731,189 @@ class TestLCOGT_domes_to_site_codes(TestCase):
         code = LCOGT_domes_to_site_codes('ogg', 'clma', '0m4c')
 
         self.assertEqual(expected_code, code)
+
+
+class TestMPC_site_codes_to_domes(TestCase):
+
+    def test_point4m_tfn_1(self):
+        e_siteid, e_encid, e_telid = 'tfn', 'aqwa', '0m4a'
+
+        siteid, encid, telid = MPC_site_code_to_domes('Z21')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+    def test_point4m_tfn_2(self):
+        e_siteid, e_encid, e_telid = 'tfn', 'aqwa', '0m4b'
+
+        siteid, encid, telid = MPC_site_code_to_domes('Z17')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+    def test_1m_cpt_1(self):
+        e_siteid, e_encid, e_telid = 'cpt', 'doma', '1m0a'
+
+        siteid, encid, telid = MPC_site_code_to_domes('K91')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+    def test_point4m_elp_1(self):
+        e_siteid, e_encid, e_telid = 'elp', 'aqwa', '0m4a'
+
+        siteid, encid, telid = MPC_site_code_to_domes('V38')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+    def test_point4m_ogg_2(self):
+        e_siteid, e_encid, e_telid = 'ogg', 'clma', '0m4b'
+
+        siteid, encid, telid = MPC_site_code_to_domes('T04')
+
+        self.assertEqual(e_siteid, siteid)
+        self.assertEqual(e_encid, encid)
+        self.assertEqual(e_telid, telid)
+
+
+class Testmolecule_overhead(TestCase):
+
+    def test_single_filter(self):
+        filter_pattern = 'V'
+        expected_overhead = (2. + 5. + 11.)*1
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+
+    def test_multiple_individual_filters(self):
+        filter_pattern = 'V,R,I'
+        expected_overhead = (2. + 5. + 11.)*10.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+
+    def test_multiple_repeated_filters(self):
+        filter_pattern = 'V,R,I,V,R,I'
+        expected_overhead = (2. + 5. + 11.)*10.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 10)))
+
+    def test_multiple_filter_strings(self):
+        filter_pattern = 'V,V,V,R,R,R,I,I,I,'
+        expected_overhead = (2. + 5. + 11.)*5.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 14)))
+
+    def test_short_block(self):
+        filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
+        expected_overhead = (2. + 5. + 11.)*2.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 5)))
+
+    def test_start_end_loop(self):
+        filter_pattern = 'V,V,R,R,V,V'
+        expected_overhead = (2. + 5. + 11.)*7.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 19)))
+
+    def test_exact_loop(self):
+        filter_pattern = 'V,V,R,R,I,I'
+        expected_overhead = (2. + 5. + 11.)*9.
+        self.assertEqual(expected_overhead, molecule_overhead(build_filter_blocks(filter_pattern, 18)))
+
+
+class TestDetermineExpTimeCount_WithFilters(TestCase):
+
+    def test_1m_alternating(self):
+        speed = 2.52
+        site_code = 'W85'
+        slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
+        filter_pattern = 'V,I'
+
+        expected_exptime = 60.0
+        expected_expcount = 10
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_1m_long_pattern(self):
+        speed = 2.52
+        site_code = 'W85'
+        slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
+        filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
+
+        expected_exptime = 60.0
+        expected_expcount = 12
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_1m_short_pattern(self):
+        speed = 2.52
+        site_code = 'W85'
+        slot_len = 22.5
+        name = 'WH2845B'
+        mag = 17.58
+        filter_pattern = 'V,V,I,I'
+
+        expected_exptime = 60.0
+        expected_expcount = 11
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_0m4_alternating_pattern(self):
+        speed = 23.5
+        site_code = 'Z21'
+        slot_len = 20
+        name = 'WH2845B'
+        mag = 17.58
+        filter_pattern = 'V,I,V,I'
+
+        expected_exptime = 2.0
+        expected_expcount = 32
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_0m4_long_pattern(self):
+        speed = 23.5
+        site_code = 'Z21'
+        slot_len = 20
+        name = 'WH2845B'
+        mag = 17.58
+        filter_pattern = 'V,V,V,V,V,V,R,R,R,R,R,R,I,I,I,I,I,I,I'
+
+        expected_exptime = 2.0
+        expected_expcount = 58
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+
+    def test_0m4_short_pattern(self):
+        speed = 23.5
+        site_code = 'Z21'
+        slot_len = 20
+        name = 'WH2845B'
+        mag = 17.58
+        filter_pattern = 'V,V,I,I'
+
+        expected_exptime = 2.0
+        expected_expcount = 44
+
+        exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
+
+        self.assertEqual(expected_exptime, exp_time)
+        self.assertEqual(expected_expcount, exp_count)
+

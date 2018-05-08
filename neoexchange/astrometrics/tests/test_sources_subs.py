@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -21,23 +21,23 @@ from unittest import skipIf
 from bs4 import BeautifulSoup
 import os
 import mock
-import urllib2
 from socket import error
 
 from astrometrics.ephem_subs import determine_darkness_times
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
 from core.views import record_block
-#Import module to test
+# Import module to test
 from astrometrics.sources_subs import parse_goldstone_chunks, \
     fetch_arecibo_targets, fetch_goldstone_targets, \
     submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
     parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
     fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence,fetch_taxonomy_page,fetch_list_targets
+    make_userrequest, make_cadence_valhalla, make_cadence, fetch_taxonomy_page, \
+    fetch_list_targets, fetch_filter_list
 
 
 class TestGoldstoneChunkParser(TestCase):
-    '''Unit tests for the sources_subs.parse_goldstone_chunks() method'''
+    """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
 
     def test_specficdate_provis_desig(self):
         expected_objid = '2015 FW117'
@@ -64,37 +64,37 @@ class TestGoldstoneChunkParser(TestCase):
         self.assertEqual(expected_objid, obj_id)
 
     def test_specficdate_named_ast(self):
-        expected_objid = '1566' # '(1566) Icarus'
+        expected_objid = '1566'  # '(1566) Icarus'
         chunks = [u'2015', u'Jun', u'13-17', u'1566', u'Icarus', u'No', u'Yes', u'R', u'PHA', u'June', u'13/14,', u'14/15,', u'and', u'16/17']
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
     def test_unspecficdate_named_ast(self):
-        expected_objid = '1685' # '(1685) Toro'
+        expected_objid = '1685'  # '(1685) Toro'
         chunks = ['2016', 'Jan', '1685', 'Toro', 'No', 'No', 'R']
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
     def test_multimonth_split(self):
-        expected_objid = '410777' # '(410777) 2009 FD'
+        expected_objid = '410777'  # '(410777) 2009 FD'
         chunks = [u'2015', u'Oct', u'25-Nov', u'1', u'410777', u'2009', u'FD', u'No', u'Yes', u'R']
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
     def test_multimonth_split_provisional(self):
-        expected_objid = '2017 CS' # '2017 CS'
+        expected_objid = '2017 CS'  # '2017 CS'
         chunks = [u'2017', u'May', u'22-Jun', u'01', u'2017', u'CS', u'Yes', u'Yes', u'19.4', u'PHA', u'Target-of-opportunity']
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
     def test_multimonth_split_provisional2(self):
-        expected_objid = '2017 CS101' # '2017 CS01'
+        expected_objid = '2017 CS101'  # '2017 CS01'
         chunks = [u'2017', u'May', u'22-Jun', u'01', u'2017', u'CS101', u'Yes', u'Yes', u'19.4', u'PHA', u'Target-of-opportunity']
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
 
     def test_multimonth_split_named(self):
-        expected_objid = '6063' # '606 Jason'
+        expected_objid = '6063'  # '606 Jason'
         chunks = [u'2017', u'May', u'22-Jun', u'01', u'6063', u'Jason', u'No', u'Yes', u'15.9', u'R1']
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
@@ -112,6 +112,7 @@ class TestGoldstoneChunkParser(TestCase):
         chunks = line.lstrip().split()
         obj_id = parse_goldstone_chunks(chunks)
         self.assertEqual(expected_objid, obj_id)
+
 
 class TestFetchAreciboTargets(TestCase):
 
@@ -135,7 +136,7 @@ class TestFetchAreciboTargets(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_targets(self):
-        expected_targets =  [u'294739',
+        expected_targets = [ u'294739',
                              u'162385',
                              u'337866',
                              u'85990',
@@ -165,7 +166,7 @@ class TestFetchAreciboTargets(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_targets_v2(self):
-        expected_targets =  [u'4775',
+        expected_targets = [ u'4775',
                              u'357024',
                              u'250458',
                              u'2009 ES',
@@ -206,6 +207,7 @@ class TestFetchAreciboTargets(TestCase):
 
         self.assertEqual(expected_targets, targets)
 
+
 class TestFetchGoldstoneTargets(TestCase):
 
     def setUp(self):
@@ -224,7 +226,7 @@ class TestFetchGoldstoneTargets(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_targets(self):
-        expected_targets =  ['3200',
+        expected_targets = [ '3200',
                              '2017 VT14',
                              '2017 WX12',
                              '2017 WZ14',
@@ -267,7 +269,7 @@ class TestFetchGoldstoneTargets(TestCase):
                              '2002 VE68',
                              '4953',
                              '2003 NW1',
-#                             'Comet 46P/Wirtanen',
+#                            'Comet 46P/Wirtanen',
                              '410088',
                              '418849',
                              '2012 MS4',
@@ -281,7 +283,7 @@ class TestFetchGoldstoneTargets(TestCase):
 
     def test_target_with_ampersand(self):
 
-        html =  '''<html><head>
+        html = '''<html><head>
                 <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Goldstone Asteroid Schedule</title><style></style></head>
                 <body>
                                                                   Needs
@@ -293,7 +295,7 @@ class TestFetchGoldstoneTargets(TestCase):
                 '''
         page = BeautifulSoup(html, 'html.parser')
 
-        expected_target = ['438017',]
+        expected_target = ['438017', ]
 
         targets = fetch_goldstone_targets(page)
 
@@ -302,7 +304,7 @@ class TestFetchGoldstoneTargets(TestCase):
 
     def test_target_with_ampersand2(self):
 
-        html =  '''<html><head>
+        html = '''<html><head>
                 <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Goldstone Asteroid Schedule</title><style></style></head>
                 <body>
                                                                   Needs
@@ -314,7 +316,7 @@ class TestFetchGoldstoneTargets(TestCase):
                 '''
         page = BeautifulSoup(html, 'html.parser')
 
-        expected_target = ['438017',]
+        expected_target = ['438017', ]
 
         targets = fetch_goldstone_targets(page)
 
@@ -323,7 +325,7 @@ class TestFetchGoldstoneTargets(TestCase):
 
     def test_target_with_ampersand3(self):
 
-        html =  '''<html><head>
+        html = '''<html><head>
                 <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Goldstone Asteroid Schedule</title><style></style></head>
                 <body>
                                                                   Needs
@@ -335,7 +337,7 @@ class TestFetchGoldstoneTargets(TestCase):
                 '''
         page = BeautifulSoup(html, 'html.parser')
 
-        expected_target = ['438017',]
+        expected_target = ['438017', ]
 
         targets = fetch_goldstone_targets(page)
 
@@ -344,7 +346,7 @@ class TestFetchGoldstoneTargets(TestCase):
 
     def test_target_with_ampersand4(self):
 
-        html =  '''<html><head>
+        html = '''<html><head>
                 <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Goldstone Asteroid Schedule</title><style></style></head>
                 <body>
                                                                   Needs
@@ -356,12 +358,13 @@ class TestFetchGoldstoneTargets(TestCase):
                 '''
         page = BeautifulSoup(html, 'html.parser')
 
-        expected_target = ['438017',]
+        expected_target = ['438017', ]
 
         targets = fetch_goldstone_targets(page)
 
         self.assertEqual(1, len(targets))
         self.assertEqual(expected_target, targets)
+
 
 class TestSubmitBlockToScheduler(TestCase):
 
@@ -369,7 +372,7 @@ class TestSubmitBlockToScheduler(TestCase):
         params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
                     'slope'         : 0.15,
-                    'epochofel'     : datetime(2015,03,19,00,00,00),
+                    'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
                     'meananom'      : 325.2636,
                     'argofperih'    : 85.19251,
                     'longascnode'   : 147.81325,
@@ -392,7 +395,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id':'999', 'requests' : [{'id':'111', 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -406,32 +409,35 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'filter_pattern' : 'w',
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson'
                  }
 
         resp, sched_params = submit_block_to_scheduler(body_elements, params)
         self.assertEqual(resp, '999')
 
-        #store block
+        # store block
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
         block_resp = record_block(resp, sched_params, data, self.body)
-        self.assertEqual(block_resp,True)
+        self.assertEqual(block_resp, True)
 
-        #Test that block has same start/end as superblock
+        # Test that block has same start/end as superblock
         blocks = Block.objects.filter(active=True)
         for block in blocks:
-            self.assertEqual(block.block_start,block.superblock.block_start)
-            self.assertEqual(block.block_end,block.superblock.block_end)
+            self.assertEqual(block.block_start, block.superblock.block_start)
+            self.assertEqual(block.block_end, block.superblock.block_end)
 
     @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     @mock.patch('astrometrics.sources_subs.requests.post')
-    def test_submit_cadence(self,mock_post):
+    def test_submit_cadence(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id':'999', 'requests' : [{'id':'111', 'duration' : 1820},{'id':'222', 'duration' : 1820},{'id':'333', 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820},
+                                                                               {'id': '222', 'duration' : 1820},
+                                                                               {'id': '333', 'duration' : 1820}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -445,28 +451,29 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'filter_pattern' : 'w',
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'period'    : 2.0,
                     'jitter'    : 0.25
                  }
         tracking_num, sched_params = submit_block_to_scheduler(body_elements, params)
 
-        #store Blocks
+        # store Blocks
         data = params
         data['proposal_code'] = 'LCO2015A-009'
         data['exp_length'] = 91
         block_resp = record_block(tracking_num, sched_params, data, self.body)
-        self.assertEqual(block_resp,True)
+        self.assertEqual(block_resp, True)
 
         blocks = Block.objects.filter(active=True)
 
-        #test Block dates are indipendent from Superblock dates
+        # test Block dates are indipendent from Superblock dates
         for block in blocks:
             if block != blocks[0]:
-                self.assertNotEqual(block.block_start,block.superblock.block_start)
+                self.assertNotEqual(block.block_start, block.superblock.block_start)
             if block != blocks[2]:
-                self.assertNotEqual(block.block_end,block.superblock.block_end)
+                self.assertNotEqual(block.block_end, block.superblock.block_end)
 
     def test_make_userrequest(self):
         body_elements = model_to_dict(self.body)
@@ -481,16 +488,16 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson'
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
                  }
 
         user_request = make_userrequest(body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
-        self.assertEqual(user_request['requests'][0]['location'].get('telescope',None), None)
-
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
 
     def test_1m_sinistro_lsc_doma_userrequest(self):
 
@@ -506,8 +513,9 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson'
+                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
                  }
 
         user_request = make_userrequest(body_elements, params)
@@ -518,9 +526,262 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
         self.assertEqual(user_request['requests'][0]['location']['observatory'], 'doma')
 
+    def test_multi_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 18,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,R,I,I'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 9
+            expected_exp_count = 2
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[3].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[3].get('filter'), expected_filter)
+
+    def test_uneven_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 18,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,I'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 13
+            expected_exp_count = 1
+            expected_filter = 'I'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[2].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[2].get('filter'), expected_filter)
+
+    def test_single_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 18,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 1
+            expected_exp_count = 18
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[0].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[0].get('filter'), expected_filter)
+
+    def test_overlap_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 18,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,R,I,I,V'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 8
+            expected_exp_count = 3
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[3].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[3].get('filter'), expected_filter)
+
+    def test_overlap_nooverlap_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 15,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,I,V'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 10
+            expected_exp_count = 1
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[9].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[9].get('filter'), expected_filter)
+
+    def test_partial_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 15,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 3
+            expected_exp_count = 4
+            expected_filter = 'I'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[2].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[2].get('filter'), expected_filter)
+
+    def test_partial_overlap_filter_userrequest(self):
+
+            body_elements = model_to_dict(self.body)
+            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+            body_elements['current_name'] = self.body.current_name()
+            site_code = 'W85'
+            utc_date = datetime.now()+timedelta(days=1)
+            dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+            params = {  'proposal_id' : 'LCO2015A-009',
+                        'exp_count' : 15,
+                        'exp_time' : 50.0,
+                        'site_code' : site_code,
+                        'start_time' : dark_start,
+                        'end_time' : dark_end,
+                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'user_id'  : 'bsimpson',
+                        'filter_pattern' : 'V,V,R,R,I,V'
+                     }
+
+            user_request = make_userrequest(body_elements, params)
+            molecules = user_request.get('requests')[0].get('molecules')
+            expected_molecule_num = 8
+            expected_exp_count = 3
+            expected_filter = 'V'
+
+            self.assertEqual(len(molecules), expected_molecule_num)
+            self.assertEqual(molecules[6].get('exposure_count'), expected_exp_count)
+            self.assertEqual(molecules[6].get('filter'), expected_filter)
+
+
+class TestFetchFilterList(TestCase):
+    """Unit test for getting current filters from configdb"""
+
+    def setUp(self):
+        # Read stored version of camera mappings file
+        self.test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
+
+    def test_1m_cpt(self):
+        expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+
+        filter_list = fetch_filter_list('K91', self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_0m4_ogg(self):
+        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+
+        filter_list = fetch_filter_list('T04', self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_2m_ogg(self):
+        expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
+
+        filter_list = fetch_filter_list('F65', self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_1m_lsc_domeb(self):
+        expected_filter_list = ['air', 'ND' , 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
+
+        filter_list = fetch_filter_list('W86', self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_unavailable_telescope(self):
+        expected_filter_list = []
+
+        filter_list = fetch_filter_list('Z21', self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_lowercase_telescope(self):
+        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+
+        filter_list = fetch_filter_list('t04', self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_invalid_telescope(self):
+        expected_filter_list = []
+
+        filter_list = fetch_filter_list('BESTtelescope', self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
 
 class TestPreviousNEOCPParser(TestCase):
-    '''Unit tests for the sources_subs.parse_previous_NEOCP_id() method'''
+    """Unit tests for the sources_subs.parse_previous_NEOCP_id() method"""
 
     def test_was_not_confirmed(self):
 
@@ -554,7 +815,6 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
-
     def test_non_neo(self):
 
         items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
@@ -563,10 +823,10 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
-
     def test_neo(self):
 
-        items = [u' 2015 PK', BeautifulSoup('<sub>229</sub>', "html.parser").sub, u' = P10n00U (Aug. 17.98 UT)  [see ', BeautifulSoup('<a href="/mpec/K15/K15Q10.html"><i>MPEC</i> 2015-Q10</a>', "html.parser").a, u']\n']
+        items = [u' 2015 PK', BeautifulSoup('<sub>229</sub>', "html.parser").sub, u' = P10n00U (Aug. 17.98 UT)  [see ',
+                 BeautifulSoup('<a href="/mpec/K15/K15Q10.html"><i>MPEC</i> 2015-Q10</a>', "html.parser").a, u']\n']
         expected = [u'P10n00U', u'2015 PK229', u'MPEC 2015-Q10', u'(Aug. 17.98 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
@@ -639,6 +899,7 @@ class TestPreviousNEOCPParser(TestCase):
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
+
 
 class TestParseNEOCP(TestCase):
 
@@ -753,7 +1014,7 @@ class TestParseNEOCP(TestCase):
                             u'WSAC5DA',
                             u'WS03256',
                             u'WSAD60C',
-#                            u'WR0159E',
+                            # u'WR0159E',
                             u'LM01vOQ',
                             u'P10nI6D',
                             u'P10nw2g',
@@ -775,6 +1036,7 @@ class TestParseNEOCP(TestCase):
         obj_ids = parse_NEOCP(BeautifulSoup(' <a href="http://www.cbat.eps.harvard.edu/cbet/004100/CBET004119.txt"><i>CBET</i> 4119</a>', "html.parser"))
 
         self.assertEqual(obj_ids, None)
+
 
 class TestParseNEOCPExtraParams(TestCase):
 
@@ -805,7 +1067,6 @@ class TestParseNEOCPExtraParams(TestCase):
           <tbody>'''
         self.table_footer = "</tbody>\n</table>"
 
-
         # Set to None to show all differences
         self.maxDiff = None
 
@@ -822,8 +1083,8 @@ class TestParseNEOCPExtraParams(TestCase):
         self.assertEqual(obj_ids, None)
 
     def test_parse_neocpep_good_entry(self):
-        html = BeautifulSoup(self.table_header + \
-        '''
+        html = BeautifulSoup(self.table_header +
+                             '''
         <tr><td><span style="display:none">CAH024</span>&nbsp;<input type="checkbox" name="obj" VALUE="CAH024"> CAH024</td>
         <td align="right"><span style="display:none">099</span> 99&nbsp;&nbsp;&nbsp;</td>
         <td>&nbsp;&nbsp;2015 09 20.0&nbsp;&nbsp;</td>
@@ -840,7 +1101,7 @@ class TestParseNEOCPExtraParams(TestCase):
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'CAH024', {'score' : 99,
-                                        'discovery_date' : datetime(2015,9,20),
+                                        'discovery_date' : datetime(2015, 9, 20),
                                         'num_obs' : 6,
                                         'arc_length' : 0.06,
                                         'not_seen' : 4.878,
@@ -854,10 +1115,10 @@ class TestParseNEOCPExtraParams(TestCase):
 
     @skipIf(True, "need to mock URL fetch of PCCP. Tested in TestParsePCCP")
     def test_parse_neocpep_bad_entry(self):
-        '''Test of 'Moved to the PCCP' entries'''
+        """Test of 'Moved to the PCCP' entries"""
 
-        html = BeautifulSoup(self.table_header + \
-        '''
+        html = BeautifulSoup(self.table_header +
+                             '''
         <tr><td><span style="display:none">WR0159E</span><center>WR0159E</center></td>
         <td></td>
         <td></td>
@@ -886,8 +1147,8 @@ class TestParseNEOCPExtraParams(TestCase):
         self.assertEqual(expected_obj_ids[1], obj_ids[0][1])
 
     def test_parse_neocpep_good_entry_updated(self):
-        html = BeautifulSoup(self.table_header + \
-        '''
+        html = BeautifulSoup(self.table_header +
+                             '''
         <tr><td><span style="display:none">P10o4Gp</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10o4Gp"> P10o4Gp</td>
         <td align="right"><span style="display:none">088</span> 88&nbsp;&nbsp;&nbsp;</td>
         <td>&nbsp;&nbsp;2015 09 23.4&nbsp;&nbsp;</td>
@@ -904,7 +1165,7 @@ class TestParseNEOCPExtraParams(TestCase):
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'P10o4Gp', {'score' : 88,
-                                        'discovery_date' : datetime(2015,9,23,9,36),
+                                        'discovery_date' : datetime(2015, 9, 23, 9, 36),
                                         'num_obs' : 7,
                                         'arc_length' : 0.86,
                                         'not_seen' : 0.665,
@@ -917,8 +1178,8 @@ class TestParseNEOCPExtraParams(TestCase):
         self.assertEqual(expected_obj_ids[1], obj_ids[0][1])
 
     def test_parse_neocpep_good_entry_updated2(self):
-        html = BeautifulSoup(self.table_header + \
-        '''
+        html = BeautifulSoup(self.table_header +
+                             '''
         <tr><td><span style="display:none">P10nw2g</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10nw2g"> P10nw2g</td>
         <td align="right"><span style="display:none">100</span>100&nbsp;&nbsp;&nbsp;</td>
         <td>&nbsp;&nbsp;2015 09 06.3&nbsp;&nbsp;</td>
@@ -935,7 +1196,7 @@ class TestParseNEOCPExtraParams(TestCase):
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = (u'P10nw2g', {'score' : 100,
-                                        'discovery_date' : datetime(2015,9,6,7,12,00),
+                                        'discovery_date' : datetime(2015, 9, 6, 7, 12, 00),
                                         'num_obs' : 6,
                                         'arc_length' : 1.16,
                                         'not_seen' : 17.455,
@@ -948,8 +1209,8 @@ class TestParseNEOCPExtraParams(TestCase):
         self.assertEqual(expected_obj_ids[1], obj_ids[0][1])
 
     def test_parse_neocpep_good_multi_entries(self):
-        html = BeautifulSoup(self.table_header + \
-        '''
+        html = BeautifulSoup(self.table_header +
+                             '''
         <tr><td><span style="display:none">P10nI6D</span>&nbsp;<input type="checkbox" name="obj" VALUE="P10nI6D"> P10nI6D</td>
         <td align="right"><span style="display:none">060</span> 60&nbsp;&nbsp;&nbsp;</td>
         <td>&nbsp;&nbsp;2015 09 09.3&nbsp;&nbsp;</td>
@@ -978,7 +1239,7 @@ class TestParseNEOCPExtraParams(TestCase):
 
         obj_ids = parse_NEOCP_extra_params(html)
         expected_obj_ids = [(u'P10nI6D', {'score' : 60,
-                                        'discovery_date' : datetime(2015,9,9,7,12,00),
+                                        'discovery_date' : datetime(2015, 9, 9, 7, 12, 00),
                                         'num_obs' : 6,
                                         'arc_length' : 1.84,
                                         'not_seen' : 13.761,
@@ -986,7 +1247,7 @@ class TestParseNEOCPExtraParams(TestCase):
                                         'updated' : True
                                 }),
                            (u'P10nw2g', {'score' : 100,
-                                        'discovery_date' : datetime(2015,9,6,7,12,00),
+                                        'discovery_date' : datetime(2015, 9, 6, 7, 12, 00),
                                         'num_obs' : 6,
                                         'arc_length' : 1.16,
                                         'not_seen' : 17.455,
@@ -999,7 +1260,8 @@ class TestParseNEOCPExtraParams(TestCase):
         while obj < len(expected_obj_ids):
             self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
-            obj+=1
+            obj += 1
+
 
 class TestParsePCCP(TestCase):
 
@@ -1025,7 +1287,6 @@ class TestParsePCCP(TestCase):
           <tbody>'''
         self.table_footer = "</tbody>\n</table>"
 
-
         # Set to None to show all differences
         self.maxDiff = None
 
@@ -1043,8 +1304,8 @@ class TestParsePCCP(TestCase):
 
     def test_parse_pccp_entry(self):
 
-        html = BeautifulSoup(self.table_header + \
-        '''
+        html = BeautifulSoup(self.table_header +
+                             '''
         <tr><td><span style="display:none">WR0159E</span>&nbsp;<input type="checkbox" name="obj" VALUE="WR0159E"> WR0159E</td>
         <td align="right"><span style="display:none">010</span> 10&nbsp;&nbsp;&nbsp;</td>
         <td>&nbsp;&nbsp;2015 09 13.4&nbsp;&nbsp;</td>
@@ -1068,18 +1329,18 @@ class TestParsePCCP(TestCase):
                                         'update_time': datetime(2015, 9, 28, 17, 48, 10),
                                         'updated' : True
                                        }
-                            ),]
+                            ), ]
         self.assertNotEqual(None, obj_ids)
         obj = 0
         while obj < len(expected_obj_ids):
             self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
-            obj+=1
+            obj += 1
 
     def test_parse_pccp_multientries(self):
 
-        html = BeautifulSoup(self.table_header + \
-        '''
+        html = BeautifulSoup(self.table_header +
+                             '''
         <tr><td><span style="display:none">WR0159E</span>&nbsp;<input type="checkbox" name="obj" VALUE="WR0159E"> WR0159E</td>
         <td align="right"><span style="display:none">010</span> 10&nbsp;&nbsp;&nbsp;</td>
         <td>&nbsp;&nbsp;2015 09 13.4&nbsp;&nbsp;</td>
@@ -1131,7 +1392,8 @@ class TestParsePCCP(TestCase):
         while obj < len(expected_obj_ids):
             self.assertEqual(expected_obj_ids[obj][0], obj_ids[obj][0])
             self.assertEqual(expected_obj_ids[obj][1], obj_ids[obj][1])
-            obj+=1
+            obj += 1
+
 
 class TestFetchMPCOrbit(TestCase):
 
@@ -1154,7 +1416,7 @@ class TestFetchMPCOrbit(TestCase):
                              'Q-vector [y]': '-0.29869255',
                              'Q-vector [z]': '-0.24414360',
                              'Tisserand w.r.t. Jupiter': '6.1',
-                             'V w.r.t. Earth': '6.0',
+                             'ΔV w.r.t. Earth': '6.0',
                              'absolute magnitude': '26.6',
                              'aphelion distance': '1.009',
                              'arc length': '357',
@@ -1201,10 +1463,11 @@ class TestFetchMPCOrbit(TestCase):
         elements = parse_mpcorbit(BeautifulSoup('<html><table class="nb"><table></table></table></html>', 'html.parser'))
         self.assertEqual(expected_elements, elements)
 
+
 class TestParseMPCObsFormat(TestCase):
 
     def setUp(self):
-        '''The "code" for the dictionary keys for the test lines is as follows:
+        """The "code" for the dictionary keys for the test lines is as follows:
         <char1>_<char2><char3>_<char4> where:
         <char1> is the type of desigination:
             p: provisional designation (e.g. 'K15TE5B'),
@@ -1222,7 +1485,7 @@ class TestParseMPCObsFormat(TestCase):
             l: low precision
             h: high precision
             n: no magnitude
-        '''
+        """
         self.test_lines = { 'p_ C_l' :  u'     K15TE5B  C2015 10 19.36445 04 16 45.66 -02 06 29.9          18.7 RqEU023H45',
                             'p_KC_l' :  u'     K15TE5B KC2015 10 18.42125 04 16 20.07 -02 07 27.5          19.2 VqEU023H21',
                             'p_#C_l' :  u'     K15TE5B 5C2015 10 17.34423 04 15 51.57 -02 07 27.4          18.6 VqEU017W88',
@@ -1363,7 +1626,7 @@ class TestParseMPCObsFormat(TestCase):
         expected_params = { 'body'  : '01566',
                             'flags' : 't',
                             'obs_type'  : 'C',
-                            'obs_date'  : datetime(2002, 07, 31, 13, 9, 33, int(0.984*1e6)),
+                            'obs_date'  : datetime(2002, 7, 31, 13, 9, 33, int(0.984*1e6)),
                             'obs_ra'    : 307.6231666666667,
                             'obs_dec'   : -47.82069444444445,
                             'obs_mag'   : 18.1,
@@ -1393,18 +1656,17 @@ class TestParseMPCObsFormat(TestCase):
 
         self.compare_dict(expected_params, params)
 
-
     def test_p_spacex_l(self):
-        # This tests the case of an 'x' observation for a replaced discovery
-        # observation. From the MPC page
-        # (http://www.minorplanetcenter.net/iau/info/OpticalObs.html, Note 2):
-        # "In addition, there are 'X' and 'x' which are used only for already-
-        # filed observations. 'X' was given originally only to discovery
-        # observations that were approximate or semi-accurate and that had accurate
-        # measures corresponding to the time of discovery: this has been extended to
-        # other replaced discovery observations. Observations marked 'X'/'x' are to be
-        # suppressed in residual blocks. They are retained so that there exists
-        # an original record of a discovery. "
+        """This tests the case of an 'x' observation for a replaced discovery
+        observation. From the MPC page
+        (http://www.minorplanetcenter.net/iau/info/OpticalObs.html, Note 2):
+        "In addition, there are 'X' and 'x' which are used only for already-
+        filed observations. 'X' was given originally only to discovery
+        observations that were approximate or semi-accurate and that had accurate
+        measures corresponding to the time of discovery: this has been extended to
+        other replaced discovery observations. Observations marked 'X'/'x' are to be
+        suppressed in residual blocks. They are retained so that there exists
+        an original record of a discovery. """
         expected_params = { }
 
         params = parse_mpcobs(self.test_lines['p_ x_l'])
@@ -1477,6 +1739,7 @@ class TestParseMPCObsFormat(TestCase):
 
         self.compare_dict(expected_params, params)
 
+
 class TestFetchNEOCPObservations(TestCase):
 
     def setUp(self):
@@ -1510,6 +1773,7 @@ class TestFetchNEOCPObservations(TestCase):
         observations = fetch_NEOCP_observations(page)
         self.assertEqual(expected, observations)
 
+
 class TestIMAPLogin(TestCase):
 
     def setUp(self):
@@ -1538,8 +1802,8 @@ class TestIMAPLogin(TestCase):
     @mock.patch('astrometrics.sources_subs.imaplib')
     def test_emptyfolder(self, mockimaplib):
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['0'])
-        mailbox.search.return_value = ("OK", [''])
+        mailbox.select.return_value = ("OK", [b'0'])
+        mailbox.search.return_value = ("OK", [b''])
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
@@ -1547,8 +1811,8 @@ class TestIMAPLogin(TestCase):
     @mock.patch('astrometrics.sources_subs.imaplib')
     def test_foldersearchfailure(self, mockimaplib):
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['0'])
-        mailbox.search.return_value = ("NO", [''])
+        mailbox.select.return_value = ("OK", [b'0'])
+        mailbox.search.return_value = ("NO", [b''])
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
@@ -1556,9 +1820,9 @@ class TestIMAPLogin(TestCase):
     @mock.patch('astrometrics.sources_subs.imaplib')
     def test_cannot_retrieve_msg_high(self, mockimaplib):
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value = ("OK", [None,])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value = ("OK", [None, ])
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
@@ -1566,8 +1830,8 @@ class TestIMAPLogin(TestCase):
     @mock.patch('astrometrics.sources_subs.imaplib')
     def test_cannot_retrieve_msg_low(self, mockimaplib):
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.side_effect = error("FETCH command error: BAD ['Could not parse command']")
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -1578,9 +1842,9 @@ class TestIMAPLogin(TestCase):
     def test_find_msg_correct_match(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ("OK", [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
 
         expected_targets = ['2016 CV246']
         targets = fetch_NASA_targets(mailbox)
@@ -1591,9 +1855,9 @@ class TestIMAPLogin(TestCase):
     def test_msg_has_bad_prefix(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-birds-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 16 Feb 2018 21:27:04 +000\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-birds-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 16 Feb 2018 21:27:04 +000\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -1604,9 +1868,9 @@ class TestIMAPLogin(TestCase):
     def test_find_msg_has_bad_suffix(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 CV246 - Radar Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Radar Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -1617,9 +1881,9 @@ class TestIMAPLogin(TestCase):
     def test_find_msg_good_with_tz(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')])
 
         expected_targets = ['2016 BA14']
         targets = fetch_NASA_targets(mailbox)
@@ -1630,9 +1894,9 @@ class TestIMAPLogin(TestCase):
     def test_reject_msg_old_with_tz(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 15,  4, 27, 5)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
@@ -1643,12 +1907,12 @@ class TestIMAPLogin(TestCase):
     def test_find_multiple_msgs(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['2'])
-        mailbox.search.return_value = ("OK", ['1 2'])
-        results =  [ ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')]),
-                     ('OK', [('2 (RFC822 {12324}', 'Subject: [small-bodies-observations] 2016 CV123 - Observations Requested\r\nDate: Tue, 22 Feb 2016 22:47:42 -0500\r\n')])
+        mailbox.select.return_value = ("OK", [b'2'])
+        mailbox.search.return_value = ("OK", [b'1 2'])
+        results = [ ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')]),
+                    ('OK', [(b'2 (RFC822 {12324}', b'Subject: [small-bodies-observations] 2016 CV123 - Observations Requested\r\nDate: Tue, 22 Feb 2016 22:47:42 -0500\r\n')])
                    ]
-        mailbox.fetch.side_effect =  results
+        mailbox.fetch.side_effect = results
 
         expected_targets = ['2016 BA14', '2016 CV123']
         targets = fetch_NASA_targets(mailbox)
@@ -1659,13 +1923,13 @@ class TestIMAPLogin(TestCase):
     def test_one_msg_multiple_old_msgs(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['3'])
-        mailbox.search.return_value = ("OK", ['1 2 4'])
-        results =  [ ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 20516 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2015 20:27:04 -0500\r\n')]),
-                     ('OK', [('2 (RFC822 {12324}', 'Subject: [small-bodies-observations] 2015 CV123 - Observations Requested\r\nDate: Tue, 22 Dec 2015 22:47:42 -0500\r\n')]),
-                     ('OK', [('4 (RFC822 {12324}', 'Subject: [small-bodies-observations] 2016 CV123 - Observations Requested\r\nDate: Tue, 22 Feb 2016 22:47:42 -0500\r\n')])
-                   ]
-        mailbox.fetch.side_effect =  results
+        mailbox.select.return_value = ("OK", [b'3'])
+        mailbox.search.return_value = ("OK", [b'1 2 4'])
+        results = [ ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 20516 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2015 20:27:04 -0500\r\n')]),
+                    ('OK', [(b'2 (RFC822 {12324}', b'Subject: [small-bodies-observations] 2015 CV123 - Observations Requested\r\nDate: Tue, 22 Dec 2015 22:47:42 -0500\r\n')]),
+                    ('OK', [(b'4 (RFC822 {12324}', b'Subject: [small-bodies-observations] 2016 CV123 - Observations Requested\r\nDate: Tue, 22 Feb 2016 22:47:42 -0500\r\n')])
+                    ]
+        mailbox.fetch.side_effect = results
 
         expected_targets = ['2016 CV123']
         targets = fetch_NASA_targets(mailbox)
@@ -1676,9 +1940,9 @@ class TestIMAPLogin(TestCase):
     def test_find_fwd_msg_(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 23, 19, 51, 5)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
 
         expected_targets = ['2016 DJ']
         targets = fetch_NASA_targets(mailbox)
@@ -1689,9 +1953,9 @@ class TestIMAPLogin(TestCase):
     def test_reject_msg_old_with_tz_and_cutoff(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 16,  4, 27, 5)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = []
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
@@ -1702,9 +1966,9 @@ class TestIMAPLogin(TestCase):
     def test_accept_msg_old_with_tz_and_cutoff(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 16,  3, 26, 5)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
 
         expected_targets = ['2016 BA14']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
@@ -1715,13 +1979,14 @@ class TestIMAPLogin(TestCase):
     def test_accept_msg_multiple_targets(self, mockimaplib):
         MockDateTime.change_datetime(2016, 10, 25,  3, 26, 5)
         mailbox = mock.MagicMock()
-        mailbox.select.return_value = ("OK", ['1'])
-        mailbox.search.return_value = ("OK", ['1'])
-        mailbox.fetch.return_value =  ('OK', [('1 (RFC822 {12326}', 'Subject: [small-bodies-observations] 2016 TQ11, 2016 SR2, 2016 NP56,\r\n\t2016 ND1- Observations Requested\r\nDate: Mon, 24 Oct 2016 20:20:57 +0000\r\n')])
+        mailbox.select.return_value = ("OK", [b'1'])
+        mailbox.search.return_value = ("OK", [b'1'])
+        mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 TQ11, 2016 SR2, 2016 NP56,\r\n\t2016 ND1- Observations Requested\r\nDate: Mon, 24 Oct 2016 20:20:57 +0000\r\n')])
 
         expected_targets = ['2016 TQ11', '2016 SR2', '2016 NP56', '2016 ND1']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
+
 
 class TestConfigureDefaults(TestCase):
 
@@ -1735,13 +2000,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'Z21',
               }
 
-        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
-                            'pondtelescope' :'0m4',
-                            'observatory' : '',
-                            'site' : 'TFN',
-                            'filter' : 'w',
-                            'exp_type':'EXPOSE',
-                            'binning' : 2}
+        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+                            'pondtelescope': '0m4',
+                            'observatory': '',
+                            'site': 'TFN',
+                            'exp_type': 'EXPOSE',
+                            'binning': 2}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1755,13 +2019,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'T04',
               }
 
-        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
-                            'pondtelescope' :'0m4',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'OGG',
-                            'filter' : 'w',
-                            'binning' : 2}
+        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+                            'pondtelescope': '0m4',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'OGG',
+                            'binning': 2}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1775,13 +2038,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'Q59',
               }
 
-        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
-                            'pondtelescope' :'0m4',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'COJ',
-                            'filter' : 'w',
-                            'binning' : 2}
+        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+                            'pondtelescope': '0m4',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'COJ',
+                            'binning': 2}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1795,13 +2057,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'L09',
               }
 
-        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
-                            'pondtelescope' :'0m4',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'CPT',
-                            'filter' : 'w',
-                            'binning' : 2}
+        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+                            'pondtelescope': '0m4',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'CPT',
+                            'binning': 2}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1815,13 +2076,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'V38',
               }
 
-        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
-                            'pondtelescope' :'0m4',
-                            'observatory' : 'aqwa',
-                            'exp_type':'EXPOSE',
-                            'site' : 'ELP',
-                            'filter' : 'w',
-                            'binning' : 2}
+        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+                            'pondtelescope': '0m4',
+                            'observatory': 'aqwa',
+                            'exp_type': 'EXPOSE',
+                            'site': 'ELP',
+                            'binning': 2}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1835,13 +2095,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'W89',
               }
 
-        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
-                            'pondtelescope' :'0m4',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'LSC',
-                            'filter' : 'w',
-                            'binning' : 2}
+        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+                            'pondtelescope': '0m4',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'LSC',
+                            'binning': 2}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1855,36 +2114,17 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'W79',
               }
 
-        expected_params = { 'instrument' :  '0M4-SCICAM-SBIG',
-                            'pondtelescope' :'0m4',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'LSC',
-                            'filter' : 'w',
-                            'binning' : 2}
+        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+                            'pondtelescope': '0m4',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'LSC',
+                            'binning': 2}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
 
         self.assertEqual(expected_params, params)
-
-    def test_1m_sinistro_lsc_doma(self):
-        expected_params = { 'binning': 1,
-                            'filter': 'w',
-                            'instrument': '1M0-SCICAM-SINISTRO',
-                            'observatory': 'doma',
-                            'exp_type':'EXPOSE',
-                            'pondtelescope': '1m0a',
-                            'site': 'LSC',
-                            'site_code': 'W85'}
-
-
-        params = { 'site_code' : 'W85' }
-
-        params = configure_defaults(test_params)
-
-        self.assertEqual(expected_params, params)
-
 
     def test_lsc_sinistro(self):
         test_params = {
@@ -1893,13 +2133,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'W86',
               }
 
-        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'LSC',
-                            'filter' : 'w',
-                            'binning' : 1}
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'LSC',
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1913,16 +2152,15 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'W87',
               }
 
-        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'LSC',
-                            'filter' : 'w',
-                            'binning' : 1,
-                            'site_code' : 'W87',
-                            'exp_count' : 42,
-                            'exp_time' : 42.0}
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'LSC',
+                            'binning': 1,
+                            'site_code': 'W87',
+                            'exp_count': 42,
+                            'exp_time': 42.0}
 
         params = configure_defaults(test_params)
 
@@ -1935,13 +2173,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'F65',
               }
 
-        expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
-                            'pondtelescope' :'2m0',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'OGG',
-                            'filter' : 'solar',
-                            'binning' : 2}
+        expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
+                            'pondtelescope': '2m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'OGG',
+                            'binning': 2}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1955,12 +2192,11 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'E10',
               }
 
-        expected_params = { 'instrument' :  '2M0-SCICAM-SPECTRAL',
-                            'pondtelescope' :'2m0',
+        expected_params = { 'instrument':  '2M0-SCICAM-SPECTRAL',
+                            'pondtelescope': '2m0',
                             'observatory' : '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'site' : 'COJ',
-                            'filter' : 'solar',
                             'binning' : 2}
         expected_params.update(test_params)
 
@@ -1975,13 +2211,12 @@ class TestConfigureDefaults(TestCase):
               'site_code': 'V37',
               }
 
-        expected_params = { 'instrument' :  '1M0-SCICAM-SINISTRO',
-                            'pondtelescope' :'1m0',
-                            'observatory' : '',
-                            'exp_type':'EXPOSE',
-                            'site' : 'ELP',
-                            'filter' : 'w',
-                            'binning' : 1}
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'site': 'ELP',
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -1990,16 +2225,14 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_cpt(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K92'}
 
-
-        params = { 'site_code' : 'K92' }
+        params = {'site_code': 'K92'}
 
         params = configure_defaults(params)
 
@@ -2007,16 +2240,14 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_lsc_doma(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W85'}
 
-
-        params = { 'site_code' : 'W85' }
+        params = {'site_code': 'W85'}
 
         params = configure_defaults(params)
 
@@ -2024,16 +2255,14 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_lsc(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W86'}
 
-
-        params = { 'site_code' : 'W86' }
+        params = {'site_code': 'W86'}
 
         params = configure_defaults(params)
 
@@ -2041,16 +2270,14 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_elp(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'ELP',
                             'site_code': 'V37'}
 
-
-        params = { 'site_code' : 'V37' }
+        params = {'site_code': 'V37'}
 
         params = configure_defaults(params)
 
@@ -2058,16 +2285,14 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_lsc_domec(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'LSC',
                             'site_code': 'W87'}
 
-
-        params = { 'site_code' : 'W87' }
+        params = {'site_code': 'W87'}
 
         params = configure_defaults(params)
 
@@ -2075,16 +2300,14 @@ class TestConfigureDefaults(TestCase):
 
     def test_1m_sinistro_cpt_domec(self):
         expected_params = { 'binning': 1,
-                            'filter': 'w',
                             'instrument': '1M0-SCICAM-SINISTRO',
                             'observatory': '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'pondtelescope': '1m0',
                             'site': 'CPT',
                             'site_code': 'K93'}
 
-
-        params = { 'site_code' : 'K93' }
+        params = {'site_code': 'K93'}
 
         params = configure_defaults(params)
 
@@ -2092,16 +2315,14 @@ class TestConfigureDefaults(TestCase):
 
     def test_2m_ogg(self):
         expected_params = { 'binning': 2,
-                            'filter': 'solar',
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'pondtelescope': '2m0',
                             'site': 'OGG',
                             'site_code': 'F65'}
 
-
-        params = { 'site_code' : 'F65' }
+        params = {'site_code': 'F65'}
 
         params = configure_defaults(params)
 
@@ -2109,20 +2330,19 @@ class TestConfigureDefaults(TestCase):
 
     def test_2m_coj(self):
         expected_params = { 'binning': 2,
-                            'filter': 'solar',
                             'instrument': '2M0-SCICAM-SPECTRAL',
                             'observatory': '',
-                            'exp_type':'EXPOSE',
+                            'exp_type': 'EXPOSE',
                             'pondtelescope': '2m0',
                             'site': 'COJ',
                             'site_code': 'E10'}
 
-
-        params = { 'site_code' : 'E10' }
+        params = {'site_code': 'E10'}
 
         params = configure_defaults(params)
 
         self.assertEqual(params, expected_params)
+
 
 class TestMakeCadence(TestCase):
 
@@ -2139,9 +2359,9 @@ class TestMakeCadence(TestCase):
                          "elements_type": "MPC_MINOR_PLANET",
                          "type": "NON_SIDEREAL",
                          "argofperih": 27.8469}
-        self.params =  {'utc_date' : datetime(2017,8,20,0,0),
-                        'start_time' : datetime(2017,8,20,8,40),
-                        'end_time' : datetime(2017,8,20,19,40),
+        self.params = { 'utc_date' : datetime(2017, 8, 20, 0, 0),
+                        'start_time' : datetime(2017, 8, 20, 8, 40),
+                        'end_time' : datetime(2017, 8, 20, 19, 40),
                         'period' : 2.0,
                         'jitter' : 0.25,
                         'group_id' : "3122_Q59-20170815",
@@ -2182,7 +2402,6 @@ class TestMakeCadence(TestCase):
         self.request['target']['scheme'] = self.request['target']['elements_type']
 
         self.maxDiff = None
-
 
     @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     def test_cadence_valhalla(self):
@@ -2294,8 +2513,8 @@ class TestMakeCadence(TestCase):
         self.request['molecules'][0]['exposure_count'] = 10
         self.request['molecules'][0]['exposure_time'] = 2.0
         params = self.params
-        params['start_time'] = datetime(2017,9,2,6,0,0)
-        params['end_time'] = datetime(2017,9,2,12,40,0)
+        params['start_time'] = datetime(2017, 9, 2, 6, 0, 0)
+        params['end_time'] = datetime(2017, 9, 2, 12, 40, 0)
 
         ur = make_cadence_valhalla(self.request, params, self.ipp_value)
         for key in ur.keys():
@@ -2411,20 +2630,21 @@ class TestMakeCadence(TestCase):
         self.request['molecules'][0]['exposure_count'] = 10
         self.request['molecules'][0]['exposure_time'] = 2.0
         params = self.params
-        params['start_time'] = datetime(2017,9,2,6,0,0)
-        params['end_time'] = datetime(2017,9,2,12,40,0)
+        params['start_time'] = datetime(2017, 9, 2, 6, 0, 0)
+        params['end_time'] = datetime(2017, 9, 2, 12, 40, 0)
 
         ur = make_cadence(self.elements, params, self.ipp_value, self.request)
         for key in ur.keys():
             self.assertEqual(expected[key], ur[key])
 
+
 class TestFetchTaxonomyData(TestCase):
 
     def setUp(self):
         # Read and make soup from the stored, partial version of the PDS Taxonomy Database
-        #test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
-        #self.test_taxonomy_page = test_fh
-        #test_fh.close()
+        # test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
+        # self.test_taxonomy_page = test_fh
+        # test_fh.close()
         self.test_taxonomy_page = os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat')
 
     def test_basics(self):
@@ -2434,22 +2654,22 @@ class TestFetchTaxonomyData(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_targets(self):
-        expected_targets =  [['980','SU',"T","PDS6",'7G'],
-                             ['980','S3',"Ba","PDS6",'7I'],
-                             ['980','S',"Td","PDS6",'2I'],
-                             ['980','T',"H","PDS6",'65'],
-                             ['980','L',"B","PDS6",'s'],
-                             ['4713','A',"B","PDS6",'s'],
-                             ['4713','A',"3T","PDS6",' '],
-                             ['4713','Sl',"3B","PDS6",' '],
-                             ['4713','Sw',"BD","PDS6",'a'],
+        expected_targets = [ ['980', 'SU', "T", "PDS6", '7G'],
+                             ['980', 'S3', "Ba", "PDS6", '7I'],
+                             ['980', 'S', "Td", "PDS6", '2I'],
+                             ['980', 'T', "H", "PDS6", '65'],
+                             ['980', 'L', "B", "PDS6", 's'],
+                             ['4713', 'A', "B", "PDS6", 's'],
+                             ['4713', 'A', "3T", "PDS6", ' '],
+                             ['4713', 'Sl', "3B", "PDS6", ' '],
+                             ['4713', 'Sw', "BD", "PDS6", 'a'],
                             ]
         tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
         for line in expected_targets:
             self.assertIn(line, tax_data)
 
     def test_tax(self):
-        expected_tax =  ['SU',
+        expected_tax = [ 'SU',
                          'S3',
                          'S',
                          'T',
@@ -2484,31 +2704,28 @@ class TestFetchTaxonomyData(TestCase):
                          'V',
                           ]
         tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
-        taxonomy=[row[1] for row in tax_data]
+        taxonomy = [row[1] for row in tax_data]
         self.assertEqual(expected_tax, taxonomy)
 
     def test_tax_site_pull(self):
-        expected_line = ['1','G',"T","PDS6","7G"]
+        expected_line = ['1', 'G', "T", "PDS6", "7G"]
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
+
 
 class TestFetchTargetsFromList(TestCase):
 
     def test_commad_line_entry(self):
-        test_list=['588', '2759', '4035', '1930_UB', '1989 AL2']
+        test_list = ['588', '2759', '4035', '1930_UB', '1989 AL2']
         out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2']
-        self.assertEqual(out_list,fetch_list_targets(test_list))
+        self.assertEqual(out_list, fetch_list_targets(test_list))
 
     def test_text_file_entry(self):
-        test_file = []
-        test_file.append(os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'))
+        test_file = [os.path.join('astrometrics', 'tests', 'test_target_list_page.txt')]
         out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2']
-        self.assertEqual(out_list,fetch_list_targets(test_file))
+        self.assertEqual(out_list, fetch_list_targets(test_file))
 
     def test_file_and_command_entry(self):
-        test_file = []
-        test_file.append(os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'))
-        test_file.append('4063')
-        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2','4063']
-        self.assertEqual(out_list,fetch_list_targets(test_file))
-
+        test_file = [os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'), '4063']
+        out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2', '4063']
+        self.assertEqual(out_list, fetch_list_targets(test_file))

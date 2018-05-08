@@ -1,3 +1,4 @@
+from operator import itemgetter
 from django import template
 from django.conf import settings
 from django.template import Library
@@ -7,6 +8,7 @@ from astrometrics.time_subs import degreestohours, hourstodegrees, degreestodms,
 
 register = Library()
 
+
 def subsblank(value, arg):
     arg = int(arg)
     if not value:
@@ -14,14 +16,29 @@ def subsblank(value, arg):
     else:
         return value
 
+
 def roundeddays(value, arg):
-    '''Lightly customized version of floatformat to return "None" if the value
-    is None rather than a blank space'''
+    """Lightly customized version of floatformat to return "None" if the value
+    is None rather than a blank space"""
     if value:
-        return floatformat(value,arg)
+        return floatformat(value, arg)
     else:
         return "None"
 
+
+def dictsortreversed_with_none(value, arg):
+    """
+    Takes a list of dicts, returns that list sorted in reverse order by the
+    property given in the argument. Separates out None values and places them
+    at the end.
+    """
+    try:
+        return sorted(value, key=lambda x: (itemgetter(arg)(x) is not None, itemgetter(arg)(x)), reverse=True)
+    except TypeError:
+        return ''
+
+
+register.filter('dictsortreversed_with_none', dictsortreversed_with_none)
 register.filter('subsblank', subsblank)
 register.filter('degreestohours', degreestohours)
 register.filter('hourstodegrees', hourstodegrees)

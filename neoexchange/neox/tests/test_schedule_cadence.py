@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list
 
 from datetime import datetime
 from django.test.client import Client
@@ -13,6 +13,9 @@ from core.models import Body, Proposal
 
 import time
 
+
+@patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+@patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
 class ScheduleCadence(FunctionalTest):
 
     def setUp(self):
@@ -60,6 +63,7 @@ class ScheduleCadence(FunctionalTest):
 # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
 # TAL: Need to patch the datetime in views also otherwise we will get the wrong
 # semester and window bounds.
+
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_can_schedule_cadence(self):

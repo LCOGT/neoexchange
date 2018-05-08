@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2016-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime, timedelta
 from unittest import skipIf
@@ -33,30 +33,30 @@ from numpy.testing import assert_allclose
 
 from core.models import Body, Proposal, Block, Frame
 
-#Import module to test
+# Import module to test
 from photometrics.catalog_subs import *
 from core.views import check_catalog_and_refit
 
 class ZeropointUnitTest(TestCase):
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
-#    def test_get_cat_ra_dec(self, mock_vizier):
+    # @mock.patch('photometrics.catalog_subs.Vizier')
+    # def test_get_cat_ra_dec(self, mock_vizier):
     def test_get_cat_ra_dec(self):
-        #test getting a single ra, dec, and rmag out of the default UCAC4 catalog
-#        test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-##        test_query_result = []
-##        test_query_result.append(Table.read(test_data, format='csv'))
-##        mock_vizier().query_region().__getitem__.return_value=test_query_result
-##        print mock_vizier().query_region().__getitem__.return_value#['_RAJ2000'][0]
-##        print len(mock_vizier().query_region().__getitem__.return_value)
-##        print mock_vizier().query_region().__getitem__(0)
-##        print test_query_result.__getitem__(0)
-#        print test_query_result[0]
-#        print len(test_query_result)
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
-#        print mock_vizier().query_region().__getitem__.return_value[0]#['_RAJ2000'][0]
-#        print len(mock_vizier().query_region().__getitem__.return_value[0])
+        # test getting a single ra, dec, and rmag out of the default UCAC4 catalog
+        # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
+        #        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        ## test_query_result = []
+        ## test_query_result.append(Table.read(test_data, format='csv'))
+        ## mock_vizier().query_region().__getitem__.return_value=test_query_result
+        ## print mock_vizier().query_region().__getitem__.return_value#['_RAJ2000'][0]
+        ## print len(mock_vizier().query_region().__getitem__.return_value)
+        ## print mock_vizier().query_region().__getitem__(0)
+        ## print test_query_result.__getitem__(0)
+        # print test_query_result[0]
+        # print len(test_query_result)
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # print mock_vizier().query_region().__getitem__.return_value[0]#['_RAJ2000'][0]
+        # print len(mock_vizier().query_region().__getitem__.return_value[0])
 
         expected_ra_first_source = 299.29474599999998
 
@@ -85,10 +85,10 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_no_cat(self, mock_vizier):
     def test_no_cat(self):
-        #test if no catalog input, use default catalog
-#        test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # test if no catalog input, use default catalog
+        # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29474599999998
 
@@ -114,10 +114,10 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_not_default(self, mock_vizier):
     def test_get_cat_ra_dec_not_default(self):
-        #test a catalog other than the default
-#        test_data = __file__.replace('.py', '_PPMXL.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # test a catalog other than the default
+        # test_data = __file__.replace('.py', '_PPMXL.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL.dat', format='csv')
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29136599999998
 
@@ -143,10 +143,10 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_rmag_limit(self, mock_vizier):
     def test_get_cat_diff_rmag_limit(self):
-        #test a catalog with an r mag limit
-#        test_data = __file__.replace('.py', '_PPMXL_diff_rmag_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_rmag_limit.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # test a catalog with an r mag limit
+        # test_data = __file__.replace('.py', '_PPMXL_diff_rmag_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_rmag_limit.dat', format='csv')
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 299.82885099999999
 
@@ -156,7 +156,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_len_cat_table = 443
 
-        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit = "<=14.5", cat_name = "PPMXL")
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", rmag_limit="<=14.5", cat_name="PPMXL")
 
         ra_last_source = cat_table['RAJ2000'][-1]
 
@@ -172,10 +172,10 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_row_limit(self, mock_vizier):
     def test_get_cat_diff_row_limit(self):
-        #test a catalog with a different row limit
-#        test_data = __file__.replace('.py', '_PPMXL_diff_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_row_limit.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # test a catalog with a different row limit
+        # test_data = __file__.replace('.py', '_PPMXL_diff_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_row_limit.dat', format='csv')
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29136599999998
 
@@ -185,7 +185,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_len_cat_table = 737
 
-        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit = 40, cat_name = "PPMXL")
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", set_row_limit=40, cat_name="PPMXL")
 
         ra_first_source = cat_table['RAJ2000'][0]
 
@@ -201,10 +201,10 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_width(self, mock_vizier):
     def test_get_cat_diff_width(self):
-        #test a catalog with a different width and height
-#        test_data = __file__.replace('.py', '_UCAC4_diff_width_height.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_diff_width_height.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # test a catalog with a different width and height
+        # test_data = __file__.replace('.py', '_UCAC4_diff_width_height.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_diff_width_height.dat', format='csv')
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 299.74110200000001
 
@@ -230,10 +230,10 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_above_row_limit(self, mock_vizier):
     def test_get_cat_ra_dec_above_row_limit(self):
-        #test a catalog with a different width and height
-#        test_data = __file__.replace('.py', '_PPMXL_above_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_above_row_limit.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # test a catalog with a different width and height
+        # test_data = __file__.replace('.py', '_PPMXL_above_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_above_row_limit.dat', format='csv')
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 267.35990700000002
 
@@ -259,10 +259,10 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_PPMXL(self, mock_vizier):
     def test_get_cat_ra_dec_empty_list_PPMXL(self):
-        #test a catalog with a different width and height
-#        test_data = __file__.replace('.py', '_UCAC4_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_empty.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # test a catalog with a different width and height
+        # test_data = __file__.replace('.py', '_UCAC4_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_empty.dat', format='csv')
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 0.0
 
@@ -278,7 +278,7 @@ class ZeropointUnitTest(TestCase):
 
         dec_last_source = cat_table['DEJ2000'][-1]
 
-        rmag_last_source = cat_table['rmag'][-1] #will replace cat_name with UCAC4 after failing with PPMXL
+        rmag_last_source = cat_table['rmag'][-1]  # will replace cat_name with UCAC4 after failing with PPMXL
 
         self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
         self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
@@ -288,10 +288,10 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_UCAC4(self, mock_vizier):
     def test_get_cat_ra_dec_empty_list_UCAC4(self):
-        #test a catalog with a different width and height
-#        test_data = __file__.replace('.py', '_PPMXL_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_empty.dat', format='csv')
-#        test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-#        mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        # test a catalog with a different width and height
+        # test_data = __file__.replace('.py', '_PPMXL_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_empty.dat', format='csv')
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 0.0
 
@@ -307,7 +307,7 @@ class ZeropointUnitTest(TestCase):
 
         dec_last_source = cat_table['DEJ2000'][-1]
 
-        rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
+        rmag_last_source = cat_table['r2mag'][-1]  # will replace cat_name with PPMXL after failing with UCAC4
 
         self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
         self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
@@ -330,7 +330,7 @@ class ZeropointUnitTest(TestCase):
 
         dec_last_source = cat_table['DEJ2000'][-1]
 
-        rmag_last_source = cat_table['r2mag'][-1] #will replace cat_name with PPMXL after failing with UCAC4
+        rmag_last_source = cat_table['r2mag'][-1]  # will replace cat_name with PPMXL after failing with UCAC4
 
         self.assertAlmostEqual(expected_ra_last_source, ra_last_source, 8)
         self.assertAlmostEqual(expected_dec_last_source, dec_last_source, 8)
@@ -338,7 +338,7 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
     def test_cross_match_UCAC4_longerThan_testFITS(self):
-        #test with cat 1 as longer UCAC4 table values and cat 2 as shorter test FITS table values
+        # test with cat 1 as longer UCAC4 table values and cat 2 as shorter test FITS table values
 
         expected_cross_match_table_data = [(299.303973, 299.304084, 1.11e-04, 35.20152, 35.201634, 1.1400e-04, 0.0, 13.8500003815, 0.05, 13.8500003815),
                                            (299.828851, 299.828851, 0.0, 34.99841, 34.998407, 3.0000e-06, 0.0, 14.5, 0.01, 14.5),
@@ -348,7 +348,10 @@ class ZeropointUnitTest(TestCase):
                                            (299.709162, 299.709139, 2.3000e-05, 35.218112, 35.218109, 3.0000e-06, 13.3520002365, 12.7700004578, 0.0, 0.582000),
                                            (299.860889, 299.860871, 1.8000e-05, 35.381485, 35.381474, 1.1000e-05, 14.9130001068, 14.0799999237, 0.0, 0.833000)]
 
-        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff',
+                                                                                        'Dec Cat 1', 'Dec Cat 2', 'Dec diff',
+                                                                                        'r mag Cat 1', 'r mag Cat 2', 'r mag err',
+                                                                                        'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
         table_cat_1_data = [(299.303973, 35.20152, 0.0, 0),
                             (299.828851, 34.99841, 0.0, 0),
@@ -358,7 +361,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709162, 35.218112, 13.3520002365, 0),
                             (299.860889, 35.381485, 14.9130001068, 0)]
 
-        table_cat_1 = Table(rows=table_cat_1_data, names = ('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_1 = Table(rows=table_cat_1_data, names=('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         table_cat_2_data = [(299.291366, 35.242404, 14.3199996948, 3, 0),
                             (299.304084, 35.201634, 13.8500003815, 5, 0),
@@ -369,7 +372,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names=('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
@@ -454,8 +457,8 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
 
     def test_cross_match_UCAC4_shorterThan_testFITS(self):
-        #test with cat 1 as longer test FITS table values and cat 2 as shorter UCAC4 table values to test cat reordering
-        #also tests filtering of poor cross matches
+        # test with cat 1 as longer test FITS table values and cat 2 as shorter UCAC4 table values to test cat reordering
+        # also tests filtering of poor cross matches
 
         expected_cross_match_table_data = [(299.291366, 299.291455, 8.9000e-5, 35.242404, 35.242368, 3.6000e-05, 14.3199996948, 0.0, 0.03, 14.3199996948),
                                            (299.304084, 299.303973, 1.11e-04, 35.201634, 35.20152, 1.1400e-04, 13.8500003815, 0.0, 0.05, 13.8500003815),
@@ -466,7 +469,10 @@ class ZeropointUnitTest(TestCase):
                                            (299.709139, 299.709162, 2.3000e-05, 35.218109, 35.218112, 3.0000e-06, 12.7700004578, 13.3520002365, 0.0, 0.582000),
                                            (299.860871, 299.860889, 1.8000e-05, 35.381474, 35.381485, 1.1000e-05, 14.0799999237, 14.9130001068, 0.0, 0.833000)]
 
-        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1',
+                                                                                        'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2',
+                                                                                        'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8',
+                                                                                                                           'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
         table_cat_1_data = [(299.303973, 35.20152, 0.0, 0),
                             (299.828851, 34.99841, 0.0, 0),
@@ -478,7 +484,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709162, 35.218112, 13.3520002365, 0),
                             (299.860889, 35.381485, 14.9130001068, 0)]
 
-        table_cat_1 = Table(rows=table_cat_1_data, names = ('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_1 = Table(rows=table_cat_1_data, names=('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         table_cat_2_data = [(299.291366, 35.242404, 14.3199996948, 3, 0),
                             (299.304084, 35.201634, 13.8500003815, 5, 0),
@@ -489,7 +495,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names=('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
@@ -584,19 +590,22 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
 
     def test_cross_match_PPMXL_shorterThan_testFITS(self):
-        #test with cat 1 as longer test FITS table values and cat 2 as shorter PPMXL table values to test cat reordering
-        #also tests filtering of poor cross matches
+        # test with cat 1 as longer test FITS table values and cat 2 as shorter PPMXL table values to test cat reordering
+        # also tests filtering of poor cross matches
 
         expected_cross_match_table_data = [(299.291366, 299.291455, 8.9000e-5, 35.242404, 35.242368, 3.6000e-05, 14.3199996948, 0.0, 0.0, 14.3199996948),
                                            (299.304084, 299.303973, 1.11e-04, 35.201634, 35.20152, 1.1400e-04, 13.8500003815, 0.0, 0.0, 13.8500003815),
                                            (299.480004, 299.479984, 2.0000e-05, 34.965488, 34.965502, 1.4000e-05, 14.3800001144, 0.0, 0.0, 14.3800001144),
                                            (299.308579, 299.308515, 6.4000e-05, 35.165495, 35.165529, 3.4000e-05, 14.8900003433, 15.0059995651, 0.0, 0.115999),
-                                           (299.828851, 299.828851, 0.0, 34.998407, 34.99841, 3.0000e-06, 14.5,0.0,  0.0, 14.5),
+                                           (299.828851, 299.828851, 0.0, 34.998407, 34.99841, 3.0000e-06, 14.5, 0.0,  0.0, 14.5),
                                            (299.510143, 299.510127, 1.6000e-05, 34.960303, 34.960327, 2.4000e-05, 14.4499998093, 15.5469999313, 0.0, 1.097000),
                                            (299.709139, 299.709162, 2.3000e-05, 35.218109, 35.218112, 3.0000e-06, 12.7700004578, 13.3520002365, 0.0, 0.582000),
                                            (299.860871, 299.860889, 1.8000e-05, 35.381474, 35.381485, 1.1000e-05, 14.0799999237, 14.9130001068, 0.0, 0.833000)]
 
-        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1',
+                                                                                        'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2',
+                                                                                        'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8',
+                                                                                                                           'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
         table_cat_1_data = [(299.303973, 35.20152, 0.0, 0),
                             (299.828851, 34.99841, 0.0, 0),
@@ -608,7 +617,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709162, 35.218112, 13.3520002365, 0),
                             (299.860889, 35.381485, 14.9130001068, 0)]
 
-        table_cat_1 = Table(rows=table_cat_1_data, names = ('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_1 = Table(rows=table_cat_1_data, names=('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         table_cat_2_data = [(299.291366, 35.242404, 14.3199996948, 0),
                             (299.304084, 35.201634, 13.8500003815, 0),
@@ -619,7 +628,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0),
                             (299.860871, 35.381474, 14.0799999237, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names=('RAJ2000', 'DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
@@ -714,8 +723,8 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
 
     def test_cross_match_UCAC_shorterThan_testFITS(self):
-        #test with cat 1 as longer test FITS table values and cat 2 as shorter UCAC table values to test cat reordering NOTE: UCAC not UCAC4 tested here...need to add a test for something other than a variation of PPMXL or UCAC.
-        #also tests filtering of poor cross matches
+        # test with cat 1 as longer test FITS table values and cat 2 as shorter UCAC table values to test cat reordering NOTE: UCAC not UCAC4 tested here...need to add a test for something other than a variation of PPMXL or UCAC.
+        # also tests filtering of poor cross matches
 
         expected_cross_match_table_data = [(299.291366, 299.291455, 8.9000e-5, 35.242404, 35.242368, 3.6000e-05, 14.3199996948, 0.0, 0.03, 14.3199996948),
                                            (299.304084, 299.303973, 1.11e-04, 35.201634, 35.20152, 1.1400e-04, 13.8500003815, 0.0, 0.05, 13.8500003815),
@@ -726,7 +735,10 @@ class ZeropointUnitTest(TestCase):
                                            (299.709139, 299.709162, 2.3000e-05, 35.218109, 35.218112, 3.0000e-06, 12.7700004578, 13.3520002365, 0.0, 0.582000),
                                            (299.860871, 299.860889, 1.8000e-05, 35.381474, 35.381485, 1.1000e-05, 14.0799999237, 14.9130001068, 0.0, 0.833000)]
 
-        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1',
+                                                                                        'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2',
+                                                                                        'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8',
+                                                                                                                           'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
         table_cat_1_data = [(299.303973, 35.20152, 0.0, 0),
                             (299.828851, 34.99841, 0.0, 0),
@@ -738,7 +750,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709162, 35.218112, 13.3520002365, 0),
                             (299.860889, 35.381485, 14.9130001068, 0)]
 
-        table_cat_1 = Table(rows=table_cat_1_data, names = ('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_1 = Table(rows=table_cat_1_data, names=('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         table_cat_2_data = [(299.291366, 35.242404, 14.3199996948, 3, 0),
                             (299.304084, 35.201634, 13.8500003815, 5, 0),
@@ -749,7 +761,7 @@ class ZeropointUnitTest(TestCase):
                             (299.709139, 35.218109, 12.7700004578, 0, 0),
                             (299.860871, 35.381474, 14.0799999237, 0, 0)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names=('RAJ2000', 'DEJ2000', 'rmag', 'e_rmag', 'flags'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "UCAC")
 
@@ -844,7 +856,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
 
     def test_cross_match_filtering(self):
-        #test filtering of poor catalog cross matches
+        # test filtering of poor catalog cross matches
 
         expected_cross_match_table_data = [(299.480004, 299.479984, 2.0000e-05, 34.965488, 34.965502, 1.4000e-05, 14.3800001144, 0.0, 0.0, 14.3800001144),
                                            (299.308579, 299.308515, 6.4000e-05, 35.165495, 35.165529, 3.4000e-05, 14.8900003433, 15.0059995651, 0.0, 0.115999),
@@ -852,7 +864,10 @@ class ZeropointUnitTest(TestCase):
                                            (299.709139, 299.709162, 2.3000e-05, 35.218109, 35.218112, 3.0000e-06, 12.7700004578, 13.3520002365, 0.0, 0.582000),
                                            (299.860871, 299.860889, 1.8000e-05, 35.381474, 35.381485, 1.1000e-05, 14.0799999237, 14.9130001068, 0.0, 0.833000)]
 
-        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1',
+                                                                                        'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2',
+                                                                                        'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8',
+                                                                                                                           'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
         table_cat_1_data = [(299.303973, 35.20152, 0.0, 0),
                             (299.828851, 34.99841, 0.0, 0),
@@ -866,7 +881,7 @@ class ZeropointUnitTest(TestCase):
                             (299.315295, 35.069564, 0.0, 0),
                             (299.321592, 35.351089, 14.0190000534, 0)]
 
-        table_cat_1 = Table(rows=table_cat_1_data, names = ('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_1 = Table(rows=table_cat_1_data, names=('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         table_cat_2_data = [(299.291366, 35.242404, 14.3199996948, 1),
                             (299.304084, 35.201634, 13.8500003815, 1),
@@ -879,7 +894,7 @@ class ZeropointUnitTest(TestCase):
                             (299.31235, 35.07259, 14.8500003815, 0),
                             (299.362172, 35.351208, 14.2600002289, 1)]
 
-        table_cat_2 = Table(rows=table_cat_2_data, names = ('RAJ2000', 'DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
+        table_cat_2 = Table(rows=table_cat_2_data, names=('RAJ2000', 'DEJ2000', 'r2mag', 'fl'), dtype=('f8', 'f8', 'f8', 'i2'))
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
@@ -938,7 +953,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
 
     def test_get_zeropoint(self):
-        #test zeropoint calculation
+        # test zeropoint calculation
 
         expected_avg_zeropoint = 0.8520
 
@@ -952,7 +967,10 @@ class ZeropointUnitTest(TestCase):
                                   (299.860871, 299.860889, 1.8000e-05, 35.381474, 35.381485, 1.1000e-05, 14.0799999237, 14.9130001068, 0.03, 0.833000),
                                   (299.789005, 299.788977, 2.8000e-05, 34.983303, 34.98333, 2.7000e-05, 14.5200004578, 13.795999527, 0.03, 0.724000)]
 
-        cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+        cross_match_table = Table(rows=cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff',
+                                                                      'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8',
+                                                                                                                                       'f8', 'f8', 'f8', 'f8', 'f8',
+                                                                                                                                       'f8', 'f8'))
 
         avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.2)
 
@@ -962,7 +980,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
 
     def test_get_zeropoint_larger_dataset(self):
-        #test zeropoint calculation
+        # test zeropoint calculation
 
         expected_avg_zeropoint = 0.095078815789473692
 
@@ -983,7 +1001,7 @@ class ZeropointUnitTest(TestCase):
                                   (299.789005, 299.788977, 2.8000e-05, 34.983303, 34.98333, 2.7000e-05, 14.5200004578, 13.795999527, 0.06, 0.724000),
                                   (299.999005, 299.998977, 2.8000e-05, 34.223303, 34.22333, 2.7000e-05, 14.5200004578, 0.0, 0.08, 14.5200004578)]
 
-        cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+        cross_match_table = Table(rows=cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
         avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.1)
 
@@ -993,7 +1011,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
 
     def test_get_zeropoint_inconclusive_value(self):
-        #test zeropoint calculation
+        # test zeropoint calculation
 
         expected_avg_zeropoint = 40.0
 
@@ -1007,7 +1025,7 @@ class ZeropointUnitTest(TestCase):
                                   (209.107363, 209.107484127, 0.0001, -17.524826, -17.5249530573, 0.0001, 12.8000001907, 17.7864189148, 0.01, 4.9864),
                                   (209.319028, 209.319387053, 0.0004, -17.577961, -17.5778475751, 0.0001, 13.4300003052, 17.4026889801, 0.01, 3.9727)]
 
-        cross_match_table = Table(rows=cross_match_table_data, names = ('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+        cross_match_table = Table(rows=cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2', 'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err', 'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
 
         avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance=0.1)
 
@@ -1026,7 +1044,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 12
 
-	expected_cat_name = "PPMXL"
+        expected_cat_name = "PPMXL"
 
         expected_len_cross_match_table = 21
 
@@ -1051,7 +1069,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 26
 
-	expected_cat_name = "UCAC4"
+        expected_cat_name = "UCAC4"
 
         expected_len_cross_match_table = 56
 
@@ -1067,7 +1085,10 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_force_to_UCAC4(self):
-        #test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL catalog and a zeropoint already in the header, so that the computed avg_zeropoint is the difference between the FITS catalog ZP (in the header) and the Vizier catalog computed ZP
+        """test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL
+        catalog and a zeropoint already in the header, so that the computed avg_zeropoint is the difference between
+        the FITS catalog ZP (in the header) and the Vizier catalog computed ZP
+        """
 
         expected_avg_zeropoint = 0.276944994033
 
@@ -1077,7 +1098,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 9
 
-	expected_cat_name = "UCAC4"
+        expected_cat_name = "UCAC4"
 
         expected_len_cross_match_table = 19
 
@@ -1093,7 +1114,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_UCAC4(self):
-        #test the call with a different FITS catalog file and the default UCAC4 catalog
+        # test the call with a different FITS catalog file and the default UCAC4 catalog
 
         expected_avg_zeropoint = 27.2969494845
 
@@ -1103,7 +1124,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 8
 
-	expected_cat_name = "UCAC4"
+        expected_cat_name = "UCAC4"
 
         expected_len_cross_match_table = 16
 
@@ -1119,7 +1140,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
     def test_call_with_diff_test_cat_PPMXL(self):
-        #test the call with a different FITS catalog file and the default UCAC4 catalog
+        # test the call with a different FITS catalog file and the default UCAC4 catalog
 
         expected_avg_zeropoint = 27.0946609497
 
@@ -1129,7 +1150,7 @@ class ZeropointUnitTest(TestCase):
 
         expected_num_in_calc = 5
 
-	expected_cat_name = "PPMXL"
+        expected_cat_name = "PPMXL"
 
         expected_len_cross_match_table = 8
 
@@ -1148,6 +1169,7 @@ class ZeropointUnitTest(TestCase):
     def test_vizier_down(self):
         self.fail("write test for no internet")
 
+
 class FITSUnitTest(TestCase):
     def __init__(self, *args, **kwargs):
         super(FITSUnitTest, self).__init__(*args, **kwargs)
@@ -1162,7 +1184,7 @@ class FITSUnitTest(TestCase):
         self.table_firstitem = self.test_table[0:1]
         self.table_lastitem = self.test_table[-1:]
         self.table_item_flags24 = self.test_table[2:3]
-        self.table_num_flags0 = len(where(self.test_table['flags']==0)[0])
+        self.table_num_flags0 = len(where(self.test_table['flags'] == 0)[0])
 
         self.test_ldacfilename = os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits')
         hdulist = fits.open(self.test_ldacfilename)
@@ -1201,21 +1223,23 @@ class FITSUnitTest(TestCase):
                         ('flux_max', '>f4'),
                         ('threshold', '>f4')
                        ]
-        self.basic_table = Table(dtype = column_types)
+        self.basic_table = Table(dtype=column_types)
 
         self.maxDiff = None
         self.precision = 7
 
         self.flux2mag = 2.5/log(10)
 
-    def compare_tables(self, expected_catalog, catalog, precision = 4):
+    def compare_tables(self, expected_catalog, catalog, precision=4):
         for column in expected_catalog.colnames:
-            self.assertAlmostEqual(expected_catalog[column], catalog[column], precision, \
-                msg="Failure on %s (%.*f != %.*f)" % (column, precision, expected_catalog[column], \
-                    precision, catalog[column]))
+            expected_column_value = float(expected_catalog[column].quantity)
+            catalog_column_value = float(catalog[column].quantity)
+            self.assertAlmostEqual(expected_column_value, catalog_column_value, precision,
+                msg="Failure on %s (%.*f != %.*f)" % (column, precision, expected_column_value,
+                    precision, catalog_column_value))
+
 
 class OpenFITSCatalog(FITSUnitTest):
-
 
     def test_catalog_does_not_exist(self):
         expected_hdr = {}
@@ -1297,12 +1321,12 @@ class OpenFITSCatalog(FITSUnitTest):
 
     def test_ldac_catalog_header(self):
         outpath = os.path.join("photometrics", "tests")
-        expected_header = fits.Header.fromfile(os.path.join(outpath,"test_header"), sep='\n', endcard=False, padding=False)
+        expected_header = fits.Header.fromfile(os.path.join(outpath, "test_header"), sep='\n', endcard=False, padding=False)
 
         hdr, tbl, cattype = open_fits_catalog(self.test_ldacfilename)
 
         for key in expected_header:
-            self.assertEqual(expected_header[key], hdr[key], \
+            self.assertEqual(expected_header[key], hdr[key],
                 msg="Failure on %s (%s != %s)" % (key, expected_header[key], hdr[key]))
 
     def test_ldac_catalog_read_hdr_keyword(self):
@@ -1312,7 +1336,7 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
-    def test_catalog_read_tbl_column(self):
+    def test_catalog_read_tbl_column2(self):
         expected_tbl_value = 'XWIN_IMAGE'
         expected_tbl_units = 'pixel'
 
@@ -1340,7 +1364,7 @@ class OpenFITSCatalog(FITSUnitTest):
         self.assertNotEqual(unexpected_value, cattype)
 
     def test_banzai_catalog_read_length(self):
-        expected_hdr_len = 278-23 # Total-compression keywords
+        expected_hdr_len = 278-23  # Total-compression keywords
         expected_tbl_len = len(self.test_banzaitable)
         expected_cattype = 'BANZAI'
 
@@ -1357,7 +1381,7 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertEqual(expected_hdr_value, hdr['INSTRUME'])
 
-    def test_catalog_read_tbl_column(self):
+    def test_catalog_read_tbl_column3(self):
         expected_tbl_value = 'XWIN'
 #        expected_tbl_units = 'pixel'   # No units in the new table (yet?)
 
@@ -1420,6 +1444,7 @@ class OpenFITSCatalog(FITSUnitTest):
 
         self.assertAlmostEqual(expected_x, tbl[-1]['XWIN'], self.precision)
         self.assertAlmostEqual(expected_y, tbl[-1]['YWIN'], self.precision)
+
 
 class Test_Convert_Values(FITSUnitTest):
 
@@ -1497,7 +1522,7 @@ class Test_Convert_Values(FITSUnitTest):
 
     def test_ra_to_decimal_degrees(self):
 
-        expected_value = 86.7366375 #conversion of 05:46:56.793 to decimal degrees
+        expected_value = 86.7366375  # conversion of 05:46:56.793 to decimal degrees
 
         value = convert_value('field_center_ra', '05:46:56.793')
 
@@ -1505,7 +1530,7 @@ class Test_Convert_Values(FITSUnitTest):
 
     def test_dec_to_decimal_degrees(self):
 
-        expected_value = -27.7043417 #conversion of -27:42:15.63 to decimal degrees
+        expected_value = -27.7043417  # conversion of -27:42:15.63 to decimal degrees
 
         value = convert_value('field_center_dec', '-27:42:15.63')
 
@@ -1513,7 +1538,7 @@ class Test_Convert_Values(FITSUnitTest):
 
     def test_field_width(self):
 
-        expected_value = '15.7846m' #2028 pixels x 0.467"/pixel converted to arcmin
+        expected_value = '15.7846m'  # 2028 pixels x 0.467"/pixel converted to arcmin
 
         value = convert_value('field_width', (2028, 0.467))
 
@@ -1521,7 +1546,7 @@ class Test_Convert_Values(FITSUnitTest):
 
     def test_field_height(self):
 
-        expected_value = '15.8624m' #2038 pixels x 0.467"/pixel converted to arcmin
+        expected_value = '15.8624m'  # 2038 pixels x 0.467"/pixel converted to arcmin
 
         value = convert_value('field_height', (2038, 0.467))
 
@@ -1534,6 +1559,7 @@ class Test_Convert_Values(FITSUnitTest):
         value = convert_value('mu_threshold', (-5.4871593, 0.467))
 
         self.assertAlmostEqual(expected_value, value, 5)
+
 
 class FITSReadHeader(FITSUnitTest):
 
@@ -1642,6 +1668,7 @@ class FITSReadHeader(FITSUnitTest):
                 assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
                 assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
 
+
 class FITSLDACToHeader(FITSUnitTest):
 
     def setUp(self):
@@ -1653,7 +1680,7 @@ class FITSLDACToHeader(FITSUnitTest):
                                    'NAXIS2  =                 2038',
                                    "COMMENT   FITS (Flexible Image Transport System) format is defined in 'Astronomy",
                                    "COMMENT   and Astrophysics', volume 376, page 359; bibcode: 2001A&A...376..359H"], 
-                                   dtype='|S80')
+                                   dtype='|U80')
 
     def test_nocomment(self):
 
@@ -1673,6 +1700,7 @@ class FITSLDACToHeader(FITSUnitTest):
         self.assertEqual(header['BITPIX'], -32)
         self.assertEqual(header['NAXIS1'], 2028)
         self.assertEqual(header['NAXIS2'], 2038)
+
 
 class FITSSubsetCatalogTable(FITSUnitTest):
 
@@ -1696,8 +1724,8 @@ class FITSSubsetCatalogTable(FITSUnitTest):
         self.assertEqual(expected_rows, len(new_table))
         self.assertEqual(expected_columns, len(new_table.colnames))
 
-class FITSReadCatalog(FITSUnitTest):
 
+class FITSReadCatalog(FITSUnitTest):
 
     def test_first_item(self):
 
@@ -1722,7 +1750,6 @@ class FITSReadCatalog(FITSUnitTest):
         catalog_items = get_catalog_items(self.test_header, self.table_firstitem)
 
         self.assertEqual(expected_catalog, catalog_items)
-
 
     def test_last_item(self):
 
@@ -1770,7 +1797,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_dec_err' : 2.9221911507086037e-06,
                                    'obs_mag' : -2.5*log10(67883.703125),
                                    'obs_mag_err'  : self.flux2mag * self.table_item_flags24['FLUXERR_AUTO']/self.table_item_flags24['FLUX_AUTO'],
-                                   'obs_sky_bkgd' :741.20977783,
+                                   'obs_sky_bkgd' : 741.20977783,
                                    'flags' : 24,
                                    'flux_max' : 2913.0918,
                                    'threshold' : 43.438805,
@@ -1778,9 +1805,8 @@ class FITSReadCatalog(FITSUnitTest):
 
         catalog_items = get_catalog_items(self.test_header, self.table_item_flags24, flag_filter=24)
 
-        for column in expected_catalog.colnames:
-            self.assertAlmostEqual(expected_catalog[column], catalog_items[column], 9, \
-                msg="Failure on %s (%s != %s)" % (column, expected_catalog[column], catalog_items[column]))
+        self.compare_tables(expected_catalog, catalog_items, 9)
+
 
     def test_first_item_with_bad_zeropoint(self):
 
@@ -1869,7 +1895,7 @@ class FITSReadCatalog(FITSUnitTest):
                                    'obs_dec' :  -9.6401399241501036,
                                    'obs_ra_err'  : 8.92232262319e-06,
                                    'obs_dec_err' : 8.12455029148e-06,
-                                   'obs_mag'      : -2.5*log10(206447.5625) +00.00,
+                                   'obs_mag'      : -2.5*log10(206447.5625) + 00.00,
                                    'obs_mag_err'  : 0.0034573016162758306,
                                    'obs_sky_bkgd' : 343.17666626,
                                    'flags' : 0,
@@ -1877,12 +1903,9 @@ class FITSReadCatalog(FITSUnitTest):
                                    'threshold' : 29.2062811208271
                                  })
 
-
         header, table, cattype = open_fits_catalog(self.test_ldacfilename)
         header_items = get_catalog_header(header, cattype)
         catalog_items = get_catalog_items(header_items, self.ldac_table_firstitem, "FITS_LDAC")
-
-
         self.compare_tables(expected_catalog, catalog_items, 4)
 
 
@@ -2005,6 +2028,7 @@ class TestDetermineFilenames(TestCase):
 
         self.assertEqual(expected_product, filename)
 
+
 class TestIncrementRedLevel(TestCase):
 
     def test_quicklook_image(self):
@@ -2092,7 +2116,7 @@ class TestIncrementRedLevel(TestCase):
 class ExternalCodeUnitTest(TestCase):
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
 
@@ -2104,12 +2128,13 @@ class ExternalCodeUnitTest(TestCase):
                 for file_to_rm in files_to_remove:
                     os.remove(file_to_rm)
             except OSError:
-                print "Error removing files in temporary test directory", self.test_dir
+                print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print "Removed", self.test_dir
+                if self.debug_print:
+                    print("Removed", self.test_dir)
             except OSError:
-                print "Error removing temporary test directory", self.test_dir
+                print("Error removing temporary test directory", self.test_dir)
 
 
 class UpdateFrameZeropointTest(FITSUnitTest):
@@ -2149,7 +2174,7 @@ class UpdateFrameZeropointTest(FITSUnitTest):
                          'block_start' : '2017-03-08 05:05:00',
                          'block_end'   : '2017-03-08 05:22:36',
                          'tracking_number' : '0000358587',
-                         'num_exposures' : 6L,
+                         'num_exposures' : 6,
                          'exp_length' : 120.0,
                          'active'   : False
                        }
@@ -2179,39 +2204,39 @@ class UpdateFrameZeropointTest(FITSUnitTest):
                       }
 
         # Create test frame
-        frame_params = {    'sitecode':'W85',
-                            'instrument':'fl15',
-                            'filter':'w',
-                            'filename':'lsc1m005-fl15-20170307-0121-e91.fits',
-                            'exptime':120.0,
-                            'midpoint':datetime(2017, 3, 8, 5, 6, 40),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':1.9080,
-                            'frametype':91,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':None,
-                            'astrometric_catalog':' ',
+        frame_params = {    'sitecode': 'W85',
+                            'instrument': 'fl15',
+                            'filter': 'w',
+                            'filename': 'lsc1m005-fl15-20170307-0121-e91.fits',
+                            'exptime': 120.0,
+                            'midpoint': datetime(2017, 3, 8, 5, 6, 40),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 1.9080,
+                            'frametype': 91,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': None,
+                            'astrometric_catalog': ' ',
                             'photometric_catalog': ' '
                         }
 
         self.test_frame1, created = Frame.objects.get_or_create(**frame_params)
 
-        frame_params = {    'sitecode':'W85',
-                            'instrument':'fl15',
-                            'filter':'w',
-                            'filename':'lsc1m005-fl15-20170307-0121-e91_ldac.fits',
-                            'exptime':120.0,
-                            'midpoint':datetime(2017, 3, 8, 5, 6, 40),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':1.9080,
-                            'frametype':6,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':None,
-                            'astrometric_catalog':' ',
+        frame_params = {    'sitecode': 'W85',
+                            'instrument': 'fl15',
+                            'filter': 'w',
+                            'filename': 'lsc1m005-fl15-20170307-0121-e91_ldac.fits',
+                            'exptime': 120.0,
+                            'midpoint': datetime(2017, 3, 8, 5, 6, 40),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 1.9080,
+                            'frametype': 6,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': None,
+                            'astrometric_catalog': ' ',
                             'photometric_catalog': ' '
                         }
 
@@ -2247,33 +2272,34 @@ class UpdateFrameZeropointTest(FITSUnitTest):
         self.assertEqual(frame.astrometric_catalog, '2MASS')
         self.assertEqual(frame.photometric_catalog, 'UCAC4')
 
+
 class MakeSEXTFileTest(FITSUnitTest):
 
     def setUp(self):
 
         # Hand-rolled WCS for pickling testing
-        self.naxis_header = {'NAXIS1' : 4096, 'NAXIS2' : 4096, 'NAXIS' :2}
+        self.naxis_header = {'NAXIS1' : 4096, 'NAXIS2' : 4096, 'NAXIS' : 2}
         self.w = WCS(self.naxis_header)
 
-        frame_params = {    'sitecode':'V37',
-                            'instrument':'fl05',
-                            'filter':'w',
-                            'filename':'elp1m008-fl05-20160225-0100-e91.fits',
-                            'exptime':125.0,
-                            'midpoint':datetime(2016, 2, 26, 3, 58, 46, 189000),
-                            'block':None,
-                            'zeropoint':29.6113857745,
-                            'zeropoint_err':0.0414642608048,
-                            'fwhm':3.246,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':10.0,
-                            'wcs':self.w
+        frame_params = {    'sitecode': 'V37',
+                            'instrument': 'fl05',
+                            'filter': 'w',
+                            'filename': 'elp1m008-fl05-20160225-0100-e91.fits',
+                            'exptime': 125.0,
+                            'midpoint': datetime(2016, 2, 26, 3, 58, 46, 189000),
+                            'block': None,
+                            'zeropoint': 29.6113857745,
+                            'zeropoint_err': 0.0414642608048,
+                            'fwhm': 3.246,
+                            'frametype': 0,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': 10.0,
+                            'wcs': self.w
                         }
 
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
 
-        source_params = {   'frame':self.test_frame,
+        source_params = {   'frame': self.test_frame,
                             'obs_x': 2165.8260536,
                             'obs_y': 57.1152786081,
                             'obs_ra': 163.864883508,
@@ -2294,25 +2320,25 @@ class MakeSEXTFileTest(FITSUnitTest):
                         }
         self.test_cat_src, created = CatalogSources.objects.get_or_create(**source_params)
 
-        frame_params = {    'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'cpt1m013-kb76-20160505-0205-e11.fits',
-                            'exptime':60.0,
-                            'midpoint':datetime(2016, 5, 5,20, 2, 29),
-                            'block':None,
-                            'zeropoint':27.7305864552,
-                            'zeropoint_err':0.0776317342309,
-                            'fwhm':2.825,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':3.0,
-                            'wcs':self.w
+        frame_params = {    'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'cpt1m013-kb76-20160505-0205-e11.fits',
+                            'exptime': 60.0,
+                            'midpoint': datetime(2016, 5, 5, 20, 2, 29),
+                            'block': None,
+                            'zeropoint': 27.7305864552,
+                            'zeropoint_err': 0.0776317342309,
+                            'fwhm': 2.825,
+                            'frametype': 0,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': 3.0,
+                            'wcs': self.w
                         }
 
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params)
 
-        source_params = {   'frame':self.test_frame_2,
+        source_params = {   'frame': self.test_frame_2,
                             'obs_x': 886.244640655,
                             'obs_y': 18.2107121645,
                             'obs_ra': 218.143035602,
@@ -2333,7 +2359,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         }
         self.test_cat_src_2, created = CatalogSources.objects.get_or_create(**source_params)
 
-        source_params = {   'frame':self.test_frame_2,
+        source_params = {   'frame': self.test_frame_2,
                             'obs_x': 886.244640655,
                             'obs_y': 4078.2107121645,
                             'obs_ra': 218.143035602,
@@ -2354,7 +2380,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         }
         self.test_cat_src_3, created = CatalogSources.objects.get_or_create(**source_params)
 
-        source_params = {   'frame':self.test_frame_2,
+        source_params = {   'frame': self.test_frame_2,
                             'obs_x': 4086.244640655,
                             'obs_y': 178.2107121645,
                             'obs_ra': 218.143035602,
@@ -2375,7 +2401,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         }
         self.test_cat_src_4, created = CatalogSources.objects.get_or_create(**source_params)
 
-        source_params = {   'frame':self.test_frame_2,
+        source_params = {   'frame': self.test_frame_2,
                             'obs_x': 708.002750723,
                             'obs_y': 1960.00075651,
                             'obs_ra': 218.164206491,
@@ -2397,28 +2423,28 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.test_cat_src_5, created = CatalogSources.objects.get_or_create(**source_params)
 
         # Hand-rolled WCS for pickling testing
-        self.naxis_header2 = {'NAXIS1' : 1500, 'NAXIS2' : 2000, 'NAXIS' :2}
+        self.naxis_header2 = {'NAXIS1' : 1500, 'NAXIS2' : 2000, 'NAXIS' : 2}
         self.w2 = WCS(self.naxis_header2)
 
-        frame_params = {    'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'ldac_test_catalog.fits',
-                            'exptime':115.0,
-                            'midpoint':datetime(2016, 4, 28, 20, 11, 54),
-                            'block':None,
-                            'zeropoint':27.7305864552,
-                            'zeropoint_err':0.0776317342309,
-                            'fwhm':2.886,
-                            'frametype':0,
-                            'rms_of_fit':None,
-                            'nstars_in_fit':3.0,
-                            'wcs':self.w2
+        frame_params = {    'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'ldac_test_catalog.fits',
+                            'exptime': 115.0,
+                            'midpoint': datetime(2016, 4, 28, 20, 11, 54),
+                            'block': None,
+                            'zeropoint': 27.7305864552,
+                            'zeropoint_err': 0.0776317342309,
+                            'fwhm': 2.886,
+                            'frametype': 0,
+                            'rms_of_fit': None,
+                            'nstars_in_fit': 3.0,
+                            'wcs': self.w2
                         }
 
         self.test_frame_3, created = Frame.objects.get_or_create(**frame_params)
 
-        source_params = {   'frame':self.test_frame_3,
+        source_params = {   'frame': self.test_frame_3,
                             'obs_x': 886.244640655,
                             'obs_y': 18.2107121645,
                             'obs_ra': 218.143035602,
@@ -2439,7 +2465,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         }
         self.test_cat_src_6, created = CatalogSources.objects.get_or_create(**source_params)
 
-        source_params = {   'frame':self.test_frame_3,
+        source_params = {   'frame': self.test_frame_3,
                             'obs_x': 886.244640655,
                             'obs_y': 1078.2107121645,
                             'obs_ra': 218.143035602,
@@ -2460,7 +2486,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         }
         self.test_cat_src_7, created = CatalogSources.objects.get_or_create(**source_params)
 
-        source_params = {   'frame':self.test_frame_3,
+        source_params = {   'frame': self.test_frame_3,
                             'obs_x': 1086.244640655,
                             'obs_y': 178.2107121645,
                             'obs_ra': 218.143035602,
@@ -2481,7 +2507,7 @@ class MakeSEXTFileTest(FITSUnitTest):
                         }
         self.test_cat_src_8, created = CatalogSources.objects.get_or_create(**source_params)
 
-        source_params = {   'frame':self.test_frame_3,
+        source_params = {   'frame': self.test_frame_3,
                             'obs_x': 708.002750723,
                             'obs_y': 1960.00075651,
                             'obs_ra': 218.164206491,
@@ -2504,19 +2530,19 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_dictionary_creation(self):
 
-        test_dict = {   'number':1,
-                        'obs_x':2165.826,
-                        'obs_y':57.115,
-                        'obs_mag':21.4523,
-                        'theta':-74.1,
-                        'elongation':1.087,
-                        'fwhm':3.30,
-                        'flags':0,
-                        'deltamu':0.828,
-                        'flux':1835.1,
-                        'area':8.5378,
-                        'ra':163.86488,
-                        'dec':39.06242
+        test_dict = {   'number': 1,
+                        'obs_x': 2165.826,
+                        'obs_y': 57.115,
+                        'obs_mag': 21.4523,
+                        'theta': -74.1,
+                        'elongation': 1.087,
+                        'fwhm': 3.30,
+                        'flags': 0,
+                        'deltamu': 0.828,
+                        'flux': 1835.1,
+                        'area': 8.5378,
+                        'ra': 163.86488,
+                        'dec': 39.06242
                     }
 
         num_iter = 1
@@ -2539,19 +2565,19 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_line_creation(self):
 
-        test_dict = {   'number':1,
-                        'obs_x':106.118,
-                        'obs_y':18.611,
-                        'obs_mag':17.1818,
-                        'theta':-79.4,
-                        'elongation':1.076,
-                        'fwhm':3.63,
-                        'flags':0,
-                        'deltamu':2.624,
-                        'flux':11228.2,
-                        'area':10.3126,
-                        'ra':86.86805,
-                        'dec':-27.57513
+        test_dict = {   'number': 1,
+                        'obs_x': 106.118,
+                        'obs_y': 18.611,
+                        'obs_mag': 17.1818,
+                        'theta': -79.4,
+                        'elongation': 1.076,
+                        'fwhm': 3.63,
+                        'flags': 0,
+                        'deltamu': 2.624,
+                        'flux': 11228.2,
+                        'area': 10.3126,
+                        'ra': 86.86805,
+                        'dec': -27.57513
                     }
 
         test_line = '         1    106.118     18.611  17.1818  -79.4       1.076      3.63   0  2.62        11228.2    10  86.86805 -27.57513'
@@ -2562,19 +2588,19 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_multiple_sources_sext_dict_trimmed(self):
 
-        test_dict_first = { 'number':1,
-                            'obs_x':708.003,
-                            'obs_y':1960.001,
-                            'obs_mag':18.4868,
-                            'theta':7.218,
-                            'elongation':1.005,
-                            'fwhm':1.30,
-                            'flags':0,
-                            'deltamu':5.605,
-                            'flux':4983.4,
-                            'area':1.3271,
-                            'ra':218.16421,
-                            'dec':9.64090
+        test_dict_first = { 'number': 1,
+                            'obs_x': 708.003,
+                            'obs_y': 1960.001,
+                            'obs_mag': 18.4868,
+                            'theta': 7.218,
+                            'elongation': 1.005,
+                            'fwhm': 1.30,
+                            'flags': 0,
+                            'deltamu': 5.605,
+                            'flux': 4983.4,
+                            'area': 1.3271,
+                            'ra': 218.16421,
+                            'dec': 9.64090
                          }
 
         cat_ldacfilename = os.path.join(os.path.sep, 'tmp', 'tmp_neox_2016GS2', 'cpt1m013-kb76-20160505-0205-e11_ldac.fits')
@@ -2600,64 +2626,64 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_multiple_sources_sext_dict_untrimmed(self):
 
-        test_dict_first = { 'number':1,
-                            'obs_x':886.245,
-                            'obs_y':18.211,
-                            'obs_mag':16.2081,
-                            'theta':-77.62,
-                            'elongation':1.00,
-                            'fwhm':3.34,
-                            'flags':0,
-                            'deltamu':3.9049,
-                            'flux':40643.1,
-                            'area':8.7652,
-                            'ra':218.14304,
-                            'dec':9.89449
+        test_dict_first = { 'number': 1,
+                            'obs_x': 886.245,
+                            'obs_y': 18.211,
+                            'obs_mag': 16.2081,
+                            'theta': -77.62,
+                            'elongation': 1.00,
+                            'fwhm': 3.34,
+                            'flags': 0,
+                            'deltamu': 3.9049,
+                            'flux': 40643.1,
+                            'area': 8.7652,
+                            'ra': 218.14304,
+                            'dec': 9.89449
                           }
 
-        test_dict_middle1 = { 'number':2,
-                              'obs_x':886.245,
-                              'obs_y':1078.211,
-                              'obs_mag':16.2081,
-                              'theta':-77.62,
-                              'elongation':1.00,
-                              'fwhm':3.34,
-                              'flags':0,
-                              'deltamu':3.9049,
-                              'flux':40643.1,
-                              'area':8.7652,
-                              'ra':218.14304,
-                              'dec':9.89449
+        test_dict_middle1 = { 'number': 2,
+                              'obs_x': 886.245,
+                              'obs_y': 1078.211,
+                              'obs_mag': 16.2081,
+                              'theta': -77.62,
+                              'elongation': 1.00,
+                              'fwhm': 3.34,
+                              'flags': 0,
+                              'deltamu': 3.9049,
+                              'flux': 40643.1,
+                              'area': 8.7652,
+                              'ra': 218.14304,
+                              'dec': 9.89449
                            }
 
-        test_dict_middle2 = { 'number':3,
-                              'obs_x':1086.245,
-                              'obs_y':178.211,
-                              'obs_mag':16.2081,
-                              'theta':-77.62,
-                              'elongation':1.00,
-                              'fwhm':3.34,
-                              'flags':0,
-                              'deltamu':3.9049,
-                              'flux':40643.1,
-                              'area':8.7652,
-                              'ra':218.14304,
-                              'dec':9.89449
+        test_dict_middle2 = { 'number': 3,
+                              'obs_x': 1086.245,
+                              'obs_y': 178.211,
+                              'obs_mag': 16.2081,
+                              'theta': -77.62,
+                              'elongation': 1.00,
+                              'fwhm': 3.34,
+                              'flags': 0,
+                              'deltamu': 3.9049,
+                              'flux': 40643.1,
+                              'area': 8.7652,
+                              'ra': 218.14304,
+                              'dec': 9.89449
                            }
 
-        test_dict_last = {  'number':4,
-                            'obs_x':708.003,
-                            'obs_y':1960.001,
-                            'obs_mag':18.4868,
-                            'theta':7.218,
-                            'elongation':1.005,
-                            'fwhm':1.30,
-                            'flags':0,
-                            'deltamu':5.605,
-                            'flux':4983.4,
-                            'area':1.3271,
-                            'ra':218.16421,
-                            'dec':9.64090
+        test_dict_last = {  'number': 4,
+                            'obs_x': 708.003,
+                            'obs_y': 1960.001,
+                            'obs_mag': 18.4868,
+                            'theta': 7.218,
+                            'elongation': 1.005,
+                            'fwhm': 1.30,
+                            'flags': 0,
+                            'deltamu': 5.605,
+                            'flux': 4983.4,
+                            'area': 1.3271,
+                            'ra': 218.16421,
+                            'dec': 9.64090
                          }
 
         cat_ldacfilename = os.path.join(os.path.sep, 'photometrics', 'tests', 'ldac_test_catalog.fits')
@@ -2725,33 +2751,33 @@ class MakeSEXTFileTest(FITSUnitTest):
 
     def test_make_sext_line_list(self):
 
-        test_dict_list = [{  'number':405,
-                            'obs_x':5.959,
-                            'obs_y':800.006,
-                            'obs_mag':20.7902,
-                            'theta':-89.1,
-                            'elongation':1.070,
-                            'fwhm':0.63,
-                            'flags':0,
-                            'deltamu':2.82,
-                            'flux':597.2,
-                            'area':0,
-                            'ra':218.25847,
-                            'dec':9.79143
+        test_dict_list = [{  'number': 405,
+                            'obs_x': 5.959,
+                            'obs_y': 800.006,
+                            'obs_mag': 20.7902,
+                            'theta': -89.1,
+                            'elongation': 1.070,
+                            'fwhm': 0.63,
+                            'flags': 0,
+                            'deltamu': 2.82,
+                            'flux': 597.2,
+                            'area': 0,
+                            'ra': 218.25847,
+                            'dec': 9.79143
                           },
-                          {  'number':456,
-                            'obs_x':2017.041,
-                            'obs_y':655.951,
-                            'obs_mag':20.1782,
-                            'theta':80.4,
-                            'elongation':1.006,
-                            'fwhm':1.30,
-                            'flags':0,
-                            'deltamu':3.91,
-                            'flux':1049.4,
-                            'area':1,
-                            'ra':217.99272,
-                            'dec':9.81255
+                          {  'number': 456,
+                            'obs_x': 2017.041,
+                            'obs_y': 655.951,
+                            'obs_mag': 20.1782,
+                            'theta': 80.4,
+                            'elongation': 1.006,
+                            'fwhm': 1.30,
+                            'flags': 0,
+                            'deltamu': 3.91,
+                            'flux': 1049.4,
+                            'area': 1,
+                            'ra': 217.99272,
+                            'dec': 9.81255
                           }]
 
         test_line_list = ['       405      5.959    800.006  20.7902  -89.1       1.070      0.63   0  2.82          597.2     0 218.25847   9.79143', '       456   2017.041    655.951  20.1782   80.4       1.006      1.30   0  3.91         1049.4     1 217.99272   9.81255']

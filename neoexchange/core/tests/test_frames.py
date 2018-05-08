@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2015-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime
 from django.test import TestCase
@@ -52,7 +52,7 @@ class TestBlockStatus(TestCase):
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
-        
+
         sb_params = {  'cadence'       : 'True',
                        'body'          : self.body,
                        'proposal'      : self.neo_proposal,
@@ -522,7 +522,7 @@ class TestBlockStatus(TestCase):
     def mock_check_result_status(tracking_num):
         result_status_out = {u'created': u'2018-02-23T23:56:01.695109Z',
                          u'group_id': u'N999r0q_V38-cad-0223-0227',
-                         u'id': 00042,
+                         u'id': 42,
                          u'ipp_value': 1.0,
                          u'modified': u'2018-02-27T05:54:41.007389Z',
                          u'observation_type': u'NORMAL',
@@ -813,7 +813,7 @@ class TestBlockStatus(TestCase):
     @patch('core.frames.lco_api_call', side_effect=mock_lco_api_call)
     @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
     @patch('core.frames.check_for_archive_images', side_effect=mock_check_for_archive_images)
-    def test_block_status_updates_num_observed(self,check_request_status,check_for_archive_images,lco_api_call):
+    def test_block_status_updates_num_observed(self, check_request_status, check_for_archive_images, lco_api_call):
         expected = ('3/4', '0/4')
 
         blocks = Block.objects.filter(superblock=self.super_block, active=True)
@@ -827,24 +827,24 @@ class TestBlockStatus(TestCase):
     @patch('core.frames.lco_api_call', side_effect=mock_lco_api_call)
     @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
     @patch('core.frames.check_for_archive_images', side_effect=mock_check_for_archive_images)
-    def test_correct_frames_per_block(self,check_request_status,check_for_archive_images,lco_api_call):
+    def test_correct_frames_per_block(self, check_request_status, check_for_archive_images, lco_api_call):
         expected = ['1test_3.fits', '2test_3.fits', '3test_3.fits']
         blocks = Block.objects.filter(active=True)
         for block in blocks:
             block_status(block.id)
 
-        frame_names_blk1=[]
+        frame_names_blk1 = []
         frames = Frame.objects.filter(block=blocks[0])
-        for frame in frames: 
+        for frame in frames:
             frame_names_blk1.append(frame.filename)
-        self.assertEqual(expected,frame_names_blk1)
+        self.assertEqual(expected, frame_names_blk1)
 
-        frame_names_blk2=[]
+        frame_names_blk2 = []
         frames = Frame.objects.filter(block=blocks[1])
-        for frame in frames: 
+        for frame in frames:
             frame_names_blk2.append(frame.filename)
         for element in expected:
-            self.assertNotIn(element,frame_names_blk2)
+            self.assertNotIn(element, frame_names_blk2)
 
     @patch('core.frames.check_request_status', mock_check_request_status_spectro)
     @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)

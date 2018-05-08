@@ -4,6 +4,18 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.3.6
+
+Bite the Bullet and Update to Python 3.6
+
+### 2.2.0
+
+Added capability of requesting multiple filters when making a user request. 
+
+### 2.1.6
+
+Reduce connection maximum age to 60 seconds. Switch off perturbations in ephemeris computation calls.
+
 ### 2.1.5
 
 Update Selenium to 3.11 and Django to 1.11. Refactor functional tests for Valhalla/JavaScript-based authentication. Add functionality to ingest targets from text file list of target names.

@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2017-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 import glob
 import os
@@ -33,16 +33,20 @@ from core.models import Frame, Block, PanoptesReport, CatalogSources, Proposal, 
 from core.zoo import download_images_block, download_image, panoptes_add_set_mtd, \
     create_panoptes_report, identify_sources
 
+
 def mock_download_image(frame, current_files, download_dir, blockid):
     return 'myfile.fits'
 
+
 def mock_create_mosaic(filename, frame_id, download_dir):
-    return ['myfile1.jpg','myfile2.jpg']
+    return ['myfile1.jpg', 'myfile2.jpg']
 
-def mock_convert_coords(x,y,quad,xscale,yscale, xsize, ysize):
-    return (195.0,205.0,340.,345.0)
 
-class Test_Panoptes(TestCase):
+def mock_convert_coords(x, y, quad, xscale, yscale, xsize, ysize):
+    return 195.0, 205.0, 340., 345.0
+
+
+class TestPanoptes(TestCase):
 
     def setUp(self):
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
@@ -162,7 +166,6 @@ class Test_Panoptes(TestCase):
         coord_range = convert_coords(200,300,0,640,640, 640,640)
         coord_range_test = (195.0, 205.0, 335.0, 345.0)
         self.assertEqual(coord_range, coord_range_test)
-
 
     def _create_panoptes_report(self):
         subjects = [
