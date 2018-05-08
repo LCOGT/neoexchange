@@ -1212,7 +1212,7 @@ def make_window(params):
 def make_molecule(params, exp_filter):
 
     # Common part of a molecule
-    exp_count = len(exp_filter)
+    exp_count = exp_filter[1]
     molecule = {
                 'type' : params['exp_type'],
                 'exposure_count'  : exp_count,

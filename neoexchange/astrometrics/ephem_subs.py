@@ -865,7 +865,7 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     if exp_count < min_exp_count:
         exp_count = min_exp_count
         exp_time = (slot_length - setup_overhead - molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)) - (exp_overhead * float(exp_count))) / exp_count
-        logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count ))
+        logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count))
     logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" %
         ( slot_length/60.0, slot_length, exp_count, exp_time))
     if exp_time is None or exp_time <= 0.0 or exp_count < 1:
@@ -875,8 +875,9 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
 
     return exp_time, exp_count
 
+
 def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
-    '''Determine the length of time that a planned spectroscopic observation will take.
+    """Determine the length of time that a planned spectroscopic observation will take.
     This is based on the <exp_time> and no. of spectrum exposures [exp_count] (defaults
     to 1) and also on the value of <calibs>, which can be one of ('none', before',
     'after' or 'both') depending on whether calibrations (arcs and lamp flats) are not
@@ -884,7 +885,7 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
     Values and formulae come from Valhalla and values are encoded in
     get_sitecam_params(). Currently only FLOYDS is supported and no distinction is
     made between FTN and FTS.
-    The estimated time, in seconds, is returned.'''
+    The estimated time, in seconds, is returned."""
 
     site_code = 'F65-FLOYDS'
     slot_length = None
@@ -905,9 +906,10 @@ def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
             slot_length += float(num_molecules-1)*(overheads['calib_exposure_time'] + exp_overhead)
         slot_length += num_molecules * (overheads.get('config_change_time', 0.0) + overheads.get('per_molecule_time', 0.0))
         slot_length += overheads.get('acquire_exposure_time', 0.0) + overheads.get('acquire_processing_time', 0.0)
-        slot_length += overheads.get('front_padding',0.0)
+        slot_length += overheads.get('front_padding', 0.0)
         slot_length = ceil(slot_length)
     return slot_length
+
 
 def molecule_overhead(filter_blocks):
     single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
@@ -916,6 +918,7 @@ def molecule_overhead(filter_blocks):
 
 
 def build_filter_blocks(filter_pattern, exp_count):
+    """Take in filter pattern string, export list of [filter, # of exposures in filter] """
     filter_bits = filter_pattern.split(',')
     filter_bits = list(filter(None, filter_bits))
     filter_list = []
@@ -927,7 +930,8 @@ def build_filter_blocks(filter_pattern, exp_count):
         filter_blocks.append(list(m))
     if len(filter_blocks) == 0:
         filter_blocks = [filter_bits]
-    return filter_blocks
+    return [[block[0], len(block)] for block in filter_blocks]
+    # return filter_blocks
 
 
 def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):

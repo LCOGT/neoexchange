@@ -28,9 +28,8 @@ from core.models import Body, Proposal, Block
 from astrometrics.ephem_subs import determine_darkness_times
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
 from core.views import record_block
-#Import module to test
+# Import module to test
 from astrometrics.sources_subs import *
-
 
 
 class TestGoldstoneChunkParser(TestCase):
@@ -2379,8 +2378,7 @@ class TestConfigureDefaults(TestCase):
                             'site_code'   : 'F65',
                             'instrument_code' : 'F65-FLOYDS'}
 
-
-        params = { 'site_code' : 'F65', 'instrument_code' : 'F65-FLOYDS', 'spectroscopy' : True }
+        params = { 'site_code' : 'F65', 'instrument_code' : 'F65-FLOYDS', 'spectroscopy' : True}
 
         params = configure_defaults(params)
 
@@ -2392,18 +2390,18 @@ class TestConfigureDefaults(TestCase):
                             'spectra_slit': 'slit_2.0as',
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
-                            'exp_type'    :'SPECTRUM',
+                            'exp_type'    : 'SPECTRUM',
                             'pondtelescope': '2m0',
                             'site'        : 'COJ',
                             'site_code'   : 'E10',
                             'instrument_code' : 'E10-FLOYDS'}
 
-
-        params = { 'site_code' : 'E10', 'instrument_code' : 'E10-FLOYDS', 'spectroscopy' : True }
+        params = { 'site_code' : 'E10', 'instrument_code' : 'E10-FLOYDS', 'spectroscopy' : True}
 
         params = configure_defaults(params)
 
         self.assertEqual(params, expected_params)
+
 
 class TestMakeMolecule(TestCase):
 
@@ -2434,7 +2432,7 @@ class TestMakeMolecule(TestCase):
                                                             'spectroscopy' : True,
                                                             'exp_time' : 180.0,
                                                             'exp_count' : 1})
-        self.filt_2m0_spectroscopy = ['slit_2.0as',]
+        self.filt_2m0_spectroscopy = ['slit_2.0as', 1]
 
     def test_2m_imaging(self):
 

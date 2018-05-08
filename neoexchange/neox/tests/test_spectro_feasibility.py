@@ -8,6 +8,7 @@ from mock import patch
 
 from neox.tests.mocks import mock_fetch_sfu
 
+
 # Imported in the form creation so need to patch there
 @patch('core.forms.fetch_sfu', mock_fetch_sfu)
 class SpectroscopicFeasibility(FunctionalTest):
@@ -22,12 +23,12 @@ class SpectroscopicFeasibility(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target',kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Check Feasibility button
         link = self.browser.find_element_by_id('check-feasibility')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('feasibility',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('feasibility', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
