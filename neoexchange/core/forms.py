@@ -177,7 +177,9 @@ class ScheduleBlockForm(forms.Form):
                 chunks = [chunks[0]]
             cleaned_filter_pattern = ",".join(chunks)
         except KeyError:
-            cleaned_filter_pattern = ','
+            cleaned_filter_pattern = ''
+        except IndexError:
+            cleaned_filter_pattern = ''
         return cleaned_filter_pattern
 
     def clean(self):
@@ -186,17 +188,20 @@ class ScheduleBlockForm(forms.Form):
         if not fetch_filter_list(site, spectra):
             raise forms.ValidationError("This Site/Telescope combination is not currently available.")
         try:
-            pattern = self.cleaned_data['filter_pattern']
-            chunks = pattern.split(',')
-            bad_filters = [x for x in chunks if x not in fetch_filter_list(site, spectra)]
-            if len(bad_filters) > 0:
-                if len(bad_filters) == 1:
-                    raise ValidationError(_('%(bad)s is not an acceptable filter at this site.'), params={'bad': ",".join(bad_filters)}, )
-                else:
-                    raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
+            if not self.cleaned_data['filter_pattern']:
+                raise forms.ValidationError("You must select a filter.")
         except KeyError:
-            raise ValidationError(_('Dude, you had to actively input a bunch of spaces and nothing else to see this error. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site, spectra))}, )
-        if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
+            raise forms.ValidationError('Dude, you had to actively input a bunch of spaces and nothing else to see this error. '
+                                        'Why?? Just pick a filter from the list! %(filters)s', params={'filters': ",".join(fetch_filter_list(site, spectra))})
+        pattern = self.cleaned_data['filter_pattern']
+        chunks = pattern.split(',')
+        bad_filters = [x for x in chunks if x not in fetch_filter_list(site, spectra)]
+        if len(bad_filters) > 0:
+            if len(bad_filters) == 1:
+                raise forms.ValidationError('%(bad)s is not an acceptable filter at this site.', params={'bad': ",".join(bad_filters)})
+            else:
+                raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
+        elif not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")

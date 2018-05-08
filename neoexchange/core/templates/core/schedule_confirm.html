@@ -18,7 +18,7 @@
           <div class="row">
                   {% for key, error in form.errors.items %}
                           <div class="messages error">
-                              {{ key }}: {{ error }}
+                              {{ error }}
                           </div>
                   {% endfor %}
           </div>
@@ -68,6 +68,16 @@
                         <td class="kv-key">Speed</td>
                         <td class="kv-value">{{ data.speed|floatformat:2 }} '/min</td>
                     </tr>
+                    {% if data.spectroscopy %}
+                    <tr id="id_slit_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                            <div class="tooltip">Slit Pattern
+                            <span class="tooltiptext" style="left:75%">Comma Separated Pattern
+                            <br>(e.g.: slit_6.0as,slit_2.0as,slit_6.0as)<br>
+                            <br><u>Slits Available at {{data.site_code}}:</u>
+                            <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
+                        <td class="kv-value">{{ form.filter_pattern }}</td>
+                    </tr>
+                    {% else %}
                     <tr id="id_filter_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
                             <div class="tooltip">Filter Pattern
                             <span class="tooltiptext" style="left:75%">Comma Separated Pattern
@@ -76,6 +86,7 @@
                             <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
                         <td class="kv-value">{{ form.filter_pattern }}</td>
                     </tr>
+                    {% endif %}
                     <tr id="id_pattern_iterations">
                         <td class="kv-key">Pattern Iterations</td>
                         {% if data.pattern_iterations < 1 %}
