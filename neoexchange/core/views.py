@@ -387,6 +387,8 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         proposals = user_proposals(self.request.user)
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        if kwargs['cad_form']:
+            kwargs['cad_form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
 
 
@@ -435,6 +437,15 @@ class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
+
+    def get_context_data(self, **kwargs):
+        """
+        Only show proposals the current user is a member of
+        """
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
 
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
@@ -695,6 +706,7 @@ def schedule_submit(data, body, username):
         # Record block and submit to scheduler
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
+
 
 class SpectroFeasibility(LookUpBodyMixin, FormView):
 
