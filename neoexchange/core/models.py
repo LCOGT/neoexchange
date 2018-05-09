@@ -15,7 +15,7 @@ GNU General Public License for more details.
 from __future__ import unicode_literals
 from datetime import datetime
 from math import pi, log10
-from collections import Counter
+from collections import Counter, OrderedDict
 import reversion
 
 from django.conf import settings
@@ -486,7 +486,8 @@ class Block(models.Model):
         if num_frames > 0:
             moltypes = [x['OBSTYPE'] for x in data]
             num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
-            num_moltypes_string = ", ".join([x+": "+str(num_moltypes[x]) for x in num_moltypes])
+            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(),reverse=True))
+            num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string
 
     def num_candidates(self):

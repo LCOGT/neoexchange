@@ -261,9 +261,9 @@ class SpectroBlocksListValidationTest(FunctionalTest):
         # He sees that there are both spectroscopic and non-spectroscopic Blocks scheduled.
         self.check_for_header_in_table('id_blocks',
             'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
-        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
-                     u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
-                     u'3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 0 / 1 0 / 1']
+        testlines = ['1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
+                     '2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
+                     '3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 0 / 1 0 / 1']
         self.check_for_row_in_table('id_blocks', testlines[2])
 
 class SpectroBlocksDetailValidationTest(FunctionalTest):
@@ -355,9 +355,9 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
         # He sees that there are both spectroscopic and non-spectroscopic Blocks scheduled.
         self.check_for_header_in_table('id_blocks',
             'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
-        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
-                     u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
-                     u'3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 1 / 1 0 / 1']
+        testlines = ['1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
+                     '2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
+                     '3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 1 / 1 0 / 1']
         self.check_for_row_in_table('id_blocks', testlines[2])
 
         # He wishes to get more details on the spectroscopic block that is scheduled
@@ -381,14 +381,14 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
         # He notices there is a table which lists a lot more details about
         # the Block.
 
-        testlines = [u'TELESCOPE CLASS ' + self.test_block.telclass + '(S)',
-                     u'SITE ' + self.test_block.site.upper()]
+        testlines = ['TELESCOPE CLASS ' + self.test_block.telclass + '(S)',
+                     'SITE ' + self.test_block.site.upper()]
         for line in testlines:
             self.check_for_row_in_table('id_blockdetail', line)
 
         side_text = self.browser.find_element_by_class_name('block-status').text
         block_lines = side_text.splitlines()
-        testlines = [u'ARC: 1, SPECTRUM: 2, LAMPFLAT: 1',
+        testlines = ['SPECTRUM: 2, LAMPFLAT: 1, ARC: 1',
                     ]
         for line in testlines:
             self.assertIn(line, block_lines)
