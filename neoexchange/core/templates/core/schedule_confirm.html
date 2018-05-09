@@ -153,7 +153,7 @@
       </div>
       <div class="four columns">
         {% if form.errors%}
-          {% if data.spectroscopy is True %}
+          {% if form.spectroscopy.value == 'True' %}
             <a href="{% url 'schedule-body-spectra' body.id %}">Return to schedule spectra page</a>
           {% else %}
             <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
@@ -173,6 +173,7 @@
           {{form.utc_date}}
           {{form.jitter}}
           {{form.period}}
+          {{forms.pattern_iterations}}
           {{form.spectroscopy}}
           {{form.calibs}}          
         </div>
