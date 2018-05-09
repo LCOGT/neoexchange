@@ -516,10 +516,16 @@ def determine_rates_pa(start_time, end_time, elements, site_code):
     from the <site_code>"""
 
     first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=True, display=True)
+    # Check for no ephemeris caused by perturbing error
+    if not first_frame_emp:
+        first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=False, display=True)
     first_frame_speed = first_frame_emp[4]
     first_frame_pa = first_frame_emp[7]
 
     last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=True, display=True)
+    # Check for no ephemeris caused by perturbing error
+    if not last_frame_emp:
+        last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=False, display=True)
     last_frame_speed = last_frame_emp[4]
     last_frame_pa = last_frame_emp[7]
 
