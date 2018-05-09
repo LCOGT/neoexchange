@@ -315,7 +315,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     if display:
         print("  %02.2d %02.2d %02.2d.%02.2d %s%02.2d %02.2d %02.2d.%01.1d  V=%.1f  %5.2f %.1f % 7.3f %8.4f" % ( ra_geo_deg[0],
             ra_geo_deg[1], ra_geo_deg[2], ra_geo_deg[3],
-            dsign, dec_geo_deg[0], dec_geo_deg[1], dec_geo_deg[2], dec_geo_deg[3],
+            dsign.decode('utf-8'), dec_geo_deg[0], dec_geo_deg[1], dec_geo_deg[2], dec_geo_deg[3],
             mag, total_motion, sky_pa, alt_deg, airmass))
 
 # Compute South Polar Distance from Dec
