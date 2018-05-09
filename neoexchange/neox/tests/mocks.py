@@ -569,7 +569,7 @@ def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
                   u'related_frames': [7783593],
                   u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/dd9f/ogg2m001-en06-20180110-0005-e00?versionId=c1X8nfL_LSwptv_c0m7dultGCOfVJJr3&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=fjmzi9KK%2FqNi3DnvjyEjSP%2BJG8o%3D&Expires=1521319897',
                  }]
-    elif archive_url.rfind("OBSTYPE=") > 0:
+    elif archive_url.rfind("OBSTYPE=") > 0 and 'EXPOSE' not in archive_url:
         data = [{
                   u'OBSTYPE': u'SPECTRUM',
                   u'REQNUM': 1391169,
