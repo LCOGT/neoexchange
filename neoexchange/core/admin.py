@@ -65,9 +65,9 @@ class BlockAdmin(VersionAdmin):
     format_block_start.admin_order_field = 'block_start'
 
     def zoo_friendly(self, obj):
-        if obj.num_exposures is None or obj.num_observed is None or obj.num_candidates is None:
+        if obj.num_exposures is None or obj.num_observed is None or obj.num_candidates() is None:
             return False
-        elif obj.num_exposures < 10 and obj.num_observed > 0 and obj.num_candidates > 0:
+        elif obj.num_exposures < 10 and obj.num_observed > 0 and obj.num_candidates() > 0:
             return True
         else:
             return False
