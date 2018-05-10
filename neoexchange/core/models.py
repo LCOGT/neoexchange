@@ -367,6 +367,8 @@ class SuperBlock(models.Model):
         return ", ".join(class_obstype)
 
     def get_obsdetails(self):
+        obs_details_str = ""
+
         qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
 
         # Count number of unique N exposure x Y exposure length combinations
@@ -378,7 +380,7 @@ class SuperBlock(models.Model):
                 obs_details.append("%d of %dx%.1f secs" % (c[1], c[0][0], c[0][1]))
 
             obs_details_str = ", ".join(obs_details)
-        else:
+        elif len(counts) == 1:
             c = list(counts)
             obs_details_str = "%dx%.1f secs" % (c[0][0], c[0][1])
 

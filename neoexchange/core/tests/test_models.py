@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from django.db import connection
@@ -421,6 +421,27 @@ class TestSuperBlock(TestCase):
         expected_obstypes = "1,0"
 
         obs_types = self.sblock.get_obstypes()
+
+        self.assertEqual(expected_obstypes, obs_types)
+
+    def test_obstypes_noblocks(self):
+        expected_obstypes = ''
+
+        # Create new SuperBlock for the next day and assert that there are
+        # no Block's associated with it.
+        new_sblock = SuperBlock(body = self.body,
+                                proposal = self.proposal,
+                                block_start = self.sblock.block_start + timedelta(days=1, seconds=300),
+                                block_end   = self.sblock.block_end + timedelta(days=1, seconds=300)
+                               )
+        new_sblock.save()
+
+        self.assertEqual(2, SuperBlock.objects.count())
+        num_assoc_blocks = Block.objects.filter(superblock=new_sblock.id).count()
+
+        self.assertEqual(0, num_assoc_blocks)
+
+        obs_types = new_sblock.get_obstypes()
 
         self.assertEqual(expected_obstypes, obs_types)
 
