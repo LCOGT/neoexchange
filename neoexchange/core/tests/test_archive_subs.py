@@ -63,7 +63,6 @@ class Test_Determine_Archive_Start_End(TestCase):
 
     def test_date_closeto_day_rollover(self):
         dt = datetime(2016, 4, 13, 15, 59, 59)
-
         expected_start = datetime(2016, 4, 12, 16, 0, 0)
         expected_end = datetime(2016, 4, 13, 16, 0, 0)
 

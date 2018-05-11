@@ -19,7 +19,10 @@ import logging
 from datetime import datetime, timedelta, time
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil
 
-import pyslalib.slalib as S
+try:
+    import pyslalib.slalib as S
+except:
+    pass
 from numpy import array, concatenate, zeros
 import copy
 from itertools import groupby
@@ -868,7 +871,7 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     if exp_count < min_exp_count:
         exp_count = min_exp_count
         exp_time = (slot_length - setup_overhead - molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)) - (exp_overhead * float(exp_count))) / exp_count
-        logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count ))
+        logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count))
     logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" %
         ( slot_length/60.0, slot_length, exp_count, exp_time))
     if exp_time is None or exp_time <= 0.0 or exp_count < 1:
@@ -879,6 +882,41 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     return exp_time, exp_count
 
 
+def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
+    """Determine the length of time that a planned spectroscopic observation will take.
+    This is based on the <exp_time> and no. of spectrum exposures [exp_count] (defaults
+    to 1) and also on the value of <calibs>, which can be one of ('none', before',
+    'after' or 'both') depending on whether calibrations (arcs and lamp flats) are not
+    wanted, wanted either before or after the spectrum, or both before and after.
+    Values and formulae come from Valhalla and values are encoded in
+    get_sitecam_params(). Currently only FLOYDS is supported and no distinction is
+    made between FTN and FTS.
+    The estimated time, in seconds, is returned."""
+
+    site_code = 'F65-FLOYDS'
+    slot_length = None
+
+    (chk_site_code, overheads, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit) = get_sitecam_params(site_code)
+
+    num_molecules = 1
+    calibs = calibs.lower()
+    if calibs == 'before' or calibs == 'after':
+        num_molecules = 3
+    elif calibs == 'both':
+        num_molecules = 5
+
+    if type(overheads) == dict and exp_overhead > -1:
+        slot_length = (exp_time + exp_overhead) * float(exp_count)
+        if calibs != 'none':
+            # If we have calibration molecules, add their time and readout to the total
+            slot_length += float(num_molecules-1)*(overheads['calib_exposure_time'] + exp_overhead)
+        slot_length += num_molecules * (overheads.get('config_change_time', 0.0) + overheads.get('per_molecule_time', 0.0))
+        slot_length += overheads.get('acquire_exposure_time', 0.0) + overheads.get('acquire_processing_time', 0.0)
+        slot_length += overheads.get('front_padding', 0.0)
+        slot_length = ceil(slot_length)
+    return slot_length
+
+
 def molecule_overhead(filter_blocks):
     single_mol_overhead = cfg.molecule_overhead['filter_change'] + cfg.molecule_overhead['per_molecule_time']
     molecule_setup_overhead = single_mol_overhead * len(filter_blocks)
@@ -886,6 +924,7 @@ def molecule_overhead(filter_blocks):
 
 
 def build_filter_blocks(filter_pattern, exp_count):
+    """Take in filter pattern string, export list of [filter, # of exposures in filter] """
     filter_bits = filter_pattern.split(',')
     filter_bits = list(filter(None, filter_bits))
     filter_list = []
@@ -897,7 +936,8 @@ def build_filter_blocks(filter_pattern, exp_count):
         filter_blocks.append(list(m))
     if len(filter_blocks) == 0:
         filter_blocks = [filter_bits]
-    return filter_blocks
+    return [[block[0], len(block)] for block in filter_blocks]
+    # return filter_blocks
 
 
 def compute_score(obj_alt, moon_alt, moon_sep, alt_limit=25.0):
@@ -1197,7 +1237,7 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 
 # Full formula for phase angle, i. Requires r (Earth-Sun distance) and del(ta) (the
 # Earth-Moon distance) neither of which we have with our methods. However Meeus
-# _Astronomical Algorithms_ p 316 reckons we can "put cos(i) = -cos(phi) and k (the
+# _Astronomical Algorithms_ p 345 reckons we can "put cos(i) = -cos(phi) and k (the
 # Moon phase) will never be in error by more than 0.0014"
 #    i = atan2( r * sin(phi), del - r * cos(phi) )
 
@@ -1342,6 +1382,20 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
+    elif site == 'F65-FLOYDS' or site == 'E10-FLOYDS':
+        site_code = site[0:3]
+        exp_overhead = cfg.inst_overhead['floyds_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_floyds_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_floyds_fov'])
+        max_exp_length = 3600.0
+        alt_limit = cfg.tel_alt['twom_alt_limit']
+        setup_overhead = { 'front_padding' : cfg.tel_overhead['twom_setup_overhead'],
+                           'config_change_time' : cfg.inst_overhead['floyds_config_change_overhead'],
+                           'acquire_processing_time' : cfg.inst_overhead['floyds_acq_proc_overhead'],
+                           'acquire_exposure_time': cfg.inst_overhead['floyds_acq_exp_time'],
+                           'per_molecule_time' : cfg.molecule_overhead['per_molecule_time'],
+                           'calib_exposure_time' : cfg.inst_overhead['floyds_calib_exp_time']
+                         }
     elif site in valid_point4m_codes:
         site_code = site
         setup_overhead = cfg.tel_overhead['point4m_setup_overhead']

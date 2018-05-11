@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 import os
 from datetime import datetime, timedelta
-from math import floor
+from math import floor, ceil
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
@@ -33,8 +33,10 @@ from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes
-from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, MPCReportForm
+    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
+    determine_spectro_slot_length
+from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
@@ -45,6 +47,7 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
     read_mtds_file
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
+from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
@@ -384,12 +387,14 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         proposals = user_proposals(self.request.user)
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        if kwargs['cad_form']:
+            kwargs['cad_form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
 
 
 class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     """
-    Creates a suggested observation request, including time window and molecules
+    Creates a suggested cadenced observation request, including time window and molecules
     """
     template_name = 'core/schedule.html'
     form_class = ScheduleCadenceForm
@@ -406,6 +411,41 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
+
+
+class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
+    """
+    Creates a suggested spectroscopic observation request, including time window,
+    calibrations and molecules
+    """
+    template_name = 'core/schedule_spectra.html'
+    form_class = ScheduleSpectraForm
+    ok_to_schedule = False
+
+    def get(self, request, *args, **kwargs):
+        form = self.get_form()
+        return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def post(self, request, *args, **kwargs):
+        form = ScheduleSpectraForm(request.POST)
+        if form.is_valid():
+            return self.form_valid(form,request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
+
+    def get_context_data(self, **kwargs):
+        """
+        Only show proposals the current user is a member of
+        """
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
 
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
@@ -456,7 +496,14 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
 
 def schedule_check(data, body, ok_to_schedule=True):
+
+    spectroscopy = data.get('spectroscopy', False)
     body_elements = model_to_dict(body)
+
+    if spectroscopy:
+        data['site_code'] = data['instrument_code'][0:3]
+    else:
+        data['instrument_code'] = ''
 
     # Check if we have a high eccentricity object and it's not of comet type
     if body_elements['eccentricity'] >= 0.9 and body_elements['elements_type'] != 'MPC_COMET':
@@ -499,13 +546,16 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
     elif data['site_code'] == 'E10' or data['site_code'] == 'F65':
-        filter_pattern = 'solar'
+        if spectroscopy:
+            filter_pattern = 'slit_6.0as'
+        else:
+            filter_pattern = 'solar'
     else:
         filter_pattern = 'w'
 
     # Get string of available filters
     available_filters = ''
-    filter_list = fetch_filter_list(data['site_code'])
+    filter_list = fetch_filter_list(data['site_code'], spectroscopy)
     for filt in filter_list:
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
@@ -514,15 +564,26 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('slot_length'):
         slot_length = data.get('slot_length')
     else:
-        try:
-            slot_length = determine_slot_length(magnitude, data['site_code'])
-        except MagRangeError:
-            slot_length = 0.
+        if spectroscopy:
+            slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
+            slot_length /= 60.0
+            slot_length = ceil(slot_length)
+        else:
+            try:
+                slot_length = determine_slot_length(magnitude, data['site_code'])
+            except MagRangeError:
+                slot_length = 0.
+                ok_to_schedule = False
+    snr = None
+    if spectroscopy:
+        new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
+        exp_count = data['exp_count']
+        exp_length = data.get('exp_length', 1)
+    else:
+        # Determine exposure length and count
+        exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
+        if exp_length is None or exp_count is None:
             ok_to_schedule = False
-    # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
-    if exp_length is None or exp_count is None:
-        ok_to_schedule = False
 
     # Determine pattern iterations
     if exp_count:
@@ -556,7 +617,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         if len(body.current_name()) > 7:
             # Name is too long to fit in the groupid field, trim off year part.
             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%m%d'), datetime.strftime(data['end_time'], '%m%d'))
-
+    elif spectroscopy:
+        suffix += "_spectra"
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
@@ -578,7 +640,11 @@ def schedule_check(data, body, ok_to_schedule=True):
         'ra_midpoint': emp[1],
         'dec_midpoint': emp[2],
         'period' : period,
-        'jitter' : jitter
+        'jitter' : jitter,
+        'snr' : snr,
+        'spectroscopy' : spectroscopy,
+        'calibs' : data.get('calibs', ''),
+        'instrument_code' : data['instrument_code']
     }
 
     if period and jitter:
@@ -615,7 +681,11 @@ def schedule_submit(data, body, username):
               'site_code': data['site_code'],
               'start_time': data['start_time'],
               'end_time': data['end_time'],
-              'group_id': data['group_id']
+              'group_id': data['group_id'],
+
+              'spectroscopy' : data.get('spectroscopy', False),
+              'calibs' : data.get('calibs', ''),
+              'instrument_code' : data['instrument_code']
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
@@ -637,6 +707,49 @@ def schedule_submit(data, body, username):
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
 
+
+class SpectroFeasibility(LookUpBodyMixin, FormView):
+
+    template_name = 'core/feasibility.html'
+    form_class = SpectroFeasibilityForm
+
+    def get(self, request, *args, **kwargs):
+        form = SpectroFeasibilityForm(body=self.body)
+        return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+    def form_valid(self, form, request):
+        data = feasibility_check(form.cleaned_data, self.body)
+        new_form = SpectroFeasibilityForm(data, body=self.body)
+        return render(request, 'core/feasibility.html', {'form': new_form, 'data': data, 'body': self.body})
+
+    def post(self, request, *args, **kwargs):
+        form = SpectroFeasibilityForm(request.POST,body=self.body)
+        if form.is_valid():
+            return self.form_valid(form,request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+
+
+def feasibility_check(data, body):
+    """Calculate spectroscopic feasibility
+    """
+
+    # We assume asteroid magnitudes will be in V and calculate sky
+    # brightness in SDSS-ip as that is where most of the signal will be
+    ast_mag_bandpass = data.get('bandpass', 'V')
+    sky_mag_bandpass = data.get('sky_mag_bandpass', 'ip')
+    data['sky_mag'] = calc_sky_brightness(sky_mag_bandpass, data['moon_phase'])
+    snr_params = {
+                    'moon_phase' : data['moon_phase'],
+                    'airmass'    : data['airmass']
+                 }
+    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params)
+    calibs = data.get('calibs', 'both')
+    slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
+    slot_length /= 60.0
+    data['slot_length'] = slot_length
+
+    return data
 
 def ranking(request):
 

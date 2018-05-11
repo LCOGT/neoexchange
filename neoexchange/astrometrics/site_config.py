@@ -8,7 +8,9 @@ tel_field = {   'onem_fov'              : 15.5,
                 'point4m_pixscale'      : 1.139,        # bin 2, from average kb29 values
                 'point4m_fov'           : 29.1,
                 'twom_pixscale'         : 0.304,
-                'twom_fov'              : 10.0
+                'twom_fov'              : 10.0,
+                'twom_floyds_pixscale'  : 0.337,
+                'twom_floyds_fov'       : 2.0
             }
 
 #altitude limits
@@ -37,7 +39,7 @@ inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'floyds_config_change_overhead' : 30.0,
                     'floyds_acq_proc_overhead'      : 60.0,
                     'floyds_acq_exp_time'           : 30.0,
-                    'floyds_calib_time'             : 60.0
+                    'floyds_calib_exp_time'         : 60.0
                 }
 
 # Telescope sites
@@ -67,4 +69,33 @@ valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
 # Reverse site code dictionary
 valid_telescope_codes = {v: k for k, v in valid_site_codes.items()}
 
+# Establish Filter Lists
+phot_filters = [    "air",
+                    "clear",
+                    "ND",
+                    "Astrodon-UV",
+                    "U",
+                    "B",
+                    "V",
+                    "R",
+                    "I",
+                    "B*ND",
+                    "V*ND",
+                    "R*ND",
+                    "I*ND",
+                    "up",
+                    "gp",
+                    "rp",
+                    "ip",
+                    "Skymapper-VS",
+                    "solar",
+                    "zs",
+                    "Y",
+                    "w"
+                    ]
 
+spec_filters = [    "slit_1.2as",
+                    "slit_1.6as",
+                    "slit_2.0as",
+                    "slit_6.0as"
+                ]
