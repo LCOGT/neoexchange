@@ -1944,6 +1944,21 @@ class TestFrames(TestCase):
                        }
         self.test_block_0m4 = Block.objects.create(**block_params)
 
+        block_params = { 'obstype' : Block.OPT_SPECTRA,
+                         'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : 'TEMP_GROUP_spectra',
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'tracking_number' : '1509481',
+                         'num_exposures' : 1,
+                         'exp_length' : 1800.0,
+                         'active'   : True
+                       }
+        self.test_spec_block = Block.objects.create(**block_params)
+
     def test_add_frame(self):
         params = parse_mpcobs(self.test_obslines[-1])
         resp = create_frame(params, self.test_block)
@@ -2262,6 +2277,35 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_spectro_arc(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "FILTER" : "air     ",
+                    "APERTYPE" : "SLIT    ",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-a00.fits",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_2.0AS')
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('a00', 'a91.fits'))
 
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
