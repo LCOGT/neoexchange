@@ -2732,7 +2732,9 @@ class TestFetchPreviousSpectra(TestCase):
 
         self.assertEqual(expected_length, len(targets))
 
+    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_smass_year(self):
+        MockDateTime.change_datetime(2017, 10, 25, 3, 26, 5)
         expected_length = 10
         page = self.test_smass_page
         targets = fetch_smass_targets(page, False)
