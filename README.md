@@ -4,6 +4,12 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.4.0
+
+Add basic spectroscopy support to NEOexchange:
+* Added a SNR estimator which can transform the predicted V mag to a variety of different magnitudes for several different taxonomic types (SDSS-i and a Mean taxonomic class is assumed right now) and include the effects of the Moon and zodiacal light. The SNR estimator includes a generalized telescope and instrument model which can be adapted to other telescopes/instruments in the future.
+* Added ability to submit spectroscopic observations and associated calibrations to the LCO Network.
+
 ### 2.3.6
 
 Bite the Bullet and Update to Python 3.6
