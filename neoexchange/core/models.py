@@ -1,6 +1,6 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -11,10 +11,10 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
+from __future__ import unicode_literals
 from datetime import datetime,timedelta,date
 from math import pi, log10, sqrt, cos
-import math
 from collections import Counter
 import reversion
 
@@ -23,7 +23,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
-from django.utils.encoding import force_text
+from django.utils.encoding import force_text, python_2_unicode_compatible
 from django.forms.models import model_to_dict
 from astropy.time import Time
 from astropy.wcs import WCS
@@ -44,66 +44,67 @@ from astrometrics.albedo import asteroid_albedo, asteroid_diameter
 
 
 OBJECT_TYPES = (
-                ('N','NEO'),
-                ('A','Asteroid'),
-                ('C','Comet'),
-                ('K','KBO'),
-                ('E','Centaur'),
-                ('T','Trojan'),
-                ('U','Candidate'),
-                ('X','Did not exist'),
-                ('W','Was not interesting'),
-                ('D','Discovery, non NEO'),
-                ('J','Artificial satellite')
+                ('N', 'NEO'),
+                ('A', 'Asteroid'),
+                ('C', 'Comet'),
+                ('K', 'KBO'),
+                ('E', 'Centaur'),
+                ('T', 'Trojan'),
+                ('U', 'Candidate'),
+                ('X', 'Did not exist'),
+                ('W', 'Was not interesting'),
+                ('D', 'Discovery, non NEO'),
+                ('J', 'Artificial satellite'),
+                ('H', 'Hyperbolic asteroids')
             )
 
-ELEMENTS_TYPES = (('MPC_MINOR_PLANET','MPC Minor Planet'),('MPC_COMET','MPC Comet'))
+ELEMENTS_TYPES = (('MPC_MINOR_PLANET', 'MPC Minor Planet'), ('MPC_COMET', 'MPC Comet'))
 
 ORIGINS = (
-            ('M','Minor Planet Center'),
-            ('N','NASA'),
-            ('S','Spaceguard'),
-            ('D','NEODSYS'),
-            ('G','Goldstone'),
-            ('A','Arecibo'),
-            ('R','Goldstone & Arecibo'),
-            ('L','LCOGT'),
-            ('Y','Yarkovsky'),
+            ('M', 'Minor Planet Center'),
+            ('N', 'NASA'),
+            ('S', 'Spaceguard'),
+            ('D', 'NEODSYS'),
+            ('G', 'Goldstone'),
+            ('A', 'Arecibo'),
+            ('R', 'Goldstone & Arecibo'),
+            ('L', 'LCOGT'),
+            ('Y', 'Yarkovsky'),
             ('T', 'Trojan')
             )
 
 TELESCOPE_CHOICES = (
-                        ('1m0','1-meter'),
-                        ('2m0','2-meter'),
-                        ('0m4','0.4-meter')
+                        ('1m0', '1-meter'),
+                        ('2m0', '2-meter'),
+                        ('0m4', '0.4-meter')
                     )
 
 SITE_CHOICES = (
-                    ('ogg','Haleakala'),
-                    ('coj','Siding Spring'),
-                    ('lsc','Cerro Tololo'),
-                    ('elp','McDonald'),
-                    ('cpt','Sutherland'),
-                    ('tfn','Tenerife'),
-                    ('sbg','SBIG cameras'),
-                    ('sin','Sinistro cameras')
+                    ('ogg', 'Haleakala'),
+                    ('coj', 'Siding Spring'),
+                    ('lsc', 'Cerro Tololo'),
+                    ('elp', 'McDonald'),
+                    ('cpt', 'Sutherland'),
+                    ('tfn', 'Tenerife'),
+                    ('sbg', 'SBIG cameras'),
+                    ('sin', 'Sinistro cameras')
     )
 
 TAX_SCHEME_CHOICES = (
-                        ('T','Tholen'),
-                        ('Ba','Barucci'),
-                        ('Td','Tedesco'),
-                        ('H','Howell'),
-                        ('S','SMASS'),
-                        ('B','Bus'),
-                        ('3T','S3OS2_TH'),
-                        ('3B','S3OS2_BB'),
-                        ('BD','Bus-DeMeo')
+                        ('T', 'Tholen'),
+                        ('Ba', 'Barucci'),
+                        ('Td', 'Tedesco'),
+                        ('H', 'Howell'),
+                        ('S', 'SMASS'),
+                        ('B', 'Bus'),
+                        ('3T', 'S3OS2_TH'),
+                        ('3B', 'S3OS2_BB'),
+                        ('BD', 'Bus-DeMeo')
                      )
 
 TAX_REFERENCE_CHOICES = (
-                        ('PDS6','Neese, Asteroid Taxonomy V6.0. (2010).'),
-                        ('BZ04','Binzel, et al. (2004).'),
+                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0. (2010).'),
+                        ('BZ04', 'Binzel, et al. (2004).'),
                      )
 
 SPECTRAL_WAV_CHOICES = (
@@ -120,6 +121,8 @@ SPECTRAL_SOURCE_CHOICES = (
                         ('O','Other')
                      )
 
+
+@python_2_unicode_compatible
 class Proposal(models.Model):
     code = models.CharField(max_length=20)
     title = models.CharField(max_length=255)
@@ -129,31 +132,32 @@ class Proposal(models.Model):
 
     class Meta:
         db_table = 'ingest_proposal'
-        ordering = ['-id',]
+        ordering = ['-id', ]
 
-    def __unicode__(self):
-        if len(self.title)>=10:
+    def __str__(self):
+        if len(self.title) >= 10:
             title = "%s..." % self.title[0:9]
         else:
             title = self.title[0:10]
-        return "%s %s"  % (self.code, title)
+        return "%s %s" % (self.code, title)
 
 
+@python_2_unicode_compatible
 class Body(models.Model):
-    provisional_name    = models.CharField('Provisional MPC designation',max_length=15,blank=True, null=True)
-    provisional_packed  = models.CharField('MPC name in packed format', max_length=7,blank=True, null=True)
-    name                = models.CharField('Designation',max_length=15, blank=True, null=True)
-    origin              = models.CharField('Where did this target come from?',max_length=1, choices=ORIGINS, default="M",blank=True, null=True)
-    source_type         = models.CharField('Type of object',max_length=1,choices=OBJECT_TYPES,blank=True, null=True)
-    elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES,blank=True, null=True)
+    provisional_name    = models.CharField('Provisional MPC designation', max_length=15, blank=True, null=True)
+    provisional_packed  = models.CharField('MPC name in packed format', max_length=7, blank=True, null=True)
+    name                = models.CharField('Designation', max_length=15, blank=True, null=True)
+    origin              = models.CharField('Where did this target come from?', max_length=1, choices=ORIGINS, default="M", blank=True, null=True)
+    source_type         = models.CharField('Type of object', max_length=1, choices=OBJECT_TYPES, blank=True, null=True)
+    elements_type       = models.CharField('Elements type', max_length=16, choices=ELEMENTS_TYPES, blank=True, null=True)
     active              = models.BooleanField('Actively following?', default=False)
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
     urgency             = models.IntegerField(help_text='how urgent is this?', blank=True, null=True)
-    epochofel           = models.DateTimeField('Epoch of elements',blank=True, null=True)
-    orbinc              = models.FloatField('Orbital inclination in deg',blank=True, null=True)
-    longascnode         = models.FloatField('Longitude of Ascending Node (deg)',blank=True, null=True)
-    argofperih          = models.FloatField('Arg of perihelion (deg)',blank=True, null=True)
-    eccentricity        = models.FloatField('Eccentricity',blank=True, null=True)
+    epochofel           = models.DateTimeField('Epoch of elements', blank=True, null=True)
+    orbinc              = models.FloatField('Orbital inclination in deg', blank=True, null=True)
+    longascnode         = models.FloatField('Longitude of Ascending Node (deg)', blank=True, null=True)
+    argofperih          = models.FloatField('Arg of perihelion (deg)', blank=True, null=True)
+    eccentricity        = models.FloatField('Eccentricity', blank=True, null=True)
     meandist            = models.FloatField('Mean distance (AU)', blank=True, null=True, help_text='for asteroids')
     meananom            = models.FloatField('Mean Anomaly (deg)', blank=True, null=True, help_text='for asteroids')
     perihdist           = models.FloatField('Perihelion distance (AU)', blank=True, null=True, help_text='for comets')
@@ -174,7 +178,7 @@ class Body(models.Model):
             return True
         else:
             return False
- 
+
     def diameter(self):        
         m = self.abs_mag
         avg = 0.167
@@ -228,7 +232,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return (emp_line[1], emp_line[2], emp_line[3], emp_line[6])
+            return emp_line[1], emp_line[2], emp_line[3], emp_line[6]
         else:
             # Catch the case where there is no Epoch
             return False
@@ -240,44 +244,41 @@ class Body(models.Model):
         delta_t = 10
         mag_limit = 18
         vmag = []
-        i=0
+        i = 0
         dstart = ''
         dend = ''
         if self.epochofel:
             orbelems = model_to_dict(self)
             sitecode = '500'
-#            print "--------------------"
-#            print self.name
-            while (i <= df / delta_t ):
-
+            while i <= df / delta_t :
                 emp_line, mag_dot = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
                 vmag.append(emp_line[3])
 
-                #Eliminate bad magnitudes
+                # Eliminate bad magnitudes
                 if vmag[i] < 0:
-                    return (dstart,dend,d0)
+                    return dstart, dend, d0
 
-                #Calculate time since/until reaching Magnitude limit
+                # Calculate time since/until reaching Magnitude limit
                 t_diff = (mag_limit - vmag[i]) / mag_dot
-#                print d, emp_line[1],emp_line[2], emp_line[3], t_diff
-                '''Filter likely results based on Mag/mag_dot to speed results.
-                    Cuts load time by 60% will ocasionally and temporarily miss
-                    objects with either really short windows or unusual behavior 
-                    at the edges. These objects will be found as the date changes.'''
+
+                # Filter likely results based on Mag/mag_dot to speed results.
+                # Cuts load time by 60% will occasionally and temporarily miss
+                # objects with either really short windows or unusual behavior
+                # at the edges. These objects will be found as the date changes.
                 if d == d0 + timedelta(days=df) and i == 1:
-                    if vmag [i] <= mag_limit and dstart:
-                        return (dstart,dend,d0)
+                    if vmag[i] <= mag_limit and dstart:
+                        return dstart, dend, d0
                     elif not dstart:
                         if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
-                            return (dstart,dend,d0)
+                            return dstart, dend, d0
                         else:
                             d = d0 + timedelta(days=delta_t)
                     else:
                         d = d0 + timedelta(days=delta_t)
                 if vmag[i] > mag_limit and dstart:
                     dend = d
-                    return (dstart,dend,d0)
-                elif vmag [i] <= mag_limit and not dstart:
+                    return dstart, dend, d0
+                elif vmag[i] <= mag_limit and not dstart:
                     dstart = d
                     if i == 0:
                         d += timedelta(days=df)
@@ -293,7 +294,7 @@ class Body(models.Model):
 #                d += timedelta(days=delta_t)
                 i += 1
             # Return dates
-            return (dstart,dend,d0)
+            return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
             return False
@@ -304,12 +305,12 @@ class Body(models.Model):
             orbelems = model_to_dict(self)
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
-            if 'U' in orbelems['source_type'] and orbelems['not_seen']!=None and orbelems['arc_length']!=None and orbelems['score']!=None:
+            if 'U' in orbelems['source_type'] and orbelems['not_seen'] is not None and orbelems['arc_length'] is not None and orbelems['score'] is not None:
                 FOM = comp_FOM(orbelems, emp_line)
                 return FOM
             else:
                 return None
-           # Catch the case where there is no Epoch
+        # Catch the case where there is no Epoch
         else:
             return None
 
@@ -324,7 +325,7 @@ class Body(models.Model):
         else:
             observed = 'Not yet'
             reported = 'Not yet'
-        return (observed, reported)
+        return observed, reported
 
     class Meta:
         verbose_name = _('Minor Body')
@@ -332,72 +333,74 @@ class Body(models.Model):
         db_table = 'ingest_body'
         ordering = ['-ingest', '-active']
 
-    def __unicode__(self):
+    def __str__(self):
         if self.active:
             text = ''
         else:
             text = 'not '
         return_name = self.provisional_name
-        if (self.provisional_name == None or self.provisional_name == u'') \
-            and self.name != None and self.name != u'':
+        if (self.provisional_name is None or self.provisional_name == u'')\
+                and self.name is not None and self.name != u'':
             return_name = self.name
-        return u'%s is %sactive' % (return_name,text)
+        return u'%s is %sactive' % (return_name, text)
 
+
+@python_2_unicode_compatible
 class SpectralInfo(models.Model):
     body                = models.ForeignKey(Body, on_delete=models.CASCADE)
-    taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True,max_length=6)
-    tax_scheme          = models.CharField('Taxonomic Scheme',blank=True,choices=TAX_SCHEME_CHOICES, null=True,max_length=2)
-    tax_reference       = models.CharField('Reference source for Taxonomic data',max_length=6,choices=TAX_REFERENCE_CHOICES,blank=True, null=True)
-    tax_notes           = models.CharField('Notes on Taxonomic Classification',max_length=20,blank=True, null=True)
+    taxonomic_class     = models.CharField('Taxonomic Class', blank=True, null=True, max_length=6)
+    tax_scheme          = models.CharField('Taxonomic Scheme', blank=True, choices=TAX_SCHEME_CHOICES, null=True, max_length=2)
+    tax_reference       = models.CharField('Reference source for Taxonomic data', max_length=6, choices=TAX_REFERENCE_CHOICES, blank=True, null=True)
+    tax_notes           = models.CharField('Notes on Taxonomic Classification', max_length=30, blank=True, null=True)
 
     def make_readable_tax_notes(self):
-        text=self.tax_notes
-        text_out=''
-        end=''
+        text = self.tax_notes
+        text_out = ''
+        end = ''
         if self.tax_reference == 'PDS6':
             if "|" in text:
-                chunks=text.split('|')
-                text=chunks[0]
-                end =chunks[1]
+                chunks = text.split('|')
+                text = chunks[0]
+                end = chunks[1]
             if self.tax_scheme in "T,Ba,Td,H,S,B":
-                if  text[0].isdigit():
+                if text[0].isdigit():
                     if len(text) > 1:
                         if text[1].isdigit():
-                            text_out=text_out + ' %s color indices were used.\n' % (text[0:2])
+                            text_out = text_out + ' %s color indices were used.\n' % (text[0:2])
                         else:
-                            text_out=text_out + ' %s color indices were used.\n' % (text[0])
+                            text_out = text_out + ' %s color indices were used.\n' % (text[0])
                     else:
-                        text_out=text_out + ' %s color indices were used.\n' % (text[0])
+                        text_out = text_out + ' %s color indices were used.\n' % (text[0])
                 if "G" in text:
-                    text_out=text_out + ' Used groundbased radiometric albedo.'
+                    text_out = text_out + ' Used groundbased radiometric albedo.'
                 if "I" in text:
-                    text_out=text_out + ' Used IRAS radiometric albedo.'
+                    text_out = text_out + ' Used IRAS radiometric albedo.'
                 if "A" in text:
-                    text_out=text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
+                    text_out = text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
                 if "S" in text:
-                    text_out=text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
+                    text_out = text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                 if "s" in text:
-                    text_out=text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
+                    text_out = text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
             elif self.tax_scheme == "BD":
                 if "a" in text:
-                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
+                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
                 if "b" in text:
-                    text_out=text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+                    text_out = text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
                 if "c" in text:
-                    text_out=text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
+                    text_out = text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
                 if "d" in text:
-                    text_out=text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
+                    text_out = text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
                 if "e" in text:
-                    text_out=text_out + ' Visible and NIR: DeMeo et al. (2009).'
+                    text_out = text_out + ' Visible and NIR: DeMeo et al. (2009).'
                 if "f" in text:
-                    text_out=text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
+                    text_out = text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
                 if "g" in text:
-                    text_out=text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
+                    text_out = text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
                 if "h" in text:
-                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
+                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
                 if "i" in text:
-                    text_out=text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).' 
-        text_out=text_out+end
+                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+        text_out = text_out+end
         return text_out
 
     class Meta:
@@ -405,16 +408,17 @@ class SpectralInfo(models.Model):
         verbose_name_plural = _('Spectroscopy Details')
         db_table = 'ingest_taxonomy'
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s is a %s-Type Asteroid" % (self.body.name, self.taxonomic_class)
+
 
 class PreviousSpectra(models.Model):
     body                = models.ForeignKey(Body, on_delete=models.CASCADE)
-    spec_wav            = models.CharField('Wavelength', blank=True, null=True,max_length=7,choices=SPECTRAL_WAV_CHOICES)
-    spec_vis            = models.CharField('Visible Spectra Link',blank=True, null=True,max_length=40)
-    spec_ir             = models.CharField('IR Spectra Link',max_length=40,blank=True, null=True)
-    spec_ref            = models.CharField('Spectra Reference',max_length=10,blank=True, null=True)
-    spec_source         = models.CharField('Source',max_length=1,blank=True, null=True,choices=SPECTRAL_SOURCE_CHOICES)
+    spec_wav            = models.CharField('Wavelength', blank=True, null=True, max_length=7, choices=SPECTRAL_WAV_CHOICES)
+    spec_vis            = models.CharField('Visible Spectra Link', blank=True, null=True, max_length=40)
+    spec_ir             = models.CharField('IR Spectra Link', max_length=40, blank=True, null=True)
+    spec_ref            = models.CharField('Spectra Reference', max_length=10, blank=True, null=True)
+    spec_source         = models.CharField('Source', max_length=1, blank=True, null=True, choices=SPECTRAL_SOURCE_CHOICES)
     spec_date           = models.DateField(blank=True, null=True)
 
     class Meta:
@@ -423,8 +427,10 @@ class PreviousSpectra(models.Model):
         db_table = 'ingest_previous_spectra'
 
     def __unicode__(self):
-        return "%s has %s spectra of %s" % (self.spec_source,self.spec_wav,self.body.name)
+        return "%s has %s spectra of %s" % (self.spec_source, self.spec_wav, self.body.name)
 
+
+@python_2_unicode_compatible
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
@@ -442,7 +448,7 @@ class SuperBlock(models.Model):
 
     def make_obsblock_link(self):
         url = ''
-        if self.tracking_number != None and self.tracking_number != '':
+        if self.tracking_number is not None and self.tracking_number != '':
             url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
         return url
 
@@ -467,7 +473,7 @@ class SuperBlock(models.Model):
             for c in counts.items():
                 obs_details.append("%d of %dx%.1f secs" % (c[1], c[0][0], c[0][1]))
 
-            obs_details_str =  ", ".join(obs_details)
+            obs_details_str = ", ".join(obs_details)
         else:
             c = list(counts)
             obs_details_str = "%dx%.1f secs" % (c[0][0], c[0][1])
@@ -477,12 +483,12 @@ class SuperBlock(models.Model):
     def get_num_observed(self):
         qs = Block.objects.filter(superblock=self.id)
 
-        return (qs.filter(num_observed__gte=1).count(), qs.count())
+        return qs.filter(num_observed__gte=1).count(), qs.count()
 
     def get_num_reported(self):
         qs = Block.objects.filter(superblock=self.id)
 
-        return (qs.filter(reported=True).count(), qs.count())
+        return qs.filter(reported=True).count(), qs.count()
 
     def get_last_observed(self):
         last_observed = None
@@ -505,14 +511,16 @@ class SuperBlock(models.Model):
         verbose_name_plural = _('SuperBlocks')
         db_table = 'ingest_superblock'
 
-    def __unicode__(self):
+    def __str__(self):
         if self.active:
             text = ''
         else:
             text = 'not '
 
-        return u'%s is %sactive' % (self.tracking_number,text)
+        return '%s is %sactive' % (self.tracking_number, text)
 
+
+@python_2_unicode_compatible
 class Block(models.Model):
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
@@ -535,12 +543,23 @@ class Block(models.Model):
     def make_obsblock_link(self):
         url = ''
         # XXX Change to request number and point at requests endpoint (https://observe.lco.global/requests/<request no.>/
-        if self.tracking_number != None and self.tracking_number != '':
+        if self.tracking_number is not None and self.tracking_number != '':
             url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
         return url
 
-    def num_frames(self):
+    def num_red_frames(self):
+        """Returns the total number of reduced frames (quicklook and fully reduced)"""
         return Frame.objects.filter(block=self.id, frametype__in=Frame.reduced_frames(Frame())).count()
+
+    def num_unique_red_frames(self):
+        """Returns the number of *unique* reduced frames (quicklook OR fully reduced)"""
+        reduced_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_RED_FRAMETYPE)
+        ql_frames = Frame.objects.filter(block=self.id, frametype=Frame.BANZAI_QL_FRAMETYPE)
+        if reduced_frames.count() >= ql_frames.count():
+            total_exposure_number = reduced_frames.count()
+        else:
+            total_exposure_number = ql_frames.count()
+        return total_exposure_number
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
@@ -565,24 +584,26 @@ class Block(models.Model):
         verbose_name_plural = _('Observation Blocks')
         db_table = 'ingest_block'
 
-    def __unicode__(self):
+    def __str__(self):
         if self.active:
             text = ''
         else:
             text = 'not '
 
-        return u'%s is %sactive' % (self.tracking_number,text)
+        return '%s is %sactive' % (self.tracking_number, text)
+
 
 def unpickle_wcs(wcs_string):
-    '''Takes a pickled string and turns into an astropy WCS object'''
+    """Takes a pickled string and turns into an astropy WCS object"""
     wcs_bytes = wcs_string.encode()     # encode str to bytes
     wcs_bytes = b64decode(wcs_bytes)
     wcs_header = loads(wcs_bytes)
     return WCS(wcs_header)
 
+
 def pickle_wcs(wcs_object):
-    '''Turn out base64encoded string from astropy WCS object. This does
-    not use the inbuilt pickle/__reduce__ which loses needed information'''
+    """Turn out base64encoded string from astropy WCS object. This does
+    not use the inbuilt pickle/__reduce__ which loses needed information"""
     pickle_protocol = 2
 
     if wcs_object is not None and isinstance(wcs_object, WCS):
@@ -613,6 +634,7 @@ def pickle_wcs(wcs_object):
     else:
         value = wcs_object
     return value
+
 
 class WCSField(models.Field):
 
@@ -657,10 +679,12 @@ class WCSField(models.Field):
     def get_internal_type(self):
         return 'TextField'
 
+
+@python_2_unicode_compatible
 class Frame(models.Model):
-    ''' Model to represent (FITS) frames of data from observations successfully
+    """ Model to represent (FITS) frames of data from observations successfully
     made and filename of data which resulted.
-    '''
+    """
     SINGLE_FRAMETYPE = 0
     STACK_FRAMETYPE = 1
     NONLCO_FRAMETYPE = 2
@@ -706,7 +730,6 @@ class Frame(models.Model):
     wcs         = WCSField('WCS info', blank=True, null=True, editable=False)
     astrometric_catalog = models.CharField('Astrometric catalog used', max_length=40, default=' ')
     photometric_catalog = models.CharField('Photometric catalog used', max_length=40, default=' ')
-
 
     def get_x_size(self):
         x_size = None
@@ -773,7 +796,11 @@ class Frame(models.Model):
                         'E10' : 'LCO COJ Node 2m0 FTS at Siding Spring, Australia',
                         'F65' : 'LCO OGG Node 2m0 FTN at Haleakala, Maui',
                         'T04' : 'LCO OGG Node 0m4b at Haleakala, Maui',
-                        'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui'
+                        'T03' : 'LCO OGG Node 0m4c at Haleakala, Maui',
+                        'W89' : 'LCO LSC Node Aqawan A 0m4a at Cerro Tololo, Chile',
+                        'W79' : 'LCO LSC Node Aqawan B 0m4a at Cerro Tololo, Chile',
+                        'V38' : 'LCO ELP Node Aqawan A 0m4a at McDonald Observatory, Texas',
+                        'L09' : 'LCO CPT Node Aqawan A 0m4a at Sutherland, South Africa',
                         }
         return site_strings.get(self.sitecode, 'Unknown LCO site')
 
@@ -800,13 +827,17 @@ class Frame(models.Model):
                         'E10' : twom_string,
                         'F65' : twom_string,
                         'T04' : point4m_string,
-                        'T03' : point4m_string
+                        'T03' : point4m_string,
+                        'W89' : point4m_string,
+                        'W79' : point4m_string,
+                        'V38' : point4m_string,
+                        'L09' : point4m_string,
                         }
         return tels_strings.get(self.sitecode, 'Unknown LCO telescope')
 
     def map_filter(self):
-        '''Maps somewhat odd observed filters (e.g. 'solar') into the filter
-        (e.g. 'R') that would be used for the photometric calibration'''
+        """Maps somewhat odd observed filters (e.g. 'solar') into the filter
+        (e.g. 'R') that would be used for the photometric calibration"""
 
         new_filter = self.filter
         # Don't perform any mapping if it's not LCO data
@@ -822,20 +853,21 @@ class Frame(models.Model):
         verbose_name_plural = _('Observed Frames')
         db_table = 'ingest_frame'
 
-    def __unicode__(self):
+    def __str__(self):
 
         if self.filename:
-            name= self.filename
+            name = self.filename
         else:
-            name = "%s@%s" % ( self.midpoint, self.sitecode.rstrip() )
+            name = "%s@%s" % ( self.midpoint, self.sitecode.rstrip())
         return name
 
+
 class SourceMeasurement(models.Model):
-    '''Class to represent the measurements (RA, Dec, Magnitude and errors)
+    """Class to represent the measurements (RA, Dec, Magnitude and errors)
     performed on a Frame (having site code, date/time etc.).
     These will provide the way of storing past measurements of an object and
     any new measurements performed on data from the LCOGT NEO Follow-up Network
-    '''
+    """
 
     body = models.ForeignKey(Body)
     frame = models.ForeignKey(Frame)
@@ -884,7 +916,7 @@ class SourceMeasurement(models.Model):
         mpc_line = "%12s%2s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
             flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
-            mag, self.frame.map_filter(), translate_catalog_code(self.astrometric_catalog),self.frame.sitecode)
+            mag, self.frame.map_filter(), translate_catalog_code(self.astrometric_catalog), self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
             if self.body.name:
@@ -899,13 +931,14 @@ class SourceMeasurement(models.Model):
         verbose_name_plural = _('Source Measurements')
         db_table = 'source_measurement'
 
+
 class CatalogSources(models.Model):
-    '''Class to represent the measurements (X, Y, RA, Dec, Magnitude, shape and
+    """Class to represent the measurements (X, Y, RA, Dec, Magnitude, shape and
     errors) extracted from a catalog extraction performed on a Frame (having
     site code, date/time etc.). These will allow the storage of information for
     reference stars and candidate objects, allowing the display and measurement
     of objects.
-    '''
+    """
 
     frame = models.ForeignKey(Frame)
     obs_x = models.FloatField('CCD X co-ordinate')
@@ -961,19 +994,22 @@ class CatalogSources(models.Model):
         area = pi*self.major_axis*self.minor_axis
         return area
 
+
 def detections_array_dtypes():
-    '''Declare the columns and types of the structured numpy array for holding
-    the per-frame detections from the mtdlink moving object code'''
+    """Declare the columns and types of the structured numpy array for holding
+    the per-frame detections from the mtdlink moving object code"""
 
     dtypes = {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'sky_pos_angle', 'pixels_frame', 'streak_length'),
-                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
+                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4')
              }
 
     return dtypes
 
+
+@python_2_unicode_compatible
 class Candidate(models.Model):
-    '''Class to hold candidate moving object detections found by the moving
-    object code'''
+    """Class to hold candidate moving object detections found by the moving
+    object code"""
 
     block = models.ForeignKey(Block)
     cand_id = models.PositiveIntegerField('Candidate Id')
@@ -989,23 +1025,23 @@ class Candidate(models.Model):
     detections = models.BinaryField('Detections array', blank=True, null=True, editable=False)
 
     def convert_speed(self):
-        '''Convert speed in degrees/day into arcsec/min'''
+        """Convert speed in degrees/day into arcsec/min"""
         new_speed = (self.speed*3600.0)/(24.0*60.0)
         return new_speed
 
     def unpack_dets(self):
-        '''Unpacks the binary BLOB from the detections field into a numpy
-        structured array'''
+        """Unpacks the binary BLOB from the detections field into a numpy
+        structured array"""
         dtypes = detections_array_dtypes()
         dets = fromstring(self.detections, dtype=dtypes)
         return dets
 
     def compute_separation(self, body=None, time=None):
-        '''Computes the separation between the Candidate's avg_ra and avg_dec
-        and the RA, Dec of the body at a time of avg_midpoint'''
-        if body == None or type(body) != 'core.models.Body':
+        """Computes the separation between the Candidate's avg_ra and avg_dec
+        and the RA, Dec of the body at a time of avg_midpoint"""
+        if body is None or type(body) != 'core.models.Body':
             body = self.block.body
-        if time == None:
+        if time is None:
             time = self.avg_midpoint
 
         try:
@@ -1020,26 +1056,30 @@ class Candidate(models.Model):
     class Meta:
         verbose_name = _('Candidate')
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s#%04d" % (self.block.tracking_number, self.cand_id)
 
+
+@python_2_unicode_compatible
 class ProposalPermission(models.Model):
-    '''
+    """
     Linking a user to proposals in NEOx to control their access
-    '''
+    """
     proposal = models.ForeignKey(Proposal)
     user = models.ForeignKey(User)
 
     class Meta:
         verbose_name = _('Proposal Permission')
 
-    def __unicode__(self):
+    def __str__(self):
         return "%s is a member of %s" % (self.user, self.proposal)
 
+
+@python_2_unicode_compatible
 class PanoptesReport(models.Model):
-    '''
+    """
     Status of block
-    '''
+    """
     block = models.ForeignKey(Block)
     when_submitted = models.DateTimeField('Date sent to Zooniverse', blank=True, null=True)
     last_check = models.DateTimeField(blank=True, null=True)
@@ -1052,5 +1092,5 @@ class PanoptesReport(models.Model):
     class Meta:
         verbose_name = _('Zooniverse Report')
 
-    def __unicode__(self):
+    def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)

@@ -1,6 +1,6 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -11,10 +11,11 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 import os
-from datetime import datetime, timedelta
+import shutil
+from datetime import datetime, timedelta, date
 from unittest import skipIf
 import tempfile
 from glob import glob
@@ -29,7 +30,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
-    mock_odin_login, mock_run_sextractor_make_catalog
+    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
@@ -172,9 +173,8 @@ class TestClean_NEOCP_Object(TestCase):
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
-
     def save_N007riz(self):
-        obj_id ='N007riz'
+        obj_id = 'N007riz'
         elements = { 'abs_mag'     : 23.9,
                       'slope'       : 0.15,
                       'epochofel'   : datetime(2015, 3, 19, 0, 0, 0),
@@ -191,14 +191,14 @@ class TestClean_NEOCP_Object(TestCase):
                     }
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # We are creating this object
-        self.assertEqual(True,created)
-        resp = save_and_make_revision(body,elements)
+        self.assertEqual(True, created)
+        resp = save_and_make_revision(body, elements)
         # We are saving all the detailing elements
-        self.assertEqual(True,resp)
+        self.assertEqual(True, resp)
 
     def test_revise_N007riz(self):
         self.save_N007riz()
-        obj_id ='N007riz'
+        obj_id = 'N007riz'
         elements = { 'abs_mag'     : 23.9,
                       'slope'       : 0.15,
                       'epochofel'   : datetime(2015, 4, 19, 0, 0, 0),
@@ -216,13 +216,13 @@ class TestClean_NEOCP_Object(TestCase):
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # Created should now be false
         self.assertEqual(False, created)
-        resp = save_and_make_revision(body,elements)
+        resp = save_and_make_revision(body, elements)
         # Saving the new elements
         self.assertEqual(True,resp)
 
     def test_update_MPC_duplicate(self):
         self.save_N007riz()
-        obj_id ='N007riz'
+        obj_id = 'N007riz'
         update_MPC_orbit(obj_id)
 
     def test_create_discovered_object(self):
@@ -244,12 +244,12 @@ class TestClean_NEOCP_Object(TestCase):
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
         # We are creating this object
         self.assertEqual(True,created)
-        resp = save_and_make_revision(body,elements)
+        resp = save_and_make_revision(body, elements)
         # Need to call full_clean() to validate the fields as this is not
         # done on save() (called by get_or_create() or save_and_make_revision())
         body.full_clean()
         # We are saving all the detailing elements
-        self.assertEqual(True,resp)
+        self.assertEqual(True, resp)
 
         # Test it came from LCOGT as a discovery
         self.assertEqual('L', body.origin)
@@ -285,7 +285,6 @@ class TestClean_NEOCP_Object(TestCase):
             self.assertEqual(expected_elements[element], elements[element])
 
 class TestCheck_for_block(TestCase):
-
 
     def setUp(self):
         # Initialise with three test bodies a test proposal and several blocks.
@@ -443,13 +442,13 @@ class TestCheck_for_block(TestCase):
         self.test_block2 = Block.objects.create(**block_params2)
 
     def test_db_storage(self):
-        expected_body_count = 5 # Pew, pew, bang, bang...
+        expected_body_count = 5  # Pew, pew, bang, bang...
         expected_block_count = 7
         expected_sblock_count = 7
 
         body_count = Body.objects.count()
-        block_count =  Block.objects.count()
-        sblock_count =  SuperBlock.objects.count()
+        block_count = Block.objects.count()
+        sblock_count = SuperBlock.objects.count()
 
         self.assertEqual(expected_body_count, body_count)
         self.assertEqual(expected_block_count, block_count)
@@ -591,11 +590,23 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.views.ingest_frames', mock_ingest_frames)
     @patch('core.frames.lco_api_call', mock_archive_frame_header)
-    def test_block_update_check_status_change(self):
+    def test_block_update_check_status_change_not_enough_frames(self):
         blockid = self.test_block6.id
         resp = block_status(blockid)
         myblock = Block.objects.get(id=blockid)
-        self.assertFalse(myblock.active)
+        self.assertTrue(myblock.active)
+
+    @patch('core.frames.check_request_status', mock_check_request_status)
+    @patch('core.frames.check_for_archive_images', mock_check_for_images)
+    @patch('core.views.ingest_frames', mock_ingest_frames)
+    @patch('core.frames.lco_api_call', mock_archive_frame_header)
+    def test_block_update_check_status_change_enough_frames(self):
+        self.test_block6.num_exposures = 3
+        self.test_block6.save()
+        blockid = self.test_block6.id
+        resp = block_status(blockid)
+        myblock = Block.objects.get(id=blockid)
+        self.assertTrue(myblock.active)
 
     @patch('core.frames.check_request_status', mock_check_request_status_null)
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
@@ -618,7 +629,6 @@ class TestCheck_for_block(TestCase):
     @patch('core.frames.check_for_archive_images', mock_check_for_images)
     @patch('core.frames.lco_api_call', mock_check_for_images_bad_date)
     def test_block_update_bad_datestamp(self):
-        print self.core.frames.lco_api_call
         blockid = self.test_block5.id
         resp = block_status(blockid)
         self.assertFalse(resp)
@@ -638,6 +648,7 @@ class TestCheck_for_block(TestCase):
         bid = 1
         resp = block_status(block_id=bid)
         self.assertEqual(False, resp)
+
 
 class TestSchedule_Check(TestCase):
 
@@ -681,6 +692,7 @@ class TestSchedule_Check(TestCase):
 
         self.maxDiff = None
 
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
     def test_mp_good(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
@@ -692,9 +704,12 @@ class TestSchedule_Check(TestCase):
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'magnitude': 19.099556975068584,
-                        'speed': 2.901241169520825,
+                        'magnitude': 19.099441743160916,
+                        'speed': 2.9012947050834836,
                         'slot_length': 20,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 12.0,
+                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
                         'exp_count': 12,
                         'exp_length': 50.0,
                         'schedule_ok': True,
@@ -705,22 +720,115 @@ class TestSchedule_Check(TestCase):
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T19:10:00',
                         'mid_time': '2016-04-06T14:05:00',
-                        'ra_midpoint': 3.3121839503195525,
-                        'dec_midpoint': -0.16049303559750142,
-                        'period' : '',
-                        'jitter' : ''
+                        'ra_midpoint': 3.312248725288052,
+                        'dec_midpoint': -0.1605498546995108,
+                        'period' : None,
+                        'jitter' : None
                         }
 
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_cadence_short_name(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        self.body_mp.name = '2009 HA'
+        self.body_mp.save()
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'period' : 4.0,
+                 'jitter' : 1.0,
+                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
+                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.111452844407932,
+                        'speed': 2.8743096178906367,
+                        'slot_length': 20,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 12.0,
+                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 12,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T23:00:00',
+                        'mid_time': '2016-04-06T16:00:00',
+                        'ra_midpoint': 3.3110137022045336,
+                        'dec_midpoint': -0.15949643713664577,
+                        'period' : 4.0,
+                        'jitter' : 1.0,
+                        'num_times' : 3,
+                        'total_time' : 1.0
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_cadence_long_name(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : date(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'period' : 4.0,
+                 'jitter' : 1.0,
+                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
+                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.111452844407932,
+                        'speed': 2.8743096178906367,
+                        'slot_length': 20,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 12.0,
+                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 12,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': '2009 HA21_Q63-cad-0406-0406',
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T23:00:00',
+                        'mid_time': '2016-04-06T16:00:00',
+                        'ra_midpoint': 3.3110137022045336,
+                        'dec_midpoint': -0.15949643713664577,
+                        'period' : 4.0,
+                        'jitter' : 1.0,
+                        'num_times' : 3,
+                        'total_time' : 1.0
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 30)
 
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
         MockDateTime.change_datetime(2016, 3, 31, 22, 0, 0)
 
         data = { 'site_code' : 'K92',
-                 'utc_date' : datetime(2016, 4, 1),
+                 'utc_date' : date(2016, 4, 1),
                  'proposal_code' : self.neo_proposal.code
                }
 
@@ -1046,6 +1154,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['end_time'], resp['end_time'])
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
 
+
 class TestUpdate_MPC_orbit(TestCase):
 
     def setUp(self):
@@ -1067,11 +1176,11 @@ class TestUpdate_MPC_orbit(TestCase):
                              'argofperih': 222.91160,
                              'longascnode': 24.87559,
                              'eccentricity': 0.0120915,
-                             'epochofel': datetime(2016,01,13,0),
+                             'epochofel': datetime(2016, 1, 13, 0),
                              'meandist': 0.9967710,
                              'orbinc': 8.25708,
                              'meananom': 221.74204,
-                             'num_obs': None , # '147',
+                             'num_obs': None ,  # '147',
                              'epochofperih': None,
                              'perihdist': None,
                              'slope': 0.15,
@@ -1111,7 +1220,7 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.assertEqual(len(self.expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in self.expected_elements:
-            if key not in self.nocheck_keys and key !='id':
+            if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(self.expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
@@ -1129,7 +1238,7 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in expected_elements:
-            if key not in self.nocheck_keys and key !='id':
+            if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
@@ -1147,7 +1256,7 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in expected_elements:
-            if key not in self.nocheck_keys and key !='id':
+            if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
@@ -1169,7 +1278,7 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in expected_elements:
-            if key not in self.nocheck_keys and key !='id':
+            if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
@@ -1191,7 +1300,7 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in expected_elements:
-            if key not in self.nocheck_keys and key !='id':
+            if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
@@ -1213,8 +1322,9 @@ class TestUpdate_MPC_orbit(TestCase):
 
         self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
         for key in expected_elements:
-            if key not in self.nocheck_keys and key !='id':
+            if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
+
 
 class TestClean_mpcorbit(TestCase):
 
@@ -1233,13 +1343,42 @@ class TestClean_mpcorbit(TestCase):
 
         self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
 
+        self.test_hyperbolic_elements = {
+                                         'argument of perihelion': '325.96205',
+                                         'ascending node': '276.22261',
+                                         'eccentricity': '1.0014825',
+                                         'epoch': '2018-03-23.0',
+                                         'epoch JD': '2458200.5',
+                                         'first observation date used': '2017-09-18.0',
+                                         'inclination': '142.63838',
+                                         'last observation date used': '2018-02-10.0',
+                                         'mean anomaly': None,
+                                         'mean daily motion': None,
+                                         'obj_id': u'A/2017 U7',
+                                         'observations used': '87',
+                                         'perihelion JD': '2458737.02791',
+                                         'perihelion date': '2019-09-10.52791',
+                                         'perihelion distance': '6.4186788',
+                                         'period': None,
+                                         'perturbers coarse indicator': None,
+                                         'perturbers precise indicator': '0000',
+                                         'radial non-grav. param.': None,
+                                         'recip semimajor axis error': None,
+                                         'recip semimajor axis future': '-0.00000374',
+                                         'recip semimajor axis orig': '0.00011957',
+                                         'reference': 'MPEC 2018-E17',
+                                         'residual rms': '0.2',
+                                         'semimajor axis': None,
+                                         'transverse non-grav. param.': None}
+
+
         self.expected_params = {
                              'elements_type': 'MPC_MINOR_PLANET',
                              'abs_mag' : '26.6',
                              'argofperih': '222.91160',
                              'longascnode': '24.87559',
                              'eccentricity': '0.0120915',
-                             'epochofel': datetime(2016,01,13,0),
+                             'epochofel': datetime(2016, 1, 13, 0),
                              'meandist': '0.9967710',
                              'orbinc': '8.25708',
                              'meananom': '221.74204',
@@ -1247,7 +1386,7 @@ class TestClean_mpcorbit(TestCase):
                              'origin' : 'M',
                              'active' : True,
                              'source_type' : 'N',
-                             'discovery_date': datetime(2014,10,17,0),
+                             'discovery_date': datetime(2014, 10, 17, 0),
                              'num_obs': '147',
                              'arc_length': '357',
                              'not_seen' : 5.5,
@@ -1260,7 +1399,7 @@ class TestClean_mpcorbit(TestCase):
                                         'argofperih': '214.01052',
                                         'longascnode' : '24.55858',
                                         'eccentricity' : '1.0000000',
-                                        'epochofel': datetime(2016, 04, 19, 0),
+                                        'epochofel': datetime(2016, 4, 19, 0),
                                         'meandist' : None,
                                         'orbinc' : '38.19233',
                                         'meananom': None,
@@ -1275,6 +1414,28 @@ class TestClean_mpcorbit(TestCase):
                                         'arc_length': '10',
                                         'not_seen' : 6.75,
                                         'update_time' : datetime(2016, 2, 18, 0),
+                                        'updated' : True
+                                     }
+        self.expected_hyperbolic_params = {
+                                        'elements_type': 'MPC_COMET',
+                                        'argofperih': '325.96205',
+                                        'longascnode' : '276.22261',
+                                        'eccentricity' : '1.0014825',
+                                        'epochofel': datetime(2018, 3, 23, 0),
+                                        'meandist' : None,
+                                        'orbinc' : '142.63838',
+                                        'meananom': None,
+                                        'perihdist' : '6.4186788',
+                                        'epochofperih': datetime(2019, 9, 10, 12, 40, 11, int(0.424*1e6)),
+                                        'slope': '4.0',
+                                        'origin' : 'M',
+                                        'active' : True,
+                                        'source_type' : 'H',
+                                        'discovery_date': datetime(2017, 9, 18, 0),
+                                        'num_obs': '87',
+                                        'arc_length': '145',
+                                        'not_seen' : 23.75,
+                                        'update_time' : datetime(2018, 2, 10, 0),
                                         'updated' : True
                                      }
 
@@ -1330,6 +1491,15 @@ class TestClean_mpcorbit(TestCase):
 
         self.assertEqual(self.expected_comet_params, params)
 
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_A_2017U7(self):
+
+        MockDateTime.change_datetime(2018, 3, 5, 18, 0, 0)
+        params = clean_mpcorbit(self.test_hyperbolic_elements)
+
+        self.assertEqual(self.expected_hyperbolic_params, params)
+
+
 class TestCreate_sourcemeasurement(TestCase):
 
     def setUp(self):
@@ -1357,7 +1527,6 @@ class TestCreate_sourcemeasurement(TestCase):
                         }
 
         self.gbot_test_body = Body.objects.create(**G07212_params)
-
 
         self.maxDiff = None
 
@@ -1462,8 +1631,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['filter'], source_measure.frame.filter)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_blankline(self):
 
@@ -1494,8 +1663,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.STACK_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_LCO_flagI(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1520,8 +1689,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_satellite(self):
         expected_params = { 'body'  : 'N009ags',
@@ -1609,8 +1778,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
 
 class TestFrames(TestCase):
@@ -1649,6 +1818,19 @@ class TestFrames(TestCase):
                        }
         self.test_block = Block.objects.create(**block_params)
 
+        block_params = { 'telclass' : '0m4',
+                         'site'     : 'CPT',
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : 'TEMP_GROUP',
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'tracking_number' : '522289',
+                         'num_exposures' : 5,
+                         'exp_length' : 145.0,
+                         'active'   : True
+                       }
+        self.test_block_0m4 = Block.objects.create(**block_params)
 
     def test_add_frame(self):
         params = parse_mpcobs(self.test_obslines[-1])
@@ -1688,8 +1870,8 @@ class TestFrames(TestCase):
         params = {
                         "DATE_OBS": "2016-06-01T09:43:28.067",
                         "ENCID": "doma",
-                        "SITEID":"cpt",
-                        "TELID":"1m0a",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
                         "FILTER": "R",
                         "INSTRUME" : "kb70",
                         "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00.fits",
@@ -1711,8 +1893,8 @@ class TestFrames(TestCase):
         params = {
                         "DATE_OBS": "2016-06-01T09:43:28.067",
                         "ENCID": "doma",
-                        "SITEID":"cpt",
-                        "TELID":"1m0a",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
                         "FILTER": "R",
                         "INSTRUME" : "kb70",
                         "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00",
@@ -1734,8 +1916,8 @@ class TestFrames(TestCase):
         params = {
                         "DATE_OBS": "2015-12-31T23:59:28.067",
                         "ENCID": "doma",
-                        "SITEID":"cpt",
-                        "TELID":"1m0a",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
                         "FILTER": "R",
                         "INSTRUME" : "kb70",
                         "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00.fits",
@@ -1744,7 +1926,7 @@ class TestFrames(TestCase):
                         "L1FWHM"   : "2.42433"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
-        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
@@ -1758,8 +1940,8 @@ class TestFrames(TestCase):
         params = {
                         "DATE_OBS": "2015-12-31T23:59:28.067",
                         "ENCID": "doma",
-                        "SITEID":"cpt",
-                        "TELID":"1m0a",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
                         "FILTER": "R",
                         "INSTRUME" : "kb70",
                         "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e11.fits",
@@ -1769,7 +1951,7 @@ class TestFrames(TestCase):
                         "L1FWHM"   : "2.42433"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
-        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
@@ -1784,8 +1966,8 @@ class TestFrames(TestCase):
         params = {
                         "DATE_OBS": "2015-12-31T23:59:28.067",
                         "ENCID": "doma",
-                        "SITEID":"cpt",
-                        "TELID":"1m0a",
+                        "SITEID": "cpt",
+                        "TELID": "1m0a",
                         "FILTER": "R",
                         "INSTRUME" : "kb70",
                         "ORIGNAME" : "cpt1m010-kb70-20150420-0001-e00",
@@ -1795,7 +1977,7 @@ class TestFrames(TestCase):
                         "L1FWHM"   : "2.42433"
                 }
         midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
-        midpoint += timedelta(seconds=float(params['EXPTIME']) /2.0)
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
@@ -1804,6 +1986,169 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_cpt_0m4_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-11T23:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID": "cpt",
+                        "TELID": "0m4a",
+                        "FILTER": "R",
+                        "INSTRUME" : "kb96",
+                        "ORIGNAME" : "cpt0m407-kb96-20171211-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='L09')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'L09')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_elp_0m4_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-11T23:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID": "elp",
+                        "TELID": "0m4a",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb80",
+                        "ORIGNAME" : "elp0m407-kb96-20171211-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='V38')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'V38')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_tfn_0m4n1_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-11T23:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID": "tfn",
+                        "TELID": "0m4a",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb29",
+                        "ORIGNAME" : "tfn0m414-kb29-20171211-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='Z21')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'Z21')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_tfn_0m4n2_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-11T23:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID": "tfn",
+                        "TELID": "0m4b",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb88",
+                        "ORIGNAME" : "tfn0m410-kb88-20171211-0001-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='Z17')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'Z17')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_lsc_0m4n1_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-12T03:59:28.067",
+                        "ENCID": "aqwa",
+                        "SITEID": "lsc",
+                        "TELID": "0m4a",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb95",
+                        "ORIGNAME" : "lsc0m409-kb95-20171211-0121-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='W89')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'W89')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_lsc_0m4n2_banzai_red(self):
+        params = {
+                        "DATE_OBS": "2017-12-12T03:59:28.067",
+                        "ENCID": "aqwb",
+                        "SITEID": "lsc",
+                        "TELID": "0m4a",
+                        "FILTER": "w",
+                        "INSTRUME" : "kb26",
+                        "ORIGNAME" : "lsc0m412-kb26-20171211-0041-e00",
+                        "EXPTIME"  : "145",
+                        "GROUPID"  : "TEMP",
+                        "RLEVEL"   : 91,
+                        "L1FWHM"   : "2.42433"
+                }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_block_0m4)
+        frames = Frame.objects.filter(sitecode='W79')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'W79')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
 
     def test_add_source_measurements(self):
@@ -1826,7 +2171,6 @@ class TestFrames(TestCase):
         # We should get the same number in the previous test,
         # i.e. on the second run the frames are not created
         self.assertEqual(3, frames.count())
-
 
 
 @patch('core.views.datetime', MockDateTime)
@@ -1892,7 +2236,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_was_not_interesting(self):
-        crossid =  [u'P10oYZI', '', '', u'(Nov. 4.81 UT)']
+        crossid = [u'P10oYZI', '', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
                             'source_type' : 'W'
@@ -1914,7 +2258,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_comet_cbet_recent(self):
-        crossid =  [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 5.49 UT)']
+        crossid = [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 V2',
                             'source_type' : 'C'
@@ -1925,7 +2269,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_comet_cbet_notrecent(self):
-        crossid =  [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 1.49 UT)']
+        crossid = [u'WV2B5A8', u'C/2015 V2', u'CBET 5432', u'(Nov. 1.49 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 V2',
                             'source_type' : 'C'
@@ -1936,7 +2280,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_comet_iauc_recent(self):
-        crossid =  [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 5.49 UT)']
+        crossid = [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 5.49 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 V2',
                             'source_type' : 'C'
@@ -1947,7 +2291,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_comet_iauc_notrecent(self):
-        crossid =  [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 1.49 UT)']
+        crossid = [u'WV2B5A8', u'C/2015 V2', u'IAUC-', u'(Nov. 1.49 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 V2',
                             'source_type' : 'C'
@@ -1958,7 +2302,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_comet_asteroid_number(self):
-        crossid =  [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
+        crossid = [u'LM02L2J', u'C/2015 TQ209', u'IAUC 2015-', u'(Oct. 24.07 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 TQ209',
                             'source_type' : 'C'
@@ -1969,7 +2313,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_comet_mpec_recent(self):
-        crossid =  [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Nov. 3.63 UT)']
+        crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Nov. 3.63 UT)']
         expected_params = { 'active' : True,
                             'name' : 'C/2015 X8',
                             'source_type' : 'C'
@@ -1980,7 +2324,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_comet_mpec_notrecent(self):
-        crossid =  [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
+        crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',
                             'source_type' : 'C'
@@ -1990,9 +2334,31 @@ class TestClean_crossid(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_hyperbolic_asteroid1(self):
+        crossid = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Nov. 4.95 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'A/2018 C2',
+                            'source_type' : 'H'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_hyperbolic_asteroid2(self):
+        crossid = [u'P10EwQh', u'A/2017 U7', u'MPEC 2018-E17', u'(Nov. 4.94 UT)']
+        expected_params = { 'active' : True,
+                            'name' : 'A/2017 U7',
+                            'source_type' : 'H'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
     def test_new_year_switchover(self):
         MockDateTime.change_datetime(2016, 1, 1, 0, 30, 0)
-        crossid =  [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
+        crossid = [u'NM0015a', u'C/2015 X8', u'MPEC 2015-Y20', u'(Oct. 18.63 UT)']
         expected_params = { 'active' : False,
                             'name' : 'C/2015 X8',
                             'source_type' : 'C'
@@ -2222,16 +2588,22 @@ class TestCheckCatalogAndRefitNew(TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
 
-        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
-        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
+#        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
+#        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
         self.configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
 
         self.debug_print = False
 
-        self.test_banzai_fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
-        self.test_cat_bad_wcs = os.path.abspath(os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits'))
+        original_test_banzai_fits = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
+        original_test_cat_bad_wcs = os.path.abspath(os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits'))
         self.test_cat_good_wcs_not_BANZAI = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
         self.test_fits_e10 = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+
+        self.test_banzai_fits = os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'))
+        self.test_cat_bad_wcs = os.path.abspath(os.path.join(self.temp_dir, 'oracdr_test_catalog.fits'))
+
+        shutil.copyfile(original_test_banzai_fits, self.test_banzai_fits)
+        shutil.copyfile(original_test_cat_bad_wcs, self.test_cat_bad_wcs)
 
         body_params = {     'provisional_name': 'P10w5z5',
                             'origin': 'M',
@@ -2300,12 +2672,12 @@ class TestCheckCatalogAndRefitNew(TestCase):
                 for file_to_rm in files_to_remove:
                     os.remove(file_to_rm)
             except OSError:
-                print "Error removing files in temporary test directory", self.temp_dir
+                print("Error removing files in temporary test directory", self.temp_dir)
             try:
                 os.rmdir(self.temp_dir)
-                if self.debug_print: print "Removed", self.temp_dir
+                if self.debug_print: print("Removed", self.temp_dir)
             except OSError:
-                print "Error removing temporary test directory", self.temp_dir
+                print("Error removing temporary test directory", self.temp_dir)
 
     def test_check_catalog_and_refit_new_good(self):
 
@@ -2353,7 +2725,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_fits_file = None
 
-        fits_file = find_matching_image_file(self.test_banzai_fits.replace('photometrics', 'photometric'))
+        fits_file = find_matching_image_file(self.test_banzai_fits.replace('neox', 'neoxs'))
 
         self.assertEqual(expected_fits_file, fits_file)
 
@@ -2367,7 +2739,7 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         expected_status_and_num_frames = (-1, 0)
 
-        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('photometrics', 'photometric'))
+        status = check_catalog_and_refit(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('neox', 'neoxs'))
 
         self.assertEqual(expected_status_and_num_frames, status)
 
@@ -2549,13 +2921,14 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_num_new_frames, num_new_frames)
 
+
 class TestUpdate_Crossids(TestCase):
 
     def setUp(self):
         params = {  'provisional_name' : 'LM05OFG',
                     'abs_mag'       : 24.7,
                     'slope'         : 0.15,
-                    'epochofel'     : datetime(2016,07,31,00,00,00),
+                    'epochofel'     : datetime(2016, 7, 31, 00, 0, 0),
                     'meananom'      :   8.5187,
                     'argofperih'    : 227.23234,
                     'longascnode'   :  57.83134,
@@ -2570,6 +2943,7 @@ class TestUpdate_Crossids(TestCase):
         self.body, created = Body.objects.get_or_create(**params)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_goldstone_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2588,6 +2962,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_arecibo_comet_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2610,6 +2985,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('C/2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_jointradar_neo_is_not_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2631,6 +3007,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_old_mpc_neo_is_overridden(self):
 
         # Set Mock time to more than 3 days past the time of the cross ident.
@@ -2639,6 +3016,7 @@ class TestUpdate_Crossids(TestCase):
         crossid_info = [u'LM05OFG', u'2016 JD18', u'MPEC 2016-J96', u'(May 9.64 UT)']
 
         self.body.origin = u'M'
+        self.assertEqual(True, self.body.active)
         self.body.save()
 
         status = update_crossids(crossid_info, dbg=False)
@@ -2652,6 +3030,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_new_mpc_neo_is_not_overridden(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
@@ -2673,6 +3052,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('2016 JD18', body.name)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_artsat(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
@@ -2694,6 +3074,31 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('J', body.source_type)
         self.assertEqual('M', body.origin)
         self.assertEqual('', body.name)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_inactive_comet(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
+
+        crossid_info = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'ZC82561'
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('H', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('A/2018 C2', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
 
 class TestStoreDetections(TestCase):
 

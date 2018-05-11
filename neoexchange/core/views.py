@@ -1,6 +1,6 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 import os
 from datetime import datetime, timedelta, date
@@ -28,7 +28,7 @@ from django.views.generic import DetailView, ListView, FormView, TemplateView, V
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404, HttpResponse, HttpResponseRedirect
-from httplib import REQUEST_TIMEOUT, HTTPSConnection
+from http.client import HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
@@ -38,7 +38,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockF
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError
+    fetch_NEOCP_observations, PackedError, fetch_filter_list
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -52,7 +52,6 @@ import logging
 import reversion
 import json
 import requests
-from urlparse import urljoin
 import numpy as np
 from django.conf import settings
 
@@ -61,17 +60,18 @@ logger = logging.getLogger(__name__)
 
 class LoginRequiredMixin(object):
 
-    #login_url = reverse('auth_login')
+    # login_url = reverse('auth_login')
 
     @classmethod
     def as_view(cls, **initkwargs):
         view = super(LoginRequiredMixin, cls).as_view(**initkwargs)
         return login_required(view)
 
+
 def user_proposals(user):
-    '''
+    """
     Returns active proposals the given user has permissions for
-    '''
+    """
     if type(user) != User:
         try:
             user = User.objects.get(username=user)
@@ -81,6 +81,7 @@ def user_proposals(user):
     proposals = Proposal.objects.filter(proposalpermission__user=user, active=True)
 
     return proposals
+
 
 class MyProposalsMixin(object):
 
@@ -94,6 +95,7 @@ class MyProposalsMixin(object):
 
 def home(request):
     params = build_unranked_list_params()
+
     return render(request, 'core/home.html', params)
 
 
@@ -101,7 +103,8 @@ class BlockTimeSummary(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         block_summary = summarise_block_efficiency(block_filter=10)
-        return render(request, 'core/block_time_summary.html', {'summary':json.dumps(block_summary)})
+        return render(request, 'core/block_time_summary.html', {'summary': json.dumps(block_summary)})
+
 
 def summarise_block_efficiency(block_filter=0):
     summary = []
@@ -111,7 +114,7 @@ def summarise_block_efficiency(block_filter=0):
         observed = blocks.filter(num_observed__isnull=False)
         if len(blocks) > block_filter:
             proposal_summary = {
-                                 'proposal':proposal.code,
+                                 'proposal': proposal.code,
                                  'Observed' : observed.count(),
                                  'Not Observed' : blocks.count() - observed.count()
                                }
@@ -166,12 +169,16 @@ class BodySearchView(ListView):
     model = Body
 
     def get_queryset(self):
-        name = self.request.GET.get("q","")
-        if (name != ''):
-            object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
+        name = self.request.GET.get("q", "")
+        if name != '':
+            if name.isdigit():
+                object_list = self.model.objects.filter(name=name)
+            else:
+                object_list = self.model.objects.filter(Q(provisional_name__icontains=name) | Q(provisional_packed__icontains=name) | Q(name__icontains=name))
         else:
             object_list = self.model.objects.all()
         return object_list
+
 
 class BlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
@@ -182,42 +189,50 @@ class SuperBlockDetailView(DetailView):
     template_name = 'core/block_detail.html'
     model = SuperBlock
 
+
 class BlockListView(ListView):
     model = Block
     template_name = 'core/block_list.html'
-    queryset=Block.objects.order_by('-block_start')
-    context_object_name="block_list"
+    queryset = Block.objects.order_by('-block_start')
+    context_object_name = "block_list"
     paginate_by = 20
+
 
 class SuperBlockListView(ListView):
     model = SuperBlock
     template_name = 'core/block_list.html'
-    queryset=SuperBlock.objects.order_by('-block_start')
-    context_object_name="block_list"
+    queryset = SuperBlock.objects.order_by('-block_start')
+    context_object_name = "block_list"
     paginate_by = 20
+
 
 class BlockReport(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        block.active = False
-        block.reported = True
-        block.when_reported = datetime.utcnow()
-        block.save()
-        return redirect(reverse('blocklist'))
+        if block.when_observed:
+            block.active = False
+            block.reported = True
+            block.when_reported = datetime.utcnow()
+            block.save()
+            return redirect(reverse('blocklist'))
+        else:
+            messages.error(request, 'Block does not have any observations')
+            return HttpResponseRedirect(reverse('block-view', kwargs={'pk': block.superblock.id}))
+
 
 class BlockReportMPC(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        if block.reported == True:
-            messages.error(request,'Block has already been reported')
-            return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
+        if block.reported is True:
+            messages.error(request, 'Block has already been reported')
+            return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk': kwargs['pk']}))
         if request.user.is_authenticated:
             email = request.user.email
         else:
             email = None
-        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'], bodyid=kwargs.get('source',None), email_sender=email)
+        mpc_resp = email_report_to_mpc(blockid=kwargs['pk'], bodyid=kwargs.get('source', None), email_sender=email)
         if mpc_resp:
             block.active = False
             block.reported = True
@@ -225,8 +240,9 @@ class BlockReportMPC(LoginRequiredMixin, View):
             block.save()
             return redirect(reverse('blocklist'))
         else:
-            messages.error(request,'It was not possible to email report to MPC')
-            return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk':kwargs['pk']}))
+            messages.error(request, 'It was not possible to email report to MPC')
+            return HttpResponseRedirect(reverse('block-report-mpc', kwargs={'pk': kwargs['pk']}))
+
 
 class UploadReport(LoginRequiredMixin, FormView):
     template_name = 'core/uploadreport.html'
@@ -235,13 +251,13 @@ class UploadReport(LoginRequiredMixin, FormView):
 
     def get(self, request, *args, **kwargs):
         block = Block.objects.get(pk=kwargs['pk'])
-        form = MPCReportForm(initial={'block_id':block.id})
-        return render(request, 'core/uploadreport.html', {'form':form,'slot':block})
+        form = MPCReportForm(initial={'block_id': block.id})
+        return render(request, 'core/uploadreport.html', {'form': form, 'slot': block})
 
     def form_invalid(self, form, **kwargs):
         context = self.get_context_data(**kwargs)
         slot = Block.objects.get(pk=form['block_id'].value())
-        return render(context['view'].request, 'core/uploadreport.html', {'form':form,'slot':slot})
+        return render(context['view'].request, 'core/uploadreport.html', {'form': form, 'slot': slot})
 
     def form_valid(self, form):
         obslines = form.cleaned_data['report'].splitlines()
@@ -255,23 +271,29 @@ class UploadReport(LoginRequiredMixin, FormView):
 
 class MeasurementViewBlock(LoginRequiredMixin, View):
     template = 'core/measurements.html'
+
     def get(self, request, *args, **kwargs):
         data = measurements_from_block(blockid=kwargs['pk'])
         return render(request, self.template, data)
 
+
 class MeasurementViewBody(View):
     template = 'core/measurements.html'
+
     def get(self, request, *args, **kwargs):
         body = Body.objects.get(pk=kwargs['pk'])
         measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
-        return render(request, self.template, {'body':body, 'measures' : measures})
+        return render(request, self.template, {'body': body, 'measures' : measures})
+
 
 class CandidatesViewBlock(LoginRequiredMixin, View):
     template = 'core/candidates.html'
+
     def get(self, request, *args, **kwargs):
-       block = Block.objects.get(pk=kwargs['pk'])
-       candidates = Candidate.objects.filter(block=block).order_by('score')
-       return render(request, self.template, {'body':block.body,'candidates':candidates,'slot':block})
+        block = Block.objects.get(pk=kwargs['pk'])
+        candidates = Candidate.objects.filter(block=block).order_by('score')
+        return render(request, self.template, {'body': block.body, 'candidates': candidates, 'slot': block})
+
 
 def generate_new_candidate_id(prefix='LNX'):
 
@@ -290,8 +312,9 @@ def generate_new_candidate_id(prefix='LNX'):
             num_zeros = 7 - len(prefix)
             new_id = "%s%0.*d" % (prefix, num_zeros, new_id_num)
         except ValueError:
-            logger.warn("Unable to decode last discoveries' id (id=%s)" % last_body_id)
+            logger.warning("Unable to decode last discoveries' id (id=%s)" % last_body_id)
     return new_id
+
 
 def generate_new_candidate(cand_frame_data, prefix='LNX'):
 
@@ -320,9 +343,10 @@ def generate_new_candidate(cand_frame_data, prefix='LNX'):
             new_body.not_seen = not_seen_days
             new_body.save()
     else:
-        logger.warn("Could not determine a new id for the new object")
+        logger.warning("Could not determine a new id for the new object")
 
     return new_body
+
 
 def ephemeris(request):
 
@@ -334,7 +358,7 @@ def ephemeris(request):
         dark_start, dark_end = determine_darkness_times(
             data['site_code'], data['utc_date'])
         ephem_lines = call_compute_ephem(
-            body_elements, dark_start, dark_end, data['site_code'], 300, data['alt_limit'])
+            body_elements, dark_start, dark_end, data['site_code'], 900, data['alt_limit'])
     else:
         return render(request, 'core/home.html', {'form': form})
     return render(request, 'core/ephem.html',
@@ -346,9 +370,9 @@ def ephemeris(request):
 
 
 class LookUpBodyMixin(object):
-    '''
+    """
     A Mixin for finding a Body from a pk and if it exists, return the Body instance.
-    '''
+    """
     def dispatch(self, request, *args, **kwargs):
         try:
             body = Body.objects.get(pk=kwargs['pk'])
@@ -357,10 +381,11 @@ class LookUpBodyMixin(object):
         except Body.DoesNotExist:
             raise Http404("Body does not exist")
 
+
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
-    '''
+    """
     Creates a suggested observation request, including time window and molecules
-    '''
+    """
     template_name = 'core/schedule.html'
     form_class = ScheduleForm
     ok_to_schedule = False
@@ -383,18 +408,19 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
     def get_context_data(self, **kwargs):
-        '''
+        """
         Only show proposals the current user is a member of
-        '''
+        """
         proposals = user_proposals(self.request.user)
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
 
+
 class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
-    '''
+    """
     Creates a suggested observation request, including time window and molecules
-    '''
+    """
     template_name = 'core/schedule.html'
     form_class = ScheduleCadenceForm
     ok_to_schedule = False
@@ -402,7 +428,7 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def post(self, request, *args, **kwargs):
         form = ScheduleCadenceForm(request.POST)
         if form.is_valid():
-            return self.form_valid(form,request)
+            return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
@@ -412,12 +438,11 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
         return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
 
 
-
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
-    '''
+    """
     Takes the hidden form input from ScheduleParameters, validates them as a double check.
     Then submits to the scheduler. If a tracking number is returned, the object has been scheduled and we record a Block.
-    '''
+    """
     template_name = 'core/schedule_confirm.html'
     form_class = ScheduleBlockForm
     model = Body
@@ -432,7 +457,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def form_valid(self, form, request):
         if 'edit' in request.POST:
-            # Recalculate the parameters with by amending the block length
+            # Recalculate the parameters by amending the block length
             data = schedule_check(form.cleaned_data, self.object)
             new_form = ScheduleBlockForm(data)
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
@@ -443,10 +468,10 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
             if tracking_num:
-                messages.success(self.request,"Request %s successfully submitted to the scheduler" % tracking_num)
+                messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
                 block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
                 if block_resp:
-                    messages.success(self.request,"Block recorded")
+                    messages.success(self.request, "Block recorded")
                 else:
                     messages.warning(self.request, "Record not created")
             else:
@@ -459,12 +484,13 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     def get_success_url(self):
         return reverse('home')
 
+
 def schedule_check(data, body, ok_to_schedule=True):
     body_elements = model_to_dict(body)
 
     # Check if we have a high eccentricity object and it's not of comet type
     if body_elements['eccentricity'] >= 0.9 and body_elements['elements_type'] != 'MPC_COMET':
-        logger.warn("Preventing attempt to schedule high eccentricity non-Comet")
+        logger.warning("Preventing attempt to schedule high eccentricity non-Comet")
         ok_to_schedule = False
 
     # Check for valid proposal
@@ -474,10 +500,13 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
-        utc_date = dark_start.date()
+        utc_date = data.get('utc_date', dark_start.date())
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
         utc_date = data['utc_date']
+        if dark_end <= datetime.utcnow():
+            dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'] + timedelta(days=1))
+            utc_date = data['utc_date'] + timedelta(days=1)
     # Determine the semester boundaries for the current time and truncate the dark time and
     # therefore the windows appropriately.
     semester_date = max(datetime.utcnow(), datetime.combine(utc_date, datetime.min.time()))
@@ -489,33 +518,55 @@ def schedule_check(data, body, ok_to_schedule=True):
     dark_end = min(dark_end, semester_end)
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'], \
-        dbg=False, perturb=True, display=False)
+    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
+        dbg=False, perturb=False, display=False)
     if emp == []:
         emp = [-99 for x in range(5)]
     magnitude = emp[3]
     speed = emp[4]
+    
+    # Determine filter pattern
+    if data.get('filter_pattern'):
+        filter_pattern = data.get('filter_pattern')
+    elif data['site_code'] == 'E10' or data['site_code'] == 'F65':
+        filter_pattern = 'solar'
+    else:
+        filter_pattern = 'w'
+
+    # Get string of available filters
+    available_filters = ''
+    filter_list = fetch_filter_list(data['site_code'])
+    for filt in filter_list:
+        available_filters = available_filters + filt + ', '
+    available_filters = available_filters[:-2]
 
     # Determine slot length
     if data.get('slot_length'):
         slot_length = data.get('slot_length')
     else:
         try:
-            slot_length = determine_slot_length(body_elements['provisional_name'], magnitude, data['site_code'])
+            slot_length = determine_slot_length(magnitude, data['site_code'])
         except MagRangeError:
             slot_length = 0.
             ok_to_schedule = False
     # Determine exposure length and count
-    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length)
-    if exp_length == None or exp_count == None:
+    exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
+    if exp_length is None or exp_count is None:
         ok_to_schedule = False
 
+    # Determine pattern iterations
+    if exp_count:
+        pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
+        pattern_iterations = round(pattern_iterations, 2)
+    else:
+        pattern_iterations = None
+
     # Get period and jitter for cadence
-    period = data.get('period','')
-    jitter = data.get('jitter','')
+    period = data.get('period', None)
+    jitter = data.get('jitter', None)
 
     if period and jitter:
-        '''Number of times the cadence request will run between start and end date'''
+        # Number of times the cadence request will run between start and end date
         cadence_start = data['start_time']
         cadence_end = data['end_time']
         total_run_time = cadence_end - cadence_start
@@ -525,19 +576,25 @@ def schedule_check(data, body, ok_to_schedule=True):
         if cadence_start + total_requests * cadence_period + timedelta(seconds=slot_length*60.0) > cadence_end:
             total_requests -= 1
 
-        '''Total hours of time used by all cadence requests'''
+        # Total hours of time used by all cadence requests
         total_time = timedelta(seconds=slot_length*60.0) * total_requests
         total_time = total_time.total_seconds()/3600.0
 
     suffix = datetime.strftime(utc_date, '%Y%m%d')
-    if period != '' and jitter != '':
+    if period and jitter:
         suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        if len(body.current_name()) > 7:
+            # Name is too long to fit in the groupid field, trim off year part.
+            suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%m%d'), datetime.strftime(data['end_time'], '%m%d'))
 
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
         'speed': speed,
         'slot_length': slot_length,
+        'filter_pattern': filter_pattern,
+        'pattern_iterations': pattern_iterations,
+        'available_filters': available_filters,
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
@@ -582,6 +639,7 @@ def schedule_submit(data, body, username):
               'priority': data.get('priority', 15),
               'submitter_id': username,
 
+              'filter_pattern': data['filter_pattern'],
               'exp_count': data['exp_count'],
               'exp_time': data['exp_length'],
               'site_code': data['site_code'],
@@ -596,11 +654,19 @@ def schedule_submit(data, body, username):
     tracking_number = None
     resp_params = None
     if check_for_block(data, params, body) == 1:
+        # Append another suffix to allow 2 versions of the block. Must
+        # do this to both `data` (so the next Block check works) and to
+        # `params` so the correct group_id will go to the Valhalla/scheduler
         data['group_id'] = data['group_id'] + '_2'
+        params['group_id'] = data['group_id']
+    elif check_for_block(data, params, body) >= 2:
+        # Multiple blocks found
+        resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}
     if check_for_block(data, params, body) == 0:
         # Record block and submit to scheduler
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
+
 
 def ranking(request):
 
@@ -620,7 +686,7 @@ def build_unranked_list_params():
         unranked = []
         for body in newest:
             body_dict = model_to_dict(body)
-            body_dict['FOM'] = body.compute_FOM
+            body_dict['FOM'] = body.compute_FOM()
             body_dict['current_name'] = body.current_name()
             emp_line = body.compute_position()
             if not emp_line:
@@ -632,7 +698,7 @@ def build_unranked_list_params():
             body_dict['observed'], body_dict['reported'] = body.get_block_info()
             body_dict['type'] = body.get_source_type_display()
             unranked.append(body_dict)
-    except Exception, e:
+    except Exception as e:
         latest = None
         unranked = None
         logger.error('Ranking failed on %s' % e)
@@ -644,11 +710,13 @@ def build_unranked_list_params():
     }
     return params
 
+
 def characterization(request):
 
-    char_filter = request.GET.get("filter","")
+    char_filter = request.GET.get("filter", "")
     params = build_characterization_list(char_filter)
-    return render(request, 'core/characterization.html',params)
+    return render(request, 'core/characterization.html', params)
+
 
 def build_characterization_list(disp=None):
     params = {}
@@ -658,76 +726,76 @@ def build_characterization_list(disp=None):
         unranked = []
 #        t_test = datetime.today()
         for body in char_targets:
-            spectra=PreviousSpectra.objects.filter(body = body)
-            s_wav=s_vis_link=s_nir_link=''
-            m_vis_link=m_nir_link=''
-            m_wav=""
+            spectra = PreviousSpectra.objects.filter(body=body)
+            s_wav = s_vis_link = s_nir_link = ''
+            m_vis_link = m_nir_link = ''
+            m_wav = ""
             if spectra:
-                s_date = date.today()-date(1000,01,01)
+                s_date = date.today()-date(1000, 1, 1)
                 for spectrum in spectra:
                     if spectrum.spec_source == "S":
                         if s_wav == spectrum.spec_wav or not s_wav:
                             if s_date > date.today()-spectrum.spec_date:
-                                s_date=date.today()-spectrum.spec_date
-                                s_wav=spectrum.spec_wav
-                                s_vis_link=spectrum.spec_vis
-                                s_nir_link=spectrum.spec_ir
+                                s_date = date.today()-spectrum.spec_date
+                                s_wav = spectrum.spec_wav
+                                s_vis_link = spectrum.spec_vis
+                                s_nir_link = spectrum.spec_ir
                         else:
-                            s_date=date.today()-spectrum.spec_date
-                            s_wav="Vis+NIR"
+                            s_date = date.today()-spectrum.spec_date
+                            s_wav = "Vis+NIR"
                             if spectrum.spec_vis:
-                                s_vis_link=spectrum.spec_vis
+                                s_vis_link = spectrum.spec_vis
                             if spectrum.spec_ir:
-                                s_nir_link=spectrum.spec_ir
+                                s_nir_link = spectrum.spec_ir
                     elif spectrum.spec_source == "M":
-                        m_wav=spectrum.spec_wav
-                        m_vis_link=spectrum.spec_vis
-                        m_nir_link=spectrum.spec_ir
+                        m_wav = spectrum.spec_wav
+                        m_vis_link = spectrum.spec_vis
+                        m_nir_link = spectrum.spec_ir
                         if m_wav == "NA":
                             m_wav = "YES"
             body_dict = model_to_dict(body)
             body_dict['current_name'] = body.current_name()
             body_dict['ingest_date'] = body.ingest
-            body_dict['s_wav']=s_wav
+            body_dict['s_wav'] = s_wav
             if s_vis_link:
-                body_dict['s_vis_link']='http://smass.mit.edu/data/'+s_vis_link
+                body_dict['s_vis_link'] = 'http://smass.mit.edu/data/'+s_vis_link
             if s_nir_link:
-                body_dict['s_nir_link']='http://smass.mit.edu/data/'+s_nir_link
+                body_dict['s_nir_link'] = 'http://smass.mit.edu/data/'+s_nir_link
             if m_vis_link:
-                body_dict['m_vis_link']='https://manosobs.files.wordpress.com/'+m_vis_link
+                body_dict['m_vis_link'] = 'https://manosobs.files.wordpress.com/'+m_vis_link
             if m_nir_link:
-                body_dict['m_nir_link']='https://manosobs.files.wordpress.com/'+m_nir_link
-            body_dict['m_wav']=m_wav
-            body_dict['origin']=body.get_origin_display()
+                body_dict['m_nir_link'] = 'https://manosobs.files.wordpress.com/'+m_nir_link
+            body_dict['m_wav'] = m_wav
+            body_dict['origin'] = body.get_origin_display()
             if 'Vis' in s_wav or 'Vis' in m_wav:
-                body_dict['obs_needed']='LC'
+                body_dict['obs_needed'] = 'LC'
             else:
-                body_dict['obs_needed']='Spec/LC'
+                body_dict['obs_needed'] = 'Spec/LC'
             emp_line = body.compute_position()
             if not emp_line:
                 continue
-            obs_dates=body.compute_obs_window()
+            obs_dates = body.compute_obs_window()
             if obs_dates[0]:
-                body_dict['obs_sdate']=obs_dates[0]
+                body_dict['obs_sdate'] = obs_dates[0]
                 if obs_dates[0] == obs_dates[2]:
-                    startdate='Now'
+                    startdate = 'Now'
                 else:
-                    startdate=obs_dates[0].strftime('%m/%y')
+                    startdate = obs_dates[0].strftime('%m/%y')
                 if not obs_dates[1]:
-                    body_dict['obs_edate']=obs_dates[2]+timedelta(days=99)
+                    body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
                     enddate = '>'
                 else:
                     enddate = obs_dates[1].strftime('%m/%y')
-                    body_dict['obs_edate']=obs_dates[1]
+                    body_dict['obs_edate'] = obs_dates[1]
             else:
-                body_dict['obs_sdate']=body_dict['obs_edate']=obs_dates[2]+timedelta(days=99)
-                startdate='-'
+                body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                startdate = '-'
                 enddate = '-'
-            days_to_start=body_dict['obs_sdate']-obs_dates[2]
-            days_to_end=body_dict['obs_edate']-obs_dates[2]
-            #Define a sorting Priority:
+            days_to_start = body_dict['obs_sdate']-obs_dates[2]
+            days_to_end = body_dict['obs_edate']-obs_dates[2]
+            # Define a sorting Priority:
             # Currently a combination of imminence and window width.
-            body_dict['priority']=days_to_start.days +days_to_end.days
+            body_dict['priority'] = days_to_start.days + days_to_end.days
             body_dict['obs_start'] = startdate
             body_dict['obs_end'] = enddate
             body_dict['ra'] = emp_line[0]
@@ -738,57 +806,62 @@ def build_characterization_list(disp=None):
                     unranked.append(body_dict)
             else:
                 unranked.append(body_dict)
-            #print body_dict['obs_sdate'],body_dict['obs_edate']
-#        print datetime.today()-t_test
-    except Exception, e:
+            # print body_dict['obs_sdate'],body_dict['obs_edate']
+            # print datetime.today()-t_test
+    except Exception as e:
         unranked = None
         logger.error('Characterization list failed on %s' % e)
     params = {
         'targets': Body.objects.filter(active=True).count(),
         'blocks': Block.objects.filter(active=True).count(),
         'char_targets': unranked,
-        'char_filter':disp
+        'char_filter': disp
     }
     return params
 
+
 def check_for_block(form_data, params, new_body):
-        '''Checks if a block with the given name exists in the Django DB.
-        Return 0 if no block found, 1 if found, 2 if multiple blocks found'''
+    """Checks if a block with the given name exists in the Django DB.
+    Return 0 if no block found, 1 if found, 2 if multiple blocks found"""
 
-        # XXX Code smell, duplicated from sources_subs.configure_defaults()
-        site_list = { 'V37' : 'ELP' ,
-                      'K92' : 'CPT' ,
-                      'K93' : 'CPT',
-                      'Q63' : 'COJ',
-                      'W85' : 'LSC',
-                      'W86' : 'LSC',
-                      'F65' : 'OGG',
-                      'E10' : 'COJ',
-                      'Z21' : 'TFN',
-                      'Q58' : 'COJ',
-                      'Q59' : 'COJ',
-                      'T04' : 'OGG'  }
+    # XXX Code smell, duplicated from sources_subs.configure_defaults()
+    site_list = { 'V37' : 'ELP' ,
+                  'K92' : 'CPT' ,
+                  'K93' : 'CPT',
+                  'Q63' : 'COJ',
+                  'W85' : 'LSC',
+                  'W86' : 'LSC',
+                  'W89' : 'LSC',
+                  'F65' : 'OGG',
+                  'E10' : 'COJ',
+                  'Z21' : 'TFN',
+                  'Q58' : 'COJ',
+                  'Q59' : 'COJ',
+                  'T04' : 'OGG',
+                  'V99' : 'ELP'
+                  }
 
-        try:
-            block_id = SuperBlock.objects.get(body=new_body.id,
-                                         groupid__contains=form_data['group_id'],
-                                         proposal=Proposal.objects.get(code=form_data['proposal_code'])
-                                         )
+    try:
+        block_id = SuperBlock.objects.get(body=new_body.id,
+                                     groupid__contains=form_data['group_id'],
+                                     proposal=Proposal.objects.get(code=form_data['proposal_code'])
+                                     )
 #                                         site=site_list[params['site_code']])
-        except SuperBlock.MultipleObjectsReturned:
-            logger.debug("Multiple superblocks found")
-            return 2
-        except SuperBlock.DoesNotExist:
-            logger.debug("SuperBlock not found")
-            return 0
-        else:
-            logger.debug("SuperBlock found")
-            # XXX Do we want to check for matching site in the Blocks as well?
-            return 1
+    except SuperBlock.MultipleObjectsReturned:
+        logger.debug("Multiple superblocks found")
+        return 2
+    except SuperBlock.DoesNotExist:
+        logger.debug("SuperBlock not found")
+        return 0
+    else:
+        logger.debug("SuperBlock found")
+        # XXX Do we want to check for matching site in the Blocks as well?
+        return 1
+
 
 def record_block(tracking_number, params, form_data, body):
-    '''Records a just-submitted observation as a SuperBlock and Block(s) in the database.
-    '''
+    """Records a just-submitted observation as a SuperBlock and Block(s) in the database.
+    """
 
     logger.debug("form data=%s" % form_data)
     logger.debug("   params=%s" % params)
@@ -810,44 +883,51 @@ def record_block(tracking_number, params, form_data, body):
                          'active'   : True,
                        }
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
+        i = 0
         for request in params.get('request_numbers', []):
+            # cut off json UTC timezone remnant
+            no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
+            no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : params['site'].lower(),
                              'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'groupid'  : form_data['group_id'],
-                             'block_start' : form_data['start_time'],
-                             'block_end'   : form_data['end_time'],
+                             'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
+                             'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
                              'tracking_number' : request,
                              'num_exposures'   : form_data['exp_count'],
                              'exp_length'      : form_data['exp_length'],
                              'active'   : True
                            }
             pk = Block.objects.create(**block_kwargs)
+            i += 1
         return True
     else:
         return False
 
+
 def return_fields_for_saving():
-    '''Returns a list of fields that should be checked before saving a revision.
+    """Returns a list of fields that should be checked before saving a revision.
     Split out from save_and_make_revision() so it can be consistently used by the
-    remove_bad_revisions management command.'''
+    remove_bad_revisions management command."""
 
     fields = ['provisional_name', 'provisional_packed', 'name', 'origin', 'source_type',  'elements_type',
               'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'eccentricity', 'argofperih', 'meandist', 'meananom',
-              'score', 'discovery_date', 'num_obs', 'arc_length' ]
+              'score', 'discovery_date', 'num_obs', 'arc_length']
 
     return fields
 
+
 def save_and_make_revision(body, kwargs):
-    '''
+    """
     Make a revision if any of the parameters have changed, but only do it once
     per ingest not for each parameter.
     Converts current model instance into a dict and compares a subset of elements with
     incoming version. Incoming variables may be generically formatted as strings,
     so use the type of original to convert and then compare.
-    '''
+    """
 
     fields = return_fields_for_saving()
 
@@ -855,8 +935,8 @@ def save_and_make_revision(body, kwargs):
 
     body_dict = model_to_dict(body)
     for k, v in kwargs.items():
-        param = body_dict.get(k,'')
-        if type(param) == type(float()) and v is not None:
+        param = body_dict.get(k, '')
+        if isinstance(param, float) and v is not None:
             v = float(v)
         if v != param:
             setattr(body, k, v)
@@ -871,12 +951,12 @@ def save_and_make_revision(body, kwargs):
 
 
 def update_NEOCP_orbit(obj_id, extra_params={}):
-    '''Query the MPC's showobs service with the specified <obj_id> and
+    """Query the MPC's showobs service with the specified <obj_id> and
     it will write the orbit found into the neox database.
     a) If the object does not have a response it will be marked as active = False
     b) If the object's parameters have changed they will be updated and a revision logged
     c) New objects get marked as active = True automatically
-    '''
+    """
     NEOCP_orb_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
 
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
@@ -918,11 +998,12 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     logger.info(msg)
     return msg
 
+
 def update_NEOCP_observations(obj_id, extra_params={}):
-    '''Query the NEOCP for <obj_id> and download the observation lines.
+    """Query the NEOCP for <obj_id> and download the observation lines.
     These are used to create Source Measurements for the body if the
     number of observations in the passed extra_params dictionary is greater than
-    the number of Source Measurements for that Body'''
+    the number of Source Measurements for that Body"""
 
     try:
         body = Body.objects.get(provisional_name__startswith=obj_id)
@@ -933,10 +1014,10 @@ def update_NEOCP_observations(obj_id, extra_params={}):
             obs_lines = fetch_NEOCP_observations(obj_id)
             if obs_lines:
                 measure = create_source_measurement(obs_lines)
-                if measure == False:
+                if measure is False:
                     msg = "Could not create source measurements for object %s (no or multiple Body's exist)" % obj_id
                 else:
-                    if len(measure) >0:
+                    if len(measure) > 0:
                         msg = "Created source measurements for object %s" % obj_id
                     elif len(measure) == 0:
                         msg = "Source measurements already exist for object %s" % obj_id
@@ -948,9 +1029,10 @@ def update_NEOCP_observations(obj_id, extra_params={}):
         msg = "Object %s does not exist" % obj_id
     return msg
 
+
 def clean_NEOCP_object(page_list):
-    '''Parse response from the MPC NEOCP page making sure we only return
-    parameters from the 'NEOCPNomin' (nominal orbit)'''
+    """Parse response from the MPC NEOCP page making sure we only return
+    parameters from the 'NEOCPNomin' (nominal orbit)"""
     current = False
     if page_list[0] == '':
         page_list.pop(0)
@@ -969,9 +1051,9 @@ def clean_NEOCP_object(page_list):
                 try:
                     rms = float(current[15])
                 except ValueError:
-                     # Insert a high value for the missing rms
+                    # Insert a high value for the missing rms
                     current.insert(15, 99.99)
-                    logger.warn(
+                    logger.warning(
                         "Missing RMS for %s; assuming 99.99", current[0])
                 except:
                     logger.error(
@@ -979,7 +1061,7 @@ def clean_NEOCP_object(page_list):
             except ValueError:
                 # Insert a high magnitude for the missing H
                 current.insert(1, 99.99)
-                logger.warn(
+                logger.warning(
                     "Missing H magnitude for %s; assuming 99.99", current[0])
             except:
                 logger.error(
@@ -1050,11 +1132,11 @@ def clean_NEOCP_object(page_list):
                 params['arc_length'] = arc_length
             try:
                 not_seen = datetime.utcnow() - datetime.strptime(current[-1], '%Y%m%d')
-                params['not_seen'] = not_seen.total_seconds() / 86400.0 # Leap seconds can go to hell...
+                params['not_seen'] = not_seen.total_seconds() / 86400.0  # Leap seconds can go to hell...
             except:
                 pass
         else:
-            logger.warn(
+            logger.warning(
                 "Did not get right number of parameters for %s. Values %s", current[0], current)
             params = {}
         if params != {}:
@@ -1071,11 +1153,12 @@ def clean_NEOCP_object(page_list):
         params = {}
     return params
 
+
 def update_crossids(astobj, dbg=False):
-    '''Update the passed <astobj> for a new cross-identification.
+    """Update the passed <astobj> for a new cross-identification.
     <astobj> is expected to be a list of:
     provisional id, final id/failure reason, reference, confirmation date
-    normally produced by the fetch_previous_NEOCP_desigs() method.'''
+    normally produced by the fetch_previous_NEOCP_desigs() method."""
 
     if len(astobj) != 4:
         return False
@@ -1091,12 +1174,14 @@ def update_crossids(astobj, dbg=False):
     kwargs = clean_crossid(astobj, dbg)
     if not created:
         if dbg:
-            print "Did not create new Body"
+            print("Did not create new Body")
         # Find out if the details have changed, if they have, save a revision
         # But first check if it is a comet or NEO and came from somewhere other
         # than the MPC. In this case, leave it active.
-        if body.source_type in ['N', 'C'] and body.origin != 'M':
+        if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
             kwargs['active'] = True
+        if kwargs['source_type'] in ['C', 'H']:
+            kwargs['elements_type'] = 'MPC_COMET'
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
@@ -1107,20 +1192,20 @@ def update_crossids(astobj, dbg=False):
         save_and_make_revision(body, kwargs)
         logger.info("Added cross identification for %s" % obj_id)
     else:
-        logger.warn("Could not add cross identification for %s" % obj_id)
+        logger.warning("Could not add cross identification for %s" % obj_id)
         return False
     return True
 
 
 def clean_crossid(astobj, dbg=False):
-    '''Takes an <astobj> (a list of new designation, provisional designation,
+    """Takes an <astobj> (a list of new designation, provisional designation,
     reference and confirm date produced from the MPC's Previous NEOCP Objects
     page) and determines the type and whether it should still be followed.
 
     Objects that were not confirmed, did not exist or "were not interesting
     (normally a satellite) are set inactive immediately. For NEOs and comets,
     we set it to inactive if more than 3 days have passed since the
-    confirmation date'''
+    confirmation date"""
 
     interesting_cutoff = 3 * 86400  # 3 days in seconds
 
@@ -1170,6 +1255,9 @@ def clean_crossid(astobj, dbg=False):
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
             objtype = 'N'
+            if 'A/' in desig:
+                # Check if it is an inactive hyperbolic asteroid
+                objtype = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
         else:
@@ -1182,20 +1270,20 @@ def clean_crossid(astobj, dbg=False):
                   'active': active
                   }
         if dbg:
-            print "%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active'])
+            print("%07s->%s (%s) %s" % (obj_id, params['name'], params['source_type'], params['active']))
     else:
-        logger.warn("Unparseable cross-identification: %s" % astobj)
+        logger.warning("Unparseable cross-identification: %s" % astobj)
         params = {}
 
     return params
 
 
 def clean_mpcorbit(elements, dbg=False, origin='M'):
-    '''Takes a list of (proto) element lines from fetch_mpcorbit() and plucks
-    out the appropriate bits. origin defaults to 'M'(PC) if not specified'''
+    """Takes a list of (proto) element lines from fetch_mpcorbit() and plucks
+    out the appropriate bits. origin defaults to 'M'(PC) if not specified"""
 
     params = {}
-    if elements != None:
+    if elements is not None:
 
         try:
             last_obs = datetime.strptime(elements['last observation date used'].replace('.0', ''), '%Y-%m-%d')
@@ -1239,9 +1327,11 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             # Comet, update/overwrite a bunch of things
             params['elements_type'] = 'MPC_COMET'
             params['source_type'] = 'C'
+            if 'A/2' in elements.get('obj_id', ''):
+                params['source_type'] = 'H'
             # The MPC never seems to have H values for comets so we remove it
             # from the dictionary to avoid replacing what was there before.
-            if params['abs_mag'] == None:
+            if params['abs_mag'] is None:
                 del params['abs_mag']
             params['slope'] = elements.get('phase slope', '4.0')
             params['perihdist'] = elements['perihelion distance']
@@ -1249,7 +1339,7 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             params['epochofperih'] = parse_neocp_decimal_date(perihelion_date)
 
         not_seen = None
-        if last_obs != None:
+        if last_obs is not None:
             time_diff = datetime.utcnow() - last_obs
             not_seen = time_diff.total_seconds() / 86400.0
         params['not_seen'] = not_seen
@@ -1257,28 +1347,28 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
 
 
 def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
-    '''
+    """
     Performs remote look up of orbital elements for object with id obj_id_or_page,
     Gets or creates corresponding Body instance and updates entry.
     Alternatively obj_id_or_page can be a BeautifulSoup object, in which case
     the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup
     object will parsed.
-    '''
+    """
 
     obj_id = None
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
         page = fetch_mpcdb_page(obj_id, dbg)
 
-        if page == None:
-            logger.warn("Could not find elements for %s" % obj_id)
+        if page is None:
+            logger.warning("Could not find elements for %s" % obj_id)
             return False
     else:
         page = obj_id_or_page
 
     elements = parse_mpcorbit(page, dbg)
     if elements == {}:
-        logger.warn("Could not parse elements from page for %s" % obj_id)
+        logger.warning("Could not parse elements from page for %s" % obj_id)
         return False
 
     if type(obj_id_or_page) == BeautifulSoup:
@@ -1312,10 +1402,11 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         logger.info("Added new orbit for %s" % obj_id)
     return True
 
+
 def create_source_measurement(obs_lines, block=None):
     measures = []
     if type(obs_lines) != list:
-        obs_lines = [obs_lines,]
+        obs_lines = [obs_lines, ]
 
     for obs_line in obs_lines:
         logger.debug(obs_line.rstrip())
@@ -1338,16 +1429,16 @@ def create_source_measurement(obs_lines, block=None):
                         logger.info("Found %s blocks for %s" % (blocks.count(), obs_body))
                         block = blocks[0]
                     else:
-                        logger.warn("No blocks for %s" % (obs_body))
+                        logger.warning("No blocks for %s" % obs_body)
                 if params['obs_type'] == 's':
                     # If we have an obs_type of 's', then we have the second line
                     # of a satellite measurement and we need to find the matching
                     # Frame we created on the previous line read and update its
                     # extrainfo field.
                     try:
-                        prior_frame = Frame.objects.get(frametype = Frame.SATELLITE_FRAMETYPE,
-                                                        midpoint = params['obs_date'],
-                                                        sitecode = params['site_code'])
+                        prior_frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
+                                                        midpoint=params['obs_date'],
+                                                        sitecode=params['site_code'])
                         if prior_frame.extrainfo != params['extrainfo']:
                             prior_frame.extrainfo = params['extrainfo']
                             prior_frame.save()
@@ -1356,9 +1447,9 @@ def create_source_measurement(obs_lines, block=None):
                             # updated version
                             measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:
-                        logger.warn("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'],params['site_code']))
+                        logger.warning("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'], params['site_code']))
                     except Frame.MultipleObjectsReturned:
-                        logger.warn("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'],params['site_code']))
+                        logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                 else:
                     # Otherwise, make a new Frame and SourceMeasurement
                     frame = create_frame(params, block)
@@ -1376,16 +1467,17 @@ def create_source_measurement(obs_lines, block=None):
                 logger.debug("Body %s does not exist" % params['body'])
                 measures = False
             except Body.MultipleObjectsReturned:
-                logger.warn("Multiple versions of Body %s exist" % params['body'])
+                logger.warning("Multiple versions of Body %s exist" % params['body'])
                 measures = False
 
     return measures
 
+
 def determine_original_name(fits_file):
-    '''Determines the ORIGNAME for the FITS file <fits_file>.
+    """Determines the ORIGNAME for the FITS file <fits_file>.
     This is pretty disgusting and a sign we are probably doing something wrong
     and should store the true filename but at least it's contained to one place
-    now...'''
+    now..."""
     fits_file_orig = fits_file
     if 'e90.fits' in os.path.basename(fits_file):
         fits_file_orig = os.path.basename(fits_file.replace('e90.fits', 'e00.fits'))
@@ -1397,31 +1489,33 @@ def determine_original_name(fits_file):
         fits_file_orig = os.path.basename(fits_file.replace('e11.fits', 'e00.fits'))
     return fits_file_orig
 
-def find_matching_image_file(catfile):
-    '''Find the matching image file for the passed <catfile>. Returns None if it
-    can't be found or opened'''
 
-    if os.path.exists(catfile) == False or os.path.isfile(catfile) == False:
+def find_matching_image_file(catfile):
+    """Find the matching image file for the passed <catfile>. Returns None if it
+    can't be found or opened"""
+
+    if os.path.exists(catfile) is False or os.path.isfile(catfile) is False:
         logger.error("Could not open matching image for catalog %s" % catfile)
         return None
     fits_file_for_sext = catfile + "[SCI]"
 
     return fits_file_for_sext
 
+
 def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
-    '''Run SExtractor, rename output to new filename which is returned'''
+    """Run SExtractor, rename output to new filename which is returned"""
 
     logger.debug("Running SExtractor on BANZAI file: %s" % fits_file)
     sext_status = run_sextractor(configs_dir, dest_dir, fits_file, catalog_type='FITS_LDAC')
     if sext_status == 0:
-        fits_ldac_catalog ='test_ldac.fits'
+        fits_ldac_catalog = 'test_ldac.fits'
         fits_ldac_catalog_path = os.path.join(dest_dir, fits_ldac_catalog)
 
         # Rename catalog to permanent name
         fits_file_output = os.path.basename(fits_file)
         fits_file_output = fits_file_output.replace('[SCI]', '').replace('.fits', '_ldac.fits')
         new_ldac_catalog = os.path.join(dest_dir, fits_file_output)
-        logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog ))
+        logger.debug("Renaming %s to %s" % (fits_ldac_catalog_path, new_ldac_catalog))
         os.rename(fits_ldac_catalog_path, new_ldac_catalog)
 
     else:
@@ -1430,13 +1524,14 @@ def run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 
     return sext_status, new_ldac_catalog
 
+
 def find_block_for_frame(catfile):
-    '''Try and find a Block for the original passed <catfile> filename (new style with
+    """Try and find a Block for the original passed <catfile> filename (new style with
     filename directly stored in the DB. If that fails, try and determine the filename
     that would have been stored with the ORIGNAME.
-    Returns the Block if found, None otherwise.'''
+    Returns the Block if found, None otherwise."""
 
-    #try and find Frame does for the fits catfile with a non-null block
+    # try and find Frame does for the fits catfile with a non-null block
     try:
         frame = Frame.objects.get(filename=os.path.basename(catfile), block__isnull=False)
     except Frame.MultipleObjectsReturned:
@@ -1455,47 +1550,49 @@ def find_block_for_frame(catfile):
             return None
     return frame.block
 
+
 def make_new_catalog_entry(new_ldac_catalog, header, block):
 
     num_new_frames_created = 0
 
-    #if a Frame does not exist for the catalog file with a non-null block
-    #create one with the fits filename
+    # if a Frame does not exist for the catalog file with a non-null block
+    # create one with the fits filename
     catfilename = os.path.basename(new_ldac_catalog)
     if len(Frame.objects.filter(filename=catfilename, block__isnull=False)) < 1:
 
-        #Create a new Frame entry for new fits_file_output name
-        frame_params = {    'sitecode':header['site_code'],
-                          'instrument':header['instrument'],
-                              'filter':header['filter'],
-                            'filename':catfilename,
-                             'exptime':header['exptime'],
-                            'midpoint':header['obs_midpoint'],
-                               'block':block,
-                           'zeropoint':header['zeropoint'],
-                       'zeropoint_err':header['zeropoint_err'],
-                                'fwhm':header['fwhm'],
-                           'frametype':Frame.BANZAI_LDAC_CATALOG,
+        # Create a new Frame entry for new fits_file_output name
+        frame_params = {    'sitecode': header['site_code'],
+                          'instrument': header['instrument'],
+                              'filter': header['filter'],
+                            'filename': catfilename,
+                             'exptime': header['exptime'],
+                            'midpoint': header['obs_midpoint'],
+                               'block': block,
+                           'zeropoint': header['zeropoint'],
+                       'zeropoint_err': header['zeropoint_err'],
+                                'fwhm': header['fwhm'],
+                           'frametype': Frame.BANZAI_LDAC_CATALOG,
                            'astrometric_catalog' : header.get('astrometric_catalog', None),
-                          'rms_of_fit':header['astrometric_fit_rms'],
-                       'nstars_in_fit':header['astrometric_fit_nstars'],
-                                'wcs' :header.get('wcs', None),
+                          'rms_of_fit': header['astrometric_fit_rms'],
+                       'nstars_in_fit': header['astrometric_fit_nstars'],
+                                'wcs' : header.get('wcs', None),
                         }
 
         frame, created = Frame.objects.get_or_create(**frame_params)
-        if created == True:
+        if created is True:
             logger.debug("Created new Frame id#%d", frame.id)
             num_new_frames_created += 1
 
     return num_new_frames_created
 
+
 def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
-    '''New version of check_catalog_and_refit designed for BANZAI data. This
+    """New version of check_catalog_and_refit designed for BANZAI data. This
     version of the routine assumes that the astrometric fit status of <catfile>
     is likely to be good and exits if not the case. A new source extraction
     is performed unless we find an existing Frame record for the catalog.
     The name of the newly created FITS LDAC catalog from this process is returned
-    or an integer status code if no fit was needed or could not be performed.'''
+    or an integer status code if no fit was needed or could not be performed."""
 
     num_new_frames_created = 0
 
@@ -1520,7 +1617,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
 
     # Find image file for this catalog
     fits_file = find_matching_image_file(catfile)
-    if fits_file == None:
+    if fits_file is None:
         logger.error("Could not open matching image %s for catalog %s" % ( fits_file, catfile))
         return -1, num_new_frames_created
 
@@ -1532,7 +1629,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
 
     # Find Block for original frame
     block = find_block_for_frame(catfile)
-    if block == None:
+    if block is None:
         logger.error("Could not find block for fits frame %s" % catfile)
         return -3, num_new_frames_created
 
@@ -1545,6 +1642,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
     num_new_frames_created = make_new_catalog_entry(new_ldac_catalog, header, block)
 
     return new_ldac_catalog, num_new_frames_created
+
 
 def store_detections(mtdsfile, dbg=False):
 
@@ -1581,11 +1679,11 @@ def store_detections(mtdsfile, dbg=False):
             mean_mag = mag.mean(dtype=np.float64)
 
             try:
-                cand = Candidate.objects.get(block=frame.block, cand_id=candidate['det_number'][0], avg_midpoint=mean_dt, score=score,\
-                        avg_x=mean_x, avg_y=mean_y,avg_ra=mean_ra, avg_dec=mean_dec, avg_mag=mean_mag, speed=speed,\
+                cand = Candidate.objects.get(block=frame.block, cand_id=candidate['det_number'][0], avg_midpoint=mean_dt, score=score,
+                        avg_x=mean_x, avg_y=mean_y, avg_ra=mean_ra, avg_dec=mean_dec, avg_mag=mean_mag, speed=speed,
                         sky_motion_pa=sky_position_angle)
-                if cand.detections!=candidate.tostring():
-                    cand.detections=candidate.tostring()
+                if cand.detections != candidate.tostring():
+                    cand.detections = candidate.tostring()
                     cand.save()
             except Candidate.MultipleObjectsReturned:
                 pass
@@ -1604,13 +1702,16 @@ def store_detections(mtdsfile, dbg=False):
                             'sky_motion_pa' : sky_position_angle,
                             'detections' : candidate.tostring()
                         }
-                if dbg: print params
+                if dbg:
+                    print(params)
                 cand, created = Candidate.objects.get_or_create(**params)
-                if dbg: print cand, created
+                if dbg:
+                    print(cand, created)
                 if created:
                     num_candidates += 1
 
     return num_candidates
+
 
 def make_plot(request):
 
@@ -1637,37 +1738,40 @@ def make_plot(request):
 
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
+
 def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
-def update_taxonomy(taxobj,dbg=False):
-    '''Update the passed <taxobj> for a new taxonomy update.
+
+def update_taxonomy(taxobj, dbg=False):
+    """Update the passed <taxobj> for a new taxonomy update.
     <taxobj> is expected to be a list of:
     designation/provisional designation, taxonomy, taxonomic scheme, reference, notes
     normally produced by the fetch_taxonomy_page() method.
-    Will only add (never remove) taxonomy fields that are not already in Taxonomy database and match objects in DB.'''
+    Will only add (never remove) taxonomy fields that are not already in Taxonomy database and match objects in DB."""
 
     if len(taxobj) != 5:
         return False
 
     obj_id = taxobj[0].rstrip()
-    body_all=Body.objects.all()
+    body_all = Body.objects.all()
     try:
         body = Body.objects.get(name=obj_id)
     except:
         try:
             body = Body.objects.get(provisional_name=obj_id)
         except:
-            if dbg == True:
-                print "No such Body as %s" % obj_id
-                print "number of bodies: %i" %body_all.count()
+            if dbg is True:
+                print("No such Body as %s" % obj_id)
+                print("number of bodies: %i" % body_all.count())
             return False
-    #Must be a better way to do this next bit, but I don't know what it is off the top of my head.
-    check_tax = SpectralInfo.objects.filter(body=body,taxonomic_class=taxobj[1],tax_scheme=taxobj[2],tax_reference=taxobj[3],tax_notes=taxobj[4])
+    # Must be a better way to do this next bit, but I don't know what it is off the top of my head.
+    check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2],
+                                            tax_reference=taxobj[3], tax_notes=taxobj[4])
     if check_tax.count() != 0:
-        if dbg == True:
-            print "Data already in DB"
+        if dbg is True:
+            print("Data already in DB")
         return False
     params = {  'body'          : body,
                 'taxonomic_class' : taxobj[1],
@@ -1677,40 +1781,41 @@ def update_taxonomy(taxobj,dbg=False):
                 }
     tax, created = SpectralInfo.objects.get_or_create(**params)
     if not created:
-        if dbg == True:
-            print "Did not write for some reason."
+        if dbg is True:
+            print("Did not write for some reason.")
         return False
     return True
 
-def update_previous_spectra(specobj,source='U',dbg=False):
-    '''Update the passed <specobj> for a new external spectroscopy update.
+
+def update_previous_spectra(specobj, source='U', dbg=False):
+    """Update the passed <specobj> for a new external spectroscopy update.
     <specobj> is expected to be a list of:
     designation/provisional designation, wavelength region, data link, reference, date
     normally produced by the fetch_manos_tagets() or fetch_smass_targets() method.
-    Will only add (never remove) spectroscopy details that are not already in spectroscopy 
-    database and match Characterization objects in DB.'''
+    Will only add (never remove) spectroscopy details that are not already in spectroscopy
+    database and match Characterization objects in DB."""
 
     if len(specobj) != 6:
         return False
 
     obj_id = specobj[0].rstrip()
-    body_char=Body.objects.filter(active=True).exclude(origin='M')
+    body_char = Body.objects.filter(active=True).exclude(origin='M')
     try:
         body = body_char.get(name=obj_id)
     except:
         try:
             body = body_char.get(provisional_name=obj_id)
         except:
-            if dbg == True:
-                print "%s is not a Characterization Target" % obj_id
-                print "Number of Characterization Targets: %i" %body_char.count()
+            if dbg is True:
+                print("%s is not a Characterization Target" % obj_id)
+                print("Number of Characterization Targets: %i" % body_char.count())
             return False
-    check_spec = PreviousSpectra.objects.filter(body=body,spec_wav=specobj[1],spec_source=source)
+    check_spec = PreviousSpectra.objects.filter(body=body, spec_wav=specobj[1], spec_source=source)
     if check_spec:
         for check in check_spec:
             if check.spec_date >= specobj[5]:
-                if dbg == True:
-                    print "More recent data already in DB"
+                if dbg is True:
+                    print("More recent data already in DB")
                 return False
     params = {  'body'          : body,
                 'spec_wav'      : specobj[1],
@@ -1722,8 +1827,8 @@ def update_previous_spectra(specobj,source='U',dbg=False):
                 }
     spec, created = PreviousSpectra.objects.get_or_create(**params)
     if not created:
-        if dbg == True:
-            print "Did not write for some reason."
+        if dbg is True:
+            print("Did not write for some reason.")
         return False
     return True
 

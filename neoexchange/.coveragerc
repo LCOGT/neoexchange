@@ -1,6 +1,7 @@
 [run]
 include = core/*
-#          photometrics/*
+          astrometrics/*
+	  photometrics/*
 
 [report]
 exclude_lines =

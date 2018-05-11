@@ -5,15 +5,17 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.common.by import By
 from mock import patch
 from neox.tests.mocks import MockDateTime
-#from datetime import datetime as real_datetime
+# from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
 from django.core.urlresolvers import reverse
 
+
 class NewVisitorTest(FunctionalTest):
-# The homepage computes the RA, Dec of each body for 'now' so we need to mock
-# patch the datetime used by models.Body.compute_position to give the same
-# consistent answer.
+    """ The homepage computes the RA, Dec of each body for 'now' so we need to mock
+    patch the datetime used by models.Body.compute_position to give the same
+    consistent answer.
+    """
 
     def insert_extra_test_body(self):
         params = {  'name'          : '1995 YR1',
@@ -57,13 +59,13 @@ class NewVisitorTest(FunctionalTest):
                    'meandist': 3.0862545,
                    'name': u'',
                    'not_seen': 0.918786862824074,
-                   'num_obs': 16L,
+                   'num_obs': 16,
                    'orbinc': 15.46491,
                    'origin': u'L',
                    'perihdist': None,
                    'provisional_name': u'LSCTLGm',
                    'provisional_packed': u'',
-                   'score': 2L,
+                   'score': 2,
                    'slope': 0.15,
                    'source_type': u'U',
                    'update_time': datetime(2017, 2, 2, 22, 3, 3),
@@ -78,27 +80,27 @@ class NewVisitorTest(FunctionalTest):
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
         self.insert_extra_test_body()
 
-        #Matt has heard about a new website that provides a ranked list of NEOs for follow-up.
+        # Matt has heard about a new website that provides a ranked list of NEOs for follow-up.
 
-        #He goes to the homepage for the website and expects to see this ranked list of NEOs.
+        # He goes to the homepage for the website and expects to see this ranked list of NEOs.
         self.browser.get(self.live_server_url)
         self.assertIn('Home | LCO NEOx', self.browser.title)
-        self.check_for_header_in_table('id_neo_targets',\
+        self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 N999r0q Candidate 23 43 12.75 +19 58 55.6 20.7 17 3.00 0.420 90',
+        testlines = [u'1 N999r0q Candidate 23 43 12.75 +19 58 55.6 20.7 17 3.00 0.420 90',
                     u'2 1995 YR1 NEO 23 43 12.75 +19 58 55.6 20.7 35 42.00 2.220 None']
         self.check_for_row_in_table('id_neo_targets', testlines[0])
         self.check_for_row_in_table('id_neo_targets', testlines[1])
         # Because we can't find the Updated icon with a simple text search
         # we look for the data-label for 'Updated?'
-        updated_statuses = ['true','false']
+        updated_statuses = ['Yes', 'No']
         data_label = 'Updated?'
         self.check_icon_status_elements('id_neo_targets', data_label, updated_statuses)
 
-        #He clicks on the top ranked NEO and is taken to a page that has more information on the object.
+        # He clicks on the top ranked NEO and is taken to a page that has more information on the object.
         link = self.browser.find_element_by_link_text('N999r0q')
-        body_url = self.live_server_url + reverse('target',kwargs={'pk':1})
+        body_url = self.live_server_url + reverse('target', kwargs={'pk': 1})
         self.assertIn(link.get_attribute('href'), body_url)
 
         # He clicks the link and is taken to a page with the targets' details.
@@ -120,25 +122,25 @@ class NewVisitorTest(FunctionalTest):
         self.insert_local_test_body()
         self.insert_extra_test_body()
 
-        #Matt has heard about a new website that provides a ranked list of NEOs for follow-up.
+        # Matt has heard about a new website that provides a ranked list of NEOs for follow-up.
 
-        #He goes to the homepage for the website and expects to see this ranked list of NEOs.
+        # He goes to the homepage for the website and expects to see this ranked list of NEOs.
         self.browser.get(self.live_server_url)
         self.assertIn('Home | LCO NEOx', self.browser.title)
-        self.check_for_header_in_table('id_neo_targets',\
+        self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2017-02-01 17:00:00
-        testlines =[u'1 LSCTLGm Candidate 09 27 30.78 +03 05 24.6 21.6 16 1.07 0.919 2',]
+        testlines = [u'1 LSCTLGm Candidate 09 27 30.78 +03 05 24.6 21.6 16 1.07 0.919 2', ]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
         # Because we can't find the Updated icon with a simple text search
         # we look for the data-label for 'Updated?'
-        updated_statuses = ['true',]
+        updated_statuses = ['Yes', ]
         data_label = 'Updated?'
         self.check_icon_status_elements('id_neo_targets', data_label, updated_statuses)
 
-        #He clicks on the top ranked NEO and is taken to a page that has more information on the object.
+        # He clicks on the top ranked NEO and is taken to a page that has more information on the object.
         link = self.browser.find_element_by_link_text('LSCTLGm')
-        body_url = self.live_server_url + reverse('target',kwargs={'pk': self.body3.pk})
+        body_url = self.live_server_url + reverse('target', kwargs={'pk': self.body3.pk})
         self.assertIn(link.get_attribute('href'), body_url)
 
         # He clicks the link and is taken to a page with the targets' details.

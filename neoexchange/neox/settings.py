@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # Django settings for neox project.
 
-import os, sys
+import os
+import sys
 from django.utils.crypto import get_random_string
 
 VERSION = '3.0.1a'
@@ -89,10 +90,12 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
 AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
+    'neox.auth_backend.ValhallaBackend',
+    'django.contrib.auth.backends.ModelBackend'
     )
 
 ROOT_URLCONF = 'neox.urls'
@@ -196,12 +199,12 @@ LOGGING = {
         }
     },
     'loggers': {
+        # 'django.request': {
+        #     'handlers': ['mail_admins'],
+        #     'level': 'ERROR',
+        #     'propagate': True,
+        # },
         'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'django': {
             'handlers':['console'],
             'propagate': True,
             'level':'ERROR',
@@ -220,13 +223,13 @@ LOGGING = {
         },
         'neox': {
             'handlers':['console'],
-            'level' : 'DEBUG'
+            'level' : 'ERROR'
         }
     }
 }
 
 chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-SECRET_KEY = get_random_string(50, chars)
+SECRET_KEY = os.environ.get('SECRET_KEY', get_random_string(50, chars))
 
 DATABASES = {
     "default": {
@@ -236,7 +239,7 @@ DATABASES = {
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "CONN_MAX_AGE" : 1800,
+        "CONN_MAX_AGE" : 300,
         "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
 
     }
@@ -252,21 +255,6 @@ EMAIL_PORT          =  587
 DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
 EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
-
-
-###############################
-# DEPRECATED LCO Api settings #
-###############################
-
-REQUEST_API_URL = 'https://lco.global/observe/api/user_requests/%s/requests/'
-FRAMES_API_URL = 'https://lco.global/observe/api/requests/%s/frames/'
-REQUEST_AUTH_API_URL = 'https://lco.global/observe/api/api-token-auth/'
-
-CLIENT_ID = os.environ.get('NEOX_RBAUTH_ID','')
-CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
-RBAUTH_TOKEN_URL = 'https://lco.global/observe/o/token/'
-RBAUTH_PROFILE_API = 'https://lco.global/observe/api/profile/'
-RBAUTH_PROPOSAL_API = 'https://lco.global/observe/api/proposals/'
 
 ####################
 # LCO Api settings #
@@ -287,6 +275,7 @@ PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
 PORTAL_REQUEST_URL = 'https://observe.lco.global/userrequests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
 PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN','')
+PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
 
 ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER','')
 ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD','')
@@ -320,9 +309,8 @@ if 'test' in sys.argv:
 # defined per machine.
 if not CURRENT_PATH.startswith('/var/www'):
     try:
-        from local_settings import *
+        from .local_settings import *
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
 
-print DATABASES['default']

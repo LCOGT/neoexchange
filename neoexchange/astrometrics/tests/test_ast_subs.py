@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -53,7 +53,7 @@ class TestIntToMutantHexChar(TestCase):
             int_to_mutant_hex_char('9')
             assert False
         except MutantError as e:
-            expected_msg = ("Number out of range 0...61")
+            expected_msg = ("Not an integer")
             self.assertEqual(e.__str__(), expected_msg)
 
     def test_bad_mutant_not_number2(self):
@@ -61,7 +61,7 @@ class TestIntToMutantHexChar(TestCase):
             int_to_mutant_hex_char('FOO')
             assert False
         except MutantError as e:
-            expected_msg = ("Number out of range 0...61")
+            expected_msg = ("Not an integer")
             self.assertEqual(e.__str__(), expected_msg)
 
     def test_num_less_than_ten(self):

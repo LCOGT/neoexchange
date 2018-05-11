@@ -2,6 +2,7 @@
 .git
 */Diffs
 */neox.log
+*/geckodriver.log
 */.coveragerc
 */htmlcov
 */comet
@@ -12,3 +13,5 @@
 *.dat
 *.fz
 neoexchange/photometrics/tests/*
+neoexchange/lightcurve.png
+neoexchange/lightcurve_data.txt

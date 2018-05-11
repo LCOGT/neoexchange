@@ -1,18 +1,21 @@
+from subprocess import check_output
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
+from contextlib import contextmanager
 from selenium import webdriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
-from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo,PreviousSpectra
-from contextlib import contextmanager
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.expected_conditions import \
-    staleness_of
+from selenium.webdriver.support.expected_conditions import staleness_of
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra
+
 
 class FunctionalTest(StaticLiveServerTestCase):
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
-        if settings.DEBUG == False:
+
+        if settings.DEBUG is False:
             settings.DEBUG = True
 
     @contextmanager
@@ -148,11 +151,10 @@ class FunctionalTest(StaticLiveServerTestCase):
                        }
         self.test_block = Block.objects.create(pk=1, **block_params)
 
-
         sblock_params = {
                          'cadence'  : False,
                          'body'     : self.body,
-                         'proposal' : self.neo_proposal,
+                         'proposal' : self.test_proposal,
                          'block_start' : '2015-04-20 03:00:00',
                          'block_end'   : '2015-04-22 13:00:00',
                          'tracking_number' : '00043',
@@ -181,12 +183,26 @@ class FunctionalTest(StaticLiveServerTestCase):
     def setUp(self):
 
         fp = webdriver.FirefoxProfile()
-        fp.set_preference("browser.startup.homepage", "about:blank");
-        fp.set_preference("startup.homepage_welcome_url", "about:blank");
-        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank");
+        fp.set_preference("browser.startup.homepage", "about:blank")
+        fp.set_preference("startup.homepage_welcome_url", "about:blank")
+        fp.set_preference("startup.homepage_welcome_url.additional", "about:blank")
 
         if not hasattr(self, 'browser'):
-            self.browser = webdriver.Firefox(firefox_profile=fp)
+            firefox_capabilities = DesiredCapabilities.FIREFOX
+            # Marionette does not work on Firefox ~< 57. Try and determine the
+            # version and check it. Hopefully this code is robust and platform-
+            # independent...
+            try:
+                version = check_output(["firefox", "--version"], universal_newlines=True)
+            except (OSError, subprocess.CalledProcessError):
+                version = None
+            if version and 'Firefox' in version:
+                version_num = version.rstrip().split(' ')[-1]
+                major_version = version_num.split('.')[0]
+                if major_version.isdigit() and int(major_version) <= 52:
+                    firefox_capabilities['marionette'] = False
+
+            self.browser = webdriver.Firefox(capabilities=firefox_capabilities, firefox_profile=fp)
         self.browser.implicitly_wait(5)
         self.insert_test_body()
         self.insert_test_proposals()
@@ -219,7 +235,7 @@ class FunctionalTest(StaticLiveServerTestCase):
     def check_icon_status_elements(self, table_id, data_label, statuses):
         table = self.browser.find_element_by_id(table_id)
         table_body = table.find_element_by_tag_name('tbody')
-        rows = self.browser.find_elements(By.XPATH,"//td[@data-label='%s']//i" % data_label )
+        rows = self.browser.find_elements(By.XPATH, "//td[@data-label='%s']//i" % data_label)
         row_vals = [r.get_attribute("title") for r in rows]
         self.assertEqual(row_vals, statuses)
 

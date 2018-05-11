@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2015-2017 LCO
+Copyright (C) 2015-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -22,11 +22,13 @@ from django.views.generic import ListView
 from django.forms.models import model_to_dict
 from django.contrib.auth.models import User
 from unittest import skipIf
+from mock import patch
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.models import Body, Proposal, Block
 from neox.settings import VERSION
+from neox.tests.mocks import mock_lco_authenticate
 
 class HomePageTest(TestCase):
 
@@ -88,7 +90,7 @@ class EphemPageTest(TestCase):
         )
         self.assertIn(u'N999r0q', response.content.decode('utf-8'))
         body_elements = model_to_dict(self.body)
-        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
+        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '15m' )
         expected_html = render_to_string(
             'core/ephem.html',
             {'target' : self.body,
@@ -185,6 +187,7 @@ class ScheduleTargetsPageTest(TestCase):
         self.bart.is_active=1
         self.bart.save()
 
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
         self.assertTrue(self.client.login(username='bart', password='simpson'))
 

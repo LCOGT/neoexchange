@@ -1,6 +1,6 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 from datetime import datetime, timedelta
 from math import ceil
 import sys
@@ -19,7 +19,7 @@ import sys
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from astropy.wcs import WCS
-from urlparse import urljoin
+from urllib.parse import urljoin
 
 from core.models import Block, Frame, Candidate, SourceMeasurement, Body
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes, LCOGT_site_codes
@@ -43,10 +43,10 @@ def measurements_from_block(blockid, bodyid=None):
     return {'body' : block.body, 'measures' : measures, 'slot' : block,'extra_bodies':extra_bodies}
 
 def find_images_for_block(blockid):
-    '''
+    """
     Look up Frames and Candidates in Block.
     Output all candidates coords for each frame for Light Monitor to display
-    '''
+    """
     red_frames = Frame.objects.filter(block__id=blockid, frametype=Frame.BANZAI_RED_FRAMETYPE).order_by('midpoint')
     ql_frames = Frame.objects.filter(block__id=blockid, frametype=Frame.BANZAI_QL_FRAMETYPE).order_by('midpoint')
     if red_frames.count() > 0 and red_frames.count() >= ql_frames.count():
@@ -227,32 +227,39 @@ def block_status(block_id):
     status = False
     try:
         block = Block.objects.get(id=block_id)
-        tracking_num = block.superblock.tracking_number
+        try:
+            tracking_num = block.superblock.tracking_number
+        except AttributeError:
+            logger.error("Superblock for Block with id %s does not exist" % block_id)
+            return False
     except ObjectDoesNotExist:
         logger.error("Block with id %s does not exist" % block_id)
         return False
 
-    # Get authentication token for ODIN
-    logger.debug("Checking request status for %s" % block_id)
+    # Get authentication token for Valhalla
+    logger.info("Checking request status for block/track# %s / %s" % (block_id, tracking_num))
     data = check_request_status(tracking_num)
-    # data is a full LCOGT request dict for this tracking number (now called 'id').
+    # data is a full LCO request dict for this tracking number (now called 'id').
     if not data:
+        logger.warn("Got no data for block/track# %s / %s" % (block_id, tracking_num))
         return False
     # Check if the request was not found
     if data.get('detail', 'None') == u'Not found.':
+        logger.warn("Request not found for block/track# %s / %s" % (block_id, tracking_num))
         return False
     # Check if credentials provided
     if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
         logger.error("No VALHALLA_TOKEN set")
         return False
-    # Although this is a loop, we should only have a single request so it is executed once
-    exposure_count = 0
 
+    # This loops through all BLOCKS in the SUPERBLOCK so we need to filter out 
+    #only the one block used to call this procedure.
+    exposure_count = 0
     for r in data['requests']:
-        images = check_for_archive_images(request_id=r['id'])
-        logger.debug('Request no. %s x %s images' % (r['id'],len(images)))
-        if images:
-            if len(images) >= 3:
+        if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
+            images, num_archive_frames = check_for_archive_images(request_id=r['id'])
+            logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
+            if images:
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
@@ -267,14 +274,25 @@ def block_status(block_id):
                     return False
                 if (not block.when_observed or last_image > block.when_observed):
                     block.when_observed = last_image
-                if block.block_end < datetime.utcnow():
+                # If the block end time has passed and we got all of the images, set to inactive.
+                # N.B. we don't check against acceptability_threshold x expected no. of frames
+                # to avoid race conditions where we have more than e.g. 90% of the frames but
+                # there has been a delay in getting data back, the block_end has passed and
+                # there may be more frames still to come in.
+                if block.block_end < datetime.utcnow() and num_archive_frames == exposure_count * 2:
+                    logger.info("All reduced frames found and block end passed - setting to inactive")
                     block.active = False
                 # Add frames and get list of scheduler block IDs used
                 block_ids = ingest_frames(images, block)
-                block.num_observed = len(block_ids)
+                # If we got at least 3 frames (i.e. usable for astrometry reporting) and
+                # at least frames for at least one block were ingested, update the blocks'
+                # observed count.
+                if len(images) >= 3 and len(block_ids) >= 1:
+                    logger.info("More than 3 reduced frames found - setting to observed")
+                    block.num_observed = len(block_ids)
                 block.save()
                 status = True
-                logger.debug("Block %s updated" % block)
+                logger.info("Block %s updated" % block)
             else:
-                logger.debug("No update to block %s" % block)
+                logger.info("No update to block %s" % block)
     return status

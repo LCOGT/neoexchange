@@ -1,6 +1,6 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2017 LCO
+Copyright (C) 2014-2018 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 from django.core.urlresolvers import reverse
 from django.contrib import admin
 
@@ -20,25 +20,27 @@ from astrometrics.time_subs import degreestohms, degreestodms
 
 from reversion.admin import VersionAdmin
 
+
 @admin.register(Body)
 class BodyAdmin(VersionAdmin):
     fieldsets = (
         (None, {
-            'fields': ('provisional_name', 'provisional_packed', 'name','origin','source_type')
+            'fields': ('provisional_name', 'provisional_packed', 'name', 'origin', 'source_type')
         }),
         ('Elements', {
-            'fields': ('elements_type', 'epochofel', 'abs_mag', 'slope', 'orbinc','longascnode','argofperih','eccentricity','meandist','meananom','perihdist', 'epochofperih')
+            'fields': ('elements_type', 'epochofel', 'abs_mag', 'slope', 'orbinc', 'longascnode', 'argofperih', 'eccentricity', 'meandist', 'meananom', 'perihdist', 'epochofperih')
        }),
-        ('Follow Up',{
-                'fields' : ('active','fast_moving','ingest','score','discovery_date','num_obs','arc_length','not_seen','update_time','updated')
+        ('Follow Up', {
+                'fields' : ('active', 'fast_moving', 'ingest', 'score', 'discovery_date', 'num_obs', 'arc_length', 'not_seen', 'update_time', 'updated')
         })
     )
-    search_fields = ('provisional_name','name')
+    search_fields = ('provisional_name', 'name')
     list_display = ('id', 'provisional_name', 'name', 'origin', 'source_type',
       'active', 'num_obs', 'not_seen', 'ingest')
     list_filter = ('origin', 'source_type', 'elements_type', 'active',
       'fast_moving', 'updated')
     ordering = ('-ingest',)
+
 
 @admin.register(SuperBlock)
 class SuperBlockAdmin(VersionAdmin):
@@ -54,6 +56,7 @@ class SuperBlockAdmin(VersionAdmin):
     list_filter = ('proposal', 'block_start', 'active', )
     ordering = ('-block_start',)
 
+
 @admin.register(Block)
 class BlockAdmin(VersionAdmin):
     def format_block_start(self, obj):
@@ -62,7 +65,9 @@ class BlockAdmin(VersionAdmin):
     format_block_start.admin_order_field = 'block_start'
 
     def zoo_friendly(self, obj):
-        if obj.num_exposures < 10 and obj.num_observed > 0 and obj.num_candidates > 0:
+        if obj.num_exposures is None or obj.num_observed is None or obj.num_candidates() is None:
+            return False
+        elif obj.num_exposures < 10 and obj.num_observed > 0 and obj.num_candidates() > 0:
             return True
         else:
             return False
@@ -83,6 +88,7 @@ class BlockAdmin(VersionAdmin):
 
     ordering = ('-block_start',)
 
+
 @admin.register(Frame)
 class FrameAdmin(VersionAdmin):
     def format_midpoint(self, obj):
@@ -99,15 +105,16 @@ class FrameAdmin(VersionAdmin):
     def filename_or_midpoint(self, obj):
 
         if obj.filename:
-            name= obj.filename
+            name = obj.filename
         else:
-            name = "%s@%s" % ( obj.midpoint, obj.sitecode.rstrip() )
+            name = "%s@%s" % (obj.midpoint, obj.sitecode.rstrip())
         return name
 
     list_display = ('id', 'block_groupid', 'quality', 'frametype', 'filename_or_midpoint', 'exptime', 'filter', 'sitecode')
     list_filter = ('quality', 'frametype', 'midpoint', 'filter', 'sitecode', 'instrument')
 
     ordering = ('-midpoint',)
+
 
 @admin.register(SpectralInfo)
 class SpectralInfoAdmin(VersionAdmin):
@@ -118,17 +125,20 @@ class SpectralInfoAdmin(VersionAdmin):
     list_display = ('body_name', 'taxonomic_class', 'tax_scheme', 'tax_reference', 'make_readable_tax_notes')
     list_filter = ('taxonomic_class', 'tax_scheme')
 
+
 @admin.register(PreviousSpectra)
 class PreviousSpectraAdmin(VersionAdmin):
 
     def body_name(self, obj):
         return obj.body.current_name()
 
-    list_display = ('body_name', 'spec_wav','spec_source','spec_date')
+    list_display = ('body_name', 'spec_wav', 'spec_source', 'spec_date')
     list_filter = ('spec_wav', 'spec_source')
+
 
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
+
 
 class SourceMeasurementAdmin(admin.ModelAdmin):
 
@@ -149,13 +159,14 @@ class SourceMeasurementAdmin(admin.ModelAdmin):
         return obj.frame.sitecode
 
     def obs_ra_hms(self, obj):
-        return degreestohms(obj.obs_ra,' ')
+        return degreestohms(obj.obs_ra, ' ')
 
     def obs_dec_dms(self, obj):
-        return degreestodms(obj.obs_dec,' ')
+        return degreestodms(obj.obs_dec, ' ')
 
     list_display = ('body_name', 'frame', 'flags', 'obs_ra_hms', 'obs_dec_dms', 'site_code')
     search_fields = ('body__name', 'body__provisional_name')
+
 
 class CatalogSourcesAdmin(admin.ModelAdmin):
 
@@ -168,11 +179,11 @@ class CatalogSourcesAdmin(admin.ModelAdmin):
     obs_y_rnd.short_description = "CCD Y"
 
     def obs_ra_hms(self, obj):
-        return degreestohms(obj.obs_ra,' ')
+        return degreestohms(obj.obs_ra, ' ')
     obs_ra_hms.short_description = "RA (h m s)"
 
     def obs_dec_dms(self, obj):
-        return degreestodms(obj.obs_dec,' ')
+        return degreestodms(obj.obs_dec, ' ')
     obs_dec_dms.short_description = "Dec (d ' \")"
 
     def obs_mag_error(self, obj):
@@ -182,9 +193,11 @@ class CatalogSourcesAdmin(admin.ModelAdmin):
     list_display = ('id', 'frame', 'obs_x_rnd', 'obs_y_rnd', 'obs_ra', 'obs_dec', 'obs_ra_hms', 'obs_dec_dms', 'obs_mag_error')
     search_fields = ('frame__filename', )
 
+
 class CandidateAdmin(admin.ModelAdmin):
 
     list_select_related = True
+
     def block_info(self, obj):
         ct = obj.block._meta
         url = reverse('admin:%s_%s_change' % (ct.app_label, ct.model_name), args=(obj.block.pk,))
@@ -229,9 +242,10 @@ class CandidateAdmin(admin.ModelAdmin):
 
     search_fields = ('block__body__provisional_name', )
 
-admin.site.register(Proposal,ProposalAdmin)
-admin.site.register(SourceMeasurement,SourceMeasurementAdmin)
+
+admin.site.register(Proposal, ProposalAdmin)
+admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
-admin.site.register(CatalogSources,CatalogSourcesAdmin)
-admin.site.register(Candidate,CandidateAdmin)
+admin.site.register(CatalogSources, CatalogSourcesAdmin)
+admin.site.register(Candidate, CandidateAdmin)
 admin.site.register(PanoptesReport)

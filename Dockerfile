@@ -1,12 +1,15 @@
 ################################################################################
 #
-# Runs the LCO Python Django NEO Exchange webapp using nginx + uwsgi
+# Runs the LCO Python Django NEO Exchange webapp using nginx + gunicorn
 #
-# The decision to run both nginx and uwsgi in the same container was made because
+# The change from uwsgi to gunicorn was made to support python 3.6. Since usgi is 
+# linked against the python libraries, it is hard to support the non-system python
+# we want to use.
+# The decision to run both nginx and gunicorn in the same container was made because
 # it avoids duplicating all of the Python code and static files in two containers.
 # It is convenient to have the whole webapp logically grouped into the same container.
 #
-# You can choose to expose the nginx and uwsgi ports separately, or you can
+# You can choose to expose the nginx and gunicorn ports separately, or you can
 # just default to using the nginx port only (recommended). There is no
 # requirement to map all exposed container ports onto host ports.
 #
@@ -15,8 +18,11 @@
 FROM centos:7
 MAINTAINER LCOGT <webmaster@lco.global>
 
-# nginx runs on port 80, uwsgi is linked in the nginx conf
+# nginx runs on port 80, gunicorn is linked in the nginx conf
 EXPOSE 80
+
+# Add path to python3.6
+ENV PATH=/opt/lcogt-python36/bin:$PATH
 
 # The entry point is our init script, which runs startup tasks, then
 # execs the supervisord daemon
@@ -31,15 +37,15 @@ ENV PREFIX /neoexchange
 
 # Install packages and update base system
 RUN yum -y install epel-release \
-        && yum -y install cronie libjpeg-devel nginx python-pip python-devel \
-                supervisor uwsgi uwsgi-plugin-python libssl libffi libffi-devel \
-                MySQL-python gcc gcc-gfortran openssl-devel ImageMagick \
-                less wget tcsh plplot plplot-libs plplot-devel numpy-f2py \
+        && yum -y install cronie libjpeg-devel nginx \
+                supervisor libssl libffi libffi-devel \
+                mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
+                less wget which tcsh plplot plplot-libs plplot-devel \
         && yum -y update
 
 # Enable LCO repo and install extra packages
 COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
-RUN yum -y install sextractor cdsclient scamp mtdlink\
+RUN yum -y install lcogt-python36 sextractor cdsclient scamp mtdlink\
         && yum clean all
 
 ENV PIP_TRUSTED_HOST buildsba.lco.gtn
@@ -50,12 +56,11 @@ COPY neoexchange/requirements.txt /var/www/apps/neoexchange/requirements.txt
 # Install the LCO NEO exchange Python required packages
 # Upgrade pip first
 # Then the LCO packages which have to be installed after the normal pip install
-# numpy needs to be explicitly installed first otherwise pySLALIB (pulled in by
-# newer reqdbclient) fails with a missing numpy.distutils.core reference
-# for...reasons...
-RUN pip install --upgrade pip \
-    && pip install -U numpy \
-    && pip install --trusted-host buildsba.lco.gtn -r /var/www/apps/neoexchange/requirements.txt \
+# numpy needs to be explicitly installed first otherwise pySLALIB
+# fails with a missing numpy.distutils.core reference for...reasons...
+RUN pip3 install -U numpy \
+    && pip3 install -U pip \
+    && pip3 install --trusted-host $PIP_TRUSTED_HOST -r /var/www/apps/neoexchange/requirements.txt \
     && rm -rf ~/.cache/pip
 
 # Ensure crond will run on all host operating systems

@@ -4,6 +4,42 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.3.6
+
+Bite the Bullet and Update to Python 3.6
+
+### 2.2.0
+
+Added capability of requesting multiple filters when making a user request. 
+
+### 2.1.6
+
+Reduce connection maximum age to 60 seconds. Switch off perturbations in ephemeris computation calls.
+
+### 2.1.5
+
+Update Selenium to 3.11 and Django to 1.11. Refactor functional tests for Valhalla/JavaScript-based authentication. Add functionality to ingest targets from text file list of target names.
+
+### 2.1.4
+
+Better separate Block Registration from SuperBlock Registation so that Blocks only see frames taken during that individual Block and Block times are separate from SuperBlock Start and End times.
+
+### 2.1.3
+
+Add support and new object type for hyperbolic asteroids such as A/2017 U7 and A/2018 C2. Increase ephemeris spacing to 15 mins prevent timeouts.
+
+### 2.1.2
+
+Add support for the 0.4m telescopes at Cerro Tololo, Sutherland and McDonald.
+
+### 2.1.1
+
+Fix for missing absolute magnitudes breaking the diameter calculation.
+
+### 2.1.0
+
+Fixes for non-cadence submitting. Improved error message passthrough from scheduling endpoints. Fixes for block reporting. First part of spectroscopy support for storing spectral taxonomies.
+
 ### 1.9.0
 
 Add cadence support.

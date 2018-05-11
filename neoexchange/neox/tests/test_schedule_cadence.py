@@ -3,7 +3,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_rbauth_login
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list
 
 from datetime import datetime
 from django.test.client import Client
@@ -13,6 +13,9 @@ from core.models import Body, Proposal
 
 import time
 
+
+@patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+@patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
 class ScheduleCadence(FunctionalTest):
 
     def setUp(self):
@@ -31,16 +34,16 @@ class ScheduleCadence(FunctionalTest):
         self.bart.delete()
         super(ScheduleCadence,self).tearDown()
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
         test_login = self.client.login(username=self.username, password=self.password)
         self.assertEqual(test_login, True)
 
-    @patch('neox.auth_backend.rbauth_login', mock_rbauth_login)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def test_login(self):
         self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
-        username_input = self.browser.find_element_by_id("email")
-        username_input.send_keys(self.email)
+        username_input = self.browser.find_element_by_id("username")
+        username_input.send_keys(self.username)
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
         with self.wait_for_page_load(timeout=10):
@@ -60,6 +63,7 @@ class ScheduleCadence(FunctionalTest):
 # Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
 # TAL: Need to patch the datetime in views also otherwise we will get the wrong
 # semester and window bounds.
+
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
     def test_can_schedule_cadence(self):
@@ -126,7 +130,9 @@ class ScheduleCadence(FunctionalTest):
         periodbox = self.get_item_input_box('id_period')
         periodbox.clear()
         periodbox.send_keys('3.0')
-        periodbox.send_keys(Keys.ENTER)
+
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
 
         #The page refreshes and he reaches the schedule cadence page
         target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence',kwargs={'pk':1}))
@@ -142,7 +148,7 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('11', num_exp)
+        self.assertIn('13', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
         self.assertIn('55.0 secs', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').find_element_by_class_name('kv-value').text
@@ -240,7 +246,8 @@ class ScheduleCadence(FunctionalTest):
         periodbox = self.get_item_input_box('id_period')
         periodbox.clear()
         periodbox.send_keys('3.0')
-        periodbox.send_keys(Keys.ENTER)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
 
         #The page refreshes and he reaches the schedule cadence page
         target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence',kwargs={'pk':1}))
@@ -256,7 +263,7 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('11', num_exp)
+        self.assertIn('13', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
         self.assertIn('55.0 secs', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').find_element_by_class_name('kv-value').text
@@ -348,7 +355,8 @@ class ScheduleCadence(FunctionalTest):
         periodbox = self.get_item_input_box('id_period')
         periodbox.clear()
         periodbox.send_keys('3.0')
-        periodbox.send_keys(Keys.ENTER)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
 
         #The page refreshes and he reaches the schedule cadence page
         target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence',kwargs={'pk':1}))
@@ -364,7 +372,7 @@ class ScheduleCadence(FunctionalTest):
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('11', num_exp)
+        self.assertIn('13', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
         self.assertIn('55.0 secs', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').find_element_by_class_name('kv-value').text
