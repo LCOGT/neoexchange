@@ -318,7 +318,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     if display:
         print("  %02.2d %02.2d %02.2d.%02.2d %s%02.2d %02.2d %02.2d.%01.1d  V=%.1f  %5.2f %.1f % 7.3f %8.4f" % ( ra_geo_deg[0],
             ra_geo_deg[1], ra_geo_deg[2], ra_geo_deg[3],
-            dsign, dec_geo_deg[0], dec_geo_deg[1], dec_geo_deg[2], dec_geo_deg[3],
+            dsign.decode('utf-8'), dec_geo_deg[0], dec_geo_deg[1], dec_geo_deg[2], dec_geo_deg[3],
             mag, total_motion, sky_pa, alt_deg, airmass))
 
 # Compute South Polar Distance from Dec
@@ -519,10 +519,16 @@ def determine_rates_pa(start_time, end_time, elements, site_code):
     from the <site_code>"""
 
     first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=True, display=True)
+    # Check for no ephemeris caused by perturbing error
+    if not first_frame_emp:
+        first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=False, display=True)
     first_frame_speed = first_frame_emp[4]
     first_frame_pa = first_frame_emp[7]
 
     last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=True, display=True)
+    # Check for no ephemeris caused by perturbing error
+    if not last_frame_emp:
+        last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=False, display=True)
     last_frame_speed = last_frame_emp[4]
     last_frame_pa = last_frame_emp[7]
 

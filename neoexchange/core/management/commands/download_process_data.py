@@ -76,7 +76,7 @@ class Command(BaseCommand):
 # Step 3: For each object:
         for rock in objects:
 # Skip if a specific object was specified on the commandline and this isn't it
-            if options['object'] != None:
+            if options['object'] is not None:
                 if options['object'] not in rock:
                     continue
             datadir = os.path.join(dataroot, rock)
@@ -86,7 +86,7 @@ class Command(BaseCommand):
             fits_files = get_fits_files(datadir)
             self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir) )
             first_frame, last_frame = find_first_last_frames(fits_files)
-            if first_frame == None or last_frame == None:
+            if first_frame is None or last_frame is None:
                 self.stderr.write("Couldn't determine first and last frames, skipping target")
                 continue
             self.stdout.write("Timespan %s->%s" % ( first_frame.midpoint, last_frame.midpoint))

@@ -238,7 +238,7 @@ DATABASES = {
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "CONN_MAX_AGE" : 60,
+        "CONN_MAX_AGE" : 300,
         "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
 
     }

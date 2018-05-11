@@ -905,6 +905,37 @@ class TestDetermineRatesAndPA(TestCase):
         self.yark_target, created = Body.objects.get_or_create(**yark_params)
         self.yark_elements = model_to_dict(self.yark_target)
 
+        perturb_params = { 'abs_mag': 30.1,
+                        'active': False,
+                        'arc_length': 0.04,
+                        'argofperih': 88.46163,
+                        'discovery_date': datetime(2018, 5, 8, 9, 36),
+                        'eccentricity': 0.5991733,
+                        'elements_type': 'MPC_MINOR_PLANET',
+                        'epochofel': datetime(2018, 5, 2, 0, 0),
+                        'epochofperih': None,
+                        'fast_moving': False,
+                        'ingest': datetime(2018, 5, 8, 18, 20, 12),
+                        'longascnode': 47.25654,
+                        'meananom': 23.36326,
+                        'meandist': 1.5492508,
+                        'name': '',
+                        'not_seen': 0.378,
+                        'num_obs': 5,
+                        'orbinc': 8.13617,
+                        'origin': 'M',
+                        'perihdist': None,
+                        'provisional_name': 'A106MHy',
+                        'provisional_packed': None,
+                        'score': 100,
+                        'slope': 0.15,
+                        'source_type': 'X',
+                        'update_time': datetime(2018, 5, 8, 18, 9, 43),
+                        'updated': False,
+                        'urgency': None}
+        self.perturb_target, created = Body.objects.get_or_create(**perturb_params)
+        self.perturb_elements = model_to_dict(self.perturb_target)
+
         self.precision = 4
 
     def test_neo_Q64(self):
@@ -955,6 +986,21 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_pa, pa, self.precision)
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
+    def test_perturb_error(self):
+        expected_minrate = 1.2072179264460565 - (0.01*1.2072179264460565)
+        expected_maxrate = 1.3456142840902674 + (0.01*1.3456142840902674)
+        expected_pa = (309.8080216233171+320.9860119849485)/2.0
+        expected_deltapa = 11.17799036163143
+
+        start_time = datetime(2018, 5, 9, 7, 11, 12, 181000)
+        end_time =   datetime(2018, 5, 9, 7, 38, 14, 888000)
+        site_code = 'W87'
+        minrate, maxrate, pa, deltapa = determine_rates_pa(start_time, end_time, self.perturb_elements, site_code)
+
+        self.assertAlmostEqual(expected_minrate, minrate, self.precision)
+        self.assertAlmostEqual(expected_maxrate, maxrate, self.precision)
+        self.assertAlmostEqual(expected_pa, pa, self.precision)
+        self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
 class TestDetermineSlotLength(TestCase):
 
