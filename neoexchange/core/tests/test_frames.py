@@ -159,7 +159,7 @@ class TestBlockStatus(TestCase):
     #Create Mocked output to image request from Valhala.
     #Header URL and Reqnum have been changed for easy tracking.
     #no images for last block
-    def mock_check_for_archive_images(request_id):
+    def mock_check_for_archive_images(request_id, obstype='EXPOSE'):
         result_images_out = [{u'BLKUID': 226770074,
                               u'DATE_OBS': u'2018-02-27T04:10:51.702000Z',
                               u'EXPTIME': u'10.238',
