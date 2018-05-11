@@ -835,7 +835,11 @@ class TestSchedule_Check(TestCase):
                         'ra_midpoint': 3.312248725288052,
                         'dec_midpoint': -0.1605498546995108,
                         'period' : None,
-                        'jitter' : None
+                        'jitter' : None,
+                        'instrument_code' : '',
+                        'snr' : None,
+                        'calibs' : '',
+                        'spectroscopy' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -882,7 +886,11 @@ class TestSchedule_Check(TestCase):
                         'period' : 4.0,
                         'jitter' : 1.0,
                         'num_times' : 3,
-                        'total_time' : 1.0
+                        'total_time' : 1.0,
+                        'instrument_code' : '',
+                        'snr' : None,
+                        'calibs' : '',
+                        'spectroscopy' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -927,7 +935,11 @@ class TestSchedule_Check(TestCase):
                         'period' : 4.0,
                         'jitter' : 1.0,
                         'num_times' : 3,
-                        'total_time' : 1.0
+                        'total_time' : 1.0,
+                        'instrument_code' : '',
+                        'snr' : None,
+                        'calibs' : '',
+                        'spectroscopy' : False
                         }
 
         resp = schedule_check(data, self.body_mp)

@@ -33,8 +33,12 @@ import json
 import copy
 
 from bs4 import BeautifulSoup
-import pyslalib.slalib as S
-
+import astropy.units as u
+try:
+    import pyslalib.slalib as S
+except:
+    pass
+import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
 from django.conf import settings
@@ -1097,6 +1101,47 @@ def fetch_yarkovsky_targets(yark_targets):
     return yark_target_list
 
 
+def fetch_sfu(page=None):
+    """Fetches the solar radio flux from the Solar Radio Monitoring
+    Program run by National Research Council and Natural Resources Canada.
+    The solar radio flux is a measure of the progress through the solar
+    cycle which has been shown to affect the atmospheric airglow - one
+    of the major components of the night sky brightness.
+    Normally this routine is run without any arguments which will fetch
+    the current value in 'solar flux units (sfu)'s' (scaled from
+    `astropy.units.Jy` (Janskys) where 1 sfu = 10,000 Jy) and the
+    `datetime` when it was measured. For testing, [page] can be a static
+    BeautifulSoup version of the page. In the event of parsing problems,
+    (None, None) is returned."""
+
+    sfu_url = 'http://www.spaceweather.gc.ca/solarflux/sx-4-en.php'
+
+    flux_datetime = None
+    flux_sfu = None
+    # Define new 'sfu' (solar flux unit)
+    sfu = u.def_unit(['sfu', 'solar flux unit'], 10000.0*u.Jy)
+
+    if page is None:
+        page = fetchpage_and_make_soup(sfu_url)
+
+    if type(page) == BeautifulSoup:
+        table = page.find_all('td')
+        try:
+            obs_jd = table[0].text
+            flux_datetime = jd_utc2datetime(float(obs_jd))
+        except ValueError:
+            logger.warning("Could not parse flux observation time (" + obs_jd + ")")
+        try:
+            flux_sfu = float(table[2].text)
+            # Flux is in 'solar flux units', equal to 10,000 Jy or 0.01 MJy.
+            # Add in our custom astropy unit declared above.
+            flux_sfu = flux_sfu * sfu
+        except ValueError:
+            logger.warning("Could not parse flux (" + table[2].text + ")")
+
+    return flux_datetime, flux_sfu
+
+
 def make_location(params):
     location = {
         'site'            : params['site'].lower(),
@@ -1112,9 +1157,10 @@ def make_target(params):
     """Make a target dictionary for the request. RA and Dec need to be
     decimal degrees"""
 
-    ra_degs = math.degrees(params['ra_rad'])
-    dec_degs = math.degrees(params['dec_rad'])
+    ra_degs = degrees(params['ra_rad'])
+    dec_degs = degrees(params['dec_rad'])
     target = {
+               'type' : 'SIDEREAL',
                'name' : params['source_id'],
                'ra'   : ra_degs,
                'dec'  : dec_degs
@@ -1164,7 +1210,9 @@ def make_window(params):
 
 
 def make_molecule(params, exp_filter):
-    exp_count = len(exp_filter)
+
+    # Common part of a molecule
+    exp_count = exp_filter[1]
     molecule = {
                 'type' : params['exp_type'],
                 'exposure_count'  : exp_count,
@@ -1172,12 +1220,60 @@ def make_molecule(params, exp_filter):
                 'bin_x'       : params['binning'],
                 'bin_y'       : params['binning'],
                 'instrument_name'   : params['instrument'],
-                'filter'      : exp_filter[0],
-                'ag_mode'     : 'OPTIONAL',  # ON, OFF, or OPTIONAL. Must be uppercase now...
-                'ag_name'     : ''
+                }
 
-    }
+    if params.get('spectroscopy', False):
+        # Autoguider mode, one of ON, OFF, or OPTIONAL.
+        # Must be uppercase now and ON for spectra, and OFF for arcs and lamp flats
+        ag_mode = 'ON'
+        if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
+            ag_mode = 'OFF'
+            molecule['exposure_count'] = 1
+            molecule['exposure_time'] = 60.0
+        molecule['spectra_slit'] = params['spectra_slit']
+        molecule['ag_mode'] = ag_mode
+        molecule['ag_name'] = ''
+        molecule['acquire_mode'] = 'WCS'
+    else:
+        molecule['filter'] = exp_filter[0]
+        molecule['ag_mode'] = 'OPTIONAL'  # ON, OFF, or OPTIONAL. Must be uppercase now...
+        molecule['ag_name'] = ''
+
     return molecule
+
+
+def make_molecules(params):
+    """Handles creating the potentially multiple molecules. Returns a list of the molecules.
+    In imaging mode (`params['spectroscopy'] = False` or not present), this just calls
+    the regular make_molecule().
+    In spectroscopy mode, this will produce 1, 3 or 5 molecules depending on whether
+    `params['calibs']` is 'none, 'before'/'after' or 'both'."""
+
+    filt_list = build_filter_blocks(params['filter_pattern'], params['exp_count'])
+
+    calib_mode = params.get('calibs', 'none').lower()
+    if params.get('spectroscopy', False) is True:
+        # Spectroscopy mode
+        spectrum_molecule = make_molecule(params, filt_list[0])
+        if calib_mode != 'none':
+            old_type = params['exp_type']
+            params['exp_type'] = 'ARC'
+            arc_molecule = make_molecule(params, filt_list[0])
+            params['exp_type'] = 'LAMP_FLAT'
+            flat_molecule = make_molecule(params, filt_list[0])
+            params['exp_type'] = old_type
+        if calib_mode == 'before':
+            molecules = [flat_molecule, arc_molecule, spectrum_molecule]
+        elif calib_mode == 'after':
+            molecules = [spectrum_molecule, arc_molecule, flat_molecule]
+        elif calib_mode == 'both':
+            molecules = [flat_molecule, arc_molecule, spectrum_molecule, arc_molecule, flat_molecule]
+        else:
+            molecules = [spectrum_molecule, ]
+    else:
+        molecules = [make_molecule(params, filt) for filt in filt_list]
+
+    return molecules
 
 
 def make_constraints(params):
@@ -1187,7 +1283,7 @@ def make_constraints(params):
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
                     'min_lunar_distance': 30
-                    }
+                  }
     return constraints
 
 
@@ -1195,22 +1291,23 @@ def make_single(params, ipp_value, request):
     """Create a user_request for a single observation"""
 
     user_request = {
-        "submitter": params['user_id'],
-        "requests": [request],
-        "group_id": params['group_id'],
-        "observation_type": "NORMAL",
-        "operator": "SINGLE",
-        "ipp_value": ipp_value,
-        "proposal": params['proposal_id']
+                    'submitter' : params['user_id'],
+                    'requests'  : [request],
+                    'group_id'  : params['group_id'],
+                    'observation_type': "NORMAL",
+                    'operator'  : "SINGLE",
+                    'ipp_value' : ipp_value,
+                    'proposal'  : params['proposal_id']
     }
 
     return user_request
 
 
 def make_proposal(params):
-    proposal = { 'proposal_id' : params['proposal_id'],
-                'user_id' : params['user_id']
-                }
+    proposal = { 
+                 'proposal_id' : params['proposal_id'],
+                 'user_id' : params['user_id']
+               }
     return proposal
 
 
@@ -1258,18 +1355,18 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
                             'end'   : datetime.strftime(params['end_time'], '%Y-%m-%dT%H:%M:%S'),
                             'period': params['period'],
                             'jitter': params['jitter']
-                        }
+                         }
     del(request['windows'])
 
     user_request = {
-        "submitter": params['user_id'],
-        "requests": [request],
-        "group_id": params['group_id'],
-        "observation_type": "NORMAL",
-        "operator": "SINGLE",
-        "ipp_value": ipp_value,
-        "proposal": params['proposal_id']
-    }
+                    'submitter': params['user_id'],
+                    'requests' : [request],
+                    'group_id' : params['group_id'],
+                    'observation_type': "NORMAL",
+                    'operator' : "SINGLE",
+                    'ipp_value': ipp_value,
+                    'proposal' : params['proposal_id']
+                   }
 # Submit the UserRequest with the cadence
     status, cadence_user_request = expand_cadence(user_request)
 
@@ -1299,7 +1396,9 @@ def configure_defaults(params):
                   'W89' : 'LSC',  # Code for aqwa-0m4a
                   'W79' : 'LSC',  # Code for aqwb-0m4a
                   'F65' : 'OGG',
+                  'F65-FLOYDS' : 'OGG',
                   'E10' : 'COJ',
+                  'E10-FLOYDS' : 'COJ',
                   'Z17' : 'TFN',
                   'Z21' : 'TFN',
                   'T03' : 'OGG',
@@ -1320,6 +1419,13 @@ def configure_defaults(params):
         params['instrument'] = '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
+        if params.get('spectroscopy', False) is True and 'FLOYDS' in params.get('instrument_code', ''):
+            params['exp_type'] = 'SPECTRUM'
+            params['instrument'] = '2M0-FLOYDS-SCICAM'
+            params['binning'] = 1
+            if params.get('filter', None):
+                del(params['filter'])
+            params['spectra_slit'] = 'slit_2.0as'
     elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
@@ -1354,8 +1460,8 @@ def make_userrequest(elements, params):
 # Create Window
     window = make_window(params)
     logger.debug("Window=%s" % window)
-# Create Molecule
-    molecule_list = [make_molecule(params, filt) for filt in build_filter_blocks(params['filter_pattern'], params['exp_count'])]
+# Create Molecule(s)
+    molecule_list = make_molecules(params)
 
     submitter = ''
     submitter_id = params.get('submitter_id', '')
@@ -1448,45 +1554,26 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 
-def fetch_filter_list(site, page=None):
+def fetch_filter_list(site, spec, page=None):
     """Fetches the camera mappings page"""
 
     if page is None:
         camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
         data_file = fetchpage_and_make_soup(camera_mappings)
-        data_out = parse_filter_file(site, data_file)
+        data_out = parse_filter_file(site, spec, data_file)
     else:
         with open(page, 'r') as input_file:
-            data_out = parse_filter_file(site, input_file.read())
+            data_out = parse_filter_file(site, spec, input_file.read())
     return data_out
 
 
-def parse_filter_file(site, camera_list=None):
+def parse_filter_file(site, spec, camera_list=None):
     """Parses the camera mappings page and sends back a list of filters at the given site code.
     """
-    filter_list = [   "air",
-                    "clear",
-                    "ND",
-                    "Astrodon-UV",
-                    "U",
-                    "B",
-                    "V",
-                    "R",
-                    "I",
-                    "B*ND",
-                    "V*ND",
-                    "R*ND",
-                    "I*ND",
-                    "up",
-                    "gp",
-                    "rp",
-                    "ip",
-                    "Skymapper-VS",
-                    "solar",
-                    "zs",
-                    "Y",
-                    "w"
-                ]
+    if spec is not True:
+        filter_list = cfg.phot_filters
+    else:
+        filter_list = cfg.spec_filters
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
 

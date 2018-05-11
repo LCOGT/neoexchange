@@ -95,6 +95,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
         self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
 
+        # Bart doesn't see the proposal to which he doesn't have permissions
+        self.assertNotIn(self.test_proposal.title, [option.text for option in proposal_choices.options])
+
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
@@ -328,3 +331,28 @@ class ScheduleObservations(FunctionalTest):
 
         error_msg = self.browser.find_element_by_class_name('errorlist').text
         self.assertIn('This Site/Telescope combination is not currently available.', error_msg)
+
+    @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
+    def test_schedule_spectroscopy(self):
+        MockDateTime.change_date(2015, 4, 20)
+        self.test_login()
+
+        # Bart has heard about a new website for NEOs. He goes to the
+        # page of the first target
+        # (XXX semi-hardwired but the targets link should be being tested in
+        # test_targets_validation.TargetsValidationTest
+        start_url = reverse('target', kwargs={'pk': 1})
+        self.browser.get(self.live_server_url + start_url)
+
+        # He sees a Schedule Spectroscopic Observations button
+        link = self.browser.find_element_by_id('schedule-spectro-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-spectra', kwargs={'pk': 1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the Schedule Spectroscopic Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)

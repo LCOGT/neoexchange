@@ -2,6 +2,7 @@ from datetime import datetime as real_datetime
 from datetime import datetime
 import os
 
+import astropy.units as u
 from django.contrib.auth import authenticate
 
 from astrometrics.sources_subs import fetch_filter_list
@@ -743,10 +744,10 @@ class MockCandidate(object):
 
 # Submission-related mocks
 
-def mock_fetch_filter_list(site):
+def mock_fetch_filter_list(site, spec):
     test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
 
-    return fetch_filter_list(site, test_filter_map)
+    return fetch_filter_list(site, spec, test_filter_map)
 
 def mock_expand_cadence(user_request):
 
@@ -854,3 +855,10 @@ def mock_expand_cadence(user_request):
                      u'start': u'2017-09-02T11:52:30Z'}]}],
                  u'submitter': u'tlister@lcogt.net'}
     return True, cadence
+
+def mock_fetch_sfu(sfu_value=None):
+    if sfu_value is None:
+        sfu = u.def_unit(['sfu', 'solar flux unit'], 10000.0*u.Jy)
+        sfu_value = 42.0 * sfu
+
+    return datetime(2018, 4, 20, 5, 0, 0), sfu_value

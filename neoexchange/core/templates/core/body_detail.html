@@ -15,6 +15,7 @@
             <div class="container" id="main">
                     <div class="row">
                         <a class="button button-primary" href="{% url 'schedule-body' body.id %}" id="schedule-obs">Schedule Observations</a>
+                        <a class="button button-primary" href="{% url 'schedule-body-spectra' body.id %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
                     </div>
                     <div class="row">
                         <div class="eight columns">
@@ -46,6 +47,7 @@
                                 {% endfor %}
                                 </form>
                             </div>
+                            <a class="button button-primary" href="{% url 'feasibility' body.id %}" id="check-feasibility">Check Spectroscopic Feasibility</a>
                             <h5  class="section-title">Recent Blocks Scheduled</h5>
                             <ul class="block-status">
                                 {% for b in blocks %}

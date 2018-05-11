@@ -10,7 +10,7 @@ from django.test.client import Client
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from core.models import Body, Proposal
-
+from neox.auth_backend import update_proposal_permissions
 import time
 
 
@@ -20,19 +20,22 @@ class ScheduleCadence(FunctionalTest):
 
     def setUp(self):
         # Create a user to test login
+        self.insert_test_proposals()
         self.username = 'bart'
         self.password = 'simpson'
         self.email = 'bart@simpson.org'
         self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
-        self.bart.first_name= 'Bart'
+        self.bart.first_name = 'Bart'
         self.bart.last_name = 'Simpson'
-        self.bart.is_active=1
+        self.bart.is_active = 1
         self.bart.save()
-        super(ScheduleCadence,self).setUp()
+        # Add Bart to the right proposal
+        update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
+        super(ScheduleCadence, self).setUp()
 
     def tearDown(self):
         self.bart.delete()
-        super(ScheduleCadence,self).tearDown()
+        super(ScheduleCadence, self).tearDown()
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
@@ -73,12 +76,12 @@ class ScheduleCadence(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest)
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -88,9 +91,9 @@ class ScheduleCadence(FunctionalTest):
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
-        #He sees a Switch to Cadence Observations button
+        # He sees a Switch to Cadence Observations button
         link = self.browser.find_element_by_id('single-switch')
-        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}), '#')
+        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}), '#')
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -105,6 +108,9 @@ class ScheduleCadence(FunctionalTest):
         # and jitter=0.25 hrs
         proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code_cad'))
         self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
+
+        # Bart doesn't see the proposal to which he doesn't have permissions
+        self.assertNotIn(self.test_proposal.title, [option.text for option in proposal_choices.options])
 
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
@@ -134,8 +140,8 @@ class ScheduleCadence(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
 
-        #The page refreshes and he reaches the schedule cadence page
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence',kwargs={'pk':1}))
+        # The page refreshes and he reaches the schedule cadence page
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence', kwargs={'pk': 1}))
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
@@ -160,7 +166,7 @@ class ScheduleCadence(FunctionalTest):
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
-        self.assertIn('Schedule this Object',submit)
+        self.assertIn('Schedule this Object', submit)
 
     def test_cannot_schedule_observations(self):
         self.test_logout()
@@ -168,7 +174,7 @@ class ScheduleCadence(FunctionalTest):
         # Bart tries the same as above but forgets to login
         # This has to be pk=2 as get_or_create in setUp makes new objects each
         # time for...reasons...
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
         self.wait_for_element_with_id('main')
         link = self.browser.find_element_by_id('schedule-obs')
@@ -189,12 +195,12 @@ class ScheduleCadence(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest)
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -204,9 +210,9 @@ class ScheduleCadence(FunctionalTest):
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
-        #He sees a Switch to Cadence Observations button
+        # He sees a Switch to Cadence Observations button
         link = self.browser.find_element_by_id('single-switch')
-        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}), '#')
+        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}), '#')
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -221,6 +227,7 @@ class ScheduleCadence(FunctionalTest):
         # and jitter=0.25 hrs
         proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code_cad'))
         self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
+        # self.browser.implicitly_wait(15)
 
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
@@ -249,8 +256,8 @@ class ScheduleCadence(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
 
-        #The page refreshes and he reaches the schedule cadence page
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence',kwargs={'pk':1}))
+        # The page refreshes and he reaches the schedule cadence page
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence', kwargs={'pk': 1}))
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
@@ -287,7 +294,7 @@ class ScheduleCadence(FunctionalTest):
         period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
         self.assertIn('3.0', period)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
-        self.assertIn('Schedule this Object',submit)
+        self.assertIn('Schedule this Object', submit)
 
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
@@ -298,12 +305,12 @@ class ScheduleCadence(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest)
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -313,9 +320,9 @@ class ScheduleCadence(FunctionalTest):
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
-        #He sees a Switch to Cadence Observations button
+        # He sees a Switch to Cadence Observations button
         link = self.browser.find_element_by_id('single-switch')
-        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}), '#')
+        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}), '#')
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -358,8 +365,8 @@ class ScheduleCadence(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
 
-        #The page refreshes and he reaches the schedule cadence page
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence',kwargs={'pk':1}))
+        # The page refreshes and he reaches the schedule cadence page
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body-cadence', kwargs={'pk': 1}))
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
@@ -391,4 +398,4 @@ class ScheduleCadence(FunctionalTest):
 
         # The page refreshes and we get an error
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('The slot length is too short',error_msg)
+        self.assertIn('The slot length is too short', error_msg)
