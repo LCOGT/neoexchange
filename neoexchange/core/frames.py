@@ -88,7 +88,7 @@ def create_frame(params, block=None, frameid=None):
     # Return None if params is just whitespace
     if not params:
         return None
-    our_site_codes = LCOGT_site_codes()
+
     if params.get('GROUPID', None):
     # In these cases we are parsing the FITS header
         frame_params = frame_params_from_header(params, block)
@@ -125,6 +125,7 @@ def create_frame(params, block=None, frameid=None):
 def frame_params_from_header(params, block):
     # In these cases we are parsing the FITS header
     sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
+    spectro_obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
@@ -136,6 +137,24 @@ def frame_params_from_header(params, block):
                      'exptime'   : params.get('EXPTIME', None),
                      'fwhm'      : params.get('L1FWHM', None),
                  }
+    if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
+        aperture_type = params.get('APERTYPE', 'SLIT').rstrip()
+        aperture_length = params.get('APERLEN', 'UNKNOWN')
+        aperture_width = params.get('APERWID', 'UNK')
+        length_str = 'UNK'
+        if aperture_length != 'UNKNOWN':
+            if aperture_length != '':
+                length_str = "{0:.1f}".format(aperture_length)
+        width_str = 'UNK'
+        if aperture_width != 'UNKNOWN':
+            if aperture_width != '':
+                width_str = "{0:.1f}".format(aperture_width)
+        slit_name = "{type:s}_{length:s}x{width:s}AS".format(type=aperture_type,
+            length=length_str, width=width_str)
+        frame_params['filter'] = slit_name
+        frame_params['frametype'] = Frame.SPECTRUM_FRAMETYPE
+        # XXX Replace (non-existant) L1FWHM with AGFWHM?
+
     # Try and create a WCS object from the header. If successful, add to frame
     # params
     wcs = None
@@ -149,8 +168,8 @@ def frame_params_from_header(params, block):
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
-    rlevel = params.get('RLEVEL', '00')
-    frame_extn = str(rlevel) + '.fits'
+    rlevel = params.get('RLEVEL', 0)
+    frame_extn = "{0:02d}.fits".format(rlevel)
     frame_params['filename'] = frame_params['filename'].replace('00.fits', frame_extn)
     # Correct midpoint for 1/2 the exposure time
     if frame_params['midpoint'] and frame_params['exptime']:
@@ -202,7 +221,8 @@ def frame_params_from_log(params, block):
 
 def ingest_frames(images, block):
     '''
-
+    Create Frame objects for each of the images in <images> and associate
+    them with the passed Block <block>.
     - Also find out how many scheduler blocks were used
     '''
     sched_blocks = []

@@ -2278,18 +2278,49 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
 
-    def test_ingest_frames_spectro_arc(self):
+    def test_ingest_frames_spectro_spectrum(self):
         params = {
                     "DATE_OBS": "2018-05-09T13:28:52.383",
                     "ENCID": "clma",
                     "SITEID" : "coj",
                     "TELID" : "2m0a",
+                    "OBSTYPE" : "SPECTRUM",
                     "FILTER" : "air     ",
                     "APERTYPE" : "SLIT    ",
                     "APERLEN" : 30.0,
                     "APERWID" : 2.0,
                     "INSTRUME" : "en05",
-                    "ORIGNAME" : "coj2m002-en05-20180509-0017-a00.fits",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-e00",
+                    "EXPTIME"  : "1800.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e00.fits'))
+
+    def test_ingest_frames_spectro_arc(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T11:44:33.898",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "ARC",
+                    "FILTER" : "air     ",
+                    "APERTYPE" : "SLIT    ",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0006-a00",
                     "EXPTIME"  : "60.0000",
                     "GROUPID"  : "4709_E10-20180509_spectra",
                   }
@@ -2302,10 +2333,101 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'E10')
         self.assertEqual(frames[0].midpoint, midpoint)
-        self.assertEqual(frames[0].filter, 'SLIT_2.0AS')
-        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
-        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('a00', 'a91.fits'))
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('a00', 'a00.fits'))
+
+    def test_ingest_frames_spectro_lampflat(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T11:42:18.352",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0005-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
+
+    def test_ingest_frames_spectro_lampflat_badslit(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : '',
+                    "RLEVEL"  : 0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0xUNKAS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
+
+    def test_ingest_frames_spectro_lampflat_badslit2(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 'UNKNOWN',
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0xUNKAS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
 
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
