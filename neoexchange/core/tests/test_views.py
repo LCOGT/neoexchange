@@ -2935,7 +2935,8 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
 class TestUpdate_Crossids(TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpTestData(cls):
         params = {  'provisional_name' : 'LM05OFG',
                     'abs_mag'       : 24.7,
                     'slope'         : 0.15,
@@ -2951,7 +2952,10 @@ class TestUpdate_Crossids(TestCase):
                     'active'        : True,
                     'origin'        : 'G',
                     }
-        self.body, created = Body.objects.get_or_create(**params)
+        cls.body, created = Body.objects.get_or_create(**params)
+
+    def setUp(self):
+        self.body.refresh_from_db()
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -3110,6 +3114,42 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('M', body.origin)
         self.assertEqual('A/2018 C2', body.name)
         self.assertEqual('MPC_COMET', body.elements_type)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_new_comet_has_epochperih(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 1, 20, 10, 40, 0)
+
+        crossid_info = ['P10G50L', 'C/2018 A5', 'MPEC 2018-B20', '(Jan. 17.81 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'U'
+        self.body.provisional_name = 'P10G50L'
+        self.body.epochofel = datetime(2018, 1, 2, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(1, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('C/2018 A5', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertIsNot(None, body.perihdist)
+        self.assertAlmostEqual(2.6725494646558405, body.perihdist, 7)
+        self.assertEqual(datetime(2017, 9, 14, 22, 34, 45, 428836), body.epochofperih)
 
 class TestStoreDetections(TestCase):
 

@@ -48,7 +48,8 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
+from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
+    convert_ast_to_comet
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 import logging
@@ -1155,7 +1156,7 @@ def update_crossids(astobj, dbg=False):
         if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
             kwargs['active'] = True
         if kwargs['source_type'] in ['C', 'H']:
-            kwargs['elements_type'] = 'MPC_COMET'
+            kwargs = convert_ast_to_comet(kwargs, body)
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
