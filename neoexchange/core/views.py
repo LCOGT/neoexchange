@@ -723,9 +723,9 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
         return render(request, 'core/feasibility.html', {'form': new_form, 'data': data, 'body': self.body})
 
     def post(self, request, *args, **kwargs):
-        form = SpectroFeasibilityForm(request.POST,body=self.body)
+        form = SpectroFeasibilityForm(request.POST, body=self.body)
         if form.is_valid():
-            return self.form_valid(form,request)
+            return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
@@ -750,6 +750,7 @@ def feasibility_check(data, body):
     data['slot_length'] = slot_length
 
     return data
+
 
 def ranking(request):
 
