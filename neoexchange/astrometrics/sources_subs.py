@@ -107,9 +107,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     opener = urllib.request.build_opener()  # create an opener object
     try:
         response = opener.open(req_page)
-    except urllib.error.URLError as e:
-        if not hasattr(e, "code"):
-            raise
+    except urllib.error.HTTPError as e:
         print("Page retrieval failed:", e)
         return None
 
