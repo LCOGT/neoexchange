@@ -1117,13 +1117,7 @@ def clean_NEOCP_object(page_list):
         if params != {}:
             # Check for objects that should be treated as comets (e>0.9)
             if params['eccentricity'] > 0.9:
-
-                if params['slope'] == 0.15:
-                    params['slope'] = 4.0
-                params['elements_type'] = 'MPC_COMET'
-                params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
-                params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
-                params['meananom'] = None
+                params = convert_ast_to_comet(params, None)
     else:
         params = {}
     return params

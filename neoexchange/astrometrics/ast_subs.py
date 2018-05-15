@@ -205,14 +205,14 @@ def convert_ast_to_comet(kwargs, body):
     model object.
     """
     params = kwargs
-    if kwargs['source_type'] in ['C', 'H']:
+    if kwargs['source_type'] in ['C', 'H'] or kwargs.get('eccentricity', 0.0) > 0.9:
         if body:
             params['meandist'] = params.get('meandist', body.meandist)
             params['eccentricity'] = params.get('eccentricity', body.eccentricity)
             params['meananom'] = params.get('meananom', body.meananom)
             params['epochofel'] = params.get('epochofel', body.epochofel)
-            params['slope'] = params.get('slope', 0.15)
-        if params['slope'] == 0.15:
+            params['slope'] = params.get('slope', body.slope)
+        if params.get('slope', 0.15) == 0.15:
             params['slope'] = 4.0
         params['elements_type'] = 'MPC_COMET'
         if params['eccentricity'] < 1.0:
