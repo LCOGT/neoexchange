@@ -39,8 +39,10 @@ try:
 except:
     pass
 import astrometrics.site_config as cfg
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, \
+    datetime2mjd_utc, mjd_utc2mjd_tt
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, \
+    get_sitepos, determine_darkness_times
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -1788,3 +1790,51 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
     else:
         logger.warn("Passed page object was not a BeautifulSoup object")
     return flux_standards
+
+def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), standards=None, debug=False):
+    """Finds the "best (closest to the zenith at the middle of the night (given
+    by [utc_date]; defaults to UTC "now") for the passed <sitecode>
+    [standards] is expected to be a dictionary of standards with the keys as the
+    name of the standards and pointing to a dictionary with the details. This is
+    normally produced by sources_subs.fetch_flux_standards(); which will be
+    called if standards=None
+    """
+    close_standard = None
+    close_params = {}
+    if standards is None:
+        standards = fetch_flux_standards(filter_optical_model=True)
+
+    site_name, site_long, site_lat, site_hgt = get_sitepos(sitecode)
+    if site_name != '?':
+
+        # Compute midpoint of the night
+        dark_start, dark_end = determine_darkness_times(sitecode, utc_date)
+
+        dark_midpoint = dark_start + (dark_end - dark_start) / 2.0
+
+        if debug:
+            print("\nDark midpoint, start, end", dark_midpoint, dark_start, dark_end)
+
+        # Compute Local Sidereal Time at the dark midpoint
+        mjd_utc = datetime2mjd_utc(dark_midpoint)
+        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+        dut = 0.0
+        mjd_ut1 = mjd_utc+(dut/86400.0)
+        gmst = S.sla_gmst(mjd_ut1)
+        stl = gmst + site_long + S.sla_eqeqx(mjd_tt)
+        stl = S.sla_dranrm(stl)
+
+        if debug:
+            print("RA, Dec of zenith@midpoint:", stl, site_lat)
+        # Loop through list of standards, recording closest
+        min_sep = 360.0
+        for std in standards:
+            sep = S.sla_dsep(standards[std]['ra_rad'], standards[std]['dec_rad'], stl, site_lat)
+            if debug:
+                print("%10s %.7f %.7f %.3f %7.3f (%10s)" % (std, standards[std]['ra_rad'], standards[std]['dec_rad'], sep, min_sep, close_standard))
+            if sep < min_sep:
+                min_sep = sep
+                close_standard = std
+        close_params = standards[close_standard]
+        close_params['separation_rad'] = min_sep
+    return close_standard, close_params

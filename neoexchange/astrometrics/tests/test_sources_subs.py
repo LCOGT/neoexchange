@@ -3141,3 +3141,49 @@ class TestFetchFluxStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[fluxstd][key], standards[fluxstd][key], places=self.precision)
                 else:
                     self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
+
+
+class TestFindBestFluxStandard(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.flux_standards = fetch_flux_standards(test_flux_page)
+
+        self.maxDiff = None
+        self.precision = 8
+
+    def test_FTN(self):
+        expected_standard = 'HR9087'
+        expected_params = { 'separation_rad' : 0.9379758789119819}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **self.flux_standards[expected_standard]}
+
+
+        utc_date = datetime(2017, 11, 15, 1, 10, 0)
+        close_standard, close_params = find_best_flux_standard('F65', utc_date, self.flux_standards)
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+    def test_FTS(self):
+        expected_standard = 'CD-34d241'
+        expected_params = { 'separation_rad' : 0.11565764559405214}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **self.flux_standards[expected_standard]}
+
+
+        utc_date = datetime(2017, 9, 27, 1, 10, 0)
+        close_standard, close_params = find_best_flux_standard('E10', utc_date, self.flux_standards)
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
