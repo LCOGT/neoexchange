@@ -3109,15 +3109,32 @@ class TestFetchFluxStandards(TestCase):
 
         self.assertEqual(expected_standards, standards)
 
-    def test_standards(self):
+    def test_standards_no_filter(self):
         expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spec_type' : 'B7III', 'notes' : None},
                                'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spec_type' : 'F', 'notes' : None},
                                'BPM16274' : { 'ra_rad' : radians(12.51325), 'dec_rad' : radians(-52.138166666666667), 'mag' : 14.20, 'spec_type' : 'DA2', 'notes' : 'Mod.'},
                                'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spec_type' : None, 'notes' : None},
                              }
 
-        standards = fetch_flux_standards(self.test_flux_page)
+        standards = fetch_flux_standards(self.test_flux_page, filter_optical_model=False)
 
+        self.assertEqual(len(expected_standards), len(standards))
+        for fluxstd in expected_standards:
+            for key in expected_standards[fluxstd]:
+                if '_rad' in key:
+                    self.assertAlmostEqual(expected_standards[fluxstd][key], standards[fluxstd][key], places=self.precision)
+                else:
+                    self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
+
+    def test_standards_filter_models(self):
+        expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spec_type' : 'B7III', 'notes' : None},
+                               'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spec_type' : 'F', 'notes' : None},
+                               'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spec_type' : None, 'notes' : None},
+                             }
+
+        standards = fetch_flux_standards(self.test_flux_page, filter_optical_model=True)
+
+        self.assertEqual(len(expected_standards), len(standards))
         for fluxstd in expected_standards:
             for key in expected_standards[fluxstd]:
                 if '_rad' in key:

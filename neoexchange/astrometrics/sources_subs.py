@@ -1721,7 +1721,7 @@ def fetch_list_targets(list_targets):
 
     return new_target_list
 
-def fetch_flux_standards(page=None, dbg=False):
+def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
     """Parses either the passed [page] or fetches the table of
     spectrophotometric flux standards from ESO's page at:
     https://www.eso.org/sci/observing/tools/standards/spectra/stanlis.html
@@ -1733,6 +1733,9 @@ def fetch_flux_standards(page=None, dbg=False):
     *     mag : V magnitude,
     * sp_type : Spectral type,
     *   notes : Notes
+    If [filter_optical_model] is True, then entries that have 'Mod' in the Notes,
+    indicating that they only modelled (not observed) optical spectra, are removed
+    from the results.
     """
 
     if page is None:
@@ -1777,7 +1780,7 @@ def fetch_flux_standards(page=None, dbg=False):
                     notes = None
                     if len(info) == 3:
                         notes = info[2].decode('utf-8', 'ignore')
-                    if ra and dec and mag:
+                    if ra and dec and mag and ((notes != 'Mod.' and filter_optical_model is True) or filter_optical_model is False):
                         flux_standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec,
                             'mag' : mag, 'spec_type' : spec_type, 'notes' : notes}
         else:
