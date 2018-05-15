@@ -108,7 +108,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         logger.debug('GMST, LAST, EQEQX, GAST, long= %.17f %.17f %E %.17f %.17f' % (gmst, stl, S.sla_eqeqx(mjd_tt), gmst+S.sla_eqeqx(mjd_tt), site_long))
         pvobs = S.sla_pvobs(site_lat, site_hgt, stl)
 
-    logger.debug("PVobs(orig)=%s\n            %s" % (pvobs[0:3],pvobs[3:6]*86400.0))
+    logger.debug("PVobs(orig)=%s\n            %s" % (pvobs[0:3], pvobs[3:6]*86400.0))
 
 # Apply transpose of precession/nutation matrix to pv vector to go from
 # true equator and equinox of date to J2000.0 mean equator and equinox (to
@@ -117,7 +117,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     pos_new = S.sla_dimxv(rmat, pvobs[0:3])
     vel_new = S.sla_dimxv(rmat, pvobs[3:6])
     pvobs_new = concatenate([pos_new, vel_new])
-    logger.debug("PVobs(new)=%s\n            %s" % (pvobs_new[0:3],pvobs_new[3:6]*86400.0))
+    logger.debug("PVobs(new)=%s\n            %s" % (pvobs_new[0:3], pvobs_new[3:6]*86400.0))
 
 # Earth position and velocity
 
@@ -281,6 +281,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     mag = -99
     mag_dot = 0
     beta = 0
+    separation = 0
     if comet is True:
         # Calculate magnitude of comet
         # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
@@ -292,7 +293,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     else:
         # Compute phase angle, beta (Sun-Target-Earth angle)
         beta = compute_phase_angle(r, delta, es_Rsq)
-        beta_dot=-1/sqrt(1-(cos(beta))**2)*(r*(delta**2-r**2+1)*delta_dot-delta*(delta**2-r**2-1)*r_dot)/(2*delta*delta*r*r)
+        beta_dot = -1/sqrt(1-(cos(beta))**2)*(r*(delta**2-r**2+1)*delta_dot-delta*(delta**2-r**2-1)*r_dot)/(2*delta*delta*r*r)
 
         phi1 = exp(-3.33 * (tan(beta/2.0))**0.63)
         phi2 = exp(-1.87 * (tan(beta/2.0))**1.22)
@@ -301,6 +302,11 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         phi2_dot = phi1 * -1.87 * 1.22 * (tan(beta/2.0))**(1.22-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
 
         #    logger.debug("Phi1, phi2=%s" % phi1,phi2)
+
+        # Compute angular separation of the sun and Target as seen from Earth (Sun-Earth-Target angle)
+        # This essentially the phase angle of Earth as seen from the target so we can reuse
+        # the compute_phase_angle function.
+        separation = compute_phase_angle(delta, sqrt(es_Rsq), r**2)
 
         # Calculate magnitude of object
         if p_orbelems['H'] and p_orbelems['G']:
@@ -341,7 +347,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
 
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
     if detailed:
-        return emp_line, mag_dot
+        return emp_line, mag_dot, separation
 
     return emp_line
 

@@ -13,8 +13,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from __future__ import unicode_literals
-from datetime import datetime,timedelta,date
-from math import pi, log10, sqrt, cos
+from datetime import datetime, timedelta, date
+from math import pi, log10, sqrt, cos, degrees
 from collections import Counter
 import reversion
 
@@ -238,57 +238,75 @@ class Body(models.Model):
             return False
 
     def compute_obs_window(self):
+        """
+        Compute rough window during which target may be observable based on when it is brighter than a
+        given mag_limit amd further from the sun than sep_limit.
+        """
         d = datetime.utcnow()
         d0 = d
-        df = 90
-        delta_t = 10
+        df = 90  # days to look forward
+        delta_t = 10  # size of steps in days
         mag_limit = 18
-        vmag = []
+        sep_limit = 45  # degrees away from Sun
         i = 0
         dstart = ''
         dend = ''
         if self.epochofel:
             orbelems = model_to_dict(self)
             sitecode = '500'
+            # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t :
-                emp_line, mag_dot = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
-                vmag.append(emp_line[3])
+                emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+                vmag = emp_line[3]
 
                 # Eliminate bad magnitudes
-                if vmag[i] < 0:
+                if vmag < 0:
                     return dstart, dend, d0
 
                 # Calculate time since/until reaching Magnitude limit
-                t_diff = (mag_limit - vmag[i]) / mag_dot
+                t_diff = (mag_limit - vmag) / mag_dot
+
+                # create separation test.
+                sep_test = degrees(separation) > sep_limit
 
                 # Filter likely results based on Mag/mag_dot to speed results.
                 # Cuts load time by 60% will occasionally and temporarily miss
                 # objects with either really short windows or unusual behavior
                 # at the edges. These objects will be found as the date changes.
+
+                # If Check first and last dates first
                 if d == d0 + timedelta(days=df) and i == 1:
-                    if vmag[i] <= mag_limit and dstart:
+                    # if Valid for beginning and end of window, assume valid for window
+                    if vmag <= mag_limit and dstart and sep_test:
                         return dstart, dend, d0
                     elif not dstart:
+                        # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
                         if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
                             return dstart, dend, d0
                         else:
                             d = d0 + timedelta(days=delta_t)
                     else:
                         d = d0 + timedelta(days=delta_t)
-                if vmag[i] > mag_limit and dstart:
+                # if a valid start has been found, check if we are now invalid. Exit if so.
+                elif (vmag > mag_limit or not sep_test) and dstart:
                     dend = d
                     return dstart, dend, d0
-                elif vmag[i] <= mag_limit and not dstart:
+                # If no start date, and we are valid, set start date
+                elif vmag <= mag_limit and not dstart and sep_test:
                     dstart = d
+                    # if this is our first iteration (i.e. we started valid) test end date
                     if i == 0:
                         d += timedelta(days=df)
+                    # otherwise step forward
                     else:
                         d += timedelta(days=delta_t)
-                elif vmag[i] > mag_limit and i == 0:
+                # if we are not valid from the start, check if we might be valid in middle. Otherwise, check end.
+                elif vmag > mag_limit and i == 0:
                     if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
                         d += timedelta(days=df)
                     else:
                         d += timedelta(days=delta_t)
+                # if nothing has changed, step forward.
                 else:
                     d += timedelta(days=delta_t)
 #                d += timedelta(days=delta_t)
