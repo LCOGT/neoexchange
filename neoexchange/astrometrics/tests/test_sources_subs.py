@@ -18,6 +18,7 @@ import mock
 from socket import error
 from datetime import datetime, timedelta
 from unittest import skipIf
+from math import radians
 
 import astropy.units as u
 from bs4 import BeautifulSoup
@@ -3089,3 +3090,37 @@ class TestFetchTargetsFromList(TestCase):
         test_file = [os.path.join('astrometrics', 'tests', 'test_target_list_page.txt'), '4063']
         out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2', '4063']
         self.assertEqual(out_list, fetch_list_targets(test_file))
+
+
+class TestFetchFluxStandards(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        self.test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.maxDiff = None
+        self.precision = 10
+
+    def test_badpage(self):
+        expected_standards = {}
+
+        standards = fetch_flux_standards('wibble')
+
+        self.assertEqual(expected_standards, standards)
+
+    def test_standards(self):
+        expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spec_type' : 'B7III', 'notes' : None},
+                               'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spec_type' : 'F', 'notes' : None},
+                               'BPM16274' : { 'ra_rad' : radians(12.51325), 'dec_rad' : radians(-52.138166666666667), 'mag' : 14.20, 'spec_type' : 'DA2', 'notes' : 'Mod.'},
+                               'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spec_type' : None, 'notes' : None},
+                             }
+
+        standards = fetch_flux_standards(self.test_flux_page)
+
+        for fluxstd in expected_standards:
+            for key in expected_standards[fluxstd]:
+                if '_rad' in key:
+                    self.assertAlmostEqual(expected_standards[fluxstd][key], standards[fluxstd][key], places=self.precision)
+                else:
+                    self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])

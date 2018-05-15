@@ -1721,3 +1721,67 @@ def fetch_list_targets(list_targets):
 
     return new_target_list
 
+def fetch_flux_standards(page=None, dbg=False):
+    """Parses either the passed [page] or fetches the table of
+    spectrophotometric flux standards from ESO's page at:
+    https://www.eso.org/sci/observing/tools/standards/spectra/stanlis.html
+    The page is parsed and a dictionary of the flux standards is returned with
+    the key set to the name of the standard. This will then points to a sub-dictionary
+    containing:
+    *  ra_rad : J2000 Right Ascension (radians),
+    * dec_rad : J2000 Declination (radians),
+    *     mag : V magnitude,
+    * sp_type : Spectral type,
+    *   notes : Notes
+    """
+
+    if page is None:
+        flux_standards_url = 'https://www.eso.org/sci/observing/tools/standards/spectra/stanlis.html'
+        page = fetchpage_and_make_soup(flux_standards_url)
+        if not page:
+            return None
+    flux_standards = {}
+
+    if type(page) == BeautifulSoup:
+        tables = page.find_all('div', {"class" : "richtext text parbase section"})
+        if len(tables) == 1:
+            links = tables[0].find_all('a')
+            for link in links:
+                name = link.text.strip()
+                if dbg:
+                    print("Standard=",name)
+                standard_details = {}
+                if link.next_sibling:
+                    string = link.next_sibling.encode('ascii','ignore')
+                    if dbg:
+                        print(string)
+                    nstart = 1
+                    nstart, ra, status = S.sla_dafin(string, nstart)
+                    if status == 0:
+                        ra = ra * 15.0
+                    else:
+                        ra = None
+                    nstart, dec, status = S.sla_dafin(string, nstart)
+                    if status != 0:
+                        dec = None
+                    info = string[nstart-1:].rstrip().split()
+                    if len(info) >= 1:
+                        mag = None
+                        try:
+                            mag = float(info[0])
+                        except ValueError:
+                            mag = None
+                    spec_type = None
+                    if len(info) >= 2:
+                        spec_type = info[1].decode('utf-8', 'ignore')
+                    notes = None
+                    if len(info) == 3:
+                        notes = info[2].decode('utf-8', 'ignore')
+                    if ra and dec and mag:
+                        flux_standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec,
+                            'mag' : mag, 'spec_type' : spec_type, 'notes' : notes}
+        else:
+            logger.warn("Unable to find table of flux standards in page")
+    else:
+        logger.warn("Passed page object was not a BeautifulSoup object")
+    return flux_standards
