@@ -7,7 +7,7 @@ import tempfile
 from django.core.management.base import BaseCommand, CommandError
 
 from core.views import check_catalog_and_refit, store_detections
-from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image, FITSHdrException
+from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 # from core.models import CatalogSources
 
@@ -85,11 +85,7 @@ class Command(BaseCommand):
             # Step 1: Determine if astrometric fit in catalog is good and
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
-            try:
-                new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog)
-            except FITSHdrException as e:
-                self.stdout.write("Bad header for %s (%s)" % (catalog, e))
-                continue
+            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog)
 
             try:
                 int(new_catalog_or_status)

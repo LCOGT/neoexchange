@@ -1567,7 +1567,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
 
     # Open catalog, get header and check fit status
     fits_header, junk_table, cattype = open_fits_catalog(catfile, header_only=True)
-    header = get_catalog_header(fits_header, cattype)
+    try:
+        header = get_catalog_header(fits_header, cattype)
+    except FITSHdrException as e:
+        logger.error("Bad header for %s (%s)" % (catfile, e))
+        return -1, num_new_frames_created
 
     if header.get('astrometric_fit_status', None) != 0:
         logger.error("Bad astrometric fit found")
