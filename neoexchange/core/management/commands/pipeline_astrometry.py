@@ -9,12 +9,13 @@ from django.core.management.base import BaseCommand, CommandError
 from core.views import check_catalog_and_refit, store_detections
 from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
-# from core.models import CatalogSources
 
 
 class Command(BaseCommand):
 
-    help = 'Do All The Things'
+    help = """Perform pipeline processing on a set of FITS frames.
+	   Steps include catalog creation, zeropoint determination, moving object detection and
+	   candidate storing."""
 
     def add_arguments(self, parser):
         parser.add_argument('datadir', help='Path to the data to ingest')
