@@ -18,6 +18,8 @@ GNU General Public License for more details.
 import logging
 from datetime import datetime, timedelta, time
 from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil, log
+from astropy.coordinates import get_sun
+from astropy.time import Time
 
 try:
     import pyslalib.slalib as S
@@ -311,7 +313,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         # Compute angular separation of the sun and Target as seen from Earth (Sun-Earth-Target angle)
         # This essentially the phase angle of Earth as seen from the target so we can reuse
         # the compute_phase_angle function.
-        separation = compute_phase_angle(delta, sqrt(es_Rsq), r**2)
+        if detailed is not False:
+            sun_ra = radians(get_sun(Time(d)).ra.value)
+            separation = abs(ra - sun_ra)
 
         # Calculate magnitude of object
         if p_orbelems['H'] and p_orbelems['G']:
@@ -691,14 +695,16 @@ def accurate_astro_darkness(sitecode, utc_date, debug=False):
     solarnoon = (720-4*degrees(site_long)-eqtime)/1440
     sunrise = (solarnoon - hourangle*4/1440) % 1
     sunset = (solarnoon + hourangle*4/1440) % 1
-    if debug: print(solarnoon + hourangle*4/1440, solarnoon - hourangle*4/1440)
-    if debug: print(sunset, sunrise)
+    if debug:
+        print(solarnoon + hourangle*4/1440, solarnoon - hourangle*4/1440)
+    if debug:
+        print(sunset, sunrise)
 
     if sunrise < sunset:
         sunrise = sunrise + 1
     if debug:
-        to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent, \
-            sun_true_long, degrees(omega), sun_app_long, degrees(eps0), eps, \
+        to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent,
+            sun_true_long, degrees(omega), sun_app_long, degrees(eps0), eps,
             degrees(sun_app_ra), degrees(sun_app_dec), eqtime, hourangle]
         print(to_return)
 

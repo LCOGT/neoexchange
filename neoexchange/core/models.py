@@ -255,7 +255,7 @@ class Body(models.Model):
             orbelems = model_to_dict(self)
             sitecode = '500'
             # calculate the ephemeris for each step (delta_t) within the time span df.
-            while i <= df / delta_t :
+            while i <= df / delta_t + 1:
                 emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
                 vmag = emp_line[3]
 

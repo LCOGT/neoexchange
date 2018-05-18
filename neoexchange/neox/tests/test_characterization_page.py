@@ -111,7 +111,7 @@ class CharacterizationPageTest(FunctionalTest):
         #    'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15->',
+        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
                     u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
@@ -131,7 +131,7 @@ class CharacterizationPageTest(FunctionalTest):
         self.browser.get(characterization_page_url)
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines = [u'2 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15->',
+        testlines = [u'2 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
                     u'3 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---',
                     u'1 N999r0q 23 43 12.75 +19 58 55.6 15.2 LC 15.5 NASA Vis+NIR NIR Now->']
         for line in testlines:
