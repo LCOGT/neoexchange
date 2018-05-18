@@ -994,3 +994,28 @@ class PanoptesReport(models.Model):
 
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
+
+@python_2_unicode_compatible
+class CalibSource(models.Model):
+    """
+    Class for calibration sources (solar standards, RV standards, flux standards etc)
+    """
+    UNKNOWN_SOURCE = 0
+    FLUX_STANDARD = 1
+    RV_STANDARD = 2
+    SOLAR_STANDARD = 4
+    SPECTRAL_STANDARD = 8
+    SOURCETYPE_CHOICES = [
+                            (UNKNOWN_SOURCE, 'Unknown source type'),
+                            (FLUX_STANDARD, 'Spectrophotometric standard'),
+                            (RV_STANDARD, 'Radial velocity standard'),
+                            (SOLAR_STANDARD, 'Solar spectrum standard'),
+                            (SPECTRAL_STANDARD, 'Spectral standard')
+                         ]
+
+    ra = models.FloatField('RA of source (radians)')
+    dec = models.FloatField('Dec of source (radians)')
+    vmag = models.FloatField('V magnitude')
+    spectral_type = models.CharField('Spectral type of source', max_length=10, blank=True, null=True)
+    source_type = models.IntegerField('Source Type', null=False, blank=False, default=0, choices=SOURCETYPE_CHOICES)
+    notes = models.TextField(null=True, blank=True)
