@@ -23,7 +23,11 @@
                             <h5  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h5>
                             {% endif %}
                             <h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h5>
-                            <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span></h5>
+                            <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span>
+                                {% if body.characterization %}
+                                    <br><span style="font-size:75%;padding-left:100px;font-style:italic;">Characterization Target</span>
+                                {% endif %}
+                            </h5>
                             <h5  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h5>
                             <div class="section-title">
                             <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
@@ -184,7 +188,7 @@
                                     </tr>
                                                                         {% endif %}
 								</tbody>
-							</table>						
+							</table>
 							<h5 class="section-title">Spectroscopy Details</h5>
 							<table class="keyvalue-table" id="id_spectralinfo">
 								<tbody>

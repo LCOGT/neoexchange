@@ -102,64 +102,63 @@ class CharacterizationPageTest(FunctionalTest):
         self.insert_extra_test_body()
         self.insert_another_extra_test_body()
 
-        #Kildorn the Unstoppable goes to the characterization page and expects to see the list of bodies in need of Characterization.
+        # Kildorn the Unstoppable goes to the characterization page and expects to see the list of bodies in need of Characterization.
         characterization_page_url = self.live_server_url + '/characterization/'
         self.browser.get(characterization_page_url)
         self.assertNotIn('Home | LCO NEOx', self.browser.title)
         self.assertIn('Characterization Page | LCO NEOx', self.browser.title)
-        #self.check_for_header_in_table('characterization_targets',\
+        # self.check_for_header_in_table('characterization_targets',\
         #    'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
+        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15->',
                     u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
 
-        #He notices that they are ordered by window
+        # He notices that they are ordered by window
     @patch('core.models.datetime', MockDateTime)
     def test_characterization_rank(self):
 
         MockDateTime.change_datetime(2015, 7, 1, 17, 0, 0)
-        self.body.origin='N'     ###First target is from NASA
-        self.body.abs_mag=15.5
+        self.body.origin = 'N'     # First target is from NASA
+        self.body.abs_mag = 15.5
         self.body.save()
         self.insert_extra_test_body()
         self.insert_another_extra_test_body()
-
 
         characterization_page_url = self.live_server_url + '/characterization/'
         self.browser.get(characterization_page_url)
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'2 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
+        testlines = [u'2 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15->',
                     u'3 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---',
                     u'1 N999r0q 23 43 12.75 +19 58 55.6 15.2 LC 15.5 NASA Vis+NIR NIR Now->']
         for line in testlines:
             self.check_for_row_in_table('characterization_targets', line)
         
-        #Kildorn cares not for ALL Characterization targets. He wants to see only spectroscopy targets!
+        # Kildorn cares not for ALL Characterization targets. He wants to see only spectroscopy targets!
         button = self.browser.find_element_by_id('filter_spec')
         with self.wait_for_page_load(timeout=10):
             button.click()
         self.check_for_row_not_in_table('characterization_targets', testlines[0])
         self.check_for_row_not_in_table('characterization_targets', testlines[2])
-        self.check_for_row_in_table('characterization_targets',u'1 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---')
+        self.check_for_row_in_table('characterization_targets', u'1 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---')
 
-        #Kildorn notices a link to the body page
+        # Kildorn notices a link to the body page
         link = self.browser.find_element_by_link_text('q382918r')
-        body_url = self.live_server_url + reverse('target',kwargs={'pk':3})
+        body_url = self.live_server_url + reverse('target', kwargs={'pk': 3})
         self.assertIn(link.get_attribute('href'), body_url)
         with self.wait_for_page_load(timeout=10):
             link.click()
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), body_url)
         
-        #He then sees that there is information from other surveys that have already gotten spectra for his targets
-        testlines =['SMASS SPECTRA NIR',
+        # He then sees that there is information from other surveys that have already gotten spectra for his targets
+        testlines = ['SMASS SPECTRA NIR',
                     'MANOS TARGET (No Data Yet)',
                     ]
         for line in testlines:
             self.check_for_row_in_table('id_spectralinfo', line)
 
-        #Now knowing nothing shall impede his progress, Kildorn the Unstoppable takes a lunch break.
+        # Now knowing nothing shall impede his progress, Kildorn the Unstoppable takes a lunch break.
