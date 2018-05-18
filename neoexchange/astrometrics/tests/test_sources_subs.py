@@ -13,29 +13,24 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
+import os
+import mock
+from socket import error
+from datetime import datetime, timedelta
+from unittest import skipIf
+
+import astropy.units as u
+from bs4 import BeautifulSoup
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
 from core.models import Body, Proposal, Block
-from datetime import datetime, timedelta, date
-from unittest import skipIf
-from bs4 import BeautifulSoup
-import os
-import mock
-from socket import error
-
 from astrometrics.ephem_subs import determine_darkness_times
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
 from core.views import record_block
 # Import module to test
-from astrometrics.sources_subs import parse_goldstone_chunks, \
-    fetch_arecibo_targets, fetch_goldstone_targets, \
-    submit_block_to_scheduler, parse_previous_NEOCP_id, parse_NEOCP, \
-    parse_NEOCP_extra_params, parse_PCCP, parse_mpcorbit, parse_mpcobs, \
-    fetch_NEOCP_observations, imap_login, fetch_NASA_targets, configure_defaults, \
-    make_userrequest, make_cadence_valhalla, make_cadence, fetch_taxonomy_page, \
-    fetch_list_targets, fetch_filter_list,fetch_smass_targets,\
-    fetch_manos_targets
+from astrometrics.sources_subs import *
+
 
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
@@ -741,43 +736,49 @@ class TestFetchFilterList(TestCase):
     def test_1m_cpt(self):
         expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = fetch_filter_list('K91', self.test_filter_map)
+        filter_list = fetch_filter_list('K91', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_0m4_ogg(self):
         expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
 
-        filter_list = fetch_filter_list('T04', self.test_filter_map)
+        filter_list = fetch_filter_list('T04', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_2m_ogg(self):
         expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
 
-        filter_list = fetch_filter_list('F65', self.test_filter_map)
+        filter_list = fetch_filter_list('F65', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_1m_lsc_domeb(self):
         expected_filter_list = ['air', 'ND' , 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = fetch_filter_list('W86', self.test_filter_map)
+        filter_list = fetch_filter_list('W86', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_unavailable_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('Z21', self.test_filter_map)
+        filter_list = fetch_filter_list('Z21', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_lowercase_telescope(self):
         expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
 
-        filter_list = fetch_filter_list('t04', self.test_filter_map)
+        filter_list = fetch_filter_list('t04', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_invalid_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('BESTtelescope', self.test_filter_map)
+        filter_list = fetch_filter_list('BESTtelescope', False, self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_spectra_telescope(self):
+        expected_filter_list = ['slit_1.2as', 'slit_1.6as', 'slit_2.0as', 'slit_6.0as']
+
+        filter_list = fetch_filter_list('F65', True, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
 
@@ -1988,6 +1989,27 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
 
+class TestSFUFetch(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_sfu.html'), 'r')
+        self.test_sfu_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.sfu = u.def_unit(['sfu', 'solar flux unit'], 10000.0*u.Jy)
+        u.add_enabled_units([self.sfu])
+
+    def test(self):
+
+        expected_result = (datetime(2018,1,15,17,44,10), 70*self.sfu)
+
+        sfu_result = fetch_sfu(self.test_sfu_page)
+
+        self.assertEqual(expected_result[0], sfu_result[0])
+        self.assertEqual(expected_result[1].value, sfu_result[1].value)
+        self.assertEqual(expected_result[1].unit, sfu_result[1].unit)
+        self.assertEqual(expected_result[1].to(u.MJy), sfu_result[1].to(u.MJy))
+
 
 class TestConfigureDefaults(TestCase):
 
@@ -2343,6 +2365,343 @@ class TestConfigureDefaults(TestCase):
         params = configure_defaults(params)
 
         self.assertEqual(params, expected_params)
+
+    def test_2m_ogg_floyds(self):
+        expected_params = { 'spectroscopy': True,
+                            'binning'     : 1,
+                            'spectra_slit': 'slit_2.0as',
+                            'instrument'  : '2M0-FLOYDS-SCICAM',
+                            'observatory' : '',
+                            'exp_type'    : 'SPECTRUM',
+                            'pondtelescope' : '2m0',
+                            'site'        : 'OGG',
+                            'site_code'   : 'F65',
+                            'instrument_code' : 'F65-FLOYDS'}
+
+        params = { 'site_code' : 'F65', 'instrument_code' : 'F65-FLOYDS', 'spectroscopy' : True}
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_2m_coj_floyds(self):
+        expected_params = { 'spectroscopy': True,
+                            'binning'     : 1,
+                            'spectra_slit': 'slit_2.0as',
+                            'instrument'  : '2M0-FLOYDS-SCICAM',
+                            'observatory' : '',
+                            'exp_type'    : 'SPECTRUM',
+                            'pondtelescope': '2m0',
+                            'site'        : 'COJ',
+                            'site_code'   : 'E10',
+                            'instrument_code' : 'E10-FLOYDS'}
+
+        params = { 'site_code' : 'E10', 'instrument_code' : 'E10-FLOYDS', 'spectroscopy' : True}
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+
+class TestMakeMolecule(TestCase):
+
+    def setUp(self):
+
+        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'solar'})
+        self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
+                                                    self.params_2m0_imaging['exp_count'])[0]
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'w'})
+        self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
+                                                    self.params_1m0_imaging['exp_count'])[0]
+        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
+                                                       'exp_time' : 90.0,
+                                                       'exp_count' : 18,
+                                                       'filter_pattern' : 'w'})
+        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
+                                                    self.params_0m4_imaging['exp_count'])[0]
+
+        self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
+                                                            'instrument_code' : 'F65-FLOYDS',
+                                                            'spectroscopy' : True,
+                                                            'exp_time' : 180.0,
+                                                            'exp_count' : 1})
+        self.filt_2m0_spectroscopy = ['slit_2.0as', 1]
+
+    def test_2m_imaging(self):
+
+        expected_molecule = {
+                             'type' : 'EXPOSE',
+                             'exposure_count' : 12,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 2,
+                             'bin_y'       : 2,
+                             'instrument_name' : '2M0-SCICAM-SPECTRAL',
+                             'filter'      : 'solar',
+                             'ag_mode'     : 'OPTIONAL',
+                             'ag_name'     : ''
+                            }
+
+        molecule = make_molecule(self.params_2m0_imaging, self.filt_2m0_imaging)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_1m_imaging(self):
+
+        expected_molecule = {
+                             'type' : 'EXPOSE',
+                             'exposure_count' : 12,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '1M0-SCICAM-SINISTRO',
+                             'filter'      : 'w',
+                             'ag_mode'     : 'OPTIONAL',
+                             'ag_name'     : ''
+                            }
+
+        molecule = make_molecule(self.params_1m0_imaging, self.filt_1m0_imaging)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_0m4_imaging(self):
+
+        expected_molecule = {
+                             'type' : 'EXPOSE',
+                             'exposure_count' : 18,
+                             'exposure_time' : 90.0,
+                             'bin_x'       : 2,
+                             'bin_y'       : 2,
+                             'instrument_name' : '0M4-SCICAM-SBIG',
+                             'filter'      : 'w',
+                             'ag_mode'     : 'OPTIONAL',
+                             'ag_name'     : ''
+                            }
+
+        molecule = make_molecule(self.params_0m4_imaging, self.filt_0m4_imaging)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_spectrum(self):
+
+        expected_molecule = {
+                             'type' : 'SPECTRUM',
+                             'exposure_count' : 1,
+                             'exposure_time' : 180.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'ON',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_arc(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'ARC'
+
+        expected_molecule = {
+                             'type' : 'ARC',
+                             'exposure_count' : 1,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'OFF',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_arc_multiple_spectra(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'ARC'
+        self.params_2m0_spectroscopy['exp_count'] = 2
+
+        expected_molecule = {
+                             'type' : 'ARC',
+                             'exposure_count' : 1,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'OFF',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_lampflat(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
+
+        expected_molecule = {
+                             'type' : 'LAMP_FLAT',
+                             'exposure_count' : 1,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'OFF',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
+    def test_2m_spectroscopy_lampflat_multiple_spectra(self):
+
+        self.params_2m0_spectroscopy['exp_type'] = 'LAMP_FLAT'
+        self.params_2m0_spectroscopy['exp_count'] = 42
+
+        expected_molecule = {
+                             'type' : 'LAMP_FLAT',
+                             'exposure_count' : 1,
+                             'exposure_time' : 60.0,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
+                             'instrument_name' : '2M0-FLOYDS-SCICAM',
+                             'spectra_slit': 'slit_2.0as',
+                             'ag_mode'     : 'OFF',
+                             'ag_name'     : '',
+                             'acquire_mode': 'WCS'
+                            }
+
+        molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
+
+        self.assertEqual(expected_molecule, molecule)
+
+class TestMakeMolecules(TestCase):
+
+    def setUp(self):
+
+        self.params_2m0_imaging = configure_defaults({ 'site_code': 'F65',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'solar'})
+        self.filt_2m0_imaging = build_filter_blocks(self.params_2m0_imaging['filter_pattern'],
+                                                    self.params_2m0_imaging['exp_count'])[0]
+
+        self.params_1m0_imaging = configure_defaults({ 'site_code': 'K92',
+                                                       'exp_time' : 60.0,
+                                                       'exp_count' : 12,
+                                                       'filter_pattern' : 'w'})
+        self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
+                                                    self.params_1m0_imaging['exp_count'])[0]
+        self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
+                                                       'exp_time' : 90.0,
+                                                       'exp_count' : 18,
+                                                       'filter_pattern' : 'w'})
+        self.filt_0m4_imaging = build_filter_blocks(self.params_0m4_imaging['filter_pattern'],
+                                                    self.params_0m4_imaging['exp_count'])[0]
+
+        self.params_2m0_spectroscopy = configure_defaults({ 'site_code': 'F65',
+                                                            'instrument_code' : 'F65-FLOYDS',
+                                                            'spectroscopy' : True,
+                                                            'exp_time' : 180.0,
+                                                            'exp_count' : 1,
+                                                            'filter_pattern' : 'slit_2.0as'})
+        self.filt_2m0_spectroscopy = ['slit_2.0as',]
+
+    def test_2m_imaging(self):
+
+        expected_num_molecules = 1
+        expected_type = 'EXPOSE'
+
+        molecules = make_molecules(self.params_2m0_imaging)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
+
+    def test_1m_imaging(self):
+
+        expected_num_molecules = 1
+        expected_type = 'EXPOSE'
+
+        molecules = make_molecules(self.params_1m0_imaging)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
+
+    def test_0m4_imaging(self):
+
+        expected_num_molecules = 1
+        expected_type = 'EXPOSE'
+
+        molecules = make_molecules(self.params_0m4_imaging)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
+
+    def test_2m_spectroscopy_nocalibs(self):
+
+        expected_num_molecules = 1
+        expected_type = 'SPECTRUM'
+
+        molecules = make_molecules(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
+
+    def test_2m_spectroscopy_calibs_before(self):
+
+        self.params_2m0_spectroscopy['calibs'] = 'before'
+        expected_num_molecules = 3
+
+        molecules = make_molecules(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual('LAMP_FLAT', molecules[0]['type'])
+        self.assertEqual('ARC', molecules[1]['type'])
+        self.assertEqual('SPECTRUM', molecules[2]['type'])
+
+    def test_2m_spectroscopy_calibs_after(self):
+
+        self.params_2m0_spectroscopy['calibs'] = 'AFTER'
+        expected_num_molecules = 3
+
+        molecules = make_molecules(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual('LAMP_FLAT', molecules[2]['type'])
+        self.assertEqual('ARC', molecules[1]['type'])
+        self.assertEqual('SPECTRUM', molecules[0]['type'])
+
+    def test_2m_spectroscopy_calibs_both(self):
+
+        self.params_2m0_spectroscopy['calibs'] = 'BoTh'
+        expected_num_molecules = 5
+
+        molecules = make_molecules(self.params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual('LAMP_FLAT', molecules[0]['type'])
+        self.assertEqual('ARC', molecules[1]['type'])
+        self.assertEqual('SPECTRUM', molecules[2]['type'])
+        self.assertEqual('ARC', molecules[3]['type'])
+        self.assertEqual('LAMP_FLAT', molecules[4]['type'])
 
 
 class TestMakeCadence(TestCase):

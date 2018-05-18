@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+
+{% block header %}Spectroscopy feasibility{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Spectroscopy feasibility for: {{body.current_name}}</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <!-- Main body -->
+    <div class="container" id="main">
+        <div class="section-title">
+            <form action="{% url 'feasibility' body.id %}" method="POST" style="display:inline-block;">
+                {% csrf_token %}
+                Right Ascension: {{ body.compute_position.0|radianstohms:" "}} Declination: {{ body.compute_position.1|radianstodms:" " }}
+                <div class="inline-fields">
+                    <div class="compact-field">
+                    {{ form.instrument_code }}<label for="id_instrument_code">Instrument</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.magnitude }}<label for="id_magnitude">Magnitude</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.exp_length }}<label for="id_exp_length">Exposure length</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.airmass }}<label for="id_airmass">Airmass</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.moon_phase }}<label for="id_moon_phase">Moon phase</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.sfu }}<label for="id_sfu"><a href="http://www.spaceweather.gc.ca/solarflux/sx-3-en.php">Solar Flux (SFUs)</a></label>
+                    </div>
+                    <input type="submit" class="button button-primary" value="Calculate Feasibility" id="id_submit">
+                </div>
+            {% for key, error in form.errors.items %}
+                <div class="messages error">
+                    {{ error }}
+                </div>
+            {% endfor %}
+            </form>
+        </div>
+        {% if data %}
+        <div class="eight columns">
+            <h5 class="section-title">Feasibility Results for: {{body.current_name}}</h5>
+            <table class="keyvalue-table" style="width:100%">
+            <tbody>
+                <tr id="id_snr">
+                    <td class="kv-key">SNR</td>
+                    <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                </tr>
+                <tr id="id_newmag">
+                    <td class="kv-key">New magnitude</td>
+                    <td class="kv-value">{{ data.new_mag|floatformat:1 }}</td>
+                </tr>
+                <tr id="id_newpassband">
+                    <td class="kv-key">New passband</td>
+                    <td class="kv-value">{{ data.new_passband }}</td>
+                </tr>
+                <tr id="id_slot_length">
+                    <td class="kv-key">Slot length (mins)</td>
+                    <td class="kv-value">{{ data.slot_length|floatformat:1 }}</td>
+                </tr>
+                <tr id="id_skymag">
+                    <td class="kv-key">Sky brightness</td>
+                    <td class="kv-value">{{ data.sky_mag|floatformat:1 }}</td>
+                </tr>
+            </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+    </div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block header %}NEOx spectroscopy scheduling{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Spectroscopy Scheduling</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div class="container">
+        <div id="main">
+            {% if body.id  and form %}
+            <h5 class="section-title">Parameters for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h5>
+            <div  id="single_request" class="mode-container">
+            <form action="{% url 'schedule-body-spectra' body.id %}" method="POST" style="display:inline-block;">
+            <div class="row">
+              {% csrf_token %}
+              <div class="inline-fields">
+                <div class="row">
+                    <div class="compact-field">
+                    {{ form.utc_date }}<label for="id_utc_date">UTC date</label>
+                    </div>
+                    <div class="compact-field">
+                    {{ form.instrument_code }}<label for="id_site_code">Site</label>
+                    </div>
+                    <div class="compact-field">
+                      {{ form.proposal_code }}<label for="id_proposal_code">Proposal</label>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="compact-field">
+                      {{ form.exp_length }}<label for="id_exp_length">Exposure length</label>
+                    </div>
+                    <div class="compact-field">
+                      {{ form.exp_count }}<label for="id_exp_count">No. of spectra</label>
+                    </div>
+                    <div class="compact-field">
+                      {{ form.calibs }}<label for="id_calibs">Calibrations</label>
+                    </div>
+                </div>
+              </div>
+              {% for key, error in form.errors.items %}
+                  <div class="messages error">
+                      {{ error }}
+                  </div>
+             {% endfor %}
+              </div>
+              <div class="row">
+                  <button type="submit" name="action" value="verify_single" class="button button-primary">Verify before Scheduling</button>
+              </div>
+              {{form.spectroscopy}}
+              </form>
+            </div>
+            {% endif %}
+            </div>
+        </div>
+
+{% endblock %}

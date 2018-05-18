@@ -5,185 +5,183 @@
 {% block bodyclass %}page{% endblock %}
 
 {% block extramenu %}
-					<div class="headingleft">
-						<h1>Object: {{body.current_name}}</h1>
-					</div>
+                    <div class="headingleft">
+                        <h1>Object: {{body.current_name}}</h1>
+                    </div>
 {% endblock%}
 
 {% block main-content %}
-			<!-- Main body -->
-			<div class="container" id="main">
-					<div class="row">
-						<a class="button button-primary" href="{% url 'schedule-body' body.id %}" id="schedule-obs">Schedule Observations</a>
-					</div>
-					<div class="row">
-						<div class="eight columns">
-							{% if body.old_name %}
-							<h5  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h5>
-							{% endif %}
-							<h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h5>
-							<h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span>
-							    {% if body.characterization %}
-							        <br><span style="font-size:75%;padding-left:100px;font-style:italic;">Characterization Target</span>
-							    {% endif %}
-							</h5>
-							<h5  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h5>
-							<div class="section-title">
-							<form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
-						        <input type="hidden" name="{{ form.target.name }}" id="id_target" value="{{body.current_name}}" />
-						            <div class="inline-fields">
-						            	<div class="compact-field">
-							            {{ form.utc_date }}<label for="id_utc_date">UTC date</label>
-							            </div>
-							            <div class="compact-field">
-							            {{ form.site_code }}<label for="id_site_code">Site</label>
-							            </div>
-							            <div class="compact-field">
-							            {{ form.alt_limit }}<label for="id_alt_limit">Min Altitude</label>
-							            </div>
-							            <input type="submit" class="button button-primary" value="Calculate Ephemerides" id="id_submit">
-						            </div>
-						        {% for key, error in form.errors.items %}
-						            <div class="messages error">
-						                {{ error }}
-						            </div>
-						        {% endfor %}
-						        </form>
-					        </div>
-							<h5  class="section-title">Recent Blocks Scheduled</h5>
-							<ul class="block-status">
-								{% for b in blocks %}
-								<li class="{% cycle 'odd' 'even' %}">
-										<a href="{% url 'block-view' b.id %}">
-										<span class="block-status-line">
-											<span class="block-status-item">
-											{% if b.reported and b.when_observed %}
-											<i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
-									    {% elif b.when_observed and not b.reported %}
-											<i class="fa fa-clock-o fa-lg" style="color: #FF9933;"></i>
-											{% elif not b.reported and not b.when_observed and b.active %}
-											<i class="fa fa-circle-o fa-lg" style="color:#263c6f;"></i>
-											{% elif not b.reported and not b.when_observed and  not b.active %}
-											<i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
-											{% endif %}
-											</span>
-											<span class="block-status-item">{{b.block_start|date:"c"}}</span>
-											<span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
-											<span class="block-status-item">{{b.block_end|date:"c"}}</span>
-											<span class="block-status-item">{{b.site|upper}}</span>
-										</span>
-										</a>
-								</li>
-								{% empty %}
-								<li>No blocks have been scheduled</li>
-								{% endfor %}
-							</ul>
+            <!-- Main body -->
+            <div class="container" id="main">
+                    <div class="row">
+                        <a class="button button-primary" href="{% url 'schedule-body' body.id %}" id="schedule-obs">Schedule Observations</a>
+                        <a class="button button-primary" href="{% url 'schedule-body-spectra' body.id %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
+                    </div>
+                    <div class="row">
+                        <div class="eight columns">
+                            {% if body.old_name %}
+                            <h5  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h5>
+                            {% endif %}
+                            <h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h5>
+                            <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span></h5>
+                            <h5  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h5>
+                            <div class="section-title">
+                            <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
+                                <input type="hidden" name="{{ form.target.name }}" id="id_target" value="{{body.current_name}}" />
+                                    <div class="inline-fields">
+                                        <div class="compact-field">
+                                        {{ form.utc_date }}<label for="id_utc_date">UTC date</label>
+                                        </div>
+                                        <div class="compact-field">
+                                        {{ form.site_code }}<label for="id_site_code">Site</label>
+                                        </div>
+                                        <div class="compact-field">
+                                        {{ form.alt_limit }}<label for="id_alt_limit">Min Altitude</label>
+                                        </div>
+                                        <input type="submit" class="button button-primary" value="Calculate Ephemerides" id="id_submit">
+                                    </div>
+                                {% for key, error in form.errors.items %}
+                                    <div class="messages error">
+                                        {{ error }}
+                                    </div>
+                                {% endfor %}
+                                </form>
+                            </div>
+                            <a class="button button-primary" href="{% url 'feasibility' body.id %}" id="check-feasibility">Check Spectroscopic Feasibility</a>
+                            <h5  class="section-title">Recent Blocks Scheduled</h5>
+                            <ul class="block-status">
+                                {% for b in blocks %}
+                                <li class="{% cycle 'odd' 'even' %}">
+                                        <a href="{% url 'block-view' b.id %}">
+                                        <span class="block-status-line">
+                                            <span class="block-status-item">
+                                            {% if b.reported and b.when_observed %}
+                                            <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
+                                        {% elif b.when_observed and not b.reported %}
+                                            <i class="fa fa-clock-o fa-lg" style="color: #FF9933;"></i>
+                                            {% elif not b.reported and not b.when_observed and b.active %}
+                                            <i class="fa fa-circle-o fa-lg" style="color:#263c6f;"></i>
+                                            {% elif not b.reported and not b.when_observed and  not b.active %}
+                                            <i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
+                                            {% endif %}
+                                            </span>
+                                            <span class="block-status-item">{{b.block_start|date:"c"}}</span>
+                                            <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
+                                            <span class="block-status-item">{{b.block_end|date:"c"}}</span>
+                                            <span class="block-status-item">{{b.site|upper}}</span>
+                                        </span>
+                                        </a>
+                                </li>
+                                {% empty %}
+                                <li>No blocks have been scheduled</li>
+                                {% endfor %}
+                            </ul>
                     <h5 class="section-title">Measurements</h5>
-	                    <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
-    						</div>
-						<div class="four columns rightsidebar">
-							<div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
-							<h5 class="section-title">Orbital Elements</h5>
-							<table class="keyvalue-table" id="id_orbelements">
-								<tbody>
-									<tr>
-										<td class="kv-key" colspan=2>{{body.get_elements_type_display}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Epoch of elements (MJD)</td>
-										<td class="kv-value">{{body.epochofel_mjd}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Orbital inclination in deg</td>
-										<td class="kv-value">{{body.orbinc}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Longitude of Ascending Node (deg)</td>
-										<td class="kv-value">{{body.longascnode}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Arg of perihelion (deg)</td>
-										<td class="kv-value">{{body.argofperih}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Eccentricity</td>
-										<td class="kv-value">{{body.eccentricity}}</td>
-									</tr>
-									{% if body.elements_type  == 'MPC_MINOR_PLANET' %}
-									<tr>
-										<td class="kv-key">Mean distance (AU)</td>
-										<td class="kv-value">{{body.meandist}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Mean Anomaly (deg)</td>
-										<td class="kv-value">{{body.meananom}}</td>
-									</tr>
-									{% else %}
-									<tr>
-										<td class="kv-key">Perihelion distance (AU)</td>
-										<td class="kv-value">{{body.perihdist}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Epoch of perihelion</td>
-										<td class="kv-value">{{body.epochofperih}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Epoch of perihelion (MJD)</td>
-										<td class="kv-value">{{body.epochofperih_mjd}}</td>
-									</tr>
-									{% endif %}
-									<tr>
-										<td class="kv-key">Absolute Magnitude (H)</td>
-										<td class="kv-value">{{body.abs_mag}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Slope Parameter (G)</td>
-										<td class="kv-value">{{body.slope}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Albedo (average)</td>
-										<td class="kv-value">0.17</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Albedo (range)</td>
-										<td class="kv-value">0.01 - 0.60</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Diameter in meters (average)</td>
-										<td class="kv-value">{{body.diameter|floatformat:0}}</td>
-									</tr>
-									<tr>
-										<td class="kv-key">Diameter in meters<br/>(range)</td>
-										<td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
-									</tr>
-								</tbody>
-							</table>
-							<h5 class="section-title">Follow-up Details</h5>
-							<table class="keyvalue-table" id="id_followup">
-								<tbody>
+                        <a href="{% url 'measurement' body.id %}" class="button button-primary" id="show-measurements">Show Measurements</a>
+                            </div>
+                        <div class="four columns rightsidebar">
+                            <div class="section-title">Last Update: {{body.ingest|date:"Y-M-d H:i"}}</div>
+                            <h5 class="section-title">Orbital Elements</h5>
+                            <table class="keyvalue-table" id="id_orbelements">
+                                <tbody>
+                                    <tr>
+                                        <td class="kv-key" colspan=2>{{body.get_elements_type_display}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of elements (MJD)</td>
+                                        <td class="kv-value">{{body.epochofel_mjd}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Orbital inclination in deg</td>
+                                        <td class="kv-value">{{body.orbinc}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Longitude of Ascending Node (deg)</td>
+                                        <td class="kv-value">{{body.longascnode}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Arg of perihelion (deg)</td>
+                                        <td class="kv-value">{{body.argofperih}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Eccentricity</td>
+                                        <td class="kv-value">{{body.eccentricity}}</td>
+                                    </tr>
+                                    {% if body.elements_type  == 'MPC_MINOR_PLANET' %}
+                                    <tr>
+                                        <td class="kv-key">Mean distance (AU)</td>
+                                        <td class="kv-value">{{body.meandist}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Mean Anomaly (deg)</td>
+                                        <td class="kv-value">{{body.meananom}}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td class="kv-key">Perihelion distance (AU)</td>
+                                        <td class="kv-value">{{body.perihdist}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of perihelion</td>
+                                        <td class="kv-value">{{body.epochofperih}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Epoch of perihelion (MJD)</td>
+                                        <td class="kv-value">{{body.epochofperih_mjd}}</td>
+                                    </tr>
+                                    {% endif %}
+                                    <tr>
+                                        <td class="kv-key">Absolute Magnitude (H)</td>
+                                        <td class="kv-value">{{body.abs_mag}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Slope Parameter (G)</td>
+                                        <td class="kv-value">{{body.slope}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Albedo (average)</td>
+                                        <td class="kv-value">0.17</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Albedo (range)</td>
+                                        <td class="kv-value">0.01 - 0.60</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Diameter in meters (average)</td>
+                                        <td class="kv-value">{{body.diameter|floatformat:0}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Diameter in meters<br/>(range)</td>
+                                        <td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <h5 class="section-title">Follow-up Details</h5>
+                            <table class="keyvalue-table" id="id_followup">
+                                <tbody>
                                                                         {% if body.score %}
-									<tr>
-										<td class="kv-key">NEOCP <i>digest2</i> score</td>
-										<td class="kv-value">{{body.score}}</td>
-									</tr>
+                                    <tr>
+                                        <td class="kv-key">NEOCP <i>digest2</i> score</td>
+                                        <td class="kv-value">{{body.score}}</td>
+                                    </tr>
                                                                         {% endif %}
                                                                         {% if body.num_obs %}
-									<tr>
-										<td class="kv-key">Number of observations</td>
-										<td class="kv-value">{{body.num_obs}}</td>
-									</tr>
+                                    <tr>
+                                        <td class="kv-key">Number of observations</td>
+                                        <td class="kv-value">{{body.num_obs}}</td>
+                                    </tr>
                                                                         {% endif %}
                                                                         {% if body.arc_length %}
-									<tr>
-										<td class="kv-key">Arc length (days)</td>
-										<td class="kv-value">{{body.arc_length}}</td>
-									</tr>
+                                    <tr>
+                                        <td class="kv-key">Arc length (days)</td>
+                                        <td class="kv-value">{{body.arc_length}}</td>
+                                    </tr>
                                                                         {% endif %}
                                                                         {% if body.not_seen %}
-									<tr>
-										<td class="kv-key">Time since last observation (days)</td>
-										<td class="kv-value">{{body.not_seen|floatformat:2}}</td>
-									</tr>
+                                    <tr>
+                                        <td class="kv-key">Time since last observation (days)</td>
+                                        <td class="kv-value">{{body.not_seen|floatformat:2}}</td>
+                                    </tr>
                                                                         {% endif %}
 								</tbody>
 							</table>						

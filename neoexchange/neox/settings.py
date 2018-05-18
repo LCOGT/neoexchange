@@ -10,7 +10,7 @@ VERSION = '3.0.1a'
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
 DEBUG = False
-BRANCH = os.environ.get('BRANCH',None)
+BRANCH = os.environ.get('BRANCH', None)
 if BRANCH:
     BRANCH = '-' + BRANCH
 else:
@@ -23,7 +23,7 @@ if PREFIX != '':
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SESSION_COOKIE_NAME='neox.sessionid'
+SESSION_COOKIE_NAME = 'neox.sessionid'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -74,7 +74,7 @@ MEDIA_URL = '/media/'
 
 STATIC_ROOT = '/var/www/html/static/'
 STATIC_URL = PREFIX + '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core'), ]
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -135,7 +135,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LOGIN_URL = PREFIX +'/accounts/login/'
+LOGIN_URL = PREFIX + '/accounts/login/'
 
 LOGIN_REDIRECT_URL = PREFIX + '/'
 
@@ -156,9 +156,9 @@ INSTALLED_APPS = (
 )
 
 OPBEAT = {
-    'ORGANIZATION_ID': os.environ.get('NEOX_OPBEAT_ORGID',''),
-    'APP_ID': os.environ.get('NEOX_OPBEAT_APPID',''),
-    'SECRET_TOKEN': os.environ.get('NEOX_OPBEAT_TOKEN',''),
+    'ORGANIZATION_ID': os.environ.get('NEOX_OPBEAT_ORGID', ''),
+    'APP_ID': os.environ.get('NEOX_OPBEAT_APPID', ''),
+    'SECRET_TOKEN': os.environ.get('NEOX_OPBEAT_TOKEN', ''),
     'DEBUG': False,
 }
 
@@ -222,7 +222,7 @@ LOGGING = {
             'level'    : 'ERROR',
         },
         'neox': {
-            'handlers':['console'],
+            'handlers': ['console'],
             'level' : 'ERROR'
         }
     }
@@ -251,7 +251,7 @@ DATABASES = {
 
 EMAIL_USE_TLS       = True
 EMAIL_HOST          = 'smtp.gmail.com'
-EMAIL_PORT          =  587
+EMAIL_PORT          = 587
 DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
 EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
 EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
@@ -268,17 +268,17 @@ THUMBNAIL_URL = 'https://thumbnails.lco.global/'
 ARCHIVE_API_URL = 'https://archive-api.lco.global/'
 ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
 ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
-ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN','')
+ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN', '')
 
 PORTAL_API_URL = 'https://observe.lco.global/api/'
 PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
 PORTAL_REQUEST_URL = 'https://observe.lco.global/userrequests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
-PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN','')
+PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN', '')
 PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
 
-ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER','')
-ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD','')
+ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER', '')
+ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD', '')
 
 #######################
 # Test Database setup #

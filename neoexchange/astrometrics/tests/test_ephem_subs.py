@@ -1620,6 +1620,64 @@ class TestDetermineExpTimeCount(TestCase):
         self.assertEqual(expected_expcount, exp_count)
 
 
+class TestDetermineSpectroSlotLength(TestCase):
+
+    def test_bright_no_calibs(self):
+
+        exp_time = 180.0
+        calibs = 'none'
+
+        expected_slot_length = 582.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_bright_calibs_before(self):
+
+        exp_time = 180.0
+        calibs = 'before'
+
+        expected_slot_length = 845.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_bright_calibs_after(self):
+
+        exp_time = 180.0
+        calibs = 'after'
+
+        expected_slot_length = 845.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_bright_calibs_both(self):
+
+        exp_time = 180.0
+        calibs = 'both'
+
+        expected_slot_length = 1108.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+    def test_bright_calibs_both_mixedcase(self):
+
+        exp_time = 180.0
+        calibs = 'BoTH'
+
+        expected_slot_length = 1108.0
+
+        slot_length = determine_spectro_slot_length(exp_time, calibs)
+
+        self.assertEqual(expected_slot_length, slot_length)
+
+
 class TestGetSitePos(TestCase):
 
     def test_tenerife_point4m_num1_by_code(self):
