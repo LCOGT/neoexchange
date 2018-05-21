@@ -1013,9 +1013,15 @@ class CalibSource(models.Model):
                             (SPECTRAL_STANDARD, 'Spectral standard')
                          ]
 
+    name = models.CharField('Name of calibration source', max_length=55)
     ra = models.FloatField('RA of source (radians)')
     dec = models.FloatField('Dec of source (radians)')
     vmag = models.FloatField('V magnitude')
     spectral_type = models.CharField('Spectral type of source', max_length=10, blank=True, null=True)
     source_type = models.IntegerField('Source Type', null=False, blank=False, default=0, choices=SOURCETYPE_CHOICES)
     notes = models.TextField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = _('Calibration Source')
+        verbose_name_plural = _('Calibration Sources')
+        db_table = 'ingest_calibsource'
