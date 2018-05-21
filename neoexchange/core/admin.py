@@ -248,9 +248,26 @@ class CandidateAdmin(admin.ModelAdmin):
     search_fields = ('block__body__provisional_name', )
 
 
+class CalibSourceAdmin(admin.ModelAdmin):
+
+    def calib_ra_hms(self, obj):
+        return degreestohms(obj.ra, ' ')
+    calib_ra_hms.short_description = "RA (h m s)"
+
+    def calib_dec_dms(self, obj):
+        return degreestodms(obj.dec, ' ')
+    calib_dec_dms.short_description = "Dec (d ' \")"
+
+    list_display = ['id', 'calib_ra_hms', 'calib_dec_dms', 'vmag', 'spectral_type', 'source_type', 'notes']
+    list_filter = ['spectral_type', 'source_type']
+
+    ordering = [ 'ra', ]
+
+
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
 admin.site.register(CatalogSources, CatalogSourcesAdmin)
 admin.site.register(Candidate, CandidateAdmin)
 admin.site.register(PanoptesReport)
+admin.site.register(CalibSource, CalibSourceAdmin)
