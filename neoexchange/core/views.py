@@ -688,7 +688,7 @@ def schedule_submit(data, body, username):
               'start_time': data['start_time'],
               'end_time': data['end_time'],
               'group_id': data['group_id'],
-              'too_mode' : data.get('too_mode', False)
+              'too_mode' : data.get('too_mode', False),
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
               'instrument_code' : data['instrument_code']
