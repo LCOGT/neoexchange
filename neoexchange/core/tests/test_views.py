@@ -32,10 +32,14 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
 
-#Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
-from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
+from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, fetch_flux_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
+from core.frames import block_status, create_frame, frame_params_from_block
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
+    SuperBlock, SpectralInfo, CalibSource
+from core.forms import EphemQuery
+#Import modules to test
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     update_MPC_orbit, check_for_block, clean_mpcorbit, \
     create_source_measurement, clean_crossid, create_frame, \
@@ -43,10 +47,7 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
-from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
-from core.forms import EphemQuery
+    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy, create_calib_sources
 
 # Disable logging during testing
 import logging
@@ -3336,4 +3337,21 @@ class Test_Add_New_Taxonomy_Data(TestCase):
         self.assertEqual(expected_res, new_tax)
 
 
+class TestCreateCalibSource(TestCase):
 
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.test_flux_standards = fetch_flux_standards(test_flux_page)
+
+        self.maxDiff = None
+        self.precision = 10
+
+    def test_num_created(self):
+        expected_created = 3
+
+        num_created = create_calib_sources(self.test_flux_standards)
+
+        self.assertEqual(expected_created, num_created)
+        self.assertEqual(expected_created, CalibSource.objects.count())

@@ -1754,3 +1754,26 @@ def update_taxonomy(taxobj, dbg=False):
             print("Did not write for some reason.")
         return False
     return True
+
+def create_calib_sources(calib_sources):
+    """Creates CalibrationSources from the passed dictionary of <calib_sources>. This
+    would normally come from fetch_flux_standards() but other sources are possible.
+    The number of sources created is returned"""
+
+    num_created = 0
+
+    for standard in calib_sources:
+
+        params = {
+                    'name' : standard,
+                    'ra'  : calib_sources[standard]['ra_rad'],
+                    'dec' : calib_sources[standard]['dec_rad'],
+                    'vmag' : calib_sources[standard]['mag'],
+                    'spectral_type' : calib_sources[standard]['spec_type'],
+                    'source_type' : CalibSource.FLUX_STANDARD,
+                    'notes' : calib_sources[standard]['notes']
+                 }
+        calib_source, created = CalibSource.objects.get_or_create(**params)
+        if created:
+            num_created += 1
+    return num_created
