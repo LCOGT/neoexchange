@@ -9,11 +9,13 @@ from django.core.management.base import BaseCommand, CommandError
 from core.views import check_catalog_and_refit, store_detections
 from photometrics.catalog_subs import store_catalog_sources, make_sext_file, extract_sci_image
 from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
-#from core.models import CatalogSources
+
 
 class Command(BaseCommand):
 
-    help = 'Do All The Things'
+    help = """Perform pipeline processing on a set of FITS frames.
+	   Steps include catalog creation, zeropoint determination, moving object detection and
+	   candidate storing."""
 
     def add_arguments(self, parser):
         parser.add_argument('datadir', help='Path to the data to ingest')
@@ -55,11 +57,11 @@ class Command(BaseCommand):
 
         datadir = os.path.expanduser(options['datadir'])
         datadir = os.path.join(datadir, '')
-        self.stdout.write("datapath= %s" % (datadir))
+        self.stdout.write("datapath= %s" % datadir)
 
         # Get lists of images and catalogs
         fits_files, fits_catalogs = self.determine_images_and_catalogs(datadir)
-        if fits_files == None or fits_catalogs == None:
+        if fits_files is None or fits_catalogs is None:
             exit(-2)
 
         # If a --temp_dir option was given on the command line use that as our
@@ -67,16 +69,16 @@ class Command(BaseCommand):
         if options['temp_dir']:
             temp_dir = options['temp_dir']
             temp_dir = os.path.expanduser(temp_dir)
-            if os.path.exists(temp_dir) == False:
+            if os.path.exists(temp_dir) is False:
                 os.makedirs(temp_dir)
         else:
-            temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+            temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         keep_temp = ''
         if options['keep_temp_dir']: keep_temp = ' (will keep)'
-        self.stdout.write("Using %s as temp dir%s" % (temp_dir, keep_temp ))
+        self.stdout.write("Using %s as temp dir%s" % (temp_dir, keep_temp))
 
-        #create a new list of fits files to run mtdlink on
+        # create a new list of fits files to run mtdlink on
         fits_file_list = []
 
         configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
@@ -90,7 +92,7 @@ class Command(BaseCommand):
                 int(new_catalog_or_status)
                 if new_catalog_or_status != 0:
                     self.stdout.write("Error reprocessing %s (Error code= %s)" % (catalog, new_catalog_or_status))
-                    return "pipeline_astrometry completed with status=-3"
+                    continue
                 new_catalog = catalog
                 catalog_type = 'LCOGT'
                 if 'e91' in catalog or 'e11' in catalog:
@@ -112,7 +114,7 @@ class Command(BaseCommand):
                 self.stdout.write("Error occured storing catalog sources (Error code= %d, %d)" % (num_sources_created, num_in_catalog))
             # Step 3: Synthesize MTDLINK-compatible SExtractor .sext ASCII catalogs
             # from CatalogSources
-            if options['skip_mtdlink'] == False:
+            if options['skip_mtdlink'] is False:
                 self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))
                 fits_filename = make_sext_file(temp_dir, new_catalog, catalog_type)
             else:
@@ -122,11 +124,11 @@ class Command(BaseCommand):
                 fits_filename = extract_sci_image(catalog, new_catalog)
             fits_file_list.append(fits_filename)
 
-        if options['skip_mtdlink'] == False:
+        if options['skip_mtdlink'] is False:
             # Step 4: Run MTDLINK to find moving objects
-            self.stdout.write("Running mtdlink on file(s) %s" % (fits_file_list))
+            self.stdout.write("Running mtdlink on file(s) %s" % fits_file_list)
             param_file = os.path.abspath(os.path.join('photometrics', 'configs', 'mtdi.lcogt.param'))
-            #May change this to get pa and rate from compute_ephem later
+            # May change this to get pa and rate from compute_ephem later
             pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
 
             retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
@@ -144,7 +146,7 @@ class Command(BaseCommand):
             self.stdout.write("Skipping running of mtdlink")
 
         # Tidy up
-        if options['keep_temp_dir'] != True:
+        if options['keep_temp_dir'] is not True:
             try:
                 files_to_remove = glob(os.path.join(temp_dir, '*'))
                 for file_to_rm in files_to_remove:
@@ -154,4 +156,4 @@ class Command(BaseCommand):
             try:
                 os.rmdir(temp_dir)
             except OSError:
-                 self.stdout.write("Error removing temporary test directory %s" % temp_dir)
+                self.stdout.write("Error removing temporary test directory %s" % temp_dir)

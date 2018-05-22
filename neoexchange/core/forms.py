@@ -20,7 +20,7 @@ from .models import Body, Proposal, Block
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
-from astrometrics.sources_subs import fetch_filter_list
+from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
 import logging
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,19 @@ SITES = (('V37', 'McDonald, Texas (ELP - V37; Sinistro)'),
          ('W89', 'CTIO, Chile (LSC - W89,W79; 0.4m)'),
          ('V38', 'McDonald, Texas (ELP - V38; 0.4m)'),
          ('L09', 'Sutherland, S. Africa (CPT - L09; 0.4m)'))
+
+
+SPECTRO_SITES = (('F65-FLOYDS', 'Maui, Hawaii (FTN - F65)'),
+                 ('E10-FLOYDS', 'Siding Spring, Aust. (FTS - E10)'))
+
+CALIBS = (('Both', 'Calibrations before and after spectrum'),
+          ('Before', 'Calibrations before spectrum'),
+          ('After', 'Calibrations after spectrum'),
+          ('None', 'No Calibrations (not recommended)'))
+
+MOON = (('G', 'Grey',),
+        ('B', 'Bright'),
+        ('D', 'Dark'))
 
 
 class EphemQuery(forms.Form):
@@ -134,6 +147,9 @@ class ScheduleBlockForm(forms.Form):
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
+    calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
+    instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
@@ -153,32 +169,39 @@ class ScheduleBlockForm(forms.Form):
     def clean_filter_pattern(self):
         try:
             pattern = self.cleaned_data['filter_pattern']
-            stripped_pattern = pattern.replace(" ", ",").replace(";", ",").replace("/", ",").replace(".", ",")
+            stripped_pattern = pattern.replace(" ", ",").replace(";", ",").replace("/", ",")
+
             chunks = stripped_pattern.split(',')
             chunks = list(filter(None, chunks))
             if chunks.count(chunks[0]) == len(chunks):
                 chunks = [chunks[0]]
             cleaned_filter_pattern = ",".join(chunks)
         except KeyError:
-            cleaned_filter_pattern = ','
+            cleaned_filter_pattern = ''
+        except IndexError:
+            cleaned_filter_pattern = ''
         return cleaned_filter_pattern
 
     def clean(self):
         site = self.cleaned_data['site_code']
-        if not fetch_filter_list(site):
+        spectra = self.cleaned_data['spectroscopy']
+        if not fetch_filter_list(site, spectra):
             raise forms.ValidationError("This Site/Telescope combination is not currently available.")
         try:
-            pattern = self.cleaned_data['filter_pattern']
-            chunks = pattern.split(',')
-            bad_filters = [x for x in chunks if x not in fetch_filter_list(site)]
-            if len(bad_filters) > 0:
-                if len(bad_filters) == 1:
-                    raise ValidationError(_('%(bad)s is not an acceptable filter at this site.'), params={'bad': ",".join(bad_filters)}, )
-                else:
-                    raise ValidationError(_('%(bad)s are not acceptable filters at this site.'), params={'bad': ",".join(bad_filters)}, )
+            if not self.cleaned_data['filter_pattern']:
+                raise forms.ValidationError("You must select a filter.")
         except KeyError:
-            raise ValidationError(_('Dude, you had to actively input a bunch of spaces and nothing else to see this error. Why?? Just pick a filter from the list! %(filters)s'), params={'filters': ",".join(fetch_filter_list(site))}, )
-        if not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
+            raise forms.ValidationError('Dude, you had to actively input a bunch of spaces and nothing else to see this error. '
+                                        'Why?? Just pick a filter from the list! %(filters)s', params={'filters': ",".join(fetch_filter_list(site, spectra))})
+        pattern = self.cleaned_data['filter_pattern']
+        chunks = pattern.split(',')
+        bad_filters = [x for x in chunks if x not in fetch_filter_list(site, spectra)]
+        if len(bad_filters) > 0:
+            if len(bad_filters) == 1:
+                raise forms.ValidationError('%(bad)s is not an acceptable filter at this site.', params={'bad': ",".join(bad_filters)})
+            else:
+                raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
+        elif not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
             raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
@@ -187,6 +210,29 @@ class ScheduleBlockForm(forms.Form):
         elif self.cleaned_data['period'] is not None and self.cleaned_data['jitter'] is not None:
             if self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
                 raise forms.ValidationError("Jitter must be larger than slot length")
+
+
+class ScheduleSpectraForm(forms.Form):
+    proposal_code = forms.ChoiceField(required=True)
+    instrument_code = forms.ChoiceField(required=True, choices=SPECTRO_SITES)
+    utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'UTC date is required')})
+    exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
+    exp_length = forms.FloatField(initial=1800.0, required=True)
+    calibs = forms.ChoiceField(required=True, choices=CALIBS)
+    spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
+
+    def clean_utc_date(self):
+        start = self.cleaned_data['utc_date']
+        if start < datetime.utcnow().date():
+            raise forms.ValidationError("Window cannot start in the past")
+        return start
+
+    def __init__(self, *args, **kwargs):
+        self.proposal_code = kwargs.pop('proposal_code', None)
+        super(ScheduleSpectraForm, self).__init__(*args, **kwargs)
+        proposals = Proposal.objects.filter(active=True)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        self.fields['proposal_code'].choices = proposal_choices
 
 
 class MPCReportForm(forms.Form):
@@ -199,3 +245,24 @@ class MPCReportForm(forms.Form):
             self.cleaned_data['block'] = block
         except:
             raise forms.ValidationError('Block ID %s is not valid' % self.cleaned_data['block_id'])
+
+
+class SpectroFeasibilityForm(forms.Form):
+    instrument_code = forms.ChoiceField(required=True, choices=SPECTRO_SITES)
+    magnitude = forms.FloatField()
+    exp_length = forms.FloatField(initial=1800.0, required=True)
+    moon_phase = forms.ChoiceField(choices=MOON, required=True)
+    airmass = forms.FloatField(initial=1.2, required=True)
+    sfu = forms.FloatField(disabled=True, required=True)
+
+    def __init__(self, *args, **kwargs):
+        sfu_values = fetch_sfu()
+        body = kwargs.pop('body', None)
+        mag = None
+        if body:
+            emp = body.compute_position()
+            if emp is not False:
+                mag = round(emp[2], 1)
+        super(SpectroFeasibilityForm, self).__init__(*args, **kwargs)
+        self.fields['magnitude'].initial = mag
+        self.fields['sfu'].initial = sfu_values[1].value

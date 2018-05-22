@@ -7,7 +7,7 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>{{body.current_name}}: Confirm Scheduling</h1>
+        <h1><a href="{% url 'target' body.id %}">{{body.current_name}}</a>: Confirm Scheduling</h1>
     </div>
 {% endblock%}
 
@@ -32,10 +32,17 @@
                         <td class="kv-key">Proposal</td>
                         <td class="kv-value">{{ data.proposal_code }}</td>
                     </tr>
-                    <tr id="id_site">
-                        <td class="kv-key">Site</td>
-                        <td class="kv-value">{{data.site_code}}</td>
-                    </tr>
+                    {% if data.instrument_code %}
+                        <tr id="id_site">
+                            <td class="kv-key">Site/Instrument</td>
+                            <td class="kv-value">{{data.instrument_code}}</td>
+                        </tr>
+                    {% else %}
+                        <tr id="id_site">
+                            <td class="kv-key">Site</td>
+                            <td class="kv-value">{{data.site_code}}</td>
+                        </tr>
+                    {% endif %}
                     <tr id="id_utc_date">
                         <td class="kv-key">UTC date</td>
                         <td class="kv-value">{{ data.utc_date}}</td>
@@ -61,6 +68,16 @@
                         <td class="kv-key">Speed</td>
                         <td class="kv-value">{{ data.speed|floatformat:2 }} '/min</td>
                     </tr>
+                    {% if data.spectroscopy %}
+                    <tr id="id_slit_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                            <div class="tooltip">Slit Pattern
+                            <span class="tooltiptext" style="left:75%">Comma Separated Pattern
+                            <br>(e.g.: slit_6.0as,slit_2.0as,slit_6.0as)<br>
+                            <br><u>Slits Available at {{data.site_code}}:</u>
+                            <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
+                        <td class="kv-value">{{ form.filter_pattern }}</td>
+                    </tr>
+                    {% else %}
                     <tr id="id_filter_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
                             <div class="tooltip">Filter Pattern
                             <span class="tooltiptext" style="left:75%">Comma Separated Pattern
@@ -69,6 +86,7 @@
                             <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
                         <td class="kv-value">{{ form.filter_pattern }}</td>
                     </tr>
+                    {% endif %}
                     <tr id="id_pattern_iterations">
                         <td class="kv-key">Pattern Iterations</td>
                         {% if data.pattern_iterations < 1 %}
@@ -91,6 +109,12 @@
                         <td class="kv-key">Exposure length</td>
                         <td class="kv-value">{{ data.exp_length|floatformat:1 }} secs</td>
                     </tr>
+                    {% if data.snr %}
+                    <tr id="id_snr">
+                        <td class="kv-key">SNR</td>
+                        <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                    </tr>
+                    {% endif %}
                     <tr id="id_window">
                         <td class="kv-key">Window (UTC)</td>
                         <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
@@ -113,13 +137,27 @@
                         <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
                     </tr>
                     {% endif %}
+                    {% if data.spectroscopy %}
+                    <tr id="id_spectroscopy">
+                        <td class="kv-key">Spectroscopy</td>
+                        <td class="kv-value">{{ data.spectroscopy }}</td>
+                    </tr>
+                    <tr id="id_spectroscopy">
+                        <td class="kv-key">Calibs</td>
+                        <td class="kv-value">{{ data.calibs }}</td>
+                    </tr>
+                    {% endif %}
                 </tbody>
             </table>
         {% endif %}
       </div>
       <div class="four columns">
         {% if form.errors%}
-        <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
+          {% if form.spectroscopy.value == 'True' %}
+            <a href="{% url 'schedule-body-spectra' body.id %}">Return to schedule spectra page</a>
+          {% else %}
+            <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
+          {% endif %}
         {% else %}
         <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
         <input type="submit" class="button button-primary" value="Edit Parameters" id="id_edit_button" name="edit">
@@ -130,10 +168,14 @@
           {{form.exp_length}}
           {{form.proposal_code}}
           {{form.site_code}}
+          {{form.instrument_code}}
           {{form.group_id}}
           {{form.utc_date}}
           {{form.jitter}}
           {{form.period}}
+          {{forms.pattern_iterations}}
+          {{form.spectroscopy}}
+          {{form.calibs}}          
         </div>
       </div>
 
