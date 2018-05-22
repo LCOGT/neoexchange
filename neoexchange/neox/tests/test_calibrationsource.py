@@ -59,8 +59,8 @@ class CalibrationSourceListViewTest(FunctionalTest):
 
         # He decides he would like to schedule a standard on FTN
         # He sees a Schedule Calibration Observations button
-        link = self.browser.find_element_by_id('schedule-calib-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'pk': 1}))
+        link = self.browser.find_element_by_id('schedule-calib-ftn-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'sitecode': 'F65'}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 

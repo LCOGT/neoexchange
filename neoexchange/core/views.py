@@ -36,11 +36,11 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, ScheduleCalibSpectraForm
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list
+    fetch_NEOCP_observations, PackedError, fetch_filter_list, find_best_flux_standard
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -364,6 +364,18 @@ class LookUpBodyMixin(object):
             raise Http404("Body does not exist")
 
 
+class LookUpCalibMixin(object):
+    """
+    A Mixin for finding a CalibSource for a sitecode and if it exists, return the Target instance.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            target = find_best_flux_standard(kwargs['sitecode'])
+            self.target = target
+            return super(LookUpCalibMixin, self).dispatch(request, *args, **kwargs)
+        except CalibSource.DoesNotExist:
+            raise Http404("CalibSource does not exist")
+
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
     """
     Creates a suggested observation request, including time window and molecules
@@ -456,6 +468,40 @@ class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
 
+
+class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
+    """
+    Creates a suggested spectroscopic calibration observation request, including time
+    window, calibrations and molecules
+    """
+    template_name = 'core/schedule_spectra.html'
+    form_class = ScheduleCalibSpectraForm
+    ok_to_schedule = False
+
+    def get(self, request, *args, **kwargs):
+        form = self.get_form()
+        return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def post(self, request, *args, **kwargs):
+        form = ScheduleCalibSpectraForm(request.POST)
+        if form.is_valid():
+            return self.form_valid(form,request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.target, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.target})
+
+    def get_context_data(self, **kwargs):
+        """
+        Only show proposals the current user is a member of
+        """
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     """
