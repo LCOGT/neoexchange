@@ -1,7 +1,8 @@
-from core.models import CalibSource
-from django.core.management.base import BaseCommand, CommandError
-from astrometrics.sources_subs import fetch_flux_standards
 from datetime import datetime
+from django.core.management.base import BaseCommand, CommandError
+
+from core.models import CalibSource
+from astrometrics.sources_subs import fetch_flux_standards
 
 class Command(BaseCommand):
     help = "Ingest the list of ESO Spectrophotometric standards"
