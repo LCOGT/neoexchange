@@ -108,7 +108,7 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     opener = urllib.request.build_opener()  # create an opener object
     try:
         response = opener.open(req_page)
-    except urllib.URLError as e:
+    except urllib.error.URLError as e:
         if not hasattr(e, "code"):
             raise
         print("Page retrieval failed:", e)
@@ -1786,7 +1786,7 @@ def fetch_smass_targets(page=None, fetch_all=False):
 
 def fetch_manos_page():
     """Fetches the manos list of spectral targets"""
-
+    # new manos site = http://manos.lowell.edu/observations/summary
     manos_url = 'https://manosobs.wordpress.com/observations/neo-observing-log/'
     page = fetchpage_and_make_soup(manos_url)
 
