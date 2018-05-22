@@ -269,6 +269,14 @@ class CandidatesViewBlock(LoginRequiredMixin, View):
         return render(request, self.template, {'body': block.body, 'candidates': candidates, 'slot': block})
 
 
+class CalibSourceView(ListView):
+    template_name = 'core/calibsource_list.html'
+    model = CalibSource
+    queryset = CalibSource.objects.order_by('ra')
+    context_object_name = "calibsources"
+    paginate_by = 20
+
+
 def generate_new_candidate_id(prefix='LNX'):
 
     new_id = None

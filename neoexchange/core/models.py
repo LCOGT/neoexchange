@@ -1021,6 +1021,9 @@ class CalibSource(models.Model):
     source_type = models.IntegerField('Source Type', null=False, blank=False, default=0, choices=SOURCETYPE_CHOICES)
     notes = models.TextField(null=True, blank=True)
 
+    def return_source_type(self):
+        return self.SOURCETYPE_CHOICES[self.source_type][1]
+
     class Meta:
         verbose_name = _('Calibration Source')
         verbose_name_plural = _('Calibration Sources')
