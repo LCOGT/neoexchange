@@ -16,7 +16,8 @@ class CalibrationSourceListViewTest(FunctionalTest):
         num_created = create_calib_sources(self.flux_standards)
         super(CalibrationSourceListViewTest, self).setUp()
 
-    def test_can_view_blocks(self):
+    def test_can_view_calibsources(self):
+
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
         self.browser.get(target_url)
@@ -38,3 +39,44 @@ class CalibrationSourceListViewTest(FunctionalTest):
         self.check_for_row_in_table('id_calibsources', testlines[0])
         self.check_for_row_in_table('id_calibsources', testlines[1])
         self.check_for_row_in_table('id_calibsources', testlines[2])
+
+        # Satisfied that there are many potential calibration sources to choose
+        # from, he goes for a beer.
+
+    def test_can_schedule_calibsource(self):
+
+        # A new user, Daniel, goes to a hidden calibration page on the site
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
+        self.browser.get(target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions calibrations
+        self.assertIn('Calibration Sources | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Calibration Sources', header_text)
+
+        # He decides he would like to schedule a standard on FTN
+        # He sees a Schedule Calibration Observations button
+        link = self.browser.find_element_by_id('schedule-calib-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'pk': 1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the Schedule Calibration Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        # He selects FTN and a suggested standard comes up
+
+        # Liking the selected star, he clicks Submit and is returned to the
+        # home page
+        target_url = "{0}{1}".format(self.live_server_url, reverse('home'))
+        self.browser.get(target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # Satisfied, he goes to find a currywurst
