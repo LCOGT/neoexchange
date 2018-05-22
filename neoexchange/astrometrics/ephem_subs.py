@@ -1118,6 +1118,13 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long # West of Greenwich !
         site_hgt = 3037.0
         site_name = 'LCO OGG Node 0m4b at Maui'
+    elif site_code == 'OGG-CLMA-0M4C' or site_code == 'T03':
+        # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
+        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
+        (site_long, status) =  S.sla_daf2r(156, 15, 27.12)
+        site_long = -site_long # West of Greenwich !
+        site_hgt = 3037.0
+        site_name = 'LCO OGG Node 0m4c at Maui'
     elif site_code == 'COJ-CLMA-0M4A' or site_code == 'Q58':
         # Latitude, longitude from Google Earth, SE corner of clamshell, probably wrong
         (site_lat, status)  =  S.sla_daf2r(31, 16, 22.38)

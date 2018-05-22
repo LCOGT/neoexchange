@@ -1743,6 +1743,32 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
 
+    def test_maui_point4m_num3_by_code(self):
+        site_code = 'T03'
+
+        expected_site_name = 'LCO OGG Node 0m4c at Maui'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
+    def test_maui_point4m_num3_by_name(self):
+        site_code = 'OGG-CLMA-0M4C'
+
+        expected_site_name = 'LCO OGG Node 0m4c at Maui'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual('Haleakala-Faulkes Telescope North (FTN)', site_name)
+        self.assertNotEqual('LCO OGG Node 0m4b at Maui', site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
     def test_aust_point4m_num1_by_code(self):
         site_code = 'Q58'
 
