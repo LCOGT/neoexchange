@@ -243,7 +243,7 @@ class CalibSourceAdmin(admin.ModelAdmin):
         return degreestodms(obj.dec, ' ')
     calib_dec_dms.short_description = "Dec (d ' \")"
 
-    list_display = ['id', 'calib_ra_hms', 'calib_dec_dms', 'vmag', 'spectral_type', 'source_type', 'notes']
+    list_display = ['id', 'name', 'calib_ra_hms', 'calib_dec_dms', 'vmag', 'spectral_type', 'source_type', 'notes']
     list_filter = ['spectral_type', 'source_type']
 
     ordering = [ 'ra', ]
