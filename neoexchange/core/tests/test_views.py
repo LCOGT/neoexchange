@@ -40,14 +40,7 @@ from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candida
     SuperBlock, SpectralInfo, CalibSource
 from core.forms import EphemQuery
 #Import modules to test
-from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, clean_mpcorbit, \
-    create_source_measurement, clean_crossid, create_frame, \
-    schedule_check, summarise_block_efficiency, \
-    store_detections, update_crossids, \
-    check_catalog_and_refit, find_matching_image_file, \
-    run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy, create_calib_sources
+from core.views import *
 
 # Disable logging during testing
 import logging
@@ -3355,3 +3348,50 @@ class TestCreateCalibSource(TestCase):
 
         self.assertEqual(expected_created, num_created)
         self.assertEqual(expected_created, CalibSource.objects.count())
+
+
+class TestFindBestFluxStandard(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.flux_standards = fetch_flux_standards(test_flux_page)
+        num_created = create_calib_sources(self.flux_standards)
+
+        self.maxDiff = None
+        self.precision = 8
+
+    def test_FTN(self):
+        expected_standard = CalibSource.objects.get(name='HR9087')
+        expected_params = { 'separation_rad' : 0.9379758789119819}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+
+        utc_date = datetime(2017, 11, 15, 1, 10, 0)
+        close_standard, close_params = find_best_flux_standard('F65', utc_date)
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+    def test_FTS(self):
+        expected_standard = CalibSource.objects.get(name='CD-34d241')
+        expected_params = { 'separation_rad' : 0.11565764559405214}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+
+        utc_date = datetime(2017, 9, 27, 1, 10, 0)
+        close_standard, close_params = find_best_flux_standard('E10', utc_date)
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])

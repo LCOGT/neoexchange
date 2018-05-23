@@ -16,6 +16,10 @@ GNU General Public License for more details.
 import os
 from datetime import datetime, timedelta
 from math import floor, ceil
+import json
+import urllib
+import logging
+
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
@@ -29,35 +33,38 @@ from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from http.client import HTTPSConnection
+from django.conf import settings
 from bs4 import BeautifulSoup
-import urllib
-from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
-    determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
-    determine_spectro_slot_length
+import reversion
+import requests
+import numpy as np
+try:
+    import pyslalib.slalib as S
+except ImportError:
+    pass
+
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, ScheduleCalibSpectraForm
 from .models import *
+from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
+    convert_ast_to_comet
+from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
+    determine_darkness_times, determine_slot_length, determine_exp_time_count, \
+    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
+    determine_spectro_slot_length, get_sitepos
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list, find_best_flux_standard
+    fetch_NEOCP_observations, PackedError, fetch_filter_list
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
+    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
-    convert_ast_to_comet
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
-import logging
-import reversion
-import json
-import requests
-import numpy as np
-from django.conf import settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -1831,3 +1838,45 @@ def create_calib_sources(calib_sources):
         if created:
             num_created += 1
     return num_created
+
+def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards=None, debug=False):
+    """Finds the "best (closest to the zenith at the middle of the night (given
+    by [utc_date]; defaults to UTC "now") for the passed <sitecode>
+    [flux_standards] is expected to be a dictionary of standards with the keys as the
+    name of the standards and pointing to a dictionary with the details. This is
+    normally produced by sources_subs.fetch_flux_standards(); which will be
+    called if standards=None
+    """
+    close_standard = None
+    close_params = {}
+    if flux_standards is None:
+        flux_standards = CalibSource.objects.filter(source_type=CalibSource.FLUX_STANDARD)
+
+    site_name, site_long, site_lat, site_hgt = get_sitepos(sitecode)
+    if site_name != '?':
+
+        # Compute midpoint of the night
+        dark_start, dark_end = determine_darkness_times(sitecode, utc_date)
+
+        dark_midpoint = dark_start + (dark_end - dark_start) / 2.0
+
+        if debug:
+            print("\nDark midpoint, start, end", dark_midpoint, dark_start, dark_end)
+
+        # Compute Local Sidereal Time at the dark midpoint
+        stl = datetime2st(dark_midpoint, site_long)
+
+        if debug:
+            print("RA, Dec of zenith@midpoint:", stl, site_lat)
+        # Loop through list of standards, recording closest
+        min_sep = 360.0
+        for standard in flux_standards:
+            sep = S.sla_dsep(standard.ra, standard.dec, stl, site_lat)
+            if debug:
+                print("%10s %.7f %.7f %.3f %7.3f (%10s)" % (standard, standard.ra, standard.dec, sep, min_sep, close_standard))
+            if sep < min_sep:
+                min_sep = sep
+                close_standard = standard
+        close_params = model_to_dict(close_standard)
+        close_params['separation_rad'] = min_sep
+    return close_standard, close_params
