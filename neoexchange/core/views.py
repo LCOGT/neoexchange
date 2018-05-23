@@ -377,7 +377,8 @@ class LookUpCalibMixin(object):
     """
     def dispatch(self, request, *args, **kwargs):
         try:
-            target = find_best_flux_standard(kwargs['sitecode'])
+            sitecode = kwargs['instrument_code'][0:3]
+            target, target_params = find_best_flux_standard(sitecode)
             self.target = target
             return super(LookUpCalibMixin, self).dispatch(request, *args, **kwargs)
         except CalibSource.DoesNotExist:
@@ -568,7 +569,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         data['instrument_code'] = ''
 
     # Check if we have a high eccentricity object and it's not of comet type
-    if body_elements['eccentricity'] >= 0.9 and body_elements['elements_type'] != 'MPC_COMET':
+    if body_elements.get('eccentricity', 0.0) >= 0.9 and body_elements.get('elements_type', None) != 'MPC_COMET':
         logger.warning("Preventing attempt to schedule high eccentricity non-Comet")
         ok_to_schedule = False
 
@@ -597,12 +598,20 @@ def schedule_check(data, body, ok_to_schedule=True):
     dark_end = min(dark_end, semester_end)
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
-        dbg=False, perturb=False, display=False)
-    if emp == []:
-        emp = [-99 for x in range(5)]
-    magnitude = emp[3]
-    speed = emp[4]
+    if type(body) == Body:
+        emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
+            dbg=False, perturb=False, display=False)
+        if emp == []:
+            emp = [-99 for x in range(5)]
+        ra = emp[1]
+        dec = emp[2]
+        magnitude = emp[3]
+        speed = emp[4]
+    else:
+        magnitude = body.vmag
+        speed = 0.0
+        ra = body.ra
+        dec = body.dec
     
     # Determine filter pattern
     if data.get('filter_pattern'):
@@ -699,8 +708,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
         'mid_time': dark_midpoint.isoformat(),
-        'ra_midpoint': emp[1],
-        'dec_midpoint': emp[2],
+        'ra_midpoint': ra,
+        'dec_midpoint': dec,
         'period' : period,
         'jitter' : jitter,
         'snr' : snr,

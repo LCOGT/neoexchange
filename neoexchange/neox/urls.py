@@ -60,7 +60,7 @@ urlpatterns = [
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     url(r'^schedule/(?P<pk>\d+)/cadence/$', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),
     url(r'^schedule/(?P<pk>\d+)/spectra/$', ScheduleParametersSpectra.as_view(), name='schedule-body-spectra'),
-    url(r'^schedule/(?P<sitecode>[A-Z,0-9]{3})/calib/$', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
+    url(r'^schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/calib/$', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout'),
     url(r'^admin/', include(admin.site.urls)),
