@@ -690,6 +690,13 @@ def schedule_check(data, body, ok_to_schedule=True):
             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%m%d'), datetime.strftime(data['end_time'], '%m%d'))
     elif spectroscopy:
         suffix += "_spectra"
+    groupid = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+    if len(groupid) > 30:
+        if spectroscopy:
+            suffix = suffix[:-3]
+            groupid = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+        else:
+            groupid = groupid[0:30]
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
@@ -703,7 +710,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'schedule_ok': ok_to_schedule,
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + suffix,
+        'group_id': groupid,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
