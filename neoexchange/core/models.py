@@ -1024,6 +1024,9 @@ class CalibSource(models.Model):
     def return_source_type(self):
         return self.SOURCETYPE_CHOICES[self.source_type][1]
 
+    def current_name(self):
+        return self.name
+
     class Meta:
         verbose_name = _('Calibration Source')
         verbose_name_plural = _('Calibration Sources')
