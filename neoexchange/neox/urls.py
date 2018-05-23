@@ -26,7 +26,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     SuperBlockListView, SuperBlockDetailView, SpectroFeasibility, CalibSourceView, \
-    ScheduleCalibSpectra
+    ScheduleCalibSpectra, ScheduleCalibSubmit
 from analyser.views import BlockFramesView, ProcessCandidates
 
 
@@ -60,7 +60,8 @@ urlpatterns = [
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     url(r'^schedule/(?P<pk>\d+)/cadence/$', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),
     url(r'^schedule/(?P<pk>\d+)/spectra/$', ScheduleParametersSpectra.as_view(), name='schedule-body-spectra'),
-    url(r'^schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/calib/$', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
+    url(r'^calib-schedule/(?P<instrument_code>[A-Z,0-9,\-]*)/$', ScheduleCalibSpectra.as_view(), name='schedule-calib-spectra'),
+    url(r'^calib-schedule/(?P<pk>\d+)/confirm/$', ScheduleCalibSubmit.as_view(), name='schedule-calib-confirm'),
     url(r'^accounts/login/$', login, {'template_name': 'core/login.html'}, name='auth_login'),
     url(r'^accounts/logout/$', logout, {'template_name': 'core/logout.html'}, name='auth_logout'),
     url(r'^admin/', include(admin.site.urls)),

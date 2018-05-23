@@ -500,7 +500,7 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.target, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
-        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.target})
+        return render(request, 'core/calib_schedule_confirm.html', {'form': new_form, 'data': data, 'calibrator': self.target})
 
     def get_context_data(self, **kwargs):
         """
@@ -510,6 +510,54 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
+
+class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
+    """
+    Takes the hidden form input from ScheduleParameters, validates them as a double check.
+    Then submits to the scheduler. If a tracking number is returned, the object has been scheduled and we record a Block.
+    """
+    template_name = 'core/calib_schedule_confirm.html'
+    form_class = ScheduleBlockForm
+    model = CalibSource
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form, request):
+        if 'edit' in request.POST:
+            # Recalculate the parameters by amending the block length
+            data = schedule_check(form.cleaned_data, self.object)
+            new_form = ScheduleBlockForm(data)
+            return render(request, self.template_name, {'form': new_form, 'data': data, 'calibrator': self.object})
+        elif 'submit' in request.POST:
+            target = self.get_object()
+            username = ''
+            if request.user.is_authenticated():
+                username = request.user.get_username()
+            tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
+            if tracking_num:
+                messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
+# Not possible to store CalibSources in Blocks/SuperBlocks yet
+#                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+#                if block_resp:
+#                    messages.success(self.request, "Block recorded")
+#                else:
+#                    messages.warning(self.request, "Record not created")
+            else:
+                msg = "It was not possible to submit your request to the scheduler."
+                if sched_params.get('error_msg', None):
+                    msg += "\nAdditional information:" + sched_params['error_msg']
+                messages.warning(self.request, msg)
+            return super(ScheduleCalibSubmit, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse('home')
+
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     """
@@ -736,10 +784,13 @@ def schedule_submit(data, body, username):
 
     # Assemble request
     # Send to scheduler
-    body_elements = model_to_dict(body)
-    body_elements['epochofel_mjd'] = body.epochofel_mjd()
-    body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
-    body_elements['current_name'] = body.current_name()
+    if type(body) == CalibSource:
+        body_elements = {}
+    else:
+        body_elements = model_to_dict(body)
+        body_elements['epochofel_mjd'] = body.epochofel_mjd()
+        body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
+        body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
@@ -768,6 +819,11 @@ def schedule_submit(data, body, username):
     if data['period'] or data['jitter']:
         params['period'] = data['period']
         params['jitter'] = data['jitter']
+    # If we have a (static) CalibSource object, fill in details needed by make_target
+    if type(body) == CalibSource:
+        params['ra_rad' ] = body.ra
+        params['dec_rad'] = body.dec
+        params['source_id'] = body.current_name()
     # Check for pre-existing block
     tracking_number = None
     resp_params = None
@@ -781,7 +837,7 @@ def schedule_submit(data, body, username):
         # Multiple blocks found
         resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}
     if check_for_block(data, params, body) == 0:
-        # Record block and submit to scheduler
+        # Submit to scheduler and then record block
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
 
