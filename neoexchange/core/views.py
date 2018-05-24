@@ -487,7 +487,11 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
     ok_to_schedule = False
 
     def get(self, request, *args, **kwargs):
-        form = ScheduleSpectraForm(initial={'exp_length' : 180.0})
+        # Override default exposure time for brighter calib targets and set the initial
+        # instrument code to that which came in via the URL and the kwargs
+        form = ScheduleSpectraForm(initial={'exp_length' : 180.0,
+                                            'instrument_code' : kwargs.get('instrument_code', '')}
+                                  )
         return self.render_to_response(self.get_context_data(form=form, body=self.target))
 
     def post(self, request, *args, **kwargs):
