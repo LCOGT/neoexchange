@@ -44,7 +44,7 @@ except ImportError:
     pass
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
-    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm, ScheduleCalibSpectraForm
+    ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -483,15 +483,15 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
     window, calibrations and molecules
     """
     template_name = 'core/schedule_spectra.html'
-    form_class = ScheduleCalibSpectraForm
+    form_class = ScheduleSpectraForm
     ok_to_schedule = False
 
     def get(self, request, *args, **kwargs):
-        form = self.get_form()
+        form = ScheduleSpectraForm(initial={'exp_length' : 180.0})
         return self.render_to_response(self.get_context_data(form=form, body=self.target))
 
     def post(self, request, *args, **kwargs):
-        form = ScheduleCalibSpectraForm(request.POST)
+        form = ScheduleSpectraForm(request.POST)
         if form.is_valid():
             return self.form_valid(form,request)
         else:

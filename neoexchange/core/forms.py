@@ -237,28 +237,6 @@ class ScheduleSpectraForm(forms.Form):
         self.fields['proposal_code'].choices = proposal_choices
 
 
-class ScheduleCalibSpectraForm(forms.Form):
-    proposal_code = forms.ChoiceField(required=True)
-    instrument_code = forms.ChoiceField(required=True, choices=SPECTRO_SITES)
-    utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'UTC date is required')})
-    exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
-    exp_length = forms.FloatField(initial=180.0, required=True)
-    calibs = forms.ChoiceField(required=True, choices=CALIBS)
-    spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
-
-    def clean_utc_date(self):
-        start = self.cleaned_data['utc_date']
-        if start < datetime.utcnow().date():
-            raise forms.ValidationError("Window cannot start in the past")
-        return start
-
-    def __init__(self, *args, **kwargs):
-        self.proposal_code = kwargs.pop('proposal_code', None)
-        super(ScheduleCalibSpectraForm, self).__init__(*args, **kwargs)
-        proposals = Proposal.objects.filter(active=True)
-        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
-        self.fields['proposal_code'].choices = proposal_choices
-
 class MPCReportForm(forms.Form):
     block_id = forms.IntegerField(widget=forms.HiddenInput())
     report = forms.CharField(widget=forms.Textarea)
