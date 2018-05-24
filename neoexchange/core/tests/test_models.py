@@ -289,7 +289,7 @@ class TestComputeFOM(TestCase):
 
     def test_FOM_with_body(self):
         MockDateTime.change_datetime(2015, 4, 21, 17, 0, 0)
-        expected_FOM = 137.11876450346662
+        expected_FOM = 137.11876237236538
 
         FOM = self.body.compute_FOM()
 
