@@ -1,12 +1,20 @@
 import os
 from .base import FunctionalTest
 from django.core.urlresolvers import reverse
+from django.contrib.auth.models import User
 from bs4 import BeautifulSoup
 #from selenium import webdriver
+from mock import patch
+
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, \
+    mock_fetch_filter_list, mock_submit_to_scheduler
+from neox.auth_backend import update_proposal_permissions
 from astrometrics.sources_subs import fetch_flux_standards
 from core.views import create_calib_sources
+from core.models import Proposal, CalibSource
 
-class CalibrationSourceListViewTest(FunctionalTest):
+
+class TestCalibrationSources(FunctionalTest):
 
     def setUp(self):
         test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
@@ -14,7 +22,51 @@ class CalibrationSourceListViewTest(FunctionalTest):
         test_fh.close()
         self.flux_standards = fetch_flux_standards(test_flux_page)
         num_created = create_calib_sources(self.flux_standards)
-        super(CalibrationSourceListViewTest, self).setUp()
+
+        # Create a user to test login
+        self.insert_test_proposals()
+        self.username = 'bart'
+        self.password = 'simpson'
+        self.email = 'bart@simpson.org'
+        self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
+        self.bart.first_name = 'Bart'
+        self.bart.last_name = 'Simpson'
+        self.bart.is_active = 1
+        self.bart.save()
+        # Add Bart to the right proposal
+        update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
+
+        super(TestCalibrationSources, self).setUp()
+
+    def tearDown(self):
+        self.bart.delete()
+        CalibSource.objects.all().delete()
+        super(TestCalibrationSources, self).tearDown()
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def login(self):
+        test_login = self.client.login(username=self.username, password=self.password)
+        self.assertEqual(test_login, True)
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def test_login(self):
+        self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
+        username_input = self.browser.find_element_by_id("username")
+        username_input.send_keys(self.username)
+        password_input = self.browser.find_element_by_id("password")
+        password_input.send_keys(self.password)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
+        # Wait until response is recieved
+        self.wait_for_element_with_id('page')
+
+    def test_logout(self):
+        self.test_login()
+        logout_link = self.browser.find_element_by_partial_link_text('Logout')
+        with self.wait_for_page_load(timeout=10):
+            logout_link.click()
+        # Wait until response is recieved
+        self.wait_for_element_with_id('page')
 
     def test_can_view_calibsources(self):
 
@@ -43,7 +95,11 @@ class CalibrationSourceListViewTest(FunctionalTest):
         # Satisfied that there are many potential calibration sources to choose
         # from, he goes for a beer.
 
+    @patch('core.views.datetime', MockDateTime)
+    @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource(self):
+        self.test_login()
+        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
@@ -60,7 +116,7 @@ class CalibrationSourceListViewTest(FunctionalTest):
         # He decides he would like to schedule a standard on FTN
         # He sees a Schedule Calibration Observations button
         link = self.browser.find_element_by_id('schedule-calib-ftn-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'sitecode': 'F65'}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'F65-FLOYDS'}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -70,12 +126,34 @@ class CalibrationSourceListViewTest(FunctionalTest):
         new_url = self.browser.current_url
         self.assertEqual(new_url, actual_url)
 
-        # He selects FTN and a suggested standard comes up
+        # He sees a suggested standard comes up and the parameters are displayed
+        self.assertIn('NEOx spectroscopy scheduling | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('section-title').text
+        self.assertIn('Parameters for: HR9087', header_text)
+        self.assertIn("00:01:49.42", header_text)
+        self.assertIn("-03:01:39.0", header_text)
+        self.assertIn('V=5.1', header_text)
 
-        # Liking the selected star, he clicks Submit and is returned to the
+        # Liking the selected star, he clicks Verify and is taken to a confirmation
+        # page
+        button = self.browser.find_element_by_id('verify-scheduling')
+        with self.wait_for_page_load(timeout=10):
+            button.click()
+
+        self.assertIn('NEOx calibration scheduling | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn("HR9087: Confirm Scheduling", header_text)
+        filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
+        self.assertIn("slit_6.0as", filter_pattern)
+        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
+        self.assertIn('180.0 secs', exp_length)
+        # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
+        button = self.browser.find_element_by_id('id_submit_button')
+        with self.wait_for_page_load(timeout=10):
+            button.click()
+
         target_url = "{0}{1}".format(self.live_server_url, reverse('home'))
-        self.browser.get(target_url)
         actual_url = self.browser.current_url
         self.assertEqual(actual_url, target_url)
 
