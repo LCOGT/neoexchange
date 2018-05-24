@@ -251,7 +251,7 @@ class TestComputeEphem(TestCase):
         expected_spd = 119.94694444444444
         expected_pa = 91.35793788996334
 
-        emp_line = compute_ephem(d, self.elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
 
         self.assertEqual(self.length_emp_line, len(emp_line))
         self.assertEqual(d, emp_line[0])
@@ -275,7 +275,7 @@ class TestComputeEphem(TestCase):
         expected_pa  = 91.35793788996334
 
         body_elements = model_to_dict(self.body)
-        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
 
         self.assertEqual(self.length_emp_line, len(emp_line))
         self.assertEqual(d, emp_line[0])
@@ -292,7 +292,7 @@ class TestComputeEphem(TestCase):
         d = datetime(2015, 4, 21, 17, 35, 00)
         expected_dec = 0.522637696108887
         expected_spd = 119.94694444444444
-        emp_line = compute_ephem(d, self.elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
         self.assertAlmostEqual(expected_dec, emp_line[2], precision)
         self.assertAlmostEqual(expected_spd, emp_line[6], precision)
@@ -302,7 +302,7 @@ class TestComputeEphem(TestCase):
         expected_dec = 0.522637696108887
         expected_spd = 119.94694444444444
         body_elements = model_to_dict(self.body)
-        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
         self.assertAlmostEqual(expected_dec, emp_line[2], precision)
         self.assertAlmostEqual(expected_spd, emp_line[6], precision)
@@ -313,7 +313,7 @@ class TestComputeEphem(TestCase):
         expected_spd = 86.242222222222225
         body_elements = model_to_dict(self.body)
         body_elements['meananom'] = 25.2636
-        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
         self.assertAlmostEqual(expected_dec, emp_line[2], precision)
         self.assertAlmostEqual(expected_spd, emp_line[6], precision)
@@ -391,7 +391,7 @@ class TestComputeEphem(TestCase):
         step_size = 60
         alt_limit = 0
         body_elements = model_to_dict(self.body)
-        expected_ephem_lines = [['2015 07 05 07:20', '23 50 01.78', '+19 03 49.3', '20.7', ' 1.20',  '121.1', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'], ]
+        expected_ephem_lines = [['2015 07 05 07:20', '23 49 59.84', '+19 04 06.3', '20.7', ' 1.23',  '122.4', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'], ]
 
         ephem_lines = call_compute_ephem(body_elements, start, end,
             site_code, step_size, alt_limit)
@@ -489,7 +489,7 @@ class TestComputeFOM(TestCase):
         expected_score = 83
         expected_abs_mag = 19.8
         body_elements = model_to_dict(self.body)
-        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         FOM = comp_FOM(body_elements, emp_line)
         precision = 11
         self.assertAlmostEqual(expected_not_seen, body_elements['not_seen'], precision)
@@ -504,7 +504,7 @@ class TestComputeFOM(TestCase):
         body_elements = model_to_dict(self.body)
         body_elements['not_seen'] = None
         body_elements['arc_length'] = None
-        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
 
         FOM = comp_FOM(body_elements, emp_line)
 
@@ -515,7 +515,7 @@ class TestComputeFOM(TestCase):
         expected_FOM = None
         body_elements = model_to_dict(self.body)
         body_elements['score'] = None
-        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
 
         FOM = comp_FOM(body_elements, emp_line)
 
@@ -526,7 +526,7 @@ class TestComputeFOM(TestCase):
         expected_FOM = None
         body_elements = model_to_dict(self.body)
         body_elements['source_type'] = 'N'
-        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
 
         FOM = comp_FOM(body_elements, emp_line)
 
@@ -536,7 +536,7 @@ class TestComputeFOM(TestCase):
         d = datetime(2015, 11, 2, 19, 46, 9)
         expected_FOM = 1.658839108423487e+75
         body_elements = model_to_dict(self.body2)
-        emp_line = compute_ephem(d, body_elements, '?', dbg=False, perturb=True, display=False)
+        emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
 
         FOM = comp_FOM(body_elements, emp_line)
 
@@ -1816,6 +1816,30 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_long, 0.0)
         self.assertLess(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
+
+    def test_geocenter(self):
+        site_code = '500'
+
+        expected_site_name = 'Geocenter'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertEqual(site_long, 0.0)
+        self.assertEqual(site_lat, 0.0)
+        self.assertEqual(site_hgt, 0.0)
+
+    def test_bpl(self):
+        site_code = 'BPL'
+
+        expected_site_name = 'LCO Back Parking Lot Node (BPL)'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertNotEqual(site_long, 0.0)
+        self.assertNotEqual(site_lat, 0.0)
+        self.assertNotEqual(site_hgt, 0.0)
 
 
 class TestLCOGT_domes_to_site_codes(TestCase):
