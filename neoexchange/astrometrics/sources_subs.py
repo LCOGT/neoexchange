@@ -1787,13 +1787,13 @@ def fetch_smass_targets(page=None, fetch_all=False):
 def fetch_manos_page():
     """Fetches the manos list of spectral targets"""
     # new manos site = http://manos.lowell.edu/observations/summary
-    manos_url = 'https://manosobs.wordpress.com/observations/neo-observing-log/'
+    manos_url = 'http://manos.lowell.edu/observations/summary/statuses'
     page = fetchpage_and_make_soup(manos_url)
 
     return page
 
 
-def fetch_manos_targets(page=None):
+def fetch_manos_targets(page=None, fetch_all=False):
     """Parses the manos webpage for spectroscopy results and returns a list
     of these targets back along with links to data files when present.
     Takes either a BeautifulSoup page version of the MANOS target page (from
@@ -1804,57 +1804,55 @@ def fetch_manos_targets(page=None):
     if type(page) != BeautifulSoup:
         page = fetch_manos_page()
 
+    current_year = datetime.now().year
     targets = []
 
     if type(page) == BeautifulSoup:
-        # Find the table, make sure there is only one
-        tables = page.find_all('table')
-        if len(tables) != 1:
-            logger.warning("Unexpected number of tables found on MANOS page (Found %d)" % len(tables))
-        else:
-            targets_table = tables[0]
-            rows = page.find_all('tr')
-            check = page.find(string=compile('Observation done:'))
-            check = check[-1]
-            ex = page.find(string=compile('No observation:'))
-            ex = ex[-1]
-            if len(rows) > 1:
-                for row in rows[2:]:
-                    mpnum = row.find_all('a', limit=1)
-                    target_name = mpnum[0].text
-                    target_name = target_name.strip()
-                    if '(' in target_name and ')' in target_name:
-                        split_char = ')'
-                        target_name = target_name.split(split_char)[0].replace('(', '')
-                        target_name = target_name.strip()
-                    items = row.find_all('td')
-                    vislink = ''
-                    nirlink = ''
-                    if items[3].find('a'):
-                        vislink = items[3].find('a')['href']
-                    if items[4].find('a'):
-                        nirlink = items[4].find('a')['href']
-                    # Ignore data from external sources to MANOS
-                    # Ignore data in "Queue mode"
-                    if items[3].text.strip() == check or vislink[:16] == "https://manosobs":
-                        target_wav = "Vis"
-                        if items[4].text.strip() == check or nirlink[:16] == "https://manosobs":
-                            target_wav = "Vis+NIR"
-                        else:
-                            nirlink=''
-                    elif items[4].text.strip() == check or nirlink[:16] == "https://manosobs":
-                        target_wav = "NIR"
-                        vislink = ''
-                    else:
-                        target_wav = "NA"
-                        vislink = ''
-                        nirlink = ''
-                    if vislink:
-                        vislink = vislink[37:]
-                    if nirlink:
-                        nirlink = nirlink[37:]
-                    target_object = [target_name, target_wav, vislink, nirlink, 'MANOS Site', date.today()]
-                    targets.append(target_object)
+        # Create list of dictionaries of manos data
+        manos_data = eval(str(page).replace('true', 'True').replace('false', 'False'))['data']
+
+        for datum in manos_data:
+            if datum['ast_number'] != '-':
+                target_name = datum['ast_number']
+            else:
+                target_name = datum['primary_designation']
+            # skip if already ingested more recent data for target
+            if any([target_name == target[0] for target in targets]):
+                continue
+
+            # Has MANOS collected Spectra?
+            if datum['vis_spec'] is True and datum['nir_spec'] is True:
+                target_wav = 'Vis+NIR'
+            elif datum['vis_spec'] is True:
+                target_wav = 'Vis'
+            elif datum['nir_spec'] is True:
+                target_wav = 'NIR'
+            else:
+                target_wav = "NA"
+
+            # Does MANOS have links?
+            if isinstance(datum['vis_spec_image'], str):
+                print(datum['vis_spec_image'])
+                vislink = datum['vis_spec_image'].replace('thumbs', datum['file_asteroid_vis_spec'])
+                print(vislink)
+                vislink = vislink.replace('/static/data/manosResults', '')
+                print(vislink)
+            else:
+                vislink = ''
+            if isinstance(datum['nir_spec_image'], str):
+                nirlink = datum['nir_spec_image'].replace('thumbs', datum['file_asteroid_nir_spec'])
+                nirlink = nirlink.replace('/static/data/manosResults', '')
+            else:
+                nirlink = ''
+
+            # Date of update
+            update = datetime.strptime(datum['last_updated'], '%Y-%m-%d').date()
+            # Return new updates only (check current calendar year) unless told otherwise
+            if not fetch_all and update.year < current_year:
+                return targets
+
+            target_object = [target_name, target_wav, vislink, nirlink, 'MANOS Site', update]
+            targets.append(target_object)
     return targets
 
 

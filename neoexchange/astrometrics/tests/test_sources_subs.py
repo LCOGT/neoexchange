@@ -3100,46 +3100,49 @@ class TestFetchPreviousSpectra(TestCase):
 
         self.assertEqual(expected_length, len(targets))
 
-    # def test_manos_basics(self):
-    #     expected_length = 8
-    #     page = self.test_manos_page
-    #     targets = fetch_manos_targets(page)
-    #
-    #     self.assertEqual(expected_length, len(targets))
-    #
-    # def test_smass_targets(self):
-    #     expected_targets = [ ['302'   , 'NIR', '', "spex/sp233/a000302.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-    #                          ['6053'  , 'NIR', '', "spex/sp233/a006053.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-    #                          ['96631' , 'NIR', '', "spex/sp233/a096631.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-    #                          ['96631' , 'Vis', "spex/sp234/a096631.sp234.txt", '', "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-    #                          ['265962', 'Vis+NIR', "spex/sp233/a265962.sp233.txt", "spex/sp233/a265962.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-    #                          ['416584', 'NIR', '', "spex/sp233/a416584.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-    #                          ['422699', 'NIR', '', "spex/sp233/a422699.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-    #                          ['2006 UY64', 'NIR', '', "spex/sp209/au2010pr66.sp209.txt", "sp[209]", datetime.strptime('2017-12-02', '%Y-%m-%d').date()],
-    #                          ['416584', 'Vis', "spex/sp210/au2005lw7.sp210.txt", '', "sp[210]", datetime.strptime('2015-12-02', '%Y-%m-%d').date()],
-    #                         ]
-    #     smass_data = fetch_smass_targets(self.test_smass_page, True)
-    #     for line in expected_targets:
-    #         self.assertIn(line, smass_data)
-    #
-    # def test_manos_targets(self):
-    #     expected_targets = [ ['1627'     , 'Vis+NIR', '', '', 'MANOS Site', date.today()],
-    #                          ['1981'     , 'Vis'    , '', '', 'MANOS Site', date.today()],
-    #                          ['6063'     , 'NA'     , '', '', 'MANOS Site', date.today()],
-    #                          ['17511'    , 'NA'     , '', '', 'MANOS Site', date.today()],
-    #                          ['1999 SH10', 'Vis'    , '2014/09/1999sh10.png', '', 'MANOS Site', date.today()],
-    #                          ['1999 TU95', 'Vis'    , '', '', 'MANOS Site', date.today()],
-    #                          ['350751'   , 'Vis'    , '', '', 'MANOS Site', date.today()],
-    #                          ['2004 BZ74', 'NA'     , '', '', 'MANOS Site', date.today()],
-    #                         ]
-    #     manos_data = fetch_manos_targets(self.test_manos_page)
-    #     for line in expected_targets:
-    #         self.assertIn(line, manos_data)
+    def test_manos_basics(self):
+        expected_length = 11
+        page = self.test_manos_page
+        targets = fetch_manos_targets(page, True)
+        self.assertEqual(expected_length, len(targets))
 
-#    def test_smass_site_pull(self):
-#        expected_line = ['302'   ,'NIR',"http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt","sp[233]",'2017-09-25']
-#        smass_data = fetch_smass_targets()
-#        self.assertEqual(expected_line, smass_data[0])
+    def test_manos_year(self):
+        expected_length = 10
+        page = self.test_manos_page
+        targets = fetch_manos_targets(page, False)
+        self.assertEqual(expected_length, len(targets))
+
+    def test_smass_targets(self):
+        expected_targets = [ ['302'   , 'NIR', '', "spex/sp233/a000302.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['6053'  , 'NIR', '', "spex/sp233/a006053.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['96631' , 'NIR', '', "spex/sp233/a096631.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['96631' , 'Vis', "spex/sp234/a096631.sp234.txt", '', "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['265962', 'Vis+NIR', "spex/sp233/a265962.sp233.txt", "spex/sp233/a265962.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['416584', 'NIR', '', "spex/sp233/a416584.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['422699', 'NIR', '', "spex/sp233/a422699.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['2006 UY64', 'NIR', '', "spex/sp209/au2010pr66.sp209.txt", "sp[209]", datetime.strptime('2017-12-02', '%Y-%m-%d').date()],
+                             ['416584', 'Vis', "spex/sp210/au2005lw7.sp210.txt", '', "sp[210]", datetime.strptime('2015-12-02', '%Y-%m-%d').date()],
+                            ]
+        smass_data = fetch_smass_targets(self.test_smass_page, True)
+        for line in expected_targets:
+            self.assertIn(line, smass_data)
+
+    def test_manos_targets(self):
+        expected_targets = [ ['2018 KW1'  , 'NIR'    , '', '', 'MANOS Site', datetime.strptime('2018-05-23', '%Y-%m-%d').date()],
+                             ['2011 SC191', 'NA'     , '', '', 'MANOS Site', datetime.strptime('2018-04-25', '%Y-%m-%d').date()],
+                             ['3552'      , 'NA'     , '', '', 'MANOS Site', datetime.strptime('2018-04-25', '%Y-%m-%d').date()],
+                             ['2018 FW1'  , 'Vis'    , '', '', 'MANOS Site', datetime.strptime('2018-03-26', '%Y-%m-%d').date()],
+                             ['2018 CB'   , 'Vis+NIR', '', '', 'MANOS Site', datetime.strptime('2018-02-08', '%Y-%m-%d').date()],
+                             ['2015 CQ13' , 'Vis'    , '/2015CQ13/2015CQ13_150217_GN_spec', '', 'MANOS Site', datetime.strptime('2015-02-17', '%Y-%m-%d').date()],
+                            ]
+        manos_data = fetch_manos_targets(self.test_manos_page, True)
+        for line in expected_targets:
+            self.assertIn(line, manos_data)
+
+    # def test_smass_site_pull(self):
+    #     expected_line = ['302'   , 'NIR', "http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()]
+    #     smass_data = fetch_smass_targets()
+    #     self.assertIn(expected_line, smass_data)
 
 
 class TestFetchTargetsFromList(TestCase):

@@ -12,14 +12,13 @@ class Command(BaseCommand):
         parser.add_argument('-a', '--all', action="store_true", help='Download ALL SMASS data. Default: Grab data from the current year.')
 
     def handle(self, *args, **options):
-        # # MANOS page moved, and is a mess... Much more work to get this working again...
-        # self.stdout.write("==== Searching MANOS Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-        # new_manos_data = fetch_manos_targets()
-        # for m_datum in new_manos_data:
-        #     resp = update_previous_spectra(m_datum, 'M', dbg=False)
-        #     if resp:
-        #         msg = "New MANOS data found for %s" % m_datum[0]
-        #         self.stdout.write(msg)
+        self.stdout.write("==== Searching MANOS Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
+        new_manos_data = fetch_manos_targets(None, options['all'])
+        for m_datum in new_manos_data:
+            resp = update_previous_spectra(m_datum, 'M', dbg=False)
+            if resp:
+                msg = "New MANOS data found for %s" % m_datum[0]
+                self.stdout.write(msg)
         self.stdout.write("==== Searching SMASS Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         new_smass_data = fetch_smass_targets(None, options['all'])
         for s_datum in new_smass_data:

@@ -5,6 +5,7 @@ from datetime import datetime
 from core.models import Body, PreviousSpectra
 from django.core.urlresolvers import reverse
 
+
 class CharacterizationPageTest(FunctionalTest):
 
     def insert_extra_test_body(self):
@@ -111,7 +112,7 @@ class CharacterizationPageTest(FunctionalTest):
         #    'Rank Target Name R.A. Dec. V Mag. Required Observations H Mag. Origin SMASS Obs MANOS Target? Observation Window Reported?')
 
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
+        testlines = [u'1 V38821zi 23 43 12.75 +19 58 55.6 18.7 LC 19.0 Goldstone Vis+NIR 08/15-09/15',
                     u'2 q382918r 23 43 12.75 +19 58 55.6 20.7 Spec/LC 21.0 NASA NIR YES ---']
         self.check_for_row_in_table('characterization_targets', testlines[0])
         self.check_for_row_in_table('characterization_targets', testlines[1])
