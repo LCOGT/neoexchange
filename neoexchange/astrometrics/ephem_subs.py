@@ -102,8 +102,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
     logger.debug("Site code/name, lat/long/height=%s %s %f %f %.1f" % (sitecode, site_name, site_long, site_lat, site_hgt))
 
-    if site_name == '?':
-        logger.debug("WARN: No site co-ordinates found, computing for geocenter")
+    if site_name == '?'  or sitecode == '500':
+        if site_name == '?':
+            logger.warn("WARN: No site co-ordinates found, computing for geocenter")
         pvobs = zeros(6)
     else:
         # Compute local apparent sidereal time
@@ -1041,7 +1042,7 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long
         site_hgt = 2027.0
         site_name = 'LCO Node at McDonald Observatory (ELP)'
-    elif site_code == 'BPL' or site_code == '500':
+    elif site_code == 'BPL':
         (site_lat, status)  =  S.sla_daf2r(34, 25, 57)
         (site_long, status) =  S.sla_daf2r(119, 51, 46)
         site_long = -site_long
@@ -1144,6 +1145,13 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long # West of Greenwich !
         site_hgt = 3037.0
         site_name = 'LCO OGG Node 0m4b at Maui'
+    elif site_code == 'OGG-CLMA-0M4C' or site_code == 'T03':
+        # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
+        (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
+        (site_long, status) =  S.sla_daf2r(156, 15, 27.12)
+        site_long = -site_long # West of Greenwich !
+        site_hgt = 3037.0
+        site_name = 'LCO OGG Node 0m4c at Maui'
     elif site_code == 'COJ-CLMA-0M4A' or site_code == 'Q58':
         # Latitude, longitude from Google Earth, SE corner of clamshell, probably wrong
         (site_lat, status)  =  S.sla_daf2r(31, 16, 22.38)
@@ -1165,6 +1173,11 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(20, 48, 35.54)
         site_hgt = 1804.0
         site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
+    elif site_code == '500':
+        site_lat = 0.0
+        site_long = 0.0
+        site_hgt = 0.0
+        site_name = 'Geocenter'
     else:
         # Obtain latitude, longitude of the observing site.
         # Reverse longitude to get the more normal East-positive convention

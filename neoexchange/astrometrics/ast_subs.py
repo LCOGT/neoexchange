@@ -215,8 +215,10 @@ def convert_ast_to_comet(kwargs, body):
         if params.get('slope', 0.15) == 0.15:
             params['slope'] = 4.0
         params['elements_type'] = 'MPC_COMET'
-        if params['eccentricity'] < 1.0:
-            params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
-        params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
-        params['meananom'] = None
+        if params['eccentricity'] is not None and params['meandist'] is not None and \
+            params['meananom'] is not None and params['epochofel'] is not None:
+            if params['eccentricity'] < 1.0:
+                params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
+            params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+            params['meananom'] = None
     return params
