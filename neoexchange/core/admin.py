@@ -16,7 +16,7 @@ from django.core.urlresolvers import reverse
 from django.contrib import admin
 
 from core.models import *
-from astrometrics.time_subs import degreestohms, degreestodms
+from astrometrics.time_subs import degreestohms, degreestodms, radianstohms, radianstodms
 
 from reversion.admin import VersionAdmin
 
@@ -236,11 +236,11 @@ class CandidateAdmin(admin.ModelAdmin):
 class CalibSourceAdmin(admin.ModelAdmin):
 
     def calib_ra_hms(self, obj):
-        return degreestohms(obj.ra, ' ')
+        return radianstohms(obj.ra, ' ')
     calib_ra_hms.short_description = "RA (h m s)"
 
     def calib_dec_dms(self, obj):
-        return degreestodms(obj.dec, ' ')
+        return radianstodms(obj.dec, ' ')
     calib_dec_dms.short_description = "Dec (d ' \")"
 
     list_display = ['id', 'name', 'calib_ra_hms', 'calib_dec_dms', 'vmag', 'spectral_type', 'source_type', 'notes']
