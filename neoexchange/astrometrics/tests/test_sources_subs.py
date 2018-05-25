@@ -3139,11 +3139,6 @@ class TestFetchPreviousSpectra(TestCase):
         for line in expected_targets:
             self.assertIn(line, manos_data)
 
-    # def test_smass_site_pull(self):
-    #     expected_line = ['302'   , 'NIR', "http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()]
-    #     smass_data = fetch_smass_targets()
-    #     self.assertIn(expected_line, smass_data)
-
 
 class TestFetchTargetsFromList(TestCase):
 

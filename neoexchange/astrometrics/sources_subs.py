@@ -1832,11 +1832,8 @@ def fetch_manos_targets(page=None, fetch_all=False):
 
             # Does MANOS have links?
             if isinstance(datum['vis_spec_image'], str):
-                print(datum['vis_spec_image'])
                 vislink = datum['vis_spec_image'].replace('thumbs', datum['file_asteroid_vis_spec'])
-                print(vislink)
                 vislink = vislink.replace('/static/data/manosResults', '')
-                print(vislink)
             else:
                 vislink = ''
             if isinstance(datum['nir_spec_image'], str):
