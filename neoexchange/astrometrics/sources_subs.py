@@ -1747,16 +1747,12 @@ def fetch_smass_targets(page=None, fetch_all=False):
                     t_wav = t_wav.strip()
                     t_link = row.find_all('a')
                     t_link = t_link[0]['href']
-                    t_link = t_link[5:]
-                    if t_link[-4:] != ".txt":
-                        if t_link[-3:] == ".tx":
-                            t_link = t_link + "t"
-                        elif t_link[-2:] == ".t":
-                            t_link = t_link + "xt"
-                        elif t_link[-1:] == ".":
-                            t_link = t_link + "txt"
-                        else:
-                            t_link = t_link + ".txt"
+                    if len(t_link.split('.')) < 3:
+                        t_link = t_link + '.txt'
+                    else:
+                        chunks = t_link.split('.')
+                        t_link = chunks[0] + chunks[1] + '.txt'
+                    t_link = 'http://smass.mit.edu/' + t_link
                     if 'Vis' in t_wav:
                         v_link = t_link
                     else:
@@ -1833,12 +1829,12 @@ def fetch_manos_targets(page=None, fetch_all=False):
             # Does MANOS have links?
             if isinstance(datum['vis_spec_image'], str):
                 vislink = datum['vis_spec_image'].replace('thumbs', datum['file_asteroid_vis_spec'])
-                vislink = vislink.replace('/static/data/manosResults', '')
+                vislink = 'http://manos.lowell.edu' + vislink + '.jpg'
             else:
                 vislink = ''
             if isinstance(datum['nir_spec_image'], str):
                 nirlink = datum['nir_spec_image'].replace('thumbs', datum['file_asteroid_nir_spec'])
-                nirlink = nirlink.replace('/static/data/manosResults', '')
+                nirlink = 'http://manos.lowell.edu' + nirlink + '.jpg'
             else:
                 nirlink = ''
 

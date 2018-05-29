@@ -145,26 +145,17 @@ def sort_previous_spectra(self, **kwargs):
     vis_count = 0
     nir_count = 0
     for s in spectra_of_interest:
-        if s.spec_source == 'M':
-            if s.spec_vis:
-                s.spec_vis = 'https://manosobs.files.wordpress.com/'+s.spec_vis
-            if s.spec_ir:
-                s.spec_vis = 'https://manosobs.files.wordpress.com/'+s.spec_ir
-            spectra_out.append(s)
+        if spectra_of_interest.filter(spec_wav='Vis+NIR').count() > 0:
+            if s.spec_wav == 'Vis+NIR':
+                spectra_out.append(s)
         else:
-            if spectra_of_interest.filter(spec_wav='Vis+NIR').count() > 0:
-                if s.spec_wav == 'Vis+NIR':
-                    s.spec_vis = 'http://smass.mit.edu/data/'+s.spec_vis
-                    spectra_out.append(s)
-            else:
-                if vis_count == 0 and s.spec_wav == 'Vis':
-                    vis_count = 1
-                    s.spec_vis = 'http://smass.mit.edu/data/'+s.spec_vis
-                    spectra_out.append(s)
-                if nir_count == 0 and s.spec_wav == 'NIR':
-                    nir_count = 1
-                    s.spec_vis = 'http://smass.mit.edu/data/'+s.spec_ir
-                    spectra_out.append(s)
+            if vis_count == 0 and s.spec_wav == 'Vis':
+                vis_count = 1
+                spectra_out.append(s)
+            if nir_count == 0 and s.spec_wav == 'NIR':
+                nir_count = 1
+                s.spec_vis = s.spec_ir
+                spectra_out.append(s)
     return spectra_out
 
 
@@ -872,13 +863,13 @@ def build_characterization_list(disp=None):
             body_dict['ingest_date'] = body.ingest
             body_dict['s_wav'] = s_wav
             if s_vis_link:
-                body_dict['s_vis_link'] = 'http://smass.mit.edu/data/' + s_vis_link
+                body_dict['s_vis_link'] = s_vis_link
             if s_nir_link:
-                body_dict['s_nir_link'] = 'http://smass.mit.edu/data/' + s_nir_link
+                body_dict['s_nir_link'] = s_nir_link
             if m_vis_link:
-                body_dict['m_vis_link'] = 'http://manos.lowell.edu/static/data/manosResults' + m_vis_link + '.jpg'
+                body_dict['m_vis_link'] = m_vis_link
             if m_nir_link:
-                body_dict['m_nir_link'] = 'http://manos.lowell.edu/static/data/manosResults' + m_nir_link + '.jpg'
+                body_dict['m_nir_link'] = m_nir_link
             body_dict['m_wav'] = m_wav
             body_dict['origin'] = body.get_origin_display()
             if 'Vis' in s_wav or 'Vis' in m_wav:

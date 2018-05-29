@@ -433,8 +433,8 @@ class SpectralInfo(models.Model):
 class PreviousSpectra(models.Model):
     body                = models.ForeignKey(Body, on_delete=models.CASCADE)
     spec_wav            = models.CharField('Wavelength', blank=True, null=True, max_length=7, choices=SPECTRAL_WAV_CHOICES)
-    spec_vis            = models.CharField('Visible Spectra Link', blank=True, null=True, max_length=40)
-    spec_ir             = models.CharField('IR Spectra Link', max_length=40, blank=True, null=True)
+    spec_vis            = models.URLField('Visible Spectra Link', blank=True, null=True)
+    spec_ir             = models.URLField('IR Spectra Link', blank=True, null=True)
     spec_ref            = models.CharField('Spectra Reference', max_length=10, blank=True, null=True)
     spec_source         = models.CharField('Source', max_length=1, blank=True, null=True, choices=SPECTRAL_SOURCE_CHOICES)
     spec_date           = models.DateField(blank=True, null=True)
