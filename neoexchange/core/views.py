@@ -145,17 +145,20 @@ def sort_previous_spectra(self, **kwargs):
     vis_count = 0
     nir_count = 0
     for s in spectra_of_interest:
-        if spectra_of_interest.filter(spec_wav='Vis+NIR').count() > 0:
-            if s.spec_wav == 'Vis+NIR':
-                spectra_out.append(s)
-        else:
-            if vis_count == 0 and s.spec_wav == 'Vis':
-                vis_count = 1
-                spectra_out.append(s)
-            if nir_count == 0 and s.spec_wav == 'NIR':
-                nir_count = 1
-                s.spec_vis = s.spec_ir
-                spectra_out.append(s)
+        if s.spec_source == 'M':
+            spectra_out.append(s)
+        elif s.spec_source == 'S':
+            if spectra_of_interest.filter(spec_wav='Vis+NIR').count() > 0:
+                if s.spec_wav == 'Vis+NIR':
+                    spectra_out.append(s)
+            else:
+                if vis_count == 0 and s.spec_wav == 'Vis':
+                    vis_count = 1
+                    spectra_out.append(s)
+                if nir_count == 0 and s.spec_wav == 'NIR':
+                    nir_count = 1
+                    s.spec_vis = s.spec_ir
+                    spectra_out.append(s)
     return spectra_out
 
 

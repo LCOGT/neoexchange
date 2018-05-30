@@ -3113,15 +3113,15 @@ class TestFetchPreviousSpectra(TestCase):
         self.assertEqual(expected_length, len(targets))
 
     def test_smass_targets(self):
-        expected_targets = [ ['302'   , 'NIR', '', "spex/sp233/a000302.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-                             ['6053'  , 'NIR', '', "spex/sp233/a006053.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-                             ['96631' , 'NIR', '', "spex/sp233/a096631.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-                             ['96631' , 'Vis', "spex/sp234/a096631.sp234.txt", '', "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-                             ['265962', 'Vis+NIR', "spex/sp233/a265962.sp233.txt", "spex/sp233/a265962.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-                             ['416584', 'NIR', '', "spex/sp233/a416584.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-                             ['422699', 'NIR', '', "spex/sp233/a422699.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
-                             ['2006 UY64', 'NIR', '', "spex/sp209/au2010pr66.sp209.txt", "sp[209]", datetime.strptime('2017-12-02', '%Y-%m-%d').date()],
-                             ['416584', 'Vis', "spex/sp210/au2005lw7.sp210.txt", '', "sp[210]", datetime.strptime('2015-12-02', '%Y-%m-%d').date()],
+        expected_targets = [ ['302'   , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['6053'  , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a006053.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['96631' , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a096631.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['96631' , 'Vis', "http://smass.mit.edu/data/spex/sp234/a096631.sp234.txt", '', "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['265962', 'Vis+NIR', "http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt", "http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['416584', 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a416584.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['422699', 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a422699.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['2006 UY64', 'NIR', '', "http://smass.mit.edu/data/spex/sp209/au2010pr66.sp209.txt", "sp[209]", datetime.strptime('2017-12-02', '%Y-%m-%d').date()],
+                             ['416584', 'Vis', "http://smass.mit.edu/data/spex/sp210/au2005lw7.sp210.txt", '', "sp[210]", datetime.strptime('2015-12-02', '%Y-%m-%d').date()],
                             ]
         smass_data = fetch_smass_targets(self.test_smass_page, True)
         for line in expected_targets:
@@ -3133,7 +3133,7 @@ class TestFetchPreviousSpectra(TestCase):
                              ['3552'      , 'NA'     , '', '', 'MANOS Site', datetime.strptime('2018-04-25', '%Y-%m-%d').date()],
                              ['2018 FW1'  , 'Vis'    , '', '', 'MANOS Site', datetime.strptime('2018-03-26', '%Y-%m-%d').date()],
                              ['2018 CB'   , 'Vis+NIR', '', '', 'MANOS Site', datetime.strptime('2018-02-08', '%Y-%m-%d').date()],
-                             ['2015 CQ13' , 'Vis'    , '/2015CQ13/2015CQ13_150217_GN_spec', '', 'MANOS Site', datetime.strptime('2015-02-17', '%Y-%m-%d').date()],
+                             ['2015 CQ13' , 'Vis'    , 'http://manos.lowell.edu/static/data/manosResults/2015CQ13/2015CQ13_150217_GN_spec.jpg', '', 'MANOS Site', datetime.strptime('2015-02-17', '%Y-%m-%d').date()],
                             ]
         manos_data = fetch_manos_targets(self.test_manos_page, True)
         for line in expected_targets:
