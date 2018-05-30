@@ -1747,11 +1747,12 @@ def fetch_smass_targets(page=None, fetch_all=False):
                     t_wav = t_wav.strip()
                     t_link = row.find_all('a')
                     t_link = t_link[0]['href']
-                    if len(t_link.split('.')) < 3:
-                        t_link = t_link + '.txt'
-                    else:
-                        chunks = t_link.split('.')
-                        t_link = chunks[0] + chunks[1] + '.txt'
+
+                    if t_link.split('.')[-1] != 'txt':
+                        if t_link.split('.')[-1] == 'tx':
+                            t_link = t_link + 't'
+                        else:
+                            t_link = t_link + '.txt'
                     t_link = 'http://smass.mit.edu/' + t_link
                     if 'Vis' in t_wav:
                         v_link = t_link
