@@ -173,8 +173,10 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
 
-    def characterization(self):
-        if self.active == True and self.origin != 'M':
+    def characterization_target(self):
+        # If we change the definition of Characterization Target,
+        # also update views.build_characterization_list
+        if self.active is True and self.origin != 'M':
             return True
         else:
             return False

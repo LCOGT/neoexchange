@@ -828,11 +828,12 @@ def characterization(request):
 
 def build_characterization_list(disp=None):
     params = {}
+    # If we don't have any Body instances, return None instead of breaking
     try:
-        # If we don't have any Body instances, return None instead of breaking
+        # If we change the definition of Characterization Target,
+        # also update models.Body.characterization_target()
         char_targets = Body.objects.filter(active=True).exclude(origin='M')
         unranked = []
-#        t_test = datetime.today()
         for body in char_targets:
             spectra = PreviousSpectra.objects.filter(body=body)
             s_wav = s_vis_link = s_nir_link = ''
@@ -914,8 +915,6 @@ def build_characterization_list(disp=None):
                     unranked.append(body_dict)
             else:
                 unranked.append(body_dict)
-            # print body_dict['obs_sdate'],body_dict['obs_edate']
-            # print datetime.today()-t_test
     except Exception as e:
         unranked = None
         logger.error('Characterization list failed on %s' % e)

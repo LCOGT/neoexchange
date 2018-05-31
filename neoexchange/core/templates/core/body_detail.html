@@ -24,7 +24,7 @@
                             {% endif %}
                             <h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h5>
                             <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span>
-                                {% if body.characterization %}
+                                {% if body.characterization_target %}
                                     <br><span style="font-size:75%;padding-left:100px;font-style:italic;">Characterization Target</span>
                                 {% endif %}
                             </h5>
