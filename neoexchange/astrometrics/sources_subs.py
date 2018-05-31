@@ -1709,7 +1709,7 @@ def fetch_smass_page():
     return page
 
 
-def fetch_smass_targets(page=None, fetch_all=False):
+def fetch_smass_targets(page=None, cut_off=None):
     """Parses the smass webpage for spectroscopy results and returns a list
     of these targets back along with links to data files.
     Takes either a BeautifulSoup page version of the SMASS target page (from
@@ -1721,7 +1721,6 @@ def fetch_smass_targets(page=None, fetch_all=False):
         page = fetch_smass_page()
 
     targets = []
-    current_year = datetime.now().year
     if type(page) == BeautifulSoup:
         # Find the table, make sure there is only one
         tables = page.find_all('table')
@@ -1765,7 +1764,7 @@ def fetch_smass_targets(page=None, fetch_all=False):
                     date = items[-1].text
                     date = date.strip()
                     date = datetime.strptime(date, '%Y-%m-%d').date()
-                    if not fetch_all and date.year < current_year:
+                    if cut_off and date < cut_off:
                         return targets
                     ref = ref[0].text
                     ref = ref.strip()
@@ -1790,7 +1789,7 @@ def fetch_manos_page():
     return page
 
 
-def fetch_manos_targets(page=None, fetch_all=False):
+def fetch_manos_targets(page=None, cut_off=None):
     """Parses the manos webpage for spectroscopy results and returns a list
     of these targets back along with links to data files when present.
     Takes either a BeautifulSoup page version of the MANOS target page (from
@@ -1801,7 +1800,6 @@ def fetch_manos_targets(page=None, fetch_all=False):
     if type(page) != BeautifulSoup:
         page = fetch_manos_page()
 
-    current_year = datetime.now().year
     targets = []
 
     if type(page) == BeautifulSoup:
@@ -1842,7 +1840,7 @@ def fetch_manos_targets(page=None, fetch_all=False):
             # Date of update
             update = datetime.strptime(datum['last_updated'], '%Y-%m-%d').date()
             # Return new updates only (check current calendar year) unless told otherwise
-            if not fetch_all and update.year < current_year:
+            if cut_off and update < cut_off:
                 return targets
 
             target_object = [target_name, target_wav, vislink, nirlink, 'MANOS Site', update]
