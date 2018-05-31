@@ -17,6 +17,7 @@ import os
 import mock
 from socket import error
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from unittest import skipIf
 
 import astropy.units as u
@@ -3087,29 +3088,29 @@ class TestFetchPreviousSpectra(TestCase):
     def test_smass_basics(self):
         expected_length = 12
         page = self.test_smass_page
-        targets = fetch_smass_targets(page, True)
+        targets = fetch_smass_targets(page, None)
 
         self.assertEqual(expected_length, len(targets))
 
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
-    def test_smass_year(self):
-        MockDateTime.change_datetime(2017, 10, 25, 3, 26, 5)
+    def test_smass_abreviated(self):
+        cut_off = datetime(2017, 10, 25, 3, 26, 5).date() - relativedelta(months=6)
         expected_length = 10
         page = self.test_smass_page
-        targets = fetch_smass_targets(page, False)
+        targets = fetch_smass_targets(page, cut_off)
 
         self.assertEqual(expected_length, len(targets))
 
     def test_manos_basics(self):
         expected_length = 11
         page = self.test_manos_page
-        targets = fetch_manos_targets(page, True)
+        targets = fetch_manos_targets(page, None)
         self.assertEqual(expected_length, len(targets))
 
-    def test_manos_year(self):
+    def test_manos_abreviated(self):
+        cut_off = datetime(2017, 10, 25, 3, 26, 5).date() - relativedelta(months=6)
         expected_length = 10
         page = self.test_manos_page
-        targets = fetch_manos_targets(page, False)
+        targets = fetch_manos_targets(page, cut_off)
         self.assertEqual(expected_length, len(targets))
 
     def test_smass_targets(self):
@@ -3123,7 +3124,7 @@ class TestFetchPreviousSpectra(TestCase):
                              ['2006 UY64', 'NIR', '', "http://smass.mit.edu/data/spex/sp209/au2010pr66.sp209.txt", "sp[209]", datetime.strptime('2017-12-02', '%Y-%m-%d').date()],
                              ['416584', 'Vis', "http://smass.mit.edu/data/spex/sp210/au2005lw7.sp210.txt", '', "sp[210]", datetime.strptime('2015-12-02', '%Y-%m-%d').date()],
                             ]
-        smass_data = fetch_smass_targets(self.test_smass_page, True)
+        smass_data = fetch_smass_targets(self.test_smass_page, None)
         for line in expected_targets:
             self.assertIn(line, smass_data)
 
@@ -3135,7 +3136,7 @@ class TestFetchPreviousSpectra(TestCase):
                              ['2018 CB'   , 'Vis+NIR', '', '', 'MANOS Site', datetime.strptime('2018-02-08', '%Y-%m-%d').date()],
                              ['2015 CQ13' , 'Vis'    , 'http://manos.lowell.edu/static/data/manosResults/2015CQ13/2015CQ13_150217_GN_spec.jpg', '', 'MANOS Site', datetime.strptime('2015-02-17', '%Y-%m-%d').date()],
                             ]
-        manos_data = fetch_manos_targets(self.test_manos_page, True)
+        manos_data = fetch_manos_targets(self.test_manos_page, None)
         for line in expected_targets:
             self.assertIn(line, manos_data)
 
