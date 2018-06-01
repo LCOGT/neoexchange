@@ -3,8 +3,9 @@
 
 import os, sys
 from django.utils.crypto import get_random_string
+import rollbar
 
-VERSION = '2.4.0'
+VERSION = '2.4.1'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -158,7 +159,6 @@ ROLLBAR = {
     'environment': 'development' if DEBUG else 'production',
     'root': BASE_DIR,
 }
-import rollbar
 rollbar.init(**ROLLBAR)
 
 LOGGING = {
