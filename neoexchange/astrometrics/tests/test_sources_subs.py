@@ -2028,7 +2028,7 @@ class TestConfigureDefaults(TestCase):
                             'observatory': '',
                             'site': 'TFN',
                             'exp_type': 'EXPOSE',
-                            'binning': 2}
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -2047,7 +2047,7 @@ class TestConfigureDefaults(TestCase):
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'OGG',
-                            'binning': 2}
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -2066,7 +2066,7 @@ class TestConfigureDefaults(TestCase):
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'COJ',
-                            'binning': 2}
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -2085,7 +2085,7 @@ class TestConfigureDefaults(TestCase):
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'CPT',
-                            'binning': 2}
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -2104,7 +2104,7 @@ class TestConfigureDefaults(TestCase):
                             'observatory': 'aqwa',
                             'exp_type': 'EXPOSE',
                             'site': 'ELP',
-                            'binning': 2}
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -2123,7 +2123,7 @@ class TestConfigureDefaults(TestCase):
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'LSC',
-                            'binning': 2}
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -2142,7 +2142,7 @@ class TestConfigureDefaults(TestCase):
                             'observatory': '',
                             'exp_type': 'EXPOSE',
                             'site': 'LSC',
-                            'binning': 2}
+                            'binning': 1}
         expected_params.update(test_params)
 
         params = configure_defaults(test_params)
@@ -2476,8 +2476,8 @@ class TestMakeMolecule(TestCase):
                              'type' : 'EXPOSE',
                              'exposure_count' : 18,
                              'exposure_time' : 90.0,
-                             'bin_x'       : 2,
-                             'bin_y'       : 2,
+                             'bin_x'       : 1,
+                             'bin_y'       : 1,
                              'instrument_name' : '0M4-SCICAM-SBIG',
                              'filter'      : 'w',
                              'ag_mode'     : 'OPTIONAL',
