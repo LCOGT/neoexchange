@@ -25,5 +25,4 @@ fits2image
 panoptes-client
 pillow
 gunicorn
-django-reversion
 rollbar
