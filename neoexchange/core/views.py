@@ -1143,7 +1143,7 @@ def update_crossids(astobj, dbg=False):
     try:
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
     except:
-        logger.debug("Multiple objects found called %s" % obj_id)
+        logger.warn("Multiple objects found called %s" % obj_id)
         return False
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)

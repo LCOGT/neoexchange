@@ -2954,6 +2954,36 @@ class TestUpdate_Crossids(TestCase):
                     }
         cls.body, created = Body.objects.get_or_create(**params)
 
+        params = {  'provisional_name': 'ZC82561',
+                    'provisional_packed': None,
+                    'origin': 'M',
+                    'source_type': 'U',
+                    'elements_type': None,
+                    'active': False,
+                    'fast_moving': False,
+                    'urgency': None,
+                    'epochofel': None,
+                    'orbinc': None,
+                    'longascnode': None,
+                    'argofperih': None,
+                    'eccentricity': None,
+                    'meandist': None,
+                    'meananom': None,
+                    'perihdist': None,
+                    'epochofperih': None,
+                    'abs_mag': None,
+                    'slope': None,
+                    'score': None,
+                    'discovery_date': None,
+                    'num_obs': None,
+                    'arc_length': None,
+                    'not_seen': None,
+                    'updated': False,
+                    'ingest': datetime(2018, 5, 24, 16, 45, 42),
+                    'update_time': None
+                    }
+        cls.blank_body, created = Body.objects.get_or_create(**params)
+
     def setUp(self):
         self.body.refresh_from_db()
 
@@ -3092,16 +3122,16 @@ class TestUpdate_Crossids(TestCase):
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
-    def test_check_inactive_comet(self):
+    def test_check_hyperbolic_ast(self):
 
         # Set Mock time to less than 3 days past the time of the cross ident.
         MockDateTime.change_datetime(2017, 9, 21, 10, 40, 0)
 
-        crossid_info = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+        crossid_info = [u'ZC99999', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
 
         self.body.origin = u'M'
         self.body.source_type = u'U'
-        self.body.provisional_name = 'ZC82561'
+        self.body.provisional_name = 'ZC99999'
         self.body.save()
 
         status = update_crossids(crossid_info, dbg=False)
@@ -3118,6 +3148,9 @@ class TestUpdate_Crossids(TestCase):
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
     def test_check_new_comet_has_epochperih(self):
+
+        # Remove other Body to check we don't create extra
+        self.blank_body.delete()
 
         # Set Mock time to less than 3 days past the time of the cross ident.
         MockDateTime.change_datetime(2018, 1, 20, 10, 40, 0)
@@ -3150,6 +3183,26 @@ class TestUpdate_Crossids(TestCase):
         self.assertIsNot(None, body.perihdist)
         self.assertAlmostEqual(2.6725494646558405, body.perihdist, 7)
         self.assertEqual(datetime(2017, 9, 14, 22, 34, 45, 428836), body.epochofperih)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_check_hyperbolic_ast_blank_body(self):
+
+        # Set Mock time to more than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2017, 3,  8, 10, 40, 0)
+
+        crossid_info = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        status = update_crossids(crossid_info, dbg=False)
+
+        body = Body.objects.get(provisional_name=self.blank_body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('H', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('A/2018 C2', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
 
 class TestStoreDetections(TestCase):
 
