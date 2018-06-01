@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, date
 from math import pi, log10, sqrt, cos, degrees
 from collections import Counter
 import reversion
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -41,6 +42,7 @@ from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params,
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+logger = logging.getLogger(__name__)
 
 
 OBJECT_TYPES = (
@@ -239,11 +241,13 @@ class Body(models.Model):
             # Catch the case where there is no Epoch
             return False
 
-    def compute_obs_window(self, d=datetime.utcnow()):
+    def compute_obs_window(self, d=None, dbg=False):
         """
         Compute rough window during which target may be observable based on when it is brighter than a
         given mag_limit amd further from the sun than sep_limit.
         """
+        if not isinstance(d, datetime):
+            d = datetime.utcnow()
         d0 = d
         df = 90  # days to look forward
         delta_t = 10  # size of steps in days
@@ -279,10 +283,14 @@ class Body(models.Model):
                 if d == d0 + timedelta(days=df) and i == 1:
                     # if Valid for beginning and end of window, assume valid for window
                     if vmag <= mag_limit and dstart and sep_test:
+                        if dbg:
+                            logger.debug("good at begining and end", "mag:", vmag, "sep:", sep_test)
                         return dstart, dend, d0
                     elif not dstart:
                         # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
                         if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                            if dbg:
+                                logger.debug("bad at begining and end, Delta Mag no good", "mag:", vmag, "sep:", sep_test)
                             return dstart, dend, d0
                         else:
                             d = d0 + timedelta(days=delta_t)
@@ -291,10 +299,14 @@ class Body(models.Model):
                 # if a valid start has been found, check if we are now invalid. Exit if so.
                 elif (vmag > mag_limit or not sep_test) and dstart:
                     dend = d
+                    if dbg:
+                        logger.debug("Ended in at", i, "mag:", vmag, "sep:", sep_test)
                     return dstart, dend, d0
                 # If no start date, and we are valid, set start date
                 elif vmag <= mag_limit and not dstart and sep_test:
                     dstart = d
+                    if dbg:
+                        logger.debug("started at", i, "mag:", vmag, "sep:", sep_test)
                     # if this is our first iteration (i.e. we started valid) test end date
                     if i == 0:
                         d += timedelta(days=df)
@@ -313,6 +325,8 @@ class Body(models.Model):
 #                d += timedelta(days=delta_t)
                 i += 1
             # Return dates
+            if dbg:
+                logger.debug("no end change", "mag:", vmag, "sep:", sep_test)
             return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
