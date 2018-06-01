@@ -39,6 +39,20 @@ from core.views import check_catalog_and_refit
 
 class ZeropointUnitTest(TestCase):
 
+    def setUp(self):
+        # Maybe do some static test catalog reading later
+        # test if no catalog input, use default catalog
+        # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_ca
+        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.d
+        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
+        pass
+
+    def compare_tables(self, expected_table, table, column, num_to_check=6, precision=6):
+
+        for i in range(0, num_to_check+1):
+#           print(i,num_to_check+1)
+            self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
+
     # @mock.patch('photometrics.catalog_subs.Vizier')
     # def test_get_cat_ra_dec(self, mock_vizier):
     def test_get_cat_ra_dec(self):
@@ -85,10 +99,6 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_no_cat(self, mock_vizier):
     def test_no_cat(self):
-        # test if no catalog input, use default catalog
-        # test_data = __file__.replace('.py', '_UCAC4.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29474599999998
 
@@ -114,10 +124,6 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_not_default(self, mock_vizier):
     def test_get_cat_ra_dec_not_default(self):
-        # test a catalog other than the default
-        # test_data = __file__.replace('.py', '_PPMXL.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29136599999998
 
@@ -143,10 +149,6 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_rmag_limit(self, mock_vizier):
     def test_get_cat_diff_rmag_limit(self):
-        # test a catalog with an r mag limit
-        # test_data = __file__.replace('.py', '_PPMXL_diff_rmag_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_rmag_limit.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 299.82885099999999
 
@@ -172,10 +174,6 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_row_limit(self, mock_vizier):
     def test_get_cat_diff_row_limit(self):
-        # test a catalog with a different row limit
-        # test_data = __file__.replace('.py', '_PPMXL_diff_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_diff_row_limit.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_first_source = 299.29136599999998
 
@@ -201,10 +199,6 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_width(self, mock_vizier):
     def test_get_cat_diff_width(self):
-        # test a catalog with a different width and height
-        # test_data = __file__.replace('.py', '_UCAC4_diff_width_height.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_diff_width_height.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 299.74110200000001
 
@@ -230,10 +224,6 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_above_row_limit(self, mock_vizier):
     def test_get_cat_ra_dec_above_row_limit(self):
-        # test a catalog with a different width and height
-        # test_data = __file__.replace('.py', '_PPMXL_above_row_limit.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_above_row_limit.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 267.35990700000002
 
@@ -259,10 +249,6 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_PPMXL(self, mock_vizier):
     def test_get_cat_ra_dec_empty_list_PPMXL(self):
-        # test a catalog with a different width and height
-        # test_data = __file__.replace('.py', '_UCAC4_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_UCAC4_empty.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 0.0
 
@@ -288,10 +274,6 @@ class ZeropointUnitTest(TestCase):
 #    @mock.patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_UCAC4(self, mock_vizier):
     def test_get_cat_ra_dec_empty_list_UCAC4(self):
-        # test a catalog with a different width and height
-        # test_data = __file__.replace('.py', '_PPMXL_empty.dat') #test_data_file captured with cat_table.write('test_catalog_subs_PPMXL_empty.dat', format='csv')
-        # test_data = '/home/sgreenstreet/git/neoexchange/neoexchange/photometrics/tests/test_catalog_subs_UCAC4.dat'
-        # mock_vizier().query_region().__getitem__.return_value=Table.read(test_data, format='csv')
 
         expected_ra_last_source = 0.0
 
@@ -376,85 +358,16 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][5], cross_match_table['RA Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][6], cross_match_table['RA Cat 1'][6], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][5], cross_match_table['RA Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][6], cross_match_table['RA Cat 2'][6], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][5], cross_match_table['RA diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][6], cross_match_table['RA diff'][6], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][5], cross_match_table['Dec Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][6], cross_match_table['Dec Cat 1'][6], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][5], cross_match_table['Dec Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][6], cross_match_table['Dec Cat 2'][6], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][5], cross_match_table['Dec diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][6], cross_match_table['Dec diff'][6], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][5], cross_match_table['r mag Cat 1'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][6], cross_match_table['r mag Cat 1'][6], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][5], cross_match_table['r mag Cat 2'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][6], cross_match_table['r mag Cat 2'][6], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][0], cross_match_table['r mag err'][0], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][1], cross_match_table['r mag err'][1], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][2], cross_match_table['r mag err'][2], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][3], cross_match_table['r mag err'][3], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][4], cross_match_table['r mag err'][4], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][5], cross_match_table['r mag err'][5], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][6], cross_match_table['r mag err'][6], 2)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][5], cross_match_table['r mag diff'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff')
 
     def test_cross_match_UCAC4_shorterThan_testFITS(self):
         # test with cat 1 as longer test FITS table values and cat 2 as shorter UCAC4 table values to test cat reordering
@@ -499,95 +412,16 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2)
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][5], cross_match_table['RA Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][6], cross_match_table['RA Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][7], cross_match_table['RA Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][5], cross_match_table['RA Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][6], cross_match_table['RA Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][7], cross_match_table['RA Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][5], cross_match_table['RA diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][6], cross_match_table['RA diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][7], cross_match_table['RA diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][5], cross_match_table['Dec Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][6], cross_match_table['Dec Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][7], cross_match_table['Dec Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][5], cross_match_table['Dec Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][6], cross_match_table['Dec Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][7], cross_match_table['Dec Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][5], cross_match_table['Dec diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][6], cross_match_table['Dec diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][7], cross_match_table['Dec diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][5], cross_match_table['r mag Cat 1'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][6], cross_match_table['r mag Cat 1'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][7], cross_match_table['r mag Cat 1'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][5], cross_match_table['r mag Cat 2'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][6], cross_match_table['r mag Cat 2'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][7], cross_match_table['r mag Cat 2'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][0], cross_match_table['r mag err'][0], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][1], cross_match_table['r mag err'][1], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][2], cross_match_table['r mag err'][2], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][3], cross_match_table['r mag err'][3], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][4], cross_match_table['r mag err'][4], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][5], cross_match_table['r mag err'][5], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][6], cross_match_table['r mag err'][6], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][7], cross_match_table['r mag err'][7], 2)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][5], cross_match_table['r mag diff'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 7)
 
     def test_cross_match_PPMXL_shorterThan_testFITS(self):
         # test with cat 1 as longer test FITS table values and cat 2 as shorter PPMXL table values to test cat reordering
@@ -632,95 +466,16 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][5], cross_match_table['RA Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][6], cross_match_table['RA Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][7], cross_match_table['RA Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][5], cross_match_table['RA Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][6], cross_match_table['RA Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][7], cross_match_table['RA Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][5], cross_match_table['RA diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][6], cross_match_table['RA diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][7], cross_match_table['RA diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][5], cross_match_table['Dec Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][6], cross_match_table['Dec Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][7], cross_match_table['Dec Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][5], cross_match_table['Dec Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][6], cross_match_table['Dec Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][7], cross_match_table['Dec Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][5], cross_match_table['Dec diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][6], cross_match_table['Dec diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][7], cross_match_table['Dec diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][5], cross_match_table['r mag Cat 1'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][6], cross_match_table['r mag Cat 1'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][7], cross_match_table['r mag Cat 1'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][5], cross_match_table['r mag Cat 2'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][6], cross_match_table['r mag Cat 2'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][7], cross_match_table['r mag Cat 2'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][0], cross_match_table['r mag err'][0], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][1], cross_match_table['r mag err'][1], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][2], cross_match_table['r mag err'][2], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][3], cross_match_table['r mag err'][3], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][4], cross_match_table['r mag err'][4], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][5], cross_match_table['r mag err'][5], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][6], cross_match_table['r mag err'][6], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][7], cross_match_table['r mag err'][7], 2)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][5], cross_match_table['r mag diff'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 7)
 
     def test_cross_match_UCAC_shorterThan_testFITS(self):
         # test with cat 1 as longer test FITS table values and cat 2 as shorter UCAC table values to test cat reordering NOTE: UCAC not UCAC4 tested here...need to add a test for something other than a variation of PPMXL or UCAC.
@@ -765,95 +520,16 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "UCAC")
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][5], cross_match_table['RA Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][6], cross_match_table['RA Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][7], cross_match_table['RA Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][5], cross_match_table['RA Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][6], cross_match_table['RA Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][7], cross_match_table['RA Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][5], cross_match_table['RA diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][6], cross_match_table['RA diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][7], cross_match_table['RA diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][5], cross_match_table['Dec Cat 1'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][6], cross_match_table['Dec Cat 1'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][7], cross_match_table['Dec Cat 1'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][5], cross_match_table['Dec Cat 2'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][6], cross_match_table['Dec Cat 2'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][7], cross_match_table['Dec Cat 2'][7], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][5], cross_match_table['Dec diff'][5], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][6], cross_match_table['Dec diff'][6], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][7], cross_match_table['Dec diff'][7], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][5], cross_match_table['r mag Cat 1'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][6], cross_match_table['r mag Cat 1'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][7], cross_match_table['r mag Cat 1'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][5], cross_match_table['r mag Cat 2'][5], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][6], cross_match_table['r mag Cat 2'][6], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][7], cross_match_table['r mag Cat 2'][7], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][0], cross_match_table['r mag err'][0], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][1], cross_match_table['r mag err'][1], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][2], cross_match_table['r mag err'][2], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][3], cross_match_table['r mag err'][3], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][4], cross_match_table['r mag err'][4], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][5], cross_match_table['r mag err'][5], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][6], cross_match_table['r mag err'][6], 2)
-        self.assertAlmostEqual(expected_cross_match_table['r mag err'][7], cross_match_table['r mag err'][7], 2)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][5], cross_match_table['r mag diff'][5], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][6], cross_match_table['r mag diff'][6], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][7], cross_match_table['r mag diff'][7], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 7)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=7, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=7, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', num_to_check=7, precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 7)
 
     def test_cross_match_filtering(self):
         # test filtering of poor catalog cross matches
@@ -898,59 +574,15 @@ class ZeropointUnitTest(TestCase):
 
         cross_match_table = cross_match(table_cat_1, table_cat_2, "PPMXL")
 
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][0], cross_match_table['RA Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][1], cross_match_table['RA Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][2], cross_match_table['RA Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][3], cross_match_table['RA Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 1'][4], cross_match_table['RA Cat 1'][4], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][0], cross_match_table['RA Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][1], cross_match_table['RA Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][2], cross_match_table['RA Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][3], cross_match_table['RA Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['RA Cat 2'][4], cross_match_table['RA Cat 2'][4], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][0], cross_match_table['RA diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][1], cross_match_table['RA diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][2], cross_match_table['RA diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][3], cross_match_table['RA diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['RA diff'][4], cross_match_table['RA diff'][4], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][0], cross_match_table['Dec Cat 1'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][1], cross_match_table['Dec Cat 1'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][2], cross_match_table['Dec Cat 1'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][3], cross_match_table['Dec Cat 1'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 1'][4], cross_match_table['Dec Cat 1'][4], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][0], cross_match_table['Dec Cat 2'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][1], cross_match_table['Dec Cat 2'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][2], cross_match_table['Dec Cat 2'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][3], cross_match_table['Dec Cat 2'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['Dec Cat 2'][4], cross_match_table['Dec Cat 2'][4], 6)
-
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][0], cross_match_table['Dec diff'][0], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][1], cross_match_table['Dec diff'][1], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][2], cross_match_table['Dec diff'][2], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][3], cross_match_table['Dec diff'][3], 9)
-        self.assertAlmostEqual(expected_cross_match_table['Dec diff'][4], cross_match_table['Dec diff'][4], 9)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][0], cross_match_table['r mag Cat 1'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][1], cross_match_table['r mag Cat 1'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][2], cross_match_table['r mag Cat 1'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][3], cross_match_table['r mag Cat 1'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 1'][4], cross_match_table['r mag Cat 1'][4], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][0], cross_match_table['r mag Cat 2'][0], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][1], cross_match_table['r mag Cat 2'][1], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][2], cross_match_table['r mag Cat 2'][2], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][3], cross_match_table['r mag Cat 2'][3], 10)
-        self.assertAlmostEqual(expected_cross_match_table['r mag Cat 2'][4], cross_match_table['r mag Cat 2'][4], 10)
-
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][0], cross_match_table['r mag diff'][0], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][1], cross_match_table['r mag diff'][1], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][2], cross_match_table['r mag diff'][2], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][3], cross_match_table['r mag diff'][3], 6)
-        self.assertAlmostEqual(expected_cross_match_table['r mag diff'][4], cross_match_table['r mag diff'][4], 6)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1', num_to_check=4)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2', num_to_check=4)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', num_to_check=4, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1', 4)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2', 4)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', num_to_check=4, precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', num_to_check=4, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=4, precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 4)
 
     def test_get_zeropoint(self):
         # test zeropoint calculation
