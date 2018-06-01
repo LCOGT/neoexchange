@@ -14,8 +14,8 @@ from photometrics.external_codes import make_pa_rate_dict, run_mtdlink
 class Command(BaseCommand):
 
     help = """Perform pipeline processing on a set of FITS frames.
-	   Steps include catalog creation, zeropoint determination, moving object detection and
-	   candidate storing."""
+        Steps include catalog creation, zeropoint determination, moving object detection and
+        candidate storing."""
 
     def add_arguments(self, parser):
         parser.add_argument('datadir', help='Path to the data to ingest')
