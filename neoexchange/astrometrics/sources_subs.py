@@ -1429,7 +1429,7 @@ def configure_defaults(params):
     elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
-        params['binning'] = 2  # 1 is the Right Answer...
+        params['binning'] = 1
 # We are not currently doing Aqawan-specific binding for LSC (or TFN or OGG) but
 # the old code is here if needed again
 #        if params['site_code'] == 'W89':
