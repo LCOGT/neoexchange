@@ -295,7 +295,6 @@ if 'test' in sys.argv:
         'NAME': 'test_db', # Add the name of your SQLite3 database file here.
         },
     }
-    OPBEAT['APP_ID'] = None
 
 
 
