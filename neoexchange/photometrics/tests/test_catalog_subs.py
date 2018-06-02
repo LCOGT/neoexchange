@@ -319,6 +319,30 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
+    def test_get_cat_ra_dec_GAIA_DR2(self):
+
+        expected_ra_first_source = 299.84644068600
+        expected_dec_first_source = 34.96403374990
+        expected_rmag_first_source = 14.7231
+        expected_e_rmag_first_source = 0.0003
+        expected_flags_first_source = 0
+        expected_len_cat_table = 585
+
+        cat_table, cat_name = get_vizier_catalog_table(299.590, 35.201, "30m", "30m", "GAIA-DR2")
+
+        ra_first_source = cat_table['RAJ2000'][0]
+        dec_first_source = cat_table['DEJ2000'][0]
+        rmag_first_source = cat_table['Gmag'][0]
+        e_rmag_first_source = cat_table['e_Gmag'][0]
+        flags_first_source = cat_table['Dup'][0]
+
+        self.assertAlmostEqual(expected_ra_first_source, ra_first_source, 8)
+        self.assertAlmostEqual(expected_dec_first_source, dec_first_source, 8)
+        self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 5)
+        self.assertAlmostEqual(expected_e_rmag_first_source, e_rmag_first_source, 5)
+        self.assertEqual(expected_flags_first_source, flags_first_source)
+        self.assertEqual(expected_len_cat_table, len(cat_table))
+
     def test_cross_match_UCAC4_longerThan_testFITS(self):
         # test with cat 1 as longer UCAC4 table values and cat 2 as shorter test FITS table values
 
