@@ -790,6 +790,31 @@ class ZeropointUnitTest(TestCase):
         self.assertEqual(expected_cat_name, cat_name)
         self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
 
+    def test_call_cross_match_and_zeropoint_with_GAIADR2(self):
+
+        expected_avg_zeropoint = 27.368678593401157
+
+        expected_std_zeropoint = 0.018250034068048576
+
+        expected_count = 10
+
+        expected_num_in_calc = 10
+
+        expected_cat_name = "GAIA-DR2"
+
+        expected_len_cross_match_table = 20
+
+        catfile = os.path.join('photometrics', 'tests', 'oracdr_test_catalog.fits')
+
+        header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name = call_cross_match_and_zeropoint(catfile, cat_name='GAIA-DR2')
+
+        self.assertAlmostEqual(expected_avg_zeropoint, avg_zeropoint, 8)
+        self.assertAlmostEqual(expected_std_zeropoint, std_zeropoint, 8)
+        self.assertAlmostEqual(expected_count, count, 1)
+        self.assertAlmostEqual(expected_num_in_calc, num_in_calc, 1)
+        self.assertEqual(expected_cat_name, cat_name)
+        self.assertAlmostEqual(expected_len_cross_match_table, len(cross_match_table))
+
     def test_call_with_diff_test_cat_force_to_UCAC4(self):
         """test the call with a different FITS catalog file that will return an empty vizier query table for the PPMXL
         catalog and a zeropoint already in the header, so that the computed avg_zeropoint is the difference between
