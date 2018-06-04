@@ -1129,14 +1129,14 @@ def fetch_sfu(page=None):
         try:
             obs_jd = table[0].text
             flux_datetime = jd_utc2datetime(float(obs_jd))
-        except ValueError:
+        except (ValueError, IndexError):
             logger.warning("Could not parse flux observation time (" + obs_jd + ")")
         try:
             flux_sfu = float(table[2].text)
             # Flux is in 'solar flux units', equal to 10,000 Jy or 0.01 MJy.
             # Add in our custom astropy unit declared above.
             flux_sfu = flux_sfu * sfu
-        except ValueError:
+        except (ValueError, IndexError):
             logger.warning("Could not parse flux (" + table[2].text + ")")
 
     return flux_datetime, flux_sfu
