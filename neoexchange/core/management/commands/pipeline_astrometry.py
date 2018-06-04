@@ -107,7 +107,9 @@ class Command(BaseCommand):
             # results into CatalogSources
             self.stdout.write("Creating CatalogSources from %s (Cat. type=%s)" % (new_catalog, catalog_type))
 
-            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type, std_zeropoint_tolerance=0.1)
+            num_sources_created, num_in_catalog = store_catalog_sources(new_catalog, catalog_type,
+                                                                        std_zeropoint_tolerance=0.1,
+                                                                        phot_cat_name='GAIA-DR2')
             if num_sources_created >= 0 and num_in_catalog > 0:
                 self.stdout.write("Created/updated %d sources from %d in catalog" % (num_sources_created, num_in_catalog) )
             else:
