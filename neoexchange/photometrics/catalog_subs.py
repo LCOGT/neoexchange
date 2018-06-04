@@ -172,55 +172,49 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
     if len(FITS_table) >= len(cat_table):
         table_1 = cat_table
         table_2 = FITS_table
+        RA_table_2 = table_2['obs_ra']
+        Dec_table_2 = table_2['obs_dec']
+        rmag_table_2 = table_2['obs_mag']
+        flags_table_2 = table_2['flags']
+        table1_has_errs = True
+        RA_table_1 = table_1['RAJ2000']
+        Dec_table_1 = table_1['DEJ2000']
         if "PPMXL" in cat_name:
-            RA_table_1 = table_1['RAJ2000']
-            Dec_table_1 = table_1['DEJ2000']
             rmag_table_1 = table_1['r2mag']
             flags_table_1 = table_1['fl']
             rmag_err_table_1 = table_1['RAJ2000'] * 0  # PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
-            RA_table_2 = table_2['obs_ra']
-            Dec_table_2 = table_2['obs_dec']
-            rmag_table_2 = table_2['obs_mag']
-            flags_table_2 = table_2['flags']
-            table1_has_errs = True
+        elif "GAIA-DR2" in cat_name:
+            rmag_table_1 = table_1['Gmag']
+            rmag_err_table_1 = table_1['e_Gmag']
+            flags_table_1 = table_1['Dup']
         else:
-            RA_table_1 = table_1['RAJ2000']
-            Dec_table_1 = table_1['DEJ2000']
             rmag_table_1 = table_1['rmag']
             flags_table_1 = table_1['RAJ2000'] * 0  # UCAC4 does not have flags, so copy RA table column and turn values all to zeros
             rmag_err_table_1 = table_1['e_rmag']
-            RA_table_2 = table_2['obs_ra']
-            Dec_table_2 = table_2['obs_dec']
-            rmag_table_2 = table_2['obs_mag']
-            flags_table_2 = table_2['flags']
-            table1_has_errs = True
     else:
         table_1 = FITS_table
         table_2 = cat_table
+        RA_table_1 = table_1['obs_ra']
+        Dec_table_1 = table_1['obs_dec']
+        rmag_table_1 = table_1['obs_mag']
+        flags_table_1 = table_1['flags']
+        rmag_err_table_1 = 'nan'
+        RA_table_2 = table_2['RAJ2000']
+        Dec_table_2 = table_2['DEJ2000']
+        table1_has_errs = False
+
         if "PPMXL" in cat_name:
-            RA_table_1 = table_1['obs_ra']
-            Dec_table_1 = table_1['obs_dec']
-            rmag_table_1 = table_1['obs_mag']
-            flags_table_1 = table_1['flags']
-            rmag_err_table_1 = 'nan'
-            RA_table_2 = table_2['RAJ2000']
-            Dec_table_2 = table_2['DEJ2000']
             rmag_table_2 = table_2['r2mag']
             flags_table_2 = table_2['fl']
             rmag_err_table_2 = table_2['RAJ2000'] * 0  # PPMXL does not have r mag errors, so copy RA table column and turn values all to zeros
-            table1_has_errs = False
+        elif "GAIA-DR2" in cat_name:
+            rmag_table_2 = table_2['Gmag']
+            rmag_err_table_2 = table_2['e_Gmag']
+            flags_table_2 = table_2['Dup']
         else:
-            RA_table_1 = table_1['obs_ra']
-            Dec_table_1 = table_1['obs_dec']
-            rmag_table_1 = table_1['obs_mag']
-            flags_table_1 = table_1['flags']
-            rmag_err_table_1 = 'nan'
-            RA_table_2 = table_2['RAJ2000']
-            Dec_table_2 = table_2['DEJ2000']
             rmag_table_2 = table_2['rmag']
             flags_table_2 = table_2['RAJ2000'] * 0  # UCAC4 does not have flags, so copy RA table column and turn values all to zeros
             rmag_err_table_2 = table_2['e_rmag']
-            table1_has_errs = False
     y = 0
     logger.debug("TIME: Table lengths: {} {}".format(len(Dec_table_1), len(Dec_table_2)))
     for value in Dec_table_1:
@@ -1052,7 +1046,7 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
             # if bad, determine new zeropoint
             logger.debug("Refitting zeropoint, tolerance set to {}".format(std_zeropoint_tolerance))
             start = time.time()
-            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance)
+            header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, phot_cat_name = call_cross_match_and_zeropoint((header, table), std_zeropoint_tolerance, phot_cat_name)
             end = time.time()
             logger.debug("TIME: compute_zeropoint took {:.1f} seconds".format(end-start))
             logger.debug("New zp={} {} {} {}".format(avg_zeropoint, std_zeropoint, count, num_in_calc))

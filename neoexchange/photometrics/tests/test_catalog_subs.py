@@ -608,6 +608,56 @@ class ZeropointUnitTest(TestCase):
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', num_to_check=4, precision=10)
         self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff', 4)
 
+    def test_cross_match_GAIA_longerThan_testFITS(self):
+        # test with cat 1 as longer GAIA table values and cat 2 as shorter test FITS table values
+
+        expected_cross_match_table_data = [(299.303973, 299.304084, 1.11e-04, 35.20152, 35.201634, 1.1400e-04, 0.0, 13.8500003815, 0.05, 13.8500003815),
+                                           (299.828851, 299.828851, 0.0, 34.99841, 34.998407, 3.0000e-06, 0.0, 14.5, 0.01, 14.5),
+                                           (299.291455, 299.291366, 8.9000e-5, 35.242368, 35.242404, 3.6000e-05, 0.0, 14.3199996948, 0.03, 14.3199996948),
+                                           (299.510127, 299.510143, 1.6000e-05, 34.960327, 34.960303, 2.4000e-05, 15.5469999313, 14.4499998093, 0.05, 1.097000),
+                                           (299.308515, 299.308579, 6.4000e-05, 35.165529, 35.165495, 3.4000e-05, 15.0059995651, 14.8900003433, 0.02, 0.115999),
+                                           (299.709162, 299.709139, 2.3000e-05, 35.218112, 35.218109, 3.0000e-06, 13.3520002365, 12.7700004578, 0.0, 0.582000),
+                                           (299.860889, 299.860871, 1.8000e-05, 35.381485, 35.381474, 1.1000e-05, 14.9130001068, 14.0799999237, 0.0, 0.833000)]
+
+        expected_cross_match_table = Table(rows=expected_cross_match_table_data, names=('RA Cat 1', 'RA Cat 2', 'RA diff',
+                                                                                        'Dec Cat 1', 'Dec Cat 2', 'Dec diff',
+                                                                                        'r mag Cat 1', 'r mag Cat 2', 'r mag err',
+                                                                                        'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+
+        table_cat_1_data = [(299.303973, 35.20152, 0.0, 0),
+                            (299.828851, 34.99841, 0.0, 0),
+                            (299.291455, 35.242368, 0.0, 0),
+                            (299.510127, 34.960327, 15.5469999313, 0),
+                            (299.308515, 35.165529, 15.0059995651, 0),
+                            (299.709162, 35.218112, 13.3520002365, 0),
+                            (299.860889, 35.381485, 14.9130001068, 0)]
+
+        table_cat_1 = Table(rows=table_cat_1_data, names=('obs_ra', 'obs_dec', 'obs_mag', 'flags'), dtype=('f8', 'f8', 'f8', 'i2'))
+
+        table_cat_2_data = [(299.291366, 35.242404, 14.3199996948, 3, 0),
+                            (299.304084, 35.201634, 13.8500003815, 5, 0),
+                            (299.480004, 34.965488, 14.3800001144, 3, 0),
+                            (299.308579, 35.165495, 14.8900003433, 2, 0),
+                            (299.828851, 34.998407, 14.5, 1, 0),
+                            (299.510143, 34.960303, 14.4499998093, 5, 0),
+                            (299.709139, 35.218109, 12.7700004578, 0, 0),
+                            (299.860871, 35.381474, 14.0799999237, 0, 0)]
+
+        table_cat_2 = Table(rows=table_cat_2_data, names=('RAJ2000', 'DEJ2000', 'Gmag', 'e_Gmag', 'Dup'), dtype=('f8', 'f8', 'f8', 'f8', 'i2'))
+
+        cross_match_table = cross_match(table_cat_1, table_cat_2, cat_name='GAIA-DR2')
+
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 1')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA Cat 2')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'RA diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 1')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec Cat 2')
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'Dec diff', precision=9)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 1', precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag Cat 2', precision=10)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag err', precision=2)
+        self.compare_tables(expected_cross_match_table, cross_match_table, 'r mag diff')
+
     def test_get_zeropoint(self):
         # test zeropoint calculation
 
