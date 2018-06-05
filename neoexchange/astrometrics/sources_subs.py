@@ -60,12 +60,12 @@ def download_file(url, file_to_save):
             file_handle.close()
             print("Downloaded:", file_to_save)
             break
-        except urllib.error.HTTPError as e:
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
             attempts += 1
-            if hasattr(e, 'reason'):
+            if hasattr(e, 'code'):
                 print("HTTP Error %d: %s, retrying" % (e.code, e.reason))
             else:
-                print("HTTP Error: %s" % (e.code,))
+                print("HTTP Error: %s" % (e.reason,))
 
 
 def random_delay(lower_limit=10, upper_limit=20):
@@ -107,10 +107,11 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     opener = urllib.request.build_opener()  # create an opener object
     try:
         response = opener.open(req_page)
-    except urllib.URLError as e:
-        if not hasattr(e, "code"):
-            raise
-        print("Page retrieval failed:", e)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        if hasattr(e, 'code'):
+            logger.warn("Page retrieval failed with HTTP Error %d: %s, retrying" % (e.code, e.reason))
+        else:
+            logger.warn("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
 
     # Suck the HTML down
