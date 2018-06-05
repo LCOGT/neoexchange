@@ -138,7 +138,7 @@ def sky_brightness_model(params, dbg=False):
                 galactic_lat = target.galactic.b
                 if dbg: print(target, ecliptic_lat, galactic_lat)
             except ValueError:
-                logger.warn("Could not find/convert co-ordinates")
+                logger.warning("Could not find/convert co-ordinates")
     # Assume a value of 60.0 in S10 units for the zodiacal light if the
     # latitude wasn't given or calculatable
     q_zodi = 60.0

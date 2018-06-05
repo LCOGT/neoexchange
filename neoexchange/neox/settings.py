@@ -4,6 +4,7 @@
 import os
 import sys
 from django.utils.crypto import get_random_string
+import rollbar
 
 VERSION = '3.0.1a'
 
@@ -84,13 +85,13 @@ STATICFILES_FINDERS = (
  )
 
 MIDDLEWARE_CLASSES = (
-    'opbeat.contrib.django.middleware.OpbeatAPMMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddleware',
 )
 
 AUTHENTICATION_BACKENDS = (
@@ -152,15 +153,14 @@ INSTALLED_APPS = (
     'reversion',
     'core.apps.CoreConfig',
     'analyser.apps.AstrometerConfig',
-    'opbeat.contrib.django',
 )
 
-OPBEAT = {
-    'ORGANIZATION_ID': os.environ.get('NEOX_OPBEAT_ORGID', ''),
-    'APP_ID': os.environ.get('NEOX_OPBEAT_APPID', ''),
-    'SECRET_TOKEN': os.environ.get('NEOX_OPBEAT_TOKEN', ''),
-    'DEBUG': False,
+ROLLBAR = {
+    'access_token': os.environ.get('ROLLBAR_TOKEN',''),
+    'environment': 'development' if DEBUG else 'production',
+    'root': BASE_DIR,
 }
+rollbar.init(**ROLLBAR)
 
 LOGGING = {
     'version': 1,
@@ -296,7 +296,6 @@ if 'test' in sys.argv:
         'NAME': 'test_db', # Add the name of your SQLite3 database file here.
         },
     }
-    OPBEAT['APP_ID'] = None
 
 
 

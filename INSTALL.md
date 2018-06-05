@@ -18,6 +18,7 @@ You will need to create a `neox/local_settings.py` file which has details of you
 
 ```
 import os, sys
+import rollbar
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.dirname(CURRENT_PATH)
@@ -31,11 +32,12 @@ STATIC_ROOT =  '<filesystem path>'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
 
-OPBEAT = {
-    'ORGANIZATION_ID': '',
-    'APP_ID': '',
-    'SECRET_TOKEN': '',
+ROLLBAR = {
+    'access_token': os.environ.get('ROLLBAR_TOKEN',''),
+    'environment': 'development' if DEBUG else 'production',
+    'root': BASE_DIR,
 }
+rollbar.init(**ROLLBAR)
 
 DATABASES = {
     "default": {

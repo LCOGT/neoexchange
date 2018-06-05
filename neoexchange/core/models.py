@@ -943,7 +943,7 @@ class SourceMeasurement(models.Model):
             else:
                 flags = ' ' + self.flags
         elif len(self.flags) > 2:
-            logger.warn("Flags longer than will fit into field - needs mapper")
+            logger.warning("Flags longer than will fit into field - needs mapper")
             flags = self.flags[0:2]
 
         mpc_line = "%12s%2s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,

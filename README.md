@@ -4,6 +4,12 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.4.1
+
+* Change default binning for 0.4m's to bin 1x1.
+* Change default proposals for 2018B semester.
+* Switch from OpBeat to Rollbar.
+
 ### 2.4.0
 
 Add basic spectroscopy support to NEOexchange:

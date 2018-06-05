@@ -400,10 +400,11 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
+        cadence_form = ScheduleCadenceForm()
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+            return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
 
     def get_context_data(self, **kwargs):
         """
@@ -1269,7 +1270,7 @@ def update_crossids(astobj, dbg=False):
     try:
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
     except:
-        logger.warn("Multiple objects found called %s" % obj_id)
+        logger.warning("Multiple objects found called %s" % obj_id)
         return False
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
