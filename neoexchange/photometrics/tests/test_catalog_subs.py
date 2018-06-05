@@ -901,6 +901,42 @@ class ZeropointUnitTest(TestCase):
         self.fail("write test for no internet")
 
 
+class Test_GetReferenceCatalog(TestCase):
+
+    def setUp(self):
+        self.header = { 'ra' : 228.33284875,
+                        'dec': 38.395874166666665,
+                        'width': '4.5m',
+                        'height': '3.0m',
+                      }
+
+        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.debug_print = False
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test_fetch_catalog(self):
+
+        expected_ref_catalog = os.path.exists(os.path.join(self.test_dir, 'GAIADR2.cat'))
+        get_reference_catalog(self.test_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertTrue(os.path.exists(expected_ref_catalog))
+
+
 class FITSUnitTest(TestCase):
     def __init__(self, *args, **kwargs):
         super(FITSUnitTest, self).__init__(*args, **kwargs)

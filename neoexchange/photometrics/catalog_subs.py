@@ -406,9 +406,12 @@ def write_ldac(table, output_file):
 
     return num_sources
 
-def get_reference_catalog(ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0"):
-    """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR2') around
-    the passed (ra, dec) co-ordinates and width and height"""
+def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0"):
+    """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR2') into
+    the passed <dest_dir> around the passed (ra, dec) co-ordinates and width and
+    height. The catalog file will be of the form <dest_dir/<cat_name>.cat, with
+    any hyphens removed.
+    """
 
     refcat = None
     # Add 50% to passed width and height in lieu of actual calculation of extent
@@ -442,6 +445,7 @@ def get_reference_catalog(ra, dec, set_width, set_height, cat_name="GAIA-DR2", s
         logger.warn("Did not get catalog type that was expected ({} vs {})".format(final_cat_name, cat_name))
     else:
         refcat = cat_name.replace('-', '') + '.cat'
+        refcat = os.path.join(dest_dir, refcat)
         num_sources = write_ldac(cat_table, refcat)
     return refcat
 
