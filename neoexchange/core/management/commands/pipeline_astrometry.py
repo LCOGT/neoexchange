@@ -86,7 +86,7 @@ class Command(BaseCommand):
             # Step 1: Determine if astrometric fit in catalog is good and
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
-            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog)
+            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog, desired_catalog='GAIA-DR2')
 
             try:
                 int(new_catalog_or_status)

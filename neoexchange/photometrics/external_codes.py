@@ -42,7 +42,7 @@ def default_scamp_config_files():
     '''Return a list of the needed files for SCAMP. The config file should be in
     element 0'''
 
-    config_files = ['scamp_neox.cfg']
+    config_files = ['scamp_neox_gaiadr2.cfg']
 
     return config_files
 
@@ -288,9 +288,10 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
     if fits_catalog != fits_catalog_path:
         fits_catalog = os.path.join(dest_dir, fits_catalog)
         # If the file exists and is a link (or a broken link), then remove it
-        if os.path.lexists(fits_catalog) and os.path.islink(fits_catalog):
-            os.unlink(fits_catalog)
-        os.symlink(fits_catalog_path, fits_catalog)
+        if os.path.lexists(fits_catalog):
+            if os.path.islink(fits_catalog):
+                os.unlink(fits_catalog)
+                os.symlink(fits_catalog_path, fits_catalog)
     cmdline = "%s %s -c %s %s" % ( binary, fits_catalog, scamp_config_file, options )
     cmdline = cmdline.rstrip()
 
