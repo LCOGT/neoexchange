@@ -28,6 +28,12 @@ from django.forms.models import model_to_dict
 #Import module to test
 from photometrics.external_codes import *
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
+
 class ExternalCodeUnitTest(TestCase):
 
     def setUp(self):
@@ -350,6 +356,14 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
         self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox.cfg')))
+
+    def test_scamp_options(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIADR2.cat'
+
+        options = determine_scamp_options('foo.ldac')
+
+        self.assertEqual(expected_options, options)
 
 class TestSExtractorRunner(ExternalCodeUnitTest):
 
