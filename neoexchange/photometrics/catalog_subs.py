@@ -32,6 +32,7 @@ import astropy.units as u
 import astropy.coordinates as coord
 from astropy.wcs import WCS
 from astropy.wcs.utils import proj_plane_pixel_scales
+from astropy import __version__ as astropyversion
 
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 from astrometrics.time_subs import timeit
@@ -91,7 +92,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
         if "UCAC4" in cat_name:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
         elif "GAIA-DR2" in cat_name:
-            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+            query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000','e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
 
@@ -137,7 +138,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             if "UCAC4" in cat_name:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'rmag', 'e_rmag'])
             elif "GAIA-DR2" in cat_name:
-                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
+                query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
             else:
                 query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, catalog=[cat_name])
@@ -324,6 +325,125 @@ def get_zeropoint(cross_match_table, std_zeropoint_tolerance):
 
     return avg_zeropoint, std_zeropoint, count, num_in_calc
 
+def write_ldac(table, output_file):
+    """
+    write out a reference catalog table in new FITS_LDAC file (mainly for use in SCAMP)
+    input: <table>, an Astropy Table of data, <output_file>, filename to write out
+    return: number of sources written to file
+    """
+
+    # create primary header (empty)
+    primaryhdu = fits.PrimaryHDU(header=fits.Header())
+
+    # create header table
+    hdr_col = fits.Column(name='Field Header Card', format='1680A',
+                          array=["obtained through Vizier"])
+    hdrhdu = fits.BinTableHDU.from_columns(fits.ColDefs([hdr_col]))
+    hdrhdu.header['EXTNAME'] = ('LDAC_IMHEAD')
+    # hdrhdu.header['TDIM1'] = ('(80, 36)') # remove?
+
+    # create data table
+    colname_dict = { 'RAJ2000'  : 'XWIN_WORLD',
+                     'DEJ2000'  : 'YWIN_WORLD',
+                     'e_RAJ2000': 'ERRAWIN_WORLD',
+                     'e_DEJ2000': 'ERRBWIN_WORLD',
+                     'mag'      : 'MAG',
+                     'e_mag'    : 'MAGERR'
+                   }
+    format_dict = { 'RAJ2000'   : '1D',
+                    'DEJ2000'   : '1D',
+                    'e_RAJ2000' : '1E',
+                    'e_DEJ2000' : '1E',
+                    'mag'       : '1E',
+                    'e_mag'     : '1E'
+                  }
+    disp_dict = { 'RAJ2000'   : 'E15',
+                  'DEJ2000'   : 'E15',
+                  'e_RAJ2000' : 'E12',
+                  'e_DEJ2000' : 'E12',
+                  'mag'       : 'F8.4',
+                  'e_mag'     : 'F8.5'
+                }
+    unit_dict = { 'RAJ2000'   : 'deg', 
+                  'DEJ2000'   : 'deg',
+                  'e_RAJ2000' : 'deg',
+                  'e_DEJ2000' : 'deg',
+                  'mag'       : 'mag',
+                  'e_mag'     : 'mag'
+                }
+
+    data_cols = []
+    for col_name in table.columns:
+        if not col_name in list(colname_dict.keys()):
+            continue
+        data_cols.append(fits.Column(name=colname_dict[col_name],
+                                     format=format_dict[col_name],
+                                     array=table[col_name],
+                                     unit=unit_dict[col_name],
+                                     disp=disp_dict[col_name]))
+
+    data_cols.append(fits.Column(name='OBSDATE',
+                                 disp='F13.8',
+                                 format='1D',
+                                 unit='yr',
+                                 array=np.ones(len(table))*2015.5))
+
+    datahdu = fits.BinTableHDU.from_columns(fits.ColDefs(data_cols))
+    datahdu.header['EXTNAME'] = ('LDAC_OBJECTS')
+
+    num_sources = len(table)
+
+    # # combine HDUs and write file
+    hdulist = fits.HDUList([primaryhdu, hdrhdu, datahdu])
+    if float(astropyversion.split('.')[0]) > 1:
+        hdulist.writeto(output_file, overwrite=True)
+    elif float(astropyversion.split('.')[1]) >= 3:
+        hdulist.writeto(output_file, overwrite=True)
+    else:
+        hdulist.writeto(output_file, clobber=True)
+
+    logger.info('wrote {:d} sources from {} to LDAC file'.format(num_sources, output_file))
+
+    return num_sources
+
+def get_reference_catalog(ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0"):
+    """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR2') around
+    the passed (ra, dec) co-ordinates and width and height"""
+
+    refcat = None
+    # Add 50% to passed width and height in lieu of actual calculation of extent
+    # of a series of frames
+    units = set_width[-1]
+    try:
+        ref_width = float(set_width[:-1]) * 1.5
+        ref_width = "{:s}{}".format(ref_width, units)
+    except ValueError:
+        ref_width = set_width
+    units = set_height[-1]
+    try:
+        ref_height = float(set_height[:-1]) * 1.5
+        ref_height = "{:s}{}".format(ref_height, units)
+    except ValueError:
+        ref_height = set_height
+
+    cat_table, final_cat_name = get_vizier_catalog_table(ra, dec, ref_width, ref_height, cat_name, set_row_limit, rmag_limit)
+
+    # Rename and standardize column names, add error units and convert to degrees
+    cat_table.rename_column('Gmag', 'mag')
+    cat_table.rename_column('e_Gmag', 'e_mag')
+    if type(cat_table['e_RAJ2000'].unit) == 'str':
+        cat_table['e_RAJ2000'] = cat_table['e_RAJ2000'] * u.mas
+    cat_table['e_RAJ2000'] = cat_table['e_RAJ2000'].to(u.deg)
+    if type(cat_table['e_DEJ2000'].unit) == 'str':
+        cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'] * u.mas
+    cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'].to(u.deg)
+
+    if final_cat_name != cat_name:
+        logger.warn("Did not get catalog type that was expected ({} vs {})".format(final_cat_name, cat_name))
+    else:
+        refcat = cat_name.replace('-', '') + '.cat'
+        num_sources = write_ldac(cat_table, refcat)
+    return refcat
 
 class FITSHdrException(Exception):
     """Raised when a required FITS header keyword is missing"""
