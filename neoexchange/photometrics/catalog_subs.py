@@ -414,6 +414,7 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
     """
 
     refcat = None
+    num_sources = None
     # Add 50% to passed width and height in lieu of actual calculation of extent
     # of a series of frames
     units = set_width[-1]
@@ -442,12 +443,12 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
     cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'].to(u.deg)
 
     if final_cat_name != cat_name:
-        logger.warn("Did not get catalog type that was expected ({} vs {})".format(final_cat_name, cat_name))
+        logger.warning("Did not get catalog type that was expected ({} vs {})".format(final_cat_name, cat_name))
     else:
         refcat = cat_name.replace('-', '') + '.cat'
         refcat = os.path.join(dest_dir, refcat)
         num_sources = write_ldac(cat_table, refcat)
-    return refcat
+    return refcat, num_sources
 
 class FITSHdrException(Exception):
     """Raised when a required FITS header keyword is missing"""

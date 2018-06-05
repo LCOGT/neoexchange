@@ -930,11 +930,14 @@ class Test_GetReferenceCatalog(TestCase):
                 print("Error removing temporary test directory", self.test_dir)
 
     def test_fetch_catalog(self):
+        expected_ref_catalog = os.path.join(self.test_dir, 'GAIADR2.cat')
+        expected_num_sources = 8
 
-        expected_ref_catalog = os.path.exists(os.path.join(self.test_dir, 'GAIADR2.cat'))
-        get_reference_catalog(self.test_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+        refcat, num_sources = get_reference_catalog(self.test_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
 
         self.assertTrue(os.path.exists(expected_ref_catalog))
+        self.assertEqual(expected_ref_catalog, refcat)
+        self.assertEqual(expected_num_sources, num_sources)
 
 
 class FITSUnitTest(TestCase):
