@@ -939,6 +939,20 @@ class Test_GetReferenceCatalog(TestCase):
         self.assertEqual(expected_ref_catalog, refcat)
         self.assertEqual(expected_num_sources, num_sources)
 
+    def test_fetch_catalog_existing(self):
+        expected_ref_catalog = os.path.join(self.test_dir, 'GAIADR2.cat')
+        try:
+            open(expected_ref_catalog, 'x')
+        except FileExistsError:
+            pass
+        expected_num_sources = -1
+
+        refcat, num_sources = get_reference_catalog(self.test_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertTrue(os.path.exists(expected_ref_catalog))
+        self.assertEqual(expected_ref_catalog, refcat)
+        self.assertEqual(expected_num_sources, num_sources)
+
 
 class FITSUnitTest(TestCase):
     def __init__(self, *args, **kwargs):

@@ -411,10 +411,18 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
     the passed <dest_dir> around the passed (ra, dec) co-ordinates and width and
     height. The catalog file will be of the form <dest_dir/<cat_name>.cat, with
     any hyphens removed.
+    The path to the reference catalog and the number of sources written are
+    returned. If the catalog already exists, the path and '-1' will be returned.
     """
 
-    refcat = None
     num_sources = None
+
+    refcat = cat_name.replace('-', '') + '.cat'
+    refcat = os.path.join(dest_dir, refcat)
+    if os.path.exists(refcat):
+        logger.debug("Reference catalog {} already exists".format(refcat))
+        return refcat, -1
+
     # Add 50% to passed width and height in lieu of actual calculation of extent
     # of a series of frames
     units = set_width[-1]
@@ -444,9 +452,8 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
 
     if final_cat_name != cat_name:
         logger.warning("Did not get catalog type that was expected ({} vs {})".format(final_cat_name, cat_name))
+        refcat = None
     else:
-        refcat = cat_name.replace('-', '') + '.cat'
-        refcat = os.path.join(dest_dir, refcat)
         num_sources = write_ldac(cat_table, refcat)
     return refcat, num_sources
 
