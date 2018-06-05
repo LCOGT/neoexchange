@@ -108,9 +108,9 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
         response = opener.open(req_page)
     except (urllib.error.HTTPError, urllib.error.URLError) as e:
         if hasattr(e, 'code'):
-            logger.warn("Page retrieval failed with HTTP Error %d: %s, retrying" % (e.code, e.reason))
+            logger.warning("Page retrieval failed with HTTP Error %d: %s, retrying" % (e.code, e.reason))
         else:
-            logger.warn("Page retrieval failed with HTTP Error: %s" % (e.reason,))
+            logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
 
     # Suck the HTML down
