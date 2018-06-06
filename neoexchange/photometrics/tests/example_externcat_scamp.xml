@@ -205,12 +205,12 @@
    <FIELD name="Msg" datatype="char" arraysize="*" ucd="meta"/>
    <DATA><TABLEDATA>
     <TR><TD>2018-06-06</TD><TD>00:43:17</TD><TD>This executable has been compiled using a version of the ATLAS library without sPerformance will be degraded.</TD></TR>
-    <TR><TD>2018-06-06</TD><TD>00:43:17</TD><TD>FLAGS parameter not found in catalog GAIADR2.cat</TD></TR>
+    <TR><TD>2018-06-06</TD><TD>00:43:17</TD><TD>FLAGS parameter not found in catalog GAIA-DR2.cat</TD></TR>
    </TABLEDATA></DATA>
   </TABLE>
   <RESOURCE ID="Config" name="Config">
    <DESCRIPTION>SCAMP configuration</DESCRIPTION>
-   <PARAM name="Command_Line" datatype="char" arraysize="*" ucd="obs.param" value="/usr/bin/scamp /apophis/tlister/2018EJ4/Temp/tfn0m414-kb99-20180529-0202-e91_ldac.fits -c scamp_neox_gaiadr2.cfg -ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIADR2.cat"/>
+   <PARAM name="Command_Line" datatype="char" arraysize="*" ucd="obs.param" value="/usr/bin/scamp /apophis/tlister/2018EJ4/Temp/tfn0m414-kb99-20180529-0202-e91_ldac.fits -c scamp_neox_gaiadr2.cfg -ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat"/>
    <PARAM name="Prefs_Name" datatype="char" arraysize="*" ucd="obs.param;meta.file" value="scamp_neox_gaiadr2.cfg"/>
    <PARAM name="FGroup_Radius" unit="arcmin" datatype="double" ucd="phot.calib;obs.param" value="0.2"/>
    <PARAM name="Ref_Server" datatype="char" arraysize="*" ucd="meta.ref.url" value="cocat1.u-strasbg.fr"/>
@@ -218,7 +218,7 @@
    <PARAM name="CDSClient_Exec" datatype="char" arraysize="*" ucd="meta;meta.file" value="aclient_cgi"/>
    <PARAM name="AstRef_Catalog" datatype="char" arraysize="*" ucd="meta.code;meta.file" value="FILE"/>
    <PARAM name="AstRef_Band" datatype="char" arraysize="*" ucd="instr.bandpass" value="DEFAULT"/>
-   <PARAM name="AstRefCat_Name" datatype="char" arraysize="*" ucd="meta.id;meta.file;meta.dataset" value="GAIADR2.cat"/>
+   <PARAM name="AstRefCat_Name" datatype="char" arraysize="*" ucd="meta.id;meta.file;meta.dataset" value="GAIA-DR2.cat"/>
    <PARAM name="AstRefCent_Keys" datatype="char" arraysize="*" ucd="meta.id;pos.eq" value="XWIN_WORLD,YWIN_WORLD"/>
    <PARAM name="AstRefErr_Keys" datatype="char" arraysize="*" ucd="meta.id;pos.errorEllipse" value="ERRAWIN_WORLD,ERRBWIN_WORLD,ERRTHETAWIN_WORLD"/>
    <PARAM name="AstRefMag_Key" datatype="char" arraysize="*" ucd="meta.id;phot.mag" value="MAG"/>

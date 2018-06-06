@@ -359,7 +359,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_scamp_options(self):
 
-        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIADR2.cat'
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
 
         options = determine_scamp_options('foo.ldac')
 
@@ -712,11 +712,11 @@ class TestUpdateFITSWCS(TestCase):
         expected_cd2_2 = -1.075429228793E-06
         expected_secpix = 1.13853
         expected_wcssolvr = 'SCAMP-2.0.4'
-        expected_wcsrfcat = 'GAIADR2.cat'
+        expected_wcsrfcat = 'GAIA-DR2.cat'
         expected_wcsimcat = 'tfn0m414-kb99-20180529-0202-e91_ldac.fits'
         expected_wcsnref = 280
         expected_wcsmatch = 23
-        expected_wccattyp = 'GAIADR2@CDS'
+        expected_wccattyp = 'GAIA-DR2@CDS'
         expected_wcsrdres = '0.31469/0.30167' # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
         expected_wcsdelra = 44.619981558
         expected_wcsdelde = -37.1150613409
@@ -785,11 +785,11 @@ class TestUpdateFITSWCS(TestCase):
         expected_cd2_2 = -1.075429228793E-06
         expected_secpix = 1.13853
         expected_wcssolvr = 'SCAMP-2.0.4'
-        expected_wcsrfcat = 'GAIADR2.cat'
+        expected_wcsrfcat = 'GAIA-DR2.cat'
         expected_wcsimcat = 'tfn0m414-kb99-20180529-0202-e91_ldac.fits'
         expected_wcsnref = 280
         expected_wcsmatch = 23
-        expected_wccattyp = 'GAIADR2@CDS'
+        expected_wccattyp = 'GAIA-DR2@CDS'
         expected_wcsrdres = '0.31469/0.30167' # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
         expected_wcsdelra = 44.619981558
         expected_wcsdelde = -37.1150613409
@@ -872,8 +872,8 @@ class TestGetSCAMPXMLInfo(TestCase):
 
         expected_results = { 'num_refstars' : 280,
                              'num_match'    : 23,
-                             'wcs_refcat'   : 'GAIADR2.cat',
-                             'wcs_cattype'  : 'GAIADR2@CDS',
+                             'wcs_refcat'   : 'GAIA-DR2.cat',
+                             'wcs_cattype'  : 'GAIA-DR2@CDS',
                              'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
                              'pixel_scale'  : 1.13853
                            }

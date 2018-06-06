@@ -200,7 +200,7 @@ def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
     options = options.rstrip()
     return options
 
-def determine_scamp_options(fits_catalog, external_cat_name='GAIADR2.cat'):
+def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat'):
 
     options = "-ASTREF_CATALOG FILE -ASTREFCAT_NAME {}".format(external_cat_name)
 

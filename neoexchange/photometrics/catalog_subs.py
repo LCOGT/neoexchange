@@ -417,7 +417,7 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
 
     num_sources = None
 
-    refcat = cat_name.replace('-', '') + '.cat'
+    refcat = cat_name + '.cat'
     refcat = os.path.join(dest_dir, refcat)
     if os.path.exists(refcat):
         logger.debug("Reference catalog {} already exists".format(refcat))

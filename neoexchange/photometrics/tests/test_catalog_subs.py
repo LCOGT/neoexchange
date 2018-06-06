@@ -930,7 +930,7 @@ class Test_GetReferenceCatalog(TestCase):
                 print("Error removing temporary test directory", self.test_dir)
 
     def test_fetch_catalog(self):
-        expected_ref_catalog = os.path.join(self.test_dir, 'GAIADR2.cat')
+        expected_ref_catalog = os.path.join(self.test_dir, 'GAIA-DR2.cat')
         expected_num_sources = 8
 
         refcat, num_sources = get_reference_catalog(self.test_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
@@ -940,7 +940,7 @@ class Test_GetReferenceCatalog(TestCase):
         self.assertEqual(expected_num_sources, num_sources)
 
     def test_fetch_catalog_existing(self):
-        expected_ref_catalog = os.path.join(self.test_dir, 'GAIADR2.cat')
+        expected_ref_catalog = os.path.join(self.test_dir, 'GAIA-DR2.cat')
         try:
             open(expected_ref_catalog, 'x')
         except FileExistsError:
