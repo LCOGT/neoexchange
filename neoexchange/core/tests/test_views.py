@@ -25,6 +25,8 @@ from django.forms.models import model_to_dict
 from bs4 import BeautifulSoup
 from mock import patch
 from astropy.io import fits
+from astropy.wcs import WCS
+from numpy.testing import assert_allclose
 
 from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check_for_images, \
     mock_check_request_status_null, mock_check_request_status_notfound, \
@@ -2942,12 +2944,22 @@ class TestCheckCatalogAndRefitNew(TestCase):
         fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
         status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_headfile, self.test_externcat_xml, fits_file_output)
         header = get_catalog_header(new_header, cattype)
+        new_wcs = WCS(new_header)
+        expected_wcs = new_wcs.wcs
         num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
 
         frames = Frame.objects.filter(frametype=Frame.BANZAI_LDAC_CATALOG)
         self.assertEqual(1, frames.count())
         frame = frames[0]
         self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
+        self.assertEqual(' ', frame.photometric_catalog)
+        self.assertEqual(0.30818, frame.rms_of_fit)
+        self.assertEqual(23, frame.nstars_in_fit)
+
+        frame_wcs = frame.wcs.wcs
+        assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+        assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+        assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
 
 class TestUpdate_Crossids(TestCase):
 

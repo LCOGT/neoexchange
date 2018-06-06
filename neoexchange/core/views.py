@@ -1556,7 +1556,7 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
     return num_new_frames_created
 
 
-def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_catalog='GAIA-DR2'):
+def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_catalog=None):
     """New version of check_catalog_and_refit designed for BANZAI data. This
     version of the routine assumes that the astrometric fit status of <catfile>
     is likely to be good and exits if not the case. A new source extraction
