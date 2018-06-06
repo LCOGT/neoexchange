@@ -13,10 +13,11 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from __future__ import unicode_literals
-from datetime import datetime
-from math import pi, log10
+from datetime import datetime, timedelta, date
+from math import pi, log10, sqrt, cos, degrees
 from collections import Counter
 import reversion
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -41,6 +42,7 @@ from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params,
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+logger = logging.getLogger(__name__)
 
 
 OBJECT_TYPES = (
@@ -107,6 +109,20 @@ TAX_REFERENCE_CHOICES = (
                         ('BZ04', 'Binzel, et al. (2004).'),
                      )
 
+SPECTRAL_WAV_CHOICES = (
+                        ('Vis','Visible'),
+                        ('NIR','Near Infrared'),
+                        ('Vis+NIR','Both Visible and Near IR'),
+                        ('NA','None Yet.'),
+                     )
+
+SPECTRAL_SOURCE_CHOICES = (
+                        ('S','SMASS'),
+                        ('M','MANOS'),
+                        ('U','Unknown'),
+                        ('O','Other')
+                     )
+
 
 @python_2_unicode_compatible
 class Proposal(models.Model):
@@ -158,6 +174,14 @@ class Body(models.Model):
     updated             = models.BooleanField('Has this object been updated?', default=False)
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
+
+    def characterization_target(self):
+        # If we change the definition of Characterization Target,
+        # also update views.build_characterization_list
+        if self.active is True and self.origin != 'M':
+            return True
+        else:
+            return False
 
     def diameter(self):        
         m = self.abs_mag
@@ -213,6 +237,97 @@ class Body(models.Model):
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
             return emp_line[1], emp_line[2], emp_line[3], emp_line[6]
+        else:
+            # Catch the case where there is no Epoch
+            return False
+
+    def compute_obs_window(self, d=None, dbg=False):
+        """
+        Compute rough window during which target may be observable based on when it is brighter than a
+        given mag_limit amd further from the sun than sep_limit.
+        """
+        if not isinstance(d, datetime):
+            d = datetime.utcnow()
+        d0 = d
+        df = 90  # days to look forward
+        delta_t = 10  # size of steps in days
+        mag_limit = 18
+        sep_limit = 45  # degrees away from Sun
+        i = 0
+        dstart = ''
+        dend = ''
+        if self.epochofel:
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            # calculate the ephemeris for each step (delta_t) within the time span df.
+            while i <= df / delta_t + 1:
+                emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+                vmag = emp_line[3]
+
+                # Eliminate bad magnitudes
+                if vmag < 0:
+                    return dstart, dend, d0
+
+                # Calculate time since/until reaching Magnitude limit
+                t_diff = (mag_limit - vmag) / mag_dot
+
+                # create separation test.
+                sep_test = degrees(separation) > sep_limit
+
+                # Filter likely results based on Mag/mag_dot to speed results.
+                # Cuts load time by 60% will occasionally and temporarily miss
+                # objects with either really short windows or unusual behavior
+                # at the edges. These objects will be found as the date changes.
+
+                # Check first and last dates first
+                if d == d0 + timedelta(days=df) and i == 1:
+                    # if Valid for beginning and end of window, assume valid for window
+                    if vmag <= mag_limit and dstart and sep_test:
+                        if dbg:
+                            logger.debug("good at begining and end", "mag:", vmag, "sep:", sep_test)
+                        return dstart, dend, d0
+                    elif not dstart:
+                        # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
+                        if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                            if dbg:
+                                logger.debug("bad at begining and end, Delta Mag no good", "mag:", vmag, "sep:", sep_test)
+                            return dstart, dend, d0
+                        else:
+                            d = d0 + timedelta(days=delta_t)
+                    else:
+                        d = d0 + timedelta(days=delta_t)
+                # if a valid start has been found, check if we are now invalid. Exit if so.
+                elif (vmag > mag_limit or not sep_test) and dstart:
+                    dend = d
+                    if dbg:
+                        logger.debug("Ended in at", i, "mag:", vmag, "sep:", sep_test)
+                    return dstart, dend, d0
+                # If no start date, and we are valid, set start date
+                elif vmag <= mag_limit and not dstart and sep_test:
+                    dstart = d
+                    if dbg:
+                        logger.debug("started at", i, "mag:", vmag, "sep:", sep_test)
+                    # if this is our first iteration (i.e. we started valid) test end date
+                    if i == 0:
+                        d += timedelta(days=df)
+                    # otherwise step forward
+                    else:
+                        d += timedelta(days=delta_t)
+                # if we are not valid from the start, check if we might be valid in middle. Otherwise, check end.
+                elif vmag > mag_limit and i == 0:
+                    if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                        d += timedelta(days=df)
+                    else:
+                        d += timedelta(days=delta_t)
+                # if nothing has changed, step forward.
+                else:
+                    d += timedelta(days=delta_t)
+#                d += timedelta(days=delta_t)
+                i += 1
+            # Return dates
+            if dbg:
+                logger.debug("no end change", "mag:", vmag, "sep:", sep_test)
+            return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
             return False
@@ -328,6 +443,24 @@ class SpectralInfo(models.Model):
 
     def __str__(self):
         return "%s is a %s-Type Asteroid" % (self.body.name, self.taxonomic_class)
+
+
+class PreviousSpectra(models.Model):
+    body                = models.ForeignKey(Body, on_delete=models.CASCADE)
+    spec_wav            = models.CharField('Wavelength', blank=True, null=True, max_length=7, choices=SPECTRAL_WAV_CHOICES)
+    spec_vis            = models.URLField('Visible Spectra Link', blank=True, null=True)
+    spec_ir             = models.URLField('IR Spectra Link', blank=True, null=True)
+    spec_ref            = models.CharField('Spectra Reference', max_length=10, blank=True, null=True)
+    spec_source         = models.CharField('Source', max_length=1, blank=True, null=True, choices=SPECTRAL_SOURCE_CHOICES)
+    spec_date           = models.DateField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('External Spectroscopy')
+        verbose_name_plural = _('External Spectroscopy')
+        db_table = 'ingest_previous_spectra'
+
+    def __unicode__(self):
+        return "%s has %s spectra of %s" % (self.spec_source, self.spec_wav, self.body.name)
 
 
 @python_2_unicode_compatible

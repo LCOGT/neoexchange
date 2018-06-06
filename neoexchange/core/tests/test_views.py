@@ -43,9 +43,10 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
+    make_new_catalog_entry, generate_new_candidate_id, \
+    update_taxonomy,update_previous_spectra
 from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo, PreviousSpectra
 from core.forms import EphemQuery
 
 # Disable logging during testing
@@ -53,6 +54,7 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
+
 
 class TestClean_NEOCP_Object(TestCase):
 
@@ -282,6 +284,7 @@ class TestClean_NEOCP_Object(TestCase):
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
+
 
 class TestCheck_for_block(TestCase):
 
@@ -913,7 +916,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
         self.assertEqual(expected_resp['exp_count'], resp['exp_count'])
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
-        self.assertAlmostEqual(expected_resp['magnitude'], resp['magnitude'],2)
+        self.assertAlmostEqual(expected_resp['magnitude'], resp['magnitude'], 2)
 
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_mid_past_A_semester(self):
@@ -1382,7 +1385,6 @@ class TestClean_mpcorbit(TestCase):
                                          'semimajor axis': None,
                                          'transverse non-grav. param.': None}
 
-
         self.expected_params = {
                              'elements_type': 'MPC_MINOR_PLANET',
                              'abs_mag' : '26.6',
@@ -1401,8 +1403,8 @@ class TestClean_mpcorbit(TestCase):
                              'num_obs': '147',
                              'arc_length': '357',
                              'not_seen' : 5.5,
-#                             'score' : None,
-                             'update_time' : datetime(2015,10,9,0),
+                             # 'score' : None,
+                             'update_time' : datetime(2015, 10, 9, 0),
                              'updated' : True
                              }
         self.expected_comet_params = {
@@ -1564,8 +1566,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_nonLCO_nocat(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1590,8 +1592,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_nonLCO_nomag(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1616,8 +1618,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_nonLCO_flags(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1728,8 +1730,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.SATELLITE_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
         self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
 
     def test_create_non_existant_body(self):
@@ -1847,14 +1849,14 @@ class TestFrames(TestCase):
         params = parse_mpcobs(self.test_obslines[-1])
         resp = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K93')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
 
     def test_add_frames(self):
         for line in self.test_obslines:
             params = parse_mpcobs(line)
             resp = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K93')
-        self.assertEqual(3,frames.count())
+        self.assertEqual(3, frames.count())
         # Did the block get Added
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         # Although there are 4 sources in the file 2 are in the same frame
@@ -1874,7 +1876,7 @@ class TestFrames(TestCase):
         frame_params = frame_params_from_block(params, self.test_block)
         frame, frame_created = Frame.objects.get_or_create(**frame_params)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
 
     def test_ingest_frames_block(self):
@@ -1894,7 +1896,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -1917,7 +1919,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].filename, params['ORIGNAME']+'.fits')
@@ -1941,7 +1943,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -1966,7 +1968,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_QL_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -1992,7 +1994,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2019,7 +2021,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='L09')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'L09')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2046,7 +2048,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='V38')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'V38')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2073,7 +2075,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='Z21')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'Z21')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2100,7 +2102,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='Z17')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'Z17')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2127,7 +2129,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='W89')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'W89')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2154,7 +2156,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='W79')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'W79')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2225,7 +2227,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_did_not_exist(self):
-        crossid =  [u'WTB842B', 'doesnotexist', '', u'(Oct. 9.19 UT)']
+        crossid = [u'WTB842B', 'doesnotexist', '', u'(Oct. 9.19 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
                             'source_type' : 'X'
@@ -2236,7 +2238,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_was_not_confirmed(self):
-        crossid =  [u'P10oYZI', 'wasnotconfirmed', '', u'(Nov. 4.81 UT)']
+        crossid = [u'P10oYZI', 'wasnotconfirmed', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
                             'source_type' : 'U'
@@ -2402,6 +2404,7 @@ class TestClean_crossid(TestCase):
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
+
 
 class TestSummarise_Block_Efficiency(TestCase):
 
@@ -2597,7 +2600,7 @@ class TestSummarise_Block_Efficiency(TestCase):
 class TestCheckCatalogAndRefitNew(TestCase):
 
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
 #        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
 #        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
@@ -2659,19 +2662,19 @@ class TestCheckCatalogAndRefitNew(TestCase):
                         }
         self.test_block, created = Block.objects.get_or_create(**block_params)
 
-        frame_params = {    'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'banzai_test_frame.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.390,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params = {    'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'banzai_test_frame.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.390,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
 
@@ -2686,7 +2689,8 @@ class TestCheckCatalogAndRefitNew(TestCase):
                 print("Error removing files in temporary test directory", self.temp_dir)
             try:
                 os.rmdir(self.temp_dir)
-                if self.debug_print: print("Removed", self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
             except OSError:
                 print("Error removing temporary test directory", self.temp_dir)
 
@@ -2796,19 +2800,19 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
     def test_find_block_for_frame_multiple_frames(self):
 
-        frame_params_2 = {  'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'banzai_test_frame.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.380,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params_2 = {  'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'banzai_test_frame.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.380,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
 
@@ -2820,35 +2824,35 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
     def test_find_block_for_frame_DNE_multiple_frames(self):
 
-        frame_params = {  'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'example-sbig-e00.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.390,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params = {  'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'example-sbig-e00.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.390,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
 
-        frame_params_2 = {  'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'example-sbig-e00.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.380,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params_2 = {  'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'example-sbig-e00.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.380,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
 
@@ -2890,19 +2894,19 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
     def test_make_new_catalog_entry_multiple_frames(self):
 
-        frame_params_2 = {  'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'banzai_test_frame_ldac.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.380,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params_2 = {  'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'banzai_test_frame_ldac.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.380,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
 
@@ -3266,6 +3270,7 @@ class TestStoreDetections(TestCase):
         cands = Candidate.objects.all()
         self.assertEqual(expected_num_cands, len(cands))
 
+
 class Test_Generate_New_Candidate_Id_Blank(TestCase):
 
     def test_no_discoveries(self):
@@ -3294,6 +3299,7 @@ class Test_Generate_New_Candidate_Id_Blank(TestCase):
         new_id = generate_new_candidate_id()
 
         self.assertEqual(expected_id, new_id)
+
 
 class Test_Generate_New_Candidate_Id(TestCase):
 
@@ -3341,6 +3347,7 @@ class Test_Generate_New_Candidate_Id(TestCase):
         self.assertEqual(expected_id, new_id)
         self.assertEqual(3, Body.objects.count())
 
+
 class Test_Add_New_Taxonomy_Data(TestCase):
 
     def setUp(self):
@@ -3349,7 +3356,7 @@ class Test_Add_New_Taxonomy_Data(TestCase):
                    'provisional_name' : 'LNX0003',
                    'origin' : 'L',
                  }
-        self.body = Body.objects.create(pk=1,**params)
+        self.body = Body.objects.create(pk=1, **params)
 
         tax_params = {'body'          : self.body,
                       'taxonomic_class' : 'S3',
@@ -3361,32 +3368,85 @@ class Test_Add_New_Taxonomy_Data(TestCase):
 
     def test_one_body(self):
         expected_res = True
-        test_obj=['LNX0003','SU',"T","PDS6","7G"]
+        test_obj = ['LNX0003', 'SU', "T", "PDS6", "7G"]
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_new_target(self):
         expected_res = False
-        test_obj=['4702','S',"B","PDS6","s"]
+        test_obj = ['4702', 'S', "B", "PDS6", "s"]
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data(self):
         expected_res = False
-        test_obj=['980','S3',"Ba","PDS6","7I"]
+        test_obj = ['980', 'S3', "Ba", "PDS6", "7I"]
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data_twice(self):
         expected_res = False
-        test_obj=['980','SU',"T","PDS6","7G"]
+        test_obj = ['980', 'SU', "T", "PDS6", "7G"]
         new_tax = update_taxonomy(test_obj)
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
 
+class Test_Add_External_Spectroscopy_Data(TestCase):
 
+    def setUp(self):
+
+        params = { 'name' : '980',
+                   'provisional_name' : 'LNX0003',
+                   'origin' : 'L',
+                   'active' : True,
+                 }
+        self.body = Body.objects.create(pk=1, **params)
+
+        spec_params = {'body'          : self.body,
+                'spec_wav'      : 'Vis',
+                'spec_vis'      : 'spex/sp233/a265962.sp233.txt',
+                'spec_ref'      : 'sp[234]',
+                'spec_source'   : 'S',
+                'spec_date'     : '2017-09-25',
+                      }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spec_params)
+
+    def test_same_body_different_wavelength(self):
+        expected_res = True
+        test_obj = ['LNX0003', 'NIR', '', "spex/sp233/a416584.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_older(self):
+        expected_res = False
+        test_obj = ['980', 'Vis', 'spex/sp233/a416584.sp234.txt', "", "sp[24]", datetime.strptime('2015-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_newer(self):
+        expected_res = True
+        test_obj = ['980', 'Vis', 'spex/sp233/a416584.sp234.txt', "", "sp[24]", datetime.strptime('2017-12-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_different_source(self):
+        expected_res = True
+        test_obj = ['980', 'Vis', '2014/09/1999sh10.png', "", "MANOS Site", datetime.strptime('2015-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'M', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_new_body(self):
+        expected_res = False
+        test_obj = ['9801', 'Vis', '2014/09/1999sh10.png', "", "MANOS Site", datetime.strptime('2015-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'M', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)

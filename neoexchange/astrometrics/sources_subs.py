@@ -28,6 +28,7 @@ from datetime import datetime, timedelta
 from socket import error
 from random import randint
 from time import sleep
+from datetime import date
 import requests
 
 from bs4 import BeautifulSoup
@@ -1696,6 +1697,155 @@ def parse_taxonomy_data(tax_text=None):
                 row = [obj_id, chunks[16], "3B", "PDS6", out]
                 tax_table.append(row)
     return tax_table
+
+
+def fetch_smass_page():
+    """Fetches the smass list of spectral targets"""
+
+    smass_url = 'http://smass.mit.edu/catalog.php?sort=dat&mpcc=off&text=off'
+
+    page = fetchpage_and_make_soup(smass_url)
+
+    return page
+
+
+def fetch_smass_targets(page=None, cut_off=None):
+    """Parses the smass webpage for spectroscopy results and returns a list
+    of these targets back along with links to data files.
+    Takes either a BeautifulSoup page version of the SMASS target page (from
+    a call to fetch_smass_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    """
+
+    if type(page) != BeautifulSoup:
+        page = fetch_smass_page()
+
+    targets = []
+    if type(page) == BeautifulSoup:
+        # Find the table, make sure there is only one
+        tables = page.find_all('table')
+        if len(tables) != 1:
+            logger.warning("Unexpected number of tables found on SMASS page (Found %d)" % len(tables))
+        else:
+            targets_table = tables[0]
+            rows = targets_table.find_all('tr')
+            if len(rows) > 1:
+                for row in rows[2:]:
+                    mpnum = row.find_all('td', class_="mpnumber")
+                    provdes = row.find_all('td', class_="provdesig")
+                    data = row.find_all('td', class_="datalinks")
+                    ref = row.find_all('td', class_="refnumber last")
+                    items = row.find_all('td')
+                    if len(mpnum) > 0:
+                        target_name = mpnum[0].text
+                        target_name = target_name.strip()
+                        if target_name == '':
+                            target_name = provdes[0].text
+                            target_name = target_name.strip()
+                    t_wav = data[0].text
+                    t_wav = t_wav.strip()
+                    t_link = row.find_all('a')
+                    t_link = t_link[0]['href']
+
+                    if t_link.split('.')[-1] != 'txt':
+                        if t_link.split('.')[-1] == 'tx':
+                            t_link = t_link + 't'
+                        else:
+                            t_link = t_link + '.txt'
+                    t_link = 'http://smass.mit.edu/' + t_link
+                    if 'Vis' in t_wav:
+                        v_link = t_link
+                    else:
+                        v_link = ''
+                    if 'NIR' in t_wav:
+                        i_link = t_link
+                    else:
+                        i_link = ''
+                    date = items[-1].text
+                    date = date.strip()
+                    date = datetime.strptime(date, '%Y-%m-%d').date()
+                    if cut_off and date < cut_off:
+                        return targets
+                    ref = ref[0].text
+                    ref = ref.strip()
+                    target_object = [target_name, t_wav, v_link, i_link, ref, date]
+                    same_object = [row for row in targets if target_name == row[0] and t_wav == row[1]]
+                    same_object = [item for sublist in same_object for item in sublist]
+                    if same_object and date <= same_object[5]:
+                        continue
+                    elif same_object:
+                        targets[targets.index(same_object)] = target_object
+                    else:
+                        targets.append(target_object)
+    return targets
+
+
+def fetch_manos_page():
+    """Fetches the manos list of spectral targets"""
+    # new manos site = http://manos.lowell.edu/observations/summary
+    manos_url = 'http://manos.lowell.edu/observations/summary/statuses'
+    page = fetchpage_and_make_soup(manos_url)
+
+    return page
+
+
+def fetch_manos_targets(page=None, cut_off=None):
+    """Parses the manos webpage for spectroscopy results and returns a list
+    of these targets back along with links to data files when present.
+    Takes either a BeautifulSoup page version of the MANOS target page (from
+    a call to fetch_manos_page() - to allow  standalone testing) or  calls
+    this routine and then parses the resulting page.
+    """
+
+    if type(page) != BeautifulSoup:
+        page = fetch_manos_page()
+
+    targets = []
+
+    if type(page) == BeautifulSoup:
+        # Create list of dictionaries of manos data
+        manos_data = eval(str(page).replace('true', 'True').replace('false', 'False'))['data']
+
+        for datum in manos_data:
+            if datum['ast_number'] != '-':
+                target_name = datum['ast_number']
+            else:
+                target_name = datum['primary_designation']
+            # skip if already ingested more recent data for target
+            if any([target_name == target[0] for target in targets]):
+                continue
+
+            # Has MANOS collected Spectra?
+            if datum['vis_spec'] is True and datum['nir_spec'] is True:
+                target_wav = 'Vis+NIR'
+            elif datum['vis_spec'] is True:
+                target_wav = 'Vis'
+            elif datum['nir_spec'] is True:
+                target_wav = 'NIR'
+            else:
+                target_wav = "NA"
+
+            # Does MANOS have links?
+            if isinstance(datum['vis_spec_image'], str):
+                vislink = datum['vis_spec_image'].replace('thumbs', datum['file_asteroid_vis_spec'])
+                vislink = 'http://manos.lowell.edu' + vislink + '.jpg'
+            else:
+                vislink = ''
+            if isinstance(datum['nir_spec_image'], str):
+                nirlink = datum['nir_spec_image'].replace('thumbs', datum['file_asteroid_nir_spec'])
+                nirlink = 'http://manos.lowell.edu' + nirlink + '.jpg'
+            else:
+                nirlink = ''
+
+            # Date of update
+            update = datetime.strptime(datum['last_updated'], '%Y-%m-%d').date()
+            # Return new updates only (check current calendar year) unless told otherwise
+            if cut_off and update < cut_off:
+                return targets
+
+            target_object = [target_name, target_wav, vislink, nirlink, 'MANOS Site', update]
+            targets.append(target_object)
+    return targets
 
 
 def fetch_list_targets(list_targets):

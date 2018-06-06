@@ -28,7 +28,7 @@ from neox.tests.mocks import MockDateTime
 
 #Import module to test
 from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources, Candidate, WCSField
+    CatalogSources, Candidate, WCSField,PreviousSpectra
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -146,6 +146,15 @@ class TestBody(TestCase):
                        }
         self.test_block5b = Block.objects.create(**block_params5b)
 
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_ref'     : 'sp[233]',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spectra_params)
+
     def test_get_block_info_NoBlock(self):
         expected = ('Not yet', 'Not yet')
 
@@ -182,7 +191,7 @@ class TestBody(TestCase):
         self.assertEqual(expected, result)
 
     def test_no_absmag(self):
-        test_body=self.body
+        test_body = self.body
         test_body.abs_mag = None
         test_body.save()
 
@@ -190,12 +199,56 @@ class TestBody(TestCase):
         self.assertEqual(None, diameter)
 
     def test_bad_absmag(self):
-        test_body=self.body
+        test_body = self.body
         test_body.abs_mag = -99
         test_body.save()
 
         diameter = test_body.diameter()
         self.assertEqual(None, diameter)
+
+    def test_compute_obs_window_mid(self):
+        test_body = self.body
+        test_body.abs_mag = 19.0
+        test_body.save()
+
+        expected_start = datetime(2015, 8, 10, 17, 0)
+        expected_end = datetime(2015, 9, 29, 17, 0)
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_full(self):
+        test_body = self.body
+        test_body.abs_mag = 17.0
+        test_body.save()
+
+        expected_start = datetime(2015, 7, 1, 17, 0, )
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_none(self):
+        test_body = self.body
+        test_body.save()
+
+        expected_start = ''
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_sun(self):
+        test_body = self.body
+        test_body.abs_mag = 8.0
+        test_body.meananom = 180
+        test_body.save()
+
+        expected_start = ''
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
 
 
 @patch('core.models.datetime', MockDateTime)
@@ -663,6 +716,7 @@ class TestFrame(TestCase):
         self.assertEqual(self.w._naxis1, frame.wcs._naxis1)
         self.assertEqual(self.w._naxis2, frame.wcs._naxis2)
 
+
 class TestWCSField(TestCase):
 
     def setUp(self):
@@ -687,6 +741,7 @@ class TestWCSField(TestCase):
     def test_db_parameters_respects_db_type(self):
         f = WCSField()
         self.assertEqual(f.db_parameters(connection)['type'], 'text')
+
 
 class TestSourceMeasurement(TestCase):
 
@@ -1155,3 +1210,4 @@ class TestCandidate(TestCase):
         for frame in arange(self.dets_array.shape[0]):
             for column in self.dets_array.dtype.names:
                 self.assertAlmostEqual(self.dets_array[column][frame], new_dets_array[column][frame], 7)
+

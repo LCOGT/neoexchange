@@ -17,6 +17,7 @@ import os
 from mock import patch, MagicMock
 from socket import error
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from unittest import skipIf
 
 import astropy.units as u
@@ -3070,6 +3071,73 @@ class TestFetchTaxonomyData(TestCase):
         expected_line = ['1', 'G', "T", "PDS6", "7G"]
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
+
+
+class TestFetchPreviousSpectra(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored, partial version of the PDS Taxonomy Database
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_smass_page.html'), 'r')
+        self.test_smass_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        test_fh2 = open(os.path.join('astrometrics', 'tests', 'test_manos_page.html'), 'r')
+        self.test_manos_page = BeautifulSoup(test_fh2, "html.parser")
+        test_fh2.close()
+
+    def test_smass_basics(self):
+        expected_length = 12
+        page = self.test_smass_page
+        targets = fetch_smass_targets(page, None)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_smass_abreviated(self):
+        cut_off = datetime(2017, 10, 25, 3, 26, 5).date() - relativedelta(months=6)
+        expected_length = 10
+        page = self.test_smass_page
+        targets = fetch_smass_targets(page, cut_off)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_manos_basics(self):
+        expected_length = 11
+        page = self.test_manos_page
+        targets = fetch_manos_targets(page, None)
+        self.assertEqual(expected_length, len(targets))
+
+    def test_manos_abreviated(self):
+        cut_off = datetime(2017, 10, 25, 3, 26, 5).date() - relativedelta(months=6)
+        expected_length = 10
+        page = self.test_manos_page
+        targets = fetch_manos_targets(page, cut_off)
+        self.assertEqual(expected_length, len(targets))
+
+    def test_smass_targets(self):
+        expected_targets = [ ['302'   , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['6053'  , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a006053.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['96631' , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a096631.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['96631' , 'Vis', "http://smass.mit.edu/data/spex/sp234/a096631.sp234.txt", '', "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['265962', 'Vis+NIR', "http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt", "http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['416584', 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a416584.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['422699', 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a422699.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['2006 UY64', 'NIR', '', "http://smass.mit.edu/data/spex/sp209/au2010pr66.sp209.txt", "sp[209]", datetime.strptime('2017-12-02', '%Y-%m-%d').date()],
+                             ['416584', 'Vis', "http://smass.mit.edu/data/spex/sp210/au2005lw7.sp210.txt", '', "sp[210]", datetime.strptime('2015-12-02', '%Y-%m-%d').date()],
+                            ]
+        smass_data = fetch_smass_targets(self.test_smass_page, None)
+        for line in expected_targets:
+            self.assertIn(line, smass_data)
+
+    def test_manos_targets(self):
+        expected_targets = [ ['2018 KW1'  , 'NIR'    , '', '', 'MANOS Site', datetime.strptime('2018-05-23', '%Y-%m-%d').date()],
+                             ['2011 SC191', 'NA'     , '', '', 'MANOS Site', datetime.strptime('2018-04-25', '%Y-%m-%d').date()],
+                             ['3552'      , 'NA'     , '', '', 'MANOS Site', datetime.strptime('2018-04-25', '%Y-%m-%d').date()],
+                             ['2018 FW1'  , 'Vis'    , '', '', 'MANOS Site', datetime.strptime('2018-03-26', '%Y-%m-%d').date()],
+                             ['2018 CB'   , 'Vis+NIR', '', '', 'MANOS Site', datetime.strptime('2018-02-08', '%Y-%m-%d').date()],
+                             ['2015 CQ13' , 'Vis'    , 'http://manos.lowell.edu/static/data/manosResults/2015CQ13/2015CQ13_150217_GN_spec.jpg', '', 'MANOS Site', datetime.strptime('2015-02-17', '%Y-%m-%d').date()],
+                            ]
+        manos_data = fetch_manos_targets(self.test_manos_page, None)
+        for line in expected_targets:
+            self.assertIn(line, manos_data)
 
 
 class TestFetchTargetsFromList(TestCase):

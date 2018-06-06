@@ -23,7 +23,11 @@
                             <h5  class="section-title"><span class="">Name</span><span class="msgpadded">{{body.old_name}} &rarr; {{body.name}}</span></h5>
                             {% endif %}
                             <h5  class="section-title"><span class="">Type</span><span class="msgpadded">{{body.get_source_type_display}}</span></h5>
-                            <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span></h5>
+                            <h5  class="section-title"><span class="">Status</span> <span class="">{% if body.active %}<span class="warning msgpadded">Actively Following</span>{% else %}Not Following{% endif %}</span>
+                                {% if body.characterization_target %}
+                                    <br><span style="font-size:75%;padding-left:100px;font-style:italic;">Characterization Target</span>
+                                {% endif %}
+                            </h5>
                             <h5  class="section-title"><span class="">Source</span> <span class="msgpadded">{{body.get_origin_display}}</span></h5>
                             <div class="section-title">
                             <form action="{% url 'ephemeris' %}" method="GET" style="display:inline-block;">
@@ -183,33 +187,57 @@
                                         <td class="kv-value">{{body.not_seen|floatformat:2}}</td>
                                     </tr>
                                                                         {% endif %}
-                                </tbody>
-                            </table>                        
-                            <h5 class="section-title">Spectroscopy Details</h5>
-                            <table class="keyvalue-table" id="id_spectralinfo">
-                                <tbody>
-                                     {% for s in spectra %}
-                                    <tr>
-                                        <td class="kv-key"> {{s.get_tax_scheme_display}} Taxonomic Type</td>
-                                        <td class="kv-value">{{s.taxonomic_class}}</td>
-                                    </tr>   
-                                    {% if s.tax_notes and s.tax_notes != "*"%}
-                                        <tr>
-                                            <td style="font-size:xx-small;text-align:right;" colspan=2>{{s.make_readable_tax_notes}}</td>
-                                        </tr>
-                                    {% endif %}
-                                    <tr>
-                                        <td style="font-size:xx-small;text-align:right;" colspan=2>{{s.get_tax_reference_display}}</td>
-                                    </tr>   
-                                    {% empty %}
-                                        <tr>
-                                            <td class="kv-key"> Known Taxonomies</td>
-                                            <td class="kv-value">None</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+								</tbody>
+							</table>
+							<h5 class="section-title">Spectroscopy Details</h5>
+							<table class="keyvalue-table" id="id_spectralinfo">
+								<tbody>
+								    {% for s in spectra %}
+								        {% if s.spec_source == 'S' %}
+								            <tr>
+										        <td class="kv-key"> SMASS Spectra</td>
+										        <td class="kv-value"><a href={{s.spec_vis}}>{{s.spec_wav}}</a></td>
+									        </tr>
+								        {% endif %}
+								        {% if s.spec_source == 'M' %}
+								            <tr>
+										        <td class="kv-key"> MANOS Target</td>
+										        {% if s.spec_wav != 'NA' %}
+										            {% if s.spec_vis %}
+										                <td class="kv-value"><a href={{s.spec_vis}}>{{s.spec_wav}}</a></td>
+										            {% else %}
+										                <td class="kv-value">{{s.spec_wav}}</td>
+										            {% endif %}
+										        {% else %}
+										            <td class="kv-value">(No Data Yet)</td>
+										        {% endif %}
+									        </tr>
+								        {% endif %}
+								    {% endfor %}
+                                    {% for t in taxonomies %}
+									<tr><td ><table align="left"  style="margin: 0px"><tr>
+										<td class="kv-key" >
+                                            <div class="tooltip">{{t.get_tax_scheme_display}} Taxonomic Type
+                                                <span class="tooltiptext" style="left:30%">
+                                                    {% if t.tax_notes and t.tax_notes != "*"%}
+                                                        {{t.make_readable_tax_notes}}
+                                                    {% endif %}
+                                                    <br>
+                                                    <br>{{t.get_tax_reference_display}}
+                                                </span>
+                                            </div></td><td></td></tr></table></td>
+										<td class="kv-value">{{t.taxonomic_class}}
+										</td>
+									</tr>
+								    {% empty %}
+								        <tr>
+								            <td class="kv-key"> Known Taxonomies</td>
+								            <td class="kv-value">None</td>
+								        </tr>
+								    {% endfor %}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
 {% endblock %}
