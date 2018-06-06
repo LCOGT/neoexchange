@@ -423,23 +423,25 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     using the SCAMP generated FITS-like .head ascii file.
     <fits_file> should the processed CCD image to update, <scamp_file> is
     the SCAMP-produced .head file, <scamp_xml_file> is the SCAMP-produced
-    XML output file and <fits_file_output> is the new output FITS file.'''
+    XML output file and <fits_file_output> is the new output FITS file.
+    A return status and the updated header are returned; in the event of a
+    problem, the status will be -ve and the header will be None'''
 
     try:
         data, header = fits.getdata(fits_file, header=True)
     except IOError as e:
         logger.error("Unable to open FITS image %s (Reason=%s)" % (fits_file, e))
-        return -1
+        return -1, None
 
     scamp_info = get_scamp_xml_info(scamp_xml_file)
     if scamp_info == None:
-        return -2
+        return -2, None
 
     try:
         scamp_head_fh = open(scamp_file, 'r')
     except IOError as e:
         logger.error("Unable to open SCAMP header file %s (Reason=%s)" % (scamp_file, e))
-        return -3
+        return -3, None
 
     # Read in SCAMP .head file
     for line in scamp_head_fh:
@@ -514,7 +516,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     # Need to force the CHECKSUM to be recomputed. Trap for young players..
     fits.writeto(fits_file_output, data, header, overwrite=True, checksum=True)
 
-    return 0
+    return 0, header
 
 def read_mtds_file(mtdsfile, dbg=False):
     '''Read a detections file produced by mtdlink and return a dictionary of the

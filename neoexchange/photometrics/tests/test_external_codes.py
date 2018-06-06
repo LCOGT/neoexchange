@@ -596,9 +596,36 @@ class TestUpdateFITSWCS(TestCase):
 
         self.assertEqual(expected_radesys_value, radesys_value)
 
+    def test_update_FITS_WCS_missing_FITS(self):
+        expected_status = -1
+        expected_header = None
+
+        status, new_header = updateFITSWCS('wibble.fits', self.test_scamp_headfile, self.test_scamp_xml, self.fits_file_output)
+
+        self.assertEqual(expected_status, status)
+        self.assertEqual(expected_header, new_header)
+
+    def test_update_FITS_WCS_missing_scamp_xml(self):
+        expected_status = -2
+        expected_header = None
+
+        status, new_header = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, 'wibble.xml', self.fits_file_output)
+
+        self.assertEqual(expected_status, status)
+        self.assertEqual(expected_header, new_header)
+
+    def test_update_FITS_WCS_missing_scamp_head(self):
+        expected_status = -3
+        expected_header = None
+
+        status, new_header = updateFITSWCS(self.test_fits_file, 'wibble.head', self.test_scamp_xml, self.fits_file_output)
+
+        self.assertEqual(expected_status, status)
+        self.assertEqual(expected_header, new_header)
+
     def test_update_FITS_WCS(self):
 
-        status = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, self.test_scamp_xml, self.fits_file_output)
+        status, new_header = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, self.test_scamp_xml, self.fits_file_output)
 
         self.assertEqual(status, 0)
 
@@ -671,7 +698,7 @@ class TestUpdateFITSWCS(TestCase):
 
     def test_update_FITS_WCS_GAIADR2(self):
 
-        status = updateFITSWCS(self.test_banzai_file, self.test_externscamp_headfile, self.test_externcat_xml, self.banzai_file_output)
+        status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_headfile, self.test_externcat_xml, self.banzai_file_output)
 
         self.assertEqual(status, 0)
 
@@ -742,6 +769,77 @@ class TestUpdateFITSWCS(TestCase):
         self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
         self.assertEqual(expected_wcserr, wcserr)
 
+    def test_update_FITS_WCS_GAIADR2_new_header(self):
+
+        status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_headfile, self.test_externcat_xml, self.banzai_file_output)
+
+        self.assertEqual(status, 0)
+
+        expected_crval1 = 2.283330189100E+02
+        expected_crval2 = 3.839546339622E+01
+        expected_crpix1 = 7.621032903029E+02
+        expected_crpix2 = 5.105117960168E+02
+        expected_cd1_1 = -1.024825024633E-06
+        expected_cd1_2 = 3.162727554070E-04
+        expected_cd2_1 = -3.162997037181E-04
+        expected_cd2_2 = -1.075429228793E-06
+        expected_secpix = 1.13853
+        expected_wcssolvr = 'SCAMP-2.0.4'
+        expected_wcsrfcat = 'GAIADR2.cat'
+        expected_wcsimcat = 'tfn0m414-kb99-20180529-0202-e91_ldac.fits'
+        expected_wcsnref = 280
+        expected_wcsmatch = 23
+        expected_wccattyp = 'GAIADR2@CDS'
+        expected_wcsrdres = '0.31469/0.30167' # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+        expected_wcsdelra = 44.619981558
+        expected_wcsdelde = -37.1150613409
+        expected_wcserr = 0
+        expected_units = 'deg'
+
+        header = new_header
+        cunit1 = header['CUNIT1']
+        cunit2 = header['CUNIT2']
+        crval1 = header['CRVAL1']
+        crval2 = header['CRVAL2']
+        crpix1 = header['CRPIX1']
+        crpix2 = header['CRPIX2']
+        cd1_1 = header['CD1_1']
+        cd1_2 = header['CD1_2']
+        cd2_1 = header['CD2_1']
+        cd2_2 = header['CD2_2']
+        secpix   = header['SECPIX']
+        wcssolvr = header['WCSSOLVR']
+        wcsrfcat = header['WCSRFCAT']
+        wcsimcat = header['WCSIMCAT']
+        wcsnref  = header['WCSNREF']
+        wcsmatch = header['WCSMATCH']
+        wccattyp = header['WCCATTYP']
+        wcsrdres = header['WCSRDRES']
+        wcsdelra = header['WCSDELRA']
+        wcsdelde = header['WCSDELDE']
+        wcserr   = header['WCSERR']
+
+        self.assertEqual(expected_units, cunit1)
+        self.assertEqual(expected_units, cunit2)
+        self.assertEqual(expected_crval1, crval1)
+        self.assertEqual(expected_crval2, crval2)
+        self.assertEqual(expected_crpix1, crpix1)
+        self.assertEqual(expected_crpix2, crpix2)
+        self.assertEqual(expected_cd1_1, cd1_1)
+        self.assertEqual(expected_cd1_2, cd1_2)
+        self.assertEqual(expected_cd2_1, cd2_1)
+        self.assertEqual(expected_cd2_2, cd2_2)
+        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
+        self.assertEqual(expected_wcssolvr, wcssolvr)
+        self.assertEqual(expected_wcsrfcat, wcsrfcat)
+        self.assertEqual(expected_wcsimcat, wcsimcat)
+        self.assertEqual(expected_wcsnref, wcsnref)
+        self.assertEqual(expected_wcsmatch, wcsmatch)
+        self.assertEqual(expected_wccattyp, wccattyp)
+        self.assertEqual(expected_wcsrdres, wcsrdres)
+        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
+        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
+        self.assertEqual(expected_wcserr, wcserr)
 
 class TestGetSCAMPXMLInfo(TestCase):
 
