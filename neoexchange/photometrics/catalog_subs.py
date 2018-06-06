@@ -603,7 +603,7 @@ def banzai_catalog_mapping():
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
-                    'astrometric_catalog'    : '<ASTROMCAT>',
+                    'astrometric_catalog'    : '<WCCATTYP>',
                     'reduction_level'        : 'RLEVEL'
                   }
 
@@ -654,7 +654,7 @@ def banzai_ldac_catalog_mapping():
                     'astrometric_fit_rms'    : '<WCSRDRES>',
                     'astrometric_fit_status' : 'WCSERR',
                     'astrometric_fit_nstars' : '<WCSMATCH>',
-                    'astrometric_catalog'    : '<ASTROMCAT>',
+                    'astrometric_catalog'    : '<WCCATTYP>',
                     'reduction_level'        : 'RLEVEL'
                   }
 
@@ -877,7 +877,7 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     'UNKNOWN'.
     """
 
-    fixed_values_map = {'<ASTROMCAT>' : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
+    fixed_values_map = {'<WCCATTYP>'  : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
@@ -920,8 +920,19 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                 pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
                 header_item = {item: round(pixscale, 5), 'wcs' : fits_wcs}
             if catalog_type == 'BANZAI' or catalog_type == 'BANZAI_LDAC':
-                if fits_keyword in fixed_values_map:
-                    header_item = {item: fixed_values_map[fits_keyword]}
+                # See if there is a version of the keyword in the file first
+                file_fits_keyword = fits_keyword[1:-1]
+                if catalog_header.get(file_fits_keyword, None):
+                    value = catalog_header[file_fits_keyword]
+                    # Convert if necessary
+                    if item != 'field_width' and item != 'field_height':
+                        new_value = convert_value(item, value)
+                    else:
+                        new_value = value
+                    header_item = { item: new_value}
+                else:
+                    if fits_keyword in fixed_values_map:
+                        header_item = {item: fixed_values_map[fits_keyword]}
             if header_item:
                 header_items.update(header_item)
         else:

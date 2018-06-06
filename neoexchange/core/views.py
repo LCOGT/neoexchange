@@ -1625,11 +1625,12 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             fits_file_output = increment_red_level(fits_file)
             fits_file_output = os.path.join(dest_dir, fits_file_output)
             logger.debug("Updating bad WCS in image file: %s" % fits_file_output)
-            status = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
+            status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
             logger.info("Return status for updateFITSWCS: {}".format(status))
+            header = get_catalog_header(new_header, cattype)
+            # Apply new refitted WCS to catalog RA,Dec columns
             status = update_ldac_catalog_wcs(fits_file_output, new_ldac_catalog)
             logger.info("Return status for update_ldac_catalog_wcs: {}".format(status))
-            header['astrometric_catalog'] = 'GAIA-DR2'
 
     # Find Block for original frame
     block = find_block_for_frame(catfile)

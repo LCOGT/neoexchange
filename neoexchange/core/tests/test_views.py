@@ -43,7 +43,7 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy
+    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy, updateFITSWCS
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
 from core.forms import EphemQuery
@@ -2613,6 +2613,9 @@ class TestCheckCatalogAndRefitNew(TestCase):
         self.test_banzai_fits = os.path.abspath(os.path.join(self.temp_dir, 'banzai_test_frame.fits'))
         self.test_cat_bad_wcs = os.path.abspath(os.path.join(self.temp_dir, 'oracdr_test_catalog.fits'))
 
+        self.test_externscamp_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
+        self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
+
         shutil.copyfile(original_test_banzai_fits, self.test_banzai_fits)
         shutil.copyfile(original_test_cat_bad_wcs, self.test_cat_bad_wcs)
 
@@ -2936,7 +2939,9 @@ class TestCheckCatalogAndRefitNew(TestCase):
         fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
         (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
 
-        header = get_catalog_header(fits_header, cattype)
+        fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
+        status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_headfile, self.test_externcat_xml, fits_file_output)
+        header = get_catalog_header(new_header, cattype)
         num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
 
         frames = Frame.objects.filter(frametype=Frame.BANZAI_LDAC_CATALOG)
