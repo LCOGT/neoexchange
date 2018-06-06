@@ -862,7 +862,7 @@ def build_characterization_list(disp=None):
                         m_vis_link = spectrum.spec_vis
                         m_nir_link = spectrum.spec_ir
                         if m_wav == "NA":
-                            m_wav = "YES"
+                            m_wav = "Yes"
             body_dict = model_to_dict(body)
             body_dict['current_name'] = body.current_name()
             body_dict['ingest_date'] = body.ingest
