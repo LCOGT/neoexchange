@@ -546,7 +546,26 @@ class TestUpdateFITSWCS(TestCase):
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
         self.test_scamp_headfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.head'))
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
+        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.fits_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-sbig-e10_output.fits'))
+
         self.precision = 7
+        self.debug_print = False
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
 
     def test_read_FITS_header(self):
 
@@ -575,8 +594,7 @@ class TestUpdateFITSWCS(TestCase):
 
     def test_update_FITS_WCS(self):
 
-        fits_file_output = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10_output.fits'))
-        status = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, self.test_scamp_xml, fits_file_output)
+        status = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, self.test_scamp_xml, self.fits_file_output)
 
         self.assertEqual(status, 0)
 
@@ -602,7 +620,7 @@ class TestUpdateFITSWCS(TestCase):
         expected_units = 'deg'
 
         hdu_number = 0
-        header = fits.getheader(fits_file_output, hdu_number)
+        header = fits.getheader(self.fits_file_output, hdu_number)
         cunit1 = header['CUNIT1']
         cunit2 = header['CUNIT2']
         crval1 = header['CRVAL1']
@@ -647,8 +665,6 @@ class TestUpdateFITSWCS(TestCase):
         self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
         self.assertEqual(expected_wcserr, wcserr)
 
-        #Clean up outputfile
-        os.remove(fits_file_output)
 
 class TestGetSCAMPXMLInfo(TestCase):
 
