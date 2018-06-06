@@ -101,7 +101,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     if site_name == '?'  or sitecode == '500':
         if site_name == '?':
-            logger.warn("WARN: No site co-ordinates found, computing for geocenter")
+            logger.warning("WARN: No site co-ordinates found, computing for geocenter")
         pvobs = zeros(6)
     else:
         # Compute local apparent sidereal time

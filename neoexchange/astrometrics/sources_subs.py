@@ -19,9 +19,9 @@ import logging
 import os
 import urllib.request
 import urllib.error
+from urllib.parse import urljoin
 import imaplib
 import email
-from urllib.parse import urljoin
 from re import sub, compile
 from math import degrees
 from datetime import datetime, timedelta
@@ -29,8 +29,6 @@ from socket import error
 from random import randint
 from time import sleep
 import requests
-import json
-import copy
 
 from bs4 import BeautifulSoup
 import astropy.units as u
@@ -38,10 +36,11 @@ try:
     import pyslalib.slalib as S
 except:
     pass
+from django.conf import settings
+
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +59,12 @@ def download_file(url, file_to_save):
             file_handle.close()
             print("Downloaded:", file_to_save)
             break
-        except urllib.error.HTTPError as e:
+        except (urllib.error.HTTPError, urllib.error.URLError) as e:
             attempts += 1
-            if hasattr(e, 'reason'):
+            if hasattr(e, 'code'):
                 print("HTTP Error %d: %s, retrying" % (e.code, e.reason))
             else:
-                print("HTTP Error: %s" % (e.code,))
+                print("HTTP Error: %s" % (e.reason,))
 
 
 def random_delay(lower_limit=10, upper_limit=20):
@@ -107,10 +106,11 @@ def fetchpage_and_make_soup(url, fakeagent=False, dbg=False, parser="html.parser
     opener = urllib.request.build_opener()  # create an opener object
     try:
         response = opener.open(req_page)
-    except urllib.URLError as e:
-        if not hasattr(e, "code"):
-            raise
-        print("Page retrieval failed:", e)
+    except (urllib.error.HTTPError, urllib.error.URLError) as e:
+        if hasattr(e, 'code'):
+            logger.warning("Page retrieval failed with HTTP Error %d: %s, retrying" % (e.code, e.reason))
+        else:
+            logger.warning("Page retrieval failed with HTTP Error: %s" % (e.reason,))
         return None
 
     # Suck the HTML down
@@ -604,14 +604,14 @@ def parse_mpcobs(line):
     if obs_type == 'C' or obs_type == 'S':
         # Regular CCD observations or first line of satellite observations
         # print("Date=",line[15:32])
-        params = {  'body'     : body,
-                    'flags'    : flag,
-                    'obs_type' : obs_type,
-                    'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
-                    'obs_mag'  : obs_mag,
-                    'filter'   : filter,
-                    'astrometric_catalog' : translate_catalog_code(line[71]),
-                    'site_code' : str(line[-3:])
+        params = { 'body'     : body,
+                   'flags'    : flag,
+                   'obs_type' : obs_type,
+                   'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
+                   'obs_mag'  : obs_mag,
+                   'filter'   : filter,
+                   'astrometric_catalog' : translate_catalog_code(line[71]),
+                   'site_code' : str(line[-3:])
                  }
         ptr = 1
         ra_dec_string = line[32:56]
@@ -627,11 +627,11 @@ def parse_mpcobs(line):
         # Second line of satellite-based observation, stuff whole line into
         # 'extrainfo' and parse what we can (so we can identify the corresponding
         # 'S' line/frame)
-        params = {  'body'     : body,
-                    'obs_type' : obs_type,
-                    'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
-                    'extrainfo' : line,
-                    'site_code' : str(line[-3:])
+        params = { 'body'     : body,
+                   'obs_type' : obs_type,
+                   'obs_date' : parse_neocp_decimal_date(line[15:32].strip()),
+                   'extrainfo' : line,
+                   'site_code' : str(line[-3:])
                  }
     return params
 
@@ -1631,7 +1631,7 @@ def parse_binzel_data(tax_text=None):
                 chunks[0] = chunks[2]
             row = [chunks[0], chunks[4], "B", "BZ04", chunks[10]]
             tax_table.append(row)
-    return tax_table       
+    return tax_table
 
 
 def parse_taxonomy_data(tax_text=None):

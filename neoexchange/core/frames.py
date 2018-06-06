@@ -143,7 +143,7 @@ def frame_params_from_header(params, block):
         wcs = WCS(params)
         frame_params['wcs'] = wcs
     except ValueError:
-        logger.warn("Error creating WCS entry from frameid=%s" % frameid)
+        logger.warning("Error creating WCS entry from frameid=%s" % frameid)
 
 
     # Correct filename for missing trailing .fits extension
@@ -241,11 +241,11 @@ def block_status(block_id):
     data = check_request_status(tracking_num)
     # data is a full LCO request dict for this tracking number (now called 'id').
     if not data:
-        logger.warn("Got no data for block/track# %s / %s" % (block_id, tracking_num))
+        logger.warning("Got no data for block/track# %s / %s" % (block_id, tracking_num))
         return False
     # Check if the request was not found
     if data.get('detail', 'None') == u'Not found.':
-        logger.warn("Request not found for block/track# %s / %s" % (block_id, tracking_num))
+        logger.warning("Request not found for block/track# %s / %s" % (block_id, tracking_num))
         return False
     # Check if credentials provided
     if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
