@@ -1620,11 +1620,13 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             scamp_file = os.path.basename(new_ldac_catalog).replace('.fits', '.head' )
             scamp_file = os.path.join(dest_dir, scamp_file)
             scamp_xml_file = os.path.join(dest_dir, 'scamp.xml')
-            # Update WCS in image file
+            ## Update WCS in image file
+            # Strip off now unneeded FITS extension
+            fits_file = fits_file.replace('[SCI]', '')
             # Get new output filename
             fits_file_output = increment_red_level(fits_file)
-            fits_file_output = os.path.join(dest_dir, fits_file_output)
-            logger.debug("Updating bad WCS in image file: %s" % fits_file_output)
+            fits_file_output = os.path.join(dest_dir, fits_file_output.replace('[SCI]', ''))
+            logger.info("Updating bad WCS in image file: %s. Output to: %s" % (fits_file, fits_file_output))
             status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
             logger.info("Return status for updateFITSWCS: {}".format(status))
             header = get_catalog_header(new_header, cattype)
