@@ -2932,6 +2932,17 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.assertEqual(expected_num_new_frames, num_new_frames)
 
+    def test_make_new_catalog_entry_gaiadr2(self):
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        header = get_catalog_header(fits_header, cattype)
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        frames = Frame.objects.filter(frametype=Frame.BANZAI_LDAC_CATALOG)
+        self.assertEqual(1, frames.count())
+        frame = frames[0]
+        self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
 
 class TestUpdate_Crossids(TestCase):
 
