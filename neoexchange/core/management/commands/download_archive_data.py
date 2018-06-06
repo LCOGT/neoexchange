@@ -18,8 +18,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
-        obstype = 'EXPOSE' # Set to blank to get frames and catalogs
-        redlevel = ['91', '11']
+        obstypes = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
 
         if type(options['date']) != datetime:
             try:
@@ -40,13 +39,28 @@ class Command(BaseCommand):
             auth_headers = archive_login(username, password)
             start_date, end_date = determine_archive_start_end(obs_date)
             self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
-            frames = get_frame_data(start_date, end_date, auth_headers, obstype, proposal, red_lvls=redlevel)
-            if 'CATALOG' in obstype or obstype == '':
-                catalogs = get_catalog_data(frames, auth_headers)
+            all_frames = {}
+            for obstype in obstypes:
+                if obstype == 'EXPOSE':
+                    redlevel = ['91', '11']
+                else:
+                    # '' seems to be needed to get the tarball of FLOYDS products
+                    redlevel = ['0', '']
+                frames = get_frame_data(start_date, end_date, auth_headers, obstype, proposal, red_lvls=redlevel)
                 for red_lvl in frames.keys():
-                    frames[red_lvl] = frames[red_lvl] + catalogs[red_lvl]
-            for red_lvl in frames.keys():
-                self.stdout.write("Found %d frames for reduction level: %s" % ( len(frames[red_lvl]), red_lvl ))
+                    if red_lvl in all_frames:
+                        all_frames[red_lvl] = all_frames[red_lvl] + frames[red_lvl]
+                    else:
+                        all_frames[red_lvl] = frames[red_lvl]
+                if 'CATALOG' in obstype or obstype == '':
+                    catalogs = get_catalog_data(frames, auth_headers)
+                    for red_lvl in frames.keys():
+                        if red_lvl in all_frames:
+                            all_frames[red_lvl] = all_frames[red_lvl] + catalogs[red_lvl]
+                        else:
+                            all_frames[red_lvl] = catalogs[red_lvl]
+            for red_lvl in all_frames.keys():
+                self.stdout.write("Found %d frames for reduction level: %s" % ( len(all_frames[red_lvl]), red_lvl ))
             daydir = start_date.strftime('%Y%m%d')
             out_path = os.path.join(options['datadir'], daydir)
             if not os.path.exists(out_path):
@@ -56,7 +70,7 @@ class Command(BaseCommand):
                     msg = "Error creating output path %s" % out_path
                     raise CommandError(msg)
             self.stdout.write("Downloading data to %s" % out_path)
-            dl_frames = download_files(frames, out_path, verbose)
+            dl_frames = download_files(all_frames, out_path, verbose)
             self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
         else:
             self.stdout.write("No username or password defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD)")
