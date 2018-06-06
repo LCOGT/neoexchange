@@ -544,11 +544,14 @@ class TestUpdateFITSWCS(TestCase):
     def setUp(self):
 
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
+        self.test_banzai_file = os.path.abspath(os.path.join('photometrics', 'tests', 'banzai_test_frame.fits'))
         self.test_scamp_headfile = os.path.abspath(os.path.join('photometrics', 'tests', 'example_scamp.head'))
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
+        self.test_externscamp_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
         self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
         self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
         self.fits_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-sbig-e10_output.fits'))
+        self.banzai_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-banzai-e92_output.fits'))
 
         self.precision = 7
         self.debug_print = False
@@ -668,18 +671,18 @@ class TestUpdateFITSWCS(TestCase):
 
     def test_update_FITS_WCS_GAIADR2(self):
 
-        status = updateFITSWCS(self.test_fits_file, self.test_scamp_headfile, self.test_externcat_xml, self.fits_file_output)
+        status = updateFITSWCS(self.test_banzai_file, self.test_externscamp_headfile, self.test_externcat_xml, self.banzai_file_output)
 
         self.assertEqual(status, 0)
 
-        expected_crval1 = 1.783286919001E+02
-        expected_crval2 = 1.169387882835E+01
-        expected_crpix1 = 2.047592457311E+03
-        expected_crpix2 = 2.048419571848E+03
-        expected_cd1_1 = 1.082433886779E-04
-        expected_cd1_2 = 6.824629998000E-07
-        expected_cd2_1 = 7.053875928440E-07
-        expected_cd2_2 = -1.082408809463E-04
+        expected_crval1 = 2.283330189100E+02
+        expected_crval2 = 3.839546339622E+01
+        expected_crpix1 = 7.621032903029E+02
+        expected_crpix2 = 5.105117960168E+02
+        expected_cd1_1 = -1.024825024633E-06
+        expected_cd1_2 = 3.162727554070E-04
+        expected_cd2_1 = -3.162997037181E-04
+        expected_cd2_2 = -1.075429228793E-06
         expected_secpix = 1.13853
         expected_wcssolvr = 'SCAMP-2.0.4'
         expected_wcsrfcat = 'GAIADR2.cat'
@@ -687,14 +690,14 @@ class TestUpdateFITSWCS(TestCase):
         expected_wcsnref = 280
         expected_wcsmatch = 23
         expected_wccattyp = 'GAIADR2@CDS'
-        expected_wcsrdres = '0.21947/0.20434'
-        expected_wcsdelra = 37.175
-        expected_wcsdelde = -51.299
+        expected_wcsrdres = '0.31469/0.30167' # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+        expected_wcsdelra = 44.619981558
+        expected_wcsdelde = -37.1150613409
         expected_wcserr = 0
         expected_units = 'deg'
 
         hdu_number = 0
-        header = fits.getheader(self.fits_file_output, hdu_number)
+        header = fits.getheader(self.banzai_file_output, hdu_number)
         cunit1 = header['CUNIT1']
         cunit2 = header['CUNIT2']
         crval1 = header['CRVAL1']
