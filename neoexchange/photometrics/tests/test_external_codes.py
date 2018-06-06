@@ -355,7 +355,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
         status = setup_scamp_dir(self.source_dir, self.test_dir)
 
         self.assertEqual(expected_status, status)
-        self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox.cfg')))
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox_gaiadr2.cfg')))
 
     def test_scamp_options(self):
 
@@ -655,6 +655,7 @@ class TestGetSCAMPXMLInfo(TestCase):
     def setUp(self):
 
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
+        self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
 
         self.maxDiff = None
 
@@ -675,6 +676,25 @@ class TestGetSCAMPXMLInfo(TestCase):
                 self.assertAlmostEqual(expected_results[key], results[key], 6)
             else:
                 self.assertEqual(expected_results[key], results[key])
+
+    def test_read_extern_cat(self):
+
+        expected_results = { 'num_refstars' : 280,
+                             'num_match'    : 23,
+                             'wcs_refcat'   : 'GAIADR2.cat',
+                             'wcs_cattype'  : 'GAIADR2@CDS',
+                             'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                             'pixel_scale'  : 1.13853
+                           }
+
+        results = get_scamp_xml_info(self.test_externcat_xml)
+
+        for key in expected_results.keys():
+            if key == 'pixel_scale':
+                self.assertAlmostEqual(expected_results[key], results[key], 6)
+            else:
+                self.assertEqual(expected_results[key], results[key])
+
 
 class TestReadMTDSFile(TestCase):
 

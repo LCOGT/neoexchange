@@ -399,9 +399,18 @@ def get_scamp_xml_info(scamp_xml_file):
     reference_catalog = fgroups_table.array['AstRef_Catalog'].data[0]
     reference_catalog = reference_catalog.decode("utf-8")
     reference_catalog = reference_catalog.replace('-', '')
+    if reference_catalog == 'file':
+        # SCAMP was fed a reference catalog file, we have more digging to do
+        # to get the actual catalog used
+        reference_catalog = votable.get_field_by_id_or_name('AstRefCat_Name').value
+        reference_catalog = reference_catalog.decode("utf-8")
+        wcs_refcat_name = reference_catalog
+        reference_catalog = reference_catalog.replace('.cat', '')
+    else:
+        wcs_refcat_name = "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower()
     info = { 'num_match'    : fgroups_table.array['AstromNDets_Internal_HighSN'].data[0],
              'num_refstars' : fields_table.array['NDetect'].data[0],
-             'wcs_refcat'   : "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower(),
+             'wcs_refcat'   : wcs_refcat_name,
              'wcs_cattype'  : "%s@CDS" % reference_catalog.upper(),
              'wcs_imagecat' : fields_table.array['Catalog_Name'].data[0].decode("utf-8"),
              'pixel_scale'  : fields_table.array['Pixel_Scale'].data[0].mean()
