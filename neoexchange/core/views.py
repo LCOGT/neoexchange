@@ -1613,8 +1613,20 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             logger.error("Could not obtain reference catalog for fits frame %s" % catfile)
             return -6, num_new_frames_created
 
-        status = run_scamp(configs_dir, dest_dir, new_ldac_catalog)
-        logger.info("Return status for scamp: {}".format(status))
+        scamp_status = run_scamp(configs_dir, dest_dir, new_ldac_catalog)
+        logger.info("Return status for scamp: {}".format(scamp_status))
+
+        if scamp_status == 0:
+            scamp_file = os.path.basename(new_ldac_catalog).replace('.fits', '.head' )
+            scamp_file = os.path.join(dest_dir, scamp_file)
+            scamp_xml_file = os.path.join(dest_dir, 'scamp.xml')
+            # Update WCS in image file
+            # Get new output filename
+            fits_file_output = increment_red_level(fits_file)
+            fits_file_output = os.path.join(dest_dir, fits_file_output)
+            logger.debug("Updating bad WCS in image file: %s" % fits_file_output)
+            status = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
+            logger.info("Return status for updateFITSWCS: {}".format(status))
 
     # Find Block for original frame
     block = find_block_for_frame(catfile)
