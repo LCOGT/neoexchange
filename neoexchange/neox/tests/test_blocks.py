@@ -8,6 +8,7 @@ from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_arc
 from neox.auth_backend import update_proposal_permissions
 from core.models import Block, SuperBlock
 
+
 class BlocksListValidationTest(FunctionalTest):
 
     def test_can_view_blocks(self):
@@ -39,6 +40,7 @@ class BlocksListValidationTest(FunctionalTest):
                      u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1']
         self.check_for_row_in_table('id_blocks', testlines[0])
         self.check_for_row_in_table('id_blocks', testlines[1])
+
 
 class BlockDetailValidationTest(FunctionalTest):
 
@@ -84,6 +86,7 @@ class BlockDetailValidationTest(FunctionalTest):
                      u'SITE ' + self.test_block.site.upper()]
         for line in testlines:
             self.check_for_row_in_table('id_blockdetail', line)
+
 
 class SuperBlockListValidationTest(FunctionalTest):
 
@@ -133,7 +136,7 @@ class SuperBlockListValidationTest(FunctionalTest):
         # He clicks on one of the cadence block links and is taken to a page with details about the
         # individual blocks
         link = self.browser.find_element_by_link_text('1')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -181,7 +184,7 @@ class SuperBlockListValidationTest(FunctionalTest):
         # He clicks on one of the cadence block links and is taken to a page with details about the
         # individual blocks
         link = self.browser.find_element_by_link_text('2')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view',kwargs={'pk':2}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('block-view', kwargs={'pk': 2}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -204,6 +207,7 @@ class SuperBlockListValidationTest(FunctionalTest):
         self.assertNotIn('Not Reported', kv_table_text)
         self.assertIn('2015-04-20 09:29', kv_table_text)
 
+
 class SpectroBlocksListValidationTest(FunctionalTest):
 
     def insert_spectro_blocks(self):
@@ -217,7 +221,7 @@ class SpectroBlocksListValidationTest(FunctionalTest):
                          'tracking_number' : '4242',
                          'active'   : True
                        }
-        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        self.test_sblock = SuperBlock.objects.create(pk=3, **sblock_params)
 
         block_params = { 'telclass' : '2m0',
                          'site'     : 'ogg',
@@ -232,7 +236,7 @@ class SpectroBlocksListValidationTest(FunctionalTest):
                          'exp_length' : 1800.0,
                          'active'   : True,
                        }
-        self.test_block = Block.objects.create(**block_params)
+        self.test_block = Block.objects.create(pk=4, **block_params)
 
     def test_can_view_blocks(self):
         self.insert_spectro_blocks()
@@ -266,6 +270,7 @@ class SpectroBlocksListValidationTest(FunctionalTest):
                      '3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 0 / 1 0 / 1']
         self.check_for_row_in_table('id_blocks', testlines[2])
 
+
 class SpectroBlocksDetailValidationTest(FunctionalTest):
 
     def setUp(self):
@@ -277,11 +282,11 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
         self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
         self.bart.first_name= 'Bart'
         self.bart.last_name = 'Simpson'
-        self.bart.is_active=1
+        self.bart.is_active = 1
         self.bart.save()
         # Add Bart to the right proposal
-        update_proposal_permissions(self.bart, [{'code':self.neo_proposal.code}])
-        super(SpectroBlocksDetailValidationTest,self).setUp()
+        update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
+        super(SpectroBlocksDetailValidationTest, self).setUp()
 
         sblock_params = {
                          'cadence' : False,
@@ -292,7 +297,7 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
                          'tracking_number' : '4242',
                          'active'   : True
                        }
-        self.test_sblock = SuperBlock.objects.create(**sblock_params)
+        self.test_sblock = SuperBlock.objects.create(pk=3, **sblock_params)
 
         block_params = { 'telclass' : '2m0',
                          'site'     : 'ogg',
@@ -309,7 +314,7 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
                          'num_observed' : 1,
                          'when_observed' : '2015-04-21 12:13:14'
                        }
-        self.test_block = Block.objects.create(**block_params)
+        self.test_block = Block.objects.create(pk=4, **block_params)
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
