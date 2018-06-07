@@ -1137,8 +1137,8 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
         frame.zeropoint_err = header['zeropoint_err']
         frame.rms_of_fit = header['astrometric_fit_rms']
         frame.nstars_in_fit = header['astrometric_fit_nstars']
-        frame.astrometric_catalog = ast_cat_name
-        frame.photometric_catalog = phot_cat_name
+        frame.astrometric_catalog = header.get('astrometric_catalog', ast_cat_name)
+        frame.photometric_catalog = header.get('photometric_catalog', phot_cat_name)
         frame.save()
     except Frame.MultipleObjectsReturned:
         pass
