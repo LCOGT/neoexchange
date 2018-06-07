@@ -1528,7 +1528,9 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
     # if a Frame does not exist for the catalog file with a non-null block
     # create one with the fits filename
     catfilename = os.path.basename(new_ldac_catalog)
-    if len(Frame.objects.filter(filename=catfilename, block__isnull=False)) < 1:
+    cat_frames = Frame.objects.filter(filename=catfilename, block__isnull=False)
+    num_frames = cat_frames.count()
+    if num_frames == 0:
 
         # Create a new Frame entry for new fits_file_output name
         frame_params = {    'sitecode': header['site_code'],
@@ -1550,9 +1552,29 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
 
         frame, created = Frame.objects.get_or_create(**frame_params)
         if created is True:
-            logger.debug("Created new Frame id#%d", frame.id)
+            logger.info("Created new Frame id#%d", frame.id)
             num_new_frames_created += 1
-
+    elif num_frames == 1:
+        frame_params = {    'sitecode': header['site_code'],
+                  'instrument': header['instrument'],
+                      'filter': header['filter'],
+                    'filename': catfilename,
+                     'exptime': header['exptime'],
+                    'midpoint': header['obs_midpoint'],
+                       'block': block,
+                   'zeropoint': header['zeropoint'],
+               'zeropoint_err': header['zeropoint_err'],
+                        'fwhm': header['fwhm'],
+                   'frametype': Frame.BANZAI_LDAC_CATALOG,
+                   'astrometric_catalog' : header.get('astrometric_catalog', None),
+                  'rms_of_fit': header['astrometric_fit_rms'],
+               'nstars_in_fit': header['astrometric_fit_nstars'],
+                        'wcs' : header.get('wcs', None),
+                }
+        cat_frames.update(**frame_params)
+        logger.info("Updated Frame id#%d", cat_frames[0].id)
+    else:
+        logger.warning("Found an unexpected number of Frame entries (%d) for %s", (num_frames, catfilename))
     return num_new_frames_created
 
 
