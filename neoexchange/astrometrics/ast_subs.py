@@ -197,3 +197,28 @@ def determine_time_of_perih(meandist, meananom, epochofel):
 #    print n, days_from_perihelion, epochofperih
 
     return epochofperih
+
+def convert_ast_to_comet(kwargs, body):
+    """Converts the parameters of an object initially identified as an asteroid
+    to a comet.
+    A dictionary of updated parameters is returned, suitable for update a Body
+    model object.
+    """
+    params = kwargs
+    if kwargs['source_type'] in ['C', 'H'] or kwargs.get('eccentricity', 0.0) > 0.9:
+        if body:
+            params['meandist'] = params.get('meandist', body.meandist)
+            params['eccentricity'] = params.get('eccentricity', body.eccentricity)
+            params['meananom'] = params.get('meananom', body.meananom)
+            params['epochofel'] = params.get('epochofel', body.epochofel)
+            params['slope'] = params.get('slope', body.slope)
+        if params.get('slope', 0.15) == 0.15:
+            params['slope'] = 4.0
+        params['elements_type'] = 'MPC_COMET'
+        if params['eccentricity'] is not None and params['meandist'] is not None and \
+            params['meananom'] is not None and params['epochofel'] is not None:
+            if params['eccentricity'] < 1.0:
+                params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
+            params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+            params['meananom'] = None
+    return params

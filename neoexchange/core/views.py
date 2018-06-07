@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from math import floor, ceil
 from django.db.models import Q
 from django.forms.models import model_to_dict
@@ -46,9 +46,10 @@ from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
-    determine_filenames, increment_red_level, update_ldac_catalog_wcs
+    determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih
+from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
+    convert_ast_to_comet
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 import logging
@@ -133,8 +134,32 @@ class BodyDetailView(DetailView):
         context = super(BodyDetailView, self).get_context_data(**kwargs)
         context['form'] = EphemQuery()
         context['blocks'] = Block.objects.filter(body=self.object).order_by('block_start')
-        context['spectra'] = SpectralInfo.objects.filter(body=self.object)
+        context['taxonomies'] = SpectralInfo.objects.filter(body=self.object)
+        context['spectra'] = sort_previous_spectra(self)
         return context
+
+
+def sort_previous_spectra(self, **kwargs):
+    spectra_of_interest = PreviousSpectra.objects.filter(body=self.object)
+    spectra_out = []
+    vis_count = 0
+    nir_count = 0
+    for s in spectra_of_interest:
+        if s.spec_source == 'M':
+            spectra_out.append(s)
+        elif s.spec_source == 'S':
+            if spectra_of_interest.filter(spec_wav='Vis+NIR').count() > 0:
+                if s.spec_wav == 'Vis+NIR':
+                    spectra_out.append(s)
+            else:
+                if vis_count == 0 and s.spec_wav == 'Vis':
+                    vis_count = 1
+                    spectra_out.append(s)
+                if nir_count == 0 and s.spec_wav == 'NIR':
+                    nir_count = 1
+                    s.spec_vis = s.spec_ir
+                    spectra_out.append(s)
+    return spectra_out
 
 
 class BodySearchView(ListView):
@@ -375,10 +400,11 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
+        cadence_form = ScheduleCadenceForm()
         if form.is_valid():
             return self.form_valid(form, request)
         else:
-            return self.render_to_response(self.get_context_data(form=form, body=self.body))
+            return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
 
     def get_context_data(self, **kwargs):
         """
@@ -795,6 +821,114 @@ def build_unranked_list_params():
     return params
 
 
+def characterization(request):
+
+    char_filter = request.GET.get("filter", "")
+    params = build_characterization_list(char_filter)
+    return render(request, 'core/characterization.html', params)
+
+
+def build_characterization_list(disp=None):
+    params = {}
+    # If we don't have any Body instances, return None instead of breaking
+    try:
+        # If we change the definition of Characterization Target,
+        # also update models.Body.characterization_target()
+        char_targets = Body.objects.filter(active=True).exclude(origin='M')
+        unranked = []
+        for body in char_targets:
+            spectra = PreviousSpectra.objects.filter(body=body)
+            s_wav = s_vis_link = s_nir_link = ''
+            m_vis_link = m_nir_link = ''
+            m_wav = ""
+            if spectra:
+                s_date = date.today()-date(1000, 1, 1)
+                for spectrum in spectra:
+                    if spectrum.spec_source == "S":
+                        if s_wav == spectrum.spec_wav or not s_wav:
+                            if s_date > date.today()-spectrum.spec_date:
+                                s_date = date.today()-spectrum.spec_date
+                                s_wav = spectrum.spec_wav
+                                s_vis_link = spectrum.spec_vis
+                                s_nir_link = spectrum.spec_ir
+                        else:
+                            s_date = date.today()-spectrum.spec_date
+                            s_wav = "Vis+NIR"
+                            if spectrum.spec_vis:
+                                s_vis_link = spectrum.spec_vis
+                            if spectrum.spec_ir:
+                                s_nir_link = spectrum.spec_ir
+                    elif spectrum.spec_source == "M":
+                        m_wav = spectrum.spec_wav
+                        m_vis_link = spectrum.spec_vis
+                        m_nir_link = spectrum.spec_ir
+                        if m_wav == "NA":
+                            m_wav = "Yes"
+            body_dict = model_to_dict(body)
+            body_dict['current_name'] = body.current_name()
+            body_dict['ingest_date'] = body.ingest
+            body_dict['s_wav'] = s_wav
+            if s_vis_link:
+                body_dict['s_vis_link'] = s_vis_link
+            if s_nir_link:
+                body_dict['s_nir_link'] = s_nir_link
+            if m_vis_link:
+                body_dict['m_vis_link'] = m_vis_link
+            if m_nir_link:
+                body_dict['m_nir_link'] = m_nir_link
+            body_dict['m_wav'] = m_wav
+            body_dict['origin'] = body.get_origin_display()
+            if 'Vis' in s_wav or 'Vis' in m_wav:
+                body_dict['obs_needed'] = 'LC'
+            else:
+                body_dict['obs_needed'] = 'Spec/LC'
+            emp_line = body.compute_position()
+            if not emp_line:
+                continue
+            obs_dates = body.compute_obs_window()
+            if obs_dates[0]:
+                body_dict['obs_sdate'] = obs_dates[0]
+                if obs_dates[0] == obs_dates[2]:
+                    startdate = 'Now'
+                else:
+                    startdate = obs_dates[0].strftime('%m/%y')
+                if not obs_dates[1]:
+                    body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                    enddate = '>'
+                else:
+                    enddate = obs_dates[1].strftime('%m/%y')
+                    body_dict['obs_edate'] = obs_dates[1]
+            else:
+                body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                startdate = '-'
+                enddate = '-'
+            days_to_start = body_dict['obs_sdate']-obs_dates[2]
+            days_to_end = body_dict['obs_edate']-obs_dates[2]
+            # Define a sorting Priority:
+            # Currently a combination of imminence and window width.
+            body_dict['priority'] = days_to_start.days + days_to_end.days
+            body_dict['obs_start'] = startdate
+            body_dict['obs_end'] = enddate
+            body_dict['ra'] = emp_line[0]
+            body_dict['dec'] = emp_line[1]
+            body_dict['v_mag'] = emp_line[2]
+            if disp:
+                if disp in body_dict['obs_needed']:
+                    unranked.append(body_dict)
+            else:
+                unranked.append(body_dict)
+    except Exception as e:
+        unranked = None
+        logger.error('Characterization list failed on %s' % e)
+    params = {
+        'targets': Body.objects.filter(active=True).count(),
+        'blocks': Block.objects.filter(active=True).count(),
+        'char_targets': unranked,
+        'char_filter': disp
+    }
+    return params
+
+
 def check_for_block(form_data, params, new_body):
     """Checks if a block with the given name exists in the Django DB.
     Return 0 if no block found, 1 if found, 2 if multiple blocks found"""
@@ -1121,13 +1255,7 @@ def clean_NEOCP_object(page_list):
         if params != {}:
             # Check for objects that should be treated as comets (e>0.9)
             if params['eccentricity'] > 0.9:
-
-                if params['slope'] == 0.15:
-                    params['slope'] = 4.0
-                params['elements_type'] = 'MPC_COMET'
-                params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
-                params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
-                params['meananom'] = None
+                params = convert_ast_to_comet(params, None)
     else:
         params = {}
     return params
@@ -1147,7 +1275,7 @@ def update_crossids(astobj, dbg=False):
     try:
         body, created = Body.objects.get_or_create(provisional_name=obj_id)
     except:
-        logger.debug("Multiple objects found called %s" % obj_id)
+        logger.warning("Multiple objects found called %s" % obj_id)
         return False
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
@@ -1160,7 +1288,7 @@ def update_crossids(astobj, dbg=False):
         if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
             kwargs['active'] = True
         if kwargs['source_type'] in ['C', 'H']:
-            kwargs['elements_type'] = 'MPC_COMET'
+            kwargs = convert_ast_to_comet(kwargs, body)
         check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
@@ -1577,7 +1705,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False):
 
     # Open catalog, get header and check fit status
     fits_header, junk_table, cattype = open_fits_catalog(catfile, header_only=True)
-    header = get_catalog_header(fits_header, cattype)
+    try:
+        header = get_catalog_header(fits_header, cattype)
+    except FITSHdrException as e:
+        logger.error("Bad header for %s (%s)" % (catfile, e))
+        return -1, num_new_frames_created
 
     if header.get('astrometric_fit_status', None) != 0:
         logger.error("Bad astrometric fit found")
@@ -1764,3 +1896,52 @@ def update_taxonomy(taxobj, dbg=False):
             print("Did not write for some reason.")
         return False
     return True
+
+
+def update_previous_spectra(specobj, source='U', dbg=False):
+    """Update the passed <specobj> for a new external spectroscopy update.
+    <specobj> is expected to be a list of:
+    designation/provisional designation, wavelength region, data link, reference, date
+    normally produced by the fetch_manos_tagets() or fetch_smass_targets() method.
+    Will only add (never remove) spectroscopy details that are not already in spectroscopy
+    database and match Characterization objects in DB."""
+
+    if len(specobj) != 6:
+        return False
+
+    obj_id = specobj[0].rstrip()
+    body_char = Body.objects.filter(active=True).exclude(origin='M')
+    try:
+        body = body_char.get(name=obj_id)
+    except:
+        try:
+            body = body_char.get(provisional_name=obj_id)
+        except:
+            if dbg is True:
+                print("%s is not a Characterization Target" % obj_id)
+                print("Number of Characterization Targets: %i" % body_char.count())
+            return False
+    check_spec = PreviousSpectra.objects.filter(body=body, spec_wav=specobj[1], spec_source=source)
+    if check_spec:
+        for check in check_spec:
+            if check.spec_date >= specobj[5]:
+                if dbg is True:
+                    print("More recent data already in DB")
+                return False
+    params = {  'body'          : body,
+                'spec_wav'      : specobj[1],
+                'spec_vis'      : specobj[2],
+                'spec_ir'       : specobj[3],
+                'spec_ref'      : specobj[4],
+                'spec_source'   : source,
+                'spec_date'     : specobj[5],
+                }
+    spec, created = PreviousSpectra.objects.get_or_create(**params)
+    if not created:
+        if dbg is True:
+            print("Did not write for some reason.")
+        return False
+    return True
+
+
+

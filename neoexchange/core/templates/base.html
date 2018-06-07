@@ -118,8 +118,13 @@
 										<a rel="home" title="Home" class="navitem" href="{% url 'home'  %}">Home</a>
 									</li>
 									{% endblock %}
-									<li>
-										<a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Targets</a>
+									<li class="dropdown-menu">
+										Targets
+											<ul class="dropdown">
+												<li><a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Active</a></li>
+												<li><a href="{% url 'ranking' %}" title="Ranked target list for NEO candidates" class="navitem">Candidates</a></li>
+												<li><a href="{% url 'characterization' %}" title="Targets slated for Characterization" class="navitem">Characterization</a></li>
+											</ul>
 									</li>
 									<li>
 										<a href="{% url 'blocklist' %}" title="Blocks scheduled for NEO follow-up" class="navitem">Blocks</a>

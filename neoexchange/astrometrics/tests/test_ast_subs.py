@@ -16,6 +16,7 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 from django.test import TestCase
 
+from core.models import Body
 #Import module to test
 from astrometrics.ast_subs import *
 
@@ -343,3 +344,99 @@ class TestDetermineTimeOfPerihelion(TestCase):
         time_of_perih = determine_time_of_perih(meandist, meananom, epochofel)
 
         self.assertEqual(expected_time_of_perih, time_of_perih)
+
+class TestConvertAstToComet(TestCase):
+
+    def setUp(self):
+        self.params = {
+                         'provisional_name': 'P10G50L',
+                         'provisional_packed': None,
+                         'name': 'C/2018 A5',
+                         'origin': 'M',
+                         'source_type': 'C',
+                         'elements_type': 'MPC_COMET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2018, 1, 2, 0, 0),
+                         'orbinc': 23.77111,
+                         'longascnode': 88.06834,
+                         'argofperih': 356.74589,
+                         'eccentricity': 0.5415182,
+                         'meandist': 5.8291288,
+                         'meananom': 7.63767,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 17.0,
+                         'slope': 0.15,
+                         'score': 40,
+                         'discovery_date': datetime(2018, 1, 13, 9, 36),
+                         'num_obs': 18,
+                         'arc_length': 3.58,
+                         'not_seen': 0.757,
+                         'updated': True,
+                         'ingest': datetime(2018, 1, 14, 13, 20, 7),
+                         'update_time': datetime(2018, 1, 17, 16, 43, 16)
+                      }
+        self.body = Body.objects.create(**self.params)
+
+    def test_asteroid(self):
+        kwargs = {'source_type': 'A', 'name': '2018 AA5', 'active': False}
+
+        new_kwargs = convert_ast_to_comet(kwargs, self.body)
+
+        self.assertEqual(kwargs, new_kwargs)
+
+    def test_comet(self):
+        expected_kwargs = { 'source_type': 'C',
+                            'name': 'C/2018 A5',
+                            'active': True,
+                            'elements_type' : 'MPC_COMET',
+                            'perihdist' : 2.6725494646558405,
+                            'epochofperih' : datetime(2017, 9, 14, 22, 34, 45, 428836),
+                            'meananom' : None,
+                            'slope' : 4.0,
+                            'eccentricity' : self.body.eccentricity,
+                            'epochofel' : self.body.epochofel,
+                            'meandist' : self.body.meandist
+                          }
+        kwargs = {'source_type': 'C', 'name': 'C/2018 A5', 'active': True}
+
+        new_kwargs = convert_ast_to_comet(kwargs, self.body)
+
+        self.assertEqual(expected_kwargs, new_kwargs)
+
+    def test_new_body(self):
+        kwargs = {'source_type' : 'A', 'name' : '2018 ZZ99', 'active' : False}
+        expected_kwargs = kwargs
+
+        blank_body, created = Body.objects.get_or_create(provisional_name='Wibble')
+        self.assertTrue(created)
+        self.assertEqual(None, blank_body.meandist)
+        self.assertEqual(None, blank_body.eccentricity)
+
+        new_kwargs = convert_ast_to_comet(kwargs, blank_body)
+
+        self.assertEqual(expected_kwargs, new_kwargs)
+
+    def test_parabolic(self):
+        self.body.eccentricity = 1.0
+        self.body.save()
+        expected_kwargs = { 'source_type': 'C',
+                            'name': 'C/2018 A5',
+                            'active': True,
+                            'elements_type' : 'MPC_COMET',
+                            'epochofperih' : datetime(2017, 9, 14, 22, 34, 45, 428836),
+                            'meananom' : None,
+                            'slope' : 4.0,
+                            'eccentricity' : self.body.eccentricity,
+                            'epochofel' : self.body.epochofel,
+                            'meandist' : self.body.meandist
+                          }
+
+
+        kwargs = {'source_type': 'C', 'name': 'C/2018 A5', 'active': True}
+
+        new_kwargs = convert_ast_to_comet(kwargs, self.body)
+
+        self.assertEqual(expected_kwargs, new_kwargs)

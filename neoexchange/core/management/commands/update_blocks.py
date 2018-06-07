@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from datetime import datetime, timedelta
 from core.frames import block_status
 
+
 class Command(BaseCommand):
     help = 'Update pending blocks if observation requests have been made'
 
@@ -38,3 +39,14 @@ class Command(BaseCommand):
         completed_sblocks = SuperBlock.objects.filter(active=True, block_end__lt=now-timedelta(minutes=delta))
         self.stdout.write("==== Clean up %s SuperBlocks more than %s mins old (%s) ====" % (completed_sblocks.count(), delta, delta_string))
         completed_sblocks.update(active=False)
+
+        # Double check for late arrivals 12 and 24 hours after block end.
+        # WARNING: Rolling 20 minute check at 12 and 24 hours is based on the 20 minute crontab cadence for running update_blocks
+        blocks = Block.objects.filter(block_end__gte=now-timedelta(hours=12)-timedelta(minutes=20), block_end__lte=now-timedelta(hours=12))
+        self.stdout.write("==== Check %s blocks that ended 12 hours ago for incomplete download %s ====" % (blocks.count(), now_string))
+        for block in blocks:
+            block_status(block.id)
+        blocks = Block.objects.filter(block_end__gte=now-timedelta(hours=24)-timedelta(minutes=20), block_end__lte=now-timedelta(hours=24))
+        self.stdout.write("==== Check %s blocks that ended 24 hours ago for incomplete download %s ====" % (blocks.count(), now_string))
+        for block in blocks:
+            block_status(block.id)
