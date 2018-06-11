@@ -1651,10 +1651,20 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             logger.info("Updating bad WCS in image file: %s. Output to: %s" % (fits_file, fits_file_output))
             status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
             logger.info("Return status for updateFITSWCS: {}".format(status))
-            header = get_catalog_header(new_header, cattype)
-            # Apply new refitted WCS to catalog RA,Dec columns
-            status = update_ldac_catalog_wcs(fits_file_output, new_ldac_catalog)
-            logger.info("Return status for update_ldac_catalog_wcs: {}".format(status))
+#            ## Update WCS in catalog file
+#            logger.info("Updating bad WCS in catalog file: %s." % (new_ldac_catalog,))
+#            status, new_cat_header = updateFITSWCS(new_ldac_catalog, scamp_file, scamp_xml_file, new_ldac_catalog)
+#            logger.info("Return status for updateFITSWCS: {}".format(status))
+#            header = get_catalog_header(new_header, cattype)
+#            # Apply new refitted WCS to catalog RA,Dec columns
+#            status = update_ldac_catalog_wcs(fits_file_output, new_ldac_catalog)
+#            logger.info("Return status for update_ldac_catalog_wcs: {}".format(status))
+            # Re-run SExtractor to make a new FITS_LDAC catalog from the frame
+            status, new_ldac_catalog = run_sextractor_make_catalog(configs_dir, dest_dir, fits_file_output)
+            logger.debug("Filename after 2nd SExtractor= {}".format(new_ldac_catalog))
+            if status != 0:
+                logger.error("Execution of second SExtractor failed")
+                return -4, 0
 
     # Find Block for original frame
     block = find_block_for_frame(catfile)
