@@ -1651,6 +1651,11 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             logger.info("Updating bad WCS in image file: %s. Output to: %s" % (fits_file, fits_file_output))
             status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
             logger.info("Return status for updateFITSWCS: {}".format(status))
+#           XXX In principle, this is an alternative way of doing it without
+#           needing to do a re-extraction. However it requires breaking the 24,000+
+#           byte LDAC "header" back into a proper Header, updating, and joining
+#           it all back together again. This approach would also allow multi-
+#           aperture/curve-of-growth to be done with the second extraction
 #            ## Update WCS in catalog file
 #            logger.info("Updating bad WCS in catalog file: %s." % (new_ldac_catalog,))
 #            status, new_cat_header = updateFITSWCS(new_ldac_catalog, scamp_file, scamp_xml_file, new_ldac_catalog)
