@@ -12,7 +12,7 @@ except:
 import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
 
-from core.models import Block, Frame, SuperBlock
+from core.models import Block, Frame, SuperBlock, SourceMeasurement
 from astrometrics.ephem_subs import compute_ephem, radec2strings
 from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box
@@ -47,6 +47,27 @@ class Command(BaseCommand):
 
         return
 
+    def make_source_measurement(self, body, frame, cat_source, persist=False):
+        source = SourceMeasurement( body = body,
+                                    frame = frame,
+                                    obs_ra = cat_source.obs_ra,
+                                    obs_dec = cat_source.obs_dec,
+                                    obs_mag = cat_source.obs_mag,
+                                    err_obs_ra = cat_source.err_obs_ra,
+                                    err_obs_dec = cat_source.err_obs_dec,
+                                    err_obs_mag = cat_source.err_obs_mag,
+                                    astrometric_catalog = frame.astrometric_catalog,
+                                    photometric_catalog = frame.photometric_catalog,
+                                    aperture_size = cat_source.aperture_size,
+                                    snr = cat_source.make_snr(),
+                                    flags = cat_source.map_numeric_to_mpc_flags()
+                                  )
+        source.save()
+        mpc_line = source.format_mpc_line()
+        if persist is not True:
+            source.delete()
+        return mpc_line
+
     def handle(self, *args, **options):
 
         self.stdout.write("==== Light curve building %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
@@ -61,6 +82,7 @@ class Command(BaseCommand):
         times = []
         mags = []
         mag_errs = []
+        mpc_lines = []
         total_frame_count = 0
         mpc_site = []
         for super_block in super_blocks:
@@ -108,6 +130,8 @@ class Command(BaseCommand):
                                         best_source = source
 
                             if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 2 * options['deltamag']:
+                                mpc_line = self.make_source_measurement(block.body, frame, best_source, persist=False)
+                                mpc_lines.append(mpc_line)
                                 times.append(frame.midpoint)
                                 mags.append(best_source.obs_mag)
                                 mag_errs.append(best_source.err_obs_mag)
@@ -119,6 +143,7 @@ class Command(BaseCommand):
         # Write light curve data out in similar format to Make_lc.csh
         i = 0
         lightcurve_file = open('lightcurve_data.txt', 'w')
+        mpc_file = open('mpc_positions.txt', 'w')
 
         # Calculate integer part of JD for first frame and use this as a
         # constant in case of wrapover to the next day
@@ -132,6 +157,10 @@ class Command(BaseCommand):
                 lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
                 i += 1
             lightcurve_file.close()
+
+            for mpc_line in mpc_lines:
+                mpc_file.write(mpc_line + '\n')
+            mpc_file.close()
 
             if options['title'] is None:
                 if options['timespan'] < 1:

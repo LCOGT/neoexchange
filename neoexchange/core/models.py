@@ -1027,6 +1027,36 @@ class CatalogSources(models.Model):
         area = pi*self.major_axis*self.minor_axis
         return area
 
+    def make_snr(self):
+        snr = None
+        if self.obs_mag > 0.0 and self.err_obs_mag > 0.0:
+            snr = self.err_obs_mag / self.obs_mag
+        return snr
+
+    def map_numeric_to_mpc_flags(self):
+        """Maps SExtractor numeric flags to MPC character flags
+        FLAGS contains, coded in decimal, all the extraction flags as a sum
+        of powers of 2:
+        1:  The object has neighbours, bright and close enough to significantly
+            bias the MAG_AUTO photometry, or bad pixels (more than 10% of the
+            integrated area affected),
+        2:  The object was originally blended with another one,
+        4:  At least one pixel of the object is saturated (or very close to),
+        8:  The object is truncated (too close to an image boundary),
+        16: Object’s aperture data are incomplete or corrupted,
+        32: Object’s isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
+        64: A memory overflow occurred during deblending,
+        128:A memory overflow occurred during extraction.
+        """
+
+        flag = ' '
+        if self.flags >= 1 and self.flags <=3:
+            # Set 'Involved with star'
+            flag = 'I'
+        elif self.flags >= 8:
+            # Set 'close to Edge'
+            flag = 'E'
+        return flag
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding
