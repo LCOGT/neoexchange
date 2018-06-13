@@ -55,6 +55,51 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     return beta
 
 
+def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
+    """Return Perturbed elements if requested.
+    Convert Orbital elements into radians otherwise"""
+
+    if comet is True:
+        jform = 3
+        p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
+                      'Inc' : radians(orbelems['orbinc']),
+                      'ArgPeri' : radians(orbelems['argofperih']),
+                      'SemiAxisOrQ' : orbelems['perihdist'],
+                      'Ecc' : orbelems['eccentricity'],
+                     }
+        orbelems['meananom'] = 0.0
+        aorq = orbelems['perihdist']
+        epoch_mjd = datetime2mjd_utc(orbelems['epochofperih'])
+    else:
+        jform = 2
+        p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
+                      'Inc' : radians(orbelems['orbinc']),
+                      'ArgPeri' : radians(orbelems['argofperih']),
+                      'SemiAxisOrQ' : orbelems['meandist'],
+                      'Ecc' : orbelems['eccentricity']
+                     }
+        try:
+            p_orbelems['MeanAnom'] = radians(orbelems['meananom'])
+        except TypeError:
+            p_orbelems['MeanAnom'] = 0.0
+            orbelems['meananom'] = 0.0
+        try:
+            aorq = float(orbelems['meandist'])
+        except TypeError:
+            aorq = 0.0
+    p_orbelems['H'] = orbelems['abs_mag']
+    p_orbelems['G'] = orbelems['slope']
+    if perturb is True:
+        (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
+         p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd,
+                                                                                                  mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
+                                                                                                  radians(orbelems['argofperih']), aorq, orbelems['eccentricity'], radians(orbelems['meananom']))
+    else:
+        p_epoch_mjd = epoch_mjd
+        j = 0
+    return p_orbelems, p_epoch_mjd, j
+
+
 def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False, detailed=False):
     """Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
@@ -73,18 +118,18 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         epochofel = orbelems['epochofel']
     epoch_mjd = datetime2mjd_utc(epochofel)
 
-    logger.debug('Element Epoch= %.1f' % (epoch_mjd))
-    logger.debug('MJD(UTC) =   %.15f' % (mjd_utc))
+    logger.debug('Element Epoch= %.1f' % epoch_mjd)
+    logger.debug('MJD(UTC) =   %.15f' % mjd_utc)
     logger.debug(' JD(UTC) = %.8f' % (mjd_utc + 2400000.5))
 
 # Convert MJD(UTC) to MJD(TT)
     mjd_tt = mjd_utc2mjd_tt(mjd_utc)
-    logger.debug('MJD(TT)  =   %.15f' % (mjd_tt))
+    logger.debug('MJD(TT)  =   %.15f' % mjd_tt)
 
 # Compute UT1-UTC
 
     dut = ut1_minus_utc(mjd_utc)
-    logger.debug("UT1-UTC  = %.15f" % (dut))
+    logger.debug("UT1-UTC  = %.15f" % dut)
 
 # Obtain precession-nutation 3x3 rotation matrix
 # Should really be TDB but "TT will do" says The Wallace...
@@ -100,7 +145,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
     logger.debug("Site code/name, lat/long/height=%s %s %f %f %.1f" % (sitecode, site_name, site_long, site_lat, site_hgt))
 
-    if site_name == '?'  or sitecode == '500':
+    if site_name == '?' or sitecode == '500':
         if site_name == '?':
             logger.warning("WARN: No site co-ordinates found, computing for geocenter")
         pvobs = zeros(6)
@@ -161,44 +206,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         comet = True
         jform = 3
 
-# Perturb elements
-
-    if comet is True:
-        p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
-                      'Inc' : radians(orbelems['orbinc']),
-                      'ArgPeri' : radians(orbelems['argofperih']),
-                      'SemiAxisOrQ' : orbelems['perihdist'],
-                      'Ecc' : orbelems['eccentricity'],
-                     }
-        orbelems['meananom'] = 0.0
-        aorq = orbelems['perihdist']
-        epoch_mjd = datetime2mjd_utc(orbelems['epochofperih'])
-    else:
-        p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
-                      'Inc' : radians(orbelems['orbinc']),
-                      'ArgPeri' : radians(orbelems['argofperih']),
-                      'SemiAxisOrQ' : orbelems['meandist'],
-                      'Ecc' : orbelems['eccentricity']
-                     }
-        try:
-            p_orbelems['MeanAnom'] = radians(orbelems['meananom'])
-        except TypeError:
-            p_orbelems['MeanAnom'] = 0.0
-            orbelems['meananom'] = 0.0
-        try:
-            aorq = float(orbelems['meandist'])
-        except TypeError:
-            aorq = 0.0
-    p_orbelems['H'] = orbelems['abs_mag']
-    p_orbelems['G'] = orbelems['slope']
-    if perturb is True:
-        (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
-                    radians(orbelems['argofperih']), aorq, orbelems['eccentricity'],
-                    radians(orbelems['meananom']))
-    else:
-        p_epoch_mjd = epoch_mjd
-        j = 0
+    # Convert orbital elements into radians and perturb if requested
+    p_orbelems, p_epoch_mjd, j = perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb)
 
     if j != 0:
         logger.error("Perturbing error=%s" % j)
