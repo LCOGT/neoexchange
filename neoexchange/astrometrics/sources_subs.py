@@ -40,7 +40,7 @@ except:
 from django.conf import settings
 
 import astrometrics.site_config as cfg
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
 from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements
 logger = logging.getLogger(__name__)
 
@@ -1501,43 +1501,51 @@ def check_for_perturbation(elements, params):
     """
     Check if target orbit needs perturbed elements sent to telescope
     """
+
+    # compare unperturbed and perturbed coordinates at begining of night
     emp_line_base = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=False, display=False)
     emp_line_perturb = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=True, display=False)
+
+    # Calculate offset in arcseconds between two coordinates
     try:
         offset = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_line_perturb[1], emp_line_perturb[2])) * 3600
     except IndexError:
+        logger.error("Could not compute perturbation coordinates")
         offset = 0
+    logger.info("Offset between perturbed and unperturbed position is %s arcseconds" % offset)
+
+    # Check if offset is "reasonable"
+    # Ignore if too small (won't matter)
+    # Ignore if too large (possible error. Should calculate new orbit instead)
     if 1 < offset < 100:
-        print("offset =", offset, " perturbing elements")
+        logger.info("Perturbing Elements")
         comet = False
         if 'elements_type' in elements and str(elements['elements_type']).upper() == 'MPC_COMET':
             comet = True
-
-        try:
-            epochofel = datetime.strptime(elements['epochofel'], '%Y-%m-%d %H:%M:%S')
-        except TypeError:
-            epochofel = elements['epochofel']
-        epoch_mjd = datetime2mjd_utc(epochofel)
 
         # Convert MJD(UTC) to MJD(TT)
         mjd_utc = datetime2mjd_utc(params['start_time'])
         mjd_tt = mjd_utc2mjd_tt(mjd_utc)
 
-        p_orbelems, p_epoch_mjd, j = perturb_elements(elements, epoch_mjd, mjd_tt, comet, True)
+        p_orbelems, p_epoch_mjd, j = perturb_elements(elements, elements['epochofel_mjd'], mjd_tt, comet, True)
 
         if j != 0:
+            logger.error("Perturbing error=%s" % j)
             return elements
         if comet is True:
             elements['epochofperih'] = p_epoch_mjd
             elements['perihdist']    = p_orbelems['SemiAxisOrQ']
         else:
-            elements['epochofel'] = p_epoch_mjd
+            elements['epochofel'] = mjd_utc2datetime(p_epoch_mjd)
+            elements['epochofel_mjd'] = p_epoch_mjd
             elements['meandist']  = p_orbelems['SemiAxisOrQ']
         elements['longascnode'] = degrees(p_orbelems['LongNode'])
         elements['orbinc']      = degrees(p_orbelems['Inc'])
         elements['argofperih']  = degrees(p_orbelems['ArgPeri'])
         elements['eccentricity']= p_orbelems['Ecc']
         elements['meananom']    = degrees(p_orbelems['MeanAnom'])
+    elif offset >= 100:
+        logger.error("Position offset large (%s arcsec). Consider updating orbit." % offset)
 
     return elements
 
@@ -1551,7 +1559,7 @@ def submit_block_to_scheduler(elements, params):
         pass
 
     user_request = make_userrequest(elements, params)
-
+    print(user_request)
 # Make an endpoint and submit the thing
     try:
         resp = requests.post(

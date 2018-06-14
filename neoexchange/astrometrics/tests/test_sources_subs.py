@@ -3246,9 +3246,11 @@ class TestCheckForPerturbation(TestCase):
         expected_a = self.body_elements['meandist']
         expected_i = self.body_elements['orbinc']
         expected_long = self.body_elements['longascnode']
+        expected_epoch = self.body_elements['epochofel_mjd']
 
         elements = check_for_perturbation(self.body_elements, params)
 
+        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
         self.assertEqual(expected_e, elements['eccentricity'])
         self.assertEqual(expected_a, elements['meandist'])
         self.assertEqual(expected_i, elements['orbinc'])
@@ -3266,8 +3268,11 @@ class TestCheckForPerturbation(TestCase):
         expected_a = body_elements['meandist']
         expected_i = body_elements['orbinc']
         expected_long = body_elements['longascnode']
+        expected_epoch = body_elements['epochofel_mjd']
 
         elements = check_for_perturbation(body_elements, params)
+
+        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
         self.assertEqual(expected_e, elements['eccentricity'])
         self.assertEqual(expected_a, elements['meandist'])
         self.assertEqual(expected_i, elements['orbinc'])
@@ -3285,9 +3290,11 @@ class TestCheckForPerturbation(TestCase):
         expected_a = body_elements['meandist']
         expected_i = body_elements['orbinc']
         expected_long = body_elements['longascnode']
+        expected_epoch = body_elements['epochofel_mjd']
 
         elements = check_for_perturbation(body_elements, params)
 
+        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
         self.assertEqual(expected_e, elements['eccentricity'])
         self.assertEqual(expected_a, elements['meandist'])
         self.assertEqual(expected_i, elements['orbinc'])
@@ -3310,8 +3317,39 @@ class TestCheckForPerturbation(TestCase):
         expected_a = 1.5350441058040079
         expected_i = 4.754401449955707
         expected_long = 117.59466442936079
+        expected_epoch = params['start_time']
 
         elements = check_for_perturbation(body_elements, params)
+        self.assertEqual(expected_epoch.year, elements['epochofel'].year)
+        self.assertEqual(expected_epoch.month, elements['epochofel'].month)
+        self.assertEqual(expected_epoch.day, elements['epochofel'].day)
+        self.assertEqual(expected_e, elements['eccentricity'])
+        self.assertEqual(expected_a, elements['meandist'])
+        self.assertEqual(expected_i, elements['orbinc'])
+        self.assertEqual(expected_long, elements['longascnode'])
+
+    def test_needs_new_orbit(self):
+        params = self.params
+        params['start_time'] = params['start_time'] + relativedelta(days=810)
+        params['spectroscopy'] = True
+
+        body_elements = self.body_elements
+        body_elements['meandist'] = 1.5349659
+        body_elements['eccentricity'] = 0.5182788
+        body_elements['orbinc'] = 4.75381
+        body_elements['longascnode'] = 117.60203
+        body_elements['argofperih'] = 229.36323
+        body_elements['meananom'] = 286.18972
+
+        expected_e = body_elements['eccentricity']
+        expected_a = body_elements['meandist']
+        expected_i = body_elements['orbinc']
+        expected_long = body_elements['longascnode']
+        expected_epoch = body_elements['epochofel_mjd']
+
+        elements = check_for_perturbation(body_elements, params)
+
+        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
         self.assertEqual(expected_e, elements['eccentricity'])
         self.assertEqual(expected_a, elements['meandist'])
         self.assertEqual(expected_i, elements['orbinc'])
