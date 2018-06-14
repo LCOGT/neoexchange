@@ -40,9 +40,8 @@ except:
 from django.conf import settings
 
 import astrometrics.site_config as cfg
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
-
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements
 logger = logging.getLogger(__name__)
 
 
@@ -1426,7 +1425,7 @@ def configure_defaults(params):
             params['binning'] = 1
             if params.get('filter', None):
                 del(params['filter'])
-            params['spectra_slit'] = 'slit_2.0as'
+            params['spectra_slit'] = 'slit_6.0as'
     elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
@@ -1498,7 +1497,58 @@ def make_userrequest(elements, params):
     return user_request
 
 
+def check_for_perturbation(elements, params):
+    """
+    Check if target orbit needs perturbed elements sent to telescope
+    """
+    emp_line_base = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=False, display=False)
+    emp_line_perturb = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=True, display=False)
+    try:
+        offset = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_line_perturb[1], emp_line_perturb[2])) * 3600
+    except IndexError:
+        offset = 0
+    if 1 < offset < 100:
+        print("offset =", offset, " perturbing elements")
+        comet = False
+        if 'elements_type' in elements and str(elements['elements_type']).upper() == 'MPC_COMET':
+            comet = True
+
+        try:
+            epochofel = datetime.strptime(elements['epochofel'], '%Y-%m-%d %H:%M:%S')
+        except TypeError:
+            epochofel = elements['epochofel']
+        epoch_mjd = datetime2mjd_utc(epochofel)
+
+        # Convert MJD(UTC) to MJD(TT)
+        mjd_utc = datetime2mjd_utc(params['start_time'])
+        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+
+        p_orbelems, p_epoch_mjd, j = perturb_elements(elements, epoch_mjd, mjd_tt, comet, True)
+
+        if j != 0:
+            return elements
+        if comet is True:
+            elements['epochofperih'] = p_epoch_mjd
+            elements['perihdist']    = p_orbelems['SemiAxisOrQ']
+        else:
+            elements['epochofel'] = p_epoch_mjd
+            elements['meandist']  = p_orbelems['SemiAxisOrQ']
+        elements['longascnode'] = degrees(p_orbelems['LongNode'])
+        elements['orbinc']      = degrees(p_orbelems['Inc'])
+        elements['argofperih']  = degrees(p_orbelems['ArgPeri'])
+        elements['eccentricity']= p_orbelems['Ecc']
+        elements['meananom']    = degrees(p_orbelems['MeanAnom'])
+
+    return elements
+
+
 def submit_block_to_scheduler(elements, params):
+
+    try:
+        if params['spectroscopy'] is not False:
+            elements = check_for_perturbation(elements, params)
+    except KeyError:
+        pass
 
     user_request = make_userrequest(elements, params)
 

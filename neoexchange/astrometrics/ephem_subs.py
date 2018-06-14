@@ -56,8 +56,10 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
 
 
 def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
-    """Return Perturbed elements if requested.
-    Convert Orbital elements into radians otherwise"""
+    """
+    Convert Orbital elements into radians.
+    Return Perturbed elements if requested.
+    """
 
     if comet is True:
         jform = 3
