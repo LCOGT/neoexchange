@@ -2767,7 +2767,7 @@ class TestMakeCadence(TestCase):
     def test_cadence_valhalla(self):
         expected = {
                      u'group_id': u'3122_Q59-20170815',
-                     u'ipp_value': 1.0,
+                     u'ipp_value': 1.05,
                      u'observation_type': u'NORMAL',
                      u'operator': u'MANY',
                      u'proposal': u'LCOSchedulerTest',
@@ -2884,7 +2884,7 @@ class TestMakeCadence(TestCase):
     def test_cadence_wrapper(self):
         expected = {
                      u'group_id': u'3122_Q59-20170815',
-                     u'ipp_value': 1.0,
+                     u'ipp_value': 1.05,
                      u'observation_type': u'NORMAL',
                      u'operator': u'MANY',
                      u'proposal': u'LCOSchedulerTest',
