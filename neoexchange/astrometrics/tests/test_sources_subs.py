@@ -2010,6 +2010,57 @@ class TestSFUFetch(TestCase):
         self.assertEqual(expected_result[1].unit, sfu_result[1].unit)
         self.assertEqual(expected_result[1].to(u.MJy), sfu_result[1].to(u.MJy))
 
+    def test_notable(self):
+
+        html = '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Foo</title><style></style></head>
+                <body>
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+        expected_result = (None, None)
+
+        sfu_result = fetch_sfu(page)
+
+        self.assertEqual(expected_result[0], sfu_result[0])
+        self.assertEqual(expected_result[1], sfu_result[1])
+
+    def test_bad_JD(self):
+
+        html = '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Foo</title><style></style></head>
+                <body>
+                <table>
+                <tr><th>Julian Day Number</th><td>Wibble</td></tr>
+                </table>
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+        expected_result = (None, None)
+
+        sfu_result = fetch_sfu(page)
+
+        self.assertEqual(expected_result[0], sfu_result[0])
+        self.assertEqual(expected_result[1], sfu_result[1])
+
+    def test_bad_fluxvalue(self):
+
+        html = '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Foo</title><style></style></head>
+                <body>
+                <table>
+                <tr><th>Julian Day Number</th><td>2458134.239</td></tr>
+                <tr><th>Observed Flux Density</th><td>Wibble</td></tr>
+                </table>
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+        expected_result = (datetime(2018,1,15,17,44,10), None)
+
+        sfu_result = fetch_sfu(page)
+
+        self.assertEqual(expected_result[0], sfu_result[0])
+        self.assertEqual(expected_result[1], sfu_result[1])
 
 class TestConfigureDefaults(TestCase):
 
