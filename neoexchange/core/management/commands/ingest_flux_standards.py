@@ -1,7 +1,7 @@
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 
-from core.models import CalibSource
+from core.models import StaticSource
 from astrometrics.sources_subs import fetch_flux_standards
 from core.views import create_calib_sources
 

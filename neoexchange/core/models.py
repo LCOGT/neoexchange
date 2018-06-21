@@ -1129,9 +1129,10 @@ class PanoptesReport(models.Model):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
 
 @python_2_unicode_compatible
-class CalibSource(models.Model):
+class StaticSource(models.Model):
     """
-    Class for calibration sources (solar standards, RV standards, flux standards etc)
+    Class for static (sidereal) sources, normally calibration sources (solar
+    standards, RV standards, flux standards etc)
     """
     UNKNOWN_SOURCE = 0
     FLUX_STANDARD = 1
@@ -1147,8 +1148,11 @@ class CalibSource(models.Model):
                          ]
 
     name = models.CharField('Name of calibration source', max_length=55)
-    ra = models.FloatField('RA of source (radians)')
-    dec = models.FloatField('Dec of source (radians)')
+    ra = models.FloatField('RA of source (degrees)')
+    dec = models.FloatField('Dec of source (degrees)')
+    pm_ra = models.FloatField('Proper motion in RA of source (pmra*cos(dec); mas/yr)', default=0.0)
+    pm_dec = models.FloatField('Proper motion in Dec of source (mas/yr)', default=0.0)
+    parallax = models.FloatField('Parallax (mas)', default=0.0)
     vmag = models.FloatField('V magnitude')
     spectral_type = models.CharField('Spectral type of source', max_length=10, blank=True, null=True)
     source_type = models.IntegerField('Source Type', null=False, blank=False, default=0, choices=SOURCETYPE_CHOICES)
@@ -1161,6 +1165,6 @@ class CalibSource(models.Model):
         return self.name
 
     class Meta:
-        verbose_name = _('Calibration Source')
-        verbose_name_plural = _('Calibration Sources')
-        db_table = 'ingest_calibsource'
+        verbose_name = _('Static Source')
+        verbose_name_plural = _('Static Sources')
+        db_table = 'ingest_staticsource'

@@ -11,7 +11,7 @@ from neox.tests.mocks import MockDateTime, mock_lco_authenticate, \
 from neox.auth_backend import update_proposal_permissions
 from astrometrics.sources_subs import fetch_flux_standards
 from core.views import create_calib_sources
-from core.models import Proposal, CalibSource
+from core.models import Proposal, StaticSource
 
 
 class TestCalibrationSources(FunctionalTest):
@@ -40,7 +40,7 @@ class TestCalibrationSources(FunctionalTest):
 
     def tearDown(self):
         self.bart.delete()
-        CalibSource.objects.all().delete()
+        StaticSource.objects.all().delete()
         super(TestCalibrationSources, self).tearDown()
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)

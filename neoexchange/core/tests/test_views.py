@@ -37,7 +37,7 @@ from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, fetch_flux_s
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
-    SuperBlock, SpectralInfo, PreviousSpectra, CalibSource
+    SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.forms import EphemQuery
 #Import modules to test
@@ -3446,7 +3446,7 @@ class Test_Add_External_Spectroscopy_Data(TestCase):
         self.assertEqual(expected_res, new_spec)
 
 
-class TestCreateCalibSource(TestCase):
+class TestCreateStaticSource(TestCase):
 
     def setUp(self):
         test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
@@ -3463,7 +3463,7 @@ class TestCreateCalibSource(TestCase):
         num_created = create_calib_sources(self.test_flux_standards)
 
         self.assertEqual(expected_created, num_created)
-        self.assertEqual(expected_created, CalibSource.objects.count())
+        self.assertEqual(expected_created, StaticSource.objects.count())
 
 
 class TestFindBestFluxStandard(TestCase):
@@ -3479,7 +3479,7 @@ class TestFindBestFluxStandard(TestCase):
         self.precision = 8
 
     def test_FTN(self):
-        expected_standard = CalibSource.objects.get(name='HR9087')
+        expected_standard = StaticSource.objects.get(name='HR9087')
         expected_params = { 'separation_rad' : 0.9379758789119819}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
@@ -3496,7 +3496,7 @@ class TestFindBestFluxStandard(TestCase):
                 self.assertEqual(expected_params[key], close_params[key])
 
     def test_FTS(self):
-        expected_standard = CalibSource.objects.get(name='CD-34d241')
+        expected_standard = StaticSource.objects.get(name='CD-34d241')
         expected_params = { 'separation_rad' : 0.11565764559405214}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}

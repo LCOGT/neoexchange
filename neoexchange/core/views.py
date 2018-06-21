@@ -300,11 +300,11 @@ class CandidatesViewBlock(LoginRequiredMixin, View):
         return render(request, self.template, {'body': block.body, 'candidates': candidates, 'slot': block})
 
 
-class CalibSourceView(ListView):
+class StaticSourceView(ListView):
     template_name = 'core/calibsource_list.html'
-    model = CalibSource
-    queryset = CalibSource.objects.order_by('ra')
-    context_object_name = "calibsources"
+    model = StaticSource
+    queryset = StaticSource.objects.order_by('ra')
+    context_object_name = "StaticSources"
     paginate_by = 20
 
 
@@ -397,7 +397,7 @@ class LookUpBodyMixin(object):
 
 class LookUpCalibMixin(object):
     """
-    A Mixin for finding a CalibSource for a sitecode and if it exists, return the Target instance.
+    A Mixin for finding a StaticSource for a sitecode and if it exists, return the Target instance.
     """
     def dispatch(self, request, *args, **kwargs):
         try:
@@ -405,8 +405,8 @@ class LookUpCalibMixin(object):
             target, target_params = find_best_flux_standard(sitecode)
             self.target = target
             return super(LookUpCalibMixin, self).dispatch(request, *args, **kwargs)
-        except CalibSource.DoesNotExist:
-            raise Http404("CalibSource does not exist")
+        except StaticSource.DoesNotExist:
+            raise Http404("StaticSource does not exist")
 
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
     """
@@ -547,7 +547,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     """
     template_name = 'core/calib_schedule_confirm.html'
     form_class = ScheduleBlockForm
-    model = CalibSource
+    model = StaticSource
 
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
@@ -571,7 +571,7 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-# Not possible to store CalibSources in Blocks/SuperBlocks yet
+# Not possible to store StaticSources in Blocks/SuperBlocks yet
 #                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
 #                if block_resp:
 #                    messages.success(self.request, "Block recorded")
@@ -813,7 +813,7 @@ def schedule_submit(data, body, username):
 
     # Assemble request
     # Send to scheduler
-    if type(body) == CalibSource:
+    if type(body) == StaticSource:
         body_elements = {}
     else:
         body_elements = model_to_dict(body)
@@ -848,8 +848,8 @@ def schedule_submit(data, body, username):
     if data['period'] or data['jitter']:
         params['period'] = data['period']
         params['jitter'] = data['jitter']
-    # If we have a (static) CalibSource object, fill in details needed by make_target
-    if type(body) == CalibSource:
+    # If we have a (static) StaticSource object, fill in details needed by make_target
+    if type(body) == StaticSource:
         params['ra_rad' ] = body.ra
         params['dec_rad'] = body.dec
         params['source_id'] = body.current_name()
@@ -2077,7 +2077,7 @@ def update_previous_spectra(specobj, source='U', dbg=False):
 
 
 def create_calib_sources(calib_sources):
-    """Creates CalibrationSources from the passed dictionary of <calib_sources>. This
+    """Creates StaticSources from the passed dictionary of <calib_sources>. This
     would normally come from fetch_flux_standards() but other sources are possible.
     The number of sources created is returned"""
 
@@ -2091,10 +2091,10 @@ def create_calib_sources(calib_sources):
                     'dec' : calib_sources[standard]['dec_rad'],
                     'vmag' : calib_sources[standard]['mag'],
                     'spectral_type' : calib_sources[standard]['spec_type'],
-                    'source_type' : CalibSource.FLUX_STANDARD,
+                    'source_type' : StaticSource.FLUX_STANDARD,
                     'notes' : calib_sources[standard]['notes']
                  }
-        calib_source, created = CalibSource.objects.get_or_create(**params)
+        calib_source, created = StaticSource.objects.get_or_create(**params)
         if created:
             num_created += 1
     return num_created
@@ -2110,7 +2110,7 @@ def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards
     close_standard = None
     close_params = {}
     if flux_standards is None:
-        flux_standards = CalibSource.objects.filter(source_type=CalibSource.FLUX_STANDARD)
+        flux_standards = StaticSource.objects.filter(source_type=StaticSource.FLUX_STANDARD)
 
     site_name, site_long, site_lat, site_hgt = get_sitepos(sitecode)
     if site_name != '?':

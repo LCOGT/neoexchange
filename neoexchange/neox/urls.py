@@ -26,7 +26,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
-    CalibSourceView, ScheduleCalibSpectra, ScheduleCalibSubmit
+    StaticSourceView, ScheduleCalibSpectra, ScheduleCalibSubmit
 from analyser.views import BlockFramesView, ProcessCandidates
 
 
@@ -54,7 +54,7 @@ urlpatterns = [
     url(r'^search/$', BodySearchView.as_view(context_object_name="target_list"), name='search'),
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
-    url(r'^calibsources/$', CalibSourceView.as_view(), name='calibsource-view'),
+    url(r'^calibsources/$', StaticSourceView.as_view(), name='calibsource-view'),
     url(r'^characterization/$', characterization, name='characterization'),
     url(r'^feasibility/(?P<pk>\d+)/$', SpectroFeasibility.as_view(), name='feasibility'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$', ScheduleSubmit.as_view(), name='schedule-confirm'),
