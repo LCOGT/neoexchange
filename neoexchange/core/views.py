@@ -294,6 +294,14 @@ class CandidatesViewBlock(LoginRequiredMixin, View):
         return render(request, self.template, {'body': block.body, 'candidates': candidates, 'slot': block})
 
 
+class StaticSourceView(ListView):
+    template_name = 'core/calibsource_list.html'
+    model = StaticSource
+    queryset = StaticSource.objects.order_by('ra')
+    context_object_name = "StaticSources"
+    paginate_by = 20
+
+
 def generate_new_candidate_id(prefix='LNX'):
 
     new_id = None
@@ -379,6 +387,20 @@ class LookUpBodyMixin(object):
             return super(LookUpBodyMixin, self).dispatch(request, *args, **kwargs)
         except Body.DoesNotExist:
             raise Http404("Body does not exist")
+
+
+class LookUpCalibMixin(object):
+    """
+    A Mixin for finding a StaticSource for a sitecode and if it exists, return the Target instance.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            sitecode = kwargs['instrument_code'][0:3]
+            target, target_params = find_best_flux_standard(sitecode)
+            self.target = target
+            return super(LookUpCalibMixin, self).dispatch(request, *args, **kwargs)
+        except StaticSource.DoesNotExist:
+            raise Http404("StaticSource does not exist")
 
 
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
@@ -473,6 +495,92 @@ class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
+
+
+class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
+    """
+    Creates a suggested spectroscopic calibration observation request, including time
+    window, calibrations and molecules
+    """
+    template_name = 'core/schedule_spectra.html'
+    form_class = ScheduleSpectraForm
+    ok_to_schedule = False
+
+    def get(self, request, *args, **kwargs):
+        # Override default exposure time for brighter calib targets and set the initial
+        # instrument code to that which came in via the URL and the kwargs
+        form = ScheduleSpectraForm(initial={'exp_length' : 180.0,
+                                            'instrument_code' : kwargs.get('instrument_code', '')}
+                                  )
+        return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def post(self, request, *args, **kwargs):
+        form = ScheduleSpectraForm(request.POST)
+        if form.is_valid():
+            return self.form_valid(form,request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.target, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/calib_schedule_confirm.html', {'form': new_form, 'data': data, 'calibrator': self.target})
+
+    def get_context_data(self, **kwargs):
+        """
+        Only show proposals the current user is a member of
+        """
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
+
+class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
+    """
+    Takes the hidden form input from ScheduleParameters, validates them as a double check.
+    Then submits to the scheduler. If a tracking number is returned, the object has been scheduled and we record a Block.
+    """
+    template_name = 'core/calib_schedule_confirm.html'
+    form_class = ScheduleBlockForm
+    model = StaticSource
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form, request):
+        if 'edit' in request.POST:
+            # Recalculate the parameters by amending the block length
+            data = schedule_check(form.cleaned_data, self.object)
+            new_form = ScheduleBlockForm(data)
+            return render(request, self.template_name, {'form': new_form, 'data': data, 'calibrator': self.object})
+        elif 'submit' in request.POST:
+            target = self.get_object()
+            username = ''
+            if request.user.is_authenticated():
+                username = request.user.get_username()
+            tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
+            if tracking_num:
+                messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
+# Not possible to store StaticSources in Blocks/SuperBlocks yet
+#                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+#                if block_resp:
+#                    messages.success(self.request, "Block recorded")
+#                else:
+#                    messages.warning(self.request, "Record not created")
+            else:
+                msg = "It was not possible to submit your request to the scheduler."
+                if sched_params.get('error_msg', None):
+                    msg += "\nAdditional information:" + sched_params['error_msg']
+                messages.warning(self.request, msg)
+            return super(ScheduleCalibSubmit, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse('home')
 
 
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
@@ -689,10 +797,13 @@ def schedule_submit(data, body, username):
 
     # Assemble request
     # Send to scheduler
-    body_elements = model_to_dict(body)
-    body_elements['epochofel_mjd'] = body.epochofel_mjd()
-    body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
-    body_elements['current_name'] = body.current_name()
+    if type(body) == StaticSource:
+        body_elements = {}
+    else:
+        body_elements = model_to_dict(body)
+        body_elements['epochofel_mjd'] = body.epochofel_mjd()
+        body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
+        body_elements['current_name'] = body.current_name()
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
@@ -721,6 +832,11 @@ def schedule_submit(data, body, username):
     if data['period'] or data['jitter']:
         params['period'] = data['period']
         params['jitter'] = data['jitter']
+    # If we have a (static) StaticSource object, fill in details needed by make_target
+    if type(body) == StaticSource:
+        params['ra_rad' ] = body.ra
+        params['dec_rad'] = body.dec
+        params['source_id'] = body.current_name()
     # Check for pre-existing block
     tracking_number = None
     resp_params = None
@@ -2024,4 +2140,67 @@ def update_previous_spectra(specobj, source='U', dbg=False):
     return True
 
 
+def create_calib_sources(calib_sources):
+    """Creates StaticSources from the passed dictionary of <calib_sources>. This
+    would normally come from fetch_flux_standards() but other sources are possible.
+    The number of sources created is returned"""
 
+    num_created = 0
+
+    for standard in calib_sources:
+
+        params = {
+                    'name' : standard,
+                    'ra'  : calib_sources[standard]['ra_rad'],
+                    'dec' : calib_sources[standard]['dec_rad'],
+                    'vmag' : calib_sources[standard]['mag'],
+                    'spectral_type' : calib_sources[standard]['spec_type'],
+                    'source_type' : StaticSource.FLUX_STANDARD,
+                    'notes' : calib_sources[standard]['notes']
+                 }
+        calib_source, created = StaticSource.objects.get_or_create(**params)
+        if created:
+            num_created += 1
+    return num_created
+
+def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards=None, debug=False):
+    """Finds the "best (closest to the zenith at the middle of the night (given
+    by [utc_date]; defaults to UTC "now") for the passed <sitecode>
+    [flux_standards] is expected to be a dictionary of standards with the keys as the
+    name of the standards and pointing to a dictionary with the details. This is
+    normally produced by sources_subs.fetch_flux_standards(); which will be
+    called if standards=None
+    """
+    close_standard = None
+    close_params = {}
+    if flux_standards is None:
+        flux_standards = StaticSource.objects.filter(source_type=StaticSource.FLUX_STANDARD)
+
+    site_name, site_long, site_lat, site_hgt = get_sitepos(sitecode)
+    if site_name != '?':
+
+        # Compute midpoint of the night
+        dark_start, dark_end = determine_darkness_times(sitecode, utc_date)
+
+        dark_midpoint = dark_start + (dark_end - dark_start) / 2.0
+
+        if debug:
+            print("\nDark midpoint, start, end", dark_midpoint, dark_start, dark_end)
+
+        # Compute Local Sidereal Time at the dark midpoint
+        stl = datetime2st(dark_midpoint, site_long)
+
+        if debug:
+            print("RA, Dec of zenith@midpoint:", stl, site_lat)
+        # Loop through list of standards, recording closest
+        min_sep = 360.0
+        for standard in flux_standards:
+            sep = S.sla_dsep(standard.ra, standard.dec, stl, site_lat)
+            if debug:
+                print("%10s %.7f %.7f %.3f %7.3f (%10s)" % (standard, standard.ra, standard.dec, sep, min_sep, close_standard))
+            if sep < min_sep:
+                min_sep = sep
+                close_standard = standard
+        close_params = model_to_dict(close_standard)
+        close_params['separation_rad'] = min_sep
+    return close_standard, close_params

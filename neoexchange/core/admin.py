@@ -248,7 +248,7 @@ class CandidateAdmin(admin.ModelAdmin):
     search_fields = ('block__body__provisional_name', )
 
 
-class CalibSourceAdmin(admin.ModelAdmin):
+class StaticSourceAdmin(admin.ModelAdmin):
 
     def calib_ra_hms(self, obj):
         return degreestohms(obj.ra, ' ')
@@ -270,4 +270,4 @@ admin.site.register(ProposalPermission)
 admin.site.register(CatalogSources, CatalogSourcesAdmin)
 admin.site.register(Candidate, CandidateAdmin)
 admin.site.register(PanoptesReport)
-admin.site.register(CalibSource, CalibSourceAdmin)
+admin.site.register(StaticSource, StaticSourceAdmin)
