@@ -126,6 +126,16 @@ class SpectralInfoAdmin(VersionAdmin):
     list_filter = ('taxonomic_class', 'tax_scheme')
 
 
+@admin.register(PreviousSpectra)
+class PreviousSpectraAdmin(VersionAdmin):
+
+    def body_name(self, obj):
+        return obj.body.current_name()
+
+    list_display = ('body_name', 'spec_wav', 'spec_source', 'spec_date')
+    list_filter = ('spec_wav', 'spec_source')
+
+
 class ProposalAdmin(admin.ModelAdmin):
     list_display = ('code', 'title', 'pi', 'tag', 'active')
 

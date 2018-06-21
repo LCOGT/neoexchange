@@ -1,0 +1,316 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>Catalog of Asteroid Spectra</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<META NAME="ROBOTS" CONTENT="NOINDEX,NOFOLLOW">
+<META NAME="KEYWORDS" CONTENT="data,asteroid,spectra">
+<META NAME="DESCRIPTION" CONTENT="Available asteroid spectra, and
+references to the scientific literature describing results.">
+
+<!-- popup script from
+   HTML Code Tutorial - Popup Windows: The Basics
+   www.htmlcodetutorial.com -->
+<SCRIPT TYPE="text/javascript">
+<!--
+function popup(mylink, windowname)
+{
+if (! window.focus)return true;
+var href;
+if (typeof(mylink) == 'string')
+   href=mylink;
+else
+   href=mylink.href;
+window.open(href, windowname, 'width=350,height=150,scrollbars=no,toolbar=yes,location=no,directories=no,status=no,menubar=no,resizable=no,left=75,top=350');
+return false;
+}
+//-->
+</SCRIPT>
+
+
+<style type="text/css" media="all">@import "_stylesheets/smasssite.css";</style>
+<style type="text/css" media="all">@import "_stylesheets/catalog.css";</style>
+<style type="text/css" media="print">@import "_stylesheets/printmedia.css";</style>
+<style type="text/css">
+#SECTIONCONTENT>p.withlist
+  {margin-bottom: 0;}
+#SECTIONCONTENT>ul
+  {margin-top:0;}
+dl dt
+  {padding-top: 0.5pc;
+   font-weight: bold;}
+dl dd
+  {padding-bottom: 0.5pc;}
+.emphasize
+  {background-color: #C99;
+   border: solid 3px black;
+   padding: 3px;}
+.bulletless
+  {list-style: none;}
+
+.oddrow
+  {background-color: #DDD;}
+.evenrow
+  {background-color: #FFF;}
+.mpnumber
+  {text-align: right;}
+.mpname
+  {text-align: left;}
+.provdesig
+  {text-align: left;}
+.datalinks
+  {text-align: center;}
+.refnumber
+  {text-align: center;}
+.inactive
+  {color: grey;}
+.error
+  {color: red;}
+.warning
+  {color: orange;}
+
+/* CSS for scrolling table with fixed header
+   by Paul O'B, CSS Advisor,
+   from "Test Your CSS Skills Number 22" at SitePoint Forums,
+   www.sitepoint.com */
+
+   The solution involves absolutely placing the content in the table
+   head above the actual table itself by creating a stacking context
+   on a parent element and moving the table head content into some
+   reserved space above the table.
+
+   As long as we are repeating the table head data on the table footer
+   then the cells will be sized correctly even if we have absolutely
+   removed the content from the head.
+
+   As we can't absolutely position a th element then an inner element
+   was nested (p element) inside the "th" element and that inner p
+   element instead was pushed above the table.
+
+   The table itself can't scroll so another wrapper is used around the
+   table and that is the element that carries the scrollbar and will
+   scroll the table within it.
+
+   The rest is just minor details and tidying up. */
+p
+  {margin: 0 0 1em;}
+table p
+  {margin: 0;}
+.scrollbox
+  {position: relative;
+   float: left;
+   margin: 0.5pc 0 2pc 2%;
+   padding: 3.25pc 0 0; /* padding-top is visible height of fixed header */
+   width: 95%;
+   height: 430px;
+   overflow: hidden;
+   background: #C99;
+   border: 2px inset #000;}
+.inner
+  {width: 100%;
+   height: 430px;
+   overflow: auto;}
+table
+  {width: 100%;
+   margin: 0 0 0 -1px;
+   border-collapse: collapse;}
+td
+  {padding: 0 5px 0 5px;
+   border: 1px solid #000;
+   text-align: center;}
+tfoot th, thead th
+  {font-weight: bold;
+   border: 1px solid #000;
+   padding: 0 3px 0 5px;
+   background: #C99;}
+thead th
+  {border: none;}
+thead tr p, thead tr ul
+  {position: absolute;
+   top: 0;}
+.last
+  {padding-right: 15px!important;}
+/* Next rule to hide the footer preserving needed effect on column widths: */
+tfoot
+  {visibility: hidden;
+   height: 0;
+   overflow: hidden;}
+
+/* The following rule definitely selects 
+   the header text for the minor planet number column,
+   but it refuses to text-align: right.
+   Has to do with the position: absolute rule
+div.scrollbox div.inner table#data thead tr th.mpnumber p a
+  {text-align: right;
+   color: green;} */
+
+table ul
+  {list-style: none;
+   margin: 0;
+   padding: 0;}
+li.sortlink
+  {font-weight: normal;}
+table a img
+  {border: none;
+   padding-bottom: 1px;
+   border-bottom: solid 2px blue;}
+table a:visited img
+  {border: none;
+   padding-bottom: 1px;
+   border-bottom: solid 2px purple;}
+
+</style>
+<!--[if lte IE 7]>
+<style type="text/css">
+.inner {overflow-x: hidden;}
+</style>
+<![endif]-->
+
+</head>
+ 
+<body>
+
+<div id="SITEHEADER">
+<p><a href="home.html">Planetary Spectroscopy at MIT</a>
+</p>
+</div>
+
+<div id="SITENAV" class="catalog">
+   <p>Navigation menu:</p>
+   <ul>
+      <li class="catalog">
+      <a href="catalog.php">Browse catalog of asteroid spectra</a></li>
+   </ul>
+</div>
+
+<div id="SECTIONCONTENT">
+
+<div id="TITLE">
+<h1>Browse Catalog of Asteroid Spectra</h1>
+<ul>
+<li><a href="smass.html">SMASS</a>: Small Main-Belt Asteroid Spectroscopic Survey</li>
+<li>
+The <a href="minus.html">MIT-UH-IRTF Joint Campaign</a>
+for NEO Spectral Reconnaissance
+</li>
+</ul>
+</div>
+
+<p>
+<span class=emphasize>
+Please read below, &ldquo;<a href="#USEANDCITE">How to Use and Cite These Data</a>&rdquo; prior to proceeding.
+</span>
+</p>
+<p><span class="aside">MPC convention: <span class="inactive">off</span> | <a href="catalog.php?sort=dat&amp;mpcc=on&amp;text=off">on</a></span></p>
+
+<div class="scrollbox"><div class="inner"><table id="data" cellspacing="0" cellpadding="0"><thead><tr>
+<th class="mpnumber"><ul><li>&nbsp;</li><li>Number</li><li class="sortlink"><a href="catalog.php?sort=num&amp;mpcc=off&amp;text=off">[sort]</a></li></ul></th>
+<th class="mpname"><ul><li>&nbsp;</li><li>Name</li><li class="sortlink"><a href="catalog.php?sort=nam&amp;mpcc=off&amp;text=off">[sort]</a></li></ul></th>
+<th class="provdesig"><ul><li>Provisional</li><li>Designation</li><li class="sortlink"><a href="catalog.php?sort=pro&amp;mpcc=off&amp;text=off">[sort]</a></li></ul></th>
+<th class="datalinks"><ul><li>Data</li><li>Available</li></ul></th>
+<th class="datalinks"><ul><li>Data</li><li>Files</li></ul></th>
+<th class="refnumber"><ul><li>Data</li><li>Reference</li><li class="sortlink"><a href="catalog.php?sort=ref&amp;mpcc=off&amp;text=off">[sort]</a></li></ul></th>
+<th><ul><li>Last</li><li>Updated</li><li class="sortlink"><span class="inactive">[sort]</span></li></ul></th>
+</tr></thead>
+<tfoot><tr> 
+<th class="mpnumber"><ul><li>&nbsp;</li><li>Number</li><li class="sortlink"><a href="catalog.php?sort=num&amp;mpcc=off&amp;text=off">[sort]</a></li></ul></th>
+<th class="mpname"><ul><li>&nbsp;</li><li>Name</li><li class="sortlink"><a href="catalog.php?sort=nam&amp;mpcc=off&amp;text=off">[sort]</a></li></ul></th>
+<th class="provdesig"><ul><li>Provisional</li><li>Designation</li><li class="sortlink"><a href="catalog.php?sort=pro&amp;mpcc=off&amp;text=off">[sort]</a></li></ul></th>
+<th class="datalinks"><ul><li>Data</li><li>Available</li></ul></th>
+<th class="datalinks"><ul><li>Data</li><li>Files</li></ul></th>
+<th class="refnumber"><ul><li>Data</li><li>Reference</li><li class="sortlink"><a href="catalog.php?sort=ref&amp;mpcc=off&amp;text=off">[sort]</a></li></ul></th>
+<th><ul><li>Last</li><li>Updated</li><li class="sortlink"><span class="inactive">[sort]</span></li></ul></th>
+</tr></tfoot>
+<tbody>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">302</td><td class="mpname" rowspan="1">Clarissa</td><td class="provdesig" rowspan="1"></td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp233/a000302.sp233"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp233/sp233_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">6053</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">1993 BW3</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp233/a006053.sp233"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp233/sp233_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="2">96631</td><td class="mpname" rowspan="2"></td><td class="provdesig" rowspan="2">1999 FP59</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp233/a096631.sp233"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp233/sp233_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="datalinks">Vis</td><td class="datalinks"><a href="data/spex/sp234/a096631.sp234"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp234/sp234_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[234]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">265962</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2006 CG</td><td class="datalinks">Vis+NIR</td><td class="datalinks"><a href="data/spex/sp233/a265962.sp233"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp233/sp233_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="2">416584</td><td class="mpname" rowspan="2"></td><td class="provdesig" rowspan="2">2004 JB12</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp233/a416584.sp233"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp233/sp233_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="evenrow"><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp234/a416584.sp234"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp234/sp234_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[234]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">422699</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2000 PD3</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp233/a422699.sp233"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp233/sp233_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[233]</a></td><td>2017-09-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1">242211</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2003 QB90</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp232/a242211.sp232.txt"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1">416584</td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2004 JB12</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp232/a416584.sp232"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2017 MB1</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp232/au2017MB1.sp232.txt"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2017 MC4</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp232/au2017MC4.sp232.txt"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[232]</a></td><td>2017-07-25</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">416584</td><td class="datalinks">Vis</td><td class="datalinks"><a href="data/spex/sp210/au2005lw7.sp210.txt"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp210/sp210_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[210]</a></td><td>2015-12-02</td></tr>
+<tr class="oddrow"><td class="mpnumber" rowspan="2"></td><td class="mpname" rowspan="2"></td><td class="provdesig" rowspan="2">2006 UY64</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp212/au2006uy64.sp212.txt"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp212/sp212_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[212]</a></td><td>2015-12-02</td></tr>
+<tr class="oddrow"><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp212/au2006uy64.sp212.tx"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[212]</a></td><td>2015-12-02</td></tr>
+<tr class="evenrow"><td class="mpnumber" rowspan="1"></td><td class="mpname" rowspan="1"></td><td class="provdesig" rowspan="1">2006 UY64</td><td class="datalinks">NIR</td><td class="datalinks"><a href="data/spex/sp209/au2010pr66.sp209.txt"><img src="_smassicons/tabulated.png" alt="tabulated data file"></a> <a href="data/spex/sp209/sp209_plot.pdf"><img src="_smassicons/graph.png" alt="graph of data"></a></td><td class="refnumber last"><a href="minus.html#unpublished">sp[209]</a></td><td>2017-12-02</td></tr>
+</tbody>
+</table></div></div>
+<p><span class="aside">Catalog last updated 2017-09-25 | <a href="catalog.php?sort=dat&amp;mpcc=off&amp;text=on" onClick="return popup(this, 'popup02')">
+Generate downloadable summary text file</a>
+</span></p>
+<h2><a name="USEANDCITE">How to Use These Data</a></h2>
+
+<p class=withlist>
+Data files:
+</p>
+<ul class=bulletless>
+<li>
+<img src="_smassicons/tabulated.png" alt="icon for tabulated data">
+= data values as ASCII text file.
+&ldquo;Vis&rdquo; and &ldquo;NIR&rdquo; refer to
+visible and near-IR wavelengths, respectively.
+</li>
+<li>
+<img src="_smassicons/graph.png" alt="icon for graph of data">
+= graph of spectrum, .pdf format
+   <span class=aside>
+   (requires
+   <a href="http://www.adobe.com/products/acrobat/readstep2.html">Acrobat Reader</a>.)
+   </span>
+</li>
+</ul>
+
+<p>
+To download a data file,
+right-click on its icon in the table and choose
+&ldquo;Save Link As...&rdquo; or
+&ldquo;Save Target As...&rdquo;.
+<br>
+(Mac users with single-button mouse, use &lt;CTRL&gt;-click.)
+</p>
+<p>
+&ldquo;Last Updated&rdquo; is the date that
+the spectrum was last added or most recently modified.
+</p>
+
+<h2>How to Cite These Data</h2>
+
+<p>
+To find the published or unpublished reference for a spectrum,
+click its &ldquo;Data Reference&rdquo; link.
+</p>
+
+<p>
+Unpublished spectra made available here are considered to be in the
+public domain and may be freely used for any purpose.
+We welcome collaboration opportunities,
+but there is no pre-condition for collaboration for use of these data.
+(<a href="http://smass.mit.edu/minus.html#unpublished">Requested citation and acknowledgement</a>)
+</p>
+
+
+<div id="FOOTER">
+
+   <ul>
+      <li class="validator">
+      <a href="http://validator.w3.org/check?uri=referer"><img
+       src="http://www.w3.org/Icons/valid-html401"
+       alt="Valid HTML 4.01 Strict" height="31" width="88"></a>
+      </li>
+      <li>
+      Page last modified 2012 Jul 25
+      </li>
+   </ul>
+
+</div>
+</div>
+
+</body>
+</htm

@@ -18,11 +18,11 @@ requests[security]
 selenium>=3.8,<4.0
 pytest-django
 mock
-opbeat
-django-oauth-toolkit
+django-oauth-toolkit<1.2.0
 requests_oauthlib
 matplotlib
 fits2image
 panoptes-client
 pillow
 gunicorn
+rollbar

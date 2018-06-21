@@ -6,13 +6,15 @@
 {% block header %}Ranking Page{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
-{% block extramenucss %}extramenu-home{% endblock %}
 
 {% block extramenu %}
+ <div class="headingleft">
+        <h1>Ranked Target List</h1>
+    </div>
 {% endblock%}
 
 {% block main-content %}
-    <div class="fullwidth">
+    <div id="main" class="fullwidth">
         <table id="id_ranked_targets" class="datatable">
             <thead>
                 <tr>
