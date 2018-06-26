@@ -1161,8 +1161,9 @@ def make_target(params):
     """Make a target dictionary for the request. RA and Dec need to be
     decimal degrees"""
 
-    ra_degs = degrees(params['ra_rad'])
-    dec_degs = degrees(params['dec_rad'])
+    ra_degs = params['ra_deg']
+    dec_degs = params['dec_deg']
+    # XXX Todo: Add in proper motion and parallax if present
     target = {
                'type' : 'SIDEREAL',
                'name' : params['source_id'],

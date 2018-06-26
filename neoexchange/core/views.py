@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 import os
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees
+from math import floor, ceil, degrees, radians
 import json
 import urllib
 import logging
@@ -304,7 +304,7 @@ class StaticSourceView(ListView):
     template_name = 'core/calibsource_list.html'
     model = StaticSource
     queryset = StaticSource.objects.order_by('ra')
-    context_object_name = "StaticSources"
+    context_object_name = "calibsources"
     paginate_by = 20
 
 
@@ -850,8 +850,8 @@ def schedule_submit(data, body, username):
         params['jitter'] = data['jitter']
     # If we have a (static) StaticSource object, fill in details needed by make_target
     if type(body) == StaticSource:
-        params['ra_rad' ] = body.ra
-        params['dec_rad'] = body.dec
+        params['ra_deg' ] = body.ra
+        params['dec_deg'] = body.dec
         params['source_id'] = body.current_name()
     # Check for pre-existing block
     tracking_number = None
@@ -2131,7 +2131,7 @@ def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards
         # Loop through list of standards, recording closest
         min_sep = 360.0
         for standard in flux_standards:
-            sep = S.sla_dsep(standard.ra, standard.dec, stl, site_lat)
+            sep = S.sla_dsep(radians(standard.ra), radians(standard.dec), stl, site_lat)
             if debug:
                 print("%10s %.7f %.7f %.3f %7.3f (%10s)" % (standard, standard.ra, standard.dec, sep, min_sep, close_standard))
             if sep < min_sep:

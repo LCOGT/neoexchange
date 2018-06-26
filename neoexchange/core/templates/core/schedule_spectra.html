@@ -19,7 +19,7 @@
                     <div  id="single_request" class="mode-container">
                     <form action="{% url 'schedule-body-spectra' body.id %}" method="POST" style="display:inline-block;">
                 {% else %}
-                    <h5 class="section-title">Parameters for: {{body.name}} {{body.ra|radianstohms:":"}} {{body.dec|radianstodms:":"}} V={{body.vmag|floatformat:1}}</a></h5>
+                    <h5 class="section-title">Parameters for: {{body.name}} {{body.ra|degreestohms:":"}} {{body.dec|degreestodms:":"}} V={{body.vmag|floatformat:1}}</a></h5>
                     <div  id="single_request" class="mode-container">
                     <form action={% url 'schedule-calib-spectra' form.instrument_code.value %} method="POST" style="display:inline-block;">
                 {% endif %}

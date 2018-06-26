@@ -13,7 +13,8 @@ from astrometrics.sources_subs import fetch_flux_standards
 from core.views import create_calib_sources
 from core.models import Proposal, StaticSource
 
-
+@patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+@patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
 class TestCalibrationSources(FunctionalTest):
 
     def setUp(self):
@@ -96,6 +97,7 @@ class TestCalibrationSources(FunctionalTest):
         # from, he goes for a beer.
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource(self):
         self.test_login()
@@ -160,6 +162,7 @@ class TestCalibrationSources(FunctionalTest):
         # Satisfied, he goes to find a currywurst
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource_fts(self):
         self.test_login()
