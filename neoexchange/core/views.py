@@ -15,7 +15,7 @@ GNU General Public License for more details.
 
 import os
 from datetime import datetime, timedelta, date
-from math import floor, ceil
+from math import floor, ceil, degrees
 import json
 import urllib
 import logging
@@ -2087,8 +2087,8 @@ def create_calib_sources(calib_sources):
 
         params = {
                     'name' : standard,
-                    'ra'  : calib_sources[standard]['ra_rad'],
-                    'dec' : calib_sources[standard]['dec_rad'],
+                    'ra'  : degrees(calib_sources[standard]['ra_rad']),
+                    'dec' : degrees(calib_sources[standard]['dec_rad']),
                     'vmag' : calib_sources[standard]['mag'],
                     'spectral_type' : calib_sources[standard]['spec_type'],
                     'source_type' : StaticSource.FLUX_STANDARD,
