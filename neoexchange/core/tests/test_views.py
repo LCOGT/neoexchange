@@ -3469,6 +3469,8 @@ class TestCreateStaticSource(TestCase):
         expected_num = 3
         expected_src1_ra = ((((49.42/60.0)+1.0)/60.0)+0)*15.0
         expected_src1_dec = -((((39.0/60.0)+1.0)/60.0)+3.0)
+        expected_src3_ra = ((((24.30/60.0)+56.0)/60.0)+5)*15.0
+        expected_src3_dec = -((((28.8/60.0)+51.0)/60.0)+27.0)
 
         num_created = create_calib_sources(self.test_flux_standards)
 
@@ -3476,6 +3478,8 @@ class TestCreateStaticSource(TestCase):
         self.assertEqual(expected_num, cal_sources.count())
         self.assertAlmostEqual(expected_src1_ra, cal_sources[0].ra, self.precision)
         self.assertAlmostEqual(expected_src1_dec, cal_sources[0].dec, self.precision)
+        self.assertAlmostEqual(expected_src3_ra, cal_sources[2].ra, self.precision)
+        self.assertAlmostEqual(expected_src3_dec, cal_sources[2].dec, self.precision)
 
 class TestFindBestFluxStandard(TestCase):
 
