@@ -1233,8 +1233,8 @@ def make_molecule(params, exp_filter):
         molecule['spectra_slit'] = params['spectra_slit']
         molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
-        molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['acquire_radius_arcsec'] = 15.0  # NOTE: if this keyword exists, 'acquire_mode' is ignored, and will acquire on brightest
+        molecule['acquire_mode'] = 'WCS'
+        # molecule['acquire_radius_arcsec'] = 15.0  # NOTE: if this keyword exists, 'acquire_mode' is ignored, and will acquire on brightest
     else:
         molecule['filter'] = exp_filter[0]
         molecule['ag_mode'] = 'OPTIONAL'  # ON, OFF, or OPTIONAL. Must be uppercase now...
