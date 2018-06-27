@@ -15,6 +15,9 @@ import numpy as np
 
 #np.set_printoptions(threshold=np.inf)
 
+#def find_x_units(hdul):
+
+
 def read_spectra(spectra_file):
     """reads in spectra file
        inputs: <spectra_file>: path and file name to spectra
@@ -24,15 +27,15 @@ def read_spectra(spectra_file):
         hdul = fits.open(spectra_file) #REMINDER: Check for correct file
 
         data = hdul[0].data
-
-        x_min = hdul[0].header['XMIN']
-        x_max = hdul[0].header['XMAX']
+        #find units
+        x_min = hdul[0].header['XMIN'] #sometimes "WMIN", sometimes "WMIN"
+        x_max = hdul[0].header['XMAX'] #maybe put these two in their own functoin
 
         flux = np.array(data[0][0]) #putting data into np arrays
         wavelength = np.array([i/len(flux)*(x_max-x_min) + x_min for i in range(len(flux))])
-        flux_error = np.array(data[3][0])
+        flux_error = np.array(data[3][0]) #not all formats call this flux error. sometimes it's index 2
 
-    if spectra_file.endswith('.ascii'):
+    elif spectra_file.endswith('.ascii'):
         data = ascii.read(spectra_file)
 
         wavelength = np.array([n for n in data['col1']]) #converting tables to np arrays
@@ -40,9 +43,10 @@ def read_spectra(spectra_file):
         flux_error = np.array([n for n in data['col3']])
               
     else:
-        raise OSError(erno.EIO,"Invalid input file type")
+        raise OSError("Invalid input file type")
 
-    flux[np.logical_not(flux >= 0)] = np.nan #eliminate negative error values
+    #eliminate negative error values (Possibly unnecessary)
+    flux[np.logical_not(flux >= 0)] = np.nan
     flux_error[np.logical_not(flux_error >= 0)] = np.nan
     
     return wavelength, flux, flux_error
@@ -66,28 +70,40 @@ def smooth(ydata, window=20):
 
     return convolve(ydata, Box1DKernel(window)) #boxcar average data
 
+#def normalize(y, wavelength=5000, units='A')
+#do later
+#
 def plot_spectra(x,y):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
                <y>: flux data for y axis
-       outputs:returns ax (FOR LATER)
+       outputs:returns ax
     """
-    plt.plot(x,y,'b-')
-    plt.show()
-    
+    plt.plot(x,y)
 
 if __name__== "__main__":
-    #path = '/apophis/jchatelain/spectra/'
-    #spectra = '16/ntt16_ftn_20180606_merge_2.0_58276_1_2df_ex.fits'
-    path = '/apophis/tlister/cdbs/calspec/'
-    spectra = 'eros_visnir_reference_to1um.ascii'
-    window = 2 
-       
-    x,y,y_err = read_spectra(path+spectra)  
 
+    path = '/apophis/jchatelain/spectra/'
+    spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
+    #path = '/apophis/tlister/cdbs/calspec/'
+    #spectra = 'sun_mod_001.fits'
+
+    sol_ref = 'Solar_analogs/SA98-978/nttLandoltSA98-97_ftn_20180109_merge_2.0_58128_1_2df_ex.fits' 
+    
+    window = 20 
+       
+    x,y,y_err = read_spectra(path+spectra) 
     ysmoothed = smooth(y,window)
 
+    xref,yref,y_err_ref = read_spectra(path+sol_ref)
+    yrefsmoothed = smooth(yref, window)
+
+    #normy = normalize(y) for later
+    #normyref = normalize(yref)
+
     plot_spectra(x,ysmoothed)
+    plot_spectra(xref,yrefsmoothed)
+    plt.show()
 
 
 
