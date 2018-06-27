@@ -16,7 +16,7 @@ import numpy as np
 
 #np.set_printoptions(threshold=np.inf)
 
-def get_x_units(hdul):
+def get_fits_units(hdul):
     """finds xmin, xmax, and units DO REST LATER"""
     try:
         x_min = hdul[0].header['XMIN']
@@ -26,25 +26,40 @@ def get_x_units(hdul):
             x_min = hdul[0].header['WMIN']
             x_max = hdul[0].header['WMAX']
         except KeyError:
-            print("Could not parse wavelength range from header")
-            raise
-    
+            print("Could not parse wavelength range from FITS header")
+            raise  
     #assuming visible to NIR range (~3000-10000A)
     if x_min >1000:
-        x_units = u.Angstrom
+        x_units = u.AA
     elif 100 < x_min < 1000:
         x_units = u.PrefixUnit(nm)
     elif .1 < x_min < 1:
         x_units = u.micron
     else:
-        print("Warning: Could not parse wavelength units from head. Assuming Angstoms")
-        x_units = u.Angstrom 
-    return x_min, x_max, x_units
+        print("Warning: Could not parse wavelength units from header. Assuming Angstoms")
+        x_units = u.AA 
+               
+    return x_units, x_min, x_max
+    
+def get_ascii_units(data):
+    x_min = data['col1'][0] 
+    #assuming 1st data point is smallest wavelength (will change later)
+    #assuming visible to NIR range (~3000-10000A)
+    if x_min >1000:
+        x_units = u.AA
+    elif 100 < x_min < 1000:
+        x_units = u.PrefixUnit(nm)
+    elif .1 < x_min < 1:
+        x_units = u.micron
+    else:
+        print("Warning: Could not parse wavelength units from header. Assuming Angstoms")
+        x_units = u.AA 
+    return x_units
 
 def read_spectra(spectra_file):
     """reads in spectra file (currently only works with LCO standards)
        inputs: <spectra_file>: path and file name to spectra
-       outputs: wavelength, flux, flux_error
+       outputs: wavelength (Quantity type), flux, flux_error
     """ 
     if spectra_file.endswith('.fits'):   
         hdul = fits.open(spectra_file) 
@@ -53,16 +68,17 @@ def read_spectra(spectra_file):
         #find units
         #x_min = hdul[0].header['XMIN'] #sometimes "WMIN", sometimes "WMIN"
         #x_max = hdul[0].header['XMAX'] #maybe put these two in their own functoin
-        x_min, x_max, x_units = get_x_units(hdul)
+        xunits, xmin, xmax = get_fits_units(hdul)
         
         flux = np.array(data[0][0]) #putting data into ndarrays
-        wavelength = np.array([i/len(flux)*(x_max-x_min) + x_min for i in range(len(flux))])
+        xdata = np.array([i/len(flux)*(xmax-xmin) + 
+        xmin for i in range(len(flux))])
         flux_error = np.array(data[3][0]) 
 
     elif spectra_file.endswith('.ascii'):
         data = ascii.read(spectra_file)
-
-        wavelength = np.array([n for n in data['col1']]) #converting tables to ndarrays
+        xunits = get_ascii_units(data)
+        xdata = np.array([n for n in data['col1']]) #converting tables to ndarrays
         flux = np.array([n for n in data['col2']])
         flux_error = np.array([n for n in data['col3']])
               
@@ -73,6 +89,7 @@ def read_spectra(spectra_file):
     flux[np.logical_not(flux >= 0)] = np.nan
     flux_error[np.logical_not(flux_error >= 0)] = np.nan
     
+    wavelength = (xdata*xunits).to(u.AA)
     return wavelength, flux, flux_error
         
 
@@ -94,9 +111,9 @@ def smooth(ydata, window=20):
 
     return convolve(ydata, Box1DKernel(window)) #boxcar average data
 
-def normalize(x,y, wavelength=5000):
+def normalize(x,y,wavelength=5000*u.AA):
     """normalizes flux data with a specific wavelength flux value
-       inputs: <x>: wavelenth data (assumed to be in Angstroms)
+       inputs: <x>: wavelenth data
                <y>: flux data
                [wavelength]: target wavelength to normalize at
        outputs: normalized flux data
@@ -115,23 +132,24 @@ def plot_spectra(x,y):
 if __name__== "__main__":
 
     path = '/home/atedeschi/test_spectra/' #will make more general file passing later
-    spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
-    #spectra = 'sun_mod_001.fits'
+    #spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
+    spectra = 'calspec/eros_visnir_reference_to1um.ascii'
 
     sol_ref = 'Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
     
-    window = 20 
-       
+    window = 2 #for eros ascii file. window = 20 for most others
     x,y,y_err = read_spectra(path+spectra) 
     ysmoothed = smooth(y,window)
-    xref,yref,y_err_ref = read_spectra(path+sol_ref)
-    yrefsmoothed = smooth(yref, window)
-
+    
+    window_ref = 20
+    x_ref,y_ref,y_err_ref = read_spectra(path+sol_ref)
+    y_refsmoothed = smooth(y_ref, window_ref)
+    
     normy = normalize(x,ysmoothed)
-    normyref = normalize(xref,yrefsmoothed)
-
+    normy_ref = normalize(x_ref,y_refsmoothed)
+    
     plot_spectra(x,normy)
-    plot_spectra(xref,normyref)
+    plot_spectra(x_ref,normy_ref)
     plt.show()
 
 
