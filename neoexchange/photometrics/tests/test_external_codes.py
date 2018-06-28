@@ -461,7 +461,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 class TestFindOrbRunner(ExternalCodeUnitTest):
 
     def test_sitecode_default(self):
-        expected_status = "time fo_console {} -z -q -C 500".format(self.test_obs_file)
+        expected_status = "time fo_console {} -z -q -C 500 -e new.ephem".format(self.test_obs_file)
 
         status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, binary="fo_console", dbg=True)
 
@@ -469,7 +469,7 @@ class TestFindOrbRunner(ExternalCodeUnitTest):
 
     def test_sitecode_T03(self):
         site_code = 'T03'
-        expected_status = "time fo_console {} -z -q -C {}".format(self.test_obs_file, site_code)
+        expected_status = "time fo_console {} -z -q -C {} -e new.ephem".format(self.test_obs_file, site_code)
 
         status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, site_code, binary="fo_console", dbg=True)
 

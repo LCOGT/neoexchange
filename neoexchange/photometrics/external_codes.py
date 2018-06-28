@@ -16,6 +16,7 @@ GNU General Public License for more details.
 import logging
 import os
 from math import floor
+from datetime import datetime
 from subprocess import call
 from collections import OrderedDict
 import warnings
@@ -103,6 +104,28 @@ def setup_findorb_dir(source_dir, dest_dir):
     return_value = setup_working_dir(source_dir, dest_dir, findorb_config_files)
 
     return return_value
+
+def setup_findorb_environ_file(source_dir, site_code=500, start_time=datetime.utcnow()):
+    """Copies the initial environ.def file in <source_dir> to environ.dat, also
+    in <source_dir>. The EPHEM_START and EPHEM_MPC_CODE are altered as they are
+    read in and set to the [start_time] and [site_code] respectively"""
+
+    environ_orig = os.path.join(source_dir, 'environ.def')
+    environ_new = os.path.join(source_dir, 'environ.dat')
+
+    in_fh = open(environ_orig, 'r')
+    lines = in_fh.readlines()
+    in_fh.close()
+
+    with open(environ_new, 'w') as out_fh:
+        for line in lines:
+            if line.lstrip()[0:11] == 'EPHEM_START':
+                line = "EPHEM_START={}".format(start_time.strftime("%Y-%m-%d %H:%M"))
+            elif line.lstrip()[0:14] == 'EPHEM_MPC_CODE':
+                line = "EPHEM_MPC_CODE=1 {:3s}".format(str(site_code).upper())
+            print(line.rstrip(), file=out_fh)
+
+    return
 
 def setup_working_dir(source_dir, dest_dir, config_files):
     '''Sets up a temporary working directory for running programs in <dest_dir>.
@@ -221,8 +244,13 @@ def determine_scamp_options(fits_catalog):
     return options
 
 def determine_findorb_options(site_code):
+    """Options for find_orb:
+    -z: use config directory for files (in $HOME/.find_orb),
+    -q: quiet,
+    -C <code>: set MPC site code for ephemeris to <code>,
+    -e new.ephem: output ephemeris to new.ephem"""
 
-    options = "-z -q -C {}".format(site_code)
+    options = "-z -q -C {} -e new.ephem".format(site_code)
 
     return options
 
@@ -399,7 +427,7 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
 
     return retcode_or_cmdline
 
-def run_findorb(source_dir, dest_dir, obs_file, site_code=500, binary=None, dbg=False):
+def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=datetime.utcnow(), binary=None, dbg=False):
     """Run console version of find_orb in <dest_dir> with input file of MPC1992
     format observations in <obs_file>"""
 
@@ -411,6 +439,8 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, binary=None, dbg=
     if binary == None:
         logger.error("Could not locate 'fo' executable in PATH")
         return -42
+
+    setup_findorb_environ_file(source_dir, site_code, start_time)
 
     options = determine_findorb_options(site_code)
     cmdline = "%s %s %s %s" % ( 'time', binary, obs_file, options)
