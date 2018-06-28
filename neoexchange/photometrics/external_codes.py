@@ -443,7 +443,7 @@ def run_findorb(source_dir, dest_dir, obs_file, site_code=500, start_time=dateti
     setup_findorb_environ_file(source_dir, site_code, start_time)
 
     options = determine_findorb_options(site_code)
-    cmdline = "%s %s %s %s" % ( 'time', binary, obs_file, options)
+    cmdline = "%s %s %s" % ( binary, obs_file, options)
     cmdline = cmdline.rstrip()
     if dbg: print(cmdline)
 
