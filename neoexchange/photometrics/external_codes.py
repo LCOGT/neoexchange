@@ -222,7 +222,7 @@ def determine_scamp_options(fits_catalog):
 
 def determine_findorb_options(site_code):
 
-    options = "-q -C {}".format(site_code)
+    options = "-z -q -C {}".format(site_code)
 
     return options
 
