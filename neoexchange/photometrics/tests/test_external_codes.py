@@ -55,7 +55,10 @@ class ExternalCodeUnitTest(TestCase):
         self.test_fits_file_set2_5 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0099-e90.fits'))
         self.test_fits_file_set2_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0100-e90.fits'))
 
+        self.test_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'))
+
         self.debug_print = False
+        self.maxDiff = None
 
     def tearDown(self):
         remove = True
@@ -454,6 +457,23 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         self.assertEqual(29, len(test_lines))
         self.assertEqual(expected_line1, test_lines[3].rstrip())
 
+
+class TestFindOrbRunner(ExternalCodeUnitTest):
+
+    def test_sitecode_default(self):
+        expected_status = "time fo_console {} -q -C 500".format(self.test_obs_file)
+
+        status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, binary="fo_console", dbg=True)
+
+        self.assertEqual(expected_status, status)
+
+    def test_sitecode_T03(self):
+        site_code = 'T03'
+        expected_status = "time fo_console {} -q -C {}".format(self.test_obs_file, site_code)
+
+        status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, site_code, binary="fo_console", dbg=True)
+
+        self.assertEqual(expected_status, status)
 
 class TestDetermineSExtOptions(ExternalCodeUnitTest):
 

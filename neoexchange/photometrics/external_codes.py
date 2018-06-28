@@ -60,6 +60,10 @@ def default_sextractor_config_files(catalog_type='ASCII'):
     config_files = config_files + common_config_files
     return config_files
 
+def default_findorb_config_files():
+    config_files = ['environ.def',]
+    return config_files
+
 def setup_mtdlink_dir(source_dir, dest_dir):
     '''Setup a temporary working directory for running MTDLINK in <dest_dir>. The
     needed config files are symlinked from <source_dir>'''
@@ -87,6 +91,16 @@ def setup_sextractor_dir(source_dir, dest_dir, catalog_type='ASCII'):
     sextractor_config_files = default_sextractor_config_files(catalog_type)
 
     return_value = setup_working_dir(source_dir, dest_dir, sextractor_config_files)
+
+    return return_value
+
+def setup_findorb_dir(source_dir, dest_dir):
+    """Setup things for running find_orb. Currently a no-op (apart from the
+    directory creation)"""
+
+    findorb_config_files = default_findorb_config_files()
+
+    return_value = setup_working_dir(source_dir, dest_dir, findorb_config_files)
 
     return return_value
 
@@ -203,6 +217,12 @@ def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
 def determine_scamp_options(fits_catalog):
 
     options = ''
+
+    return options
+
+def determine_findorb_options(site_code):
+
+    options = "-q -C {}".format(site_code)
 
     return options
 
@@ -376,6 +396,33 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
         output_file = open(os.path.join(dest_dir, 'mtdlink_output.out'), 'w')
         retcode_or_cmdline = call(args, cwd=dest_dir, stdout=output_file, stderr=output_file)
         output_file.close()
+
+    return retcode_or_cmdline
+
+def run_findorb(source_dir, dest_dir, obs_file, site_code=500, binary=None, dbg=False):
+    """Run console version of find_orb in <dest_dir> with input file of MPC1992
+    format observations in <obs_file>"""
+
+    status = setup_findorb_dir(source_dir, dest_dir)
+    if status != 0:
+        return status
+
+    binary = binary or find_binary("fo")
+    if binary == None:
+        logger.error("Could not locate 'fo' executable in PATH")
+        return -42
+
+    options = determine_findorb_options(site_code)
+    cmdline = "%s %s %s %s" % ( 'time', binary, obs_file, options)
+    cmdline = cmdline.rstrip()
+    if dbg: print(cmdline)
+
+    if dbg is True:
+        retcode_or_cmdline = cmdline
+    else:
+        logger.debug("cmdline=%s" % cmdline)
+        args = cmdline.split()
+        retcode_or_cmdline = call(args, cwd=dest_dir)
 
     return retcode_or_cmdline
 
