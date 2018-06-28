@@ -41,6 +41,7 @@ RUN yum -y install epel-release \
                 supervisor libssl libffi libffi-devel \
                 mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
                 less wget which tcsh plplot plplot-libs plplot-devel \
+                git gcc-c++ ncurses-devel\
         && yum -y update
 
 # Enable LCO repo and install extra packages
@@ -71,3 +72,18 @@ COPY docker/ /
 
 # Copy the LCO NEOexchange webapp files
 COPY neoexchange /var/www/apps/neoexchange
+
+# Download and build find_orb
+RUN mkdir /tmp/git_find_orb \
+    && cd /tmp/git_find_orb \
+    && git clone https://github.com/Bill-Gray/lunar.git \
+    && git clone https://github.com/Bill-Gray/sat_code.git \
+    && git clone https://github.com/Bill-Gray/jpl_eph.git \
+    && git clone https://github.com/Bill-Gray/find_orb.git \
+    && cd lunar && make && make install && cd .. \
+    && cd jpl_eph && make && make install && cd .. \
+    && cd lunar && make integrat && make install && cd .. \
+    && cd sat_code && make && make install && cd .. \
+    && cd find_orb && make && make install && cp ps_1996.dat elp82.dat /root/.find_orb && cd .. \
+    && chmod 755 /root
+#    && rm -rf /tmp/git_find_orb
