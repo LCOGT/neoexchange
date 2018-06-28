@@ -1875,7 +1875,8 @@ def fetch_list_targets(list_targets):
 
     return new_target_list
 
-def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
+
+def fetch_flux_standards(page=None, filter_optical_model=True, dbg=True):
     """Parses either the passed [page] or fetches the table of
     spectrophotometric flux standards from ESO's page at:
     https://www.eso.org/sci/observing/tools/standards/spectra/stanlis.html
@@ -1906,10 +1907,10 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
             for link in links:
                 name = link.text.strip()
                 if dbg:
-                    print("Standard=",name)
+                    print("Standard=", name)
                 standard_details = {}
                 if link.next_sibling:
-                    string = link.next_sibling.encode('ascii','ignore')
+                    string = link.next_sibling.encode('ascii', 'ignore')
                     if dbg:
                         print(string)
                     nstart = 1
@@ -1938,7 +1939,7 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
                         flux_standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec,
                             'mag' : mag, 'spec_type' : spec_type, 'notes' : notes}
         else:
-            logger.warn("Unable to find table of flux standards in page")
+            logger.warning("Unable to find table of flux standards in page")
     else:
-        logger.warn("Passed page object was not a BeautifulSoup object")
+        logger.warning("Passed page object was not a BeautifulSoup object")
     return flux_standards

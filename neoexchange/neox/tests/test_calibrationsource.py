@@ -13,6 +13,7 @@ from astrometrics.sources_subs import fetch_flux_standards
 from core.views import create_calib_sources
 from core.models import Proposal, StaticSource
 
+
 @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
 @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
 class TestCalibrationSources(FunctionalTest):
