@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
+from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil
 from django.db.models import Q
@@ -45,7 +46,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
-    read_mtds_file
+    read_mtds_file, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
@@ -304,6 +305,52 @@ def export_measurements(body_id, output_path=''):
     output_fh.close()
 
     return filename, output.count('\n')-1
+
+def refit_with_findorb(body_id, site_code, dest_dir=None, remove=True):
+    """Refit all the SourceMeasurements for a body with find_orb"""
+
+    source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+    dest_dir = dest_dir or tempfile.mkdtemp(prefix = 'tmp_neox_')
+    new_elements = {}
+
+    filename, num_lines = export_measurements(body_id, dest_dir)
+
+    if filename is not None:
+        if num_lines > 0:
+            status = run_findorb(source_dir, dest_dir, filename, site_code)
+            if status != 0:
+                logger.error("Error running find_orb on the data")
+            else:
+                orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
+                try:
+                    orbfile_fh = open(orbit_file, 'r')
+                except IOError:
+                    logger.warning("File %s not found" % new_rock)
+                    return new_elements
+
+                orblines = orbfile_fh.readlines()
+                orbfile_fh.close()
+                orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
+                new_elements = clean_NEOCP_object(orblines)
+
+            if remove:
+                try:
+                    files_to_remove = glob(os.path.join(dest_dir, '*'))
+                    for file_to_rm in files_to_remove:
+                        os.remove(file_to_rm)
+                except OSError:
+                    logger.warning("Error removing files in temporary test directory", self.test_dir)
+                try:
+                    os.rmdir(dest_dir)
+                    logger.debug("Removed", dest_dir)
+                except OSError:
+                    logger.warning("Error removing temporary test directory", dest_dir)
+        else:
+            logger.warning("Unable to export measurements for Body #", body_id)
+    else:
+        logger.warning("Could not find Body with id #", body_id)
+
+    return new_elements
 
 class CandidatesViewBlock(LoginRequiredMixin, View):
     template = 'core/candidates.html'

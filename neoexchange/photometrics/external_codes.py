@@ -61,7 +61,7 @@ def default_sextractor_config_files(catalog_type='ASCII'):
     return config_files
 
 def default_findorb_config_files():
-    config_files = ['environ.def',]
+    config_files = ['environ.def', 'ps_1996.dat', 'elp82.dat']
     return config_files
 
 def setup_mtdlink_dir(source_dir, dest_dir):
