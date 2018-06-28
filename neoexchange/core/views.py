@@ -28,6 +28,7 @@ from django.views.generic import DetailView, ListView, FormView, TemplateView, V
 from django.views.generic.edit import FormView
 from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.template.loader import get_template
 from http.client import HTTPSConnection
 from bs4 import BeautifulSoup
 import urllib
@@ -283,6 +284,26 @@ class MeasurementViewBody(View):
         measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         return render(request, self.template, {'body': body, 'measures' : measures})
 
+def export_measurements(body_id, output_path=''):
+
+    t = get_template('core/mpc_outputfile.txt')
+    try:
+        body = Body.objects.get(id=body_id)
+    except Body.DoesNotExist:
+        logger.warning("Could not find Body with pk={}".format(body_id))
+        return None, -1
+    measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+    data = { 'measures' : measures}
+
+    filename = "{}.mpc".format(body.current_name().replace(' ', ''))
+    filename = os.path.join(output_path, filename)
+
+    output_fh = open(filename, 'w')
+    output = t.render(data)
+    output_fh.writelines(output)
+    output_fh.close()
+
+    return filename, output.count('\n')-1
 
 class CandidatesViewBlock(LoginRequiredMixin, View):
     template = 'core/candidates.html'

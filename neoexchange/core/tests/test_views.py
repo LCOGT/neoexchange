@@ -44,7 +44,7 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
     make_new_catalog_entry, generate_new_candidate_id, \
-    update_taxonomy, update_previous_spectra
+    update_taxonomy, update_previous_spectra, export_measurements
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame,\
     Candidate, SuperBlock, SpectralInfo, PreviousSpectra
@@ -3729,3 +3729,53 @@ class Test_Add_External_Spectroscopy_Data(TestCase):
         new_spec = update_previous_spectra(test_obj, 'M', dbg=True)
 
         self.assertEqual(expected_res, new_spec)
+
+class Test_Export_Measurements(TestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.debug_print = False
+        self.maxDiff = None
+
+    @classmethod
+    def setUpTestData(cls):
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        cls.test_body = Body.objects.create(**WSAE9A6_params)
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        test_obslines = test_fh.readlines()
+        test_fh.close()
+        source_measures = create_source_measurement(test_obslines)
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test1(self):
+        expected_num_sources = 6
+        sources = SourceMeasurement.objects.all()
+        self.assertEqual(expected_num_sources, sources.count())
+
+    def test_export(self):
+        expected_filename = os.path.join(self.test_dir, 'WSAE9A6.mpc')
+        expected_num_lines = 6
+
+        body = Body.objects.get(provisional_name='WSAE9A6')
+        filename, num_lines = export_measurements(body.id, self.test_dir)
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_num_lines, num_lines)
