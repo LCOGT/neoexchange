@@ -17,6 +17,7 @@ import os
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil
+import tempfile
 from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.contrib import messages
@@ -36,7 +37,7 @@ import urllib
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
-    determine_spectro_slot_length
+    determine_spectro_slot_length, read_findorb_ephem
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
@@ -306,18 +307,32 @@ def export_measurements(body_id, output_path=''):
 
     return filename, output.count('\n')-1
 
-def refit_with_findorb(body_id, site_code, dest_dir=None, remove=True):
-    """Refit all the SourceMeasurements for a body with find_orb"""
+def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_dir=None, remove=False):
+    """Refit all the SourceMeasurements for a body with find_orb and update the elements.
+    Inputs:
+    <body_id>: the PK of the Body,
+    <site_code>: the MPC site code to generate the ephemeris for,
+    [start_time]: where to start the ephemeris,
+    [dest_dir]: destination directory (if not specified, a unique directory in the
+                form '/tmp/tmp_neox_<stuff>' is created and used),
+    [remove]: whether to remove the temporary directory and contents afterwards
+
+    Outputs:
+    The ephemeris output (if found), starting at [start_time] is read in and a
+    dictionary containing the ephemeris details (object id, time system,
+    motion rate units, sitecode) and a list of tuples containing:
+    Datetime, RA, Dec, magnitude, rate, uncertainty is returned. In the event of
+    an issue, None is returned."""
 
     source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix = 'tmp_neox_')
-    new_elements = {}
+    new_elements = None
 
     filename, num_lines = export_measurements(body_id, dest_dir)
 
     if filename is not None:
         if num_lines > 0:
-            status = run_findorb(source_dir, dest_dir, filename, site_code)
+            status = run_findorb(source_dir, dest_dir, filename, site_code, start_time)
             if status != 0:
                 logger.error("Error running find_orb on the data")
             else:
@@ -325,14 +340,33 @@ def refit_with_findorb(body_id, site_code, dest_dir=None, remove=True):
                 try:
                     orbfile_fh = open(orbit_file, 'r')
                 except IOError:
-                    logger.warning("File %s not found" % new_rock)
+                    logger.warning("File %s not found" % orbit_file)
                     return new_elements
 
                 orblines = orbfile_fh.readlines()
                 orbfile_fh.close()
                 orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
                 new_elements = clean_NEOCP_object(orblines)
+                # Reset some fields to avoid overwriting
+                body = Body.objects.get(pk=body_id)
+                new_elements['provisional_name'] = body.provisional_name
+                new_elements['origin'] = body.origin
+                new_elements['source_type'] = body.source_type
+                updated = save_and_make_revision(body, new_elements)
+                message = "Did not update"
+                if updated is True:
+                    message = "Updated"
+                logger.info("%s Body #%d (%s)" % (message, body.pk, body.current_name()))
 
+                # Read in ephemeris file
+                ephem_file = os.path.join(dest_dir, 'new.ephem')
+                if os.path.exists(ephem_file):
+                    emp_info, ephemeris = read_findorb_ephem(ephem_file)
+                    new_elements = (emp_info, ephemeris)
+                else:
+                    logger.warning("Could not read ephem file %s" % ephem_file)
+
+            # Clean up output directory
             if remove:
                 try:
                     files_to_remove = glob(os.path.join(dest_dir, '*'))
@@ -346,9 +380,9 @@ def refit_with_findorb(body_id, site_code, dest_dir=None, remove=True):
                 except OSError:
                     logger.warning("Error removing temporary test directory", dest_dir)
         else:
-            logger.warning("Unable to export measurements for Body #", body_id)
+            logger.warning("Unable to export measurements for Body #%s" %  body_id)
     else:
-        logger.warning("Could not find Body with id #", body_id)
+        logger.warning("Could not find Body with id #%s" % body_id)
 
     return new_elements
 
@@ -1604,7 +1638,7 @@ def create_source_measurement(obs_lines, block=None):
                         logger.info("Found %s blocks for %s" % (blocks.count(), obs_body))
                         block = blocks[0]
                     else:
-                        logger.warning("No blocks for %s" % obs_body)
+                        logger.debug("No blocks for %s, presumably non-LCO data" % obs_body)
                 if params['obs_type'] == 's':
                     # If we have an obs_type of 's', then we have the second line
                     # of a satellite measurement and we need to find the matching
