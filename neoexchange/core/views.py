@@ -786,6 +786,15 @@ def schedule_submit(data, body, username):
 
     # Assemble request
     # Send to scheduler
+    emp_at_start = None
+    if data.get('spectroscopy', False) is not False:
+        # Invoke find_orb to update Body's elements and return ephemeris
+        new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
+        if new_ephemeris is not None:
+            emp_info = new_ephemeris[0]
+            ephemeris = new_ephemeris[1]
+            emp_at_start = ephemeris[0]
+
     body_elements = model_to_dict(body)
     body_elements['epochofel_mjd'] = body.epochofel_mjd()
     body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
@@ -813,7 +822,8 @@ def schedule_submit(data, body, username):
 
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
-              'instrument_code' : data['instrument_code']
+              'instrument_code' : data['instrument_code'],
+              'findorb_ephem' : emp_at_start
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']

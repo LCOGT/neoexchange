@@ -1513,7 +1513,16 @@ def check_for_perturbation(elements, params):
     except IndexError:
         logger.error("Could not compute perturbation coordinates")
         offset = 0
+
+    # Compare with find_orb generated ephemeris
+    offset2 = 0
+    if params.get('findorb_ephem', None) is not None:
+        emp_start = params['findorb_ephem']
+        if emp_start is not None:
+            offset2 = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_start[1], emp_start[2])) * 3600
+
     logger.info("Offset between perturbed and unperturbed position is %s arcseconds" % offset)
+    logger.info("Offset between find_orb  and unperturbed position is %s arcseconds" % offset2)
 
     # Check if offset is "reasonable"
     # Ignore if too small (won't matter)
