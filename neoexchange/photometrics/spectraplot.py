@@ -40,17 +40,18 @@ def get_x_units(x_data):
 
 def get_y_units(info):
     """finds flux/reflectance units
-       inputs: <info>: .fits header or .ascii metadata
+       inputs: <info>: .fits header, .ascii metadata, or point from .txt file
        outputs: y_units
     """
     flux_id = ["ERG", "FLAM"] #IDs to look for units with
     #I know erg isn't the full unit, but it's a good indicator.
     norm_id = ["NORM", "REFLECTANCE"] #IDs to look for normalizations with
-    if isinstance(info, float):
+ 
+    if isinstance(info, float): #from .txt file (assuming normalized)
         y_units = (1*u.m/u.m).unit.decompose()
         print("y_units: normalized")
         
-    elif isinstance(info, collections.OrderedDict): #From .ascii
+    elif isinstance(info, collections.OrderedDict): #from .ascii
         col_head = list(info.values())[0][0]
         if any(unit_id in col_head.upper() for unit_id in flux_id):
             y_unit = u.erg/(u.cm**2)/u.s/u.AA
@@ -67,12 +68,12 @@ def get_y_units(info):
         values = list(info.values())
         for n in range(len(keys)):
             if any(key_id in keys[n] for key_id in possible_keys):
-                if any(unit_id in values[n] for unit_id in flux_id):
-                    if "10^20" in values[n]:
+                if any(unit_id in values[n].upper() for unit_id in flux_id):
+                    if "10^20" in values[n]: #special LCO standard case
                         y_units = u.erg/(u.cm**2)/u.s/u.AA*10**20
                     else:
                         y_units = u.erg/(u.cm**2)/u.s/u.AA
-                elif any(unit_id in values[n] for unit_id in norm_id):
+                elif any(unit_id in values[n].upper() for unit_id in norm_id):
                     y_units = (1*u.m/u.m).unit.decompose()
                     print("y_units: normalized")
                 else:
@@ -87,7 +88,7 @@ def get_y_units(info):
     return y_units
 
 def read_spectra(spectra_file):
-    """reads in all inportant data from spectra file (Works for .ascii and .fits 2 standards)
+    """reads in all inportant data from spectra file (Works for .ascii 2 .fits standards, and .txt)
        inputs: <spectra_file>: path and file name to spectra
        outputs: wavelength (Quantity type), flux, flux_error, x_units, y_units
     """
@@ -177,25 +178,43 @@ def smooth(x,ydata, window=20):
     #    window += 1
 
     return x[window:-window], convolve(ydata, Box1DKernel(window))[window:-window] #boxcar average data
+    
+#def check_norm(x,y,y_units):
+#    """checks if data has been normalized alread with fits standard parsing
+#       inputs: <x>: wavelength data
+#               <y>: flux data
+#               <y_units>: flux units
+#       outputs: real_y_units
+#    """
+    
 
-def normalize(x,y,yerr,wavelength=5500*u.AA):
+def normalize(x,y,wavelength=5500*u.AA):
     """normalizes flux data with a specific wavelength flux value
        inputs: <x>: wavelenth data (Quantity type)
                <y>: flux data (Quantity type)
-               <yerr>:
                [wavelength]: target wavelength to normalize at (Quantity type)
        outputs: normalized flux data
     """
     normval = y[np.abs(x-wavelength).argmin()] #uses closest data point to target wavelength
-    return y/normval,yerr/normval
-
-def plot_spectra(x,y):
+    if normval == 0:
+        normval = 1
+    return y/normval
+    
+def plot_spectra(x,y,y_units,ax,norm=0):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
                <y>: flux data for y axis
-       outputs:returns ax DO LATER
+               [norm]: normalizes data when set to 1
     """
-    plt.plot(x,y)
+    
+    if norm == 1:
+        yyy = normalize(x,y)
+    else:
+        yyy = y
+    
+    ax.plot(x,yyy,linewidth=1)
+    ax.set_xlabel("wavlength (A)")
+    ax.set_ylabel(y_units)
 
 if __name__== "__main__":
 
@@ -210,32 +229,39 @@ if __name__== "__main__":
     
     #sol_ref = 'calspec/sun_mod_001.fits'
     #sol_ref = 'Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
-    #sol_ref =  'solar_standard_V2.fits'
-    sol_ref = 'calspec/sun_reference_stis_001.fits'
+    sol_ref =  'solar_standard_V2.fits'
+    #sol_ref = 'calspec/sun_reference_stis_001.fits'
 
     window = 2 # 2 for eros ascii file. 20 for most others
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         x,y,yerr,x_units,y_units = read_spectra(path+spectra)
+    #y_units = check_norm(x,y,y_units)
     xsmoothed,ysmoothed = smooth(x,y,window) #[window/2:-window/2]
-
-    #Smoothing may cause artifacts at data ends.
 
     window_ref = 2
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units = read_spectra(path+sol_ref)
-    x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref, window_ref)
+    #y_ref_units = check_norm(x_ref,y_ref,y_ref_units)
+    x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref,window_ref)
+    
+    normyerr = normalize(x,yerr)
+    normyerr_ref = normalize(x_ref,yerr_ref)
 
     #print(x.shape, y.shape, x_ref.shape, y_ref.shape, ysmoothed.shape, y_refsmoothed.shape)
 
-    normy, normyerr = normalize(xsmoothed,ysmoothed,yerr) #normalizing data
-    normy_ref,normerr_ref = normalize(x_refsmoothed,y_refsmoothed,yerr_ref)
+    #normy, normyerr = normalize(xsmoothed,ysmoothed,yerr) #normalizing data
+    #normy_ref,normerr_ref = normalize(x_refsmoothed,y_refsmoothed,yerr_ref)
 
     #print(yerr)
     #print(normyerr)
 
     #plotting data
-    plot_spectra(xsmoothed,normy)
-    plot_spectra(x_refsmoothed,normy_ref)
+    
+    #(if 2 spectra)
+    fig, ax = plt.subplots(nrows=2,sharex=True)
+    plot_spectra(xsmoothed,ysmoothed,y_units,ax[0])
+    plot_spectra(x_refsmoothed,y_refsmoothed,y_ref_units,ax[1])
+    
     plt.show()
