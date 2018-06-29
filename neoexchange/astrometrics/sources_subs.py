@@ -1876,7 +1876,7 @@ def fetch_list_targets(list_targets):
     return new_target_list
 
 
-def fetch_flux_standards(page=None, filter_optical_model=True, dbg=True):
+def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
     """Parses either the passed [page] or fetches the table of
     spectrophotometric flux standards from ESO's page at:
     https://www.eso.org/sci/observing/tools/standards/spectra/stanlis.html
@@ -1923,8 +1923,8 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=True):
                     if status != 0:
                         dec = None
                     info = string[nstart-1:].rstrip().split()
+                    mag = None
                     if len(info) >= 1:
-                        mag = None
                         try:
                             mag = float(info[0])
                         except ValueError:

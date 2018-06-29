@@ -48,7 +48,7 @@
                     <tbody>
                     {% for src in calibsources %}
                         <tr>
-                            <td>{{src.id}}</td>
+                            <td>{{forloop.counter}}</td>
                             <td>{{src.name}}</td>
                             <td>{{src.ra|degreestohms:":"}}</td>
                             <td>{{src.dec|degreestodms:":"}}</td>
