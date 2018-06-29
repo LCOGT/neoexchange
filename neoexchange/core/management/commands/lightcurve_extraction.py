@@ -1,6 +1,6 @@
 import os
 from sys import exit
-from datetime import datetime
+from datetime import datetime, timedelta
 from math import degrees, radians
 
 from django.core.management.base import BaseCommand, CommandError
@@ -24,6 +24,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('supblock', type=int, help='SuperBlock number (tracking number) to analyze')
+        parser.add_argument('-ts', '--timespan', type=float, default=0.0, help='Days prior to referenced SuperBlock that should be included')
         parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Boxwidth in arcsec to search')
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
@@ -50,56 +51,58 @@ class Command(BaseCommand):
         self.stdout.write("==== Light curve building %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
         try:
-            super_block = SuperBlock.objects.get(tracking_number=options['supblock'])
+            start_super_block = SuperBlock.objects.get(tracking_number=options['supblock'])
         except SuperBlock.DoesNotExist:
             self.stdout.write("Cannot find SuperBlock# %d" % options['supblock'])
             exit(-1)
 
-        block_list = Block.objects.filter(superblock=super_block.id)
+        super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
         times = []
         mags = []
         mag_errs = []
         total_frame_count = 0
-        for block in block_list:
-            self.stdout.write("Analyzing Block# %d for %s" % (block.id, block.body.current_name()))
+        for super_block in super_blocks:
+            block_list = Block.objects.filter(superblock=super_block.id)
+            for block in block_list:
+                self.stdout.write("Analyzing Block# %d for %s" % (block.id, block.body.current_name()))
 
-            frames = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
-            self.stdout.write("Found %d frames for Block# %d with good ZPs" % (len(frames), block.id))
-            self.stdout.write("Searching within %.1f arcseconds and +/-%.1f delta magnitudes" % (options['boxwidth'], options['deltamag']))
-            total_frame_count += len(frames)
-            if len(frames) != 0:
-                elements = model_to_dict(block.body)
+                frames = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
+                self.stdout.write("Found %d frames for Block# %d with good ZPs" % (len(frames), block.id))
+                self.stdout.write("Searching within %.1f arcseconds and +/-%.1f delta magnitudes" % (options['boxwidth'], options['deltamag']))
+                total_frame_count += len(frames)
+                if len(frames) != 0:
+                    elements = model_to_dict(block.body)
 
-                for frame in frames:
-                    emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
-                    ra  = emp_line[1]
-                    dec = emp_line[2]
-                    mag_estimate = emp_line[3]
-                    (ra_string, dec_string) = radec2strings(ra, dec, ' ')
-                    sources = search_box(frame, ra, dec, options['boxwidth'])
-                    midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
-                    self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
-                    if len(sources) != 0:
-                        if len(sources) == 1:
-                            best_source = sources[0]
-        #                    print("%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag))
-                        elif len(sources) > 1:
-                            min_sep = options['boxwidth'] * options['boxwidth']
-                            best_source = None
-                            for source in sources:
-                                sep = S.sla_dsep(ra, dec, radians(source.obs_ra), radians(source.obs_dec))
-                                sep = degrees(sep) * 3600.0
-                                src_ra_string, src_dec_string = radec2strings(radians(source.obs_ra), radians(source.obs_dec))
-                                delta_mag = abs(mag_estimate - source.obs_mag)
-                                self.stdout.write("%s %s %s %s %.1f %.1f-%.1f %.1f" % ( ra_string, dec_string, src_ra_string, src_dec_string, sep, mag_estimate, source.obs_mag, delta_mag))
-                                if sep < min_sep and delta_mag <= options['deltamag']:
-                                    min_sep = sep
-                                    best_source = source
+                    for frame in frames:
+                        emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
+                        ra  = emp_line[1]
+                        dec = emp_line[2]
+                        mag_estimate = emp_line[3]
+                        (ra_string, dec_string) = radec2strings(ra, dec, ' ')
+                        sources = search_box(frame, ra, dec, options['boxwidth'])
+                        midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
+                        self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
+                        if len(sources) != 0:
+                            if len(sources) == 1:
+                                best_source = sources[0]
+            #                    print("%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag))
+                            elif len(sources) > 1:
+                                min_sep = options['boxwidth'] * options['boxwidth']
+                                best_source = None
+                                for source in sources:
+                                    sep = S.sla_dsep(ra, dec, radians(source.obs_ra), radians(source.obs_dec))
+                                    sep = degrees(sep) * 3600.0
+                                    src_ra_string, src_dec_string = radec2strings(radians(source.obs_ra), radians(source.obs_dec))
+                                    delta_mag = abs(mag_estimate - source.obs_mag)
+                                    self.stdout.write("%s %s %s %s %.1f %.1f-%.1f %.1f" % ( ra_string, dec_string, src_ra_string, src_dec_string, sep, mag_estimate, source.obs_mag, delta_mag))
+                                    if sep < min_sep and delta_mag <= options['deltamag']:
+                                        min_sep = sep
+                                        best_source = source
 
-                        if best_source and best_source.obs_mag > 0.0:
-                            times.append(frame.midpoint)
-                            mags.append(best_source.obs_mag)
-                            mag_errs.append(best_source.err_obs_mag)
+                            if best_source and best_source.obs_mag > 0.0:
+                                times.append(frame.midpoint)
+                                mags.append(best_source.obs_mag)
+                                mag_errs.append(best_source.err_obs_mag)
 
         self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))
 
