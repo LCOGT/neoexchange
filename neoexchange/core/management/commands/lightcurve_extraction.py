@@ -20,7 +20,7 @@ from photometrics.catalog_subs import search_box
 
 class Command(BaseCommand):
 
-    help = 'Extract lightcurves of a target from a given Block'
+    help = 'Extract lightcurves of a target from a given SuperBlock. Can look back at earlier SuperBlocks for same object if requested.'
 
     def add_arguments(self, parser):
         parser.add_argument('supblock', type=int, help='SuperBlock number (tracking number) to analyze')
@@ -29,14 +29,15 @@ class Command(BaseCommand):
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
 
-    def plot_timeseries(self, times, mags, mag_errs, colors='r', title=''):
+    def plot_timeseries(self, times, mags, mag_errs, colors='r', title='', sub_title=''):
         fig, ax = plt.subplots()
         ax.plot(times, mags, color=colors, marker='.', linestyle=' ')
         ax.errorbar(times, mags, yerr=mag_errs, color=colors, linestyle=' ')
         ax.invert_yaxis()
         ax.set_xlabel('Time')
         ax.set_ylabel('Magnitude')
-        ax.set_title(title)
+        fig.suptitle(title)
+        ax.set_title(sub_title)
         ax.minorticks_on()
         ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
         ax.fmt_xdata = DateFormatter('%H:%M:%S')
@@ -61,12 +62,18 @@ class Command(BaseCommand):
         mags = []
         mag_errs = []
         total_frame_count = 0
+        mpc_site = []
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             for block in block_list:
                 self.stdout.write("Analyzing Block# %d for %s" % (block.id, block.body.current_name()))
 
-                frames = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
+                frames_red = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
+                frames_ql = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('midpoint')
+                if len(frames_red) >= len(frames_ql):
+                    frames = frames_red
+                else:
+                    frames = frames_ql
                 self.stdout.write("Found %d frames for Block# %d with good ZPs" % (len(frames), block.id))
                 self.stdout.write("Searching within %.1f arcseconds and +/-%.1f delta magnitudes" % (options['boxwidth'], options['deltamag']))
                 total_frame_count += len(frames)
@@ -99,10 +106,12 @@ class Command(BaseCommand):
                                         min_sep = sep
                                         best_source = source
 
-                            if best_source and best_source.obs_mag > 0.0:
+                            if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 2 * options['deltamag']:
                                 times.append(frame.midpoint)
                                 mags.append(best_source.obs_mag)
                                 mag_errs.append(best_source.err_obs_mag)
+                    if frame.sitecode not in mpc_site:
+                        mpc_site.append(frame.sitecode)
 
         self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))
 
@@ -124,10 +133,16 @@ class Command(BaseCommand):
             lightcurve_file.close()
 
             if options['title'] is None:
-                plot_title = '%s from %s (%s) on %s' % (block.body.current_name(), block.site.upper(), frame.sitecode, block.when_observed.strftime("%Y-%m-%d"))
+                if options['timespan'] < 1:
+                    plot_title = '%s from %s (%s) on %s' % (block.body.current_name(), block.site.upper(), frame.sitecode, block.when_observed.strftime("%Y-%m-%d"))
+                    subtitle = ''
+                else:
+                    plot_title = '%s from %s to %s' % (block.body.current_name(), (block.when_observed - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"), block.when_observed.strftime("%Y-%m-%d"))
+                    subtitle = 'Sites: ' + ", ".join(mpc_site)
             else:
                 plot_title = options['title']
+                subtitle = ''
 
-            self.plot_timeseries(times, mags, mag_errs, title=plot_title)
+            self.plot_timeseries(times, mags, mag_errs, title=plot_title, sub_title=subtitle)
         else:
             self.stdout.write("No sources matched.")
