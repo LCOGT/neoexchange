@@ -23,6 +23,7 @@ from datetime import datetime, timedelta
 from math import sqrt, log10, log, degrees
 from collections import OrderedDict
 import time
+from requests.exceptions import ReadTimeout
 
 from astropy.io import fits
 from astropy.table import Table
@@ -95,9 +96,14 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000','e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
-
-        result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
-
+        query_service.VIZIER_SERVER = 'vizier.cfa.harvard.edu'
+        query_service.TIMEOUT = 60
+        try:
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
+        except ReadTimeout:
+            logger.warning("Timeout seen querying {}".format(query_service.VIZIER_SERVER))
+            query_service.TIMEOUT = 120
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
         # resulting catalog table
         # if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo
         # the query; if the resulting catalog table is still empty, fill the table with zeros
@@ -1335,10 +1341,10 @@ def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
         frame = Frame.objects.get(filename=real_fits_filename)
         edge_trim_limit, num_x_pixels, num_y_pixels = get_trim_limit(frame, edge_trim_limit)
     except Frame.MultipleObjectsReturned:
-        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % fits_file)
+        logger.error("Found multiple versions of fits frame %s pointing at multiple blocks" % real_fits_filename)
         return -3, -3
     except Frame.DoesNotExist:
-        logger.error("Frame entry for fits file %s does not exist" % fits_file)
+        logger.error("Frame entry for fits file %s does not exist" % real_fits_filename)
         return -3, -3
     sources = CatalogSources.objects.filter(frame__filename=real_fits_filename, obs_mag__gt=0.0, obs_x__gt=edge_trim_limit, 
                                             obs_x__lt=num_x_pixels-edge_trim_limit, obs_y__gt=edge_trim_limit, obs_y__lt=num_y_pixels-edge_trim_limit)
