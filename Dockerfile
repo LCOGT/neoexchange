@@ -85,8 +85,10 @@ RUN mkdir /tmp/git_find_orb \
     && cd lunar && make integrat && make install && cd .. \
     && cd sat_code && make && make install && cd .. \
     && cd find_orb && make && make install && cp ps_1996.dat elp82.dat /root/.find_orb && cd .. \
-    && chmod 755 /root
-#    && rm -rf /tmp/git_find_orb
+    && cp /root/bin/fo /usr/local/bin/ \
+    && chmod 755 /root \
+    && chown nginx:nginx /root/.find_orb \
+    && rm -rf /tmp/git_find_orb
 
-# Copy findorb config file
+# Copy default findorb config file
 COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
