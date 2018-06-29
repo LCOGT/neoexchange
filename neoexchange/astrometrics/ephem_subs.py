@@ -532,6 +532,78 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 
     return emp
 
+def read_findorb_ephem(empfile):
+    """Routine to read find_orb produced ephemeris.emp files from non-interactive
+    mode.
+    Returns a dictionary containing the ephemeris details (object id, time system,
+    motion rate units, sitecode) and a list of tuples containing:
+    Datetime, RA, Dec, magnitude, rate, altitude"""
+
+    emp = []
+    emp_fh = open(empfile, 'r')
+    uncertain_mag = False
+    for line in emp_fh.readlines():
+# Skip blank lines first off all
+        if len(line.lstrip()) != 0:
+            if line.lstrip()[0] == '#' :
+#            print(line.lstrip())
+# First line contains object id and the sitecode the ephemeris is for. Fetch...
+                chunks = line.lstrip()[1:].split()
+                if len(chunks) == 3:
+                    ephem_info = { 'obj_id' : chunks[0], 'emp_sitecode' : chunks[2] }
+                elif len(chunks) == 4:
+                    ephem_info = { 'obj_id' : chunks[0] + chunks[1],
+                                   'emp_sitecode' : chunks[3] }
+                elif len(chunks) == 6 or len(chunks) == 7:
+                    ephem_info = { 'emp_sitecode' : chunks[0].replace('(', '').replace(')', ''),
+                                   'obj_id' : chunks[-2] + chunks[-1] }
+                else:
+                    logger.warning("Unexpected number of chunks in header line1")
+                    return (None,None)
+            elif line.lstrip()[0:4] == 'Date':
+# next line has the timescale of the ephemeris and the units of the motion
+# rate. We *hope* it's always UTC and arcmin/hr but grab and check anyway...
+                chunks = line.strip().split()
+                if len(chunks) != 13 and len(chunks) != 14 :
+                    logger.warning("Unexpected number of chunks in header line2")
+                    return (None,None)
+                ephem_info2 = { 'emp_timesys' : chunks[1], 'emp_rateunits' : chunks[9] }
+            elif line.lstrip()[0:4] == '----':
+                pass
+            else:
+# Read main ephemeris
+                line = line.strip()
+                chunks = line.split()
+                emp_datetime = datetime(int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3][0:2]), int(chunks[3][3:5]))
+                emp_ra, status = S.sla_dtf2r(chunks[4],chunks[5],chunks[6])
+                if status != 0:
+                    logger.error("Error converting RA value")
+                decstr = ' '.join([chunks[x] for x in range(7,10)])
+                nstrt = 1
+                nstrt, emp_dec, status = S.sla_dafin(decstr, nstrt)
+                if status != 0:
+                    logger.error("Error converting Dec value")
+                    logger.error("Decstr=",decstr)
+                    logger.error(chunks)
+                if '?' in chunks[13]:
+# Phase angle >120deg, magnitude uncertain
+                    if uncertain_mag == False:
+                        logger.warning("Phase angle >120deg, magnitude uncertain")
+                    chunks[13] = chunks[13].replace('?', '')
+                    uncertain_mag = True
+                emp_mag = float(chunks[13])
+                emp_rate = float(chunks[14])
+                emp_alt = float(chunks[16])
+                emp_line = (emp_datetime, emp_ra, emp_dec, emp_mag, emp_rate, emp_alt)
+#               print(emp_line)
+                emp.append(emp_line)
+# Done, close file
+    emp_fh.close()
+
+# Join ephem_info dictionaries together
+    ephem_info.update(ephem_info2)
+
+    return ephem_info, emp
 
 def make_unit_vector(angle):
     """Make a unit vector from the passed angle (in degrees).
