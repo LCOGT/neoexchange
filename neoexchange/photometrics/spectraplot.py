@@ -12,6 +12,7 @@ from astropy import units as u
 import matplotlib.pyplot as plt
 #import matplotlib.ticker as ticker
 import numpy as np
+import collections
 
 #np.set_printoptions(threshold=np.inf)
 
@@ -31,11 +32,48 @@ def get_x_units(x_data):
     elif .1 < x_min < 1:
         x_units = u.micron
     else:
-        print("Warning: Could not parse wavelength units from file. Assuming Angstoms")
+        print("WARNING: Could not parse wavelength units from file. Assuming Angstoms")
         x_units = u.AA 
                
     return x_units
     
+def get_y_units(info):
+    flux_id = ["erg", "ERG", "FLAM"] #can add more later
+    #I know erg isn't the full unit, but it's a good indicator.
+    norm_id = ["NORM", "REFLECTANCE"]
+    if isinstance(info, collections.OrderedDict): #From .ascii
+        col_head = list(info.values())[0][0]
+        if any(unit_id in col_head.upper() for unit_id in flux_id):
+            y_unit = u.erg/(u.cm**2)/u.s/u.AA
+            print(y_units)
+        elif any(unit_id in col_head for unit_id in norm_id):
+            y_units = (1*u.m/u.m).unit.decompose()
+            print(y_units, "(normalized)")
+        else:
+            print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
+            y_units = u.erg/(u.cm**2)/u.s/u.AA
+
+    elif isinstance(info, fits.header.Header):  #from .fits
+        possible_keys = ['BUNIT','TUNIT2'] #maybe add more later
+        for keys in info.keys():
+              if any(unit_key in keys for unit_key in possible_keys):  
+                    if any(unit_id in keys for unit_id in flux_id):
+                        if any("10^20" in keys for key in unit_keys):
+                            y_units = u.erg/(u.cm**2)/u.s/u.AA*10**20
+                            print(y_units)
+                        else:
+                            y_units = u.erg/(u.cm**2)/u.s/u.AA
+                            print(y_units)
+                    elif any(unit_id in keys for unit_id in norm_id):
+                        y_units = (1*u.m/u.m).unit.decompose()
+                        print(y_units, "(normalized)")
+        #TEMPORARY
+        print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
+        y_units = u.erg/(u.cm**2)/u.s/u.AA
+
+
+    return y_units
+
 def read_spectra(spectra_file):
     """reads in spectra file (currently only works with LCO standards)
        inputs: <spectra_file>: path and file name to spectra
@@ -44,38 +82,57 @@ def read_spectra(spectra_file):
     if spectra_file.endswith('.fits'):   
         hdul = fits.open(spectra_file) #read in data
 
-        #print(hdul.info())
-        data = hdul[0].data
-        hdr = hdul[0].header
+    #fits standard 1:
+        if hdul[0].data is not None:
+            data = hdul[0].data
+            hdr = hdul[0].header   
+            y_data = data.flatten()[:max(data.shape)]
+            w = WCS(hdr, naxis=1,relax=False,fix=False)
+            x_data = w.wcs_pix2world(np.arange(len(y_data)),0)[0]
+            
+            try:
+                flux_error = np.array(data[3][0]) 
+            except IndexError:
+                print("WARNING: Could not parse error data")
+                flux_error = np.zeros(len(x_data))
+    #fits standard 2:    
+        elif hdul[1].data is not None:
+            data = hdul[1].data
+            hdr = hdul[1].header
+            x_data = np.array([])
+            y_data = np.array([])           
+            for n in data: #SUPER INEFFICIENT, CHANGE!
+                x_data = np.append(x_data,n[0])
+                y_data = np.append(y_data,n[1])
+            flux_error = np.zeros(len(x_data))
+        else:
+            raise ImportError("Could not read data from .fits file")
 
-        flux = data.flatten()[:max(data.shape)] 
-        w = WCS(hdr, naxis=1,relax=False,fix=False)
-        x_data = w.wcs_pix2world(np.arange(len(flux)),0)[0]
         x_units = get_x_units(x_data)
-        
-        try:
-            flux_error = np.array(data[3][0]) 
-        except IndexError:
-            print("Could not parse error data")
-            flux_error = np.zeros()
+        y_units = get_y_units(hdr)
 
     elif spectra_file.endswith('.ascii'):
         data = ascii.read(spectra_file) #read in data
+        #print(data.meta)
         #assuming 3 columns: wavelength, flux/reflectance, error
         x_data = data['col1'] #converting tables to ndarrays
-        flux = data['col2']
+        y_data = data['col2']
         flux_error = data['col3']
         x_units = get_x_units(x_data)
+        y_units = get_y_units(data.meta)
               
     else:
-        raise OSError("Invalid input file type")
+        raise ImportError("Invalid input file type")
 
     #eliminate negative error values (Possibly unnecessary)
-    flux[np.logical_not(flux >= 0)] = np.nan
+    y_data[np.logical_not(y_data >= 0)] = np.nan
     flux_error[np.logical_not(flux_error >= 0)] = np.nan
     
-    wavelength = (x_data*x_units).to(u.AA) #convert all wavelengths to Angstroms
-    return wavelength, flux, flux_error,x_units
+    wavelength = (x_data*x_units).to(u.AA) 
+    #convert all wavelengths to Angstroms because it's easy to deal with that way
+    flux = y_data*y_units    
+
+    return wavelength, flux, flux_error, x_units, y_units
         
 
 def smooth(ydata, window=20):
@@ -96,10 +153,10 @@ def smooth(ydata, window=20):
 
     return convolve(ydata, Box1DKernel(window)) #boxcar average data
 
-def normalize(x,y,yerr,wavelength=5000*u.AA):
+def normalize(x,y,yerr,wavelength=5500*u.AA):
     """normalizes flux data with a specific wavelength flux value
        inputs: <x>: wavelenth data (Quantity type)
-               <y>: flux data
+               <y>: flux data (Quantity type)
                <yerr>: 
                [wavelength]: target wavelength to normalize at (Quantity type)
        outputs: normalized flux data
@@ -118,21 +175,21 @@ def plot_spectra(x,y):
 if __name__== "__main__":
 
     path = '/home/atedeschi/test_spectra/' #will make more general file passing later
-    spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
+    #spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
     #spectra = 'calspec/eros_visnir_reference_to1um.ascii'
-    #spectra = 'calspec/sun_mod_001.fits'
+    spectra = 'calspec/sun_mod_001.fits'
 
-    sol_ref = 'Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
-    
+    #sol_ref = 'Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
+    sol_ref =  'solar_standard_V2.fits'
+
     window = 20 # 2 for eros ascii file. 20 for most others
-    x,y,yerr,x_units = read_spectra(path+spectra) 
-    ysmoothed = smooth(y,window)
+    x,y,yerr,x_units,y_units = read_spectra(path+spectra) 
+    ysmoothed = smooth(y,window)#[window/2:-window/2]
 
     #Smoothing may cause artifacts at data ends.
-    #consider only plotting x[window:-window] and ysmoothed[window:-window]
     
     window_ref = 20
-    x_ref,y_ref,yerr_ref,x_ref_units = read_spectra(path+sol_ref)
+    x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units = read_spectra(path+sol_ref)
     y_refsmoothed = smooth(y_ref, window_ref)
     
     #print(x.shape, y.shape, x_ref.shape, y_ref.shape, ysmoothed.shape, y_refsmoothed.shape)
