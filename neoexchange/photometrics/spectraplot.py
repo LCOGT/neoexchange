@@ -269,7 +269,7 @@ if __name__== "__main__":
     
     #(if 2 spectra)
     fig, ax = plt.subplots(nrows=2,sharex=True)
-    plot_spectra(xsmoothed,ysmoothed/y_factor,y_units,ax[0],title="asteroid")
-    plot_spectra(x_refsmoothed,y_refsmoothed/y_factor_ref,y_ref_units,ax[1],title="solar_reference")
+    plot_spectra(xsmoothed,ysmoothed/y_factor,y_units.to_string('latex'),ax[0],title="asteroid")
+    plot_spectra(x_refsmoothed,y_refsmoothed/y_factor_ref,y_ref_units.to_string('latex'),ax[1],title="solar_reference")
     
     plt.show()
