@@ -1964,5 +1964,5 @@ def read_solar_standards(standards_file):
         if status != 0:
             dec = None
         Vmag = row['Vmag']
-        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : Vmag }
+        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : Vmag, 'spec_type' : 'G2V' }
     return standards

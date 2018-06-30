@@ -2076,7 +2076,7 @@ def update_previous_spectra(specobj, source='U', dbg=False):
     return True
 
 
-def create_calib_sources(calib_sources):
+def create_calib_sources(calib_sources, cal_type=StaticSource.FLUX_STANDARD):
     """Creates StaticSources from the passed dictionary of <calib_sources>. This
     would normally come from fetch_flux_standards() but other sources are possible.
     The number of sources created is returned"""
@@ -2090,9 +2090,9 @@ def create_calib_sources(calib_sources):
                     'ra'  : degrees(calib_sources[standard]['ra_rad']),
                     'dec' : degrees(calib_sources[standard]['dec_rad']),
                     'vmag' : calib_sources[standard]['mag'],
-                    'spectral_type' : calib_sources[standard]['spec_type'],
-                    'source_type' : StaticSource.FLUX_STANDARD,
-                    'notes' : calib_sources[standard]['notes']
+                    'spectral_type' : calib_sources[standard].get('spec_type', None),
+                    'source_type' : cal_type,
+                    'notes' : calib_sources[standard].get('notes', None)
                  }
         calib_source, created = StaticSource.objects.get_or_create(**params)
         if created:

@@ -33,7 +33,8 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
 
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
-from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, fetch_flux_standards
+from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
+    fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
@@ -3453,6 +3454,8 @@ class TestCreateStaticSource(TestCase):
         test_flux_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
         self.test_flux_standards = fetch_flux_standards(test_flux_page)
+        test_solar_standards = os.path.join('photometrics', 'data', 'Solar_Standards')
+        self.test_solar_analogs = read_solar_standards(test_solar_standards)
 
         self.maxDiff = None
         self.precision = 10
@@ -3480,6 +3483,22 @@ class TestCreateStaticSource(TestCase):
         self.assertAlmostEqual(expected_src1_dec, cal_sources[0].dec, self.precision)
         self.assertAlmostEqual(expected_src3_ra, cal_sources[2].ra, self.precision)
         self.assertAlmostEqual(expected_src3_dec, cal_sources[2].dec, self.precision)
+
+    def test_solar_standards(self):
+        expected_num = 11
+        expected_src1_name = 'Landolt SA93-101'
+        expected_src1_ra = ((((18.00/60.0)+53.0)/60.0)+1)*15.0
+        expected_src1_dec = ((((25.0/60.0)+22.0)/60.0)+0.0)
+        expected_src1_sptype = 'G2V'
+
+        num_created = create_calib_sources(self.test_solar_analogs, cal_type=StaticSource.SOLAR_STANDARD)
+
+        cal_sources = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
+        self.assertEqual(expected_num, cal_sources.count())
+        self.assertEqual(expected_src1_name, cal_sources[0].name)
+        self.assertEqual(expected_src1_sptype, cal_sources[0].spectral_type)
+        self.assertAlmostEqual(expected_src1_ra, cal_sources[0].ra, self.precision)
+        self.assertAlmostEqual(expected_src1_dec, cal_sources[0].dec, self.precision)
 
 class TestFindBestFluxStandard(TestCase):
 
