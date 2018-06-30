@@ -286,6 +286,7 @@ class MeasurementViewBody(View):
         measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
         return render(request, self.template, {'body': body, 'measures' : measures})
 
+
 def export_measurements(body_id, output_path=''):
 
     t = get_template('core/mpc_outputfile.txt')
@@ -306,6 +307,7 @@ def export_measurements(body_id, output_path=''):
     output_fh.close()
 
     return filename, output.count('\n')-1
+
 
 def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_dir=None, remove=False):
     """Refit all the SourceMeasurements for a body with find_orb and update the elements.
@@ -385,6 +387,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
         logger.warning("Could not find Body with id #%s" % body_id)
 
     return new_elements
+
 
 class CandidatesViewBlock(LoginRequiredMixin, View):
     template = 'core/candidates.html'
@@ -794,7 +797,7 @@ def schedule_submit(data, body, username):
             emp_info = new_ephemeris[0]
             ephemeris = new_ephemeris[1]
             emp_at_start = ephemeris[0]
-
+    body.refresh_from_db()
     body_elements = model_to_dict(body)
     body_elements['epochofel_mjd'] = body.epochofel_mjd()
     body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
