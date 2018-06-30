@@ -38,6 +38,7 @@ try:
 except:
     pass
 from django.conf import settings
+from astropy.io import ascii
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
@@ -1943,3 +1944,25 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
     else:
         logger.warning("Passed page object was not a BeautifulSoup object")
     return flux_standards
+
+def read_solar_standards(standards_file):
+
+    standards = {}
+
+    data = ascii.read(standards_file, format='fixed_width_no_header', \
+        names=('Name', 'RA', 'Dec', 'Vmag'), col_starts=(4,25,37,49))
+    for row in data:
+        name = row['Name'].replace('Land', 'Landolt').replace('(SA) ', 'SA')
+        nstart = 1
+        nstart, ra, status = S.sla_dafin(row['RA'].replace(':', ' '), nstart)
+        if status == 0:
+            ra = ra * 15.0
+        else:
+            ra = None
+        nstart = 1
+        nstart, dec, status = S.sla_dafin(row['Dec'].replace(':', ' '), nstart)
+        if status != 0:
+            dec = None
+        Vmag = row['Vmag']
+        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : Vmag }
+    return standards

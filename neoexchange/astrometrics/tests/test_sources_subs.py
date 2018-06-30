@@ -3259,3 +3259,32 @@ class TestFetchFluxStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[fluxstd][key], standards[fluxstd][key], places=self.precision)
                 else:
                     self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
+
+
+class TestReadSolarStandards(TestCase):
+
+    def setUp(self):
+        self.test_file = os.path.join('photometrics', 'data', 'Solar_Standards')
+
+        self.maxDiff = None
+        self.precision = 10
+
+    def test1(self):
+
+        expected_num_sources = 11
+        expected_standards = { 'Landolt SA93-101' : { 'ra_rad' : radians(28.325), 'dec_rad' : radians(0.373611111111111), 'mag' : 9.7},
+                               'Hyades 64'        : { 'ra_rad' : 1.1635601068681027, 'dec_rad' : 0.2922893202041282, 'mag' : 8.1},
+                               'Landolt SA98-978' : { 'ra_rad' : radians(102.8916666666666), 'dec_rad' : radians(-0.1925), 'mag' : 10.5},
+                               'Landolt SA107-684' : { 'ra_rad' : radians(234.3254166666666), 'dec_rad' : radians(-0.163888888888), 'mag' : 8.4},
+                               'Landolt SA107-998' : { 'ra_rad' : radians(234.5683333333333), 'dec_rad' : radians(0.2563888888888), 'mag' : 10.4},
+                             }
+
+        standards = read_solar_standards(self.test_file)
+
+        self.assertEqual(expected_num_sources, len(standards))
+        for solstd in expected_standards:
+            for key in expected_standards[solstd]:
+                if '_rad' in key:
+                    self.assertAlmostEqual(expected_standards[solstd][key], standards[solstd][key], places=self.precision, msg="Mismatch for {} on {}".format(solstd, key))
+                else:
+                    self.assertEqual(expected_standards[solstd][key], standards[solstd][key])
