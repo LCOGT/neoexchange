@@ -1159,7 +1159,11 @@ class StaticSource(models.Model):
     notes = models.TextField(null=True, blank=True)
 
     def return_source_type(self):
-        return self.SOURCETYPE_CHOICES[self.source_type][1]
+        srctype_name = "Undefined type"
+        srctype = [x[1] for x in self.SOURCETYPE_CHOICES if x[0] == self.source_type]
+        if len(srctype) == 1:
+            srctype_name = srctype[0]
+        return srctype_name
 
     def current_name(self):
         return self.name
@@ -1168,3 +1172,6 @@ class StaticSource(models.Model):
         verbose_name = _('Static Source')
         verbose_name_plural = _('Static Sources')
         db_table = 'ingest_staticsource'
+
+    def __str__(self):
+        return "{} ({})".format(self.name, self.return_source_type())
