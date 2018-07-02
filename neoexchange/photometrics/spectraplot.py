@@ -16,7 +16,7 @@ import collections,warnings,re
 
 #np.set_printoptions(threshold=np.inf)
 
-def check_norm(values):
+def check_norm(values): #not perfect yet
     """checks with fits standard parsing and notifies if data has been normalized already
        input: <values>: array of text values in .fits header to parse
     """
@@ -26,7 +26,7 @@ def check_norm(values):
             for s in normstr.split():
                 try:
                     normval = float(s)
-                    normloc = list(float(t) for t in re.findall(r'-?\d+\.?\d*',normstr))[-1]
+                    normloc = list(float(t) for t in re.findall(r'-?\d+\.?\d*',normstr))[-1] #reg. expres.
                     print("WARNING: Flux normalized to ", normval, " at ", normloc)
                 except ValueError:
                     continue
@@ -178,23 +178,34 @@ def read_spectra(spectra_file):
     return wavelength, flux, flux_error, x_units, y_units, y_factor
 
 
-def smooth(x,ydata, window=20):
-    """uses boxcar averaging to smooth flux data
+def smooth(x,y):
+    """uses boxcar averaging to smooth flux data if necessary
        inputs: <ydata>: raw flux data
-               [window]: size of smoothing window (default = 20)
        outputs: smoothed flux data
     """
+    #determining if smoothing is needed and to what degree
+    stds=np.array([])
+    normy = normalize(x,y)
+    loc = 5
+    while loc <= len(x):
+        stds = np.append(stds,np.std(normy[loc-5:loc]).value)
+        loc += int(len(x)/8)
+    noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
+    print(noisiness)
 
-    if len(ydata) < window:
-        raise ValueError("Input vector must be bigger than window size.")
+    if .005 < noisiness < .001:
+        window = 20
+    elif .005 <= noisiness < .01:
+        window = 25
+    elif noisiness >= .01:
+        window = 30    
+    else:
+        print("smoothing: no")
+        return x,y
 
-    if window < 3:
-        return x,ydata
-
-    #if window % 2 != 0: I believe Box 1D kernel handles this already
-    #    window += 1
-
-    return x[window:-window], convolve(ydata, Box1DKernel(window))[window:-window] #boxcar average data    
+    #smoothing
+    print("smoothing: yes")
+    return x[window:-window], convolve(y, Box1DKernel(window))[window:-window] #boxcar average data    
 
 def normalize(x,y,wavelength=5500*u.AA):
     """normalizes flux data with a specific wavelength flux value
@@ -206,7 +217,7 @@ def normalize(x,y,wavelength=5500*u.AA):
     normval = y[np.abs(x-wavelength).argmin()] #uses closest data point to target wavelength
     if normval == 0:
         normval = 1
-    return y/normval
+    return y/normval #remember to normalize y-units too
     
 def plot_spectra(x,y,y_units,ax,title='',norm=0):
     """plots spectra data
@@ -222,17 +233,17 @@ def plot_spectra(x,y,y_units,ax,title='',norm=0):
         yyy = y
     
     ax.plot(x,yyy,linewidth=1)
-    ax.set_xlabel("wavlength (A)")
-    ax.set_ylabel(y_units)
+    ax.set_xlabel(r"wavelength ($\AA$)")
+    ax.set_ylabel("flux "+y_units)
     ax.set_title(title)
 
 if __name__== "__main__":
 
     #path = '/home/adam/test_spectra/' #will make m9ore general file passing later
     path = '/home/atedeschi/test_spectra/'
-    spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
+    #spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
     #spectra = '1627/20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
-    #spectra = 'calspec/eros_visnir_reference_to1um.ascii'
+    spectra = 'calspec/eros_visnir_reference_to1um.ascii'
     #spectra = 'calspec/alpha_lyr_stis_008.fits' #vega?
     #spectra = 'calspec/bd17d4708_stis_001.fits'        
     #spectra = 'a001981.4.txt'
@@ -242,19 +253,19 @@ if __name__== "__main__":
     #sol_ref =  'solar_standard_V2.fits'
     #sol_ref = 'calspec/sun_reference_stis_001.fits'
 
-    window = 2 # 2 for eros ascii file. 20 for most others
+    #window = 2 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         x,y,yerr,x_units,y_units,y_factor = read_spectra(path+spectra)
-    xsmoothed,ysmoothed = smooth(x,y,window) #[window/2:-window/2]
+    xsmoothed,ysmoothed = smooth(x,y)#,window) #[window/2:-window/2]
 
-    window_ref = 2
+    #window_ref = 2
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units,y_factor_ref = read_spectra(path+sol_ref)
-    x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref,window_ref)
+    x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref)#,window_ref)
     
-    normyerr = normalize(x,yerr)
+    normyerr = normalize(x,yerr) #remember to normalize y-units too
     normyerr_ref = normalize(x_ref,yerr_ref)
 
     #print(x.shape, y.shape, x_ref.shape, y_ref.shape, ysmoothed.shape, y_refsmoothed.shape)
@@ -271,5 +282,6 @@ if __name__== "__main__":
     fig, ax = plt.subplots(nrows=2,sharex=True)
     plot_spectra(xsmoothed,ysmoothed/y_factor,y_units.to_string('latex'),ax[0],title="asteroid")
     plot_spectra(x_refsmoothed,y_refsmoothed/y_factor_ref,y_ref_units.to_string('latex'),ax[1],title="solar_reference")
+    plt.tight_layout(pad=1, w_pad=.5, h_pad=.5)
     
     plt.show()
