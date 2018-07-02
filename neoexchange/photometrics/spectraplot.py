@@ -16,9 +16,10 @@ import collections,warnings,re
 
 #np.set_printoptions(threshold=np.inf)
 
-def check_norm(values): #not perfect yet
+def check_norm(values): #not perfect nor finished yet
     """checks with fits standard parsing and notifies if data has been normalized already
        input: <values>: array of text values in .fits header to parse
+       ouptuts: boolean?
     """
     for value in values:
         if "NORMALIZED TO" in str(value).upper():
@@ -61,19 +62,27 @@ def get_y_units(info):
     y_factor = 1
     flux_id = ["ERG", "FLAM"] #IDs to look for units with
     #I know erg isn't the full unit, but it's a good indicator.
-    norm_id = ["NORM", "REFLECTANCE"] #IDs to look for normalizations with
+    norm_id = ["NORM", "UNITLESS", "NONE"] #IDs to look for normalizations with
+    refl_id = ["REFLECT"] #IDs to look for normalized reflectance
  
-    if isinstance(info, float): #from .txt file (assuming normalized)
-        y_units = (1*u.m/u.m).unit.decompose()
+    if isinstance(info, float): #from .txt file (assuming normalized reflectance)
+        y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).unit.decompose())
         print("y_units: normalized")
         
     elif isinstance(info, collections.OrderedDict): #from .ascii
         col_head = list(info.values())[0][0]
-        if any(unit_id in col_head.upper() for unit_id in flux_id):
+        if any(unit_id in col_head.upper() for unit_id in flux_id): #checking for flam
             y_units = u.erg/(u.cm**2)/u.s/u.AA
-        elif any(unit_id in col_head.upper() for unit_id in norm_id):
-            y_units = (1*u.m/u.m).unit.decompose()
-            print("y_units: normalized")
+        elif any(unit_id in col_head.upper() for unit_id in norm_id): #checking for normalized
+            if any(unit_id2 in col_head.upper() for unit_id2 in refl_id): #checking for normalization
+                y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
+                print(y_units)
+            else:   
+                y_units = u.def_unit("Normalized_Flux",(1*u.m/u.m).decompose())
+                print("y_units: normalized")
+        elif any(unit_id in col_head.upper() for unit_id in relf_id): #checking for normalized reflectance
+            y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
+            print(y_units)
         else:
             print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
             y_units = u.erg/(u.cm**2)/u.s/u.AA
@@ -89,8 +98,15 @@ def get_y_units(info):
                         y_factor=10**20
                     y_units = u.erg/(u.cm**2)/u.s/u.AA
                 elif any(unit_id in values[n].upper() for unit_id in norm_id):
-                    y_units = (1*u.m/u.m).unit.decompose()
-                    print("y_units: normalized")
+                    if any(unit_id in col_head.upper for unit_id in refl_id): #checking for normalization
+                        y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
+                        print(y_units)
+                    else:
+                        y_units = u.def_unit("Normalized_Flux",(1*u.m/u.m).decompose())
+                        print("y_units: normalized")
+                elif any(unit_id in col_head.upper for unit_id in refl_id): #checking for normalized reflectance
+                    y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
+                    print(y_units)
                 else:
                     print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
                     y_units = u.erg/(u.cm**2)/u.s/u.AA
@@ -102,10 +118,17 @@ def get_y_units(info):
 
     return y_units, y_factor
 
+def read_object(hdr):
+    try:
+        obj_name = hdr['OBJECT']
+    except KeyError:
+        obj_name = ""
+    return obj_name
+
 def read_spectra(spectra_file):
     """reads in all inportant data from spectra file (Works for .ascii 2 .fits standards, and .txt)
        inputs: <spectra_file>: path and file name to spectra
-       outputs: wavelength (Quantity type), flux, flux_error, x_units, y_units
+       outputs: wavelength (Quantity type), flux, flux_error, x_units, y_units, obj_name
     """
     if spectra_file.endswith('.fits'):
         hdul = fits.open(spectra_file) #read in data
@@ -136,7 +159,9 @@ def read_spectra(spectra_file):
                 flux_error = np.zeros(len(x_data))
         else:
             raise ImportError("Could not read data from .fits file")
-            
+        
+        obj_name = read_object(hdr)
+       
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(hdr)
         check_norm(hdul[0].header.values()) #check if data is already normalized
@@ -150,7 +175,8 @@ def read_spectra(spectra_file):
         flux_error = data['col3']
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(data.meta)
-        
+        obj_name = "" #TEMPORARY 
+
     elif spectra_file.endswith('.txt'):
         data = open(spectra_file) #read in data
         #assuming 3 columns: wavelength, reflectance, error
@@ -163,6 +189,7 @@ def read_spectra(spectra_file):
             flux_error = np.append(flux_error, float(line.split()[2]))
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(y_data[0])
+        obj_name = "" #TEMPORARY 
         
     else:
         raise ImportError("Invalid input file type")
@@ -175,7 +202,12 @@ def read_spectra(spectra_file):
     #convert all wavelengths to Angstroms because it's easy to deal with that way
     flux = y_data*y_units
 
-    return wavelength, flux, flux_error, x_units, y_units, y_factor
+    if not obj_name:
+        print("WARNING: Could not parse object name from file")
+    else:
+        print("Object: ", obj_name)
+
+    return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name
 
 
 def smooth(x,y):
@@ -191,12 +223,12 @@ def smooth(x,y):
         stds = np.append(stds,np.std(normy[loc-5:loc]).value)
         loc += int(len(x)/8)
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
-    print(noisiness)
+    #print(noisiness)
 
     if .005 < noisiness < .001:
-        window = 20
+        window = 15
     elif .005 <= noisiness < .01:
-        window = 25
+        window = 20
     elif noisiness >= .01:
         window = 30    
     else:
@@ -205,7 +237,7 @@ def smooth(x,y):
 
     #smoothing
     print("smoothing: yes")
-    return x[window:-window], convolve(y, Box1DKernel(window))[window:-window] #boxcar average data    
+    return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)] #boxcar average data    
 
 def normalize(x,y,wavelength=5500*u.AA):
     """normalizes flux data with a specific wavelength flux value
@@ -217,13 +249,15 @@ def normalize(x,y,wavelength=5500*u.AA):
     normval = y[np.abs(x-wavelength).argmin()] #uses closest data point to target wavelength
     if normval == 0:
         normval = 1
-    return y/normval #remember to normalize y-units too
+    return y/normval #REMEMBER to normalize y-units too
     
-def plot_spectra(x,y,y_units,ax,title='',norm=0):
+def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
                <y>: flux data for y axis
-               [label]
+               <ax>: matplotlib axis
+               <title>: plot title (shoudl be object)
+               [ref]: 1 for sol_ref, 0 for asteroid
                [norm]: normalizes data when set to 1
     """
     
@@ -234,16 +268,22 @@ def plot_spectra(x,y,y_units,ax,title='',norm=0):
     
     ax.plot(x,yyy,linewidth=1)
     ax.set_xlabel(r"wavelength ($\AA$)")
-    ax.set_ylabel("flux "+y_units)
-    ax.set_title(title)
+    ax.set_ylabel(y_units)
+    if title:
+        ax.set_title(title)
+    else:
+        if ref:
+            ax.set_title("Solar_Analog")
+        else:
+            ax.set_title("Asteroid")
 
 if __name__== "__main__":
 
     #path = '/home/adam/test_spectra/' #will make m9ore general file passing later
     path = '/home/atedeschi/test_spectra/'
-    #spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
+    spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
     #spectra = '1627/20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
-    spectra = 'calspec/eros_visnir_reference_to1um.ascii'
+    #spectra = 'calspec/eros_visnir_reference_to1um.ascii'
     #spectra = 'calspec/alpha_lyr_stis_008.fits' #vega?
     #spectra = 'calspec/bd17d4708_stis_001.fits'        
     #spectra = 'a001981.4.txt'
@@ -254,15 +294,17 @@ if __name__== "__main__":
     #sol_ref = 'calspec/sun_reference_stis_001.fits'
 
     #window = 2 
+    print("\nasteroid: ")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        x,y,yerr,x_units,y_units,y_factor = read_spectra(path+spectra)
+        x,y,yerr,x_units,y_units,y_factor, obj_name= read_spectra(path+spectra)
     xsmoothed,ysmoothed = smooth(x,y)#,window) #[window/2:-window/2]
 
+    print("\nreference star: ")
     #window_ref = 2
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units,y_factor_ref = read_spectra(path+sol_ref)
+        x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units,y_factor_ref, obj_name_ref = read_spectra(path+sol_ref)
     x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref)#,window_ref)
     
     normyerr = normalize(x,yerr) #remember to normalize y-units too
@@ -277,11 +319,10 @@ if __name__== "__main__":
     #print(normyerr)
 
     #plotting data
-    
-    #(if 2 spectra)
+    #(for 2 spectra)
     fig, ax = plt.subplots(nrows=2,sharex=True)
-    plot_spectra(xsmoothed,ysmoothed/y_factor,y_units.to_string('latex'),ax[0],title="asteroid")
-    plot_spectra(x_refsmoothed,y_refsmoothed/y_factor_ref,y_ref_units.to_string('latex'),ax[1],title="solar_reference")
+    plot_spectra(xsmoothed,ysmoothed/y_factor,y_units.to_string('latex'),ax[0], obj_name, ref=0)
+    plot_spectra(x_refsmoothed,y_refsmoothed/y_factor_ref,y_ref_units.to_string('latex'),ax[1], obj_name_ref, ref=1)
     plt.tight_layout(pad=1, w_pad=.5, h_pad=.5)
     
     plt.show()
