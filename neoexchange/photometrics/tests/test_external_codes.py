@@ -1,4 +1,4 @@
-'''
+"""
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2016-2018 LCO
 
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 import os
 from glob import glob
@@ -25,13 +25,14 @@ from numpy import array, arange
 from django.test import TestCase
 from django.forms.models import model_to_dict
 
-#Import module to test
+# Import module to test
 from photometrics.external_codes import *
+
 
 class ExternalCodeUnitTest(TestCase):
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         # Path to the config files
         self.source_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
@@ -71,9 +72,11 @@ class ExternalCodeUnitTest(TestCase):
                 print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print("Removed", self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
+
 
 class TestMTDLINKRunner(ExternalCodeUnitTest):
 
@@ -127,7 +130,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-    @skipIf(find_binary("mtdlink") == None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
     def test_run_mtdlink_realfile(self):
 
         expected_status = 0
@@ -173,7 +176,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
+        if self.debug_print:
+            print(glob(os.path.join(self.test_dir, '*')))
         input_fits_1 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0098-e90.fits')
         self.assertTrue(os.path.exists(input_fits_1))
         input_fits_2 = os.path.join(self.test_dir, 'cpt1m010-kb70-20160225-0099-e90.fits')
@@ -233,7 +237,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertEqual(58, len(test_lines_file))
         self.assertEqual(expected_line1_file, test_lines_file[0].rstrip())
 
-    @skipIf(find_binary("mtdlink") == None, "Could not find MTDLINK binary ('mtdlink') in PATH")
+    @skipIf(find_binary("mtdlink") is None, "Could not find MTDLINK binary ('mtdlink') in PATH")
     def test_run_mtdlink_realfile_different_set(self):
 
         expected_status = 0
@@ -275,7 +279,8 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
+        if self.debug_print:
+            print(glob(os.path.join(self.test_dir, '*')))
         input_fits_1 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0095-e90.fits')
         self.assertTrue(os.path.exists(input_fits_1))
         input_fits_2 = os.path.join(self.test_dir, 'elp1m008-fl05-20160225-0096-e90.fits')
@@ -327,6 +332,7 @@ class TestMTDLINKRunner(ExternalCodeUnitTest):
         self.assertEqual(52, len(test_lines_file))
         self.assertEqual(expected_line1_file, test_lines_file[0].rstrip())
 
+
 class TestSCAMPRunner(ExternalCodeUnitTest):
 
     def test_setup_scamp_dir_bad_destdir(self):
@@ -353,6 +359,7 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
         self.assertTrue(os.path.exists(os.path.join(self.test_dir, 'scamp_neox.cfg')))
+
 
 class TestSExtractorRunner(ExternalCodeUnitTest):
 
@@ -399,7 +406,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_cmdline, cmdline)
 
-    @skipIf(find_binary("sex") == None, "Could not find SExtractor binary ('sex') in PATH")
+    @skipIf(find_binary("sex") is None, "Could not find SExtractor binary ('sex') in PATH")
     def test_run_sextractor_realfile(self):
 
         expected_status = 0
@@ -409,7 +416,8 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
-        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
+        if self.debug_print:
+            print(glob(os.path.join(self.test_dir, '*')))
         output_cat = os.path.join(self.test_dir, 'test.cat')
         self.assertTrue(os.path.exists(output_cat))
         test_fh = open(output_cat, 'r')
@@ -422,10 +430,10 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
     def test_setup_ldac_sextractor_dir(self):
 
-        expected_configs = default_sextractor_config_files(catalog_type = 'FITS_LDAC')
+        expected_configs = default_sextractor_config_files(catalog_type='FITS_LDAC')
         expected_status = 0
 
-        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type = 'FITS_LDAC')
+        status = setup_sextractor_dir(self.source_dir, self.test_dir, catalog_type='FITS_LDAC')
 
         self.assertEqual(expected_status, status)
 
@@ -433,7 +441,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
             test_file = os.path.join(self.test_dir, config_file)
             self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
 
-    @skipIf(find_binary("scamp") == None, "Could not find SCAMP binary ('scamp') in PATH")
+    @skipIf(find_binary("scamp") is None, "Could not find SCAMP binary ('scamp') in PATH")
     def test_run_scamp_realfile(self):
 
         expected_status = 0
@@ -442,7 +450,8 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
 
         self.assertEqual(expected_status, status)
-        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
+        if self.debug_print:
+            print(glob(os.path.join(self.test_dir, '*')))
 
         header_file = os.path.basename(self.test_fits_catalog).replace('fits', 'head')
         output_header = os.path.join(self.test_dir, header_file)
@@ -475,6 +484,7 @@ class TestFindOrbRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_status, status)
 
+
 class TestDetermineSExtOptions(ExternalCodeUnitTest):
 
     def test_nofile(self):
@@ -497,6 +507,7 @@ class TestDetermineSExtOptions(ExternalCodeUnitTest):
         options = determine_sext_options(self.test_fits_file)
 
         self.assertEqual(expected_options, options)
+
 
 class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
 
@@ -544,6 +555,7 @@ class TestDetermineMTDLINKOptions(ExternalCodeUnitTest):
         options = determine_mtdlink_options(8, param_file, pa_rate_dict)
 
         self.assertEqual(expected_options, options)
+
 
 class TestUpdateFITSWCS(TestCase):
 
@@ -653,8 +665,9 @@ class TestUpdateFITSWCS(TestCase):
         self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
         self.assertEqual(expected_wcserr, wcserr)
 
-        #Clean up outputfile
+        # Clean up outputfile
         os.remove(fits_file_output)
+
 
 class TestGetSCAMPXMLInfo(TestCase):
 
@@ -682,6 +695,7 @@ class TestGetSCAMPXMLInfo(TestCase):
             else:
                 self.assertEqual(expected_results[key], results[key])
 
+
 class TestReadMTDSFile(TestCase):
 
     def setUp(self):
@@ -694,7 +708,7 @@ class TestReadMTDSFile(TestCase):
         # Pylint can go to hell...
         self.dtypes =\
              {  'names' : ('det_number', 'frame_number', 'sext_number', 'jd_obs', 'ra', 'dec', 'x', 'y', 'mag', 'fwhm', 'elong', 'theta', 'rmserr', 'deltamu', 'area', 'score', 'velocity', 'sky_pos_angle', 'pixels_frame', 'streak_length'),
-                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4' )
+                'formats' : ('i4',       'i1',           'i4',          'f8',     'f8', 'f8', 'f4', 'f4', 'f4', 'f4',   'f4',    'f4',    'f4',     'f4',       'i4',   'f4',   'f4',       'f4',        'f4',           'f4')
              }
 
         # Map UserWarning to an exception for testing
@@ -732,7 +746,6 @@ class TestReadMTDSFile(TestCase):
             else:
                 self.assertEqual(expected_dets_dict[key], dets[key], msg="Failed on %s" % key)
 
-
     def test_read(self):
 
         expected_array = array([(1, 1, 3283, 2457444.656045, 10.924317, 39.27700, 2103.245, 2043.026, 19.26, 12.970, 1.764, -60.4, 0.27, 1.39, 34, 1.10, 0.497, 0.2, 9.0, 6.7),
@@ -740,7 +753,7 @@ class TestReadMTDSFile(TestCase):
                                 (1, 3, 3409, 2457444.659923, 10.924271, 39.27887, 2104.491, 2043.034, 19.20, 11.350, 1.373, -57.3, 0.27, 1.38, 52, 1.10, 0.497, 0.2, 9.0, 6.7),
                                 (1, 4, 3176, 2457444.661883, 10.924257, 39.27990, 2104.191, 2043.844, 19.01, 10.680, 1.163, -41.5, 0.27, 1.52, 52, 1.10, 0.497, 0.2, 9.0, 6.7),
                                 (1, 5, 3241, 2457444.663875, 10.924237, 39.28087, 2104.365, 2043.982, 19.17, 12.940, 1.089, -31.2, 0.27, 1.27, 55, 1.10, 0.497, 0.2, 9.0, 6.7),
-                                (1, 6, 3319, 2457444.665812, 10.924220, 39.28172, 2104.357, 2043.175, 18.82, 12.910, 1.254, -37.8, 0.27, 1.38, 69, 1.10, 0.497, 0.2, 9.0, 6.7),],
+                                (1, 6, 3319, 2457444.665812, 10.924220, 39.28172, 2104.357, 2043.175, 18.82, 12.910, 1.254, -37.8, 0.27, 1.38, 69, 1.10, 0.497, 0.2, 9.0, 6.7)],
                                 dtype=self.dtypes)
 
         expected_dets_dict = {  'version'   : 'DETSV2.0',
@@ -769,4 +782,3 @@ class TestReadMTDSFile(TestCase):
         for frame in arange(expected_dets_dict['num_frames']):
             for column in expected_array.dtype.names:
                 self.assertAlmostEqual(expected_array[column][frame], det1[column][frame], 7)
-
