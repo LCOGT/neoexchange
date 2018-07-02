@@ -651,6 +651,117 @@ class TestCheck_for_block(TestCase):
         resp = block_status(block_id=bid)
         self.assertEqual(False, resp)
 
+class TestRecordBlock(TestCase):
+
+    def setUp(self):
+
+        self.spectro_tracknum = '606083'
+        self.spectro_params = {
+                              'binning': 1,
+                              'block_duration': 988.0,
+                              'calibs': 'both',
+                              'end_time': datetime(2018, 3, 16, 18, 50),
+                              'exp_count': 1,
+                              'exp_time': 180.0,
+                              'exp_type': 'SPECTRUM',
+                              'group_id': '4_E10-20180316_spectra',
+                              'instrument': '2M0-FLOYDS-SCICAM',
+                              'instrument_code': 'E10-FLOYDS',
+                              'observatory': '',
+                              'pondtelescope': '2m0',
+                              'proposal_id': 'LCOEngineering',
+                              'request_numbers': [1450339],
+                              'request_windows': [[{'end': '2018-03-16T18:30:00',
+                                 'start': '2018-03-16T11:20:00'}]],
+                              'site': 'COJ',
+                              'site_code': 'E10',
+                              'spectra_slit': 'slit_2.0as',
+                              'spectroscopy': True,
+                              'start_time': datetime(2018, 3, 16, 9, 20),
+                              'user_id': 'tlister@lcogt.net'}
+
+        self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
+                              'end_time' : self.spectro_params['end_time'],
+                              'proposal_code' : self.spectro_params['proposal_id'],
+                              'group_id' : self.spectro_params['group_id'],
+                              'exp_count' : self.spectro_params['exp_count'],
+                              'exp_length' : self.spectro_params['exp_time'],
+                            }
+        body_params = { 'name' : '4' }
+        self.spectro_body = Body.objects.create(**body_params)
+
+        proposal_params = { 'code' : self.spectro_params['proposal_id'], }
+        self.proposal = Proposal.objects.create(**proposal_params)
+
+        self.imaging_tracknum = '576013'
+        self.imaging_params = {
+                              'binning': 1,
+                              'block_duration': 1068.0,
+                              'end_time': datetime(2018, 3, 16, 3, 50),
+                              'exp_count': 12,
+                              'exp_time': 42.0,
+                              'exp_type': 'EXPOSE',
+                              'group_id': 'N999r0q_K91-20180316',
+                              'instrument': '1M0-SCICAM-SINISTRO',
+                              'observatory': '',
+                              'pondtelescope': '1m0',
+                              'proposal_id': 'LCOEngineering',
+                              'request_numbers': [1440123],
+                              'request_windows': [[{'end': '2018-03-16T03:30:00',
+                                 'start': '2018-03-15T20:20:00'}]],
+                              'site': 'CPT',
+                              'site_code': 'K91',
+                              'start_time': datetime(2018, 3, 15, 18, 20),
+                              'user_id': 'tlister@lcogt.net'}
+
+        self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
+                              'end_time' : self.imaging_params['end_time'],
+                              'proposal_code' : self.imaging_params['proposal_id'],
+                              'group_id' : self.imaging_params['group_id'],
+                              'exp_count' : self.imaging_params['exp_count'],
+                              'exp_length' : self.imaging_params['exp_time'],
+                            }
+        body_params = {'provisional_name' : 'N999r0q'}
+        self.imaging_body = Body.objects.create(**body_params)
+
+    def test_spectro_block(self):
+        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.spectro_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_SPECTRA, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+
+    def test_imaging_block(self):
+        block_resp = record_block(self.imaging_tracknum, self.imaging_params, self.imaging_form, self.imaging_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
+
 
 class TestSchedule_Check(TestCase):
 
@@ -684,7 +795,7 @@ class TestSchedule_Check(TestCase):
 
         params['elements_type'] = 'MPC_COMET'
         params['perihdist'] = 1.0540487
-        params['epochofperih']  = datetime(2017, 5, 17)
+        params['epochofperih'] = datetime(2017, 5, 17)
         self.body_good_elemtype, created = Body.objects.get_or_create(**params)
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
@@ -735,7 +846,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -786,7 +897,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -815,7 +926,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA21_Q63-cad-0406-0406',
+                        'group_id': '2009 HA21_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -835,7 +946,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
