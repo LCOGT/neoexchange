@@ -70,7 +70,7 @@ geckodriver.log
 
 lightcurve.png
 lightcurve_data.txt
-photometrics/configs/environ.dat
+environ.dat
 
 ingest/static/ingest/css/admin.css
 ingest/static/ingest/css/dashboard.css
