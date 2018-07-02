@@ -1,6 +1,6 @@
 """
 convert 1D fits spectra into a readable plot
-Written by Adam Tedeschi
+Author: Adam Tedeschi
 Date: 6/25/2018
 for NeoExchange
 """
@@ -17,7 +17,7 @@ import collections,warnings,re
 #np.set_printoptions(threshold=np.inf)
 
 def check_norm(values): #not perfect nor finished yet
-    """checks with fits standard parsing and notifies if data has been normalized already
+    """checks with fits standard parsing and notifies if flux data has been normalized already
        input: <values>: array of text values in .fits header to parse
        ouptuts: boolean?
     """
@@ -32,6 +32,10 @@ def check_norm(values): #not perfect nor finished yet
                 except ValueError:
                     continue
     
+def check_refl(x,y): #TEMPORARY CHECK
+    if x[y.argmax()] > 6000*u.AA:
+        print("Normalized Reflectance")
+
 def get_x_units(x_data):
     """finds wavelength units from x_data
        inputs: <xdata>: unitless wavelength data
@@ -67,7 +71,7 @@ def get_y_units(info):
  
     if isinstance(info, float): #from .txt file (assuming normalized reflectance)
         y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).unit.decompose())
-        print("y_units: normalized")
+        print("y_units: ",y_units)
         
     elif isinstance(info, collections.OrderedDict): #from .ascii
         col_head = list(info.values())[0][0]
@@ -76,13 +80,13 @@ def get_y_units(info):
         elif any(unit_id in col_head.upper() for unit_id in norm_id): #checking for normalized
             if any(unit_id2 in col_head.upper() for unit_id2 in refl_id): #checking for normalization
                 y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
-                print(y_units)
+                print("y_units: ",y_units)
             else:   
                 y_units = u.def_unit("Normalized_Flux",(1*u.m/u.m).decompose())
                 print("y_units: normalized")
         elif any(unit_id in col_head.upper() for unit_id in relf_id): #checking for normalized reflectance
             y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
-            print(y_units)
+            print("y_units: ",y_units)
         else:
             print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
             y_units = u.erg/(u.cm**2)/u.s/u.AA
@@ -100,13 +104,13 @@ def get_y_units(info):
                 elif any(unit_id in values[n].upper() for unit_id in norm_id):
                     if any(unit_id in col_head.upper for unit_id in refl_id): #checking for normalization
                         y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
-                        print(y_units)
+                        print("y_units: ",y_units)
                     else:
                         y_units = u.def_unit("Normalized_Flux",(1*u.m/u.m).decompose())
                         print("y_units: normalized")
                 elif any(unit_id in col_head.upper for unit_id in refl_id): #checking for normalized reflectance
                     y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
-                    print(y_units)
+                    print("y_units: ",y_units)
                 else:
                     print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
                     y_units = u.erg/(u.cm**2)/u.s/u.AA
@@ -119,6 +123,10 @@ def get_y_units(info):
     return y_units, y_factor
 
 def read_object(hdr):
+    """tries to identify object name from .fits header
+       input: <hdr>: fits header
+       output: obj_name
+    """
     try:
         obj_name = hdr['OBJECT']
     except KeyError:
@@ -206,6 +214,8 @@ def read_spectra(spectra_file):
         print("WARNING: Could not parse object name from file")
     else:
         print("Object: ", obj_name)
+    
+    check_refl(wavelength,flux)
 
     return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name
 
@@ -223,9 +233,9 @@ def smooth(x,y):
         stds = np.append(stds,np.std(normy[loc-5:loc]).value)
         loc += int(len(x)/8)
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
-    #print(noisiness)
+    print(noisiness)
 
-    if .005 < noisiness < .001:
+    if .0035 <= noisiness < .005:
         window = 15
     elif .005 <= noisiness < .01:
         window = 20
@@ -281,12 +291,14 @@ if __name__== "__main__":
 
     #path = '/home/adam/test_spectra/' #will make m9ore general file passing later
     path = '/home/atedeschi/test_spectra/'
-    spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
+    #spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
     #spectra = '1627/20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
+    #spectra = '60/ntt60_ftn_20180612_merge_2.0_58282_1_2df_ex.fits'
+    #spectra = '16/ntt16_ftn_20180606_merge_2.0_58276_1_2df_ex.fits'
     #spectra = 'calspec/eros_visnir_reference_to1um.ascii'
     #spectra = 'calspec/alpha_lyr_stis_008.fits' #vega?
     #spectra = 'calspec/bd17d4708_stis_001.fits'        
-    #spectra = 'a001981.4.txt'
+    spectra = 'a001981.4.txt'
     
     #sol_ref = 'calspec/sun_mod_001.fits'
     sol_ref = 'Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
