@@ -65,8 +65,9 @@ class Command(BaseCommand):
         mpc_site = []
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
+            self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
             for block in block_list:
-                self.stdout.write("Analyzing Block# %d for %s" % (block.id, block.body.current_name()))
+                self.stdout.write("Analyzing Block# %d" % block.id)
 
                 frames_red = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
                 frames_ql = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('midpoint')
