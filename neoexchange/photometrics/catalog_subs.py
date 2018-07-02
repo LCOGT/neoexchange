@@ -76,10 +76,16 @@ def call_cross_match_and_zeropoint(catfile, std_zeropoint_tolerance=0.1, cat_nam
     # connection, Django will auto-reconnect.
     reset_database_connection()
 
-    start = time.time()
-    avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance)
-    end = time.time()
-    logger.debug("TIME: get_zeropoint took {:.1f} seconds".format(end-start))
+    if cross_match_table is not None:
+        start = time.time()
+        avg_zeropoint, std_zeropoint, count, num_in_calc = get_zeropoint(cross_match_table, std_zeropoint_tolerance)
+        end = time.time()
+        logger.debug("TIME: get_zeropoint took {:.1f} seconds".format(end-start))
+    else:
+        avg_zeropoint = -99
+        std_zeropoint = 99.0
+        count = 0
+        num_in_calc = 0
 
     return header, table, cat_table, cross_match_table, avg_zeropoint, std_zeropoint, count, num_in_calc, cat_name
 
@@ -271,9 +277,13 @@ def cross_match(FITS_table, cat_table, cat_name="UCAC4", cross_match_diff_thresh
         ra_min_diff = ra_min_diff_threshold
         dec_min_diff = dec_min_diff_threshold
 
-    cross_match_table = Table(rows=cross_match_list, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2',
-                                                            'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err',
-                                                            'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+    if len(cross_match_list) > 0:
+        cross_match_table = Table(rows=cross_match_list, names=('RA Cat 1', 'RA Cat 2', 'RA diff', 'Dec Cat 1', 'Dec Cat 2',
+                                                                'Dec diff', 'r mag Cat 1', 'r mag Cat 2', 'r mag err',
+                                                                'r mag diff'), dtype=('f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8', 'f8'))
+    else:
+        logger.warning("Did not find any cross matches")
+        cross_match_table = None
 
     return cross_match_table
 
@@ -1203,33 +1213,33 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
             if std_zeropoint < std_zeropoint_tolerance:
                 logger.debug("Got good zeropoint - updating header")
                 header, table = update_zeropoint(header, table, avg_zeropoint, std_zeropoint)
+
+                # get the fits filename from the catfile in order to get the Block from the Frame
+                if 'e90_cat.fits' in os.path.basename(catfile):
+                    fits_file = os.path.basename(catfile.replace('e90_cat.fits', 'e90.fits'))
+                if 'e91_ldac.fits' in os.path.basename(catfile):
+                    fits_file = os.path.basename(catfile.replace('e91_ldac.fits', 'e91.fits'))
+                elif 'e10_cat.fits' in os.path.basename(catfile):
+                    fits_file = os.path.basename(catfile.replace('e10_cat.fits', 'e10.fits'))
+                elif 'e11_ldac.fits' in os.path.basename(catfile):
+                    fits_file = os.path.basename(catfile.replace('e11_ldac.fits', 'e11.fits'))
+                elif 'e92_ldac.fits' in os.path.basename(catfile):
+                    fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e91.fits'))
+                elif 'e12_ldac.fits' in os.path.basename(catfile):
+                    fits_file = os.path.basename(catfile.replace('e12_ldac.fits', 'e11.fits'))
+                else:
+                    fits_file = os.path.basename(catfile)
+
+                # update the zeropoint computed above in the FITS file Frame
+                frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
+
+                # update the zeropoint computed above in the CATALOG file Frame
+                frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
+
+                # store the CatalogSources
+                num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
             else:
-                logger.debug("Didn't get good zeropoint - not updating header")
-
-        # get the fits filename from the catfile in order to get the Block from the Frame
-        if 'e90_cat.fits' in os.path.basename(catfile):
-            fits_file = os.path.basename(catfile.replace('e90_cat.fits', 'e90.fits'))
-        if 'e91_ldac.fits' in os.path.basename(catfile):
-            fits_file = os.path.basename(catfile.replace('e91_ldac.fits', 'e91.fits'))
-        elif 'e10_cat.fits' in os.path.basename(catfile):
-            fits_file = os.path.basename(catfile.replace('e10_cat.fits', 'e10.fits'))
-        elif 'e11_ldac.fits' in os.path.basename(catfile):
-            fits_file = os.path.basename(catfile.replace('e11_ldac.fits', 'e11.fits'))
-        elif 'e92_ldac.fits' in os.path.basename(catfile):
-            fits_file = os.path.basename(catfile.replace('e92_ldac.fits', 'e91.fits'))
-        elif 'e12_ldac.fits' in os.path.basename(catfile):
-            fits_file = os.path.basename(catfile.replace('e12_ldac.fits', 'e11.fits'))
-        else:
-            fits_file = os.path.basename(catfile)
-
-        # update the zeropoint computed above in the FITS file Frame
-        frame = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=fits_file, frame_type=Frame.SINGLE_FRAMETYPE)
-
-        # update the zeropoint computed above in the CATALOG file Frame
-        frame_cat = update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename=os.path.basename(catfile), frame_type=Frame.BANZAI_LDAC_CATALOG)
-
-        # store the CatalogSources
-        num_sources_created, num_in_table = get_or_create_CatalogSources(table, frame)
+                logger.warning("Didn't get good zeropoint - not updating header")
     else:
         logger.warning("Could not open %s" % catfile)
 
