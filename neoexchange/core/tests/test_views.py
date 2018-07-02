@@ -692,7 +692,7 @@ class TestRecordBlock(TestCase):
         body_params = { 'name' : '4' }
         self.spectro_body = Body.objects.create(**body_params)
 
-        proposal_params = { 'code' : self.spectro_params['proposal_id'],}
+        proposal_params = { 'code' : self.spectro_params['proposal_id'], }
         self.proposal = Proposal.objects.create(**proposal_params)
 
         self.imaging_tracknum = '576013'
@@ -723,7 +723,7 @@ class TestRecordBlock(TestCase):
                               'exp_count' : self.imaging_params['exp_count'],
                               'exp_length' : self.imaging_params['exp_time'],
                             }
-        body_params = { 'provisional_name' : 'N999r0q' }
+        body_params = {'provisional_name' : 'N999r0q'}
         self.imaging_body = Body.objects.create(**body_params)
 
     def test_spectro_block(self):
@@ -797,7 +797,7 @@ class TestSchedule_Check(TestCase):
 
         params['elements_type'] = 'MPC_COMET'
         params['perihdist'] = 1.0540487
-        params['epochofperih']  = datetime(2017, 5, 17)
+        params['epochofperih'] = datetime(2017, 5, 17)
         self.body_good_elemtype, created = Body.objects.get_or_create(**params)
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
@@ -848,7 +848,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -899,7 +899,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -928,7 +928,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA21_Q63-cad-0406-0406',
+                        'group_id': '2009 HA21_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -948,7 +948,7 @@ class TestSchedule_Check(TestCase):
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
