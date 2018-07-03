@@ -1627,7 +1627,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'none'
 
-        expected_slot_length = 582.0
+        expected_slot_length = 612.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1638,7 +1638,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'before'
 
-        expected_slot_length = 845.0
+        expected_slot_length = 935.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1649,7 +1649,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'after'
 
-        expected_slot_length = 845.0
+        expected_slot_length = 935.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1660,7 +1660,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'both'
 
-        expected_slot_length = 1108.0
+        expected_slot_length = 1258.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1671,7 +1671,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'BoTH'
 
-        expected_slot_length = 1108.0
+        expected_slot_length = 1258.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 

@@ -762,9 +762,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     suffix = datetime.strftime(utc_date, '%Y%m%d')
     if period and jitter:
         suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
-        if len(body.current_name()) > 7:
-            # Name is too long to fit in the groupid field, trim off year part.
-            suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%m%d'), datetime.strftime(data['end_time'], '%m%d'))
     elif spectroscopy:
         suffix += "_spectra"
     groupid = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
@@ -886,9 +883,9 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
         return render(request, 'core/feasibility.html', {'form': new_form, 'data': data, 'body': self.body})
 
     def post(self, request, *args, **kwargs):
-        form = SpectroFeasibilityForm(request.POST,body=self.body)
+        form = SpectroFeasibilityForm(request.POST, body=self.body)
         if form.is_valid():
-            return self.form_valid(form,request)
+            return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
@@ -913,6 +910,7 @@ def feasibility_check(data, body):
     data['slot_length'] = slot_length
 
     return data
+
 
 def ranking(request):
 
@@ -1133,11 +1131,15 @@ def record_block(tracking_number, params, form_data, body):
             # cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
+            obstype = Block.OPT_IMAGING
+            if params.get('spectroscopy', False):
+                obstype = Block.OPT_SPECTRA
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : params['site'].lower(),
                              'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                             'obstype'  : obstype,
                              'groupid'  : form_data['group_id'],
                              'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
                              'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),

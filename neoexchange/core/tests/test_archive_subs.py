@@ -18,10 +18,11 @@ from unittest import skipIf
 from hashlib import md5
 import tempfile
 
-import mock
+from mock import patch
 from django.test import TestCase
+from django.conf import settings
 
-from neox.tests.mocks import MockDateTime
+from neox.tests.mocks import MockDateTime, mock_fetch_archive_frames
 # Import module to test
 from core.archive_subs import *
 
@@ -175,3 +176,54 @@ class TestCheckForExistingFile(TestCase):
 
     def test_badfile(self):
         self.assertFalse(check_for_existing_file('wibble'), "Wrong result")
+
+@patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+class TestFetchArchiveFrames(TestCase):
+
+    def test_fetch_spectra(self):
+        auth_header = {'Authorization': 'Token LetMeInPrettyPlease'}
+        request_id = 1391169
+        archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (settings.ARCHIVE_FRAMES_URL, 3000, request_id, 'SPECTRUM')
+
+        expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
+                          'redlevels' : [90, 0]}
+
+        data = fetch_archive_frames(auth_header, archive_url, [])
+
+        self.assertEqual(2, len(data))
+        self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in data])
+        self.assertEqual([request_id, request_id], [x['REQNUM'] for x in data])
+        self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in data])
+
+@patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+class TestCheckArchiveImages(TestCase):
+
+    def test_fetch_imaging(self):
+        request_id = 42
+
+        expected_data = { 'obstypes' : ['EXPOSE',],
+                          'redlevels' : [91, ],
+                          'files' : ['ogg0m406-kb27-20160531-0063-e91.fits.fz',]
+                        }
+        frames, num_frames = check_for_archive_images(request_id)
+
+        self.assertEqual(2, num_frames)
+        self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in frames])
+        self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in frames])
+        self.assertEqual(expected_data['files'], [x['filename'] for x in frames])
+
+    def test_fetch_spectra(self):
+        request_id = 1391169
+        obstype = 'SPECTRUM'
+
+        expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
+                          'redlevels' : [90, 0],
+                          'files' : ['LCOEngineering_0001391169_ftn_20180111_58130.tar.gz', 'ogg2m001-en06-20180110-0005-e00.fits.fz',]
+                          }
+
+        frames, num_frames = check_for_archive_images(request_id, obstype)
+
+        self.assertEqual(2, num_frames)
+        self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in frames])
+        self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in frames])
+        self.assertEqual(expected_data['files'], [x['filename'] for x in frames])

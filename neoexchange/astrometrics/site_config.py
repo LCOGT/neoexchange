@@ -36,7 +36,7 @@ inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'sinistro_exp_overhead'         : 37.0 + 1.0,      # readout + fixed overhead/exposure
                     'twom_exp_overhead'             : 10.5 + 8.5,          # readout + fixed overhead/exposure
                     'floyds_exp_overhead'           : 25.0 + 0.5,        # readout + fixed overhead/exposure
-                    'floyds_config_change_overhead' : 30.0,
+                    'floyds_config_change_overhead' : 60.0,
                     'floyds_acq_proc_overhead'      : 60.0,
                     'floyds_acq_exp_time'           : 30.0,
                     'floyds_calib_exp_time'         : 60.0
