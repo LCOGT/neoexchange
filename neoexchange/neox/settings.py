@@ -294,7 +294,7 @@ if 'test' in sys.argv:
     DATABASES = { 'default':
         {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'test_db', # Add the name of your SQLite3 database file here.
+        'NAME': 'test.db', # Add the name of your SQLite3 database file here.
         },
     }
 
