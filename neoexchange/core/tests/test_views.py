@@ -3732,6 +3732,7 @@ class TestCreateStaticSource(TestCase):
         test_flux_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
         self.test_flux_standards = fetch_flux_standards(test_flux_page)
+
         test_solar_standards = os.path.join('photometrics', 'data', 'Solar_Standards')
         self.test_solar_analogs = read_solar_standards(test_solar_standards)
 
@@ -3823,3 +3824,107 @@ class TestFindBestFluxStandard(TestCase):
                 self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
             else:
                 self.assertEqual(expected_params[key], close_params[key])
+
+class TestFindBestSolarAnalog(TestCase):
+
+    def setUp(self):
+
+        self.maxDiff = None
+        self.precision = 8
+
+    @classmethod
+    def setUpTestData(cls):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        cls.flux_standards = fetch_flux_standards(test_flux_page)
+        cls.num_flux_created = create_calib_sources(cls.flux_standards)
+
+        test_file = os.path.join('photometrics', 'data', 'Solar_Standards')
+        cls.test_solar_analogs = read_solar_standards(test_file)
+        cls.num_solar_created = create_calib_sources(cls.test_solar_analogs, cal_type=StaticSource.SOLAR_STANDARD)
+        params = {
+                 'name': '1093',
+                 'origin': 'M',
+                 'source_type': 'A',
+                 'elements_type': 'MPC_MINOR_PLANET',
+                 'epochofel': datetime(2018, 3, 23, 0, 0),
+                 'orbinc': 25.21507,
+                 'longascnode': 55.63599,
+                 'argofperih': 251.40338,
+                 'eccentricity': 0.2712664,
+                 'meandist': 3.1289388,
+                 'meananom': 211.36057,
+                 'abs_mag': 8.83,
+                 'slope': 0.15,
+                 'num_obs': 2187,
+                }
+        cls.test_body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def test_ingest(self):
+        calib_sources = StaticSource.objects.all()
+        flux_standards = calib_sources.filter(source_type=StaticSource.FLUX_STANDARD)
+        solar_standards = calib_sources.filter(source_type=StaticSource.SOLAR_STANDARD)
+
+        self.assertEqual(self.num_flux_created+self.num_solar_created, calib_sources.count())
+        self.assertEqual(self.num_flux_created, flux_standards.count())
+        self.assertEqual(self.num_solar_created, solar_standards.count())
+
+    def test_FTN(self):
+        expected_ra = 2.7772337523336565
+        expected_dec = 0.6247970652631909
+        expected_standard = StaticSource.objects.get(name='BS 4486')
+        expected_params = { 'separation_deg' : 15.019200095965104}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+
+        utc_date = datetime(2017, 11, 15, 14, 0, 0)
+        emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
+        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
+        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp[1], emp[2])
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_deg' in key or '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+    def test_FTS(self):
+        expected_ra = 4.334041503242261
+        expected_dec = -0.3877173805762358
+        expected_standard = StaticSource.objects.get(name='Landolt SA107-684')
+        expected_params = { 'separation_deg' : 25.925272337905568}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+
+        utc_date = datetime(2014, 4, 20, 13, 30, 0)
+        emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
+        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
+        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp[1], emp[2])
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_deg' in key or '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+    def test_FTS_no_match(self):
+        expected_ra = 5.840671145434903
+        expected_dec = -0.9524603478856751
+        expected_standard = None
+        expected_params = {}
+
+        utc_date = datetime(2020, 9, 5, 13, 30, 0)
+        emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
+        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
+        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp[1], emp[2], min_sep=45.0)
+
+        self.assertEqual(expected_standard, close_standard)
+        self.assertEqual(expected_params, close_params)

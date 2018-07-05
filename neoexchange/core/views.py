@@ -2102,8 +2102,8 @@ def create_calib_sources(calib_sources, cal_type=StaticSource.FLUX_STANDARD):
     return num_created
 
 def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards=None, debug=False):
-    """Finds the "best (closest to the zenith at the middle of the night (given
-    by [utc_date]; defaults to UTC "now") for the passed <sitecode>
+    """Finds the "best" flux standard (closest to the zenith at the middle of
+    the night (given by [utc_date]; defaults to UTC "now") for the passed <sitecode>
     [flux_standards] is expected to be a dictionary of standards with the keys as the
     name of the standards and pointing to a dictionary with the details. This is
     normally produced by sources_subs.fetch_flux_standards(); which will be
@@ -2141,4 +2141,29 @@ def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards
                 close_standard = standard
         close_params = model_to_dict(close_standard)
         close_params['separation_rad'] = min_sep
+    return close_standard, close_params
+
+def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=None, debug=False):
+    """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
+    from e.g. compute_ephem)) within [min_sep] degrees (defaults to 60deg (=4 hours
+    of HA).
+    If a match is found, the StaticSource object is returned along with a
+    dictionary of parameters, including the additional 'seperation_deg' with the
+    minimum separation found (in degrees)"""
+
+    close_standard = None
+    close_params = {}
+    if solar_standards is None:
+        solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
+
+    for standard in solar_standards:
+        sep = degrees(S.sla_dsep(radians(standard.ra), radians(standard.dec), ra_rad, dec_rad))
+        if debug:
+            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, min_sep, close_standard))
+        if sep < min_sep:
+            min_sep = sep
+            close_standard = standard
+    if close_standard is not None:
+        close_params = model_to_dict(close_standard)
+        close_params['separation_deg'] = min_sep
     return close_standard, close_params
