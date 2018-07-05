@@ -23,9 +23,6 @@
                     <thead>
                         <tr>
                             <th class="list_title">
-                                <span class="sortable" id="calibsource_id">Source #</span>
-                            </th>
-                            <th class="list_title">
                                 <span class="sortable" id="name_id">Name</span>
                             </th>
                             <th>
@@ -48,7 +45,6 @@
                     <tbody>
                     {% for src in calibsources %}
                         <tr>
-                            <td>{{forloop.counter}}</td>
                             <td>{{src.name}}</td>
                             <td>{{src.ra|degreestohms:":"}}</td>
                             <td>{{src.dec|degreestodms:":"}}</td>

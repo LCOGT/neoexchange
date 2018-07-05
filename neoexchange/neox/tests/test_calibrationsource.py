@@ -88,11 +88,11 @@ class TestCalibrationSources(FunctionalTest):
 
         # He notices there are several calibration sources that are listed
         self.check_for_header_in_table('id_calibsources',
-            'Source # Name R.A. Dec. V Mag. Spectral Type Source Type')
-        testlines = ['1 HR9087 00:01:49.42 -03:01:39.0 5.12 B7III Spectrophotometric standard',
-                     '2 CD-34d241 00:41:46.92 -33:39:08.5 11.23 F Spectrophotometric standard',
-                     '3 LTT2415 05:56:24.30 -27:51:28.8 12.21 None Spectrophotometric standard',
-                     '4 Landolt SA98-978 06:51:34.00 -00:11:33.0 10.50 G2V Solar spectrum standard' ]
+            'Name R.A. Dec. V Mag. Spectral Type Source Type')
+        testlines = ['HR9087 00:01:49.42 -03:01:39.0 5.12 B7III Spectrophotometric standard',
+                     'CD-34d241 00:41:46.92 -33:39:08.5 11.23 F Spectrophotometric standard',
+                     'LTT2415 05:56:24.30 -27:51:28.8 12.21 None Spectrophotometric standard',
+                     'Landolt SA98-978 06:51:34.00 -00:11:33.0 10.50 G2V Solar spectrum standard' ]
         self.check_for_row_in_table('id_calibsources', testlines[0])
         self.check_for_row_in_table('id_calibsources', testlines[1])
         self.check_for_row_in_table('id_calibsources', testlines[2])
