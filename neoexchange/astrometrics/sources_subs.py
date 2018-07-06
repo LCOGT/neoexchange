@@ -1309,6 +1309,22 @@ def make_single(params, ipp_value, request):
     return user_request
 
 
+def make_many(params, ipp_value, request, cal_request):
+    """Create a user_request for a MANY observation of the asteroid
+    target (<request>) and calibration source (<cal_request>)"""
+
+    user_request = {
+                    'submitter' : params['user_id'],
+                    'requests'  : [request, cal_request],
+                    'group_id'  : params['group_id'],
+                    'observation_type': "NORMAL",
+                    'operator'  : "MANY",
+                    'ipp_value' : ipp_value,
+                    'proposal'  : params['proposal_id']
+    }
+
+    return user_request
+
 def make_proposal(params):
     proposal = { 
                  'proposal_id' : params['proposal_id'],
@@ -1429,6 +1445,7 @@ def configure_defaults(params):
             params['exp_type'] = 'SPECTRUM'
             params['instrument'] = '2M0-FLOYDS-SCICAM'
             params['binning'] = 1
+            params['calibsrc_exptime'] = 60.0
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_2.0as'
@@ -1486,6 +1503,28 @@ def make_userrequest(elements, params):
             "windows": [window],
             "observation_note": note,
         }
+    if params['solar_analog'] and len(params['calibsource']) > 0:
+        # Assemble solar analog request
+        params['group_id'] += "+solstd"
+        params['source_id'] = params['calibsource']['name']
+        params['ra_deg'] = params['calibsource']['ra_deg']
+        params['dec_deg'] = params['calibsource']['dec_deg']
+        cal_target = make_target(params)
+        exp_time = params['exp_time']
+        params['exp_time'] = params['calibsrc_exptime']
+        cal_molecule_list = make_molecules(params)
+        params['exp_time'] = exp_time
+
+        cal_request = {
+                        "location": location,
+                        "constraints": constraints,
+                        "target": cal_target,
+                        "molecules": cal_molecule_list,
+                        "windows": [window],
+                        "observation_note": note,
+                    }
+    else:
+        cal_request = {}
 
 # If site is ELP, increase IPP value
     ipp_value = 1.05
@@ -1495,6 +1534,8 @@ def make_userrequest(elements, params):
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
         user_request = make_cadence(elements, params, ipp_value, request)
+    elif len(cal_request) > 0:
+        user_request = make_many(params, ipp_value, request, cal_request)
     else:
         user_request = make_single(params, ipp_value, request)
 

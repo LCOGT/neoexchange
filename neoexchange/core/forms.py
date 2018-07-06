@@ -152,6 +152,8 @@ class ScheduleBlockForm(forms.Form):
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
+    solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
+    calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']

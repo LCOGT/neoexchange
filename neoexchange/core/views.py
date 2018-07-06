@@ -676,6 +676,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     dark_end = min(dark_end, semester_end)
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
+
+    solar_analog_id = -1
     solar_analog_params = {}
     if type(body) == Body:
         emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
@@ -691,6 +693,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             # of block
             close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec)
             if close_solarstd is not None:
+                solar_analog_id = close_solarstd.id
                 solar_analog_params = close_solarstd_params
     else:
         magnitude = body.vmag
@@ -806,7 +809,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'calibs' : data.get('calibs', ''),
         'instrument_code' : data['instrument_code'],
         'solar_analog' : solar_analog,
-        'calibsource' : solar_analog_params
+        'calibsource' : solar_analog_params,
+        'calibsource_id' : solar_analog_id
     }
 
     if period and jitter:
@@ -827,6 +831,22 @@ def schedule_submit(data, body, username):
         body_elements['epochofel_mjd'] = body.epochofel_mjd()
         body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
         body_elements['current_name'] = body.current_name()
+    # If we have a solar analog requested, retrieve corresponding StaticSource
+    # object and assemble paramaters
+    calibsource_params = {}
+    if data.get('solar_analog', False) and data.get('calibsource_id', -1) > 0:
+        try:
+            calibsource = StaticSource.objects.get(pk=data['calibsource_id'])
+            calibsource_params = {  'id'      : calibsource.pk,
+                                    'name'    : calibsource.name,
+                                    'ra_deg'  : calibsource.ra,
+                                    'dec_deg' : calibsource.dec,
+                                    'pm_ra'   : calibsource.pm_ra,
+                                    'pm_dec'  : calibsource.pm_dec,
+                                    'parallax': calibsource.parallax
+                                 }
+        except StaticSource.DoesNotExist:
+            logger.error("Was passed a StaticSource id=%d, but it NOW can't be found" % data['calibsource_id'])
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
@@ -850,7 +870,9 @@ def schedule_submit(data, body, username):
 
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
-              'instrument_code' : data['instrument_code']
+              'instrument_code' : data['instrument_code'],
+              'solar_analog' : data.get('solar_analog', False),
+              'calibsource' : calibsource_params
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
