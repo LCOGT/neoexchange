@@ -1318,6 +1318,7 @@ def make_molecules(params):
     calib_mode = params.get('calibs', 'none').lower()
     if params.get('spectroscopy', False) is True:
         # Spectroscopy mode
+        params['spectra_slit'] = params['filter_pattern']
         spectrum_molecule = make_molecule(params, filt_list[0])
         if calib_mode != 'none':
             old_type = params['exp_type']
