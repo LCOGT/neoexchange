@@ -382,6 +382,9 @@ class TestSubmitBlockToScheduler(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
+        self.body_elements = model_to_dict(self.body)
+        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        self.body_elements['current_name'] = self.body.current_name()
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
@@ -394,9 +397,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
         mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820}]}
 
-        body_elements = model_to_dict(self.body)
-        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        body_elements['current_name'] = self.body.current_name()
         site_code = 'K92'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -407,11 +407,11 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson'
                  }
 
-        resp, sched_params = submit_block_to_scheduler(body_elements, params)
+        resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
         self.assertEqual(resp, '999')
 
         # store block
@@ -436,9 +436,6 @@ class TestSubmitBlockToScheduler(TestCase):
                                                                                {'id': '222', 'duration' : 1820},
                                                                                {'id': '333', 'duration' : 1820}]}
 
-        body_elements = model_to_dict(self.body)
-        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        body_elements['current_name'] = self.body.current_name()
         site_code = 'V38'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -449,12 +446,12 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'period'    : 2.0,
                     'jitter'    : 0.25
                  }
-        tracking_num, sched_params = submit_block_to_scheduler(body_elements, params)
+        tracking_num, sched_params = submit_block_to_scheduler(self.body_elements, params)
 
         # store Blocks
         data = params
@@ -473,9 +470,7 @@ class TestSubmitBlockToScheduler(TestCase):
                 self.assertNotEqual(block.block_end, block.superblock.block_end)
 
     def test_make_userrequest(self):
-        body_elements = model_to_dict(self.body)
-        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        body_elements['current_name'] = self.body.current_name()
+
         site_code = 'K92'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -485,12 +480,12 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
 
-        user_request = make_userrequest(body_elements, params)
+        user_request = make_userrequest(self.body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
@@ -498,9 +493,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_1m_sinistro_lsc_doma_userrequest(self):
 
-        body_elements = model_to_dict(self.body)
-        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        body_elements['current_name'] = self.body.current_name()
         site_code = 'W85'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -510,12 +502,12 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
 
-        user_request = make_userrequest(body_elements, params)
+        user_request = make_userrequest(self.body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
@@ -525,9 +517,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_multi_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -537,12 +526,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,I'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 9
             expected_exp_count = 2
@@ -554,9 +543,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_uneven_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -566,12 +552,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,I'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 13
             expected_exp_count = 1
@@ -583,9 +569,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_single_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -595,12 +578,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 1
             expected_exp_count = 18
@@ -612,9 +595,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_overlap_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -624,12 +604,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,I,V'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 8
             expected_exp_count = 3
@@ -641,9 +621,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_overlap_nooverlap_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -653,12 +630,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,I,V'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 10
             expected_exp_count = 1
@@ -670,9 +647,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_partial_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -682,12 +656,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 3
             expected_exp_count = 4
@@ -699,9 +673,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_partial_overlap_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -711,12 +682,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,V'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 8
             expected_exp_count = 3
