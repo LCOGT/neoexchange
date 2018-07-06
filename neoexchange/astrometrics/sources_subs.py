@@ -1445,7 +1445,8 @@ def configure_defaults(params):
             params['exp_type'] = 'SPECTRUM'
             params['instrument'] = '2M0-FLOYDS-SCICAM'
             params['binning'] = 1
-            params['calibsrc_exptime'] = 60.0
+            if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
+                params['calibsrc_exptime'] = 60.0
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_2.0as'
@@ -1503,7 +1504,7 @@ def make_userrequest(elements, params):
             "windows": [window],
             "observation_note": note,
         }
-    if params['solar_analog'] and len(params['calibsource']) > 0:
+    if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
         # Assemble solar analog request
         params['group_id'] += "+solstd"
         params['source_id'] = params['calibsource']['name']
@@ -1979,7 +1980,7 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
                         notes = info[2].decode('utf-8', 'ignore')
                     if ra and dec and mag and ((notes != 'Mod.' and filter_optical_model is True) or filter_optical_model is False):
                         flux_standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec,
-                            'mag' : mag, 'spec_type' : spec_type, 'notes' : notes}
+                            'mag' : mag, 'spectral_type' : spec_type, 'notes' : notes}
         else:
             logger.warning("Unable to find table of flux standards in page")
     else:
@@ -2005,5 +2006,5 @@ def read_solar_standards(standards_file):
         if status != 0:
             dec = None
         Vmag = row['Vmag']
-        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : Vmag, 'spec_type' : 'G2V' }
+        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : Vmag, 'spectral_type' : 'G2V' }
     return standards
