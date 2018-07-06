@@ -638,6 +638,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 def schedule_check(data, body, ok_to_schedule=True):
 
     spectroscopy = data.get('spectroscopy', False)
+    solar_analog = data.get('solar_analog', False)
     body_elements = model_to_dict(body)
 
     if spectroscopy:
@@ -675,6 +676,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     dark_end = min(dark_end, semester_end)
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
+    solar_analog_params = {}
     if type(body) == Body:
         emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
             dbg=False, perturb=False, display=False)
@@ -684,6 +686,12 @@ def schedule_check(data, body, ok_to_schedule=True):
         dec = emp[2]
         magnitude = emp[3]
         speed = emp[4]
+        if spectroscopy and solar_analog:
+            # Try and find a suitable solar analog "close" to RA, Dec midpoint
+            # of block
+            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec)
+            if close_solarstd is not None:
+                solar_analog_params = close_solarstd_params
     else:
         magnitude = body.vmag
         speed = 0.0
@@ -796,7 +804,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'snr' : snr,
         'spectroscopy' : spectroscopy,
         'calibs' : data.get('calibs', ''),
-        'instrument_code' : data['instrument_code']
+        'instrument_code' : data['instrument_code'],
+        'solar_analog' : solar_analog,
+        'calibsource' : solar_analog_params
     }
 
     if period and jitter:
