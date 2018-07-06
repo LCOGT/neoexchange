@@ -799,6 +799,14 @@ class TestSchedule_Check(TestCase):
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
+        src_params = {  'name' : 'SA42-999',
+                        'ra'   : 200.0,
+                        'dec'  : -15.0,
+                        'vmag' : 9.0,
+                        'spectral_type' : "G2V",
+                        'source_type' : StaticSource.SOLAR_STANDARD
+                     }
+        self.solar_analog, created = StaticSource.objects.get_or_create(pk=1, **src_params)
         self.maxDiff = None
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -836,7 +844,111 @@ class TestSchedule_Check(TestCase):
                         'instrument_code' : '',
                         'snr' : None,
                         'calibs' : '',
-                        'spectroscopy' : False
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_good_spectro(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'instrument_code' : 'E10-FLOYDS',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'spectroscopy' : True,
+                 'calibs' : 'both',
+                 'exp_length' : 300.0,
+                 'exp_count' : 1
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.09944174338544,
+                        'speed': 2.901293748154893,
+                        'slot_length': 23,
+                        'filter_pattern': 'slit_6.0as',
+                        'pattern_iterations': 1.0,
+                        'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
+                        'exp_count': 1,
+                        'exp_length': 300.0,
+                        'schedule_ok': True,
+                        'site_code': data['instrument_code'][0:3],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T19:10:00',
+                        'mid_time': '2016-04-06T14:05:00',
+                        'ra_midpoint': 3.31224872619019,
+                        'dec_midpoint': -0.16054985464643165,
+                        'period' : None,
+                        'jitter' : None,
+                        'instrument_code' : 'E10-FLOYDS',
+                        'snr' : 3.2107142545718275,
+                        'calibs' : 'both',
+                        'spectroscopy' : True,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_good_spectro_solar_analog(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'instrument_code' : 'E10-FLOYDS',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'spectroscopy' : True,
+                 'calibs' : 'both',
+                 'exp_length' : 300.0,
+                 'exp_count' : 1,
+                 'solar_analog' : True
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.09944174338544,
+                        'speed': 2.901293748154893,
+                        'slot_length': 23,
+                        'filter_pattern': 'slit_6.0as',
+                        'pattern_iterations': 1.0,
+                        'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
+                        'exp_count': 1,
+                        'exp_length': 300.0,
+                        'schedule_ok': True,
+                        'site_code': data['instrument_code'][0:3],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T19:10:00',
+                        'mid_time': '2016-04-06T14:05:00',
+                        'ra_midpoint': 3.31224872619019,
+                        'dec_midpoint': -0.16054985464643165,
+                        'period' : None,
+                        'jitter' : None,
+                        'instrument_code' : 'E10-FLOYDS',
+                        'snr' : 3.2107142545718275,
+                        'calibs' : 'both',
+                        'spectroscopy' : True,
+                        'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
+                        'calibsource_id' : 1,
+                        'solar_analog' : True
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -887,7 +999,10 @@ class TestSchedule_Check(TestCase):
                         'instrument_code' : '',
                         'snr' : None,
                         'calibs' : '',
-                        'spectroscopy' : False
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -936,7 +1051,10 @@ class TestSchedule_Check(TestCase):
                         'instrument_code' : '',
                         'snr' : None,
                         'calibs' : '',
-                        'spectroscopy' : False
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
