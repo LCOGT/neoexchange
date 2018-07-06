@@ -221,6 +221,7 @@ class ScheduleSpectraForm(forms.Form):
     exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
     exp_length = forms.FloatField(initial=1800.0, required=True)
     calibs = forms.ChoiceField(required=True, choices=CALIBS)
+    solar_analog = forms.BooleanField(initial=True, required=False)
     spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
 
     def clean_utc_date(self):
