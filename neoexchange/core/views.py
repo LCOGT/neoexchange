@@ -2124,9 +2124,9 @@ def create_calib_sources(calib_sources, cal_type=StaticSource.FLUX_STANDARD):
                     'ra'  : degrees(calib_sources[standard]['ra_rad']),
                     'dec' : degrees(calib_sources[standard]['dec_rad']),
                     'vmag' : calib_sources[standard]['mag'],
-                    'spectral_type' : calib_sources[standard].get('spectral_type', None),
+                    'spectral_type' : calib_sources[standard].get('spectral_type', ''),
                     'source_type' : cal_type,
-                    'notes' : calib_sources[standard].get('notes', None)
+                    'notes' : calib_sources[standard].get('notes', '')
                  }
         calib_source, created = StaticSource.objects.get_or_create(**params)
         if created:

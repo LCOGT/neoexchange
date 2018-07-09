@@ -1973,10 +1973,10 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
                             mag = float(info[0])
                         except ValueError:
                             mag = None
-                    spec_type = None
+                    spec_type = ''
                     if len(info) >= 2:
                         spec_type = info[1].decode('utf-8', 'ignore')
-                    notes = None
+                    notes = ''
                     if len(info) == 3:
                         notes = info[2].decode('utf-8', 'ignore')
                     if ra and dec and mag and ((notes != 'Mod.' and filter_optical_model is True) or filter_optical_model is False):
