@@ -1410,16 +1410,17 @@ def configure_defaults(params):
                   'Q58' : 'COJ',  # Code for 0m4a
                   'Q59' : 'COJ',
                   'V38' : 'ELP',
-                  'L09' : 'CPT'}  # Code for 0m4a
+                  'L09' : 'CPT', }  # Code for 0m4a
 
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
-    params['site'] = site_list[params['site_code']]
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['exp_type'] = 'EXPOSE'
+    if params['site_code'] in site_list:
+        params['site'] = site_list[params['site_code']]
 
-    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] == 'F65' or params['site_code'] == 'E10' or params['site_code'] == '2m0':
         params['instrument'] = '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
@@ -1430,7 +1431,7 @@ def configure_defaults(params):
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_2.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
+    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0m4']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
