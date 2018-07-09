@@ -36,7 +36,10 @@ SITES = (('V37', 'McDonald, Texas (ELP - V37; Sinistro)'),
          ('T04', 'Maui, Hawaii (OGG - T03-04; 0.4m)'),
          ('W89', 'CTIO, Chile (LSC - W89,W79; 0.4m)'),
          ('V38', 'McDonald, Texas (ELP - V38; 0.4m)'),
-         ('L09', 'Sutherland, S. Africa (CPT - L09; 0.4m)'))
+         ('L09', 'Sutherland, S. Africa (CPT - L09; 0.4m)'),
+         ('0m4', 'Any available 0.4m SBIG imager'),
+         ('1m0', 'Any available 1.0m Sinistro imager'),
+         ('2m0', 'Any available 2.0m Spectral imager'))
 
 
 SPECTRO_SITES = (('F65-FLOYDS', 'Maui, Hawaii (FTN - F65)'),
@@ -56,7 +59,7 @@ class EphemQuery(forms.Form):
 
     target = forms.CharField(label="Enter target name...", max_length=14, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                              error_messages={'required': _(u'Target name is required')})
-    site_code = forms.ChoiceField(required=True, choices=SITES)
+    site_code = forms.ChoiceField(required=True, choices=SITES[:-3])
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], initial=date.today, required=True, widget=forms.TextInput(attrs={'size': '10'}),
                                error_messages={'required': _(u'UTC date is required')})
     alt_limit = forms.FloatField(initial=30.0, required=True, widget=forms.TextInput(attrs={'size': '4'}))
