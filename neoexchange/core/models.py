@@ -1205,3 +1205,54 @@ class PanoptesReport(models.Model):
 
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
+
+
+@python_2_unicode_compatible
+class StaticSource(models.Model):
+    """
+    Class for static (sidereal) sources, normally calibration sources (solar
+    standards, RV standards, flux standards etc)
+    """
+    UNKNOWN_SOURCE = 0
+    FLUX_STANDARD = 1
+    RV_STANDARD = 2
+    SOLAR_STANDARD = 4
+    SPECTRAL_STANDARD = 8
+    SOURCETYPE_CHOICES = [
+                            (UNKNOWN_SOURCE, 'Unknown source type'),
+                            (FLUX_STANDARD, 'Spectrophotometric standard'),
+                            (RV_STANDARD, 'Radial velocity standard'),
+                            (SOLAR_STANDARD, 'Solar spectrum standard'),
+                            (SPECTRAL_STANDARD, 'Spectral standard')
+                         ]
+
+    name = models.CharField('Name of calibration source', max_length=55)
+    ra = models.FloatField('RA of source (degrees)')
+    dec = models.FloatField('Dec of source (degrees)')
+    pm_ra = models.FloatField('Proper motion in RA of source (pmra*cos(dec); mas/yr)', default=0.0)
+    pm_dec = models.FloatField('Proper motion in Dec of source (mas/yr)', default=0.0)
+    parallax = models.FloatField('Parallax (mas)', default=0.0)
+    vmag = models.FloatField('V magnitude')
+    spectral_type = models.CharField('Spectral type of source', max_length=10, blank=True)
+    source_type = models.IntegerField('Source Type', null=False, blank=False, default=0, choices=SOURCETYPE_CHOICES)
+    notes = models.TextField(blank=True)
+    quality = models.SmallIntegerField('Source quality', default=0, blank=True, null=True)
+    reference = models.CharField('Reference for the source', max_length=255, blank=True)
+
+    def return_source_type(self):
+        srctype_name = "Undefined type"
+        srctype = [x[1] for x in self.SOURCETYPE_CHOICES if x[0] == self.source_type]
+        if len(srctype) == 1:
+            srctype_name = srctype[0]
+        return srctype_name
+
+    def current_name(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _('Static Source')
+        verbose_name_plural = _('Static Sources')
+        db_table = 'ingest_staticsource'
+
+    def __str__(self):
+        return "{} ({})".format(self.name, self.return_source_type())
