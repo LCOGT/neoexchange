@@ -588,6 +588,16 @@ def determine_darkness_times(site_code, utc_date=datetime.utcnow(), debug=False)
         utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
     except TypeError:
         utc_date = datetime.combine(utc_date, time())
+    # For general telescope classes, return 24 hour block as
+    if site_code == '1m0' or site_code == '2m0' or site_code == '0m4':
+        utc_date = utc_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        now = datetime.utcnow().replace(second=0, microsecond=0)
+        if utc_date < now:
+            start_time = now
+        else:
+            start_time = utc_date
+        end_time = start_time + timedelta(days=1)
+        return start_time, end_time
     (start_of_darkness, end_of_darkness) = astro_darkness(site_code, utc_date)
     end_of_darkness = end_of_darkness+timedelta(hours=1)
     logger.debug("Start,End of darkness=%s %s", start_of_darkness, end_of_darkness)
