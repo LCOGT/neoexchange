@@ -757,11 +757,11 @@ def get_mag_mapping(site_code):
     slot length (in minutes) assuming minimum exposure count is 4. A null
     dictionary is returned if the site name isn't recognized"""
 
-    twom_site_codes = ['F65', 'E10']
-    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
+    twom_site_codes = ['F65', 'E10', '2M0']
+    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', '1M0']
     # COJ normally has bad seeing, allow more time
     bad_onem_site_codes = ['Q63', 'Q64']
-    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09']
+    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', '0M4']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
@@ -833,8 +833,10 @@ def determine_slot_length(mag, site_code, debug=False):
 
 # Obtain magnitude->slot length mapping dictionary
     mag_mapping = get_mag_mapping(site_code)
-    if debug: print(mag_mapping)
-    if mag_mapping == {}: return 0
+    if debug:
+        print(mag_mapping)
+    if mag_mapping == {}:
+        return 0
 
     # Derive your tuple from the magnitude->slot length mapping data structure
     upper_mags = tuple(sorted(mag_mapping.keys()))
@@ -1410,14 +1412,17 @@ def get_sitecam_params(site):
     valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']
 
     site = site.upper()
-    if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
-        site_code = 'F65'
+    if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65' or site == '2m0':
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
         pixel_scale = cfg.tel_field['twom_pixscale']
         fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['twom_alt_limit']
+        if site == '2M0':
+            site_code = site
+        else:
+            site_code = 'F65'
     elif site == 'FTS' or 'COJ-CLMA-2M0' in site or site == 'E10':
         site_code = 'E10'
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
@@ -1440,7 +1445,7 @@ def get_sitecam_params(site):
                            'per_molecule_time' : cfg.molecule_overhead['per_molecule_time'],
                            'calib_exposure_time' : cfg.inst_overhead['floyds_calib_exp_time']
                          }
-    elif site in valid_point4m_codes:
+    elif site in valid_point4m_codes or site == '0M4':
         site_code = site
         setup_overhead = cfg.tel_overhead['point4m_setup_overhead']
         exp_overhead = cfg.inst_overhead['point4m_exp_overhead']
@@ -1448,7 +1453,7 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(cfg.tel_field['point4m_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['point4m_alt_limit']
-    elif site in valid_site_codes:
+    elif site in valid_site_codes or site == '1M0':
         setup_overhead = cfg.tel_overhead['onem_setup_overhead']
         exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
         pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
