@@ -35,6 +35,9 @@ def check_norm(values): #not perfect nor finished yet
 def check_refl(x,y): #TEMPORARY CHECK
     if x[y.argmax()] > 6000*u.AA:
         print("Normalized Reflectance")
+        return True
+    else
+        return False
 
 def get_x_units(x_data):
     """finds wavelength units from x_data
@@ -68,11 +71,11 @@ def get_y_units(info):
     #I know erg isn't the full unit, but it's a good indicator.
     norm_id = ["NORM", "UNITLESS", "NONE"] #IDs to look for normalizations with
     refl_id = ["REFLECT"] #IDs to look for normalized reflectance
- 
+
     if isinstance(info, float): #from .txt file (assuming normalized reflectance)
         y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).unit.decompose())
         print("y_units: ",y_units)
-        
+
     elif isinstance(info, collections.OrderedDict): #from .ascii
         col_head = list(info.values())[0][0]
         if any(unit_id in col_head.upper() for unit_id in flux_id): #checking for flam
@@ -169,7 +172,7 @@ def read_spectra(spectra_file):
             raise ImportError("Could not read data from .fits file")
         
         obj_name = read_object(hdr)
-       
+        
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(hdr)
         check_norm(hdul[0].header.values()) #check if data is already normalized
@@ -198,7 +201,7 @@ def read_spectra(spectra_file):
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(y_data[0])
         obj_name = "" #TEMPORARY 
-        
+
     else:
         raise ImportError("Invalid input file type")
 
@@ -233,8 +236,8 @@ def smooth(x,y):
         stds = np.append(stds,np.std(normy[loc-5:loc]).value)
         loc += int(len(x)/8)
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
-    print(noisiness)
-
+    print("noisiness: ", noisiness)
+    
     if .0035 <= noisiness < .005:
         window = 15
     elif .005 <= noisiness < .01:
@@ -260,7 +263,7 @@ def normalize(x,y,wavelength=5500*u.AA):
     if normval == 0:
         normval = 1
     return y/normval #REMEMBER to normalize y-units too
-    
+
 def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
@@ -270,7 +273,7 @@ def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
                [ref]: 1 for sol_ref, 0 for asteroid
                [norm]: normalizes data when set to 1
     """
-    
+
     if norm == 1:
         yyy = normalize(x,y)
     else:
@@ -291,15 +294,15 @@ if __name__== "__main__":
 
     #path = '/home/adam/test_spectra/' #will make m9ore general file passing later
     path = '/home/atedeschi/test_spectra/'
-    #spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
+    spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
     #spectra = '1627/20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
     #spectra = '60/ntt60_ftn_20180612_merge_2.0_58282_1_2df_ex.fits'
     #spectra = '16/ntt16_ftn_20180606_merge_2.0_58276_1_2df_ex.fits'
     #spectra = 'calspec/eros_visnir_reference_to1um.ascii'
     #spectra = 'calspec/alpha_lyr_stis_008.fits' #vega?
     #spectra = 'calspec/bd17d4708_stis_001.fits'        
-    spectra = 'a001981.4.txt'
-    
+    #spectra = 'a001981.4.txt'
+
     #sol_ref = 'calspec/sun_mod_001.fits'
     sol_ref = 'Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
     #sol_ref =  'solar_standard_V2.fits'
