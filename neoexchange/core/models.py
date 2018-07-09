@@ -1186,9 +1186,11 @@ class StaticSource(models.Model):
     pm_dec = models.FloatField('Proper motion in Dec of source (mas/yr)', default=0.0)
     parallax = models.FloatField('Parallax (mas)', default=0.0)
     vmag = models.FloatField('V magnitude')
-    spectral_type = models.CharField('Spectral type of source', max_length=10, blank=True, null=True)
+    spectral_type = models.CharField('Spectral type of source', max_length=10, blank=True)
     source_type = models.IntegerField('Source Type', null=False, blank=False, default=0, choices=SOURCETYPE_CHOICES)
-    notes = models.TextField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    quality = models.SmallIntegerField('Source quality', default=0, blank=True, null=True)
+    reference = models.CharField('Reference for the source', max_length=255, blank=True)
 
     def return_source_type(self):
         srctype_name = "Undefined type"
