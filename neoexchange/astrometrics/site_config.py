@@ -69,6 +69,12 @@ valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
 # Reverse site code dictionary
 valid_telescope_codes = {v: k for k, v in valid_site_codes.items()}
 
+# Camera types
+valid_camera_types = {'0m4' : '0m4-SciCam-SBIG',
+                      '1m0' : '1m0-SciCam-Sinistro',
+                      '2m0' : '2m0-SciCam-Spectral',
+                      '0m8' : '0m8-SciCam-SBIG'}
+
 # Establish Filter Lists
 phot_filters = [    "air",
                     "clear",

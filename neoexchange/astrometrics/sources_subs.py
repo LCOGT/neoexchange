@@ -1581,6 +1581,10 @@ def parse_filter_file(site, spec, camera_list=None):
         filter_list = cfg.spec_filters
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
+    try:
+        camera_type = cfg.valid_camera_types[site]
+    except KeyError:
+        camera_type = ''
 
     camera_list = str(camera_list).split("\n")
     site_filters = []
@@ -1589,7 +1593,7 @@ def parse_filter_file(site, spec, camera_list=None):
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if len(chunks) == 13:
-                if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
+                if (chunks[0] == siteid and chunks[2][:-1] == telid[:-1]) or chunks[4] == camera_type:
                     filt_list = chunks[12].split(',')
                     for filt in filter_list:
                         if filt in filt_list and filt not in site_filters:
