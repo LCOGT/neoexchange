@@ -599,6 +599,14 @@ class Block(models.Model):
     reported        = models.BooleanField(default=False)
     when_reported   = models.DateTimeField(null=True, blank=True)
 
+    def current_name(self):
+        name = ''
+        if self.body is not None:
+            name = self.body.current_name()
+        elif self.calibsource is not None:
+            name = self.calibsource.name
+        return name
+
     def make_obsblock_link(self):
         url = ''
         # XXX Change to request number and point at requests endpoint (https://observe.lco.global/requests/<request no.>/
