@@ -81,7 +81,12 @@ class BlockAdmin(VersionAdmin):
     sent_to_zoo.boolean = True
 
     def body_name(self, obj):
-        return obj.body.current_name()
+        name = ''
+        if obj.body is not None:
+            name = obj.body.current_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
 
     list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported', 'zoo_friendly', 'sent_to_zoo')
     list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
