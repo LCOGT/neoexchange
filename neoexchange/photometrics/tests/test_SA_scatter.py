@@ -36,12 +36,20 @@ class Test_readCoords(TestCase):
         self.assertEqual(expected_coord.ra, coords[0].ra)
         self.assertEqual(expected_coord.dec, coords[0].dec)
 
+class Test_Plotting(TestCase):
+    def setUp(self):
+        self.test_gal = Galactic(0*u.deg,0*u.deg).transform_to(coordinates.ICRS)
         
+    def test_first_galcoord(self):
+        expected_object = self.test_gal
+        expected_coord_size = 360
         
-        
-        
-        
-        
-        
-        
-        
+        galcoords = genGalPlane()
+        self.assertEqual(type(expected_object),type(galcoords))
+        self.assertEqual(expected_object.ra,galcoords.ra[0])
+        self.assertEqual(expected_object.dec,galcoords.dec[0])
+        self.assertEqual(expected_coord_size,len(galcoords.ra))
+    
+    def test_plot(self):
+        self.assertEqual(1,1)
+        #How to test plotting?
