@@ -666,7 +666,7 @@ class TestRecordBlock(TestCase):
                               'observatory': '',
                               'pondtelescope': '2m0',
                               'proposal_id': 'LCOEngineering',
-                              'request_numbers': [1450339],
+                              'request_numbers': {1450339: 'NON_SIDEREAL'},
                               'request_windows': [[{'end': '2018-03-16T18:30:00',
                                  'start': '2018-03-16T11:20:00'}]],
                               'site': 'COJ',
@@ -702,7 +702,7 @@ class TestRecordBlock(TestCase):
                               'observatory': '',
                               'pondtelescope': '1m0',
                               'proposal_id': 'LCOEngineering',
-                              'request_numbers': [1440123],
+                              'request_numbers': {1440123: 'NON_SIDEREAL'},
                               'request_windows': [[{'end': '2018-03-16T03:30:00',
                                  'start': '2018-03-15T20:20:00'}]],
                               'site': 'CPT',
@@ -719,6 +719,15 @@ class TestRecordBlock(TestCase):
                             }
         body_params = { 'provisional_name' : 'N999r0q' }
         self.imaging_body = Body.objects.create(**body_params)
+
+        ssource_params = { 'name'   : 'Landolt SA107-684',
+                           'ra'     : 234.325,
+                           'dec'    : -0.164,
+                           'vmag'   : 8.2,
+                           'source_type' : StaticSource.SOLAR_STANDARD,
+                           'spectral_type' : "G2V"
+                         }
+        self.solar_analog = StaticSource.objects.create(**ssource_params)
 
     def test_spectro_block(self):
         block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.spectro_body)
@@ -758,6 +767,53 @@ class TestRecordBlock(TestCase):
         self.assertTrue(self.imaging_tracknum != blocks[0].tracking_number)
         self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
 
+    def test_spectro_and_solar_block(self):
+        new_params =  { 'calibsource' : {  'id': 1,
+                                           'name': 'Landolt SA107-684',
+                                           'ra_deg': 234.325,
+                                           'dec_deg': -0.164,
+                                           'pm_ra': 0.0,
+                                           'pm_dec': 0.0,
+                                           'parallax': 0.0
+                                        },
+                        'calibsrc_exptime' : 60.0,
+                        'dec_deg' : -0.164,
+                        'ra_deg'  : 234.325,
+                        'solar_analog' : True
+                        }
+        spectro_params = {**new_params, **self.spectro_params}
+        spectro_params['group_id'] = self.spectro_params['group_id'] + '+solstd'
+        spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL', 1450340: 'SIDEREAL'}
+        spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}],
+                                            [{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]
+                                           ]
+
+        block_resp = record_block(self.spectro_tracknum, spectro_params, self.spectro_form, self.spectro_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        solar_analogs = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(2, blocks.count())
+        self.assertEqual(Block.OPT_SPECTRA, blocks[0].obstype)
+        self.assertEqual(Block.OPT_SPECTRA, blocks[1].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
+        self.assertFalse(sblocks[0].cadence)
+        self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+
+        self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.spectro_body, blocks[0].body)
+
+        self.assertEqual(solar_analogs[0], blocks[1].calibsource)
+        self.assertEqual(None, blocks[1].body)
+        self.assertEqual(spectro_params['calibsrc_exptime'], blocks[1].exp_length)
 
 class TestSchedule_Check(TestCase):
 

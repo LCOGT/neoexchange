@@ -832,7 +832,7 @@ def schedule_submit(data, body, username):
         body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
         body_elements['current_name'] = body.current_name()
     # If we have a solar analog requested, retrieve corresponding StaticSource
-    # object and assemble paramaters
+    # object and assemble parameters
     calibsource_params = {}
     if data.get('solar_analog', False) and data.get('calibsource_id', -1) > 0:
         try:
@@ -846,7 +846,7 @@ def schedule_submit(data, body, username):
                                     'parallax': calibsource.parallax
                                  }
         except StaticSource.DoesNotExist:
-            logger.error("Was passed a StaticSource id=%d, but it NOW can't be found" % data['calibsource_id'])
+            logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
@@ -1142,7 +1142,7 @@ def record_block(tracking_number, params, form_data, body):
     logger.debug("   params=%s" % params)
     if tracking_number:
         cadence = False
-        if len(params.get('request_numbers', [])) > 1:
+        if len(params.get('request_numbers', [])) > 1 and params.get('period', -1.0) > 0.0 and params.get('jitter', -1.0) > 0.0:
             cadence = True
         sblock_kwargs = {
                          'body'     : body,
@@ -1159,7 +1159,7 @@ def record_block(tracking_number, params, form_data, body):
                        }
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
-        for request in params.get('request_numbers', []):
+        for request, request_type in params.get('request_numbers', {}).items():
             # cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
@@ -1169,17 +1169,28 @@ def record_block(tracking_number, params, form_data, body):
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : params['site'].lower(),
-                             'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'obstype'  : obstype,
-                             'groupid'  : form_data['group_id'],
+                             'groupid'  : params['group_id'],
                              'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
                              'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
                              'tracking_number' : request,
-                             'num_exposures'   : form_data['exp_count'],
-                             'exp_length'      : form_data['exp_length'],
+                             'num_exposures'   : params['exp_count'],
+                             'exp_length'      : params['exp_time'],
                              'active'   : True
                            }
+            if request_type == 'SIDEREAL' and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+                try:
+                    calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
+                except StaticSource.DoesNotExist:
+                    logger.error("Tried to refetch a StaticSource (# %d) which now does not exist" % params['calibsource']['id'])
+                    return False
+                block_kwargs['body'] = None
+                block_kwargs['calibsource'] = calib_source
+                block_kwargs['exp_length'] = params['calibsrc_exptime']
+            else:
+                block_kwargs['body'] = body
+                block_kwargs['calibsource'] = None
             pk = Block.objects.create(**block_kwargs)
             i += 1
         return True
