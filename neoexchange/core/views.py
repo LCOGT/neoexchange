@@ -327,7 +327,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     an issue, None is returned."""
 
     source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
-    dest_dir = dest_dir or tempfile.mkdtemp(prefix = 'tmp_neox_')
+    dest_dir = dest_dir or tempfile.mkdtemp(prefix='tmp_neox_')
     new_ephem = None
 
     filename, num_lines = export_measurements(body_id, dest_dir)
@@ -382,7 +382,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                 except OSError:
                     logger.warning("Error removing temporary test directory", dest_dir)
         else:
-            logger.warning("Unable to export measurements for Body #%s" %  body_id)
+            logger.warning("Unable to export measurements for Body #%s" % body_id)
     else:
         logger.warning("Could not find Body with id #%s" % body_id)
 

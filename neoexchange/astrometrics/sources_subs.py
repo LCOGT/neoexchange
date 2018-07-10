@@ -1527,7 +1527,7 @@ def check_for_perturbation(elements, params):
     # Check if offset is "reasonable"
     # Ignore if too small (won't matter)
     # Ignore if too large (possible error. Should calculate new orbit instead)
-    if 1 < offset < 100:
+    if 1 < offset < 300:
         logger.info("Perturbing Elements")
         comet = False
         if 'elements_type' in elements and str(elements['elements_type']).upper() == 'MPC_COMET':
@@ -1562,14 +1562,16 @@ def check_for_perturbation(elements, params):
 
 def submit_block_to_scheduler(elements, params):
 
+    print("==============================================================================================")
+    print(elements['epochofel'], params['start_time'], abs(elements['epochofel'] - params['start_time']))
     try:
-        if params['spectroscopy'] is not False:
+        if params['spectroscopy'] is not False and abs(elements['epochofel'] - params['start_time']) > timedelta(days=1):
             elements = check_for_perturbation(elements, params)
     except KeyError:
         pass
 
     user_request = make_userrequest(elements, params)
-    print(user_request)
+
 # Make an endpoint and submit the thing
     try:
         resp = requests.post(

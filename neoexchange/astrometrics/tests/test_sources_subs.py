@@ -31,6 +31,8 @@ from neox.tests.mocks import MockDateTime, mock_expand_cadence
 from core.views import record_block
 # Import module to test
 from astrometrics.sources_subs import *
+from astrometrics.time_subs import datetime2mjd_utc
+
 
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
@@ -439,7 +441,7 @@ class TestSubmitBlockToScheduler(TestCase):
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
         site_code = 'V38'
-        utc_date = datetime.now()+timedelta(days=1)
+        utc_date = datetime(2015, 3, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         params = {  'proposal_id' : 'LCO2015A-009',
                     'exp_count' : 18,
@@ -481,7 +483,7 @@ class TestSubmitBlockToScheduler(TestCase):
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
         site_code = 'K92'
-        utc_date = datetime(2015, 3, 19, 00, 00, 00) + timedelta(days=1)
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         params = {  'proposal_id' : 'LCO2015A-009',
                     'exp_count' : 18,
@@ -2541,7 +2543,8 @@ class TestMakeMolecule(TestCase):
                              'spectra_slit': 'slit_6.0as',
                              'ag_mode'     : 'ON',
                              'ag_name'     : '',
-                             'acquire_mode': 'WCS'
+                             'acquire_mode': 'BRIGHTEST',
+                             'acquire_radius_arcsec': 15.0
                             }
 
         molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
@@ -2562,7 +2565,8 @@ class TestMakeMolecule(TestCase):
                              'spectra_slit': 'slit_6.0as',
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
-                             'acquire_mode': 'WCS'
+                             'acquire_mode': 'BRIGHTEST',
+                             'acquire_radius_arcsec': 15.0
                             }
 
         molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
@@ -2584,7 +2588,8 @@ class TestMakeMolecule(TestCase):
                              'spectra_slit': 'slit_6.0as',
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
-                             'acquire_mode': 'WCS'
+                             'acquire_mode': 'BRIGHTEST',
+                             'acquire_radius_arcsec': 15.0
                             }
 
         molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
@@ -2605,7 +2610,8 @@ class TestMakeMolecule(TestCase):
                              'spectra_slit': 'slit_6.0as',
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
-                             'acquire_mode': 'WCS'
+                             'acquire_mode': 'BRIGHTEST',
+                             'acquire_radius_arcsec': 15.0
                             }
 
         molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
@@ -2627,7 +2633,8 @@ class TestMakeMolecule(TestCase):
                              'spectra_slit': 'slit_6.0as',
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
-                             'acquire_mode': 'WCS'
+                             'acquire_mode': 'BRIGHTEST',
+                             'acquire_radius_arcsec': 15.0
                             }
 
         molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
@@ -2664,8 +2671,8 @@ class TestMakeMolecules(TestCase):
                                                             'spectroscopy' : True,
                                                             'exp_time' : 180.0,
                                                             'exp_count' : 1,
-                                                            'filter_pattern' : 'slit_2.0as'})
-        self.filt_2m0_spectroscopy = ['slit_2.0as',]
+                                                            'filter_pattern' : 'slit_6.0as'})
+        self.filt_2m0_spectroscopy = ['slit_6.0as', ]
 
     def test_2m_imaging(self):
 
