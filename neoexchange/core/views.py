@@ -1622,6 +1622,31 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     return True
 
 
+def update_MPC_obs(obj_id_or_page):
+    """
+    Performs remote look up of observations for object with id obj_id_or_page,
+    Gets or creates corresponding Body instance and updates or creates
+    SourceMeasurements.
+    Alternatively obj_id_or_page can be a BeautifulSoup object, in which case
+    the call to fetch_mpcdb_page() will be skipped and the passed BeautifulSoup
+    object will parsed.
+    """
+    obj_id = None
+    if type(obj_id_or_page) != BeautifulSoup:
+        obj_id = obj_id_or_page
+        obslines = fetch_mpcobs(obj_id, dbg)
+
+        if obslines is None:
+            logger.warning("Could not find observations for %s" % obj_id)
+            return False
+    else:
+        page = obj_id_or_page
+        obslines = page.text.split('\n')
+
+    if len(obslines) > 0:
+        measures = create_source_measurement(obslines, None)
+    return measures
+
 def create_source_measurement(obs_lines, block=None):
     measures = []
     if type(obs_lines) != list:

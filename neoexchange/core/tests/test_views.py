@@ -37,7 +37,7 @@ from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, record_block, clean_mpcorbit, \
+    update_MPC_orbit, update_MPC_obs, check_for_block, record_block, clean_mpcorbit, \
     create_source_measurement, clean_crossid, create_frame, \
     schedule_check, summarise_block_efficiency, \
     store_detections, update_crossids, \
@@ -1452,6 +1452,50 @@ class TestUpdate_MPC_orbit(TestCase):
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
+
+class TestUpdate_MPC_obs(TestCase):
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        self.test_mpcobs_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+    @classmethod
+    def setUpTestData(cls):
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        cls.test_body = Body.objects.create(**WSAE9A6_params)
+
+    def test1(self):
+        expected_num_srcmeas = 6
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 27, 12, int(0.672*1e6)),
+                            'obs_ra'    : 325.2828333333333,
+                            'obs_dec'   : -10.8525,
+                            'obs_mag'   : 21.8,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'G96'
+                          }
+
+        measures = update_MPC_obs(self.test_mpcobs_page)
+
+        self.assertEqual(expected_num_srcmeas, len(measures))
+        source_measures = SourceMeasurement.objects.filter(body=self.test_body)
+        self.assertEqual(expected_num_srcmeas, source_measures.count())
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
 class TestClean_mpcorbit(TestCase):
 
