@@ -1147,10 +1147,12 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
+
     location = {
-        'site'            : params['site'].lower(),
         'telescope_class' : params['pondtelescope'][0:3]
     }
+    if 'site' in params:
+        location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
         location['observatory'] = 'doma'

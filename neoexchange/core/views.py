@@ -999,7 +999,6 @@ def record_block(tracking_number, params, form_data, body):
                 obstype = Block.OPT_SPECTRA
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
-                             'site'     : params['site'].lower(),
                              'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'obstype'  : obstype,
@@ -1011,6 +1010,8 @@ def record_block(tracking_number, params, form_data, body):
                              'exp_length'      : form_data['exp_length'],
                              'active'   : True
                            }
+            if 'site' in params:
+                block_kwargs['site'] = params['site'].lower()
             pk = Block.objects.create(**block_kwargs)
             i += 1
         return True

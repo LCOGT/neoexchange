@@ -577,7 +577,7 @@ class Block(models.Model):
                       )
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
-    site            = models.CharField(max_length=3, choices=SITE_CHOICES)
+    site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True, blank=True)
     body            = models.ForeignKey(Body)
     proposal        = models.ForeignKey(Proposal)
     superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
