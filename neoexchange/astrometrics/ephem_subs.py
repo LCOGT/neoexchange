@@ -1422,7 +1422,7 @@ def get_sitecam_params(site):
     valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']
 
     site = site.upper()
-    if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65' or site == '2m0':
+    if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65' or site == '2M0':
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
         pixel_scale = cfg.tel_field['twom_pixscale']

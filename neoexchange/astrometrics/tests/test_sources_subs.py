@@ -769,6 +769,18 @@ class TestFetchFilterList(TestCase):
         filter_list = fetch_filter_list('t04', False, self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
+    def test_generic_0m4(self):
+        expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
+
+        filter_list = fetch_filter_list('0m4', False, self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_generic_1m(self):
+        expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w', 'ND', 'B*ND', 'V*ND', 'R*ND', 'I*ND']
+
+        filter_list = fetch_filter_list('1m0', False, self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
     def test_invalid_telescope(self):
         expected_filter_list = []
 
@@ -1989,6 +2001,7 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
 
+
 class TestSFUFetch(TestCase):
 
     def setUp(self):
@@ -2061,6 +2074,7 @@ class TestSFUFetch(TestCase):
 
         self.assertEqual(expected_result[0], sfu_result[0])
         self.assertEqual(expected_result[1], sfu_result[1])
+
 
 class TestConfigureDefaults(TestCase):
 
@@ -2200,6 +2214,24 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_generic_0m4(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': '0m4',
+              }
+
+        expected_params = { 'instrument':  '0M4-SCICAM-SBIG',
+                            'pondtelescope': '0m4',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'binning': 1}
+        expected_params.update(test_params)
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
     def test_lsc_sinistro(self):
         test_params = {
               'exp_count': 42,
@@ -2235,6 +2267,24 @@ class TestConfigureDefaults(TestCase):
                             'site_code': 'W87',
                             'exp_count': 42,
                             'exp_time': 42.0}
+
+        params = configure_defaults(test_params)
+
+        self.assertEqual(expected_params, params)
+
+    def test_generic_sinistro(self):
+        test_params = {
+              'exp_count': 42,
+              'exp_time': 42.0,
+              'site_code': '1m0',
+              }
+
+        expected_params = { 'instrument':  '1M0-SCICAM-SINISTRO',
+                            'pondtelescope': '1m0',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'binning': 1}
+        expected_params.update(test_params)
 
         params = configure_defaults(test_params)
 
@@ -2643,6 +2693,7 @@ class TestMakeMolecule(TestCase):
         molecule = make_molecule(self.params_2m0_spectroscopy, self.filt_2m0_spectroscopy)
 
         self.assertEqual(expected_molecule, molecule)
+
 
 class TestMakeMolecules(TestCase):
 

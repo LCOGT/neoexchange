@@ -1002,6 +1002,7 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_pa, pa, self.precision)
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
+
 class TestDetermineSlotLength(TestCase):
 
     def test_bad_site_code(self):
@@ -1309,6 +1310,31 @@ class TestDetermineSlotLength(TestCase):
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
+    def test_slot_length_generic_0m4(self):
+        site_code = '0m4'
+        name = 'A101foo'
+        mag = 19.0
+
+        expected_length = 25
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_generic_1m0(self):
+        site_code = '1m0'
+        name = 'WH2845B'
+        mag = 19.9
+        expected_length = 20
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
+    def test_slot_length_generic_2m0(self):
+        site_code = '2m0'
+        name = 'WH2845B'
+        mag = 19.9
+        expected_length = 20
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
+
 
 class TestGetSiteCamParams(TestCase):
 
@@ -1495,6 +1521,36 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+
+    def test_generic_1m(self):
+        site_code = '1m0'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(0.389, pixel_scale)
+        self.assertEqual(self.onem_sinistro_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.onem_setup_overhead, setup_overhead)
+        self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+
+    def test_generic_0m4(self):
+        site_code = '0m4'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(0.571, pixel_scale)
+        self.assertEqual(self.point4m_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.point4m_setup_overhead, setup_overhead)
+        self.assertEqual(self.point4m_exp_overhead, exp_overhead)
+
+    def test_generic_2m(self):
+        site_code = '2m0'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual(site_code.upper(), chk_site_code)
+        self.assertEqual(0.304, pixel_scale)
+        self.assertEqual(self.twom_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.twom_setup_overhead, setup_overhead)
+        self.assertEqual(self.twom_exp_overhead, exp_overhead)
 
 
 class TestDetermineExpTimeCount(TestCase):
