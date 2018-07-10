@@ -4,23 +4,31 @@ of spectral Solar Anlogs accross the sky.
 Author: Adam Tedeschi
 for NeoExchange
 """
+
 import os
 from astropy.coordinates import SkyCoord, Galactic
 from astropy import coordinates
 from astropy import units as u
 import numpy as np
 import matplotlib.pyplot as plt
+from core.models import StaticSource
 
 def readFile(path): #reading file
     f = open(path)
     lines = f.readlines()
     return lines
 
+def readSources():
+    coords = np.array([])
+    for body in StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD):
+        coords = np.append(coords, SkyCoord(body.ra,body.dec,unit=(u.deg,u.deg)))
+    return coords
+
 def readCoords(lines):  #parsing coordinates from file
     coords = np.array([])
     for line in lines:
         parts = line.split()
-        for n in range(len(parts)):
+        for n in range(1,len(parts)):
             try: 
                 if ':' in parts[n]:
                     coords = np.append(coords, SkyCoord(parts[n],parts[n+1],unit=(u.hourangle, u.deg)))
@@ -53,7 +61,8 @@ def plotScatter(coords,galcoords):
 
 if __name__== "__main__":
     lines = readFile(os.path.join(os.getcwd(),'photometrics/data/Solar_Standards'))
-    coords = readCoords(lines)
+    coords = readSources()
+    #coords = readCoords(lines)
     galcoords = genGalPlane()
     plotScatter(coords,galcoords)
 
