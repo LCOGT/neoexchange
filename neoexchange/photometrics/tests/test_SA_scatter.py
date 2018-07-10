@@ -10,7 +10,7 @@ from photometrics.SA_scatter import *
 
 class Test_readCoords(TestCase):
     def setUp(self):
-        self.test_path = os.path.join(os.getenv('HOME'), 'SAf.txt')
+        self.test_path = os.path.join(os.getcwd(), 'photometrics/data/Solar_Standards')
         self.test_lines = readFile(self.test_path)
             
     def test_readFile(self):
@@ -50,6 +50,4 @@ class Test_Plotting(TestCase):
         self.assertEqual(expected_object.dec,galcoords.dec[0])
         self.assertEqual(expected_coord_size,len(galcoords.ra))
     
-    def test_plot(self):
-        self.assertEqual(1,1)
         #How to test plotting?

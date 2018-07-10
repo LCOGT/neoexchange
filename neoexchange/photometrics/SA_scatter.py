@@ -1,3 +1,10 @@
+""" 
+Generates a scatter plot of the positions 
+of spectral Solar Anlogs accross the sky.
+Author: Adam Tedeschi
+for NeoExchange
+"""
+import os
 from astropy.coordinates import SkyCoord, Galactic
 from astropy import coordinates
 from astropy import units as u
@@ -45,7 +52,7 @@ def plotScatter(coords,galcoords):
     plt.show()
 
 if __name__== "__main__":
-    lines = readFile('/home/atedeschi/SAf.txt')
+    lines = readFile(os.path.join(os.getcwd(),'photometrics/data/Solar_Standards'))
     coords = readCoords(lines)
     galcoords = genGalPlane()
     plotScatter(coords,galcoords)
