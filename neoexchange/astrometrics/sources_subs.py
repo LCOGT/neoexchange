@@ -1562,8 +1562,6 @@ def check_for_perturbation(elements, params):
 
 def submit_block_to_scheduler(elements, params):
 
-    print("==============================================================================================")
-    print(elements['epochofel'], params['start_time'], abs(elements['epochofel'] - params['start_time']))
     try:
         if params['spectroscopy'] is not False and abs(elements['epochofel'] - params['start_time']) > timedelta(days=1):
             elements = check_for_perturbation(elements, params)
