@@ -33,6 +33,12 @@ from core.views import record_block, create_calib_sources
 # Import module to test
 from astrometrics.sources_subs import *
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
+
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
 
@@ -395,7 +401,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
 
         site_code = 'K92'
         utc_date = datetime.now()+timedelta(days=1)
@@ -432,9 +438,9 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_cadence(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820},
-                                                                               {'id': '222', 'duration' : 1820},
-                                                                               {'id': '333', 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820},
+                                                                               {'id': '222', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820},
+                                                                               {'id': '333', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
 
         site_code = 'V38'
         utc_date = datetime.now()+timedelta(days=1)
@@ -3310,10 +3316,10 @@ class TestFetchFluxStandards(TestCase):
         self.assertEqual(expected_standards, standards)
 
     def test_standards_no_filter(self):
-        expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spectral_type' : 'B7III', 'notes' : None},
-                               'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spectral_type' : 'F', 'notes' : None},
+        expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spectral_type' : 'B7III', 'notes' : ''},
+                               'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spectral_type' : 'F', 'notes' : ''},
                                'BPM16274' : { 'ra_rad' : radians(12.51325), 'dec_rad' : radians(-52.138166666666667), 'mag' : 14.20, 'spectral_type' : 'DA2', 'notes' : 'Mod.'},
-                               'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spectral_type' : None, 'notes' : None},
+                               'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spectral_type' : '', 'notes' : ''},
                              }
 
         standards = fetch_flux_standards(self.test_flux_page, filter_optical_model=False)
@@ -3327,9 +3333,9 @@ class TestFetchFluxStandards(TestCase):
                     self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
 
     def test_standards_filter_models(self):
-        expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spectral_type' : 'B7III', 'notes' : None},
-                               'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spectral_type' : 'F', 'notes' : None},
-                               'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spectral_type' : None, 'notes' : None},
+        expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spectral_type' : 'B7III', 'notes' : ''},
+                               'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spectral_type' : 'F', 'notes' : ''},
+                               'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spectral_type' : '', 'notes' : ''},
                              }
 
         standards = fetch_flux_standards(self.test_flux_page, filter_optical_model=True)
