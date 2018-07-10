@@ -328,7 +328,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
 
     source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix = 'tmp_neox_')
-    new_elements = None
+    new_ephem = None
 
     filename, num_lines = export_measurements(body_id, dest_dir)
 
@@ -343,7 +343,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                     orbfile_fh = open(orbit_file, 'r')
                 except IOError:
                     logger.warning("File %s not found" % orbit_file)
-                    return new_elements
+                    return None
 
                 orblines = orbfile_fh.readlines()
                 orbfile_fh.close()
@@ -364,7 +364,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                 ephem_file = os.path.join(dest_dir, 'new.ephem')
                 if os.path.exists(ephem_file):
                     emp_info, ephemeris = read_findorb_ephem(ephem_file)
-                    new_elements = (emp_info, ephemeris)
+                    new_ephem = (emp_info, ephemeris)
                 else:
                     logger.warning("Could not read ephem file %s" % ephem_file)
 
@@ -386,7 +386,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
     else:
         logger.warning("Could not find Body with id #%s" % body_id)
 
-    return new_elements
+    return new_ephem
 
 
 class CandidatesViewBlock(LoginRequiredMixin, View):
