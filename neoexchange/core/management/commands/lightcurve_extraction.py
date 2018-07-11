@@ -46,21 +46,21 @@ class Command(BaseCommand):
         return
 
     def make_source_measurement(self, body, frame, cat_source, persist=False):
-        source = SourceMeasurement( body = body,
-                                    frame = frame,
-                                    obs_ra = cat_source.obs_ra,
-                                    obs_dec = cat_source.obs_dec,
-                                    obs_mag = cat_source.obs_mag,
-                                    err_obs_ra = cat_source.err_obs_ra,
-                                    err_obs_dec = cat_source.err_obs_dec,
-                                    err_obs_mag = cat_source.err_obs_mag,
-                                    astrometric_catalog = frame.astrometric_catalog,
-                                    photometric_catalog = frame.photometric_catalog,
-                                    aperture_size = cat_source.aperture_size,
-                                    snr = cat_source.make_snr(),
-                                    flags = cat_source.map_numeric_to_mpc_flags()
-                                  )
-        source.save()
+        source_params = { 'body' : body,
+                          'frame' : frame,
+                          'obs_ra' : cat_source.obs_ra,
+                          'obs_dec' : cat_source.obs_dec,
+                          'obs_mag' : cat_source.obs_mag,
+                          'err_obs_ra' : cat_source.err_obs_ra,
+                          'err_obs_dec' : cat_source.err_obs_dec,
+                          'err_obs_mag' : cat_source.err_obs_mag,
+                          'astrometric_catalog' : frame.astrometric_catalog,
+                          'photometric_catalog' : frame.photometric_catalog,
+                          'aperture_size' : cat_source.aperture_size,
+                          'snr' : cat_source.make_snr(),
+                          'flags' : cat_source.map_numeric_to_mpc_flags()
+                        }
+        source, created = SourceMeasurement.objects.get_or_create(**source_params)
         mpc_line = source.format_mpc_line()
         if persist is not True:
             source.delete()
