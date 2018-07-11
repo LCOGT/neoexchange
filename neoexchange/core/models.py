@@ -496,7 +496,7 @@ class SuperBlock(models.Model):
         qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
         # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
-        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_IMAGING), '') for x in qs]
+        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_SPECTRA_CALIB),'(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
 
         return ", ".join(class_obstype)
 
