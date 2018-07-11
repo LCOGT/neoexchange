@@ -792,8 +792,8 @@ def schedule_submit(data, body, username):
         cut_off_time = timedelta(minutes=30)
         now = datetime.utcnow()
         recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
-        if len(recent_updates) < 1:
-            update_MPC_obs(body.id)
+        if len(recent_updates) < 1 and body.update_time < (now - timedelta(days=1)):
+            update_MPC_obs(body.name)
         # Invoke find_orb to update Body's elements and return ephemeris
         new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
         if new_ephemeris is not None:
@@ -1640,7 +1640,7 @@ def update_MPC_obs(obj_id_or_page):
     obj_id = None
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
-        obslines = fetch_mpcobs(obj_id, dbg)
+        obslines = fetch_mpcobs(obj_id)
 
         if obslines is None:
             logger.warning("Could not find observations for %s" % obj_id)
@@ -1717,9 +1717,11 @@ def create_source_measurement(obs_lines, block=None):
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % params['body'])
                 measures = False
+                return measures
             except Body.MultipleObjectsReturned:
                 logger.warning("Multiple versions of Body %s exist" % params['body'])
                 measures = False
+                return measures
 
     update_params = { 'updated' : True,
                       'update_time' : datetime.utcnow()
@@ -1728,7 +1730,7 @@ def create_source_measurement(obs_lines, block=None):
     message = "Did not update"
     if updated is True:
         message = "Updated"
-    logger.info("%s MPC Observations for Body #%d (%s)" % (message, body.pk, body.current_name()))
+    logger.info("%s MPC Observations for Body #%d (%s)" % (message, obs_body.pk, obs_body.current_name()))
 
     return measures
 
