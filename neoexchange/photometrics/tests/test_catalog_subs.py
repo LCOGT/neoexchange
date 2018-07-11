@@ -2571,3 +2571,117 @@ class MakeSEXTFileTest(FITSUnitTest):
         self.assertEqual(len(sext_line_list), 2)
         self.assertEqual(sext_line_list[0], test_line_list[0])
         self.assertEqual(sext_line_list[-1], test_line_list[1])
+
+
+class TestDetermineImageForCatalog(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_ql_ldac_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e11_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_ldac_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e91_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_ldac_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_ldac_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_cat_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e11_cat.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_cat_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e91_cat.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_cat_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11_cat.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_cat_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91_cat.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e11.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e91.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)

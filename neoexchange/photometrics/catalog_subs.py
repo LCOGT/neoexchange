@@ -1328,14 +1328,9 @@ def make_sext_file_line(sext_params):
 
     return sext_line
 
-
-def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
-    """create a list of dictionary entries for
-    creating the .sext files needed for mtdlink"""
-
-    sext_dict_list = []
-
-    # get correct fits filename for naming .sext file
+def determine_image_for_catalog(new_catalog):
+    """Determines the originating FITS filename for the passed catalog name,
+    allowing correct naming for the corresponding .sext file"""
     if '_ldac.fits' in new_catalog:
         real_fits_filename = os.path.basename(new_catalog).replace('_ldac.fits', '.fits')
         fits_filename_path = new_catalog.replace('_ldac.fits', '.fits')
@@ -1345,6 +1340,17 @@ def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
     else:
         real_fits_filename = os.path.basename(new_catalog)
         fits_filename_path = new_catalog
+
+    return real_fits_filename, fits_filename_path
+
+def make_sext_dict_list(new_catalog, catalog_type, edge_trim_limit=75.0):
+    """create a list of dictionary entries for
+    creating the .sext files needed for mtdlink"""
+
+    sext_dict_list = []
+
+    # get correct fits filename for naming .sext file
+    real_fits_filename, fits_filename_path = determine_image_for_catalog(new_catalog)
 
     # May need to filter objects within 5 pixels of frame edge as does in cleansex.tcl
     try:
