@@ -28,6 +28,7 @@ class Command(BaseCommand):
         parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Boxwidth in arcsec to search')
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
+        parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
 
     def plot_timeseries(self, times, mags, mag_errs, colors='r', title='', sub_title=''):
         fig, ax = plt.subplots()
@@ -130,7 +131,7 @@ class Command(BaseCommand):
                                         best_source = source
 
                             if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 2 * options['deltamag']:
-                                mpc_line = self.make_source_measurement(block.body, frame, best_source, persist=False)
+                                mpc_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
                                 mpc_lines.append(mpc_line)
                                 times.append(frame.midpoint)
                                 mags.append(best_source.obs_mag)
