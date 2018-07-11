@@ -1545,6 +1545,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
                             'p_ x_l' :  u'g0232K10F41B* x2010 03 19.91359 06 26 37.29 +35 47 01.3                L~0FUhC51',
                             'p_quoteC_h': u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309",
+                            'n_pC_l' :  u'01566K15TE5B  C1968 10 13.08015704 13 52.281-02 06 45.33         19.51Rt~1YjBY28',
 
                           }
         self.maxDiff = None
@@ -1781,6 +1782,25 @@ class TestParseMPCObsFormat(TestCase):
                           }
 
         params = parse_mpcobs(self.test_lines['p_quoteC_h'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_n_pC_l(self):
+        """Tests the case for both a number and a provisional designation"""
+
+        expected_params = { 'body'  : '01566',
+                            'flags' : " ",
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(1968, 10, 13, 1, 55, 25, int(0.5648*1e6)),
+                            'obs_ra'    : 63.4678375,
+                            'obs_dec'   : -2.112591666666667,
+                            'obs_mag'   : 19.51,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'PPMXL',
+                            'site_code' : 'Y28'
+                          }
+
+        params = parse_mpcobs(self.test_lines['n_pC_l'])
 
         self.compare_dict(expected_params, params)
 

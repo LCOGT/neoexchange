@@ -795,12 +795,14 @@ def schedule_submit(data, body, username):
         if len(recent_updates) < 1 and body.update_time < (now - timedelta(days=1)):
             update_MPC_obs(body.name)
         # Invoke find_orb to update Body's elements and return ephemeris
+
         new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
         if new_ephemeris is not None:
             emp_info = new_ephemeris[0]
             ephemeris = new_ephemeris[1]
             emp_at_start = ephemeris[0]
     body.refresh_from_db()
+
     body_elements = model_to_dict(body)
     body_elements['epochofel_mjd'] = body.epochofel_mjd()
     body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
@@ -1659,6 +1661,7 @@ def create_source_measurement(obs_lines, block=None):
     if type(obs_lines) != list:
         obs_lines = [obs_lines, ]
 
+    obs_body = None
     for obs_line in obs_lines:
         logger.debug(obs_line.rstrip())
         params = parse_mpcobs(obs_line)
@@ -1673,6 +1676,7 @@ def create_source_measurement(obs_lines, block=None):
                                             Q(name=params['body']) |
                                             Q(name=unpacked_name)
                                            )
+
                 # Identify block
                 if not block:
                     blocks = Block.objects.filter(block_start__lte=params['obs_date'], block_end__gte=params['obs_date'], body=obs_body)
@@ -1716,22 +1720,20 @@ def create_source_measurement(obs_lines, block=None):
                         measures.append(measure)
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % params['body'])
-                measures = False
-                return measures
             except Body.MultipleObjectsReturned:
                 logger.warning("Multiple versions of Body %s exist" % params['body'])
-                measures = False
-                return measures
 
-    update_params = { 'updated' : True,
-                      'update_time' : datetime.utcnow()
-                    }
-    updated = save_and_make_revision(obs_body, update_params)
-    message = "Did not update"
-    if updated is True:
-        message = "Updated"
-    logger.info("%s MPC Observations for Body #%d (%s)" % (message, obs_body.pk, obs_body.current_name()))
-
+    if obs_body:
+        update_params = { 'updated' : True,
+                          'update_time' : datetime.utcnow()
+                        }
+        updated = save_and_make_revision(obs_body, update_params)
+        message = "Did not update"
+        if updated is True:
+            message = "Updated"
+        logger.info("%s MPC Observations for Body #%d (%s)" % (message, obs_body.pk, obs_body.current_name()))
+    if not measures:
+        measures = False
     return measures
 
 

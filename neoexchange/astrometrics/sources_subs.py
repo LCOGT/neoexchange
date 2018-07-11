@@ -577,7 +577,7 @@ def parse_mpcobs(line):
     number = str(line[0:5])
     prov_or_temp = str(line[5:12])
 
-    if len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
+    if len(number.strip()) == 0 and len(prov_or_temp.strip()) != 0:
         # No number but provisional/temp. desigination
         body = prov_or_temp
     else:
