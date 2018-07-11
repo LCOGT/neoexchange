@@ -43,7 +43,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockF
 from .models import *
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list
+    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -788,6 +788,12 @@ def schedule_submit(data, body, username):
     # Send to scheduler
     emp_at_start = None
     if data.get('spectroscopy', False) is not False:
+        # Update MPC observations assuming too many updates have not been done recently
+        cut_off_time = timedelta(minutes=30)
+        now = datetime.utcnow()
+        recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
+        if len(recent_updates) < 1:
+            update_MPC_obs(body.id)
         # Invoke find_orb to update Body's elements and return ephemeris
         new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
         if new_ephemeris is not None:
@@ -1647,6 +1653,7 @@ def update_MPC_obs(obj_id_or_page):
         measures = create_source_measurement(obslines, None)
     return measures
 
+
 def create_source_measurement(obs_lines, block=None):
     measures = []
     if type(obs_lines) != list:
@@ -1713,6 +1720,15 @@ def create_source_measurement(obs_lines, block=None):
             except Body.MultipleObjectsReturned:
                 logger.warning("Multiple versions of Body %s exist" % params['body'])
                 measures = False
+
+    update_params = { 'updated' : True,
+                      'update_time' : datetime.utcnow()
+                    }
+    updated = save_and_make_revision(obs_body, update_params)
+    message = "Did not update"
+    if updated is True:
+        message = "Updated"
+    logger.info("%s MPC Observations for Body #%d (%s)" % (message, body.pk, body.current_name()))
 
     return measures
 
