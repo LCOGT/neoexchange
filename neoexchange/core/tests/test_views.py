@@ -797,7 +797,7 @@ class TestRecordBlock(TestCase):
         self.assertEqual(1, sblocks.count())
         self.assertEqual(2, blocks.count())
         self.assertEqual(Block.OPT_SPECTRA, blocks[0].obstype)
-        self.assertEqual(Block.OPT_SPECTRA, blocks[1].obstype)
+        self.assertEqual(Block.OPT_SPECTRA_CALIB, blocks[1].obstype)
         # Check the SuperBlock has the broader time window but the Block(s) have
         # the (potentially) narrower per-Request windows
         self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
