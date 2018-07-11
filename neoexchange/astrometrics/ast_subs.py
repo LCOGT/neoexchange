@@ -100,10 +100,18 @@ def normal_to_packed(obj_name, dbg=False):
     
     buff = obj_name.replace(" ", "")
     if dbg: print("len(buff)=", len(buff))
-    
+
+    if buff.isdigit():
+        # Simple numbered asteroid or comet
+        number = int(buff)
+
+        if comet:
+            packed_desig = "%04d%c       " % ( number, comet_type)
+        else:
+            packed_desig = "%c%04d       " % ( int_to_mutant_hex_char( number // 10000), number % 10000);
     # If the name starts with four digits followed by an uppercase letter, it's
     # a provisional (un-numbered) designation e.g. '1984 DA' or '2015 BM510'
-    if len(buff) >= 4 and buff[0:4].isdigit() and buff[4].isupper():
+    elif len(buff) >= 4 and buff[0:4].isdigit() and buff[4].isupper():
         year = int(buff[0:4])
 
         if comet is False:
@@ -129,14 +137,6 @@ def normal_to_packed(obj_name, dbg=False):
         packed_desig = "    %c%c%02d%c%c%c%c" % ( comet_type, 
             ord('A') - 10 + year // 100, year % 100,
             str(buff[4]).upper(), pack9, pack10, pack11)
-    elif buff.isdigit():
-        # Simple numbered asteroid or comet
-        number = int(buff)
-
-        if comet:
-            packed_desig = "%04d%c       " % ( number, comet_type)
-        else:
-            packed_desig = "%c%04d       " % ( int_to_mutant_hex_char( number // 10000), number % 10000);
     else:
         # Bad id
         packed_desig = ' ' * 12
