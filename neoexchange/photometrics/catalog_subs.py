@@ -1400,6 +1400,13 @@ def make_sext_file(dest_dir, new_catalog, catalog_type):
     mtdlink instead of running sextractor again"""
 
     sext_dict_list, fits_filename_path = make_sext_dict_list(new_catalog, catalog_type)
+    try:
+        int(fits_filename_path)
+        if fits_filename_path != 0:
+            logger.error("Error making SExtractor file for %s" % new_catalog)
+            return None
+    except ValueError:
+        pass
     sext_line_list = make_sext_line_list(sext_dict_list)
     sext_filename = open(os.path.join(dest_dir, os.path.basename(fits_filename_path).replace('.fits', '.sext')), 'w')
     for line in sext_line_list:

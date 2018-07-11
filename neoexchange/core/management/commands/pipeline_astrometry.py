@@ -119,6 +119,8 @@ class Command(BaseCommand):
             if options['skip_mtdlink'] is False:
                 self.stdout.write("Creating .sext file(s) from %s" % (new_catalog))
                 fits_filename = make_sext_file(temp_dir, new_catalog, catalog_type)
+                if fits_filename is None:
+                    continue
             else:
                 self.stdout.write("Skipping creation of .sext files for skipped mtdlink")
 
