@@ -4,7 +4,10 @@ from photometrics.SA_scatter import *
 class Command(BaseCommand):
     def handle(self, *args, **options):
         lines = readFile(os.path.join(os.getcwd(),'photometrics/data/Solar_Standards'))
-        coords = readSources()
+        scoords = readSources('Solar')
+        fcoords = readSources('Flux')
         galcoords = genGalPlane()
-        plotScatter(coords,galcoords)
-
+        ax = plt.figure().gca()
+        plotScatter(ax,scoords,galcoords,'b.')
+        plotScatter(ax,fcoords,galcoords,'g.')
+        plt.show()
