@@ -576,9 +576,13 @@ class Block(models.Model):
 
     OPT_IMAGING = 0
     OPT_SPECTRA = 1
+    OPT_IMAGING_CALIB = 2
+    OPT_SPECTRA_CALIB = 3
     OBSTYPE_CHOICES = (
                         (OPT_IMAGING, 'Optical imaging'),
                         (OPT_SPECTRA, 'Optical spectra'),
+                        (OPT_IMAGING_CALIB, 'Optical imaging calibration'),
+                        (OPT_SPECTRA_CALIB, 'Optical spectro calibration')
                       )
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
