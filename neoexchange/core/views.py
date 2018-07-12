@@ -833,87 +833,90 @@ def build_characterization_list(disp=None):
         char_targets = Body.objects.filter(active=True).exclude(origin='M')
         unranked = []
         for body in char_targets:
-            spectra = PreviousSpectra.objects.filter(body=body)
-            s_wav = s_vis_link = s_nir_link = ''
-            m_vis_link = m_nir_link = ''
-            m_wav = ""
-            if spectra:
-                s_date = date.today()-date(1000, 1, 1)
-                for spectrum in spectra:
-                    if spectrum.spec_source == "S":
-                        if s_wav == spectrum.spec_wav or not s_wav:
-                            if s_date > date.today()-spectrum.spec_date:
+            try:
+                spectra = PreviousSpectra.objects.filter(body=body)
+                s_wav = s_vis_link = s_nir_link = ''
+                m_vis_link = m_nir_link = ''
+                m_wav = ""
+                if spectra:
+                    s_date = date.today()-date(1000, 1, 1)
+                    for spectrum in spectra:
+                        if spectrum.spec_source == "S":
+                            if s_wav == spectrum.spec_wav or not s_wav:
+                                if s_date > date.today()-spectrum.spec_date:
+                                    s_date = date.today()-spectrum.spec_date
+                                    s_wav = spectrum.spec_wav
+                                    s_vis_link = spectrum.spec_vis
+                                    s_nir_link = spectrum.spec_ir
+                            else:
                                 s_date = date.today()-spectrum.spec_date
-                                s_wav = spectrum.spec_wav
-                                s_vis_link = spectrum.spec_vis
-                                s_nir_link = spectrum.spec_ir
-                        else:
-                            s_date = date.today()-spectrum.spec_date
-                            s_wav = "Vis+NIR"
-                            if spectrum.spec_vis:
-                                s_vis_link = spectrum.spec_vis
-                            if spectrum.spec_ir:
-                                s_nir_link = spectrum.spec_ir
-                    elif spectrum.spec_source == "M":
-                        m_wav = spectrum.spec_wav
-                        m_vis_link = spectrum.spec_vis
-                        m_nir_link = spectrum.spec_ir
-                        if m_wav == "NA":
-                            m_wav = "Yes"
-            body_dict = model_to_dict(body)
-            body_dict['current_name'] = body.current_name()
-            body_dict['ingest_date'] = body.ingest
-            body_dict['s_wav'] = s_wav
-            if s_vis_link:
-                body_dict['s_vis_link'] = s_vis_link
-            if s_nir_link:
-                body_dict['s_nir_link'] = s_nir_link
-            if m_vis_link:
-                body_dict['m_vis_link'] = m_vis_link
-            if m_nir_link:
-                body_dict['m_nir_link'] = m_nir_link
-            body_dict['m_wav'] = m_wav
-            body_dict['origin'] = body.get_origin_display()
-            if 'Vis' in s_wav or 'Vis' in m_wav:
-                body_dict['obs_needed'] = 'LC'
-            else:
-                body_dict['obs_needed'] = 'Spec/LC'
-            emp_line = body.compute_position()
-            if not emp_line:
-                continue
-            obs_dates = body.compute_obs_window()
-            if obs_dates[0]:
-                body_dict['obs_sdate'] = obs_dates[0]
-                if obs_dates[0] == obs_dates[2]:
-                    startdate = 'Now'
+                                s_wav = "Vis+NIR"
+                                if spectrum.spec_vis:
+                                    s_vis_link = spectrum.spec_vis
+                                if spectrum.spec_ir:
+                                    s_nir_link = spectrum.spec_ir
+                        elif spectrum.spec_source == "M":
+                            m_wav = spectrum.spec_wav
+                            m_vis_link = spectrum.spec_vis
+                            m_nir_link = spectrum.spec_ir
+                            if m_wav == "NA":
+                                m_wav = "Yes"
+                body_dict = model_to_dict(body)
+                body_dict['current_name'] = body.current_name()
+                body_dict['ingest_date'] = body.ingest
+                body_dict['s_wav'] = s_wav
+                if s_vis_link:
+                    body_dict['s_vis_link'] = s_vis_link
+                if s_nir_link:
+                    body_dict['s_nir_link'] = s_nir_link
+                if m_vis_link:
+                    body_dict['m_vis_link'] = m_vis_link
+                if m_nir_link:
+                    body_dict['m_nir_link'] = m_nir_link
+                body_dict['m_wav'] = m_wav
+                body_dict['origin'] = body.get_origin_display()
+                if 'Vis' in s_wav or 'Vis' in m_wav:
+                    body_dict['obs_needed'] = 'LC'
                 else:
-                    startdate = obs_dates[0].strftime('%m/%y')
-                if not obs_dates[1]:
-                    body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
-                    enddate = '>'
+                    body_dict['obs_needed'] = 'Spec/LC'
+                emp_line = body.compute_position()
+                if not emp_line:
+                    continue
+                obs_dates = body.compute_obs_window()
+                if obs_dates[0]:
+                    body_dict['obs_sdate'] = obs_dates[0]
+                    if obs_dates[0] == obs_dates[2]:
+                        startdate = 'Now'
+                    else:
+                        startdate = obs_dates[0].strftime('%m/%y')
+                    if not obs_dates[1]:
+                        body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                        enddate = '>'
+                    else:
+                        enddate = obs_dates[1].strftime('%m/%y')
+                        body_dict['obs_edate'] = obs_dates[1]
                 else:
-                    enddate = obs_dates[1].strftime('%m/%y')
-                    body_dict['obs_edate'] = obs_dates[1]
-            else:
-                body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
-                startdate = '-'
-                enddate = '-'
-            days_to_start = body_dict['obs_sdate']-obs_dates[2]
-            days_to_end = body_dict['obs_edate']-obs_dates[2]
-            # Define a sorting Priority:
-            # Currently a combination of imminence and window width.
-            body_dict['priority'] = days_to_start.days + days_to_end.days
-            body_dict['obs_start'] = startdate
-            body_dict['obs_end'] = enddate
-            body_dict['ra'] = emp_line[0]
-            body_dict['dec'] = emp_line[1]
-            body_dict['v_mag'] = emp_line[2]
-            if disp:
-                if disp in body_dict['obs_needed']:
+                    body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                    startdate = '-'
+                    enddate = '-'
+                days_to_start = body_dict['obs_sdate']-obs_dates[2]
+                days_to_end = body_dict['obs_edate']-obs_dates[2]
+                # Define a sorting Priority:
+                # Currently a combination of imminence and window width.
+                body_dict['priority'] = days_to_start.days + days_to_end.days
+                body_dict['obs_start'] = startdate
+                body_dict['obs_end'] = enddate
+                body_dict['ra'] = emp_line[0]
+                body_dict['dec'] = emp_line[1]
+                body_dict['v_mag'] = emp_line[2]
+                if disp:
+                    if disp in body_dict['obs_needed']:
+                        unranked.append(body_dict)
+                else:
                     unranked.append(body_dict)
-            else:
-                unranked.append(body_dict)
-    except Exception as e:
+            except Exception as e:
+                logger.error('Characterization target %s failed on %s' % (body.name, e))
+    except Body.DoesNotExist as e:
         unranked = None
         logger.error('Characterization list failed on %s' % e)
     params = {

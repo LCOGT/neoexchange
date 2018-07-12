@@ -257,10 +257,13 @@ class Body(models.Model):
         dstart = ''
         dend = ''
         if self.epochofel:
+            if dbg:
+                logger.debug('Body: {}'.format(self.name))
             orbelems = model_to_dict(self)
             sitecode = '500'
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
+
                 emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
                 vmag = emp_line[3]
 
@@ -270,6 +273,8 @@ class Body(models.Model):
 
                 # Calculate time since/until reaching Magnitude limit
                 t_diff = (mag_limit - vmag) / mag_dot
+                if abs(t_diff) > 10000:
+                    t_diff = 10000*t_diff/abs(t_diff)
 
                 # create separation test.
                 sep_test = degrees(separation) > sep_limit
@@ -284,13 +289,13 @@ class Body(models.Model):
                     # if Valid for beginning and end of window, assume valid for window
                     if vmag <= mag_limit and dstart and sep_test:
                         if dbg:
-                            logger.debug("good at begining and end", "mag:", vmag, "sep:", sep_test)
+                            logger.debug("good at begining and end, mag: {}, sep {}".format(vmag, sep_test))
                         return dstart, dend, d0
                     elif not dstart:
                         # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
                         if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
                             if dbg:
-                                logger.debug("bad at begining and end, Delta Mag no good", "mag:", vmag, "sep:", sep_test)
+                                logger.debug("bad at begining and end, Delta Mag no good, mag:{}, sep: {}".format(vmag, sep_test))
                             return dstart, dend, d0
                         else:
                             d = d0 + timedelta(days=delta_t)
@@ -300,13 +305,13 @@ class Body(models.Model):
                 elif (vmag > mag_limit or not sep_test) and dstart:
                     dend = d
                     if dbg:
-                        logger.debug("Ended in at", i, "mag:", vmag, "sep:", sep_test)
+                        logger.debug("Ended at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
                     return dstart, dend, d0
                 # If no start date, and we are valid, set start date
                 elif vmag <= mag_limit and not dstart and sep_test:
                     dstart = d
                     if dbg:
-                        logger.debug("started at", i, "mag:", vmag, "sep:", sep_test)
+                        logger.debug("started at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
                     # if this is our first iteration (i.e. we started valid) test end date
                     if i == 0:
                         d += timedelta(days=df)
@@ -326,7 +331,7 @@ class Body(models.Model):
                 i += 1
             # Return dates
             if dbg:
-                logger.debug("no end change", "mag:", vmag, "sep:", sep_test)
+                logger.debug("no end change, mag: {}, sep: {}".format(vmag, sep_test))
             return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
