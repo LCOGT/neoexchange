@@ -26,7 +26,8 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
-    StaticSourceView, ScheduleCalibSpectra, ScheduleCalibSubmit
+    StaticSourceView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
+    make_standards_plot, plotstandards
 from analyser.views import BlockFramesView, ProcessCandidates
 
 
@@ -36,6 +37,8 @@ urlpatterns = [
     url(r'^$', home, name='home'),
     url(r'^makeplot/$', make_plot, name='makeplot'),
     url(r'^plotframe/$', plotframe),
+    url(r'^make-standards-plot/$', make_standards_plot, name='make-standards-plot'),
+    url(r'^plotstandards/$', plotstandards),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),

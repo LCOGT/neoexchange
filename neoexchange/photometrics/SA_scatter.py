@@ -1,5 +1,5 @@
-""" 
-Generates a scatter plot of the positions 
+"""
+Generates a scatter plot of the positions
 of spectral Solar Anlogs accross the sky.
 Author: Adam Tedeschi
 for NeoExchange
@@ -37,7 +37,7 @@ def readCoords(lines):  #parsing coordinates from file
     for line in lines:
         parts = line.split()
         for n in range(1,len(parts)):
-            try: 
+            try:
                 if ':' in parts[n]:
                     coords = np.append(coords, SkyCoord(parts[n],parts[n+1],unit=(u.hourangle, u.deg)))
                     break
@@ -46,14 +46,16 @@ def readCoords(lines):  #parsing coordinates from file
     return coords
 
 def genGalPlane(): #building galactic plane in ICRS coordinates
-    galcoords = Galactic(l=np.arange(0,360,1)*u.deg,b=np.zeros(360)*u.deg)   
+    galcoords = Galactic(l=np.arange(0,360,1)*u.deg,b=np.zeros(360)*u.deg)
     galicrs = galcoords.transform_to(coordinates.ICRS)
     galicrs.dec[117]=np.nan*u.deg
     return galicrs
 
-def plotScatter(ax,coords,galcoords,style='b.'):
+def plotScatter(ax,coords,style='b.'):
     for coord in coords: #stars
         ax.plot(coord.ra.hour,coord.dec,style)
+
+def plotFormat(ax,galcoords):
     ax.plot(24*np.arange(0,1,.01),23.4*np.sin(np.arange(0,2*np.pi,2*np.pi/100)),'r-') #ecliptic (approx)
     ax.plot(galcoords.ra.hour,galcoords.dec,'y-') #galactic plane (exact)
     ax.set_ylabel("Dec (Degrees)")
@@ -62,20 +64,22 @@ def plotScatter(ax,coords,galcoords,style='b.'):
     plt.ylim(-90,90)
     plt.xticks(np.arange(24,0,-2))
     plt.yticks(np.arange(-90,90,15))
+    leg = ax.legend(loc='best',
+    handles=[mpatches.Patch(color='blue',label='Solar Standard'),
+    mpatches.Patch(color='green',label='Flux Standard')])
+    leg.get_frame().set_alpha(.5)
+    plt.title("Stellar Standards Distribution")
 
-    ax.legend(handles=[mpatches.Patch(color='blue',label='Solar Standard'),mpatches.Patch(color='green',label='Flux Standard')])
-
-    plt.title("Solar Analog Distribution")
-    
     plt.grid(True)
-    
+
+
+
 if __name__== "__main__":
     lines = readFile(os.path.join(os.getcwd(),'photometrics/data/Solar_Standards'))
     scoords = readSources('Solar')
     #coords = readCoords(lines)
     galcoords = genGalPlane()
     ax = plt.figure().gca()
-    plotScatter(ax,scoords,galcoords)
+    plotScatter(ax,scoords)
+    plotFormat(ax,galcoords)
     plt.show()
-
-

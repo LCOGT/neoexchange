@@ -10,4 +10,5 @@ class Command(BaseCommand):
         ax = plt.figure().gca()
         plotScatter(ax,scoords,galcoords,'b.')
         plotScatter(ax,fcoords,galcoords,'g.')
+        plotFormat(ax)
         plt.show()

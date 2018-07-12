@@ -15,6 +15,9 @@
     <div id="main" class="fill-height">
         <div class="container">
             <div class="row">
+              <img src="{% url 'make-standards-plot' %}">
+            </div>
+            <div class="row">
                 <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' %}" id="schedule-calib-ftn-obs">Schedule FTN Calib Observations</a>
                 <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' %}" id="schedule-calib-fts-obs">Schedule FTS Calib Observations</a>
                 {% if "solar" in request.get_full_path %}

@@ -62,6 +62,8 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
+from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
+    plotFormat
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 
@@ -700,7 +702,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         speed = 0.0
         ra = body.ra
         dec = body.dec
-    
+
     # Determine filter pattern
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
@@ -2032,6 +2034,27 @@ def make_plot(request):
 def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
+
+def make_standards_plot(request):
+
+    import matplotlib.pyplot as plt
+    import io
+    scoords = readSources('Solar')
+    fcoords = readSources('Flux')
+    galcoords = genGalPlane()
+
+    ax = plt.figure().gca()
+    plotScatter(ax,scoords,'b*')
+    plotScatter(ax,fcoords,'g*')
+    plotFormat(ax,galcoords)
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+def plotstandards(request):
+
+    return render(request, 'core/standards_plot.html')
 
 
 def update_taxonomy(taxobj, dbg=False):
