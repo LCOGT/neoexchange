@@ -1525,7 +1525,6 @@ class TestUpdate_MPC_obs(TestCase):
         initial_measures = update_MPC_obs(self.test_mpcobs_page3)
         # update with new ones
         final_measures = update_MPC_obs(self.test_mpcobs_page2)
-        print([m.frame.midpoint for m in initial_measures])
         self.assertEqual(len(final_measures), expected_measures)
 
         source_measures = SourceMeasurement.objects.filter(body=self.test_body2)
