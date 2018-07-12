@@ -1463,6 +1463,10 @@ class TestUpdate_MPC_obs(TestCase):
         self.test_mpcobs_page2 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_13553_old.dat'), 'r')
+        self.test_mpcobs_page3 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
     @classmethod
     def setUpTestData(cls):
         WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
@@ -1494,7 +1498,7 @@ class TestUpdate_MPC_obs(TestCase):
         self.assertEqual(expected_num_srcmeas, len(measures))
         source_measures = SourceMeasurement.objects.filter(body=self.test_body)
         self.assertEqual(expected_num_srcmeas, source_measures.count())
-        source_measure = source_measures[0]
+        source_measure = source_measures[len(source_measures) - 1]
 
         self.assertEqual(SourceMeasurement, type(source_measure))
         self.assertEqual(Body, type(source_measure.body))
@@ -1510,6 +1514,27 @@ class TestUpdate_MPC_obs(TestCase):
         expected_measures = 23
         measures = update_MPC_obs(self.test_mpcobs_page2)
         self.assertEqual(len(measures), expected_measures)
+
+    def test_repeat_sources(self):
+        expected_measures = 11
+        total_measures = 23
+        first_date = datetime(1998, 2, 21, 2, 13, 10, 272000)
+        last_date = datetime(2018, 7, 10, 3, 35, 44, 448000)
+
+        # Read in old measures
+        initial_measures = update_MPC_obs(self.test_mpcobs_page3)
+        # update with new ones
+        final_measures = update_MPC_obs(self.test_mpcobs_page2)
+        print([m.frame.midpoint for m in initial_measures])
+        self.assertEqual(len(final_measures), expected_measures)
+
+        source_measures = SourceMeasurement.objects.filter(body=self.test_body2)
+        sorted_source_measures = sorted(source_measures, key=lambda sm: sm.frame.midpoint)
+        self.assertEqual(total_measures, source_measures.count())
+        source_measure1 = sorted_source_measures[len(source_measures) - 1]
+        source_measure2 = sorted_source_measures[0]
+        self.assertEqual(last_date, source_measure1.frame.midpoint)
+        self.assertEqual(first_date, source_measure2.frame.midpoint)
 
 
 class TestClean_mpcorbit(TestCase):

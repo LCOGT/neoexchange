@@ -1653,6 +1653,8 @@ def update_MPC_obs(obj_id_or_page):
 
     if len(obslines) > 0:
         measures = create_source_measurement(obslines, None)
+    else:
+        measures = []
     return measures
 
 
@@ -1662,7 +1664,7 @@ def create_source_measurement(obs_lines, block=None):
         obs_lines = [obs_lines, ]
 
     obs_body = None
-    for obs_line in obs_lines:
+    for obs_line in reversed(obs_lines):
         logger.debug(obs_line.rstrip())
         params = parse_mpcobs(obs_line)
         if params:
@@ -1703,11 +1705,25 @@ def create_source_measurement(obs_lines, block=None):
                             measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
                     except Frame.DoesNotExist:
                         logger.warning("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'], params['site_code']))
+                        frame = create_frame(params, block)
+                        frame.extrainfo = params['extrainfo']
+                        frame.save()
                     except Frame.MultipleObjectsReturned:
                         logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                 else:
                     # Otherwise, make a new Frame and SourceMeasurement
-                    frame = create_frame(params, block)
+                    if params['obs_type'] == 'S':
+                        try:
+                            frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
+                                                            midpoint=params['obs_date'],
+                                                            sitecode=params['site_code'])
+                            if frame.filter != params['filter']:
+                                frame.filter = params['filter']
+                                frame.save()
+                        except Frame.DoesNotExist:
+                            frame = create_frame(params, block)
+                    else:
+                        frame = create_frame(params, block)
                     measure_params = {  'body'    : obs_body,
                                         'frame'   : frame,
                                         'obs_ra'  : params['obs_ra'],
@@ -1718,6 +1734,8 @@ def create_source_measurement(obs_lines, block=None):
                     measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
                     if measure_created:
                         measures.append(measure)
+                    else:
+                        break
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % params['body'])
             except Body.MultipleObjectsReturned:
@@ -1732,8 +1750,8 @@ def create_source_measurement(obs_lines, block=None):
         if updated is True:
             message = "Updated"
         logger.info("%s MPC Observations for Body #%d (%s)" % (message, obs_body.pk, obs_body.current_name()))
-    if not measures:
-        measures = False
+
+    measures = [m for m in reversed(measures)]
     return measures
 
 
