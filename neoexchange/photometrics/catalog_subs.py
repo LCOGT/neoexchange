@@ -1331,7 +1331,10 @@ def make_sext_file_line(sext_params):
 def determine_image_for_catalog(new_catalog):
     """Determines the originating FITS filename for the passed catalog name,
     allowing correct naming for the corresponding .sext file"""
-    if '_ldac.fits' in new_catalog:
+    if 'e92_ldac.fits' in new_catalog or 'e12_ldac.fits' in new_catalog:
+        real_fits_filename = os.path.basename(new_catalog).replace('2_ldac.fits', '1.fits')
+        fits_filename_path = new_catalog.replace('2_ldac.fits', '1.fits')
+    elif '_ldac.fits' in new_catalog:
         real_fits_filename = os.path.basename(new_catalog).replace('_ldac.fits', '.fits')
         fits_filename_path = new_catalog.replace('_ldac.fits', '.fits')
     elif '_cat.fits' in new_catalog:

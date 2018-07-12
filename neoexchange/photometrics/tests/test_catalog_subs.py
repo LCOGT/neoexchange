@@ -2685,3 +2685,39 @@ class TestDetermineImageForCatalog(TestCase):
 
         self.assertEqual(expected_filename, fits_filename)
         self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_gaia_ldac_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e12_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_gaia_ldac_no_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = 'lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('lsc1m005-fl15-20171109-0139-e92_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_ql_gaia_ldac_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e11.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e11.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e12_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
+
+    def test_red_gaia_ldac_path(self):
+        expected_filename = 'lsc1m005-fl15-20171109-0139-e91.fits'
+        expected_filepath = '/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e91.fits'
+
+        fits_filename, fits_filepath = determine_image_for_catalog('/apophis/eng/rocks/20171109/lsc1m005-fl15-20171109-0139-e92_ldac.fits')
+
+        self.assertEqual(expected_filename, fits_filename)
+        self.assertEqual(expected_filepath, fits_filepath)
