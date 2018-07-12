@@ -84,13 +84,14 @@ def check_request_status(tracking_num=None):
     data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
     return lco_api_call(data_url)
 
+
 def create_frame(params, block=None, frameid=None):
     # Return None if params is just whitespace
     if not params:
         return None
 
     if params.get('GROUPID', None):
-    # In these cases we are parsing the FITS header
+        # In these cases we are parsing the FITS header
         frame_params = frame_params_from_header(params, block)
     else:
         # We are parsing observation logs
@@ -196,6 +197,7 @@ def frame_params_from_block(params, block):
                  }
     return frame_params
 
+
 def frame_params_from_log(params, block):
     # Called when parsing MPC NEOCP observations lines/logs
     our_site_codes = LCOGT_site_codes()
@@ -218,6 +220,7 @@ def frame_params_from_log(params, block):
                      'frametype' : frame_type
                    }
     return frame_params
+
 
 def ingest_frames(images, block):
     '''

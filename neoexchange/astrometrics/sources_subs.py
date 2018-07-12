@@ -713,6 +713,8 @@ def validate_packcode(packcode):
     valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
 
+    if len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
+        return True
     if len(packcode) != 7:
         raise PackedError("Invalid packcode length")
     if packcode[0] not in valid_cent_codes:
@@ -728,7 +730,8 @@ def validate_packcode(packcode):
 
 def packed_to_normal(packcode):
     """Converts MPC packed provisional designations e.g. K10V01F to unpacked
-    normal desigination i.e. 2010 VF1"""
+    normal desigination i.e. 2010 VF1 including packed 5 digit number designations
+    i.e. L5426 to 215426"""
 
 # Convert initial letter to century
     cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
@@ -736,6 +739,10 @@ def packed_to_normal(packcode):
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
         return None
+    elif len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
+        cycle = cycle_mpc_character_code(packcode[0])
+        normal_code = str(cycle) + packcode[1:]
+        return normal_code
     else:
         mpc_cent = cent_codes[packcode[0]]
 
@@ -744,13 +751,7 @@ def packed_to_normal(packcode):
     no_in_halfmonth = packcode[3] + packcode[6]
 # Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
 # consecutive integer by converting to ASCII code and skipping the non-alphanumerics
-    cycle = ord(packcode[4])
-    if cycle >= ord('a'):
-        cycle = cycle - 61
-    elif ord('A') <= cycle < ord('Z'):
-        cycle = cycle - 55
-    else:
-        cycle = cycle - ord('0')
+    cycle = cycle_mpc_character_code(packcode[4])
     digit = int(packcode[5])
     count = cycle * 10 + digit
 # No digits on the end of the unpacked designation if it's the first loop through
@@ -761,6 +762,18 @@ def packed_to_normal(packcode):
     normal_code = str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count)
 
     return normal_code
+
+
+def cycle_mpc_character_code(char):
+    """Convert MPC character code into a number 0--9, A--Z, a--z and return interger"""
+    cycle = ord(char)
+    if cycle >= ord('a'):
+        cycle = cycle - 61
+    elif ord('A') <= cycle < ord('Z'):
+        cycle = cycle - 55
+    else:
+        cycle = cycle - ord('0')
+    return cycle
 
 
 def parse_goldstone_chunks(chunks, dbg=False):

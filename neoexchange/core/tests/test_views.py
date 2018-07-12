@@ -1467,6 +1467,10 @@ class TestUpdate_MPC_obs(TestCase):
         self.test_mpcobs_page3 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_215426.dat'), 'r')
+        self.test_mpcobs_page4 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
     @classmethod
     def setUpTestData(cls):
         WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
@@ -1478,6 +1482,11 @@ class TestUpdate_MPC_obs(TestCase):
                          'provisional_name' : '1992 JE'
                          }
         cls.test_body2 = Body.objects.create(**params_13553)
+
+        params_215426 = { 'name' : '215426',
+                         'provisional_name' : '2002 JF45'
+                         }
+        cls.test_body3 = Body.objects.create(**params_215426)
 
     def test1(self):
         expected_num_srcmeas = 6
@@ -1534,6 +1543,12 @@ class TestUpdate_MPC_obs(TestCase):
         source_measure2 = sorted_source_measures[0]
         self.assertEqual(last_date, source_measure1.frame.midpoint)
         self.assertEqual(first_date, source_measure2.frame.midpoint)
+
+    def test_packed_name_with_change(self):
+        expected_measures = 15
+
+        measures = update_MPC_obs(self.test_mpcobs_page4)
+        self.assertEqual(len(measures), expected_measures)
 
 
 class TestClean_mpcorbit(TestCase):

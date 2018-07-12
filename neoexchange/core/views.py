@@ -1658,27 +1658,68 @@ def update_MPC_obs(obj_id_or_page):
     return measures
 
 
+def count_useful_obs(obs_lines):
+    i = 0
+    for obs_line in obs_lines:
+        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 's']:
+            i += 1
+    return i
+
+
 def create_source_measurement(obs_lines, block=None):
     measures = []
     if type(obs_lines) != list:
         obs_lines = [obs_lines, ]
 
+    useful_obs = count_useful_obs(obs_lines)
     obs_body = None
     for obs_line in reversed(obs_lines):
-        logger.debug(obs_line.rstrip())
-        params = parse_mpcobs(obs_line)
-        if params:
+        param = parse_mpcobs(obs_line)
+        if param:
+            # Try to unpack the name first
             try:
-                # Try to unpack the name first
+                try:
+                    unpacked_name = packed_to_normal(param['body'])
+                except PackedError:
+                    unpacked_name = 'ZZZZZZ'
+                obs_body = Body.objects.get(Q(provisional_name__startswith=param['body']) |
+                                            Q(name=param['body']) |
+                                            Q(name=unpacked_name) |
+                                            Q(provisional_name=unpacked_name)
+                                           )
+            except Body.DoesNotExist:
+                logger.debug("Body %s does not exist" % param['body'])
+                obs_lines.remove(obs_line)
+            except Body.MultipleObjectsReturned:
+                logger.warning("Multiple versions of Body %s exist" % param['body'])
+            if obs_body is not None:
+                break
+
+    if obs_body:
+        for obs_line in reversed(obs_lines):
+            logger.debug(obs_line.rstrip())
+            params = parse_mpcobs(obs_line)
+            if params:
                 try:
                     unpacked_name = packed_to_normal(params['body'])
                 except PackedError:
                     unpacked_name = 'ZZZZZZ'
-                obs_body = Body.objects.get(Q(provisional_name__startswith=params['body']) |
-                                            Q(name=params['body']) |
-                                            Q(name=unpacked_name)
-                                           )
-
+                if params['body'] != obs_body.name and unpacked_name != obs_body.provisional_name and unpacked_name != obs_body.name and params['body'] != obs_body.provisional_name:
+                    try:
+                        try:
+                            unpacked_name = packed_to_normal(params['body'])
+                        except PackedError:
+                            unpacked_name = 'ZZZZZZ'
+                        obs_body = Body.objects.get(Q(provisional_name__startswith=params['body']) |
+                                                    Q(name=params['body']) |
+                                                    Q(name=unpacked_name)
+                                                   )
+                    except Body.DoesNotExist:
+                        logger.debug("Body %s does not exist" % params['body'])
+                        continue
+                    except Body.MultipleObjectsReturned:
+                        logger.warning("Multiple versions of Body %s exist" % params['body'])
+                        continue
                 # Identify block
                 if not block:
                     blocks = Block.objects.filter(block_start__lte=params['obs_date'], block_end__gte=params['obs_date'], body=obs_body)
@@ -1734,14 +1775,9 @@ def create_source_measurement(obs_lines, block=None):
                     measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
                     if measure_created:
                         measures.append(measure)
-                    else:
+                    if len(SourceMeasurement.objects.filter(body=obs_body)) >= useful_obs:
                         break
-            except Body.DoesNotExist:
-                logger.debug("Body %s does not exist" % params['body'])
-            except Body.MultipleObjectsReturned:
-                logger.warning("Multiple versions of Body %s exist" % params['body'])
 
-    if obs_body:
         update_params = { 'updated' : True,
                           'update_time' : datetime.utcnow()
                         }
