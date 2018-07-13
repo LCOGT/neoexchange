@@ -1,6 +1,7 @@
 """
 Generates a scatter plot of the positions
-of spectral Solar Anlogs accross the sky.
+of Stellar Spectral Standards and Solar Analogs
+accross a sky map.
 Author: Adam Tedeschi
 for NeoExchange
 """
@@ -15,11 +16,20 @@ import matplotlib.patches as mpatches
 from core.models import StaticSource
 
 def readFile(path): #reading file
+    """ reads a path file if given
+    input: <path> file path
+    output: lines
+    """
     f = open(path)
     lines = f.readlines()
     return lines
 
 def readSources(standard='Solar'):
+    """reads in spectral standards from StaticSource model
+       outputs coordinates of each standard
+       input: [standard] standard option
+       output: coords
+   """
     if standard is 'Solar':
         coords = np.array([])
         for body in StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD):
@@ -33,6 +43,10 @@ def readSources(standard='Solar'):
     return coords
 
 def readCoords(lines):  #parsing coordinates from file
+    """Builds list of coordinates of standards from lines given by readFile()
+       input: <lines>
+       output: coords ndarray(SkyCoord)
+    """
     coords = np.array([])
     for line in lines:
         parts = line.split()
@@ -46,18 +60,29 @@ def readCoords(lines):  #parsing coordinates from file
     return coords
 
 def genGalPlane(): #building galactic plane in ICRS coordinates
+    """Generates galactic plane line to plot on sky map
+       output: galicrs ndarray(SkyCoord)
+    """
     galcoords = Galactic(l=np.arange(0,360,1)*u.deg,b=np.zeros(360)*u.deg)
     galicrs = galcoords.transform_to(coordinates.ICRS)
     galicrs.dec[117]=np.nan*u.deg
     return galicrs
 
 def plotScatter(ax,coords,style='b.'):
+    """Plots standards coords onto skymap plot
+       inputs: <ax> plot axis
+               <coords> standard coords
+               [style] style of marker
+    """
     for coord in coords: #stars
         ax.plot(coord.ra.hour,coord.dec,style)
 
-def plotFormat(ax,galcoords):
+def plotFormat(ax):
+    """Formats plot, plots reference ecliptic and galactic plane
+       inputs: <ax> plot axis
+    """
     ax.plot(24*np.arange(0,1,.01),23.4*np.sin(np.arange(0,2*np.pi,2*np.pi/100)),'r-') #ecliptic (approx)
-    ax.plot(galcoords.ra.hour,galcoords.dec,'y-') #galactic plane (exact)
+    ax.plot(genGalPlane().ra.hour,genGalPlane().dec,'y-') #galactic plane (exact)
     ax.set_ylabel("Dec (Degrees)")
     ax.set_xlabel("RA (Hours)")
     plt.xlim(24,0)

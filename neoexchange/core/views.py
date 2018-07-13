@@ -2036,17 +2036,17 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 def make_standards_plot(request):
+    """creates stellar standards plot to be added to page"""
 
     import matplotlib.pyplot as plt
     import io
     scoords = readSources('Solar')
     fcoords = readSources('Flux')
-    galcoords = genGalPlane()
 
     ax = plt.figure().gca()
     plotScatter(ax,scoords,'b*')
     plotScatter(ax,fcoords,'g*')
-    plotFormat(ax,galcoords)
+    plotFormat(ax)
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
 
