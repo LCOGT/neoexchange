@@ -23,7 +23,7 @@ class Command(BaseCommand):
     help = 'Extract lightcurves of a target from a given SuperBlock. Can look back at earlier SuperBlocks for same object if requested.'
 
     def add_arguments(self, parser):
-        parser.add_argument('supblock', type=int, help='SuperBlock number (tracking number) to analyze')
+        parser.add_argument('supblock', type=int, help='SuperBlock (tracking number) to analyze')
         parser.add_argument('-ts', '--timespan', type=float, default=0.0, help='Days prior to referenced SuperBlock that should be included')
         parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Boxwidth in arcsec to search')
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
@@ -76,7 +76,7 @@ class Command(BaseCommand):
         try:
             start_super_block = SuperBlock.objects.get(tracking_number=options['supblock'])
         except SuperBlock.DoesNotExist:
-            self.stdout.write("Cannot find SuperBlock# %d" % options['supblock'])
+            self.stdout.write("Cannot find SuperBlock with Tracking Number %d" % options['supblock'])
             exit(-1)
 
         super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
