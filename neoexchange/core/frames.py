@@ -109,10 +109,10 @@ def create_frame(params, block=None, frameid=None):
         raise(Frame.MultipleObjectsReturned)
 
     # Update catalogue information if we have it
-    if params.get('astrometric_catalog',None):
+    if params.get('astrometric_catalog', None):
         frame.astrometric_catalog = params.get('astrometric_catalog')
         frame.save()
-    if params.get('photometric_catalog',None):
+    if params.get('photometric_catalog', None):
         frame.photometric_catalog = params.get('photometric_catalog')
         frame.save()
 
@@ -122,6 +122,7 @@ def create_frame(params, block=None, frameid=None):
         msg = "updated"
     logger.debug("Frame %s %s" % (frame, msg))
     return frame
+
 
 def frame_params_from_header(params, block):
     # In these cases we are parsing the FITS header

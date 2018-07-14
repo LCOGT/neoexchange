@@ -789,10 +789,10 @@ def schedule_submit(data, body, username):
     emp_at_start = None
     if data.get('spectroscopy', False) is not False:
         # Update MPC observations assuming too many updates have not been done recently
-        cut_off_time = timedelta(minutes=30)
+        cut_off_time = timedelta(minutes=10)
         now = datetime.utcnow()
         recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
-        if len(recent_updates) < 1 and body.update_time < (now - timedelta(days=1)):
+        if len(recent_updates) < 1:
             update_MPC_obs(body.name)
         # Invoke find_orb to update Body's elements and return ephemeris
 
@@ -1696,10 +1696,17 @@ def create_source_measurement(obs_lines, block=None):
                 break
 
     if obs_body:
+        # initialize DB products
+        frame_list = Frame.objects.filter(sourcemeasurement__body__name=obs_body.name)
+        source_list = SourceMeasurement.objects.filter(body=obs_body)
+        block_list = Block.objects.filter(body=obs_body)
+        measure_count = len(source_list)
         for obs_line in reversed(obs_lines):
+            frame = None
             logger.debug(obs_line.rstrip())
             params = parse_mpcobs(obs_line)
             if params:
+                rounded_date = params['obs_date'] - timedelta(microseconds=params['obs_date'].microsecond)
                 try:
                     unpacked_name = packed_to_normal(params['body'])
                 except PackedError:
@@ -1722,61 +1729,85 @@ def create_source_measurement(obs_lines, block=None):
                         continue
                 # Identify block
                 if not block:
-                    blocks = Block.objects.filter(block_start__lte=params['obs_date'], block_end__gte=params['obs_date'], body=obs_body)
-                    if blocks:
-                        logger.info("Found %s blocks for %s" % (blocks.count(), obs_body))
-                        block = blocks[0]
-                    else:
-                        logger.debug("No blocks for %s, presumably non-LCO data" % obs_body)
+                    if block_list:
+                        blocks = [blk for blk in block_list if blk.block_start <= params['obs_date'] <= blk.block_end]
+                        if blocks:
+                            logger.info("Found %s blocks for %s" % (len(blocks), obs_body))
+                            block = blocks[0]
+                        else:
+                            logger.debug("No blocks for %s, presumably non-LCO data" % obs_body)
                 if params['obs_type'] == 's':
                     # If we have an obs_type of 's', then we have the second line
                     # of a satellite measurement and we need to find the matching
                     # Frame we created on the previous line read and update its
                     # extrainfo field.
-                    try:
-                        prior_frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
-                                                        midpoint=params['obs_date'],
-                                                        sitecode=params['site_code'])
-                        if prior_frame.extrainfo != params['extrainfo']:
-                            prior_frame.extrainfo = params['extrainfo']
-                            prior_frame.save()
-                        if len(measures) > 0:
-                            # Replace SourceMeasurement in list to be returned with
-                            # updated version
-                            measures[-1] = SourceMeasurement.objects.get(pk=measures[-1].pk)
-                    except Frame.DoesNotExist:
-                        logger.warning("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'], params['site_code']))
-                        frame = create_frame(params, block)
-                        frame.extrainfo = params['extrainfo']
-                        frame.save()
-                    except Frame.MultipleObjectsReturned:
-                        logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
-                else:
-                    # Otherwise, make a new Frame and SourceMeasurement
-                    if params['obs_type'] == 'S':
+                    if frame_list:
+                        frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
+                                                                    (params['obs_date'] >= frm.midpoint >= rounded_date) and
+                                                                    frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
+                    if not frame_list and not frame:
                         try:
-                            frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
-                                                            midpoint=params['obs_date'],
+                            prior_frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
+                                                            midpoint__gte=rounded_date,
+                                                            midpoint__lte=params['obs_date'],
                                                             sitecode=params['site_code'])
-                            if frame.filter != params['filter']:
-                                frame.filter = params['filter']
-                                frame.save()
+                            if prior_frame.extrainfo != params['extrainfo']:
+                                prior_frame.extrainfo = params['extrainfo']
+                                prior_frame.save()
                         except Frame.DoesNotExist:
+                            logger.warning("Matching satellite frame for %s from %s on %s does not exist" % (params['body'], params['obs_date'], params['site_code']))
                             frame = create_frame(params, block)
+                            frame.extrainfo = params['extrainfo']
+                            frame.save()
+                        except Frame.MultipleObjectsReturned:
+                            logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
+                            continue
+                else:
+                    if params['obs_type'] == 'S':
+                        # Otherwise, make a new Frame and SourceMeasurement
+                        if frame_list:
+                            frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
+                                                                        (params['obs_date'] >= frm.midpoint >= rounded_date) and
+                                                                        frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
+                        if not frame_list and not frame:
+                            try:
+                                frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
+                                                                midpoint__gte=rounded_date,
+                                                                midpoint__lte=params['obs_date'],
+                                                                sitecode=params['site_code'])
+                                if frame.filter != params['filter']:
+                                    frame.filter = params['filter']
+                                    frame.save()
+                            except Frame.DoesNotExist:
+                                frame = create_frame(params, block)
+                            except Frame.MultipleObjectsReturned:
+                                logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
+                                continue
                     else:
-                        frame = create_frame(params, block)
-                    measure_params = {  'body'    : obs_body,
-                                        'frame'   : frame,
-                                        'obs_ra'  : params['obs_ra'],
-                                        'obs_dec' : params['obs_dec'],
-                                        'obs_mag' : params['obs_mag'],
-                                        'flags'   : params['flags']
-                                     }
-                    measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
-                    if measure_created:
-                        measures.append(measure)
-                    if len(SourceMeasurement.objects.filter(body=obs_body)) >= useful_obs:
-                        break
+                        if frame_list:
+                            frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and (params['obs_date'] >= frm.midpoint >= rounded_date)), None)
+                            if not frame:
+                                frame = create_frame(params, block)
+                        else:
+                            frame = create_frame(params, block)
+                    if frame:
+                        measure_params = {  'body'    : obs_body,
+                                            'frame'   : frame,
+                                            'obs_ra'  : params['obs_ra'],
+                                            'obs_dec' : params['obs_dec'],
+                                            'obs_mag' : params['obs_mag'],
+                                            'flags'   : params['flags']
+                                         }
+                        if source_list and next((src for src in source_list if src.frame == measure_params['frame']), None):
+                            measure_created = False
+                            measure = None
+                        else:
+                            measure, measure_created = SourceMeasurement.objects.get_or_create(**measure_params)
+                        if measure_created:
+                            measures.append(measure)
+                            measure_count += 1
+                        if measure_count >= useful_obs:
+                            break
 
         update_params = { 'updated' : True,
                           'update_time' : datetime.utcnow()

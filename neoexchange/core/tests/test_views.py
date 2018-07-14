@@ -1527,6 +1527,7 @@ class TestUpdate_MPC_obs(TestCase):
     def test_repeat_sources(self):
         expected_measures = 11
         total_measures = 23
+        expected_frames = 23
         first_date = datetime(1998, 2, 21, 2, 13, 10, 272000)
         last_date = datetime(2018, 7, 10, 3, 35, 44, 448000)
 
@@ -1543,6 +1544,9 @@ class TestUpdate_MPC_obs(TestCase):
         source_measure2 = sorted_source_measures[0]
         self.assertEqual(last_date, source_measure1.frame.midpoint)
         self.assertEqual(first_date, source_measure2.frame.midpoint)
+
+        frames = Frame.objects.all()
+        self.assertEqual(len(frames), expected_frames)
 
     def test_packed_name_with_change(self):
         expected_measures = 15
