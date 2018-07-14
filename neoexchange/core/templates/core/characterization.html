@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+
+{% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
+
+{% block header %}Characterization Page{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Characterization Targets</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div id="main" class="fullwidth">
+        <table id="characterization_targets" class="datatable" cellpadding="0" cellspacing="0">
+            <thead>
+                <tr>
+                    <th class="list_project">
+                        <span class="sortable" id="rank">Rank</span><br>
+                    </th>
+                    <th class="list_title">
+                        <span class="sortable" id="name_id">Target Name</span><br>
+                    </th>
+                    <th>
+                        <span class="sortable" id="ra">R.A.</span><br>
+                    </th>
+                    <th>
+                        <span class="sortable" id="dec">Dec.</span><br>
+                    </th>
+                    <th>
+                        <span class="sortable" id="Vmag">V Mag.</span><br>
+                    </th>
+                    <th>
+                        <span class="sortable" id="obsneeded">Required Observations</span><br>
+                        <span style="font-size:75%" >
+                        <form action="{% url 'characterization' %}" method="GET">Filter:
+                            <label style="display:inline-block!important;" for="filter_spec">
+                            {% if char_filter == 'Spec' %}
+                                <input id='filter_spec' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="Spec" checked>
+                            {% else %}
+                                <input id='filter_spec' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="Spec" >
+                            {% endif %}
+                             Spec </label>
+                            <label style="display:inline-block!important;" for="filter_lc">
+                            {% if char_filter == 'LC' %}
+                                <input id='filter_lc' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="LC" checked>
+                            {% else %}
+                                <input id='filter_lc' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="LC">
+                            {% endif %}
+                             LC </label>
+                            <label style="display:inline-block!important;" for="filter_all">
+                            {% if char_filter%}
+                                <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="">
+                            {% else %}
+                                <input id='filter_all' onchange="this.form.submit();" style= "width:10px!important;vertical-align:middle!important;" type="radio" name="filter" value="" checked>
+                            {% endif %}
+                             All</label>
+					    </form></span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="Hmag">H Mag.</span><br>
+
+                    </th>
+                    <th>
+                        <span class="sortable" id="origin">Origin</span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="SMASS"><a href="http://smass.mit.edu/smass.html">SMASS</a><br>Observations</span><br>
+                    </th>
+                    <th>
+                        <span class="sortable" id="MANOS"><a href="http://manos.lowell.edu/index">MANOS</a><br>Target?</span><br>
+                    </th>
+                    <th>
+                        <span class="sortable" id="obsdate">Observation Window</span><br>
+                        <span style="font-size:75%" > (for next 90 days) </span>
+                    </th>
+                    <th>
+                        <span class="sortable" id="reported">Reported?</span><br>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="char_table">
+                {% for body in char_targets|dictsort:"priority"%}
+                <tr class="{% cycle 'odd' 'even' %}">
+                    <td data-label="Rank">{{forloop.counter}}</td>
+                    <td class="list_title"><a href="{% url 'target' body.id %}">{{body.current_name}}</a></td>
+                    <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
+                    <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
+                    <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>
+                    <td data-label="obsneeded"> {{body.obs_needed}}</td>
+                    <td data-label="Hmag">{{body.abs_mag}}</td>
+                    <td data-label="origin">{{body.origin}}</td>
+                    {% if body.s_wav == 'Vis+NIR'%}
+                        {% if body.s_vis_link%}
+                            {% if body.s_nir_link%}
+                                <td data-label="SMASS Obs" >
+                                    <ul style="margin: 0px;">
+                                        <li style="display: inline-block;margin: 0px;"><a href={{body.s_vis_link}}>Vis</a>
+                                        </li><li style="display: inline-block;margin: 0px;">+
+                                        </li><li style="display: inline-block;margin: 0px;"><a href={{body.s_nir_link}}>NIR</a></li>
+                                    </ul>
+                                </td>
+                            {% else %}
+                                <td data-label="SMASS Obs">
+                                    <ul style="margin: 0px;">
+                                        <li style="display: inline-block;margin: 0px;"><a href={{body.s_vis_link}}>Vis</a>
+                                        </li><li style="display: inline-block;margin: 0px;">+NIR</li>
+                                    </ul>
+                                </td>
+                            {% endif %}
+                        {% else %}
+                            {% if body.s_nir_link%}
+                                <td data-label="SMASS Obs">
+                                    <ul style="margin: 0px;">
+                                        <li style="display: inline-block;margin: 0px;">Vis+
+                                        </li><li style="display: inline-block;margin: 0px;"><a href={{body.s_nir_link}}>NIR</a></li>
+                                    </ul>
+                                </td>
+                            {% else %}
+                                <td data-label="SMASS Obs">{{body.s_wav}}</td>
+                            {% endif %}
+                        {% endif %}
+                    {% else %}
+                        {% if body.s_vis_link and body.s_wav == 'Vis'%}
+                            <td data-label="SMASS Obs"><a href={{body.s_vis_link}}>{{body.s_wav}}</a> </td>
+                        {% else %}
+                            {% if body.s_nir_link and body.s_wav == 'NIR'%}
+                                <td data-label="SMASS Obs"><a href={{body.s_nir_link}}>{{body.s_wav}}</a> </td>
+                            {% else %}
+                                <td data-label="SMASS Obs">{{body.s_wav}}</td>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                    {% if body.m_wav == 'Vis+NIR'%}
+                        {% if body.m_nir_link %}
+                            {% if body.m_vis_link %}
+                                <td data-label="MANOS Target?">
+                                    <ul  style="margin: 0px;">
+                                        <li style="display: inline-block;margin: 0px;"><a href={{body.m_vis_link}}>Vis</a>
+                                        </li><li style="display: inline-block;margin: 0px;">+
+                                        </li><li style="display: inline-block;margin: 0px;"><a href={{body.m_nir_link}}>NIR</a></li>
+                                    </ul>
+                                </td>
+                            {% else %}
+                                <td data-label="MANOS Target?">
+                                    <ul style="margin: 0px;">
+                                        <li style="display: inline-block;margin: 0px;">Vis+
+                                        </li><li style="display: inline-block;margin: 0px;"><a href={{body.m_nir_link}}>NIR</a></li>
+                                    </ul>
+                                </td>
+                            {% endif %}
+                        {% else %}
+                            {% if body.m_vis_link %}
+                                <td data-label="MANOS Target?">
+                                    <ul style="margin: 0px;">
+                                        <li style="display: inline-block;margin: 0px;"><a href={{body.m_vis_link}}>Vis</a>
+                                        </li><li style="display: inline-block;margin: 0px;">+NIR</li>
+                                    </ul>
+                                </td>
+                            {% else %}
+                                <td data-label="MANOS Target?"> {{body.m_wav}}</td>
+                            {% endif %}
+                        {% endif %}
+                    {% else %}
+                        {% if body.m_nir_link %}
+                            <td data-label="MANOS Target?"> <a href={{body.m_nir_link}}>{{body.m_wav}}</a></td>
+                        {% else %}
+                            {% if body.m_vis_link %}
+                            <td data-label="MANOS Target?"> <a href={{body.m_vis_link}}>{{body.m_wav}}</a></td>
+                            {% else %}
+                                <td data-label="MANOS Target?"> {{body.m_wav}}</td>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                    <td data-label="Observation Window">{{body.obs_start}}-{{body.obs_end}} </td>
+                    <td data-label="Reported?"></td>
+                    </tr>
+                {% empty%}
+                    <tr><td colspan=16> No new targets</td></tr>
+                {% endfor%}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

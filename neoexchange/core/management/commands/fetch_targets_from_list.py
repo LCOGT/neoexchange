@@ -7,14 +7,14 @@ from astrometrics.sources_subs import fetch_list_targets, random_delay
 from core.views import update_MPC_orbit
 from core.models import ORIGINS
 
-origin_help = '['+', '.join(['"{}":{}'.format(i[0],i[1]) for i in ORIGINS])+']'
+origin_help = '['+', '.join(['"{}":{}'.format(i[0], i[1]) for i in ORIGINS])+']'
 
 class Command(BaseCommand):
     help = 'Fetch targets text file or command line list'
 
     def add_arguments(self, parser):
         parser.add_argument('list_targets', nargs='+', help='Filenames and/or List of Targets to Ingest')
-        parser.add_argument('--origin', help='Origin code for Target list: '+ origin_help)
+        parser.add_argument('--origin', help='Origin code for Target list: ' + origin_help)
 
     def handle(self, *args, **options):
         usage = 'Incorrect usage. Usage must include: --origin ' + origin_help

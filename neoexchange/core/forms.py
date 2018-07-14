@@ -143,7 +143,7 @@ class ScheduleBlockForm(forms.Form):
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=30, widget=forms.HiddenInput())
+    group_id = forms.CharField(max_length=50, widget=forms.HiddenInput())
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
@@ -265,4 +265,6 @@ class SpectroFeasibilityForm(forms.Form):
                 mag = round(emp[2], 1)
         super(SpectroFeasibilityForm, self).__init__(*args, **kwargs)
         self.fields['magnitude'].initial = mag
-        self.fields['sfu'].initial = sfu_values[1].value
+        # Set default SFU value of 70; replace with value from fetch if it isn't None
+        self.fields['sfu'].initial = 70.0
+        self.fields['sfu'].initial = self.fields['sfu'].initial if sfu_values[1] is None else sfu_values[1].value

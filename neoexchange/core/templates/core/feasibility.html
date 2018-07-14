@@ -7,7 +7,7 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Spectroscopy feasibility for: {{body.current_name}}</h1>
+        <h1>Spectroscopy feasibility for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h1>
     </div>
 {% endblock%}
 

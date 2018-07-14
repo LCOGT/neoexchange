@@ -1,8 +1,14 @@
-# NEO Exchange
+## NEO Exchange
 
 Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
+
+### 2.5.0
+Create a characterization page for spectroscopy support
+* Pull out targets of interest.
+* Check of previous spectroscopy from SMASS and MANOS.
+* Calculate observing window for the next 3 months for each target.
 
 ### 2.4.1
 

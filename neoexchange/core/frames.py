@@ -88,7 +88,7 @@ def create_frame(params, block=None, frameid=None):
     # Return None if params is just whitespace
     if not params:
         return None
-    our_site_codes = LCOGT_site_codes()
+
     if params.get('GROUPID', None):
     # In these cases we are parsing the FITS header
         frame_params = frame_params_from_header(params, block)
@@ -125,6 +125,7 @@ def create_frame(params, block=None, frameid=None):
 def frame_params_from_header(params, block):
     # In these cases we are parsing the FITS header
     sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
+    spectro_obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
@@ -136,6 +137,24 @@ def frame_params_from_header(params, block):
                      'exptime'   : params.get('EXPTIME', None),
                      'fwhm'      : params.get('L1FWHM', None),
                  }
+    if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
+        aperture_type = params.get('APERTYPE', 'SLIT').rstrip()
+        aperture_length = params.get('APERLEN', 'UNKNOWN')
+        aperture_width = params.get('APERWID', 'UNK')
+        length_str = 'UNK'
+        if aperture_length != 'UNKNOWN':
+            if aperture_length != '':
+                length_str = "{0:.1f}".format(aperture_length)
+        width_str = 'UNK'
+        if aperture_width != 'UNKNOWN':
+            if aperture_width != '':
+                width_str = "{0:.1f}".format(aperture_width)
+        slit_name = "{type:s}_{length:s}x{width:s}AS".format(type=aperture_type,
+            length=length_str, width=width_str)
+        frame_params['filter'] = slit_name
+        frame_params['frametype'] = Frame.SPECTRUM_FRAMETYPE
+        # XXX Replace (non-existant) L1FWHM with AGFWHM?
+
     # Try and create a WCS object from the header. If successful, add to frame
     # params
     wcs = None
@@ -143,14 +162,14 @@ def frame_params_from_header(params, block):
         wcs = WCS(params)
         frame_params['wcs'] = wcs
     except ValueError:
-        logger.warn("Error creating WCS entry from frameid=%s" % frameid)
+        logger.warning("Error creating WCS entry from frameid=%s" % frameid)
 
 
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
-    rlevel = params.get('RLEVEL', '00')
-    frame_extn = str(rlevel) + '.fits'
+    rlevel = params.get('RLEVEL', 0)
+    frame_extn = "{0:02d}.fits".format(rlevel)
     frame_params['filename'] = frame_params['filename'].replace('00.fits', frame_extn)
     # Correct midpoint for 1/2 the exposure time
     if frame_params['midpoint'] and frame_params['exptime']:
@@ -202,7 +221,8 @@ def frame_params_from_log(params, block):
 
 def ingest_frames(images, block):
     '''
-
+    Create Frame objects for each of the images in <images> and associate
+    them with the passed Block <block>.
     - Also find out how many scheduler blocks were used
     '''
     sched_blocks = []
@@ -241,11 +261,11 @@ def block_status(block_id):
     data = check_request_status(tracking_num)
     # data is a full LCO request dict for this tracking number (now called 'id').
     if not data:
-        logger.warn("Got no data for block/track# %s / %s" % (block_id, tracking_num))
+        logger.warning("Got no data for block/track# %s / %s" % (block_id, tracking_num))
         return False
     # Check if the request was not found
     if data.get('detail', 'None') == u'Not found.':
-        logger.warn("Request not found for block/track# %s / %s" % (block_id, tracking_num))
+        logger.warning("Request not found for block/track# %s / %s" % (block_id, tracking_num))
         return False
     # Check if credentials provided
     if data.get('detail', 'None') == u'Invalid token header. No credentials provided.':
@@ -257,10 +277,19 @@ def block_status(block_id):
     exposure_count = 0
     for r in data['requests']:
         if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
-            images, num_archive_frames = check_for_archive_images(request_id=r['id'])
+            obstype = 'EXPOSE'
+            try:
+                if block.obstype == Block.OPT_SPECTRA:
+                    # Set OBSTYPE to null string for archive search so we get all
+                    # types of frames
+                    obstype = ''
+            except AttributeError:
+                logger.warn("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
+            images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype)
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
                 exposure_count = sum([x['exposure_count'] for x in r['molecules']])
+                obs_types = [x['type'] for x in r['molecules']]
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
                 last_image_header = lco_api_call(last_image_dict.get('headers', None))
@@ -290,9 +319,12 @@ def block_status(block_id):
                 if len(images) >= 3 and len(block_ids) >= 1:
                     logger.info("More than 3 reduced frames found - setting to observed")
                     block.num_observed = len(block_ids)
+                elif len(images) >=1 and 'SPECTRUM' in obs_types and len(block_ids) >= 1:
+                    logger.info("Spectra data found - setting to observed")
+                    block.num_observed = len(block_ids)
                 block.save()
                 status = True
-                logger.info("Block %s updated" % block)
+                logger.info("Block #%d (%s) updated" % (block.id, block))
             else:
                 logger.info("No update to block %s" % block)
     return status

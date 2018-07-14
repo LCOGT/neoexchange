@@ -149,6 +149,56 @@ class ScheduleObservations(FunctionalTest):
 
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
+    def test_schedule_observations_past(self):
+        self.test_login()
+        # Bart has heard about a new website for NEOs. He goes to the
+        # page of the first target
+        # (XXX semi-hardwired but the targets link should be being tested in
+        # test_targets_validation.TargetsValidationTest
+        start_url = reverse('target', kwargs={'pk': 1})
+        self.browser.get(self.live_server_url + start_url)
+
+        # He sees a Schedule Observations button
+        link = self.browser.find_element_by_id('schedule-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the Schedule Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.browser.implicitly_wait(10)
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), target_url)
+
+        # He notices a new selection for the proposal and site code and
+        # chooses the NEO Follow-up Network and ELP (V37)
+        proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
+        self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
+
+        # Bart doesn't see the proposal to which he doesn't have permissions
+        self.assertNotIn(self.test_proposal.title, [option.text for option in proposal_choices.options])
+
+        proposal_choices.select_by_visible_text(self.neo_proposal.title)
+
+        site_choices = Select(self.browser.find_element_by_id('id_site_code'))
+        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+
+        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+
+        MockDateTime.change_date(2015, 4, 20)
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
+        datebox.send_keys('2015-03-21')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('single-submit').click()
+
+        # The page throws an error that observing window cannot end in the past
+        error_msg = self.browser.find_element_by_class_name('errorlist').text
+        self.assertIn("Window cannot start in the past", error_msg)
+
+    @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
     def test_schedule_page_edit_block(self):
         MockDateTime.change_date(2015, 4, 20)
         self.test_login()
