@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.5.2
+
+Robotic scheduler and low-level ToO support.
+
 ### 2.5.0
 Create a characterization page for spectroscopy support
 * Pull out targets of interest.
