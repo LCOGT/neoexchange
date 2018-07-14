@@ -238,7 +238,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6]
+            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
         else:
             # Catch the case where there is no Epoch
             return False

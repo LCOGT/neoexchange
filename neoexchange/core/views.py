@@ -611,6 +611,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
+    group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d')
+    if data.get('too_mode', False) == True:
+        group_id = group_id + '_ToO'
+
     # Determine pattern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
@@ -653,9 +657,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
+        'too_mode' : data.get('too_mode', False),
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + suffix,
+        'group_id': group_id,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
@@ -705,7 +710,7 @@ def schedule_submit(data, body, username):
               'start_time': data['start_time'],
               'end_time': data['end_time'],
               'group_id': data['group_id'],
-
+              'too_mode' : data.get('too_mode', False),
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
               'instrument_code' : data['instrument_code']
@@ -989,6 +994,7 @@ def record_block(tracking_number, params, form_data, body):
                          'period'   : params.get('period', None),
                          'jitter'   : params.get('jitter', None),
                          'timeused' : params.get('block_duration', None),
+                         'rapid_response' : params.get('too_mode', False),
                          'active'   : True,
                        }
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
