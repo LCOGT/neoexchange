@@ -797,7 +797,7 @@ def schedule_submit(data, body, username):
         # Invoke find_orb to update Body's elements and return ephemeris
 
         new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
-        if new_ephemeris is not None:
+        if new_ephemeris is not None and new_ephemeris[1] is not None:
             emp_info = new_ephemeris[0]
             ephemeris = new_ephemeris[1]
             emp_at_start = ephemeris[0]
