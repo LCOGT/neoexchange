@@ -3832,6 +3832,7 @@ class Test_Add_External_Spectroscopy_Data(TestCase):
 
         self.assertEqual(expected_res, new_spec)
 
+
 class Test_Export_Measurements(TestCase):
 
     def setUp(self):

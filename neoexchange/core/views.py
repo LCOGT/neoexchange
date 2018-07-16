@@ -1706,7 +1706,6 @@ def create_source_measurement(obs_lines, block=None):
             logger.debug(obs_line.rstrip())
             params = parse_mpcobs(obs_line)
             if params:
-                rounded_date = params['obs_date'] - timedelta(microseconds=params['obs_date'].microsecond)
                 try:
                     unpacked_name = packed_to_normal(params['body'])
                 except PackedError:
@@ -1743,13 +1742,12 @@ def create_source_measurement(obs_lines, block=None):
                     # extrainfo field.
                     if frame_list:
                         frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
-                                                                    (params['obs_date'] >= frm.midpoint >= rounded_date) and
+                                                                    params['obs_date'] == frm.midpoint and
                                                                     frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
                     if not frame_list and not frame:
                         try:
                             prior_frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
-                                                            midpoint__gte=rounded_date,
-                                                            midpoint__lte=params['obs_date'],
+                                                            midpoint=params['obs_date'],
                                                             sitecode=params['site_code'])
                             if prior_frame.extrainfo != params['extrainfo']:
                                 prior_frame.extrainfo = params['extrainfo']
@@ -1767,13 +1765,12 @@ def create_source_measurement(obs_lines, block=None):
                         # Otherwise, make a new Frame and SourceMeasurement
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
-                                                                        (params['obs_date'] >= frm.midpoint >= rounded_date) and
+                                                                        params['obs_date'] == frm.midpoint and
                                                                         frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
                         if not frame_list and not frame:
                             try:
                                 frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
-                                                                midpoint__gte=rounded_date,
-                                                                midpoint__lte=params['obs_date'],
+                                                                midpoint=params['obs_date'],
                                                                 sitecode=params['site_code'])
                                 if frame.filter != params['filter']:
                                     frame.filter = params['filter']
@@ -1785,7 +1782,7 @@ def create_source_measurement(obs_lines, block=None):
                                 continue
                     else:
                         if frame_list:
-                            frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and (params['obs_date'] >= frm.midpoint >= rounded_date)), None)
+                            frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and params['obs_date'] == frm.midpoint), None)
                             if not frame:
                                 frame = create_frame(params, block)
                         else:
