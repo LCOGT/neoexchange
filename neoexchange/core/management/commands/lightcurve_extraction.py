@@ -78,7 +78,8 @@ class Command(BaseCommand):
         except SuperBlock.DoesNotExist:
             self.stdout.write("Cannot find SuperBlock with Tracking Number %d" % options['supblock'])
             exit(-1)
-
+        start_blocks = Block.objects.filter(superblock=start_super_block.id)
+        start_block = start_blocks[0]
         super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
         times = []
         mags = []
@@ -164,12 +165,16 @@ class Command(BaseCommand):
             mpc_file.close()
 
             if options['title'] is None:
-                if options['timespan'] < 1:
-                    plot_title = '%s from %s (%s) on %s' % (block.body.current_name(), block.site.upper(), frame.sitecode, block.when_observed.strftime("%Y-%m-%d"))
+                try:
+                    if options['timespan'] < 1:
+                        plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(), start_block.site.upper(), frame.sitecode, start_super_block.block_end.strftime("%Y-%m-%d"))
+                        subtitle = ''
+                    else:
+                        plot_title = '%s from %s to %s' % (start_block.body.current_name(), (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"), start_super_block.block_end.strftime("%Y-%m-%d"))
+                        subtitle = 'Sites: ' + ", ".join(mpc_site)
+                except TypeError:
+                    plot_title = 'LC for %s' % (start_super_block.body.current_name())
                     subtitle = ''
-                else:
-                    plot_title = '%s from %s to %s' % (block.body.current_name(), (block.when_observed - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"), block.when_observed.strftime("%Y-%m-%d"))
-                    subtitle = 'Sites: ' + ", ".join(mpc_site)
             else:
                 plot_title = options['title']
                 subtitle = ''
