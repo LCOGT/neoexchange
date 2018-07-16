@@ -129,16 +129,16 @@ class Command(BaseCommand):
             fits_file_list.append(fits_filename)
 
         if options['skip_mtdlink'] is False:
-            # Step 4: Run MTDLINK to find moving objects
-            self.stdout.write("Running mtdlink on file(s) %s" % fits_file_list)
-            param_file = os.path.abspath(os.path.join('photometrics', 'configs', 'mtdi.lcogt.param'))
-            # May change this to get pa and rate from compute_ephem later
-            pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
-
-            retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
-
-            # Step 5: Read MTDLINK output file and create candidates in NEOexchange
             if len(fits_file_list) > 0:
+                # Step 4: Run MTDLINK to find moving objects
+                self.stdout.write("Running mtdlink on file(s) %s" % fits_file_list)
+                param_file = os.path.abspath(os.path.join('photometrics', 'configs', 'mtdi.lcogt.param'))
+                # May change this to get pa and rate from compute_ephem later
+                pa_rate_dict = make_pa_rate_dict(float(options['pa']), float(options['deltapa']), float(options['minrate']), float(options['maxrate']))
+
+                retcode_or_cmdline = run_mtdlink(configs_dir, temp_dir, fits_file_list, len(fits_file_list), param_file, pa_rate_dict, catalog_type)
+
+                # Step 5: Read MTDLINK output file and create candidates in NEOexchange
                 mtds_file = os.path.join(temp_dir, fits_file_list[0].replace('.fits', '.mtds'))
                 if os.path.exists(mtds_file):
                     num_cands_or_status = store_detections(mtds_file,dbg=False)
@@ -146,6 +146,8 @@ class Command(BaseCommand):
                         self.stdout.write("Created %d Candidates" % num_cands_or_status)
                 else:
                     self.stdout.write("Cannot find the MTDS output file  %s" % mtds_file)
+            else:
+                self.stdout.write("No valid files to run mtdlink on (%s)" % fits_file_list)
         else:
             self.stdout.write("Skipping running of mtdlink")
 
