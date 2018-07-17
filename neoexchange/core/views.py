@@ -789,7 +789,7 @@ def schedule_submit(data, body, username):
     emp_at_start = None
     if data.get('spectroscopy', False) is not False:
         # Update MPC observations assuming too many updates have not been done recently
-        cut_off_time = timedelta(minutes=10)
+        cut_off_time = timedelta(minutes=1)
         now = datetime.utcnow()
         recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
         if len(recent_updates) < 1:
@@ -1810,10 +1810,7 @@ def create_source_measurement(obs_lines, block=None):
                           'update_time' : datetime.utcnow()
                         }
         updated = save_and_make_revision(obs_body, update_params)
-        message = "Did not update"
-        if updated is True:
-            message = "Updated"
-        logger.info("%s MPC Observations for Body #%d (%s)" % (message, obs_body.pk, obs_body.current_name()))
+        logger.info("Updated %d MPC Observations for Body #%d (%s)" % (len(measures), obs_body.pk, obs_body.current_name()))
 
     measures = [m for m in reversed(measures)]
     return measures

@@ -1238,6 +1238,7 @@ def make_molecule(params, exp_filter):
     if params.get('spectroscopy', False):
         # Autoguider mode, one of ON, OFF, or OPTIONAL.
         # Must be uppercase now and ON for spectra, and OFF for arcs and lamp flats
+        params['spectra_slit'] = exp_filter[0]
         ag_mode = 'ON'
         if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
             ag_mode = 'OFF'
