@@ -1,7 +1,8 @@
 import os
 from sys import exit
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from math import degrees, radians
+import numpy as np
 
 from django.core.management.base import BaseCommand, CommandError
 from django.forms.models import model_to_dict
@@ -11,6 +12,9 @@ except:
     pass
 import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
+from astropy.stats import LombScargle
+import astropy.units as u
+from astropy.time import Time
 
 from core.models import Block, Frame, SuperBlock, SourceMeasurement
 from astrometrics.ephem_subs import compute_ephem, radec2strings
@@ -29,24 +33,49 @@ class Command(BaseCommand):
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
+        #parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
 
-    def plot_timeseries(self, times, mags, mag_errs, colors='r', title='', sub_title=''):
-        fig, ax = plt.subplots()
-        ax.plot(times, mags, color=colors, marker='.', linestyle=' ')
-        ax.errorbar(times, mags, yerr=mag_errs, color=colors, linestyle=' ')
-        ax.invert_yaxis()
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Magnitude')
+    def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, colors='r', title='', sub_title=''):
+        fig, (ax0,ax1) = plt.subplots(nrows=2,sharex=True,gridspec_kw = {'height_ratios':[15,4]})
+        ax0.plot(times, mags, color=colors, marker='.', linestyle=' ')
+        ax0.errorbar(times, mags, yerr=mag_errs, color=colors, linestyle=' ')
+        ax1.plot(times, zps, color=colors, marker='.', linestyle=' ')
+        ax1.errorbar(times, zps, yerr=zp_errs, color=colors, linestyle=' ')
+        ax0.invert_yaxis()
+        ax1.invert_yaxis()
+        ax1.set_xlabel('Time')
+        ax0.set_ylabel('Magnitude')
+        ax1.set_ylabel('Magnitude')
         fig.suptitle(title)
-        ax.set_title(sub_title)
-        ax.minorticks_on()
-        ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
-        ax.fmt_xdata = DateFormatter('%H:%M:%S')
+        ax0.set_title(sub_title)
+        ax1.set_title('Zero Point',size='medium')
+        ax0.minorticks_on()
+        ax1.minorticks_on()
+        ax0.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
+        ax0.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
+        ax1.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
+        ax1.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         fig.autofmt_xdate()
         plt.savefig("lightcurve.png")
-        plt.show()
+        #plt.show()
 
         return
+
+    def find_period(self, times, mags, mag_errs):#, period=0):
+
+        t = Time(times,format='datetime')
+        ls = LombScargle(t.unix*u.s,mags*u.mag,mag_errs*u.mag)
+        freq, power = ls.autopower()
+        #print(freq[0], power[0])
+        #print(type(freq),type(power))
+        fig, ax = plt.subplots()
+        ax.plot(freq,power)
+        ax.set_xlabel('Frequencies Hz')
+        ax.set_ylabel('L-S Power')
+        period = (1/(freq[np.argmax(power)])).to(u.hour)
+        self.stdout.write("Period: %.3f h" % period.value)
+
+        #plt.show()
 
     def make_source_measurement(self, body, frame, cat_source, persist=False):
         source_params = { 'body' : body,
@@ -84,6 +113,8 @@ class Command(BaseCommand):
         times = []
         mags = []
         mag_errs = []
+        zps = []
+        zp_errs = []
         mpc_lines = []
         total_frame_count = 0
         mpc_site = []
@@ -137,6 +168,8 @@ class Command(BaseCommand):
                                 times.append(frame.midpoint)
                                 mags.append(best_source.obs_mag)
                                 mag_errs.append(best_source.err_obs_mag)
+                                zps.append(frame.zeropoint)
+                                zp_errs.append(frame.zeropoint_err)
                     if frame.sitecode not in mpc_site:
                         mpc_site.append(frame.sitecode)
 
@@ -179,6 +212,9 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
-            self.plot_timeseries(times, mags, mag_errs, title=plot_title, sub_title=subtitle)
+            self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, title=plot_title, sub_title=subtitle)
+            self.find_period(times, mags,mag_errs)#, options['period'])
+            plt.show()
+
         else:
             self.stdout.write("No sources matched.")
