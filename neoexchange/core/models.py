@@ -15,7 +15,7 @@ GNU General Public License for more details.
 from __future__ import unicode_literals
 from datetime import datetime, timedelta, date
 from math import pi, log10, sqrt, cos, degrees
-from collections import Counter
+from collections import Counter, OrderedDict
 import reversion
 import logging
 
@@ -42,6 +42,8 @@ from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params,
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+from core.archive_subs import check_for_archive_images
+
 logger = logging.getLogger(__name__)
 
 
@@ -236,7 +238,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6]
+            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
         else:
             # Catch the case where there is no Epoch
             return False
@@ -257,10 +259,13 @@ class Body(models.Model):
         dstart = ''
         dend = ''
         if self.epochofel:
+            if dbg:
+                logger.debug('Body: {}'.format(self.name))
             orbelems = model_to_dict(self)
             sitecode = '500'
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
+
                 emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
                 vmag = emp_line[3]
 
@@ -270,6 +275,8 @@ class Body(models.Model):
 
                 # Calculate time since/until reaching Magnitude limit
                 t_diff = (mag_limit - vmag) / mag_dot
+                if abs(t_diff) > 10000:
+                    t_diff = 10000*t_diff/abs(t_diff)
 
                 # create separation test.
                 sep_test = degrees(separation) > sep_limit
@@ -284,13 +291,13 @@ class Body(models.Model):
                     # if Valid for beginning and end of window, assume valid for window
                     if vmag <= mag_limit and dstart and sep_test:
                         if dbg:
-                            logger.debug("good at begining and end", "mag:", vmag, "sep:", sep_test)
+                            logger.debug("good at begining and end, mag: {}, sep {}".format(vmag, sep_test))
                         return dstart, dend, d0
                     elif not dstart:
                         # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
                         if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
                             if dbg:
-                                logger.debug("bad at begining and end, Delta Mag no good", "mag:", vmag, "sep:", sep_test)
+                                logger.debug("bad at begining and end, Delta Mag no good, mag:{}, sep: {}".format(vmag, sep_test))
                             return dstart, dend, d0
                         else:
                             d = d0 + timedelta(days=delta_t)
@@ -300,13 +307,13 @@ class Body(models.Model):
                 elif (vmag > mag_limit or not sep_test) and dstart:
                     dend = d
                     if dbg:
-                        logger.debug("Ended in at", i, "mag:", vmag, "sep:", sep_test)
+                        logger.debug("Ended at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
                     return dstart, dend, d0
                 # If no start date, and we are valid, set start date
                 elif vmag <= mag_limit and not dstart and sep_test:
                     dstart = d
                     if dbg:
-                        logger.debug("started at", i, "mag:", vmag, "sep:", sep_test)
+                        logger.debug("started at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
                     # if this is our first iteration (i.e. we started valid) test end date
                     if i == 0:
                         d += timedelta(days=df)
@@ -326,7 +333,7 @@ class Body(models.Model):
                 i += 1
             # Return dates
             if dbg:
-                logger.debug("no end change", "mag:", vmag, "sep:", sep_test)
+                logger.debug("no end change, mag: {}, sep: {}".format(vmag, sep_test))
             return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
@@ -491,11 +498,16 @@ class SuperBlock(models.Model):
         return ", ".join(qs)
 
     def get_telclass(self):
-        qs = Block.objects.filter(superblock=self.id).values_list('telclass', flat=True).distinct()
+        qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
-        return ", ".join(qs)
+        # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
+        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_IMAGING), '') for x in qs]
+
+        return ", ".join(class_obstype)
 
     def get_obsdetails(self):
+        obs_details_str = ""
+
         qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
 
         # Count number of unique N exposure x Y exposure length combinations
@@ -507,7 +519,7 @@ class SuperBlock(models.Model):
                 obs_details.append("%d of %dx%.1f secs" % (c[1], c[0][0], c[0][1]))
 
             obs_details_str = ", ".join(obs_details)
-        else:
+        elif len(counts) == 1:
             c = list(counts)
             obs_details_str = "%dx%.1f secs" % (c[0][0], c[0][1])
 
@@ -539,6 +551,12 @@ class SuperBlock(models.Model):
 
         return last_reported
 
+    def get_obstypes(self):
+        obstype = []
+        obstypes = Block.objects.filter(superblock=self.id).values_list('obstype', flat=True).distinct()
+
+        return ",".join([str(x) for x in obstypes])
+
     class Meta:
         verbose_name = _('SuperBlock')
         verbose_name_plural = _('SuperBlocks')
@@ -556,11 +574,19 @@ class SuperBlock(models.Model):
 @python_2_unicode_compatible
 class Block(models.Model):
 
+    OPT_IMAGING = 0
+    OPT_SPECTRA = 1
+    OBSTYPE_CHOICES = (
+                        (OPT_IMAGING, 'Optical imaging'),
+                        (OPT_SPECTRA, 'Optical spectra'),
+                      )
+
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES)
     body            = models.ForeignKey(Body)
     proposal        = models.ForeignKey(Proposal)
     superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
+    obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -593,6 +619,17 @@ class Block(models.Model):
         else:
             total_exposure_number = ql_frames.count()
         return total_exposure_number
+
+    def num_spectro_frames(self):
+        '''Returns the numbers of different types of spectroscopic frames'''
+        num_moltypes_string = 'No data'
+        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] for x in data]
+            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(),reverse=True))
+            num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
+        return num_moltypes_string
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()

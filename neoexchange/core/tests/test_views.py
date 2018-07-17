@@ -32,21 +32,22 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
 
-#Import module to test
+# Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
 from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, clean_mpcorbit, \
+    update_MPC_orbit, check_for_block, record_block, clean_mpcorbit, \
     create_source_measurement, clean_crossid, create_frame, \
     schedule_check, summarise_block_efficiency, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
     make_new_catalog_entry, generate_new_candidate_id, \
-    update_taxonomy,update_previous_spectra
+    update_taxonomy, update_previous_spectra
 from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo, PreviousSpectra
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame,\
+    Candidate, SuperBlock, SpectralInfo, PreviousSpectra
 from core.forms import EphemQuery
 
 # Disable logging during testing
@@ -650,6 +651,118 @@ class TestCheck_for_block(TestCase):
         bid = 1
         resp = block_status(block_id=bid)
         self.assertEqual(False, resp)
+
+
+class TestRecordBlock(TestCase):
+
+    def setUp(self):
+
+        self.spectro_tracknum = '606083'
+        self.spectro_params = {
+                              'binning': 1,
+                              'block_duration': 988.0,
+                              'calibs': 'both',
+                              'end_time': datetime(2018, 3, 16, 18, 50),
+                              'exp_count': 1,
+                              'exp_time': 180.0,
+                              'exp_type': 'SPECTRUM',
+                              'group_id': '4_E10-20180316_spectra',
+                              'instrument': '2M0-FLOYDS-SCICAM',
+                              'instrument_code': 'E10-FLOYDS',
+                              'observatory': '',
+                              'pondtelescope': '2m0',
+                              'proposal_id': 'LCOEngineering',
+                              'request_numbers': [1450339],
+                              'request_windows': [[{'end': '2018-03-16T18:30:00',
+                                 'start': '2018-03-16T11:20:00'}]],
+                              'site': 'COJ',
+                              'site_code': 'E10',
+                              'spectra_slit': 'slit_2.0as',
+                              'spectroscopy': True,
+                              'start_time': datetime(2018, 3, 16, 9, 20),
+                              'user_id': 'tlister@lcogt.net'}
+
+        self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
+                              'end_time' : self.spectro_params['end_time'],
+                              'proposal_code' : self.spectro_params['proposal_id'],
+                              'group_id' : self.spectro_params['group_id'],
+                              'exp_count' : self.spectro_params['exp_count'],
+                              'exp_length' : self.spectro_params['exp_time'],
+                            }
+        body_params = { 'name' : '4' }
+        self.spectro_body = Body.objects.create(**body_params)
+
+        proposal_params = { 'code' : self.spectro_params['proposal_id'],}
+        self.proposal = Proposal.objects.create(**proposal_params)
+
+        self.imaging_tracknum = '576013'
+        self.imaging_params = {
+                              'binning': 1,
+                              'block_duration': 1068.0,
+                              'end_time': datetime(2018, 3, 16, 3, 50),
+                              'exp_count': 12,
+                              'exp_time': 42.0,
+                              'exp_type': 'EXPOSE',
+                              'group_id': 'N999r0q_K91-20180316',
+                              'instrument': '1M0-SCICAM-SINISTRO',
+                              'observatory': '',
+                              'pondtelescope': '1m0',
+                              'proposal_id': 'LCOEngineering',
+                              'request_numbers': [1440123],
+                              'request_windows': [[{'end': '2018-03-16T03:30:00',
+                                 'start': '2018-03-15T20:20:00'}]],
+                              'site': 'CPT',
+                              'site_code': 'K91',
+                              'start_time': datetime(2018, 3, 15, 18, 20),
+                              'user_id': 'tlister@lcogt.net'}
+
+        self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
+                              'end_time' : self.imaging_params['end_time'],
+                              'proposal_code' : self.imaging_params['proposal_id'],
+                              'group_id' : self.imaging_params['group_id'],
+                              'exp_count' : self.imaging_params['exp_count'],
+                              'exp_length' : self.imaging_params['exp_time'],
+                            }
+        body_params = { 'provisional_name' : 'N999r0q' }
+        self.imaging_body = Body.objects.create(**body_params)
+
+    def test_spectro_block(self):
+        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.spectro_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_SPECTRA, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+
+    def test_imaging_block(self):
+        block_resp = record_block(self.imaging_tracknum, self.imaging_params, self.imaging_form, self.imaging_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
 
 
 class TestSchedule_Check(TestCase):
@@ -1845,6 +1958,21 @@ class TestFrames(TestCase):
                        }
         self.test_block_0m4 = Block.objects.create(**block_params)
 
+        block_params = { 'obstype' : Block.OPT_SPECTRA,
+                         'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : 'TEMP_GROUP_spectra',
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'tracking_number' : '1509481',
+                         'num_exposures' : 1,
+                         'exp_length' : 1800.0,
+                         'active'   : True
+                       }
+        self.test_spec_block = Block.objects.create(**block_params)
+
     def test_add_frame(self):
         params = parse_mpcobs(self.test_obslines[-1])
         resp = create_frame(params, self.test_block)
@@ -2163,6 +2291,157 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_spectro_spectrum(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "SPECTRUM",
+                    "FILTER" : "air     ",
+                    "APERTYPE" : "SLIT    ",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-e00",
+                    "EXPTIME"  : "1800.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e00.fits'))
+
+    def test_ingest_frames_spectro_arc(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T11:44:33.898",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "ARC",
+                    "FILTER" : "air     ",
+                    "APERTYPE" : "SLIT    ",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0006-a00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('a00', 'a00.fits'))
+
+    def test_ingest_frames_spectro_lampflat(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T11:42:18.352",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0005-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
+
+    def test_ingest_frames_spectro_lampflat_badslit(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : '',
+                    "RLEVEL"  : 0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0xUNKAS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
+
+    def test_ingest_frames_spectro_lampflat_badslit2(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 'UNKNOWN',
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0xUNKAS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
 
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements

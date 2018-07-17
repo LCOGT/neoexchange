@@ -520,7 +520,33 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
-        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'doma')
+
+
+    def test_make_too_userrequest(self):
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'Q63'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : body_elements['current_name'] + '_' + 'COJ' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'too_mode' : True
+                 }
+
+        user_request = make_userrequest(body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope',None), None)
+        self.assertEqual(user_request['requests'][0].get('observation_type', None), None)
+        self.assertEqual(user_request['observation_type'], 'TARGET_OF_OPPORTUNITY')
 
     def test_multi_filter_userrequest(self):
 
@@ -1502,6 +1528,9 @@ class TestParseMPCObsFormat(TestCase):
                             'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
                             'p_ x_l' :  u'g0232K10F41B* x2010 03 19.91359 06 26 37.29 +35 47 01.3                L~0FUhC51',
                             'p_quoteC_h': u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309",
+                            'cp_!C_h':  u'0315PK13V060 !C2013 11 06.14604623 28 19.756-24 20 45.77         21.6 Tt90966705',
+                            'np_4A_l' : u'24554PLS2608 4A1960 09 28.39725 00 39 02.51 +00 49 57.8                Kb6053675',
+                            'np_4X_l' : u'24554PLS2608*4X1960 09 24.46184 00 42 27.17 +00 55 44.5          18.1  Kb6053675'
 
                           }
         self.maxDiff = None
@@ -1738,6 +1767,43 @@ class TestParseMPCObsFormat(TestCase):
                           }
 
         params = parse_mpcobs(self.test_lines['p_quoteC_h'])
+
+    def test_cp_plingC_h(self):
+        expected_params = { 'body'  : '0315P',
+                            'flags' : '!',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2013, 11,  6, 3, 30, 18, int(0.3744*1e6)),
+                            'obs_ra'    : 352.08231666666667,
+                            'obs_dec'   : -24.346047222222222,
+                            'obs_mag'   : 21.6,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'PPMXL',
+                            'site_code' : '705'
+                          }
+        params = parse_mpcobs(self.test_lines['cp_!C_h'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_np_fourA_l(self):
+        expected_params = { 'body'  : '24554',
+                            'flags' : ' ',
+                            'obs_type'  : 'A',
+                            'obs_date'  : datetime(1960,  9, 28, 9, 32,  2, int(0.4*1e6)),
+                            'obs_ra'    :   9.7604583333333333,
+                            'obs_dec'   :  0.83272222222222222,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : 'Yale',
+                            'site_code' : '675'
+                          }
+        params = parse_mpcobs(self.test_lines['np_4A_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_np_fourX_l(self):
+        expected_params = { }
+        params = parse_mpcobs(self.test_lines['np_4X_l'])
+
 
         self.compare_dict(expected_params, params)
 
