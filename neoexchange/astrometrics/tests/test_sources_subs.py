@@ -535,8 +535,9 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'COJ' + '-'  + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : body_elements['current_name'] + '_' + 'COJ' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
                     'too_mode' : True
                  }
 
