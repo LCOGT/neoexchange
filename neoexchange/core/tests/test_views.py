@@ -841,6 +841,7 @@ class TestSchedule_Check(TestCase):
                         'jitter' : None,
                         'instrument_code' : '',
                         'snr' : None,
+                        'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False
                         }
@@ -892,6 +893,7 @@ class TestSchedule_Check(TestCase):
                         'total_time' : 1.0,
                         'instrument_code' : '',
                         'snr' : None,
+                        'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False
                         }
@@ -940,6 +942,7 @@ class TestSchedule_Check(TestCase):
                         'num_times' : 3,
                         'total_time' : 1.0,
                         'instrument_code' : '',
+                        'too_mode': False,
                         'snr' : None,
                         'calibs' : '',
                         'spectroscopy' : False

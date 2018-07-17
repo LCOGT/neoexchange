@@ -611,9 +611,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
-    group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + datetime.strftime(utc_date, '%Y%m%d')
-    if data.get('too_mode', False) == True:
-        group_id = group_id + '_ToO'
+
 
     # Determine pattern iterations
     if exp_count:
@@ -646,6 +644,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
     elif spectroscopy:
         suffix += "_spectra"
+    if data.get('too_mode', False) is True:
+        suffix += '_ToO'
+    group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
