@@ -1002,7 +1002,7 @@ class TestSourceMeasurement(TestCase):
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_mpc_2(self):
@@ -1016,7 +1016,35 @@ class TestSourceMeasurement(TestCase):
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 Rq     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_3(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 RU     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_4(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 RV     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_mpc_F51_no_filter_mapping(self):
@@ -1030,7 +1058,7 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2017 03 07.64515000 30 00.00 -00 30 00.0          21.5 wL     F51'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_mpc_Kflag(self):
@@ -1045,7 +1073,7 @@ class TestSourceMeasurement(TestCase):
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 Rt     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_mpc_packed_Kflag(self):
@@ -1100,7 +1128,7 @@ class TestSourceMeasurement(TestCase):
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
-        mpc_lines = measure.format_mpc_line()
+        mpc_lines = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_lines)
 
     def test_mpc_satellite_confirmed(self):
@@ -1121,7 +1149,7 @@ class TestSourceMeasurement(TestCase):
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '    CK16C020  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '    CK16C020  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
-        mpc_lines = measure.format_mpc_line()
+        mpc_lines = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_lines)
 
     def test_discovery(self):
@@ -1136,7 +1164,7 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q* C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_discovery_on_stacked(self):
@@ -1151,7 +1179,7 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
 

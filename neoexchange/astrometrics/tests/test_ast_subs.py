@@ -228,11 +228,36 @@ class TestNormalToPacked(TestCase):
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, -1)
 
-    def test_baddesig_t1(self):
+    def test_baddesig_t2(self):
         expected_desig = '            '
         packed_desig, ret_code = normal_to_packed('12345 A')
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, -1)
+
+    def test_shortnumber_t1(self):
+        expected_desig = '01627       '
+        packed_desig, ret_code = normal_to_packed('1627')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
+    def test_shortnumber_t2(self):
+        expected_desig = '00433       '
+        packed_desig, ret_code = normal_to_packed('433')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
+    def test_shortnumber_t3(self):
+        expected_desig = '00016       '
+        packed_desig, ret_code = normal_to_packed('16')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
+    def test_shortnumber_t4(self):
+        expected_desig = '00004       '
+        packed_desig, ret_code = normal_to_packed('4')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
 
 class TestDetermineAsteroidType(TestCase):
 
