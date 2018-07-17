@@ -794,8 +794,8 @@ def schedule_submit(data, body, username):
         recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
         if len(recent_updates) < 1:
             update_MPC_obs(body.name)
-        # Invoke find_orb to update Body's elements and return ephemeris
 
+        # Invoke find_orb to update Body's elements and return ephemeris
         new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
         if new_ephemeris is not None and new_ephemeris[1] is not None:
             emp_info = new_ephemeris[0]
@@ -1659,6 +1659,7 @@ def update_MPC_obs(obj_id_or_page):
 
 
 def count_useful_obs(obs_lines):
+    """Function to determine max number of obs_lines will be read """
     i = 0
     for obs_line in obs_lines:
         if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 's']:
@@ -1667,11 +1668,14 @@ def count_useful_obs(obs_lines):
 
 
 def create_source_measurement(obs_lines, block=None):
+    # initialize measures/obs_lines
     measures = []
     if type(obs_lines) != list:
         obs_lines = [obs_lines, ]
 
     useful_obs = count_useful_obs(obs_lines)
+
+    # find an obs_body for the mpc data
     obs_body = None
     for obs_line in reversed(obs_lines):
         param = parse_mpcobs(obs_line)
@@ -1689,9 +1693,11 @@ def create_source_measurement(obs_lines, block=None):
                                            )
             except Body.DoesNotExist:
                 logger.debug("Body %s does not exist" % param['body'])
+                # if no body is found, remove obsline
                 obs_lines.remove(obs_line)
             except Body.MultipleObjectsReturned:
                 logger.warning("Multiple versions of Body %s exist" % param['body'])
+            # when a body is found, exit loop
             if obs_body is not None:
                 break
 
@@ -1701,15 +1707,18 @@ def create_source_measurement(obs_lines, block=None):
         source_list = SourceMeasurement.objects.filter(body=obs_body)
         block_list = Block.objects.filter(body=obs_body)
         measure_count = len(source_list)
+
         for obs_line in reversed(obs_lines):
             frame = None
             logger.debug(obs_line.rstrip())
             params = parse_mpcobs(obs_line)
             if params:
+                # Check name is still the same as obs_body
                 try:
                     unpacked_name = packed_to_normal(params['body'])
                 except PackedError:
                     unpacked_name = 'ZZZZZZ'
+                # if new name, reset obs_body
                 if params['body'] != obs_body.name and unpacked_name != obs_body.provisional_name and unpacked_name != obs_body.name and params['body'] != obs_body.provisional_name:
                     try:
                         try:
@@ -1736,10 +1745,11 @@ def create_source_measurement(obs_lines, block=None):
                         else:
                             logger.debug("No blocks for %s, presumably non-LCO data" % obs_body)
                 if params['obs_type'] == 's':
-                    # If we have an obs_type of 's', then we have the second line
+                    # If we have an obs_type of 's', then we have one line
                     # of a satellite measurement and we need to find the matching
                     # Frame we created on the previous line read and update its
                     # extrainfo field.
+                    # Otherwise, make a new Frame and SourceMeasurement
                     if frame_list:
                         frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
                                                                     params['obs_date'] == frm.midpoint and
@@ -1762,6 +1772,10 @@ def create_source_measurement(obs_lines, block=None):
                             continue
                 else:
                     if params['obs_type'] == 'S':
+                        # If we have an obs_type of 'S', then we have one line
+                        # of a satellite measurement and we need to find the matching
+                        # Frame we created on the previous line read and update its
+                        # filter field.
                         # Otherwise, make a new Frame and SourceMeasurement
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
@@ -1781,6 +1795,7 @@ def create_source_measurement(obs_lines, block=None):
                                 logger.warning("Multiple matching satellite frames for %s from %s on %s found" % (params['body'], params['obs_date'], params['site_code']))
                                 continue
                     else:
+                        # If no satelites, check for existing frames, and create new ones
                         if frame_list:
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and params['obs_date'] == frm.midpoint), None)
                             if not frame:
@@ -1803,15 +1818,18 @@ def create_source_measurement(obs_lines, block=None):
                         if measure_created:
                             measures.append(measure)
                             measure_count += 1
+                        # End loop when measurements are in the DB for all MPC lines
                         if measure_count >= useful_obs:
                             break
 
+        # Set updated to True for the target with the current datetime
         update_params = { 'updated' : True,
                           'update_time' : datetime.utcnow()
                         }
         updated = save_and_make_revision(obs_body, update_params)
         logger.info("Updated %d MPC Observations for Body #%d (%s)" % (len(measures), obs_body.pk, obs_body.current_name()))
 
+    # Reverse and return measures.
     measures = [m for m in reversed(measures)]
     return measures
 
