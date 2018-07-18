@@ -1,7 +1,7 @@
 import os
 from sys import exit
 from datetime import datetime, timedelta, time
-from math import degrees, radians
+from math import degrees, radians, floor
 import numpy as np
 
 from django.core.management.base import BaseCommand, CommandError
@@ -33,14 +33,12 @@ class Command(BaseCommand):
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
-        #parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
+        parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
 
     def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, colors='r', title='', sub_title=''):
         fig, (ax0,ax1) = plt.subplots(nrows=2,sharex=True,gridspec_kw = {'height_ratios':[15,4]})
-        ax0.plot(times, mags, color=colors, marker='.', linestyle=' ')
-        ax0.errorbar(times, mags, yerr=mag_errs, color=colors, linestyle=' ')
-        ax1.plot(times, zps, color=colors, marker='.', linestyle=' ')
-        ax1.errorbar(times, zps, yerr=zp_errs, color=colors, linestyle=' ')
+        ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
+        ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
         ax0.invert_yaxis()
         ax1.invert_yaxis()
         ax1.set_xlabel('Time')
@@ -61,21 +59,36 @@ class Command(BaseCommand):
 
         return
 
-    def find_period(self, times, mags, mag_errs):#, period=0):
+    def find_period(self, times, mags, mag_errs):
 
         t = Time(times,format='datetime')
         ls = LombScargle(t.unix*u.s,mags*u.mag,mag_errs*u.mag)
         freq, power = ls.autopower()
-        #print(freq[0], power[0])
-        #print(type(freq),type(power))
+
         fig, ax = plt.subplots()
         ax.plot(freq,power)
         ax.set_xlabel('Frequencies Hz')
         ax.set_ylabel('L-S Power')
+
         period = (1/(freq[np.argmax(power)])).to(u.hour)
         self.stdout.write("Period: %.3f h" % period.value)
+        return period
 
-        #plt.show()
+    def fold_phase(self,times,mags,mag_errs,period,title):
+
+        t = Time(times,format='datetime')
+        subtime = (t.jd-floor(t[0].jd))
+        divtime = (subtime*24*u.h)/period
+        phases = np.modf(divtime)[0]
+        fig, ax = plt.subplots()
+        ax.errorbar(phases,mags,mag_errs, marker='.', linestyle=' ')
+        ax.set_xlabel('phase')
+        ax.set_ylabel('magnitude')
+        ax.set_xlim(0,1)
+        ax.invert_yaxis()
+        fig.suptitle(title)
+        ax.set_title('(Period = %.3f h)' % period.value)
+        plt.savefig('phasecurve.png')
 
     def make_source_measurement(self, body, frame, cat_source, persist=False):
         source_params = { 'body' : body,
@@ -187,7 +200,8 @@ class Command(BaseCommand):
             for time in times:
                 time_jd = datetime2mjd_utc(time)
                 time_jd_truncated = time_jd - mjd_offset
-                if i == 0:
+                if i ==0:
+                    lightcurve_file.write('Object: %s\n' % start_super_block.body.current_name())
                     lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % mjd_offset)
                 lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
                 i += 1
@@ -200,20 +214,36 @@ class Command(BaseCommand):
             if options['title'] is None:
                 try:
                     if options['timespan'] < 1:
-                        plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(), start_block.site.upper(), frame.sitecode, start_super_block.block_end.strftime("%Y-%m-%d"))
+                        plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
+                        start_block.site.upper(), frame.sitecode, start_super_block.block_end.strftime("%Y-%m-%d"))
+                        phasetitle = 'Phase Folded LC for %s on %s' % (start_super_block.body.current_name(),
+                        start_super_block.block_end.strftime("%Y-%m-%d"))
                         subtitle = ''
                     else:
-                        plot_title = '%s from %s to %s' % (start_block.body.current_name(), (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"), start_super_block.block_end.strftime("%Y-%m-%d"))
+                        plot_title = '%s from %s to %s' % (start_block.body.current_name(),
+                        (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
+                        start_super_block.block_end.strftime("%Y-%m-%d"))
+                        phasetitle = 'Phase Folded LC for %s from %s to %s' % (start_block.body.current_name(),
+                        (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
+                        start_super_block.block_end.strftime("%Y-%m-%d"))
                         subtitle = 'Sites: ' + ", ".join(mpc_site)
                 except TypeError:
                     plot_title = 'LC for %s' % (start_super_block.body.current_name())
+                    phasetitle + 'Phase Folded LC for %s' % (start_super_block.body.current_name())
                     subtitle = ''
             else:
                 plot_title = options['title']
+                phasetitle = 'Phase Folded LC'
                 subtitle = ''
 
+
+
             self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, title=plot_title, sub_title=subtitle)
-            self.find_period(times, mags,mag_errs)#, options['period'])
+            if options['period'] == 0:
+                period = self.find_period(times, mags,mag_errs)
+            else:
+                period = options['period']*u.h
+            self.fold_phase(times,mags,mag_errs,period,phasetitle)
             plt.show()
 
         else:
