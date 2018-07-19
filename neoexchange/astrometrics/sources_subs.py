@@ -1204,6 +1204,11 @@ def make_moving_target(elements):
     else:
         target['meandist'] = elements['meandist']
         target['meananom'] = elements['meananom']
+    if 'v_mag' in elements:
+        target['vmag'] = elements['v_mag']
+    if 'sky_pa' in elements:
+        target['rot_mode'] = 'SKY'
+        target['rot_angle'] = elements['sky_pa']
 
     return target
 
@@ -1521,6 +1526,11 @@ def check_for_perturbation(elements, params):
     emp_line_base = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=False, display=False)
     emp_line_perturb = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=True, display=False)
 
+    # assaign Magnitude and position angle
+    if emp_line_base[3] and emp_line_base[3] > 0:
+        elements['v_mag'] = emp_line_base[3]
+    elements['sky_pa'] = emp_line_base[7]
+
     # Calculate offset in arcseconds between two coordinates
     try:
         offset = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_line_perturb[1], emp_line_perturb[2])) * 3600
@@ -1568,6 +1578,9 @@ def check_for_perturbation(elements, params):
         elements['argofperih']  = degrees(p_orbelems['ArgPeri'])
         elements['eccentricity']= p_orbelems['Ecc']
         elements['meananom']    = degrees(p_orbelems['MeanAnom'])
+        if emp_line_perturb[3] and emp_line_perturb[3] > 0:
+            elements['v_mag'] = emp_line_perturb[3]
+        elements['sky_pa'] = emp_line_perturb[7]
     elif offset >= 100:
         logger.error("Position offset large (%s arcsec). Consider updating orbit." % offset)
 
