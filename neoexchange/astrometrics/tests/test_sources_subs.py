@@ -482,7 +482,7 @@ class TestSubmitBlockToScheduler(TestCase):
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
-        site_code = 'K92'
+        site_code = 'F65'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         params = {  'proposal_id' : 'LCO2015A-009',
@@ -492,7 +492,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'slit_6.0as',
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : body_elements['current_name'] + '_' + 'ogg' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'spectroscopy' : True,
                     'spectra_slit' : 'slit_6.0as'
@@ -519,7 +519,7 @@ class TestSubmitBlockToScheduler(TestCase):
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         body_elements['current_name'] = self.body.current_name()
         site_code = 'K92'
-        utc_date = datetime.now()+timedelta(days=1)
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
         params = {  'proposal_id' : 'LCO2015A-009',
                     'exp_count' : 18,
@@ -537,6 +537,33 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
         self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
+
+    def test_make_spectra_userrequest(self):
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'F65'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_id' : body_elements['current_name'] + '_' + 'OGG' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'spectroscopy' : True,
+                    'spectra_slit' : 'slit_6.0as'
+                 }
+
+        body_elements = check_for_perturbation(body_elements, params)
+        user_request = make_userrequest(body_elements, params)
+
+        self.assertAlmostEqual(user_request['requests'][0]['target']['vmag'], 20.88, 2)
+        self.assertAlmostEqual(user_request['requests'][0]['target']['rot_angle'], 107.53, 2)
+        self.assertEqual(user_request['requests'][0]['target']['rot_mode'], 'SKY')
 
     def test_1m_sinistro_lsc_doma_userrequest(self):
 
