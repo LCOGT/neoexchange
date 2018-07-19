@@ -16,6 +16,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
+        parser.add_argument('-e', '--epoch', type=float, default=0.0, help='Epoch (MJD) to set initial phase with respect to')
 
     def read_data(self,path):
 
@@ -23,7 +24,6 @@ class Command(BaseCommand):
         lines = f.readlines()
         body = lines[0][8:-1]
         day1 = lines[1][5:10]
-        daylast = floor(float(day1 + lines[-1][:6]))
         times = np.array([])
         mags = np.array([])
         mag_errs = np.array([])
@@ -57,18 +57,17 @@ class Command(BaseCommand):
         self.stdout.write("Period: %.3f h" % period.value)
         return period.value
 
-    def plot_fold_phase(self,phases,mags,mag_errs,period,title):
+    def plot_fold_phase(self,phases,mags,mag_errs,period,title,epoch):
 
         fig, ax = plt.subplots()
         ax.errorbar(phases,mags,mag_errs, marker='.', linestyle=' ')
         ax.set_xlabel('phase')
         ax.set_ylabel('magnitude')
-        ax.set_xlim(0,1)
+        ax.set_xlim(-.1,1.1)
         ax.invert_yaxis()
         fig.suptitle(title)
-        ax.set_title('(Period = %.3f h)' % period)
+        ax.set_title('(Period = %.3f h  Epoch = MJD%d)' % (period, epoch))
         plt.savefig('phased_lc.png')
-
 
         return
 
@@ -83,19 +82,36 @@ class Command(BaseCommand):
         else:
             period = options['period']
 
-        subtime = (times-times[np.argmin(times)])
+        if not options['epoch']:
+            epoch = times[np.argmin(times)]
+        else:
+            try:
+                epoch = Time(options['epoch'],format='mjd').mjd
+            except ValueError:
+                raise ValueError('Epoch input in unrecognized format. Please input as MJD')
+
+        subtime = times-epoch
+
         divtime = (subtime*24)/period
-        phases = np.modf(divtime)[0]
+        phases = np.modf(divtime)[0] #phases array built
 
-        #data = sorted(zip(phases,mags))
-
-    #    for n in range(len(data)):
-        #    if data[n][0] >= .95
-        #        data = data
+        data = sorted(zip(phases,mags,mag_errs)) #building buffers
+        end = np.array([])
+        start = np.array([])
+        for n in range(len(data)):
+            if data[n][0] >= .90:
+                start = np.append(start,[data[n][0]-1,data[n][1],data[n][2]])
+            if data[n][0] <= .1:
+                end = np.append(end,[data[n][0]+1,data[n][1],data[n][2]])
+        data = np.append(data, end)
+        data = np.append(start,data)
+        phases = data[::3]
+        mags = data[1::3]
+        mag_errs = data[2::3]
 
         phasetitle = 'Phase Folded LC for %s' % body
 
-        self.plot_fold_phase(phases,mags,mag_errs,period,phasetitle)
+        self.plot_fold_phase(phases,mags,mag_errs,period,phasetitle,epoch)
         plt.show()
 
         return
