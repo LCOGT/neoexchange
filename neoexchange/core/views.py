@@ -295,7 +295,7 @@ def export_measurements(body_id, output_path=''):
     except Body.DoesNotExist:
         logger.warning("Could not find Body with pk={}".format(body_id))
         return None, -1
-    measures = SourceMeasurement.objects.filter(body=body).order_by('frame__midpoint')
+    measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).order_by('frame__midpoint')
     data = { 'measures' : measures}
 
     filename = "{}.mpc".format(body.current_name().replace(' ', ''))
