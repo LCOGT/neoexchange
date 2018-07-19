@@ -562,7 +562,7 @@ class TestSubmitBlockToScheduler(TestCase):
         user_request = make_userrequest(body_elements, params)
 
         self.assertAlmostEqual(user_request['requests'][0]['target']['vmag'], 20.88, 2)
-        self.assertAlmostEqual(user_request['requests'][0]['target']['rot_angle'], 107.53, 2)
+        self.assertAlmostEqual(user_request['requests'][0]['target']['rot_angle'], 107.53, 1)
         self.assertEqual(user_request['requests'][0]['target']['rot_mode'], 'SKY')
 
     def test_1m_sinistro_lsc_doma_userrequest(self):

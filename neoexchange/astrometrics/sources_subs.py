@@ -1205,10 +1205,10 @@ def make_moving_target(elements):
         target['meandist'] = elements['meandist']
         target['meananom'] = elements['meananom']
     if 'v_mag' in elements:
-        target['vmag'] = elements['v_mag']
+        target['vmag'] = round(elements['v_mag'], 2)
     if 'sky_pa' in elements:
         target['rot_mode'] = 'SKY'
-        target['rot_angle'] = elements['sky_pa']
+        target['rot_angle'] = round(elements['sky_pa'], 1)
 
     return target
 
