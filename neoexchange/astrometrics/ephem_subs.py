@@ -554,18 +554,21 @@ def read_findorb_ephem(empfile):
                 elif len(chunks) == 4:
                     ephem_info = { 'obj_id' : chunks[0] + chunks[1],
                                    'emp_sitecode' : chunks[3] }
-                elif len(chunks) == 6 or len(chunks) == 7:
+                elif len(chunks) >= 6 and len(chunks) <= 9:
+                    object_name = chunks[-2] + chunks[-1]
+                    if ' = ' in line:
+                        object_name = chunks[-4].replace('(', '').replace(')', '')
                     ephem_info = { 'emp_sitecode' : chunks[0].replace('(', '').replace(')', ''),
-                                   'obj_id' : chunks[-2] + chunks[-1] }
+                                   'obj_id' : object_name }
                 else:
-                    logger.warning("Unexpected number of chunks in header line1")
+                    logger.warning("Unexpected number of chunks in header line1 ({:d})".format(len(chunks)))
                     return (None,None)
             elif line.lstrip()[0:4] == 'Date':
 # next line has the timescale of the ephemeris and the units of the motion
 # rate. We *hope* it's always UTC and arcmin/hr but grab and check anyway...
                 chunks = line.strip().split()
                 if len(chunks) != 13 and len(chunks) != 14 :
-                    logger.warning("Unexpected number of chunks in header line2")
+                    logger.warning("Unexpected number of chunks in header line2 ({:d})".format(len(chunks)))
                     return (None,None)
                 ephem_info2 = { 'emp_timesys' : chunks[1], 'emp_rateunits' : chunks[9] }
             elif line.lstrip()[0:4] == '----':

@@ -14,9 +14,13 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime
+from math import radians, degrees
+import os
+import tempfile
+from glob import glob
+
 from django.test import TestCase
 from django.forms.models import model_to_dict
-from math import radians, degrees
 
 # Import module to test
 from astrometrics.ephem_subs import *
@@ -2281,3 +2285,106 @@ class Test_perturb_elements(TestCase):
         self.assertAlmostEqual(expected_inc, degrees(p_orbelems['Inc']), self.precision)
         self.assertAlmostEqual(expected_a, p_orbelems['SemiAxisOrQ'], self.precision)
         self.assertAlmostEqual(expected_e, p_orbelems['Ecc'], self.precision)
+
+class TestReadFindorbEphem(TestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def create_empfile(self, lines):
+        outfile = os.path.join(self.test_dir, 'new.ephem')
+        outfile_fh = open(outfile, 'w')
+        for line in lines:
+            print(line, file=outfile_fh)
+        outfile_fh.close()
+        return outfile
+
+    def compare_ephemeris(self, expected, given):
+        expected_empinfo = expected[0]
+        expected_emp = expected[1]
+
+        empinfo = given[0]
+        emp = given[1]
+
+        self.assertEqual(expected_empinfo, empinfo)
+        self.assertEqual(len(expected_emp), len(emp))
+        expected_line = expected_emp[0]
+        emp_line = emp[0]
+        self.assertEqual(expected_line[0], emp_line[0])
+        self.assertAlmostEqual(expected_line[1], emp_line[1], 10)
+        self.assertAlmostEqual(expected_line[2], emp_line[2], 10)
+        self.assertAlmostEqual(expected_line[3], emp_line[3], 2)
+        self.assertAlmostEqual(expected_line[4], emp_line[4], 2)
+        self.assertAlmostEqual(expected_line[5], emp_line[5], 2)
+
+    def test_unnumbered_ast(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'F65',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '2017YE5'}
+
+        expected_emp = [(datetime(2018,6,30,6,10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
+
+        lines = [ '#(F65) Haleakala-Faulkes Telescope North: 2017 YE5',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 06 30 06:10  21 05 24.970   -12 13 43.30  .08487 1.0854 142.8 15.8   7.26 215.5   .05  27'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+
+    def test_numbered_ast(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'F65',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '398188'}
+        expected_emp = [(datetime(2018,7,19,21,48), 5.31473475745, 0.460169195739, 16.4, 3.50, 0.039)]
+
+        lines = [ '#(F65) Haleakala-Faulkes Telescope North: (398188) = 2010 LE15',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 21:48  20 18 02.849   +26 21 56.71  .10109 1.0871 132.6 16.4   3.50 233.1  .039 172',
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+
+    def test_E10_numbered_ast(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'E10',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '1627'}
+        expected_emp = [(datetime(2018,7,19,22,11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
+
+        lines = [ '#(E10) Siding Spring-Faulkes Telescope South: (1627) = 1929 SH',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  22.2  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
