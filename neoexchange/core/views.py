@@ -917,6 +917,7 @@ def build_characterization_list(disp=None):
                 body_dict['ra'] = emp_line[0]
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
+                body_dict['motion'] = emp_line[4]
                 if disp:
                     if disp in body_dict['obs_needed']:
                         unranked.append(body_dict)
