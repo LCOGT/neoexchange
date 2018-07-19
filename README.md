@@ -9,6 +9,7 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 Update light curve extraction.
 * Pull from Tracking Number rather than block number
 * Capable of incorporating any number of blocks for a given target within a given time frame. 
+Add motion details to characterization page.
 
 ### 2.5.2
 
