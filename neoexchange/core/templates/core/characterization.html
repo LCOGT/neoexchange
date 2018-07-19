@@ -34,6 +34,9 @@
                         <span class="sortable" id="Vmag">V Mag.</span><br>
                     </th>
                     <th>
+                        <span class="sortable" id="motion">Rate ("/min)</span><br>
+                    </th>
+                    <th>
                         <span class="sortable" id="obsneeded">Required Observations</span><br>
                         <span style="font-size:75%" >
                         <form action="{% url 'characterization' %}" method="GET">Filter:
@@ -90,6 +93,7 @@
                     <td data-label="RA">{{body.ra|radianstohms:" "}}</td>
                     <td data-label="Dec">{{body.dec|radianstodms:" "}}</td>
                     <td data-label="Vmag">{{body.v_mag|floatformat:1 }}</td>
+                    <td data-label="motion">{{body.motion|floatformat:2 }}</td>
                     <td data-label="obsneeded"> {{body.obs_needed}}</td>
                     <td data-label="Hmag">{{body.abs_mag}}</td>
                     <td data-label="origin">{{body.origin}}</td>
