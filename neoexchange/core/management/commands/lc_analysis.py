@@ -18,30 +18,40 @@ class Command(BaseCommand):
         parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
 
     def read_data(self,path):
+
         f = open(path)
         lines = f.readlines()
-        day1 = float(lines[0][5:10])
-        daylast = floor(day1 + float(lines[-1][:6]))
-        times = []
-        mags = []
-        mag_errs = []
+        body = lines[0][8:-1]
+        day1 = lines[1][5:10]
+        daylast = floor(float(day1 + lines[-1][:6]))
+        times = np.array([])
+        mags = np.array([])
+        mag_errs = np.array([])
         for line in lines:
             try:
-                times = times.append(Time(day1+line[:6],format='mjd'))
-                mags = mags.append(float(line[8:13]))
-                mag_errs = mags.append(float(line[15:19]))
-            except TypeError:
+                times = np.append(times,float(day1+line[1:7]))
+                mags = np.append(mags,float(line[8:13]))
+                mag_errs = np.append(mag_errs,float(line[15:20]))
+            except ValueError:
                 continue
+
+        return times, mags, mag_errs, body
 
     def find_period(self, times, mags, mag_errs):
 
-        ls = LombScargle(times.unix*u.s,mags*u.mag,mag_errs*u.mag)
+        utimes = Time(times,format='mjd')
+        ls = LombScargle(utimes.unix*u.s,mags*u.mag,mag_errs*u.mag)
         freq, power = ls.autopower()
 
         fig, ax = plt.subplots()
         ax.plot(freq,power)
         ax.set_xlabel('Frequencies Hz')
         ax.set_ylabel('L-S Power')
+
+        fig2, ax2 = plt.subplots()
+        ax2.plot(1/(freq*3600),power)
+        ax2.set_xlabel('Period h')
+        ax2.set_ylabel('L-S Power')
 
         period = (1/(freq[np.argmax(power)])).to(u.hour)
         self.stdout.write("Period: %.3f h" % period.value)
@@ -53,43 +63,39 @@ class Command(BaseCommand):
         ax.errorbar(phases,mags,mag_errs, marker='.', linestyle=' ')
         ax.set_xlabel('phase')
         ax.set_ylabel('magnitude')
-        ax.set_xlim(-.1,1.1)
+        ax.set_xlim(0,1)
         ax.invert_yaxis()
         fig.suptitle(title)
         ax.set_title('(Period = %.3f h)' % period)
-        plt.savefig('phasecurve.png')
+        plt.savefig('phased_lc.png')
+
+
+        return
 
     def handle(self, *args, **options):
+
+        try:
+            times, mags, mag_errs, body = self.read_data('lightcurve_data.txt')
+        except FileNotFoundError:
+            raise FileNotFoundError('\"lightcurve_data.txt\" not found. Please make sure you are in the correct directory and the \"lightcurve_extraction\" command has run')
         if options['period'] == 0:
             period = self.find_period(times, mags,mag_errs)
         else:
             period = options['period']
 
-        f = open('lightcurve_data.txt')
-        lines = f.readlines()
-        body = lines[0][8:-1]
-        day1 = lines[1][5:10]
-        daylast = floor(float(day1 + lines[-1][:6]))
-        times = np.array([])
-        mags = np.array([])
-        mag_errs = np.array([])
-
-        for line in lines:
-            try:
-                times = np.append(times,float(day1+line[1:7]))
-                mags = np.append(mags,float(line[8:13]))
-                mag_errs = np.append(mag_errs,float(line[15:20]))
-            except ValueError:
-                continue
-
-        subtime = (times-floor(times[0]))
+        subtime = (times-times[np.argmin(times)])
         divtime = (subtime*24)/period
         phases = np.modf(divtime)[0]
 
-        #print(phases)
-        #print(mags)
-        #print(mag_errs)
+        #data = sorted(zip(phases,mags))
+
+    #    for n in range(len(data)):
+        #    if data[n][0] >= .95
+        #        data = data
+
         phasetitle = 'Phase Folded LC for %s' % body
 
         self.plot_fold_phase(phases,mags,mag_errs,period,phasetitle)
         plt.show()
+
+        return

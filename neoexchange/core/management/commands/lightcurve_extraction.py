@@ -33,6 +33,7 @@ class Command(BaseCommand):
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
+        parser.add_argument('--fold', action="store_true", default=False, help='Whether to do folded phase plot and period calculations')
         parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
 
     def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, colors='r', title='', sub_title=''):
@@ -239,11 +240,14 @@ class Command(BaseCommand):
 
 
             self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, title=plot_title, sub_title=subtitle)
-            if options['period'] == 0:
-                period = self.find_period(times, mags,mag_errs)
-            else:
-                period = options['period']*u.h
-            self.fold_phase(times,mags,mag_errs,period,phasetitle)
+
+            if(options['fold']):
+                if options['period'] == 0:
+                    period = self.find_period(times, mags,mag_errs)
+                else:
+                    period = options['period']*u.h
+                self.fold_phase(times,mags,mag_errs,period,phasetitle)
+
             plt.show()
 
         else:
