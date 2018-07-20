@@ -34,13 +34,14 @@ logger = logging.getLogger('core')
 
 def measurements_from_block(blockid, bodyid=None):
     block = Block.objects.get(pk=blockid)
-    frames = Frame.objects.filter(block=block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE, Frame.STACK_FRAMETYPE)).values_list('id',flat=True)
-    measures = SourceMeasurement.objects.filter(frame__in=frames, obs_mag__gt=0.0).order_by('-body','frame__midpoint')
+    frames = Frame.objects.filter(block=block, frametype__in=(Frame.BANZAI_QL_FRAMETYPE, Frame.BANZAI_RED_FRAMETYPE, Frame.STACK_FRAMETYPE)).values_list('id', flat=True)
+    measures = SourceMeasurement.objects.filter(frame__in=frames, obs_mag__gt=0.0).order_by('-body', 'frame__midpoint')
     if bodyid:
         measures = measures.filter(body__id=bodyid)
     bodies = measures.values_list('body', flat=True).distinct()
     extra_bodies = Body.objects.filter(id__in=bodies)
-    return {'body' : block.body, 'measures' : measures, 'slot' : block,'extra_bodies':extra_bodies}
+    return {'body': block.body, 'measures': measures, 'slot': block, 'extra_bodies': extra_bodies}
+
 
 def find_images_for_block(blockid):
     """
@@ -61,8 +62,9 @@ def find_images_for_block(blockid):
     y_size = frames[0].wcs._naxis2
     if not frames[0].frameid:
         return False
-    frames_list = [{'img':str(f.frameid)} for f in frames]
+    frames_list = [{'img': str(f.frameid)} for f in frames]
     return frames_list, candidates, x_size, y_size
+
 
 def candidates_by_block(blockid):
     targets = []
@@ -72,13 +74,14 @@ def candidates_by_block(blockid):
         sky_coords = []
         dets = cand.unpack_dets()
         times = [jd_utc2datetime(x).strftime("%Y-%m-%d %H:%M:%S") for x in dets['jd_obs']]
-        d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'], dets['mag'], times )
+        d_zip = zip(dets['frame_number'], dets['x'], dets['y'], dets['ra'], dets['dec'], dets['mag'], times)
         for a in d_zip:
-            coords.append({'x':a[1], 'y':a[2], 'time':a[6]})
-            sky_coords.append({'ra':a[3] * 15.0, 'dec':a[4], 'mag':a[5]})
+            coords.append({'x': a[1], 'y': a[2], 'time': a[6]})
+            sky_coords.append({'ra': a[3] * 15.0, 'dec': a[4], 'mag': a[5]})
         motion = {'speed' : cand.convert_speed(), 'speed_raw' : cand.speed, 'pos_angle' : cand.sky_motion_pa}
-        targets.append({'id': str(cand.id), 'coords':coords, 'sky_coords':sky_coords, 'motion':motion})
+        targets.append({'id': str(cand.id), 'coords': coords, 'sky_coords': sky_coords, 'motion': motion})
     return targets
+
 
 def check_request_status(tracking_num=None):
     data_url = urljoin(settings.PORTAL_REQUEST_API, tracking_num)
@@ -106,7 +109,7 @@ def create_frame(params, block=None, frameid=None):
         frames = Frame.objects.filter(**frame_params)
         for frame in frames:
             logger.error(frame.id)
-        raise(Frame.MultipleObjectsReturned)
+        raise Frame.MultipleObjectsReturned
 
     # Update catalogue information if we have it
     if params.get('astrometric_catalog', None):
@@ -166,7 +169,6 @@ def frame_params_from_header(params, block):
     except ValueError:
         logger.warning("Error creating WCS entry from frameid=%s" % frameid)
 
-
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
@@ -183,6 +185,7 @@ def frame_params_from_header(params, block):
         midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
         frame_params['midpoint'] = midpoint
     return frame_params
+
 
 def frame_params_from_block(params, block):
     # In these cases we are parsing the Block info
@@ -224,11 +227,11 @@ def frame_params_from_log(params, block):
 
 
 def ingest_frames(images, block):
-    '''
+    """
     Create Frame objects for each of the images in <images> and associate
     them with the passed Block <block>.
     - Also find out how many scheduler blocks were used
-    '''
+    """
     sched_blocks = []
     for image in images:
         image_header = lco_api_call(image.get('headers', None))
@@ -241,13 +244,14 @@ def ingest_frames(images, block):
     block_ids = set(sched_blocks)
     return block_ids
 
+
 def block_status(block_id):
-    '''
+    """
     Check if a block has been observed. If it has, record when the longest run finished
     - RequestDB API is used for block status
     - FrameDB API is used for number and datestamp of images
     - We do not count scheduler blocks which include < 3 exposures
-    '''
+    """
     status = False
     try:
         block = Block.objects.get(id=block_id)
@@ -277,7 +281,7 @@ def block_status(block_id):
         return False
 
     # This loops through all BLOCKS in the SUPERBLOCK so we need to filter out 
-    #only the one block used to call this procedure.
+    # only the one block used to call this procedure.
     exposure_count = 0
     for r in data['requests']:
         if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
@@ -288,7 +292,7 @@ def block_status(block_id):
                     # types of frames
                     obstype = ''
             except AttributeError:
-                logger.warn("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
+                logger.warning("Unable to find observation type for Block/track# %s / %s" % (block_id, tracking_num))
             images, num_archive_frames = check_for_archive_images(request_id=r['id'], obstype=obstype)
             logger.info('Request no. %s x %s images (%s total all red. levels)' % (r['id'], len(images), num_archive_frames))
             if images:
@@ -297,15 +301,15 @@ def block_status(block_id):
                 # Look in the archive at the header of the most recent frame for a timestamp of the observation
                 last_image_dict = images[0]
                 last_image_header = lco_api_call(last_image_dict.get('headers', None))
-                if last_image_header == None:
+                if last_image_header is None:
                     logger.error('Image header was not returned for %s' % last_image_dict)
                     return False
                 try:
-                    last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19],'%Y-%m-%dT%H:%M:%S')
+                    last_image = datetime.strptime(last_image_header['data']['DATE_OBS'][:19], '%Y-%m-%dT%H:%M:%S')
                 except ValueError:
                     logger.error('Image datetime stamp is badly formatted %s' % last_image_header['data']['DATE_OBS'])
                     return False
-                if (not block.when_observed or last_image > block.when_observed):
+                if not block.when_observed or last_image > block.when_observed:
                     block.when_observed = last_image
                 # If the block end time has passed and we got all of the images, set to inactive.
                 # N.B. we don't check against acceptability_threshold x expected no. of frames

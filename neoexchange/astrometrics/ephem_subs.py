@@ -371,6 +371,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     else:
         spd = None
 
+#               0   1   2   3       4           5       6       7
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
     if detailed:
         return emp_line, mag_dot, separation
@@ -1584,6 +1585,41 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(emp_line))
     return FOM
 
+def determine_sites_to_schedule(sched_date = datetime.utcnow()):
+    '''Determines which sites should be attempted for scheduling based on the
+    time of day.
+    Returns a dictionary with keys of 'north' and 'south', each of which will
+    have two keys of '0m4' and '1m0' which will contain a list of sites (or an
+    empty list) that can be scheduled.'''
+
+    N_point4m_sites = N_onem_sites = S_point4m_sites = S_onem_sites = []
+
+    if sched_date.hour >= 17 and sched_date.hour < 23:
+        N_point4m_sites = ['Z21', 'Z17']
+        N_onem_sites = ['V37', ]
+        S_point4m_sites = ['L09',]
+        S_onem_sites = ['K93', 'K92', 'K91']
+    elif sched_date.hour >= 23 or ( sched_date.hour >= 0 and sched_date.hour < 8):
+        N_point4m_sites = ['T04', 'T03', 'V38']
+        N_onem_sites = ['V37', ]
+        S_point4m_sites = ['W89', 'W79']
+        S_onem_sites = ['W87', 'W85']
+    elif sched_date.hour >= 8 and sched_date.hour < 12:
+        N_point4m_sites = ['T04', 'T03']
+        N_onem_sites = [ ]
+        S_point4m_sites = ['Q58',]
+        S_onem_sites = ['Q63', 'Q64']
+    elif sched_date.hour >= 12 and sched_date.hour < 17:
+        N_point4m_sites = [ ]
+        N_onem_sites = [ ]
+        S_point4m_sites = ['Q58',]
+        S_onem_sites = ['Q63', 'Q64']
+
+    sites = {   'north' : { '0m4' : N_point4m_sites, '1m0' : N_onem_sites},
+                'south' : { '0m4' : S_point4m_sites, '1m0' : S_onem_sites},
+            }
+
+    return sites
 
 def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow(), date_range=30, dark_and_up_time_limit=3.0, slot_length=20, ephem_step_size='5 m'):
     """Determine when it's best to observe Yarkovsky & radar/ARM

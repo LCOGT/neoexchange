@@ -265,4 +265,6 @@ class SpectroFeasibilityForm(forms.Form):
                 mag = round(emp[2], 1)
         super(SpectroFeasibilityForm, self).__init__(*args, **kwargs)
         self.fields['magnitude'].initial = mag
-        self.fields['sfu'].initial = sfu_values[1].value
+        # Set default SFU value of 70; replace with value from fetch if it isn't None
+        self.fields['sfu'].initial = 70.0
+        self.fields['sfu'].initial = self.fields['sfu'].initial if sfu_values[1] is None else sfu_values[1].value

@@ -517,13 +517,13 @@ class TestBlockStatus(TestCase):
 
         return header_out
 
-    #Mock block records output from Valhalla
-    #One for each block in superblock. Changed block id's to match blocks
+    # Mock block records output from Valhalla
+    # One for each block in superblock. Changed block id's to match blocks
     def mock_check_result_status(tracking_num):
         result_status_out = {u'created': u'2018-02-23T23:56:01.695109Z',
                          u'group_id': u'N999r0q_V38-cad-0223-0227',
                          u'id': 42,
-                         u'ipp_value': 1.0,
+                         u'ipp_value': 1.05,
                          u'modified': u'2018-02-27T05:54:41.007389Z',
                          u'observation_type': u'NORMAL',
                          u'operator': u'MANY',
@@ -817,7 +817,7 @@ class TestBlockStatus(TestCase):
         expected = ('3/4', '0/4')
 
         blocks = Block.objects.filter(superblock=self.super_block, active=True)
-        self.assertEqual(4,blocks.count())
+        self.assertEqual(4, blocks.count())
         for block in blocks:
             block_status(block.id)
 

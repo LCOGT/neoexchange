@@ -238,7 +238,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6]
+            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
         else:
             # Catch the case where there is no Epoch
             return False
@@ -259,10 +259,13 @@ class Body(models.Model):
         dstart = ''
         dend = ''
         if self.epochofel:
+            if dbg:
+                logger.debug('Body: {}'.format(self.name))
             orbelems = model_to_dict(self)
             sitecode = '500'
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
+
                 emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
                 vmag = emp_line[3]
 
@@ -272,6 +275,8 @@ class Body(models.Model):
 
                 # Calculate time since/until reaching Magnitude limit
                 t_diff = (mag_limit - vmag) / mag_dot
+                if abs(t_diff) > 10000:
+                    t_diff = 10000*t_diff/abs(t_diff)
 
                 # create separation test.
                 sep_test = degrees(separation) > sep_limit
@@ -286,13 +291,13 @@ class Body(models.Model):
                     # if Valid for beginning and end of window, assume valid for window
                     if vmag <= mag_limit and dstart and sep_test:
                         if dbg:
-                            logger.debug("good at begining and end", "mag:", vmag, "sep:", sep_test)
+                            logger.debug("good at begining and end, mag: {}, sep {}".format(vmag, sep_test))
                         return dstart, dend, d0
                     elif not dstart:
                         # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
                         if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
                             if dbg:
-                                logger.debug("bad at begining and end, Delta Mag no good", "mag:", vmag, "sep:", sep_test)
+                                logger.debug("bad at begining and end, Delta Mag no good, mag:{}, sep: {}".format(vmag, sep_test))
                             return dstart, dend, d0
                         else:
                             d = d0 + timedelta(days=delta_t)
@@ -302,13 +307,13 @@ class Body(models.Model):
                 elif (vmag > mag_limit or not sep_test) and dstart:
                     dend = d
                     if dbg:
-                        logger.debug("Ended in at", i, "mag:", vmag, "sep:", sep_test)
+                        logger.debug("Ended at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
                     return dstart, dend, d0
                 # If no start date, and we are valid, set start date
                 elif vmag <= mag_limit and not dstart and sep_test:
                     dstart = d
                     if dbg:
-                        logger.debug("started at", i, "mag:", vmag, "sep:", sep_test)
+                        logger.debug("started at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
                     # if this is our first iteration (i.e. we started valid) test end date
                     if i == 0:
                         d += timedelta(days=df)
@@ -328,7 +333,7 @@ class Body(models.Model):
                 i += 1
             # Return dates
             if dbg:
-                logger.debug("no end change", "mag:", vmag, "sep:", sep_test)
+                logger.debug("no end change, mag: {}, sep: {}".format(vmag, sep_test))
             return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
@@ -909,7 +914,7 @@ class Frame(models.Model):
         if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
             if self.filter == 'solar' or self.filter == 'w':
                 new_filter = 'R'
-            if self.photometric_catalog == 'GAIA-DR1':
+            if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2']:
                 new_filter = 'G'
         return new_filter
 
@@ -948,7 +953,14 @@ class SourceMeasurement(models.Model):
     snr = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
     flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
 
-    def format_mpc_line(self):
+    def format_mpc_line(self, include_catcode=False):
+        """Format the contents of 'self' (a SourceMeasurement i.e. the confirmed
+        measurement of an object on a particular frame) into MPC 1992 80 column
+        format. This handles the discovery asterisk in column 12, some of the mapping
+        from flags into the MPC codes in column 14, mapping of non-standard
+        filters and potentially inclusion of the catalog code in column 72 (if
+        [include_catcode] is True; catalog code should not be included in new
+        submissions to the MPC)"""
 
         if self.body.name:
             name, status = normal_to_packed(self.body.name)
@@ -970,7 +982,7 @@ class SourceMeasurement(models.Model):
         flags = self.flags
         if len(self.flags) == 1:
             if self.flags == '*':
-                # Discovery asterisk needs to go into column 12
+                # Discovery asterisk needs to go into column 13
                 flags = '* '
             else:
                 flags = ' ' + self.flags
@@ -978,10 +990,14 @@ class SourceMeasurement(models.Model):
             logger.warning("Flags longer than will fit into field - needs mapper")
             flags = self.flags[0:2]
 
+        # Catalog code for column 72 (if desired)
+        catalog_code = ' '
+        if include_catcode is True:
+            catalog_code = translate_catalog_code(self.astrometric_catalog)
         mpc_line = "%12s%2s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
             flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
-            mag, self.frame.map_filter(), translate_catalog_code(self.astrometric_catalog), self.frame.sitecode)
+            mag, self.frame.map_filter(), catalog_code, self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
             if extrainfo:
@@ -1062,6 +1078,36 @@ class CatalogSources(models.Model):
         area = pi*self.major_axis*self.minor_axis
         return area
 
+    def make_snr(self):
+        snr = None
+        if self.obs_mag > 0.0 and self.err_obs_mag > 0.0:
+            snr = self.err_obs_mag / self.obs_mag
+        return snr
+
+    def map_numeric_to_mpc_flags(self):
+        """Maps SExtractor numeric flags to MPC character flags
+        FLAGS contains, coded in decimal, all the extraction flags as a sum
+        of powers of 2:
+        1:  The object has neighbours, bright and close enough to significantly
+            bias the MAG_AUTO photometry, or bad pixels (more than 10% of the
+            integrated area affected),
+        2:  The object was originally blended with another one,
+        4:  At least one pixel of the object is saturated (or very close to),
+        8:  The object is truncated (too close to an image boundary),
+        16: Object’s aperture data are incomplete or corrupted,
+        32: Object’s isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
+        64: A memory overflow occurred during deblending,
+        128:A memory overflow occurred during extraction.
+        """
+
+        flag = ' '
+        if self.flags >= 1 and self.flags <=3:
+            # Set 'Involved with star'
+            flag = 'I'
+        elif self.flags >= 8:
+            # Set 'close to Edge'
+            flag = 'E'
+        return flag
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding

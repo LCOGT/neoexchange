@@ -29,7 +29,7 @@ lines matter. A Lot.
 {% endcomment %}
 
 <pre>{% for line in measures %}
-{{line.format_mpc_line}}{% endfor %}
+{% if slot %}{% format_mpc_line_upload line %}{% else %}{% format_mpc_line_catcode line %}{%endif%}{% endfor %}
 </pre>
               {% else %}
               <h3>No report has been made for this block.</h3>

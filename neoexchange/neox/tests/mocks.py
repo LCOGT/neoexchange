@@ -52,7 +52,7 @@ def mock_check_request_status(tracking_num):
     status = { u'created' : u'2015-10-21T19:07:26.023049Z',
                 u'group_id' : u'Fake group',
                 u'id': 42,
-                u'ipp_value': 1.0,
+                u'ipp_value': 1.05,
                 u'modified': u'2015-10-21T19:07:26.023049Z',
                 u'observation_type': u'NORMAL',
                 u'operator': u'SINGLE',
@@ -120,7 +120,7 @@ def mock_check_request_status_cadence(tracking_num):
     status = {u'created': u'2017-08-15T19:18:24.869792Z',
              u'group_id': u'3122_COJ_cad_20170816-0819',
              u'id': 472636,
-             u'ipp_value': 1.0,
+             u'ipp_value': 1.05,
              u'modified': u'2017-08-15T19:18:24.869822Z',
              u'observation_type': u'NORMAL',
              u'operator': u'MANY',
@@ -753,7 +753,7 @@ def mock_expand_cadence(user_request):
 
     cadence = {
                  u'group_id': u'3122_Q59-20170815',
-                 u'ipp_value': 1.0,
+                 u'ipp_value': 1.05,
                  u'observation_type': u'NORMAL',
                  u'operator': u'MANY',
                  u'proposal': u'LCOSchedulerTest',
