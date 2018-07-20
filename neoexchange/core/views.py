@@ -1622,11 +1622,16 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     kwargs = clean_mpcorbit(elements, dbg, origin)
     # Save, make revision, or do not update depending on the what has happened
     # to the object
-    save_and_make_revision(body, kwargs)
-    if not created:
-        logger.info("Updated elements for %s" % obj_id)
+    if not body.epochofel or body.epochofel <= kwargs['epochofel']:
+        save_and_make_revision(body, kwargs)
+        if not created:
+            logger.info("Updated elements for %s" % obj_id)
+        else:
+            logger.info("Added new orbit for %s" % obj_id)
     else:
-        logger.info("Added new orbit for %s" % obj_id)
+        body.origin = origin
+        body.save()
+        logger.info("More recent elements already stored for %s" % obj_id)
     return True
 
 
