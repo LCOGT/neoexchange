@@ -33,8 +33,7 @@ class Command(BaseCommand):
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
-        parser.add_argument('--fold', action="store_true", default=False, help='Whether to do folded phase plot and period calculations')
-        parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
+
 
     def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, colors='r', title='', sub_title=''):
         fig, (ax0,ax1) = plt.subplots(nrows=2,sharex=True,gridspec_kw = {'height_ratios':[15,4]})
@@ -56,40 +55,9 @@ class Command(BaseCommand):
         ax1.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         fig.autofmt_xdate()
         plt.savefig("lightcurve.png")
-        #plt.show()
+        plt.show()
 
         return
-
-    def find_period(self, times, mags, mag_errs):
-
-        t = Time(times,format='datetime')
-        ls = LombScargle(t.unix*u.s,mags*u.mag,mag_errs*u.mag)
-        freq, power = ls.autopower()
-
-        fig, ax = plt.subplots()
-        ax.plot(freq,power)
-        ax.set_xlabel('Frequencies Hz')
-        ax.set_ylabel('L-S Power')
-
-        period = (1/(freq[np.argmax(power)])).to(u.hour)
-        self.stdout.write("Period: %.3f h" % period.value)
-        return period
-
-    def fold_phase(self,times,mags,mag_errs,period,title):
-
-        t = Time(times,format='datetime')
-        subtime = (t.jd-floor(t[0].jd))
-        divtime = (subtime*24*u.h)/period
-        phases = np.modf(divtime)[0]
-        fig, ax = plt.subplots()
-        ax.errorbar(phases,mags,mag_errs, marker='.', linestyle=' ')
-        ax.set_xlabel('phase')
-        ax.set_ylabel('magnitude')
-        ax.set_xlim(0,1)
-        ax.invert_yaxis()
-        fig.suptitle(title)
-        ax.set_title('(Period = %.3f h)' % period.value)
-        plt.savefig('phasecurve.png')
 
     def make_source_measurement(self, body, frame, cat_source, persist=False):
         source_params = { 'body' : body,
@@ -176,7 +144,7 @@ class Command(BaseCommand):
                                         min_sep = sep
                                         best_source = source
 
-                            if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 2 * options['deltamag']:
+                            if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 3 * options['deltamag']:
                                 mpc_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
                                 mpc_lines.append(mpc_line)
                                 times.append(frame.midpoint)
@@ -217,38 +185,20 @@ class Command(BaseCommand):
                     if options['timespan'] < 1:
                         plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
                         start_block.site.upper(), frame.sitecode, start_super_block.block_end.strftime("%Y-%m-%d"))
-                        phasetitle = 'Phase Folded LC for %s on %s' % (start_super_block.body.current_name(),
-                        start_super_block.block_end.strftime("%Y-%m-%d"))
                         subtitle = ''
                     else:
                         plot_title = '%s from %s to %s' % (start_block.body.current_name(),
                         (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
                         start_super_block.block_end.strftime("%Y-%m-%d"))
-                        phasetitle = 'Phase Folded LC for %s from %s to %s' % (start_block.body.current_name(),
-                        (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
-                        start_super_block.block_end.strftime("%Y-%m-%d"))
                         subtitle = 'Sites: ' + ", ".join(mpc_site)
                 except TypeError:
                     plot_title = 'LC for %s' % (start_super_block.body.current_name())
-                    phasetitle + 'Phase Folded LC for %s' % (start_super_block.body.current_name())
                     subtitle = ''
             else:
                 plot_title = options['title']
-                phasetitle = 'Phase Folded LC'
                 subtitle = ''
 
-
-
             self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, title=plot_title, sub_title=subtitle)
-
-            if(options['fold']):
-                if options['period'] == 0:
-                    period = self.find_period(times, mags,mag_errs)
-                else:
-                    period = options['period']*u.h
-                self.fold_phase(times,mags,mag_errs,period,phasetitle)
-
-            plt.show()
 
         else:
             self.stdout.write("No sources matched.")
