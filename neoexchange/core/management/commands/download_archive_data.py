@@ -15,6 +15,7 @@ class Command(BaseCommand):
         parser.add_argument('--proposal', action="store", default="LCO2018B-013", help='Proposal code to query for data (e.g. LCO2018b-013)')
         out_path = os.path.join(os.environ.get('HOME'), 'Asteroids')
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
+        parser.add_argument('--numdays', action="store", default=0.0, type=float, help='How many extra days to look for')
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
@@ -41,11 +42,14 @@ class Command(BaseCommand):
         if username and password:
             auth_headers = archive_login(username, password)
             start_date, end_date = determine_archive_start_end(obs_date)
+            end_date = end_date + timedelta(days=options['numdays'])
             self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
             all_frames = {}
             for obstype in obstypes:
                 if obstype == 'EXPOSE':
                     redlevel = ['91', '11']
+                    if obs_date < datetime(2016,4,1):
+                        redlevel = ['90', ]
                 else:
                     # '' seems to be needed to get the tarball of FLOYDS products
                     redlevel = ['0', '']
