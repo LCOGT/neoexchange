@@ -19,13 +19,14 @@ datadir = os.path.join(os.path.abspath(datadir), '')
 # Find all images
 images, catalogs = determine_images_and_catalogs(datadir)
 
+images = sorted(images)
 # Create log file, write header
 log_file = os.path.join(datadir, '67P_website.csv')
 
 if os.path.exists(log_file):
     os.remove(log_file)
 log_fh = open(log_file, 'w')
-print >> log_fh,  "Observatory,Telescope/Instrument,PI (data owner),PI/contact e-mail address,Method,Band/Wavelength,Set up details,Start time,End time,Data Quality,Notes/Comments"
+print >> log_fh,  "Observatory,Telescope/Instrument,PI (data owner),PI/contact e-mail address,Method,Band/Wavelength,Set up details,Start time,End time,Exp time,Data Quality,Notes/Comments"
 
 pi = 'Tim Lister'
 pi_email = 'tlister@lcogt.net'
@@ -54,7 +55,7 @@ for fits_fpath in images:
     quality = 'OK'
     if zp < 0 and zp_err < 0:
         quality = 'No use'
-    log_format = "%s,%3s,%s,%s,%s,IMG,%3s, ,%s,%s,%10s,"
-    log_line = log_format % (fits_frame, sitecode, tel_inst, pi, pi_email, obs_filter, start_time.strftime('%d/%m/%Y %H:%M:%S'), end_time.strftime('%d/%m/%Y %H:%M:%S'), quality)
+    log_format = "%s,%3s,%s,%s,%s,IMG,%3s, ,%s,%s,%.1f,%10s,"
+    log_line = log_format % (fits_frame, sitecode, tel_inst, pi, pi_email, obs_filter, start_time.strftime('%d/%m/%Y %H:%M:%S'), end_time.strftime('%d/%m/%Y %H:%M:%S'), header['exptime'], quality)
     print >> log_fh, log_line
 log_fh.close()
