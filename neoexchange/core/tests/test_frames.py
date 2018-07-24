@@ -17,8 +17,15 @@ from datetime import datetime
 from django.test import TestCase
 from core.models import Body, Proposal, Block, SuperBlock
 from mock import patch, Mock
+
+from neox.tests.mocks import mock_fetch_archive_frames
 from core.frames import *
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL
+logging.disable(logging.CRITICAL)
 
 class TestBlockStatus(TestCase):
 
@@ -121,10 +128,38 @@ class TestBlockStatus(TestCase):
                        }
         self.test_block4 = Block.objects.create(**block_params4)
 
+    def insert_spectro_blocks(self):
+
+        sb_params = {  'cadence'       : 'False',
+                       'body'          : self.body,
+                       'proposal'      : self.neo_proposal,
+                       'block_start'   : '2015-04-20 05:00:00',
+                       'block_end'     : '2015-04-21 15:00:00',
+                       'tracking_number' : '4242',
+                       'active'        : True
+                    }
+        self.spec_super_block, created = SuperBlock.objects.get_or_create(**sb_params)
+
+        spec_block_params1 = { 'telclass' : '2m0',
+                               'site'     : 'ogg',
+                               'body'     : self.body,
+                               'superblock'  : self.spec_super_block,
+                               'proposal' : self.neo_proposal,
+                               'block_start' : '2015-04-20 13:00:00',
+                               'block_end'   : '2015-04-21 03:00:00',
+                               'tracking_number' : '1391169',
+                               'num_exposures' : 1,
+                               'exp_length' : 1800.0,
+                               'active'   : True,
+                               'num_observed' : 0,
+                               'reported' : False
+                               }
+        self.spec_test_block1 = Block.objects.create(**spec_block_params1)
+
     #Create Mocked output to image request from Valhala.
     #Header URL and Reqnum have been changed for easy tracking.
     #no images for last block
-    def mock_check_for_archive_images(request_id):
+    def mock_check_for_archive_images(request_id, obstype='EXPOSE'):
         result_images_out = [{u'BLKUID': 226770074,
                               u'DATE_OBS': u'2018-02-27T04:10:51.702000Z',
                               u'EXPTIME': u'10.238',
@@ -482,13 +517,13 @@ class TestBlockStatus(TestCase):
 
         return header_out
 
-    #Mock block records output from Valhalla
-    #One for each block in superblock. Changed block id's to match blocks
+    # Mock block records output from Valhalla
+    # One for each block in superblock. Changed block id's to match blocks
     def mock_check_result_status(tracking_num):
         result_status_out = {u'created': u'2018-02-23T23:56:01.695109Z',
                          u'group_id': u'N999r0q_V38-cad-0223-0227',
                          u'id': 42,
-                         u'ipp_value': 1.0,
+                         u'ipp_value': 1.05,
                          u'modified': u'2018-02-27T05:54:41.007389Z',
                          u'observation_type': u'NORMAL',
                          u'operator': u'MANY',
@@ -717,14 +752,72 @@ class TestBlockStatus(TestCase):
                          u'submitter': u'neox_robot'}
         return result_status_out
 
+    def mock_check_request_status_spectro(tracking_num):
+        result_status_out = {u'created': u'2018-01-10T22:58:32.524744Z',
+                             u'group_id': u'8_F65-20180111_spectra',
+                             u'id': 557017,
+                             u'ipp_value': 1.0,
+                             u'modified': u'2018-01-11T06:49:53.678461Z',
+                             u'observation_type': u'NORMAL',
+                             u'operator': u'SINGLE',
+                             u'proposal': u'LCOEngineering',
+                             u'requests': [{u'acceptability_threshold': 90.0,
+                               u'completed': u'2018-01-11T06:49:53.665958Z',
+                               u'constraints': {u'max_airmass': 1.74, u'min_lunar_distance': 30.0},
+                               u'created': u'2018-01-10T22:58:32.526661Z',
+                               u'duration': 845,
+                               u'fail_count': 0,
+                               u'id': 1391169,
+                               u'location': {u'site': u'ogg', u'telescope_class': u'2m0'},
+                               u'modified': u'2018-01-11T06:49:53.667734Z',
+                               u'molecules': [{
+                                 u'bin_x': 1, u'bin_y': 1,
+                                 u'exposure_count': 1,
+                                 u'exposure_time': 60.0,
+                                 u'filter': u'',
+                                 u'instrument_name': u'2M0-FLOYDS-SCICAM',
+                                 u'spectra_slit': u'slit_2.0as',
+                                 u'type': u'LAMP_FLAT'},
+                                {
+                                 u'bin_x': 1, u'bin_y': 1,
+                                 u'exposure_count': 1,
+                                 u'exposure_time': 60.0,
+                                 u'filter': u'',
+                                 u'instrument_name': u'2M0-FLOYDS-SCICAM',
+                                 u'spectra_slit': u'slit_2.0as',
+                                 u'type': u'ARC'},
+                                {
+                                 u'bin_x': 1, u'bin_y': 1,
+                                 u'exposure_count': 1,
+                                 u'exposure_time': 300.0,
+                                 u'filter': u'',
+                                 u'instrument_name': u'2M0-FLOYDS-SCICAM',
+                                 u'spectra_lamp': u'',
+                                 u'spectra_slit': u'slit_2.0as',
+                                 u'type': u'SPECTRUM'}],
+                               u'observation_note': u'Submitted by NEOexchange (by tlister@lcogt.net)',
+                               u'scheduled_count': 0,
+                               u'state': u'COMPLETED',
+                               u'target': {u'acquire_mode': None,
+                                u'name': u'8',
+                                u'rot_mode': u'VFLOAT',
+                                u'scheme': u'MPC_MINOR_PLANET',
+                                u'type': u'NON_SIDEREAL',
+                                u'vmag': None},
+                               u'windows': [{u'end': u'2018-01-11T15:50:00Z',
+                                 u'start': u'2018-01-11T05:00:00Z'}]}],
+                             u'state': u'COMPLETED',
+                             u'submitter': u'tlister@lcogt.net'}
+        return result_status_out
+
     @patch('core.frames.lco_api_call', side_effect=mock_lco_api_call)
     @patch('core.frames.check_request_status', side_effect=mock_check_result_status)
     @patch('core.frames.check_for_archive_images', side_effect=mock_check_for_archive_images)
     def test_block_status_updates_num_observed(self, check_request_status, check_for_archive_images, lco_api_call):
         expected = ('3/4', '0/4')
 
-        blocks = Block.objects.filter(active=True)
-        self.assertEqual(4,blocks.count())
+        blocks = Block.objects.filter(superblock=self.super_block, active=True)
+        self.assertEqual(4, blocks.count())
         for block in blocks:
             block_status(block.id)
 
@@ -753,3 +846,14 @@ class TestBlockStatus(TestCase):
         for element in expected:
             self.assertNotIn(element, frame_names_blk2)
 
+    @patch('core.frames.check_request_status', mock_check_request_status_spectro)
+    @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    def test_check_spectro_block(self):
+        self.insert_spectro_blocks()
+
+        self.assertEqual(0, self.spec_test_block1.num_observed)
+        status = block_status(self.spec_test_block1.id)
+
+        self.assertEqual(True, status)
+        spec_block = Block.objects.get(id=self.spec_test_block1.id)
+        self.assertEqual(1, spec_block.num_observed)

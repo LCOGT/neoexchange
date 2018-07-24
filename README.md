@@ -1,8 +1,28 @@
-# NEO Exchange
+## NEO Exchange
 
 Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
+
+### 2.5.3
+
+Update light curve extraction.
+* Pull from Tracking Number rather than block number
+* Capable of incorporating any number of blocks for a given target within a given time frame. 
+Add motion details to characterization page.
+
+### 2.5.2
+
+Robotic scheduler and low-level ToO support.
+
+### 2.5.1
+Add block record keeping for spectroscopy.
+
+### 2.5.0
+Create a characterization page for spectroscopy support
+* Pull out targets of interest.
+* Check of previous spectroscopy from SMASS and MANOS.
+* Calculate observing window for the next 3 months for each target.
 
 ### 2.4.1
 

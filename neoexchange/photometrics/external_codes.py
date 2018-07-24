@@ -115,7 +115,7 @@ def setup_working_dir(source_dir, dest_dir, config_files):
             try:
                 os.unlink(config_dest_filepath)
             except OSError:
-                logger.warn("Could not unlink %s" % ( config_dest_filepath))
+                logger.warning("Could not unlink %s" % ( config_dest_filepath))
         try:
             os.symlink(config_src_filepath, config_dest_filepath)
         except OSError:
@@ -546,7 +546,7 @@ def read_mtds_file(mtdsfile, dbg=False):
         # basic check that the JD is within the expected range
         # values are 2014-01-01 to 2036-12-31 converted to Julian Dates
         if frame_jd < 2456658.5 or frame_jd > 2465058.5:
-            logger.warn("Frame %s has suspicious JD value %f outside expected range" % (frame_filename, frame_jd))
+            logger.warning("Frame %s has suspicious JD value %f outside expected range" % (frame_filename, frame_jd))
         frames.append((frame_filename, frame_jd))
         frame += 1
 
@@ -564,14 +564,14 @@ def read_mtds_file(mtdsfile, dbg=False):
         try:
             dets_array = loadtxt(mtds_fh, dtype=dtypes)
         except Exception as e:
-            logger.warn("Didn't find any detections in file %s (Reason %s)" % (mtdsfile, e))
+            logger.warning("Didn't find any detections in file %s (Reason %s)" % (mtdsfile, e))
             dets_array = empty( shape=(0, 0) )
 
     # Check for correct number of entries
     if dbg: print(dets_array.shape)
     num_detections = dets_array.shape[0] / num_frames
     if num_detections == 0:
-        logger.warn("Found 0 detection entries")
+        logger.warning("Found 0 detection entries")
         num_detections = 0
         detections = []
     elif dets_array.shape[0] / float(num_frames) != num_detections:

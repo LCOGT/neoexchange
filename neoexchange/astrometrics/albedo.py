@@ -54,14 +54,14 @@ def asteroid_diameter(a=asteroid_albedo(), h=7):
     try:
         h = float(h)
     except (TypeError, ValueError):
-        logger.warn("Could not convert H magnitude to a float")
+        logger.warning("Could not convert H magnitude to a float")
         return None
 
     if a <= 0.00:
         logger.debug("You cannot have a negative albedo")
         return False
     elif h < -90:
-        logger.warn('Nothing brighter than -90, must be a flag.')
+        logger.warning('Nothing brighter than -90, must be a flag.')
         return None
     else:
         try:

@@ -17,12 +17,13 @@ GNU General Public License for more details.
 
 import logging
 from datetime import datetime, timedelta, time
-from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil
+from math import sin, cos, tan, asin, acos, atan2, degrees, radians, pi, sqrt, fabs, exp, log10, ceil, log
 
 try:
     import pyslalib.slalib as S
 except:
     pass
+
 from numpy import array, concatenate, zeros
 import copy
 from itertools import groupby
@@ -54,7 +55,7 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     return beta
 
 
-def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
+def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False, detailed=False):
     """Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
     from a dictionary of orbital elements.
@@ -101,7 +102,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
     if site_name == '?'  or sitecode == '500':
         if site_name == '?':
-            logger.warn("WARN: No site co-ordinates found, computing for geocenter")
+            logger.warning("WARN: No site co-ordinates found, computing for geocenter")
         pvobs = zeros(6)
     else:
         # Compute local apparent sidereal time
@@ -113,7 +114,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         logger.debug('GMST, LAST, EQEQX, GAST, long= %.17f %.17f %E %.17f %.17f' % (gmst, stl, S.sla_eqeqx(mjd_tt), gmst+S.sla_eqeqx(mjd_tt), site_long))
         pvobs = S.sla_pvobs(site_lat, site_hgt, stl)
 
-    logger.debug("PVobs(orig)=%s\n            %s" % (pvobs[0:3],pvobs[3:6]*86400.0))
+    logger.debug("PVobs(orig)=%s\n            %s" % (pvobs[0:3], pvobs[3:6]*86400.0))
 
 # Apply transpose of precession/nutation matrix to pv vector to go from
 # true equator and equinox of date to J2000.0 mean equator and equinox (to
@@ -122,7 +123,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     pos_new = S.sla_dimxv(rmat, pvobs[0:3])
     vel_new = S.sla_dimxv(rmat, pvobs[3:6])
     pvobs_new = concatenate([pos_new, vel_new])
-    logger.debug("PVobs(new)=%s\n            %s" % (pvobs_new[0:3],pvobs_new[3:6]*86400.0))
+    logger.debug("PVobs(new)=%s\n            %s" % (pvobs_new[0:3], pvobs_new[3:6]*86400.0))
 
 # Earth position and velocity
 
@@ -237,7 +238,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
 
 # geometric distance, delta (AU)
         delta = sqrt(pos[0]*pos[0] + pos[1]*pos[1] + pos[2]*pos[2])
-
+        delta_dot = ((vel[0]*pos[0]+vel[1]*pos[1]+vel[2]*pos[2])/delta)*86400.0
         logger.debug("Geometric distance, delta (AU)=%s" % delta)
 
 # Light travel time to asteroid
@@ -265,6 +266,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     cposy = pv[1] - (ltt * pv[4])
     cposz = pv[2] - (ltt * pv[5])
     r = sqrt(cposx*cposx + cposy*cposy + cposz*cposz)
+    r_dot = ((pv[3]*cposx+pv[4]*cposy+pv[5]*cposz)/r)*86400.0
 
     logger.debug("r (AU) =%s" % r)
 
@@ -283,27 +285,52 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     total_motion, sky_pa, ra_motion, dec_motion = compute_sky_motion(sky_vel, delta, dbg)
 
     mag = -99
+    mag_dot = 0
+    beta = 0
+    separation = 0
     if comet is True:
         # Calculate magnitude of comet
         # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
         # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the elements
         if p_orbelems['H'] and p_orbelems['G']:
             mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
+            mag_dot = 5.0 * delta_dot / log(10) / delta + 2.5 * p_orbelems['G'] * r_dot / log(10) / r
 
     else:
         # Compute phase angle, beta (Sun-Target-Earth angle)
         beta = compute_phase_angle(r, delta, es_Rsq)
+        beta_dot = -1/sqrt(1-(cos(beta))**2)*(r*(delta**2-r**2+1)*delta_dot-delta*(delta**2-r**2-1)*r_dot)/(2*delta*delta*r*r)
 
         phi1 = exp(-3.33 * (tan(beta/2.0))**0.63)
         phi2 = exp(-1.87 * (tan(beta/2.0))**1.22)
 
+        phi1_dot = phi1 * -3.33 * 0.63 * (tan(beta/2.0))**(0.63-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
+        phi2_dot = phi1 * -1.87 * 1.22 * (tan(beta/2.0))**(1.22-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
+
         #    logger.debug("Phi1, phi2=%s" % phi1,phi2)
+
+        # If requested, calculate the effective separation between the RA of object and the sun as seen on the sky.
+        # We make simplifying assumptions that more or less balance out, such as the observers are located
+        # anywhere on the equator, but can see all the way to the horizon.
+        if detailed is not False:
+            # compute RA/Dec of the Sun
+            sun_coord = S.sla_dcc2s(e_pos_hel * -1)
+            sun_ra = S.sla_dranrm(sun_coord[0])
+            sun_dec = sun_coord[1]
+            # rotate object ra to solar position
+            lon_new = ra - sun_ra
+            lon_new = atan2(sin(lon_new-pi/2) * cos(sun_dec) - tan(dec) * sin(sun_dec), cos(lon_new-pi/2)) + pi/2
+            # convert longitude of object to distance in radians
+            separation = abs(S.sla_drange(lon_new))
 
         # Calculate magnitude of object
         if p_orbelems['H'] and p_orbelems['G']:
             try:
                 mag = p_orbelems['H'] + 5.0 * log10(r * delta) - \
                     (2.5 * log10((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
+                mag_dot = 5 * (delta * r_dot + r * delta_dot) / (r * delta * log(10)) - \
+                    2.5 * ((1.0 - p_orbelems['G'])*phi1_dot + p_orbelems['G']*phi2_dot) / \
+                    (log(10) * ((1.0 - p_orbelems['G'])*phi1 + p_orbelems['G']*phi2))
             except ValueError:
                 logger.error("Error computing magnitude")
                 logger.error("{")
@@ -333,7 +360,10 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     else:
         spd = None
 
+#               0   1   2   3       4           5       6       7
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
+    if detailed:
+        return emp_line, mag_dot, separation
 
     return emp_line
 
@@ -393,7 +423,7 @@ def compute_sky_motion(sky_vel, delta, dbg=True):
     logger.debug( "RA motion, Dec motion, PA=%10.7f %10.7f %6.1f" % (ra_motion, dec_motion, sky_pa ))
 
     total_motion = sqrt(ra_motion * ra_motion + dec_motion * dec_motion)
-    logger.debug( "Total motion=%10.7f" % (total_motion))
+    logger.debug( "Total motion=%10.7f" % total_motion)
 
     return total_motion, sky_pa, ra_motion, dec_motion
 
@@ -625,7 +655,7 @@ def crude_astro_darkness(sitecode, utc_date):
 
 def accurate_astro_darkness(sitecode, utc_date, debug=False):
 
-# Convert passed UTC date to MJD and then Julian centuries
+    # Convert passed UTC date to MJD and then Julian centuries
 
     mjd_utc = datetime2mjd_utc(utc_date)
     T = (mjd_utc - 51544.5)/36525.0
@@ -672,14 +702,16 @@ def accurate_astro_darkness(sitecode, utc_date, debug=False):
     solarnoon = (720-4*degrees(site_long)-eqtime)/1440
     sunrise = (solarnoon - hourangle*4/1440) % 1
     sunset = (solarnoon + hourangle*4/1440) % 1
-    if debug: print(solarnoon + hourangle*4/1440, solarnoon - hourangle*4/1440)
-    if debug: print(sunset, sunrise)
+    if debug:
+        print(solarnoon + hourangle*4/1440, solarnoon - hourangle*4/1440)
+    if debug:
+        print(sunset, sunrise)
 
     if sunrise < sunset:
         sunrise = sunrise + 1
     if debug:
-        to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent, \
-            sun_true_long, degrees(omega), sun_app_long, degrees(eps0), eps, \
+        to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent,
+            sun_true_long, degrees(omega), sun_app_long, degrees(eps0), eps,
             degrees(sun_app_ra), degrees(sun_app_dec), eqtime, hourangle]
         print(to_return)
 
@@ -1465,6 +1497,41 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(emp_line))
     return FOM
 
+def determine_sites_to_schedule(sched_date = datetime.utcnow()):
+    '''Determines which sites should be attempted for scheduling based on the
+    time of day.
+    Returns a dictionary with keys of 'north' and 'south', each of which will
+    have two keys of '0m4' and '1m0' which will contain a list of sites (or an
+    empty list) that can be scheduled.'''
+
+    N_point4m_sites = N_onem_sites = S_point4m_sites = S_onem_sites = []
+
+    if sched_date.hour >= 17 and sched_date.hour < 23:
+        N_point4m_sites = ['Z21', 'Z17']
+        N_onem_sites = ['V37', ]
+        S_point4m_sites = ['L09',]
+        S_onem_sites = ['K93', 'K92', 'K91']
+    elif sched_date.hour >= 23 or ( sched_date.hour >= 0 and sched_date.hour < 8):
+        N_point4m_sites = ['T04', 'T03', 'V38']
+        N_onem_sites = ['V37', ]
+        S_point4m_sites = ['W89', 'W79']
+        S_onem_sites = ['W87', 'W85']
+    elif sched_date.hour >= 8 and sched_date.hour < 12:
+        N_point4m_sites = ['T04', 'T03']
+        N_onem_sites = [ ]
+        S_point4m_sites = ['Q58',]
+        S_onem_sites = ['Q63', 'Q64']
+    elif sched_date.hour >= 12 and sched_date.hour < 17:
+        N_point4m_sites = [ ]
+        N_onem_sites = [ ]
+        S_point4m_sites = ['Q58',]
+        S_onem_sites = ['Q63', 'Q64']
+
+    sites = {   'north' : { '0m4' : N_point4m_sites, '1m0' : N_onem_sites},
+                'south' : { '0m4' : S_point4m_sites, '1m0' : S_onem_sites},
+            }
+
+    return sites
 
 def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow(), date_range=30, dark_and_up_time_limit=3.0, slot_length=20, ephem_step_size='5 m'):
     """Determine when it's best to observe Yarkovsky & radar/ARM

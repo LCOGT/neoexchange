@@ -14,9 +14,10 @@ GNU General Public License for more details.
 """
 
 import os
-import mock
+from mock import patch, MagicMock
 from socket import error
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from unittest import skipIf
 
 import astropy.units as u
@@ -30,7 +31,6 @@ from neox.tests.mocks import MockDateTime, mock_expand_cadence
 from core.views import record_block
 # Import module to test
 from astrometrics.sources_subs import *
-
 
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
@@ -387,7 +387,7 @@ class TestSubmitBlockToScheduler(TestCase):
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
-    @mock.patch('astrometrics.sources_subs.requests.post')
+    @patch('astrometrics.sources_subs.requests.post')
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
@@ -426,8 +426,8 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(block.block_start, block.superblock.block_start)
             self.assertEqual(block.block_end, block.superblock.block_end)
 
-    @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
-    @mock.patch('astrometrics.sources_subs.requests.post')
+    @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
+    @patch('astrometrics.sources_subs.requests.post')
     def test_submit_cadence(self, mock_post):
         mock_post.return_value.status_code = 200
 
@@ -520,7 +520,34 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
-        self.assertEqual(user_request['requests'][0]['location']['observatory'], 'doma')
+
+
+    def test_make_too_userrequest(self):
+        body_elements = model_to_dict(self.body)
+        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        body_elements['current_name'] = self.body.current_name()
+        site_code = 'Q63'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : body_elements['current_name'] + '_' + 'COJ' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w',
+                    'too_mode' : True
+                 }
+
+        user_request = make_userrequest(body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope',None), None)
+        self.assertEqual(user_request['requests'][0].get('observation_type', None), None)
+        self.assertEqual(user_request['observation_type'], 'TARGET_OF_OPPORTUNITY')
 
     def test_multi_filter_userrequest(self):
 
@@ -1502,6 +1529,9 @@ class TestParseMPCObsFormat(TestCase):
                             'p_ C_f' :  u'     WSAE9A6  C2015 09 20.23688 21 41 08.64 -10 51 41.7               VqNEOCPG96',
                             'p_ x_l' :  u'g0232K10F41B* x2010 03 19.91359 06 26 37.29 +35 47 01.3                L~0FUhC51',
                             'p_quoteC_h': u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309",
+                            'cp_!C_h':  u'0315PK13V060 !C2013 11 06.14604623 28 19.756-24 20 45.77         21.6 Tt90966705',
+                            'np_4A_l' : u'24554PLS2608 4A1960 09 28.39725 00 39 02.51 +00 49 57.8                Kb6053675',
+                            'np_4X_l' : u'24554PLS2608*4X1960 09 24.46184 00 42 27.17 +00 55 44.5          18.1  Kb6053675'
 
                           }
         self.maxDiff = None
@@ -1739,6 +1769,43 @@ class TestParseMPCObsFormat(TestCase):
 
         params = parse_mpcobs(self.test_lines['p_quoteC_h'])
 
+    def test_cp_plingC_h(self):
+        expected_params = { 'body'  : '0315P',
+                            'flags' : '!',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2013, 11,  6, 3, 30, 18, int(0.3744*1e6)),
+                            'obs_ra'    : 352.08231666666667,
+                            'obs_dec'   : -24.346047222222222,
+                            'obs_mag'   : 21.6,
+                            'filter'    : 'T',
+                            'astrometric_catalog' : 'PPMXL',
+                            'site_code' : '705'
+                          }
+        params = parse_mpcobs(self.test_lines['cp_!C_h'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_np_fourA_l(self):
+        expected_params = { 'body'  : '24554',
+                            'flags' : ' ',
+                            'obs_type'  : 'A',
+                            'obs_date'  : datetime(1960,  9, 28, 9, 32,  2, int(0.4*1e6)),
+                            'obs_ra'    :   9.7604583333333333,
+                            'obs_dec'   :  0.83272222222222222,
+                            'obs_mag'   : None,
+                            'filter'    : ' ',
+                            'astrometric_catalog' : 'Yale',
+                            'site_code' : '675'
+                          }
+        params = parse_mpcobs(self.test_lines['np_4A_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_np_fourX_l(self):
+        expected_params = { }
+        params = parse_mpcobs(self.test_lines['np_4X_l'])
+
+
         self.compare_dict(expected_params, params)
 
 
@@ -1781,47 +1848,47 @@ class TestIMAPLogin(TestCase):
     def setUp(self):
         pass
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.imaplib')
     def test_server_connection(self, mockimaplib):
         mailbox = imap_login('foo@bar.net', 'Wibble', 'localhost')
         mockimaplib.IMAP4_SSL.assert_called_with('localhost')
         self.assertNotEqual(None, mailbox)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.imaplib')
     def test_badserver(self, mockimaplib):
         mockimaplib.IMAP4_SSL.side_effect = error(111, 'Connection refused')
         mailbox = imap_login('foo@bar.net', 'Wibble', 'localhost')
         self.assertEqual(None, mailbox)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.imaplib')
     def test_badfolder(self, mockimaplib):
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("NO", ['[NONEXISTENT] Unknown Mailbox: Wibble (Failure)'])
         expected_targets = []
         targets = fetch_NASA_targets(mailbox, folder="Wibble")
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.imaplib')
     def test_emptyfolder(self, mockimaplib):
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'0'])
         mailbox.search.return_value = ("OK", [b''])
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.imaplib')
     def test_foldersearchfailure(self, mockimaplib):
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'0'])
         mailbox.search.return_value = ("NO", [b''])
         expected_targets = []
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.imaplib')
     def test_cannot_retrieve_msg_high(self, mockimaplib):
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value = ("OK", [None, ])
@@ -1829,9 +1896,9 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.imaplib')
     def test_cannot_retrieve_msg_low(self, mockimaplib):
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.side_effect = error("FETCH command error: BAD ['Could not parse command']")
@@ -1839,11 +1906,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_find_msg_correct_match(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ("OK", [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
@@ -1852,11 +1919,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_msg_has_bad_prefix(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-birds-observations] 2016 CV246 - Observations Requested\r\nDate: Tue, 16 Feb 2018 21:27:04 +000\r\n')])
@@ -1865,11 +1932,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_find_msg_has_bad_suffix(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 18,  21, 27, 5)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 CV246 - Radar Requested\r\nDate: Tue, 18 Feb 2016 21:27:04 +000\r\n')])
@@ -1878,11 +1945,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_find_msg_good_with_tz(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')])
@@ -1891,11 +1958,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_reject_msg_old_with_tz(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 15,  4, 27, 5)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
@@ -1904,11 +1971,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_find_multiple_msgs(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'2'])
         mailbox.search.return_value = ("OK", [b'1 2'])
         results = [ ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2016 20:27:04 -0500\r\n')]),
@@ -1920,11 +1987,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_one_msg_multiple_old_msgs(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 24,  1, 0, 0)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'3'])
         mailbox.search.return_value = ("OK", [b'1 2 4'])
         results = [ ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 20516 BA14 - Observations Requested\r\nDate: Tue, 22 Feb 2015 20:27:04 -0500\r\n')]),
@@ -1937,11 +2004,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_find_fwd_msg_(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 23, 19, 51, 5)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: Fwd: [small-bodies-observations] 2016 DJ - Observations Requested\r\nDate: Tue, 23 Feb 2016 11:25:29 -0800\r\n')])
@@ -1950,11 +2017,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_reject_msg_old_with_tz_and_cutoff(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 16,  4, 27, 5)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
@@ -1963,11 +2030,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_accept_msg_old_with_tz_and_cutoff(self, mockimaplib):
         MockDateTime.change_datetime(2016, 2, 16,  3, 26, 5)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 BA14 - Observations Requested\r\nDate: Tue, 13 Feb 2016 20:27:04 -0800\r\n')])
@@ -1976,11 +2043,11 @@ class TestIMAPLogin(TestCase):
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
 
-    @mock.patch('astrometrics.sources_subs.imaplib')
-    @mock.patch('astrometrics.sources_subs.datetime', MockDateTime)
+    @patch('astrometrics.sources_subs.imaplib')
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_accept_msg_multiple_targets(self, mockimaplib):
         MockDateTime.change_datetime(2016, 10, 25,  3, 26, 5)
-        mailbox = mock.MagicMock()
+        mailbox = MagicMock()
         mailbox.select.return_value = ("OK", [b'1'])
         mailbox.search.return_value = ("OK", [b'1'])
         mailbox.fetch.return_value =  ('OK', [(b'1 (RFC822 {12326}', b'Subject: [small-bodies-observations] 2016 TQ11, 2016 SR2, 2016 NP56,\r\n\t2016 ND1- Observations Requested\r\nDate: Mon, 24 Oct 2016 20:20:57 +0000\r\n')])
@@ -2010,6 +2077,57 @@ class TestSFUFetch(TestCase):
         self.assertEqual(expected_result[1].unit, sfu_result[1].unit)
         self.assertEqual(expected_result[1].to(u.MJy), sfu_result[1].to(u.MJy))
 
+    def test_notable(self):
+
+        html = '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Foo</title><style></style></head>
+                <body>
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+        expected_result = (None, None)
+
+        sfu_result = fetch_sfu(page)
+
+        self.assertEqual(expected_result[0], sfu_result[0])
+        self.assertEqual(expected_result[1], sfu_result[1])
+
+    def test_bad_JD(self):
+
+        html = '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Foo</title><style></style></head>
+                <body>
+                <table>
+                <tr><th>Julian Day Number</th><td>Wibble</td></tr>
+                </table>
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+        expected_result = (None, None)
+
+        sfu_result = fetch_sfu(page)
+
+        self.assertEqual(expected_result[0], sfu_result[0])
+        self.assertEqual(expected_result[1], sfu_result[1])
+
+    def test_bad_fluxvalue(self):
+
+        html = '''<html><head>
+                <meta http-equiv="content-type" content="text/html; charset=UTF-8"><title>Foo</title><style></style></head>
+                <body>
+                <table>
+                <tr><th>Julian Day Number</th><td>2458134.239</td></tr>
+                <tr><th>Observed Flux Density</th><td>Wibble</td></tr>
+                </table>
+                </body></html>
+                '''
+        page = BeautifulSoup(html, 'html.parser')
+        expected_result = (datetime(2018,1,15,17,44,10), None)
+
+        sfu_result = fetch_sfu(page)
+
+        self.assertEqual(expected_result[0], sfu_result[0])
+        self.assertEqual(expected_result[1], sfu_result[1])
 
 class TestConfigureDefaults(TestCase):
 
@@ -2763,11 +2881,11 @@ class TestMakeCadence(TestCase):
 
         self.maxDiff = None
 
-    @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
+    @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     def test_cadence_valhalla(self):
         expected = {
                      u'group_id': u'3122_Q59-20170815',
-                     u'ipp_value': 1.0,
+                     u'ipp_value': 1.05,
                      u'observation_type': u'NORMAL',
                      u'operator': u'MANY',
                      u'proposal': u'LCOSchedulerTest',
@@ -2880,11 +2998,11 @@ class TestMakeCadence(TestCase):
         for key in ur.keys():
             self.assertEqual(expected[key], ur[key])
 
-    @mock.patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
+    @patch('astrometrics.sources_subs.expand_cadence', mock_expand_cadence)
     def test_cadence_wrapper(self):
         expected = {
                      u'group_id': u'3122_Q59-20170815',
-                     u'ipp_value': 1.0,
+                     u'ipp_value': 1.05,
                      u'observation_type': u'NORMAL',
                      u'operator': u'MANY',
                      u'proposal': u'LCOSchedulerTest',
@@ -3071,6 +3189,73 @@ class TestFetchTaxonomyData(TestCase):
         expected_line = ['1', 'G', "T", "PDS6", "7G"]
         tax_data = fetch_taxonomy_page()
         self.assertEqual(expected_line, tax_data[0])
+
+
+class TestFetchPreviousSpectra(TestCase):
+
+    def setUp(self):
+        # Read and make soup from the stored, partial version of the PDS Taxonomy Database
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_smass_page.html'), 'r')
+        self.test_smass_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        test_fh2 = open(os.path.join('astrometrics', 'tests', 'test_manos_page.html'), 'r')
+        self.test_manos_page = BeautifulSoup(test_fh2, "html.parser")
+        test_fh2.close()
+
+    def test_smass_basics(self):
+        expected_length = 12
+        page = self.test_smass_page
+        targets = fetch_smass_targets(page, None)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_smass_abreviated(self):
+        cut_off = datetime(2017, 10, 25, 3, 26, 5).date() - relativedelta(months=6)
+        expected_length = 10
+        page = self.test_smass_page
+        targets = fetch_smass_targets(page, cut_off)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_manos_basics(self):
+        expected_length = 11
+        page = self.test_manos_page
+        targets = fetch_manos_targets(page, None)
+        self.assertEqual(expected_length, len(targets))
+
+    def test_manos_abreviated(self):
+        cut_off = datetime(2017, 10, 25, 3, 26, 5).date() - relativedelta(months=6)
+        expected_length = 10
+        page = self.test_manos_page
+        targets = fetch_manos_targets(page, cut_off)
+        self.assertEqual(expected_length, len(targets))
+
+    def test_smass_targets(self):
+        expected_targets = [ ['302'   , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a000302.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['6053'  , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a006053.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['96631' , 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a096631.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['96631' , 'Vis', "http://smass.mit.edu/data/spex/sp234/a096631.sp234.txt", '', "sp[234]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['265962', 'Vis+NIR', "http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt", "http://smass.mit.edu/data/spex/sp233/a265962.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['416584', 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a416584.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['422699', 'NIR', '', "http://smass.mit.edu/data/spex/sp233/a422699.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()],
+                             ['2006 UY64', 'NIR', '', "http://smass.mit.edu/data/spex/sp209/au2010pr66.sp209.txt", "sp[209]", datetime.strptime('2017-12-02', '%Y-%m-%d').date()],
+                             ['416584', 'Vis', "http://smass.mit.edu/data/spex/sp210/au2005lw7.sp210.txt", '', "sp[210]", datetime.strptime('2015-12-02', '%Y-%m-%d').date()],
+                            ]
+        smass_data = fetch_smass_targets(self.test_smass_page, None)
+        for line in expected_targets:
+            self.assertIn(line, smass_data)
+
+    def test_manos_targets(self):
+        expected_targets = [ ['2018 KW1'  , 'NIR'    , '', '', 'MANOS Site', datetime.strptime('2018-05-23', '%Y-%m-%d').date()],
+                             ['2011 SC191', 'NA'     , '', '', 'MANOS Site', datetime.strptime('2018-04-25', '%Y-%m-%d').date()],
+                             ['3552'      , 'NA'     , '', '', 'MANOS Site', datetime.strptime('2018-04-25', '%Y-%m-%d').date()],
+                             ['2018 FW1'  , 'Vis'    , '', '', 'MANOS Site', datetime.strptime('2018-03-26', '%Y-%m-%d').date()],
+                             ['2018 CB'   , 'Vis+NIR', '', '', 'MANOS Site', datetime.strptime('2018-02-08', '%Y-%m-%d').date()],
+                             ['2015 CQ13' , 'Vis'    , 'http://manos.lowell.edu/static/data/manosResults/2015CQ13/2015CQ13_150217_GN_spec.jpg', '', 'MANOS Site', datetime.strptime('2015-02-17', '%Y-%m-%d').date()],
+                            ]
+        manos_data = fetch_manos_targets(self.test_manos_page, None)
+        for line in expected_targets:
+            self.assertIn(line, manos_data)
 
 
 class TestFetchTargetsFromList(TestCase):
