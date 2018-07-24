@@ -1263,6 +1263,8 @@ def get_or_create_CatalogSources(table, frame):
                                         position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']), 
                                         aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
             new_sources.append(new_source)
+        reset_database_connection()
+
         CatalogSources.objects.bulk_create(new_sources)
         num_sources_created = len(new_sources)
     elif num_in_table != num_cat_sources:
