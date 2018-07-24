@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+{% block header %}Calibration Sources{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Calibration Sources</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div id="main" class="fill-height">
+        <div class="container">
+            <div class="row">
+              <img src="{% url 'make-standards-plot' %}">
+            </div>
+            <div class="row">
+                <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' %}" id="schedule-calib-ftn-obs">Schedule FTN Calib Observations</a>
+                <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' %}" id="schedule-calib-fts-obs">Schedule FTS Calib Observations</a>
+                {% if "solar" in request.get_full_path %}
+                    <a class="button button-primary" href="{% url 'calibsource-view' %}" id="show-all-calibsources">Show all Calibration Sources</a>
+                {% else %}
+                    <a class="button button-primary" href="{% url 'solarstandard-view' %}" id="show-solar-standards">Show only Solar Analogs</a>
+                {% endif %}
+            </div>
+            <div class="row">
+                <table class="datatable u-full-width" id="id_calibsources">
+                    <thead>
+                        <tr>
+                            <th class="list_title">
+                                <span class="sortable" id="name_id">Name</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="ra">R.A.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="dec">Dec.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="v_mag">V Mag.</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="sp_type">Spectral Type</span>
+                            </th>
+                            <th>
+                                <span class="sortable" id="src_type">Source Type</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for src in calibsources %}
+                        <tr>
+                            <td>{{src.name}}</td>
+                            <td>{{src.ra|degreestohms:":"}}</td>
+                            <td>{{src.dec|degreestodms:":"}}</td>
+                            <td>{{src.vmag|floatformat:2}}</td>
+                            <td>{{src.spectral_type}}</td>
+                            <td>{{src.return_source_type}}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="row">
+                {% if is_paginated %}
+                    <div class="pagination">
+                        <span class="page-links">
+                            {% if page_obj.has_previous %}
+                                <a href="{% url 'calibsource-view' %}?page={{ page_obj.previous_page_number }}"><i class="fa fa-arrow-left fa-2x"></i></a>
+                            {% endif %}
+                            <span class="page-current">
+                                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                            </span>
+                            {% if page_obj.has_next %}
+                                <a href="{% url 'calibsource-view' %}?page={{ page_obj.next_page_number }}"><i class="fa fa-arrow-right fa-2x"></i></a>
+                            {% endif %}
+                            </span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
