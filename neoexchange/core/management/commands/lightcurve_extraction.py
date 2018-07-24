@@ -16,10 +16,10 @@ from astropy.stats import LombScargle
 import astropy.units as u
 from astropy.time import Time
 
-from core.models import Block, Frame, SuperBlock, SourceMeasurement
-from astrometrics.ephem_subs import compute_ephem, radec2strings
+from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
+from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
-from photometrics.catalog_subs import search_box
+from photometrics.catalog_subs import search_box, open_fits_catalog
 
 
 class Command(BaseCommand):
@@ -35,7 +35,8 @@ class Command(BaseCommand):
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
 
 
-    def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, colors='r', title='', sub_title=''):
+    def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title=''):
+    #alltimes=[],L1MEDIAN=[], L1SIGMA=[], MOONDIST=[], MOONALT=[], WMSCLOUD=[], L1FWHM=[]):
         fig, (ax0,ax1) = plt.subplots(nrows=2,sharex=True,gridspec_kw = {'height_ratios':[15,4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
@@ -54,7 +55,44 @@ class Command(BaseCommand):
         ax1.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
         ax1.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         fig.autofmt_xdate()
-        plt.savefig("lightcurve.png")
+        fig.savefig("lightcurve.png")
+
+        fig2,(ax2,ax3) = plt.subplots(nrows=2,sharex=True)
+        ax2.plot(times,fwhm,marker='.',color=colors, linestyle=' ')
+        ax2.set_ylabel('FWHM')
+        #ax2.set_title('FWHM')
+        fig2.suptitle('Conditions for obs: '+title)
+        ax3.plot(times,air_mass,marker='.',color=colors, linestyle=' ')
+        ax3.set_xlabel('Time')
+        ax3.set_ylabel('Airmass')
+        #ax3.set_title('Airmass')
+        ax2.minorticks_on()
+        ax3.minorticks_on()
+        ax3.invert_yaxis()
+        ax2.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
+        ax2.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
+        ax3.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
+        ax3.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
+        fig2.autofmt_xdate()
+        fig2.savefig("lightcurve_cond.png")
+
+        # fig3,(ax4,ax5,ax6,ax7,ax8,ax9) = plt.subplots(nrows=6,sharex=True)
+        # ax4.plot(alltimes,L1MEDIAN,'.',linestyle=' ')
+        # ax4.set_ylabel('L1MEDIAN')
+        # ax5.plot(alltimes,L1SIGMA,'.',linestyle=' ')
+        # ax5.set_ylabel('L1SIGMA')
+        # ax6.plot(alltimes,MOONDIST,'.',linestyle=' ')
+        # ax6.set_ylabel('MOONDIST')
+        # ax7.plot(alltimes,MOONALT,'.',linestyle=' ')
+        # ax7.set_ylabel('MOONALT')
+        # ax8.plot(alltimes,WMSCLOUD,'.',linestyle=' ')
+        # ax8.set_ylabel('WMSCLOUD')
+        # ax9.plot(alltimes,L1FWHM,'.',linestyle=' ')
+        # ax9.set_ylabel('L1FWHM')
+        # ax9.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
+        # ax9.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
+        # fig3.autofmt_xdate()
+        #plt.tight_layout(pad=2)
         plt.show()
 
         return
@@ -93,6 +131,7 @@ class Command(BaseCommand):
         start_block = start_blocks[0]
         super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
         times = []
+        alltimes = []
         mags = []
         mag_errs = []
         zps = []
@@ -100,6 +139,14 @@ class Command(BaseCommand):
         mpc_lines = []
         total_frame_count = 0
         mpc_site = []
+        fwhm = []
+        air_mass = []
+        # L1MEDIAN = []
+        # L1SIGMA = []
+        # MOONDIST = []
+        # MOONALT = []
+        # WMSCLOUD = []
+        # L1FWHM = []
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
@@ -119,6 +166,16 @@ class Command(BaseCommand):
                     elements = model_to_dict(block.body)
 
                     for frame in frames:
+                        #####For figureing out issues from fits headers#####
+                        # alltimes.append(frame.midpoint)
+                        # fits_file = '/apophis/eng/rocks/20180720/'+frame.filename
+                        # fits_header = open_fits_catalog(fits_file,header_only=True)[0]
+                        # L1MEDIAN.append(fits_header.get('L1MEDIAN'))
+                        # L1SIGMA.append(fits_header.get('L1SIGMA'))
+                        # MOONDIST.append(fits_header.get('MOONDIST'))
+                        # MOONALT.append(fits_header.get('MOONALT'))
+                        # WMSCLOUD.append(fits_header.get('WMSCLOUD'))
+                        # L1FWHM.append(fits_header.get('L1FWHM'))
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
                         ra  = emp_line[1]
                         dec = emp_line[2]
@@ -152,6 +209,11 @@ class Command(BaseCommand):
                                 mag_errs.append(best_source.err_obs_mag)
                                 zps.append(frame.zeropoint)
                                 zp_errs.append(frame.zeropoint_err)
+                                fwhm.append(frame.fwhm)
+                                air_mass.append(S.sla_airmas(moon_alt_az(frame.midpoint,best_source.obs_ra,
+                                best_source.obs_dec,*get_sitepos(frame.sitecode)[1:])[1]))
+
+
                     if frame.sitecode not in mpc_site:
                         mpc_site.append(frame.sitecode)
 
@@ -198,7 +260,9 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
-            self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, title=plot_title, sub_title=subtitle)
-
+            #self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, fwhm, air_mass,
+            #alltimes, L1MEDIAN, L1SIGMA, MOONDIST, MOONALT, WMSCLOUD, L1FWHM,
+            #title=plot_title, sub_title=subtitle)
+            self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle)
         else:
             self.stdout.write("No sources matched.")
