@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
-from core.models import Frame, Block, SuperBlock, Body, Proposal
+from core.models import Frame, Block, SuperBlock, Body, Proposal, StaticSource
 from photometrics.catalog_subs import get_fits_files, open_fits_catalog
 from core.frames import block_status, create_frame
 
@@ -43,7 +43,7 @@ class Command(BaseCommand):
 
         object_dirs = [x[0] for x in os.walk(dataroot)]
 
-        for rock in object_dirs: #[1:]:
+        for rock in object_dirs[0]: #[1:]:
             datadir = os.path.join(dataroot, rock)
             self.stdout.write('Processing target %s in %s' % (rock, datadir))
             fits_files = get_fits_files(datadir)
@@ -91,6 +91,35 @@ class Command(BaseCommand):
                             block_status(new_block.id)
                         else:
                             self.stdout.write("Could not find Body from FITS data (OBJECT=%s)" % name)
+                            ssources = StaticSource.objects.filter(name__exact = name)
+                            if len(ssources) == 1:
+                                ssource = ssources[0]
+                                sblock_params = { 'active': True,
+                                                  'block_start': header.get('blksdate'),
+                                                  'block_end'  : header.get('blkedate'),
+                                                  'calibsource': ssource,
+                                                  'groupid'   : header.get('groupid', ''),
+                                                  'proposal' : Proposal.objects.get(code=header.get('propid', '')),
+                                                  'tracking_number': tracking_num,
+                                                }
+                                new_sblock, created = SuperBlock.objects.get_or_create(**sblock_params)
+                                block_params = { 'superblock' : new_sblock,
+                                                 'active': True,
+                                                 'block_start': header.get('blksdate'),
+                                                 'block_end'  : header.get('blkedate'),
+                                                 'calibsource': ssource,
+                                                 'obstype'   : Block.OPT_IMAGING_CALIB,
+                                                 'exp_length': header.get('exptime'),
+                                                 'groupid'   : header.get('groupid', ''),
+                                                 'num_exposures': header.get('frmtotal', 0),
+                                                 'proposal' : Proposal.objects.get(code=header.get('propid', '')),
+                                                 'site'     : header.get('siteid'),
+                                                 'telclass' : header['telid'][0:3],
+                                                 'tracking_number': header.get('reqnum', tracking_num)
+                                               }
+                                new_block,created = Block.objects.get_or_create(**block_params)
+                                self.stdout.write("Updating status of new Block %d" % new_block.id)
+                                block_status(new_block.id)                                
                     elif len(sblocks) == 1:
                         old_sblock = sblocks[0]
                         blocks = Block.objects.filter(superblock=old_sblock)
