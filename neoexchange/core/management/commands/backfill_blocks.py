@@ -43,7 +43,7 @@ class Command(BaseCommand):
 
         object_dirs = [x[0] for x in os.walk(dataroot)]
 
-        for rock in object_dirs[0]: #[1:]:
+        for rock in object_dirs[0:1]: #[1:]:
             datadir = os.path.join(dataroot, rock)
             self.stdout.write('Processing target %s in %s' % (rock, datadir))
             fits_files = get_fits_files(datadir)
@@ -89,8 +89,8 @@ class Command(BaseCommand):
                             new_block = Block.objects.create(**block_params)
                             self.stdout.write("Updating status of new Block %d" % new_block.id)
                             block_status(new_block.id)
-                        else:
-                            self.stdout.write("Could not find Body from FITS data (OBJECT=%s)" % name)
+                        elif len(bodies) == 0:
+                            self.stdout.write("Could not find Body from FITS data, trying StaticSource (OBJECT=%s)" % name)
                             ssources = StaticSource.objects.filter(name__exact = name)
                             if len(ssources) == 1:
                                 ssource = ssources[0]
@@ -119,7 +119,9 @@ class Command(BaseCommand):
                                                }
                                 new_block,created = Block.objects.get_or_create(**block_params)
                                 self.stdout.write("Updating status of new Block %d" % new_block.id)
-                                block_status(new_block.id)                                
+                                block_status(new_block.id)
+                        else:
+                            self.stdout.write("Found multiple Bodies for OBJECT=%s" % name)
                     elif len(sblocks) == 1:
                         old_sblock = sblocks[0]
                         blocks = Block.objects.filter(superblock=old_sblock)
