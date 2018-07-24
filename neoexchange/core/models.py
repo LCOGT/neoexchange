@@ -470,7 +470,8 @@ class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
     rapid_response  = models.BooleanField('Is this a ToO/Rapid Response observation?', default=False)
-    body            = models.ForeignKey(Body)
+    body            = models.ForeignKey(Body, null=True, blank=True)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     proposal        = models.ForeignKey(Proposal)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -646,6 +647,7 @@ class Block(models.Model):
         if not self.superblock:
             sblock_kwargs = {
                                 'body' : self.body,
+                                'calibsource' : self.calibsource,
                                 'proposal' : self.proposal,
                                 'block_start' : self.block_start,
                                 'block_end' : self.block_end,
