@@ -31,12 +31,12 @@ def check_norm(values): #not perfect nor finished yet
                     print("WARNING: Flux normalized to ", normval, " at ", normloc)
                 except ValueError:
                     continue
-    
+
 def check_refl(x,y): #TEMPORARY CHECK
     if x[y.argmax()] > 6000*u.AA:
         print("Normalized Reflectance")
         return True
-    else
+    else:
         return False
 
 def get_x_units(x_data):
@@ -84,7 +84,7 @@ def get_y_units(info):
             if any(unit_id2 in col_head.upper() for unit_id2 in refl_id): #checking for normalization
                 y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
                 print("y_units: ",y_units)
-            else:   
+            else:
                 y_units = u.def_unit("Normalized_Flux",(1*u.m/u.m).decompose())
                 print("y_units: normalized")
         elif any(unit_id in col_head.upper() for unit_id in relf_id): #checking for normalized reflectance
@@ -149,7 +149,7 @@ def read_spectra(spectra_file):
             hdr = hdul[0].header
             y_data = data.flatten()[:max(data.shape)]
             w = WCS(hdr, naxis=1,relax=False,fix=False)
-            
+
             x_data = w.wcs_pix2world(np.arange(len(y_data)),0)[0]
 
             try:
@@ -163,20 +163,20 @@ def read_spectra(spectra_file):
             hdr = hdul[1].header
             x_data = np.array(list(n[0] for n in data))
             y_data = np.array(list(n[1] for n in data))
-            
+
             if len(data[0]) > 2:
                 flux_error = np.array(list(n[2] for n in data))
             else:
                 flux_error = np.zeros(len(x_data))
         else:
             raise ImportError("Could not read data from .fits file")
-        
+
         obj_name = read_object(hdr)
-        
+
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(hdr)
         check_norm(hdul[0].header.values()) #check if data is already normalized
-        
+
     elif spectra_file.endswith('.ascii'):
         data = ascii.read(spectra_file) #read in data
         #print(data.meta)
@@ -186,7 +186,7 @@ def read_spectra(spectra_file):
         flux_error = data['col3']
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(data.meta)
-        obj_name = "" #TEMPORARY 
+        obj_name = "" #TEMPORARY
 
     elif spectra_file.endswith('.txt'):
         data = open(spectra_file) #read in data
@@ -200,12 +200,12 @@ def read_spectra(spectra_file):
             flux_error = np.append(flux_error, float(line.split()[2]))
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(y_data[0])
-        obj_name = "" #TEMPORARY 
+        obj_name = "" #TEMPORARY
 
     else:
         raise ImportError("Invalid input file type")
 
-    #eliminate negative error values 
+    #eliminate negative error values
     y_data[np.logical_not(y_data >= 0)] = np.nan
     flux_error[np.logical_not(flux_error >= 0)] = np.nan
 
@@ -217,7 +217,7 @@ def read_spectra(spectra_file):
         print("WARNING: Could not parse object name from file")
     else:
         print("Object: ", obj_name)
-    
+
     check_refl(wavelength,flux)
 
     return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name
@@ -237,20 +237,20 @@ def smooth(x,y):
         loc += int(len(x)/8)
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
     print("noisiness: ", noisiness)
-    
+
     if .0035 <= noisiness < .005:
         window = 15
     elif .005 <= noisiness < .01:
         window = 20
     elif noisiness >= .01:
-        window = 30    
+        window = 30
     else:
         print("smoothing: no")
         return x,y
 
     #smoothing
     print("smoothing: yes")
-    return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)] #boxcar average data    
+    return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)] #boxcar average data
 
 def normalize(x,y,wavelength=5500*u.AA):
     """normalizes flux data with a specific wavelength flux value
@@ -278,12 +278,12 @@ def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
         yyy = normalize(x,y)
     else:
         yyy = y
-    
+
     ax.plot(x,yyy,linewidth=1)
     ax.set_xlabel(r"wavelength ($\AA$)")
     ax.set_ylabel(y_units)
     if title:
-        ax.set_title(title)
+        ax.set_title('Spectra for: '+title)
     else:
         if ref:
             ax.set_title("Solar_Analog")
@@ -293,22 +293,22 @@ def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
 if __name__== "__main__":
 
     #path = '/home/adam/test_spectra/' #will make m9ore general file passing later
-    path = '/home/atedeschi/test_spectra/'
-    spectra = '467309/20180613/ntt467309_U_ftn_20180613_merge_2.0_58283_1_2df_ex.fits'
+    path = '/home/atedeschi/test_spectra'
+    spectra = '/398188/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
     #spectra = '1627/20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
     #spectra = '60/ntt60_ftn_20180612_merge_2.0_58282_1_2df_ex.fits'
     #spectra = '16/ntt16_ftn_20180606_merge_2.0_58276_1_2df_ex.fits'
     #spectra = 'calspec/eros_visnir_reference_to1um.ascii'
     #spectra = 'calspec/alpha_lyr_stis_008.fits' #vega?
-    #spectra = 'calspec/bd17d4708_stis_001.fits'        
+    #spectra = 'calspec/bd17d4708_stis_001.fits'
     #spectra = 'a001981.4.txt'
 
     #sol_ref = 'calspec/sun_mod_001.fits'
-    sol_ref = 'Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
+    sol_ref = '/Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
     #sol_ref =  'solar_standard_V2.fits'
     #sol_ref = 'calspec/sun_reference_stis_001.fits'
 
-    #window = 2 
+    #window = 2
     print("\nasteroid: ")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -321,9 +321,9 @@ if __name__== "__main__":
         warnings.simplefilter("ignore")
         x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units,y_factor_ref, obj_name_ref = read_spectra(path+sol_ref)
     x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref)#,window_ref)
-    
-    normyerr = normalize(x,yerr) #remember to normalize y-units too
-    normyerr_ref = normalize(x_ref,yerr_ref)
+
+    #normyerr = normalize(x,yerr) #remember to normalize y-units too
+    #normyerr_ref = normalize(x_ref,yerr_ref)
 
     #print(x.shape, y.shape, x_ref.shape, y_ref.shape, ysmoothed.shape, y_refsmoothed.shape)
 
@@ -339,5 +339,5 @@ if __name__== "__main__":
     plot_spectra(xsmoothed,ysmoothed/y_factor,y_units.to_string('latex'),ax[0], obj_name, ref=0)
     plot_spectra(x_refsmoothed,y_refsmoothed/y_factor_ref,y_ref_units.to_string('latex'),ax[1], obj_name_ref, ref=1)
     plt.tight_layout(pad=1, w_pad=.5, h_pad=.5)
-    
+
     plt.show()

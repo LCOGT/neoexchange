@@ -50,6 +50,7 @@ from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
+from photometrics.spectraplot import read_spectra, smooth, plot_spectra
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 import logging
@@ -567,7 +568,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         emp = [-99 for x in range(5)]
     magnitude = emp[3]
     speed = emp[4]
-    
+
     # Determine filter pattern
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
@@ -1849,6 +1850,22 @@ def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
+def make_spec(request):
+    import io
+    import matplotlib.pyplot as plt
+    spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
+    x,y,yerr,xunits,yunits,yfactor,name = read_spectra(spectra_path)
+    xsmooth,ysmooth = smooth(x,y)
+    fig,ax = plt.subplots()
+    plot_spectra(xsmooth,ysmooth/yfactor,yunits.to_string('latex'),ax,name)
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png')
+    fig.savefig(spectra_path.replace('.fits', '.png'), format='png')
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+def plotspec(request):
+    return render(request, 'core/plot_spec.html')
 
 def update_taxonomy(taxobj, dbg=False):
     """Update the passed <taxobj> for a new taxonomy update.
@@ -1937,6 +1954,3 @@ def update_previous_spectra(specobj, source='U', dbg=False):
             print("Did not write for some reason.")
         return False
     return True
-
-
-
