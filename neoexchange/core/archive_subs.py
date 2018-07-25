@@ -1,14 +1,11 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2016-2018 LCO
-
 archive_subs.py -- Routines for downloading data from the LCO Archive
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -129,7 +126,9 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
     '''
     Call Archive API to obtain all frames for request_id
     Follow links to get all frames and filter out non-reduced frames and returns
-    fully-reduced data in preference to quicklook data
+    fully-reduced data in preference to quicklook data.
+    For spectroscopic data, set `obstype=EXPOSE` will return the actual spectrum
+    and the tarball of results; setting `obstype=''` will return all frame types.
     '''
     reduced_data = []
     quicklook_data = []
@@ -143,7 +142,7 @@ def check_for_archive_images(request_id=None, obstype='EXPOSE', limit=3000):
     for datum in data:
         headers_url = u'%s%d/headers' % (settings.ARCHIVE_FRAMES_URL, datum['id'])
         datum[u'headers'] = headers_url
-        if datum['RLEVEL'] == 91:
+        if (datum['RLEVEL'] == 91 and obstype=='EXPOSE') or (datum['RLEVEL'] in [90,0] and obstype in ['SPECTRUM','']):
             reduced_data.append(datum)
         elif datum['RLEVEL'] == 11:
             quicklook_data.append(datum)

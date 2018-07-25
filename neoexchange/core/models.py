@@ -1,12 +1,10 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -15,7 +13,7 @@ GNU General Public License for more details.
 from __future__ import unicode_literals
 from datetime import datetime, timedelta, date
 from math import pi, log10, sqrt, cos, degrees
-from collections import Counter
+from collections import Counter, OrderedDict
 import reversion
 import logging
 
@@ -42,6 +40,8 @@ from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params,
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+from core.archive_subs import check_for_archive_images
+
 logger = logging.getLogger(__name__)
 
 
@@ -183,20 +183,20 @@ class Body(models.Model):
         else:
             return False
 
-    def diameter(self):        
+    def diameter(self):
         m = self.abs_mag
         avg = 0.167
         d_avg = asteroid_diameter(avg, m)
         return d_avg
-        
+
     def diameter_range(self):
         m = self.abs_mag
         mn = 0.01
-        mx = 0.6       
+        mx = 0.6
         d_max = asteroid_diameter(mn, m)
         d_min = asteroid_diameter(mx, m)
         return d_min, d_max
-        
+
     def epochofel_mjd(self):
         mjd = None
         try:
@@ -236,7 +236,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6]
+            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
         else:
             # Catch the case where there is no Epoch
             return False
@@ -257,10 +257,13 @@ class Body(models.Model):
         dstart = ''
         dend = ''
         if self.epochofel:
+            if dbg:
+                logger.debug('Body: {}'.format(self.name))
             orbelems = model_to_dict(self)
             sitecode = '500'
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
+
                 emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
                 vmag = emp_line[3]
 
@@ -270,6 +273,8 @@ class Body(models.Model):
 
                 # Calculate time since/until reaching Magnitude limit
                 t_diff = (mag_limit - vmag) / mag_dot
+                if abs(t_diff) > 10000:
+                    t_diff = 10000*t_diff/abs(t_diff)
 
                 # create separation test.
                 sep_test = degrees(separation) > sep_limit
@@ -284,13 +289,13 @@ class Body(models.Model):
                     # if Valid for beginning and end of window, assume valid for window
                     if vmag <= mag_limit and dstart and sep_test:
                         if dbg:
-                            logger.debug("good at begining and end", "mag:", vmag, "sep:", sep_test)
+                            logger.debug("good at begining and end, mag: {}, sep {}".format(vmag, sep_test))
                         return dstart, dend, d0
                     elif not dstart:
                         # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
                         if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
                             if dbg:
-                                logger.debug("bad at begining and end, Delta Mag no good", "mag:", vmag, "sep:", sep_test)
+                                logger.debug("bad at begining and end, Delta Mag no good, mag:{}, sep: {}".format(vmag, sep_test))
                             return dstart, dend, d0
                         else:
                             d = d0 + timedelta(days=delta_t)
@@ -300,13 +305,13 @@ class Body(models.Model):
                 elif (vmag > mag_limit or not sep_test) and dstart:
                     dend = d
                     if dbg:
-                        logger.debug("Ended in at", i, "mag:", vmag, "sep:", sep_test)
+                        logger.debug("Ended at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
                     return dstart, dend, d0
                 # If no start date, and we are valid, set start date
                 elif vmag <= mag_limit and not dstart and sep_test:
                     dstart = d
                     if dbg:
-                        logger.debug("started at", i, "mag:", vmag, "sep:", sep_test)
+                        logger.debug("started at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
                     # if this is our first iteration (i.e. we started valid) test end date
                     if i == 0:
                         d += timedelta(days=df)
@@ -326,7 +331,7 @@ class Body(models.Model):
                 i += 1
             # Return dates
             if dbg:
-                logger.debug("no end change", "mag:", vmag, "sep:", sep_test)
+                logger.debug("no end change, mag: {}, sep: {}".format(vmag, sep_test))
             return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
@@ -491,11 +496,16 @@ class SuperBlock(models.Model):
         return ", ".join(qs)
 
     def get_telclass(self):
-        qs = Block.objects.filter(superblock=self.id).values_list('telclass', flat=True).distinct()
+        qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
-        return ", ".join(qs)
+        # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
+        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_IMAGING), '') for x in qs]
+
+        return ", ".join(class_obstype)
 
     def get_obsdetails(self):
+        obs_details_str = ""
+
         qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
 
         # Count number of unique N exposure x Y exposure length combinations
@@ -507,7 +517,7 @@ class SuperBlock(models.Model):
                 obs_details.append("%d of %dx%.1f secs" % (c[1], c[0][0], c[0][1]))
 
             obs_details_str = ", ".join(obs_details)
-        else:
+        elif len(counts) == 1:
             c = list(counts)
             obs_details_str = "%dx%.1f secs" % (c[0][0], c[0][1])
 
@@ -539,6 +549,12 @@ class SuperBlock(models.Model):
 
         return last_reported
 
+    def get_obstypes(self):
+        obstype = []
+        obstypes = Block.objects.filter(superblock=self.id).values_list('obstype', flat=True).distinct()
+
+        return ",".join([str(x) for x in obstypes])
+
     class Meta:
         verbose_name = _('SuperBlock')
         verbose_name_plural = _('SuperBlocks')
@@ -556,11 +572,19 @@ class SuperBlock(models.Model):
 @python_2_unicode_compatible
 class Block(models.Model):
 
+    OPT_IMAGING = 0
+    OPT_SPECTRA = 1
+    OBSTYPE_CHOICES = (
+                        (OPT_IMAGING, 'Optical imaging'),
+                        (OPT_SPECTRA, 'Optical spectra'),
+                      )
+
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES)
     body            = models.ForeignKey(Body)
     proposal        = models.ForeignKey(Proposal)
     superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
+    obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -593,6 +617,17 @@ class Block(models.Model):
         else:
             total_exposure_number = ql_frames.count()
         return total_exposure_number
+
+    def num_spectro_frames(self):
+        '''Returns the numbers of different types of spectroscopic frames'''
+        num_moltypes_string = 'No data'
+        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] for x in data]
+            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(),reverse=True))
+            num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
+        return num_moltypes_string
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
@@ -877,7 +912,7 @@ class Frame(models.Model):
         if self.frametype not in [self.NONLCO_FRAMETYPE, self.SATELLITE_FRAMETYPE]:
             if self.filter == 'solar' or self.filter == 'w':
                 new_filter = 'R'
-            if self.photometric_catalog == 'GAIA-DR1':
+            if self.photometric_catalog in ['GAIA-DR1', 'GAIA-DR2']:
                 new_filter = 'G'
         return new_filter
 
@@ -916,7 +951,14 @@ class SourceMeasurement(models.Model):
     snr = models.FloatField('Size of aperture (arcsec)', blank=True, null=True)
     flags = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
 
-    def format_mpc_line(self):
+    def format_mpc_line(self, include_catcode=False):
+        """Format the contents of 'self' (a SourceMeasurement i.e. the confirmed
+        measurement of an object on a particular frame) into MPC 1992 80 column
+        format. This handles the discovery asterisk in column 12, some of the mapping
+        from flags into the MPC codes in column 14, mapping of non-standard
+        filters and potentially inclusion of the catalog code in column 72 (if
+        [include_catcode] is True; catalog code should not be included in new
+        submissions to the MPC)"""
 
         if self.body.name:
             name, status = normal_to_packed(self.body.name)
@@ -938,7 +980,7 @@ class SourceMeasurement(models.Model):
         flags = self.flags
         if len(self.flags) == 1:
             if self.flags == '*':
-                # Discovery asterisk needs to go into column 12
+                # Discovery asterisk needs to go into column 13
                 flags = '* '
             else:
                 flags = ' ' + self.flags
@@ -946,10 +988,14 @@ class SourceMeasurement(models.Model):
             logger.warning("Flags longer than will fit into field - needs mapper")
             flags = self.flags[0:2]
 
+        # Catalog code for column 72 (if desired)
+        catalog_code = ' '
+        if include_catcode is True:
+            catalog_code = translate_catalog_code(self.astrometric_catalog)
         mpc_line = "%12s%2s%1s%16s%11s %11s          %4s %1s%1s     %3s" % (name,
             flags, obs_type, dttodecimalday(self.frame.midpoint, microday),
             degreestohms(self.obs_ra, ' '), degreestodms(self.obs_dec, ' '),
-            mag, self.frame.map_filter(), translate_catalog_code(self.astrometric_catalog), self.frame.sitecode)
+            mag, self.frame.map_filter(), catalog_code, self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
             if self.body.name:
@@ -1027,6 +1073,36 @@ class CatalogSources(models.Model):
         area = pi*self.major_axis*self.minor_axis
         return area
 
+    def make_snr(self):
+        snr = None
+        if self.obs_mag > 0.0 and self.err_obs_mag > 0.0:
+            snr = self.err_obs_mag / self.obs_mag
+        return snr
+
+    def map_numeric_to_mpc_flags(self):
+        """Maps SExtractor numeric flags to MPC character flags
+        FLAGS contains, coded in decimal, all the extraction flags as a sum
+        of powers of 2:
+        1:  The object has neighbours, bright and close enough to significantly
+            bias the MAG_AUTO photometry, or bad pixels (more than 10% of the
+            integrated area affected),
+        2:  The object was originally blended with another one,
+        4:  At least one pixel of the object is saturated (or very close to),
+        8:  The object is truncated (too close to an image boundary),
+        16: Object’s aperture data are incomplete or corrupted,
+        32: Object’s isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
+        64: A memory overflow occurred during deblending,
+        128:A memory overflow occurred during extraction.
+        """
+
+        flag = ' '
+        if self.flags >= 1 and self.flags <=3:
+            # Set 'Involved with star'
+            flag = 'I'
+        elif self.flags >= 8:
+            # Set 'close to Edge'
+            flag = 'E'
+        return flag
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding

@@ -37,7 +37,7 @@ urlpatterns = [
     url(r'^makeplot/$', make_plot, name='makeplot'),
     url(r'^plotframe/$', plotframe),
     url(r'^make_spec/$', make_spec, name='make_spec'),
-    url(r'^plotspec/$', plotspec),
+    url(r'^plotspec/$', plotspec, name='plotspec'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),
