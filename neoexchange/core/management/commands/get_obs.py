@@ -12,15 +12,24 @@ class Command(BaseCommand):
         #parser.add_argument('-s','--start',type=float,default=0, help='Starting time (JD) of included observations')
         #parser.add_argument('-e','--end',type=float,default=Time.now().jd, help='Ending time (JD) of included observations')
         parser.add_argument('-b','--body',type=str, default=None, help='Find observations of specific object only')
+        parser.add_argument('-o','--obs',type=str,default=None, help='Find specific observation based on tracking number')
 
     def handle(self, *args, **options):
 
-        if not options['body']:
-            blocks = list(SuperBlock.objects.all())
-        else:
+        if options['body']:
             blocks = list(SuperBlock.objects.filter(body=Body.objects.filter(name=options['body'])))
+        # elif options['start']:
+        #     if options['body']:
+        #         blocks = list(SuperBlock.objects.filter(body=Body.objects.filter(name=options['body'], block_start__gte=datetime(options['start']))))
+        #     else:
+        #         blocks = list(SuperBlock.objects.filter(body=Body.objects.filter(block_start__gte=datetime(options['start']))))
+        else:
+            if options['obs']:
+                blocks = list(SuperBlock.objects.filter(tracking_number=options['obs']))
+            else:
+                blocks = list(SuperBlock.objects.all())
 
-        long_obs = np.array([[]])
+        long_obs = np.array([])
         tab = Table(names=('Superblock ID', 'Group ID', 'Object', 'total subblocks', 'red frames', 'good frames', 'exposure time (m)'),
         dtype= ('S','S','S','i4','i4','i4','f4'))
 #FIGURE OUT TIMING LOGIC LATER
@@ -62,4 +71,5 @@ class Command(BaseCommand):
                      #(block.id,block.groupid,block.body.current_name(),len(num_exps),redframes,goodframes,total_exp))
 
         tab.pprint(max_lines=-1)
+
         print('Total observations: %i' % len(long_obs))
