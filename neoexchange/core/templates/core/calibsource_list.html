@@ -58,7 +58,7 @@
                     <tbody>
                     {% for src in calibsources %}
                         <tr>
-                            <td>{{src.name}}</td>
+                            <td><a href="{% url 'calibsource' src.pk %}">{{src.name}}</td>
                             <td>{{src.ra|degreestohms:":"}}</td>
                             <td>{{src.dec|degreestodms:":"}}</td>
                             <td>{{src.vmag|floatformat:2}}</td>
