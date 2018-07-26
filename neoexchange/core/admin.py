@@ -50,7 +50,7 @@ class SuperBlockAdmin(VersionAdmin):
     format_block_start.admin_order_field = 'block_start'
 
     def body_name(self, obj):
-        return obj.body.current_name()
+        return obj.current_name()
 
     list_display = ('groupid', 'body_name', 'proposal', 'block_start', 'active', )
     list_filter = ('proposal', 'block_start', 'active', )

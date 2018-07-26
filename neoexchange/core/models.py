@@ -487,6 +487,14 @@ class SuperBlock(models.Model):
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
 
+    def current_name(self):
+        name = ''
+        if self.body is not None:
+            name = self.body.current_name()
+        elif self.calibsource is not None:
+            name = self.calibsource.current_name()
+        return name
+
     def make_obsblock_link(self):
         url = ''
         if self.tracking_number is not None and self.tracking_number != '':
