@@ -309,6 +309,14 @@ class StaticSourceView(ListView):
     context_object_name = "calibsources"
     paginate_by = 20
 
+class StaticSourceDetailView(DetailView):
+    template_name = 'core/calibsource_detail.html'
+    model = StaticSource
+
+    def get_context_data(self, **kwargs):
+        context = super(StaticSourceDetailView, self).get_context_data(**kwargs)
+        context['blocks'] = Block.objects.filter(calibsource=self.object).order_by('block_start')
+        return context
 
 def generate_new_candidate_id(prefix='LNX'):
 
