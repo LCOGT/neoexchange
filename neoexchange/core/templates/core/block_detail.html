@@ -40,10 +40,22 @@
                                 <td class="kv-key">Site</td>
                                 <td class="kv-value">{{object.get_sites|upper}}</td>
                             </tr>
-                            <tr>
-                                <td class="kv-key">Body</td>
-                                <td class="kv-value"><a href="{% url 'target' object.body.pk %}">{{object.body.current_name}}</a></td>
-                            </tr>
+                            {% if object.body %}
+                                <tr>
+                                    <td class="kv-key">Body</td>
+                                    <td class="kv-value"><a href="{% url 'target' object.body.pk %}">{{object.body.current_name}}</a></td>
+                                </tr>
+                            {% elif object.calibsource %}
+                                <tr>
+                                    <td class="kv-key">Calibration Source</td>
+                                    <td class="kv-value"><a href="{% url 'calibsource' object.calibsource.pk %}">{{object.calibsource.current_name}}</a></td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td class="kv-key">Target</td>
+                                    <td class="kv-value">None!?</td>
+                                </tr>
+                            {% endif %}
                             <tr>
                                 <td class="kv-key">Proposal</td>
                                 <td class="kv-value">{{object.proposal.title}} ({{object.proposal.code}})</td>
