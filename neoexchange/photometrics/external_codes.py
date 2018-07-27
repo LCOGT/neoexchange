@@ -19,6 +19,8 @@ from math import floor
 from subprocess import call
 from collections import OrderedDict
 import warnings
+from shutil import unpack_archive
+from glob import glob
 
 from astropy.io import fits
 from astropy.io.votable import parse
@@ -579,3 +581,10 @@ def read_mtds_file(mtdsfile, dbg=False):
            }
 
     return dets
+
+def unpack_tarball(tar_path, unpack_dir):
+    unpack_archive(tar_path,extract_dir=unpack_dir,format="gztar")
+
+    files = glob(unpack_dir+'/*')
+
+    return files

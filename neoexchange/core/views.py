@@ -44,7 +44,7 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
-    read_mtds_file
+    read_mtds_file, unpack_tarball
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
@@ -1869,20 +1869,44 @@ def plotframe(request):
 def make_spec(request,pk):
     import io
     import matplotlib.pyplot as plt
+
     block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
 
     base_dir = settings.DATA_ROOT
     date = str(int(block.block_start.strftime('%Y%m%d'))-1)
-    obj = block.body.current_name()
-    request = block.tracking_number
-    dir = base_dir+date+'/'+obj+'_000'+request+'/'
-    spectra_path = []
+    obj = block.body.current_name().replace(' ','')
+    req = block.tracking_number #TEMPORARY! Will have proper req# attribute later
+    dir = base_dir+date+'/'+obj+'_*'+req+'/'
+    spectra_path = ''
     prop = block.proposal.code
-    for filename in glob(os.path.join(dir,'*2df_ex.fits')):
-        spectra_path.append(filename)
+    print('ID: ',block.id)
+    print('DATE:',date)
+    print('BODY:',obj)
+    print('TN: ',req)
+    print('DIR: ',dir)
+    filename = glob(os.path.join(dir,'*2df_ex.fits'))
+    if filename:
+        spectra_path = filename[0]
+    else:
+        dir = base_dir+date
+        tar_files = glob(os.path.join(dir,'LCOEngineering'+'_*'+req+'*.tar.gz'))
+        if tar_files:
+            for tar in tar_files:
+                if req in tar:
+                    tar_path = tar
+                    unpack_path = os.path.join(dir,obj+'_000'+req)
+            print(tar_path)
+            spec_files = unpack_tarball(tar_path,unpack_path)
+            for spec in spec_files:
+                if '2df_ex.fits' in spec:
+                    spectra_path = spec
+                    break
+        else:
+            logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
+
     if spectra_path:
         #spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
-        x,y,yerr,xunits,yunits,yfactor,name = read_spectra(spectra_path[0])
+        x,y,yerr,xunits,yunits,yfactor,name = read_spectra(spectra_path)
         xsmooth,ysmooth = smooth(x,y)
         fig,ax = plt.subplots()
         plot_spectra(xsmooth,ysmooth/yfactor,yunits.to_string('latex'),ax,name)
@@ -1893,21 +1917,16 @@ def make_spec(request,pk):
         return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
     else:
-        return HttpResponse("Could not find spectra file", content_type = "text/plain")
+        logger.error("Could not find spectrum data for block: %s" % pk)
+        return None
 
 class PlotSpec(View): #make loging required later
 
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
-
-        #params = {'pk' : list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=kwargs['pk']))[0]))[0].pk}
         params = {'pk': kwargs['pk']}
-        # path = settings.DATA_ROOT
-        # date = str(int(blk.block_start.strftime('%Y%m%d'))-1)
-        # obj = blk.body.name
-        # reqnum = blk.tracking_number
-        # print(path+date+'/'+obj+'_000'+reqnum+'/')
+
         return render(request, self.template_name, params)
 
 def update_taxonomy(taxobj, dbg=False):
