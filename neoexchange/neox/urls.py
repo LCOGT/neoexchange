@@ -20,7 +20,7 @@ from django.contrib.auth.views import login, logout
 from django.views.generic import ListView, DetailView
 from django.core.urlresolvers import reverse_lazy
 
-from core.models import Body, Block, SourceMeasurement, SuperBlock
+from core.models import Body, Block, SourceMeasurement, SuperBlock, StaticSource
 from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockListView, ScheduleParameters, \
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
@@ -55,6 +55,7 @@ urlpatterns = [
     url(r'^ephemeris/$', ephemeris, name='ephemeris'),
     url(r'^ranking/$', ranking, name='ranking'),
     url(r'^calibsources/$', StaticSourceView.as_view(), name='calibsource-view'),
+    url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)), name='solarstandard-view'),
     url(r'^characterization/$', characterization, name='characterization'),
     url(r'^feasibility/(?P<pk>\d+)/$', SpectroFeasibility.as_view(), name='feasibility'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$', ScheduleSubmit.as_view(), name='schedule-confirm'),

@@ -14,12 +14,17 @@
 {% block main-content %}
     <div id="main" class="fill-height">
         <div class="container">
+{% comment %}
             <div class="row">
               <img src="{% url 'make-standards-plot' %}">
             </div>
+{% endcomment %}
             <div class="row">
+{% comment %}
                 <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' %}" id="schedule-calib-ftn-obs">Schedule FTN Calib Observations</a>
                 <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' %}" id="schedule-calib-fts-obs">Schedule FTS Calib Observations</a>
+{% endcomment %}
+
                 {% if "solar" in request.get_full_path %}
                     <a class="button button-primary" href="{% url 'calibsource-view' %}" id="show-all-calibsources">Show all Calibration Sources</a>
                 {% else %}
