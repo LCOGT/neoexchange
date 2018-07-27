@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from django.db import connection
@@ -26,9 +26,9 @@ from unittest import skipIf
 from mock import patch
 from neox.tests.mocks import MockDateTime
 
-#Import module to test
-from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources, Candidate, WCSField,PreviousSpectra
+# Import module to test
+from core.models import Body, Proposal, SuperBlock, Block, Frame, \
+    SourceMeasurement, CatalogSources, Candidate, WCSField, PreviousSpectra
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -372,6 +372,131 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+class TestSuperBlock(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'LCOEngineering',
+                   'title' : 'Engineering proposal'
+                 }
+        self.proposal = Proposal.objects.create(**params)
+
+        sblock_params = {   'cadence' : False,
+                            'body' : self.body,
+                            'proposal' : self.proposal,
+                            'block_start' : datetime(2015, 4, 20, 3),
+                            'block_end' : datetime(2015, 4, 20, 23),
+                            'active' : True
+                        }
+        self.sblock = SuperBlock.objects.create(**sblock_params)
+
+        params1 = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'tracking_number' : '1',
+                    'num_exposures' : 1,
+                    'exp_length' : 1800
+                  }
+        self.block1 = Block.objects.create(**params1)
+
+        params2 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 6, 15),
+                    'block_end' : datetime(2015, 4, 20, 6, 30),
+                    'tracking_number' : '2',
+                    'num_exposures' : 4,
+                    'exp_length' : 120.0
+                  }
+        self.block2 = Block.objects.create(**params2)
+
+        params3 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 8, 0),
+                    'block_end' : datetime(2015, 4, 20, 10, 15),
+                    'tracking_number' : '3',
+                    'num_exposures' : 120,
+                    'exp_length' : 60.0
+                  }
+        self.block3 = Block.objects.create(**params3)
+
+    def test_telclass(self):
+        expected_telclass = "2m0(S), 1m0"
+
+        tel_class = self.sblock.get_telclass()
+
+        self.assertEqual(expected_telclass, tel_class)
+
+    def test_telclass_spectro_only(self):
+        # Remove non spectroscopic blocks
+        self.block2.delete()
+        self.block3.delete()
+
+        expected_telclass = "2m0(S)"
+
+        tel_class = self.sblock.get_telclass()
+
+        self.assertEqual(expected_telclass, tel_class)
+
+    def test_obstypes(self):
+        expected_obstypes = "1,0"
+
+        obs_types = self.sblock.get_obstypes()
+
+        self.assertEqual(expected_obstypes, obs_types)
+
+    def test_obstypes_noblocks(self):
+        expected_obstypes = ''
+
+        # Create new SuperBlock for the next day and assert that there are
+        # no Block's associated with it.
+        new_sblock = SuperBlock(body = self.body,
+                                proposal = self.proposal,
+                                block_start = self.sblock.block_start + timedelta(days=1, seconds=300),
+                                block_end   = self.sblock.block_end + timedelta(days=1, seconds=300)
+                               )
+        new_sblock.save()
+
+        self.assertEqual(2, SuperBlock.objects.count())
+        num_assoc_blocks = Block.objects.filter(superblock=new_sblock.id).count()
+
+        self.assertEqual(0, num_assoc_blocks)
+
+        obs_types = new_sblock.get_obstypes()
+
+        self.assertEqual(expected_obstypes, obs_types)
 
 class TestFrame(TestCase):
 
@@ -877,7 +1002,7 @@ class TestSourceMeasurement(TestCase):
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_mpc_2(self):
@@ -891,7 +1016,35 @@ class TestSourceMeasurement(TestCase):
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 Rq     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_3(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR1",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 RU     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_mpc_4(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 7.5,
+                            'obs_dec' : -00.5,
+                            'obs_mag' : 21.5,
+                            'astrometric_catalog' : "GAIA-DR2",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q  C2015 07 13.88184000 30 00.00 -00 30 00.0          21.5 RV     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_mpc_F51_no_filter_mapping(self):
@@ -905,7 +1058,7 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  C2017 03 07.64515000 30 00.00 -00 30 00.0          21.5 wL     F51'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_mpc_Kflag(self):
@@ -920,7 +1073,7 @@ class TestSourceMeasurement(TestCase):
                                  
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          20.7 Rt     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_mpc_packed_Kflag(self):
@@ -975,7 +1128,7 @@ class TestSourceMeasurement(TestCase):
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '     N999r0q  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
-        mpc_lines = measure.format_mpc_line()
+        mpc_lines = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_lines)
 
     def test_mpc_satellite_confirmed(self):
@@ -996,7 +1149,7 @@ class TestSourceMeasurement(TestCase):
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '    CK16C020  S2016 02 08.89193 15 14 29.88 -09 50 03.0          19.0 RL     C51' +\
                           '\n' + '    CK16C020  s2016 02 08.89193 1 - 3471.6659 - 5748.3475 - 1442.3263        C51'
-        mpc_lines = measure.format_mpc_line()
+        mpc_lines = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_lines)
 
     def test_discovery(self):
@@ -1011,7 +1164,7 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q* C2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
     def test_discovery_on_stacked(self):
@@ -1026,7 +1179,7 @@ class TestSourceMeasurement(TestCase):
 
         measure = SourceMeasurement.objects.create(**measure_params)
         expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
-        mpc_line = measure.format_mpc_line()
+        mpc_line = measure.format_mpc_line(include_catcode=True)
         self.assertEqual(expected_mpcline, mpc_line)
 
 

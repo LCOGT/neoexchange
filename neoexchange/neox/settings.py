@@ -27,6 +27,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SESSION_COOKIE_NAME = 'neox.sessionid'
 
+DATA_ROOT = '/apophis/eng/rocks/'
+
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )

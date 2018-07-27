@@ -42,6 +42,7 @@ from django.conf import settings
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
 from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
+from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
 
@@ -578,7 +579,10 @@ def parse_mpcobs(line):
     number = str(line[0:5])
     prov_or_temp = str(line[5:12])
 
-    if len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
+    if len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
+        # Number and provisional/temp. desigination
+        body = number
+    elif len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
         # No number but provisional/temp. desigination
         body = prov_or_temp
     else:
@@ -602,9 +606,10 @@ def parse_mpcobs(line):
     except ValueError:
         obs_mag = None
 
-    if obs_type == 'C' or obs_type == 'S':
-        # Regular CCD observations or first line of satellite observations
-        # print("Date=",line[15:32])
+    if obs_type == 'C' or obs_type == 'S' or obs_type == 'A':
+        # Regular CCD observations, first line of satellite observations or
+        # observations that have been rotated from B1950 to J2000 ('A')
+#        print("Date=",line[15:32])
         params = { 'body'     : body,
                    'flags'    : flag,
                    'obs_type' : obs_type,
@@ -1088,6 +1093,38 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         return []
     return NASA_targets
 
+def get_site_status(site_code):
+    '''Queries the Valhalla telescope states end point to determine if the
+    passed <site_code> is available for scheduling.
+    Returns True if the site/telescope is available for scheduling and
+    assumed True if the status can't be determined. Otherwise if the
+    last event for the telescope can be found and it does not show
+    'AVAILABLE', then the good_to_schedule status is set to False.'''
+
+    good_to_schedule = True
+    reason = ''
+
+# Get dictionary mapping LCO code (site-enclosure-telescope) to MPC site code
+# and reverse it
+    site_codes = cfg.valid_site_codes
+    lco_codes = {mpc_code:lco_code.lower().replace('-', '.') for lco_code,mpc_code in site_codes.items()}
+
+    response = get_telescope_states()
+
+    if len(response) > 0:
+        key = lco_codes.get(site_code, None)
+        status = response.get(key, None)
+        if status:
+            current_status = status[-1]
+            logger.debug("State for %s:\n%s" % (site_code, current_status))
+            good_to_schedule = 'AVAILABLE' in current_status.get('event_type', '')
+            reason = current_status.get('event_reason', '')
+        else:
+            good_to_schedule = False
+            reason = 'Not available for scheduling'
+
+    return (good_to_schedule, reason)
+
 
 def fetch_yarkovsky_targets(yark_targets):
     """Fetches yarkovsky targets from command line and returns a list of targets"""
@@ -1154,6 +1191,9 @@ def make_location(params):
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
         location['observatory'] = 'doma'
+    elif params['site_code'] == 'W87':
+        location['telescope'] = '1m0a'
+        location['observatory'] = 'domc'
     return location
 
 
@@ -1303,6 +1343,10 @@ def make_single(params, ipp_value, request):
                     'ipp_value' : ipp_value,
                     'proposal'  : params['proposal_id']
     }
+
+# If the ToO mode is set, change the observation_type
+    if params.get('too_mode', False) == True:
+        user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
 
     return user_request
 

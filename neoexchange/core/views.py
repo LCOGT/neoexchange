@@ -58,6 +58,8 @@ import reversion
 import json
 import requests
 import numpy as np
+from glob import glob
+
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -612,6 +614,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
+
+
     # Determine pattern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
@@ -641,11 +645,12 @@ def schedule_check(data, body, ok_to_schedule=True):
     suffix = datetime.strftime(utc_date, '%Y%m%d')
     if period and jitter:
         suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
-        if len(body.current_name()) > 7:
-            # Name is too long to fit in the groupid field, trim off year part.
-            suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%m%d'), datetime.strftime(data['end_time'], '%m%d'))
     elif spectroscopy:
         suffix += "_spectra"
+    if data.get('too_mode', False) is True:
+        suffix += '_ToO'
+    group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+
     resp = {
         'target_name': body.current_name(),
         'magnitude': magnitude,
@@ -657,9 +662,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         'exp_count': exp_count,
         'exp_length': exp_length,
         'schedule_ok': ok_to_schedule,
+        'too_mode' : data.get('too_mode', False),
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': body.current_name() + '_' + data['site_code'].upper() + '-' + suffix,
+        'group_id': group_id,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
@@ -709,7 +715,7 @@ def schedule_submit(data, body, username):
               'start_time': data['start_time'],
               'end_time': data['end_time'],
               'group_id': data['group_id'],
-
+              'too_mode' : data.get('too_mode', False),
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
               'instrument_code' : data['instrument_code']
@@ -750,9 +756,9 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
         return render(request, 'core/feasibility.html', {'form': new_form, 'data': data, 'body': self.body})
 
     def post(self, request, *args, **kwargs):
-        form = SpectroFeasibilityForm(request.POST,body=self.body)
+        form = SpectroFeasibilityForm(request.POST, body=self.body)
         if form.is_valid():
-            return self.form_valid(form,request)
+            return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
@@ -777,6 +783,7 @@ def feasibility_check(data, body):
     data['slot_length'] = slot_length
 
     return data
+
 
 def ranking(request):
 
@@ -837,87 +844,91 @@ def build_characterization_list(disp=None):
         char_targets = Body.objects.filter(active=True).exclude(origin='M')
         unranked = []
         for body in char_targets:
-            spectra = PreviousSpectra.objects.filter(body=body)
-            s_wav = s_vis_link = s_nir_link = ''
-            m_vis_link = m_nir_link = ''
-            m_wav = ""
-            if spectra:
-                s_date = date.today()-date(1000, 1, 1)
-                for spectrum in spectra:
-                    if spectrum.spec_source == "S":
-                        if s_wav == spectrum.spec_wav or not s_wav:
-                            if s_date > date.today()-spectrum.spec_date:
+            try:
+                spectra = PreviousSpectra.objects.filter(body=body)
+                s_wav = s_vis_link = s_nir_link = ''
+                m_vis_link = m_nir_link = ''
+                m_wav = ""
+                if spectra:
+                    s_date = date.today()-date(1000, 1, 1)
+                    for spectrum in spectra:
+                        if spectrum.spec_source == "S":
+                            if s_wav == spectrum.spec_wav or not s_wav:
+                                if s_date > date.today()-spectrum.spec_date:
+                                    s_date = date.today()-spectrum.spec_date
+                                    s_wav = spectrum.spec_wav
+                                    s_vis_link = spectrum.spec_vis
+                                    s_nir_link = spectrum.spec_ir
+                            else:
                                 s_date = date.today()-spectrum.spec_date
-                                s_wav = spectrum.spec_wav
-                                s_vis_link = spectrum.spec_vis
-                                s_nir_link = spectrum.spec_ir
-                        else:
-                            s_date = date.today()-spectrum.spec_date
-                            s_wav = "Vis+NIR"
-                            if spectrum.spec_vis:
-                                s_vis_link = spectrum.spec_vis
-                            if spectrum.spec_ir:
-                                s_nir_link = spectrum.spec_ir
-                    elif spectrum.spec_source == "M":
-                        m_wav = spectrum.spec_wav
-                        m_vis_link = spectrum.spec_vis
-                        m_nir_link = spectrum.spec_ir
-                        if m_wav == "NA":
-                            m_wav = "Yes"
-            body_dict = model_to_dict(body)
-            body_dict['current_name'] = body.current_name()
-            body_dict['ingest_date'] = body.ingest
-            body_dict['s_wav'] = s_wav
-            if s_vis_link:
-                body_dict['s_vis_link'] = s_vis_link
-            if s_nir_link:
-                body_dict['s_nir_link'] = s_nir_link
-            if m_vis_link:
-                body_dict['m_vis_link'] = m_vis_link
-            if m_nir_link:
-                body_dict['m_nir_link'] = m_nir_link
-            body_dict['m_wav'] = m_wav
-            body_dict['origin'] = body.get_origin_display()
-            if 'Vis' in s_wav or 'Vis' in m_wav:
-                body_dict['obs_needed'] = 'LC'
-            else:
-                body_dict['obs_needed'] = 'Spec/LC'
-            emp_line = body.compute_position()
-            if not emp_line:
-                continue
-            obs_dates = body.compute_obs_window()
-            if obs_dates[0]:
-                body_dict['obs_sdate'] = obs_dates[0]
-                if obs_dates[0] == obs_dates[2]:
-                    startdate = 'Now'
+                                s_wav = "Vis+NIR"
+                                if spectrum.spec_vis:
+                                    s_vis_link = spectrum.spec_vis
+                                if spectrum.spec_ir:
+                                    s_nir_link = spectrum.spec_ir
+                        elif spectrum.spec_source == "M":
+                            m_wav = spectrum.spec_wav
+                            m_vis_link = spectrum.spec_vis
+                            m_nir_link = spectrum.spec_ir
+                            if m_wav == "NA":
+                                m_wav = "Yes"
+                body_dict = model_to_dict(body)
+                body_dict['current_name'] = body.current_name()
+                body_dict['ingest_date'] = body.ingest
+                body_dict['s_wav'] = s_wav
+                if s_vis_link:
+                    body_dict['s_vis_link'] = s_vis_link
+                if s_nir_link:
+                    body_dict['s_nir_link'] = s_nir_link
+                if m_vis_link:
+                    body_dict['m_vis_link'] = m_vis_link
+                if m_nir_link:
+                    body_dict['m_nir_link'] = m_nir_link
+                body_dict['m_wav'] = m_wav
+                body_dict['origin'] = body.get_origin_display()
+                if 'Vis' in s_wav or 'Vis' in m_wav:
+                    body_dict['obs_needed'] = 'LC'
                 else:
-                    startdate = obs_dates[0].strftime('%m/%y')
-                if not obs_dates[1]:
-                    body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
-                    enddate = '>'
+                    body_dict['obs_needed'] = 'Spec/LC'
+                emp_line = body.compute_position()
+                if not emp_line:
+                    continue
+                obs_dates = body.compute_obs_window()
+                if obs_dates[0]:
+                    body_dict['obs_sdate'] = obs_dates[0]
+                    if obs_dates[0] == obs_dates[2]:
+                        startdate = 'Now'
+                    else:
+                        startdate = obs_dates[0].strftime('%m/%y')
+                    if not obs_dates[1]:
+                        body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                        enddate = '>'
+                    else:
+                        enddate = obs_dates[1].strftime('%m/%y')
+                        body_dict['obs_edate'] = obs_dates[1]
                 else:
-                    enddate = obs_dates[1].strftime('%m/%y')
-                    body_dict['obs_edate'] = obs_dates[1]
-            else:
-                body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
-                startdate = '-'
-                enddate = '-'
-            days_to_start = body_dict['obs_sdate']-obs_dates[2]
-            days_to_end = body_dict['obs_edate']-obs_dates[2]
-            # Define a sorting Priority:
-            # Currently a combination of imminence and window width.
-            body_dict['priority'] = days_to_start.days + days_to_end.days
-            body_dict['obs_start'] = startdate
-            body_dict['obs_end'] = enddate
-            body_dict['ra'] = emp_line[0]
-            body_dict['dec'] = emp_line[1]
-            body_dict['v_mag'] = emp_line[2]
-            if disp:
-                if disp in body_dict['obs_needed']:
+                    body_dict['obs_sdate'] = body_dict['obs_edate'] = obs_dates[2]+timedelta(days=99)
+                    startdate = '-'
+                    enddate = '-'
+                days_to_start = body_dict['obs_sdate']-obs_dates[2]
+                days_to_end = body_dict['obs_edate']-obs_dates[2]
+                # Define a sorting Priority:
+                # Currently a combination of imminence and window width.
+                body_dict['priority'] = days_to_start.days + days_to_end.days
+                body_dict['obs_start'] = startdate
+                body_dict['obs_end'] = enddate
+                body_dict['ra'] = emp_line[0]
+                body_dict['dec'] = emp_line[1]
+                body_dict['v_mag'] = emp_line[2]
+                body_dict['motion'] = emp_line[4]
+                if disp:
+                    if disp in body_dict['obs_needed']:
+                        unranked.append(body_dict)
+                else:
                     unranked.append(body_dict)
-            else:
-                unranked.append(body_dict)
-    except Exception as e:
+            except Exception as e:
+                logger.error('Characterization target %s failed on %s' % (body.name, e))
+    except Body.DoesNotExist as e:
         unranked = None
         logger.error('Characterization list failed on %s' % e)
     params = {
@@ -989,6 +1000,7 @@ def record_block(tracking_number, params, form_data, body):
                          'period'   : params.get('period', None),
                          'jitter'   : params.get('jitter', None),
                          'timeused' : params.get('block_duration', None),
+                         'rapid_response' : params.get('too_mode', False),
                          'active'   : True,
                        }
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
@@ -997,11 +1009,15 @@ def record_block(tracking_number, params, form_data, body):
             # cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
+            obstype = Block.OPT_IMAGING
+            if params.get('spectroscopy', False):
+                obstype = Block.OPT_SPECTRA
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : params['site'].lower(),
                              'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                             'obstype'  : obstype,
                              'groupid'  : form_data['group_id'],
                              'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
                              'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
@@ -1850,22 +1866,49 @@ def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
-def make_spec(request):
+def make_spec(request,pk):
     import io
     import matplotlib.pyplot as plt
-    spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
-    x,y,yerr,xunits,yunits,yfactor,name = read_spectra(spectra_path)
-    xsmooth,ysmooth = smooth(x,y)
-    fig,ax = plt.subplots()
-    plot_spectra(xsmooth,ysmooth/yfactor,yunits.to_string('latex'),ax,name)
-    buffer = io.BytesIO()
-    fig.savefig(buffer, format='png')
-    fig.savefig(spectra_path.replace('.fits', '.png'), format='png')
+    block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
 
-    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+    base_dir = settings.DATA_ROOT
+    date = str(int(block.block_start.strftime('%Y%m%d'))-1)
+    obj = block.body.current_name()
+    request = block.tracking_number
+    dir = base_dir+date+'/'+obj+'_000'+request+'/'
+    spectra_path = []
+    prop = block.proposal.code
+    for filename in glob(os.path.join(dir,'*2df_ex.fits')):
+        spectra_path.append(filename)
+    if spectra_path:
+        #spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
+        x,y,yerr,xunits,yunits,yfactor,name = read_spectra(spectra_path[0])
+        xsmooth,ysmooth = smooth(x,y)
+        fig,ax = plt.subplots()
+        plot_spectra(xsmooth,ysmooth/yfactor,yunits.to_string('latex'),ax,name)
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format='png')
+        #fig.savefig(spectra_path.replace('.fits', '.png'), format='png')
 
-def plotspec(request):
-    return render(request, 'core/plot_spec.html')
+        return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+    else:
+        return HttpResponse("Could not find spectra file", content_type = "text/plain")
+
+class PlotSpec(View): #make loging required later
+
+    template_name = 'core/plot_spec.html'
+
+    def get(self, request, *args, **kwargs):
+
+        #params = {'pk' : list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=kwargs['pk']))[0]))[0].pk}
+        params = {'pk': kwargs['pk']}
+        # path = settings.DATA_ROOT
+        # date = str(int(blk.block_start.strftime('%Y%m%d'))-1)
+        # obj = blk.body.name
+        # reqnum = blk.tracking_number
+        # print(path+date+'/'+obj+'_000'+reqnum+'/')
+        return render(request, self.template_name, params)
 
 def update_taxonomy(taxobj, dbg=False):
     """Update the passed <taxobj> for a new taxonomy update.

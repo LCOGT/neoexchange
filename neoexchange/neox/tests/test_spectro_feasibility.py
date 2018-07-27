@@ -23,7 +23,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest
-        start_url = reverse('target',kwargs={'pk': 1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Check Feasibility button
@@ -33,9 +33,9 @@ class SpectroscopicFeasibility(FunctionalTest):
         self.assertEqual(actual_url, target_url)
 
         # He clicks the link to go to the Spectroscopy Feasibility page
-        with self.wait_for_page_load(timeout=10):
+        with self.wait_for_page_load(timeout=5):
             link.click()
-        self.browser.implicitly_wait(5)
+        self.browser.implicitly_wait(2)
         new_url = self.browser.current_url
         self.assertEqual(str(new_url), target_url)
 
@@ -76,7 +76,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('ip', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('20.5', slot_length)
+        self.assertIn('23.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('19.4', sky_mag)
 
@@ -103,7 +103,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('ip', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('20.5', slot_length)
+        self.assertIn('23.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('17.1', sky_mag)
 
@@ -131,7 +131,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
         self.assertIn('ip', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
-        self.assertIn('20.5', slot_length)
+        self.assertIn('23.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
         self.assertIn('17.1', sky_mag)
 

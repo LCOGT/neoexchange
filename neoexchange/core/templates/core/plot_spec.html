@@ -4,13 +4,11 @@
 
 {% block bodyclass %}page{% endblock %}
 
-
-
 {% block main-content %}
 <!-- Main body -->
 <div class="container" id="main">
     {% block graphic %}
-        <img src="{% url 'make_spec' %}">
+        <img src="{% url 'make_spec' pk %}">
     {% endblock %}
 </div>
 {% endblock %}

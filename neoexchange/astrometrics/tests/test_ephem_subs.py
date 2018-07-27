@@ -14,6 +14,9 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime
+from math import radians
+import mock
+
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from math import radians
@@ -1627,7 +1630,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'none'
 
-        expected_slot_length = 582.0
+        expected_slot_length = 612.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1638,7 +1641,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'before'
 
-        expected_slot_length = 845.0
+        expected_slot_length = 935.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1649,7 +1652,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'after'
 
-        expected_slot_length = 845.0
+        expected_slot_length = 935.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1660,7 +1663,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'both'
 
-        expected_slot_length = 1108.0
+        expected_slot_length = 1258.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1671,7 +1674,7 @@ class TestDetermineSpectroSlotLength(TestCase):
         exp_time = 180.0
         calibs = 'BoTH'
 
-        expected_slot_length = 1108.0
+        expected_slot_length = 1258.0
 
         slot_length = determine_spectro_slot_length(exp_time, calibs)
 
@@ -1840,6 +1843,74 @@ class TestGetSitePos(TestCase):
         self.assertNotEqual(site_long, 0.0)
         self.assertNotEqual(site_lat, 0.0)
         self.assertNotEqual(site_hgt, 0.0)
+
+
+class TestDetermineSitesToSchedule(TestCase):
+
+    def test_CA_morning(self):
+        '''Morning in CA so CPT and TFN should be open, ELP should be
+        schedulable for Northern targets'''
+        d = datetime(2017, 3,  9,  19, 27, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['Z21','Z17'], '1m0' : ['V37',] },
+                           'south' : { '0m4' : ['L09', ]    , '1m0' : ['K93', 'K92', 'K91'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+    def test_CA_afternoon1(self):
+        '''Afternoon in CA (pre UTC date roll) so LSC should be opening, ELP
+        should be schedulable for Northern targets, OGG for bright targets'''
+        d = datetime(2017, 3,  9,  23, 27, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38'], '1m0' : ['V37',] },
+                           'south' : { '0m4' : ['W89', 'W79'], '1m0' : ['W87', 'W85'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+    def test_CA_afternoon2(self):
+        '''Afternoon in CA (post UTC date roll) so LSC should be opening, ELP
+        should be schedulable for Northern targets, OGG for bright targets'''
+
+        d = datetime(2017, 3, 10,  00, 2, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38'], '1m0' : ['V37',] },
+                           'south' : { '0m4' : ['W89', 'W79']       , '1m0' : ['W87', 'W85'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+    def test_UK_morning(self):
+        '''Morning in UK so COJ is open and a little bit of OGG 0.4m is available'''
+        d = datetime(2017, 3,  10,  8, 27, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03'], '1m0' : [ ] },
+                           'south' : { '0m4' : ['Q58',], '1m0' : ['Q63', 'Q64'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+    def test_UK_late_morning(self):
+        '''Late morning in UK so only COJ is open; not enough time at the
+        OGG 0.4m is available'''
+        d = datetime(2017, 3,  10, 12,  0, 1)
+
+        expected_sites = { 'north' : { '0m4' : [ ],         '1m0' : [ ] },
+                           'south' : { '0m4' : [ 'Q58', ] , '1m0' : ['Q63', 'Q64'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
 
 
 class TestLCOGT_domes_to_site_codes(TestCase):

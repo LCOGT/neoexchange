@@ -19,6 +19,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
         obstypes = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
+        if options['proposal'] == 'LCOEngineering':
+            # Not interested in imaging frames
+            obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
 
         if type(options['date']) != datetime:
             try:

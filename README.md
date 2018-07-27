@@ -4,8 +4,19 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
-### 2.6.0
-Add plotting support for spectroscopy data
+### 2.5.3
+
+Update light curve extraction.
+* Pull from Tracking Number rather than block number
+* Capable of incorporating any number of blocks for a given target within a given time frame.
+Add motion details to characterization page.
+
+### 2.5.2
+
+Robotic scheduler and low-level ToO support.
+
+### 2.5.1
+Add block record keeping for spectroscopy.
 
 ### 2.5.0
 Create a characterization page for spectroscopy support
@@ -31,7 +42,7 @@ Bite the Bullet and Update to Python 3.6
 
 ### 2.2.0
 
-Added capability of requesting multiple filters when making a user request. 
+Added capability of requesting multiple filters when making a user request.
 
 ### 2.1.6
 
@@ -68,7 +79,7 @@ Add cadence support.
 ### 1.8.3
 
 Add check for and marking of 'was not a minor planet' in the Previous NEOCP page
-as spacecraft. 
+as spacecraft.
 Fixes for POND submitted blocks and lightcurve extraction.
 Changes for the new semester boundaries.
 
