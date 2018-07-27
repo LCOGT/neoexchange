@@ -1607,11 +1607,13 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
 
     # Check for matching catalog (solved with desired astrometric reference catalog)
     catfilename = os.path.basename(catfile).replace('.fits', '_ldac.fits')
-    catalog_frames = Frame.objects.filter(filename=catfilename,
+    reproc_catfilename = increment_red_level(catfilename)
+    catalog_frames = Frame.objects.filter(filename__in=(catfilename, reproc_catfilename),
                                           frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG),
                                           astrometric_catalog=desired_catalog)
     if len(catalog_frames) != 0:
-        return os.path.abspath(os.path.join(dest_dir, os.path.basename(catfile.replace('.fits', '_ldac.fits')))), 0
+        logger.info("Found reprocessed frame in DB")
+        return os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename)), 0
 
     # Find image file for this catalog
     fits_file = find_matching_image_file(catfile)
