@@ -53,6 +53,7 @@ from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_per
 from photometrics.spectraplot import read_spectra, smooth, plot_spectra
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
+from core.archive_subs import check_for_archive_images, lco_api_call
 import logging
 import reversion
 import json
@@ -1867,29 +1868,44 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 def make_spec(request,pk):
+    """Creates plot of spectra data for spectra blocks"""
     import io
     import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('Agg')
 
     block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
-
     base_dir = settings.DATA_ROOT
-    date = str(int(block.block_start.strftime('%Y%m%d'))-1)
+    #url = check_for_archive_images(block.tracking_number,'')[0][0]['headers']
+    url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)
+
+    #data = lco_api_call(url)['data']
+    data = lco_api_call(url)
+    if 'DAY_OBS' in data:
+        date = data['DAY_OBS']
+    elif 'DAY-OBS' in data:
+        date = data['DAY-OBS']
+    else:
+        date = str(int(block.block_start.strftime('%Y%m%d'))-1)
+
+
     obj = block.body.current_name().replace(' ','')
     req = block.tracking_number #TEMPORARY! Will have proper req# attribute later
     dir = base_dir+date+'/'+obj+'_*'+req+'/'
     spectra_path = ''
     prop = block.proposal.code
-    print('ID: ',block.id)
+    print('ID: ',block.superblock.pk)
     print('DATE:',date)
     print('BODY:',obj)
     print('TN: ',req)
     print('DIR: ',dir)
+    print('PROP:',prop)
     filename = glob(os.path.join(dir,'*2df_ex.fits'))
     if filename:
         spectra_path = filename[0]
     else:
         dir = base_dir+date
-        tar_files = glob(os.path.join(dir,'LCOEngineering'+'_*'+req+'*.tar.gz'))
+        tar_files = glob(os.path.join(dir,prop+'_*'+req+'*.tar.gz'))
         if tar_files:
             for tar in tar_files:
                 if req in tar:
@@ -1903,6 +1919,7 @@ def make_spec(request,pk):
                     break
         else:
             logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
+            return None
 
     if spectra_path:
         #spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
@@ -1913,7 +1930,7 @@ def make_spec(request,pk):
         buffer = io.BytesIO()
         fig.savefig(buffer, format='png')
         #fig.savefig(spectra_path.replace('.fits', '.png'), format='png')
-
+        plt.close()
         return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
     else:
