@@ -1188,6 +1188,7 @@ def update_frame_zeropoint(header, ast_cat_name, phot_cat_name, frame_filename, 
 @timeit
 def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance=0.1, phot_cat_name="UCAC4", ast_cat_name="2MASS"):
 
+    logger.setLevel(logging.DEBUG)
     num_new_frames_created = 0
     num_in_table = 0
     num_sources_created = 0
@@ -1246,7 +1247,11 @@ def store_catalog_sources(catfile, catalog_type='LCOGT', std_zeropoint_tolerance
     return num_sources_created, num_in_table
 
 
-def get_or_create_CatalogSources(table, frame):
+def get_or_create_CatalogSources(table, frame, batch_size=5000):
+    """Stores CatalogSources into the DB and returns the number that were
+    created and the number in the table. If the number of CatalogSources for
+    the <frame> is 0, then we use `bulk_create` with a [batch_size] (defaults
+    to 5000) to insert the data."""
 
     num_sources_created = 0
 
@@ -1265,7 +1270,7 @@ def get_or_create_CatalogSources(table, frame):
             new_sources.append(new_source)
         reset_database_connection()
 
-        CatalogSources.objects.bulk_create(new_sources)
+        CatalogSources.objects.bulk_create(new_sources, batch_size)
         num_sources_created = len(new_sources)
     elif num_in_table != num_cat_sources:
         for source in table:
