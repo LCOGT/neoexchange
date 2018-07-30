@@ -2057,6 +2057,7 @@ def make_standards_plot(request):
     plotFormat(ax)
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
+    plt.close()
 
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
