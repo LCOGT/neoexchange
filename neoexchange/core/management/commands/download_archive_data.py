@@ -23,6 +23,8 @@ class Command(BaseCommand):
         if options['proposal'] == 'LCOEngineering':
             # Not interested in imaging frames
             obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
+        if options['proposal'] == 'standard':
+            obstypes = ['EXPOSE', 'STANDARD']
 
         if type(options['date']) != datetime:
             try:
@@ -46,7 +48,7 @@ class Command(BaseCommand):
             self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
             all_frames = {}
             for obstype in obstypes:
-                if obstype == 'EXPOSE':
+                if obstype == 'EXPOSE' or obstype == 'STANDARD':
                     redlevel = ['91', '11']
                     if obs_date < datetime(2016,4,1):
                         redlevel = ['90', ]
