@@ -29,7 +29,7 @@ from core.archive_subs import archive_login, check_for_archive_images, lco_api_c
 import logging
 import requests
 
-logger = logging.getLogger('core')
+logger = logging.getLogger(__name__)
 
 
 def measurements_from_block(blockid, bodyid=None):
