@@ -10,6 +10,8 @@ from astropy.convolution import convolve, Box1DKernel #Gaussian1DKernel
 from astropy.wcs import WCS
 from astropy import units as u
 import matplotlib.pyplot as plt
+import os
+from glob import glob
 #import matplotlib.ticker as ticker
 import numpy as np
 import collections,warnings,re
@@ -72,7 +74,20 @@ def get_y_units(info):
     norm_id = ["NORM", "UNITLESS", "NONE"] #IDs to look for normalizations with
     refl_id = ["REFLECT"] #IDs to look for normalized reflectance
 
-    if isinstance(info, float): #from .txt file (assuming normalized reflectance)
+    if isinstance(info, list):
+        for line in info:
+            if 'ergs' in line:
+                normlocs = list(float(t) for t in re.findall(r'-?\d+\.?\d*',line))
+                y_units = u.erg/(u.cm**2)/u.s/u.AA
+                try:
+                    y_factor = normlocs[-2]**normlocs[-1]
+                except IndexError:
+                    print("y_units:WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
+                    y_factor = 1
+                break
+        print("y_units: ",y_units)
+
+    elif isinstance(info, float): #from .txt file (assuming normalized reflectance)
         y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).unit.decompose())
         print("y_units: ",y_units)
 
@@ -136,11 +151,12 @@ def read_object(hdr):
         obj_name = ""
     return obj_name
 
-def read_spectra(spectra_file):
+def read_spectra(path,spectra):
     """reads in all inportant data from spectra file (Works for .ascii 2 .fits standards, and .txt)
        inputs: <spectra_file>: path and file name to spectra
        outputs: wavelength (Quantity type), flux, flux_error, x_units, y_units, obj_name
     """
+    spectra_file = os.path.join(path,spectra)
     if spectra_file.endswith('.fits'):
         hdul = fits.open(spectra_file) #read in data
     #LCO fits standard:
@@ -188,7 +204,26 @@ def read_spectra(spectra_file):
         y_units,y_factor = get_y_units(data.meta)
         obj_name = "" #TEMPORARY
 
+    elif spectra_file.endswith('.dat'):
+        data = open(spectra_file) #read in data
+        filename = glob(os.path.join(path,'aaareadme.ctio'))
+        if filename:
+            ctio = filename[0]
+            ctiodata = open(ctio)
+            x_data = np.array([])
+            y_data = np.array([])
+            flux_error = np.array([])
+            for line in data:
+                x_data = np.append(x_data, float(line.split()[0]))
+                y_data = np.append(y_data, float(line.split()[1]))
+                flux_error = np.append(flux_error, np.nan)
+
+            x_units = get_x_units(x_data)
+            y_units,y_factor = get_y_units(list(ctiodata.readlines()))
+            obj_name = spectra_file.replace(path+'f','').replace('.dat','')
+
     elif spectra_file.endswith('.txt'):
+
         data = open(spectra_file) #read in data
         #assuming 3 columns: wavelength, reflectance, error
         x_data = np.array([])
@@ -293,18 +328,22 @@ def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
 if __name__== "__main__":
 
     #path = '/home/adam/test_spectra/' #will make m9ore general file passing later
-    path = '/home/atedeschi/test_spectra'
-    spectra = '/398188/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
-    #spectra = '1627/20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
+    sol_path = '/home/atedeschi/test_spectra/calspec/'
+    path = '/home/atedeschi/test_spectra/1627/'
+    #spectra = '398188/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
+    spectra = '20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
     #spectra = '60/ntt60_ftn_20180612_merge_2.0_58282_1_2df_ex.fits'
     #spectra = '16/ntt16_ftn_20180606_merge_2.0_58276_1_2df_ex.fits'
-    #spectra = 'calspec/eros_visnir_reference_to1um.ascii'
-    #spectra = 'calspec/alpha_lyr_stis_008.fits' #vega?
-    #spectra = 'calspec/bd17d4708_stis_001.fits'
+    #spectra = 'eros_visnir_reference_to1um.ascii'
+    #spectra = 'alpha_lyr_stis_008.fits' #vega?
+    #spectra = 'bd17d4708_stis_001.fits'
     #spectra = 'a001981.4.txt'
-
+    #spectra = 'fcd_34d241.dat'
+    #spectra = 'fhr718.dat'
+    sol_ref = 'fhr9087.dat'
+    #sol_path = '/home/atedeschi/test_spectra/Solar_analogs/HD209847/'
     #sol_ref = 'calspec/sun_mod_001.fits'
-    sol_ref = '/Solar_analogs/HD209847/nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
+    #sol_ref = 'nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
     #sol_ref =  'solar_standard_V2.fits'
     #sol_ref = 'calspec/sun_reference_stis_001.fits'
 
@@ -312,14 +351,14 @@ if __name__== "__main__":
     print("\nasteroid: ")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        x,y,yerr,x_units,y_units,y_factor, obj_name= read_spectra(path+spectra)
+        x,y,yerr,x_units,y_units,y_factor, obj_name= read_spectra(path,spectra)
     xsmoothed,ysmoothed = smooth(x,y)#,window) #[window/2:-window/2]
 
     print("\nreference star: ")
     #window_ref = 2
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units,y_factor_ref, obj_name_ref = read_spectra(path+sol_ref)
+        x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units,y_factor_ref, obj_name_ref = read_spectra(sol_path,sol_ref)
     x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref)#,window_ref)
 
     #normyerr = normalize(x,yerr) #remember to normalize y-units too

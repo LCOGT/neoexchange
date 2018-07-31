@@ -1,12 +1,10 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -53,7 +51,7 @@ from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_per
 from photometrics.spectraplot import read_spectra, smooth, plot_spectra
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
-from core.archive_subs import check_for_archive_images, lco_api_call
+from core.archive_subs import lco_api_call
 import logging
 import reversion
 import json
@@ -1321,7 +1319,6 @@ def clean_crossid(astobj, dbg=False):
     """Takes an <astobj> (a list of new designation, provisional designation,
     reference and confirm date produced from the MPC's Previous NEOCP Objects
     page) and determines the type and whether it should still be followed.
-
     Objects that were not confirmed, did not exist or "were not interesting
     (normally a satellite) are set inactive immediately. For NEOs and comets,
     we set it to inactive if more than 3 days have passed since the
@@ -1877,7 +1874,7 @@ def make_spec(request,pk):
     block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
     base_dir = settings.DATA_ROOT
     #url = check_for_archive_images(block.tracking_number,'')[0][0]['headers']
-    url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)
+    url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
 
     #data = lco_api_call(url)['data']
     data = lco_api_call(url)
@@ -1922,8 +1919,10 @@ def make_spec(request,pk):
             return None
 
     if spectra_path:
+        spec_file = os.path.basename(spectra_path)
+        spec_dir = os.path.dirname(spectra_path)
         #spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
-        x,y,yerr,xunits,yunits,yfactor,name = read_spectra(spectra_path)
+        x,y,yerr,xunits,yunits,yfactor,name = read_spectra(spec_dir,spec_file)
         xsmooth,ysmooth = smooth(x,y)
         fig,ax = plt.subplots()
         plot_spectra(xsmooth,ysmooth/yfactor,yunits.to_string('latex'),ax,name)
