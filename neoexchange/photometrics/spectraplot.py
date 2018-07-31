@@ -267,11 +267,26 @@ def smooth(x,y):
     stds=np.array([])
     normy = normalize(x,y)
     loc = 5
+    #OUTLIER DEBUGGING
+    # n=0
+    # while n < len(y):
+    #     if abs(y[n].value-np.nanmean(y).value) > 20*np.nanstd(y).value:
+    #         print(y[n])
+    #         print(x[n])
+    #         y[n] = np.nan
+    #         normy[n]= np.nan
+    #         print('hi')
+    #         n=0
+    #     else:
+    #         n+=1
+
     while loc <= len(x):
-        stds = np.append(stds,np.std(normy[loc-5:loc]).value)
+        stds = np.append(stds,np.nanstd(normy[loc-5:loc]).value)
         loc += int(len(x)/8)
+
+
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
-    print("noisiness: ", noisiness)
+    print("noisiness: %.5f" % noisiness)
 
     if .0035 <= noisiness < .005:
         window = 15
@@ -294,9 +309,14 @@ def normalize(x,y,wavelength=5500*u.AA):
                [wavelength]: target wavelength to normalize at (Quantity type)
        outputs: normalized flux data
     """
-    normval = y[np.abs(x-wavelength).argmin()] #uses closest data point to target wavelength
-    if normval == 0:
+    n = np.abs(x-wavelength).argmin()
+    normval = y[n]
+    while (not normval.value or np.isnan(normval.value)) and n < len(x)-2:
+        normval = y[n] #uses closest data point to target wavelength
+        n += 1
+    if not normval.value or np.isnan(normval.value):
         normval = 1
+
     return y/normval #REMEMBER to normalize y-units too
 
 def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):

@@ -4,11 +4,17 @@
 
 {% block bodyclass %}page{% endblock %}
 
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Block: {{pk}}</h1>
+    </div>
+{% endblock%}
+
 {% block main-content %}
 <!-- Main body -->
 <div class="container" id="main">
     {% block graphic %}
-        <img src="{% url 'make_spec' pk %}">
+        <img src="{% url 'make_spec' pk %}" alt="Could not find or create spectra file to plot."> <!-- TO DO: Make alternate when image not found-->
     {% endblock %}
 </div>
 {% endblock %}

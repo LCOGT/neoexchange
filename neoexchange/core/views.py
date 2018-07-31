@@ -1867,9 +1867,10 @@ def plotframe(request):
 def make_spec(request,pk):
     """Creates plot of spectra data for spectra blocks"""
     import io
+    # import matplotlib
+    # matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    import matplotlib
-    matplotlib.use('Agg')
+
 
     block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
     base_dir = settings.DATA_ROOT
@@ -1891,6 +1892,7 @@ def make_spec(request,pk):
     dir = base_dir+date+'/'+obj+'_*'+req+'/'
     spectra_path = ''
     prop = block.proposal.code
+    #debugging
     print('ID: ',block.superblock.pk)
     print('DATE:',date)
     print('BODY:',obj)
