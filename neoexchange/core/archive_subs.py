@@ -97,6 +97,16 @@ def get_frame_data(start_date, end_date, auth_header='', obstype='EXPOSE', propo
         if resp.status_code in [200,201]:
             response = resp.json()
             frames_for_red_lvl = { reduction_lvl : response.get('results', []) }
+            while response.get('next', None) is not None:
+                print("Fetching next batch")
+                resp = requests.get(response['next'], headers=auth_header)
+                if resp.status_code in [200,201]:
+                    response = resp.json()
+                    print(type(frames_for_red_lvl[reduction_lvl]), type(response.get('results', [])))
+                    new_frames = frames_for_red_lvl[reduction_lvl] + response.get('results', [])
+                    frames_for_red_lvl[reduction_lvl] = new_frames
+                else:
+                    break
             frames.update(frames_for_red_lvl)
         else:
             logger.error("Request {} API did not return JSON: {}".format(search_url, resp.status_code))
