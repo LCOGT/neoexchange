@@ -46,11 +46,10 @@ def get_x_units(x_data):
        inputs: <xdata>: unitless wavelength data
        outputs: x_units
     """
-    #xdata should be ndarray type. Will try error handling for it later
     x_min = np.amin(x_data)
 
     #assuming visible to NIR range (~3000-10000A)
-    if x_min >800:
+    if x_min >1000:
         x_units = u.AA #(Angstroms)
     elif 100 < x_min < 800:
         x_units = u.nm
@@ -82,17 +81,16 @@ def get_y_units(info):
                 try:
                     y_factor = normlocs[-2]**normlocs[-1]
                 except IndexError:
-                    print("y_units:WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
-                    y_factor = 1
+                    pass
                 break
         #print("y_units: ",y_units)
 
     elif isinstance(info, float): #from .txt file (assuming normalized reflectance)
-        y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).unit.decompose())
-        #print("y_units: ",y_units)
+        y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
 
     elif isinstance(info, collections.OrderedDict): #from .ascii
-        col_head = list(info.values())[0][0]
+        head = np.array(info.values())
+        col_head = ''.join(map(str,head.flatten()))
         if any(unit_id in col_head.upper() for unit_id in flux_id): #checking for flam
             y_units = u.erg/(u.cm**2)/u.s/u.AA
         elif any(unit_id in col_head.upper() for unit_id in norm_id): #checking for normalized
@@ -102,41 +100,38 @@ def get_y_units(info):
             else:
                 y_units = u.def_unit("Normalized_Flux",u.dimensionless_unscaled)
                 #print("y_units: normalized")
-        elif any(unit_id in col_head.upper() for unit_id in relf_id): #checking for normalized reflectance
+        elif any(unit_id in col_head.upper() for unit_id in refl_id): #checking for normalized reflectance
             y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
             #print("y_units: ",y_units)
         else:
-            print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
-            y_units = u.erg/(u.cm**2)/u.s/u.AA
+            pass
 
     elif isinstance(info, fits.header.Header):  #from .fits
         possible_keys = ['BUNIT','TUNIT2'] #maybe add more later
         keys = list(info.keys())
-        values = list(info.values())
         for n in range(len(keys)):
             if any(key_id in keys[n] for key_id in possible_keys):
-                if any(unit_id in values[n].upper() for unit_id in flux_id):
-                    if "10^20" in values[n]: #special LCO standard case
+                if any(unit_id in info[keys[n]].upper() for unit_id in flux_id):
+                    if "10^20" in info[keys[n]]: #special LCO standard case
                         y_factor=10**20
                     y_units = u.erg/(u.cm**2)/u.s/u.AA
-                elif any(unit_id in values[n].upper() for unit_id in norm_id):
-                    if any(unit_id in col_head.upper for unit_id in refl_id): #checking for normalization
+                elif any(unit_id in info[keys[n]].upper() for unit_id in norm_id):
+                    if any(unit_id in info[keys[n]].upper() for unit_id in refl_id): #checking for normalization
                         y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
                         #print("y_units: ",y_units)
                     else:
                         y_units = u.def_unit("Normalized_Flux",u.dimensionless_unscaled)
                         #print("y_units: normalized")
-                elif any(unit_id in col_head.upper for unit_id in refl_id): #checking for normalized reflectance
+                elif any(unit_id in info[keys[n]].upper() for unit_id in refl_id): #checking for normalized reflectance
                     y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
                     #print("y_units: ",y_units)
                 else:
-                    print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
-                    y_units = u.erg/(u.cm**2)/u.s/u.AA
-        # try:
-        #     print("y_units:",y_units)
-        # except NameError:
-        #     print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
-        #     y_units = u.erg/(u.cm**2)/u.s/u.AA
+                    pass
+    try:
+        y_units
+    except NameError:
+        print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
+        y_units = u.erg/(u.cm**2)/u.s/u.AA
 
     return y_units, y_factor
 
@@ -204,6 +199,7 @@ def read_spectra(path,spectra):
         y_units,y_factor = get_y_units(data.meta)
         obj_name = "" #TEMPORARY
 
+
     elif spectra_file.endswith('.dat'):
         data = open(spectra_file) #read in data
         filename = glob(os.path.join(path,'aaareadme.ctio'))
@@ -220,7 +216,7 @@ def read_spectra(path,spectra):
 
             x_units = get_x_units(x_data)
             y_units,y_factor = get_y_units(list(ctiodata.readlines()))
-            obj_name = spectra.replace('f','').replace('.dat','')
+            obj_name = spectra.lstrip('f').replace('.dat','')
 
     elif spectra_file.endswith('.txt'):
 
@@ -235,7 +231,8 @@ def read_spectra(path,spectra):
             flux_error = np.append(flux_error, float(line.split()[2]))
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(y_data[0])
-        obj_name = spectra.replace('.txt','')
+        title = spectra.split('.')[0]
+        obj_name = title.lstrip('au').lstrip('0') #assuming format from NEOx Characterization page
 
     else:
         raise ImportError("Invalid input file type")
@@ -341,7 +338,7 @@ def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
         ax.set_title('Spectra for: '+title)
     else:
         if ref:
-            ax.set_title("Solar_Analog")
+            ax.set_title("Solar Analog")
         else:
             ax.set_title("Asteroid")
 

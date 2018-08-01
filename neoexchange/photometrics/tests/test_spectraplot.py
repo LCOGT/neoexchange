@@ -2,6 +2,8 @@ from django.test import TestCase
 from astropy import units as u
 import numpy as np
 import os
+from astropy.io.fits import Header
+from collections import OrderedDict
 
 from photometrics.spectraplot import *
 
@@ -145,3 +147,172 @@ class Test_Read_Spectra(TestCase):
 
         self.assertTrue(exp_y_err_len,len(y_err))
         self.assertTrue(np.isnan(y_err[0]))
+
+    def test_read_fits_obj(self):
+        exp_obj = '398188'
+
+        obj_name = read_spectra(self.fitsdir,self.fitsfile)[6]
+
+        self.assertEqual(exp_obj,obj_name)
+
+    def test_read_txt_obj(self):
+        exp_obj = '1981'
+
+        obj_name = read_spectra(self.txtdir,self.txtfile)[6]
+
+        self.assertEqual(exp_obj,obj_name)
+
+    def test_read_dat_obj(self):
+        exp_obj = 'hr9087'
+
+        obj_name = read_spectra(self.datdir,self.datfile)[6]
+
+        self.assertEqual(exp_obj,obj_name)
+
+    def test_get_fits_y_units1(self):
+        test_hdr1 = Header()
+        test_hdr1.append(('BUNIT ','erg/cm2/s/A  10^20'))
+
+        exp_y1 = u.erg/(u.cm**2)/u.s/u.AA
+        exp_f1 = 1E+20
+        y1,f1 = get_y_units(test_hdr1)
+
+        self.assertEqual(exp_y1,y1)
+        self.assertEqual(exp_f1,f1)
+
+    def test_get_fits_y_units2(self):
+        test_hdr2 = Header()
+        test_hdr2.append(('TUNIT2','erg/cm2/s/A'))
+
+        exp_y2 = u.erg/(u.cm**2)/u.s/u.AA
+        exp_f2 = 1
+        y2,f2 = get_y_units(test_hdr2)
+
+        self.assertEqual(exp_y2,y2)
+        self.assertEqual(exp_f2,f2)
+
+    def test_get_fits_y_units3(self):
+        test_hdr3 = Header()
+        test_hdr3.append(('HI','LOL'))
+
+        exp_y3 = u.erg/(u.cm**2)/u.s/u.AA
+        exp_f3 = 1
+        y3,f3 = get_y_units(test_hdr3)
+
+        self.assertEqual(exp_y3,y3)
+        self.assertEqual(exp_f3,f3)
+
+    def test_get_fits_y_units4(self):
+        test_hdr4 = Header()
+        test_hdr4.append(('BUNIT','HI'))
+        test_hdr4.append(('TUNIT2','LOL'))
+
+        exp_y4 = u.erg/(u.cm**2)/u.s/u.AA
+        exp_f4 = 1
+        y4,f4 = get_y_units(test_hdr4)
+
+        self.assertEqual(exp_y4,y4)
+        self.assertEqual(exp_f4,f4)
+
+    def test_get_fits_y_units5(self):
+        test_hdr5 = Header()
+        test_hdr5.append(('BUNIT','Normalized'))
+        exp_y5 = u.dimensionless_unscaled
+
+        exp_f5 = 1
+        y5,f5 = get_y_units(test_hdr5)
+
+        self.assertEqual(exp_y5,y5)
+        self.assertEqual(exp_f5,f5)
+
+    def test_get_fits_y_units6(self):
+        test_hdr6 = Header()
+        test_hdr6.append(('BUNIT','FLAM'))
+
+        exp_y6 = u.erg/(u.cm**2)/u.s/u.AA
+        exp_f6 = 1
+        y6,f6 = get_y_units(test_hdr6)
+
+        self.assertEqual(exp_y6,y6)
+        self.assertEqual(exp_f6,f6)
+
+
+    def test_get_ascii_y_units1(self):
+        test_dict1 = OrderedDict({'col1':'microns','col2':'erg/cm2/s/A','col3':'error'})
+
+        exp_y1 = u.erg/(u.cm**2)/u.s/u.AA
+        exp_f1 = 1
+        y1,f1 = get_y_units(test_dict1)
+
+        self.assertEqual(exp_y1,y1)
+        self.assertEqual(exp_f1,f1)
+
+    def test_get_ascii_y_units2(self):
+        test_dict2 = OrderedDict({'col1':'microns','col2':'Normalized','col3':'error'})
+
+        exp_y2 = u.dimensionless_unscaled
+        exp_f2 = 1
+        y2,f2 = get_y_units(test_dict2)
+
+        self.assertEqual(exp_y2,y2)
+        self.assertEqual(exp_f2,f2)
+
+    def test_get_ascii_y_units3(self):
+        test_dict3 = OrderedDict({'col1':'microns','col2':'Normalized Reflectance','col3':'error'})
+
+        exp_y3 = u.dimensionless_unscaled
+        exp_f3 = 1
+        y3,f3 = get_y_units(test_dict3)
+
+        self.assertEqual(exp_y3,y3)
+        self.assertEqual(exp_f3,f3)
+
+    def test_get_ascii_y_units4(self):
+        test_dict4 = OrderedDict({'col1':'microns','col2':'something else','col3':'error'})
+
+        exp_y4 = u.erg/(u.cm**2)/u.s/u.AA
+        exp_f4 = 1
+        y4,f4 = get_y_units(test_dict4)
+
+        self.assertEqual(exp_y4,y4)
+        self.assertEqual(exp_f4,f4)
+
+    def test_get_x_units1(self):
+        test_x_data1 = [3103.14013672,3104.88222365,3106.62431058]
+
+        exp_x1 = u.AA
+        x1 = get_x_units(test_x_data1)
+
+        self.assertEqual(exp_x1,x1)
+
+    def test_get_x_units2(self):
+        test_x_data2 = [0.435,0.4375,0.44]
+
+        exp_x2 = u.micron
+        x2 = get_x_units(test_x_data2)
+
+        self.assertEqual(exp_x2,x2)
+
+    def test_get_x_units3(self):
+        test_x_data3 = [404,404.5,405]
+
+        exp_x3 = u.nm
+        x3 = get_x_units(test_x_data3)
+
+        self.assertEqual(exp_x3,x3)
+
+    def test_get_x_units4(self):
+        test_x_data4 = [15,16,17]
+
+        exp_x4 = u.AA
+        x4 = get_x_units(test_x_data4)
+
+        self.assertEqual(exp_x4,x4)
+
+    def test_get_x_units5(self):
+        test_x_data5 = [1500,800,500]
+
+        exp_x5 = u.nm
+        x5 = get_x_units(test_x_data5)
+
+        self.assertEqual(exp_x5,x5)
