@@ -1888,7 +1888,7 @@ def make_spec(request,pk):
 
 
     obj = block.body.current_name().replace(' ','')
-    req = block.tracking_number #TEMPORARY! Will have proper req# attribute later
+    req = block.tracking_number #TEMPORARY! Will have proper request# attribute later
     dir = base_dir+date+'/'+obj+'_*'+req+'/'
     spectra_path = ''
     prop = block.proposal.code
@@ -1899,19 +1899,20 @@ def make_spec(request,pk):
     print('TN: ',req)
     print('DIR: ',dir)
     print('PROP:',prop)
-    filename = glob(os.path.join(dir,'*2df_ex.fits'))
+
+    filename = glob(os.path.join(dir,'*2df_ex.fits')) #checks for file in path
     if filename:
         spectra_path = filename[0]
     else:
         dir = base_dir+date
-        tar_files = glob(os.path.join(dir,prop+'_*'+req+'*.tar.gz'))
+        tar_files = glob(os.path.join(dir,prop+'_*'+req+'*.tar.gz')) #if file not found, looks fror tarball
         if tar_files:
             for tar in tar_files:
                 if req in tar:
                     tar_path = tar
                     unpack_path = os.path.join(dir,obj+'_000'+req)
             print(tar_path)
-            spec_files = unpack_tarball(tar_path,unpack_path)
+            spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
             for spec in spec_files:
                 if '2df_ex.fits' in spec:
                     spectra_path = spec
@@ -1920,7 +1921,7 @@ def make_spec(request,pk):
             logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
             return None
 
-    if spectra_path:
+    if spectra_path: #plots spectra
         spec_file = os.path.basename(spectra_path)
         spec_dir = os.path.dirname(spectra_path)
         #spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'

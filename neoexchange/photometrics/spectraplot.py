@@ -16,7 +16,7 @@ from glob import glob
 import numpy as np
 import collections,warnings,re
 
-#np.set_printoptions(threshold=np.inf)
+#np.set_#printoptions(threshold=np.inf)
 
 def check_norm(values): #not perfect nor finished yet
     """checks with fits standard parsing and notifies if flux data has been normalized already
@@ -36,7 +36,7 @@ def check_norm(values): #not perfect nor finished yet
 
 def check_refl(x,y): #TEMPORARY CHECK
     if x[y.argmax()] > 6000*u.AA:
-        print("Normalized Reflectance")
+        #print("Normalized Reflectance")
         return True
     else:
         return False
@@ -59,7 +59,7 @@ def get_x_units(x_data):
     else:
         print("WARNING: Could not parse wavelength units from file. Assuming Angstoms")
         x_units = u.AA
-    print("x_units: ",x_units)
+    #print("x_units: ",x_units)
 
     return x_units
 
@@ -85,11 +85,11 @@ def get_y_units(info):
                     print("y_units:WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
                     y_factor = 1
                 break
-        print("y_units: ",y_units)
+        #print("y_units: ",y_units)
 
     elif isinstance(info, float): #from .txt file (assuming normalized reflectance)
         y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).unit.decompose())
-        print("y_units: ",y_units)
+        #print("y_units: ",y_units)
 
     elif isinstance(info, collections.OrderedDict): #from .ascii
         col_head = list(info.values())[0][0]
@@ -97,14 +97,14 @@ def get_y_units(info):
             y_units = u.erg/(u.cm**2)/u.s/u.AA
         elif any(unit_id in col_head.upper() for unit_id in norm_id): #checking for normalized
             if any(unit_id2 in col_head.upper() for unit_id2 in refl_id): #checking for normalization
-                y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
-                print("y_units: ",y_units)
+                y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
+                #print("y_units: ",y_units)
             else:
-                y_units = u.def_unit("Normalized_Flux",(1*u.m/u.m).decompose())
-                print("y_units: normalized")
+                y_units = u.def_unit("Normalized_Flux",u.dimensionless_unscaled)
+                #print("y_units: normalized")
         elif any(unit_id in col_head.upper() for unit_id in relf_id): #checking for normalized reflectance
-            y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
-            print("y_units: ",y_units)
+            y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
+            #print("y_units: ",y_units)
         else:
             print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
             y_units = u.erg/(u.cm**2)/u.s/u.AA
@@ -121,22 +121,22 @@ def get_y_units(info):
                     y_units = u.erg/(u.cm**2)/u.s/u.AA
                 elif any(unit_id in values[n].upper() for unit_id in norm_id):
                     if any(unit_id in col_head.upper for unit_id in refl_id): #checking for normalization
-                        y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
-                        print("y_units: ",y_units)
+                        y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
+                        #print("y_units: ",y_units)
                     else:
-                        y_units = u.def_unit("Normalized_Flux",(1*u.m/u.m).decompose())
-                        print("y_units: normalized")
+                        y_units = u.def_unit("Normalized_Flux",u.dimensionless_unscaled)
+                        #print("y_units: normalized")
                 elif any(unit_id in col_head.upper for unit_id in refl_id): #checking for normalized reflectance
-                    y_units = u.def_unit("Normalized_Reflectance",(1*u.m/u.m).decompose())
-                    print("y_units: ",y_units)
+                    y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
+                    #print("y_units: ",y_units)
                 else:
                     print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
                     y_units = u.erg/(u.cm**2)/u.s/u.AA
-        try:
-            print("y_units:",y_units)
-        except NameError:
-            print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
-            y_units = u.erg/(u.cm**2)/u.s/u.AA
+        # try:
+        #     print("y_units:",y_units)
+        # except NameError:
+        #     print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
+        #     y_units = u.erg/(u.cm**2)/u.s/u.AA
 
     return y_units, y_factor
 
@@ -171,7 +171,7 @@ def read_spectra(path,spectra):
             try:
                 flux_error = np.array(data[3][0])
             except IndexError:
-                print("WARNING: Could not parse error data")
+                #print("WARNING: Could not parse error data")
                 flux_error = np.zeros(len(x_data))
     #fits standard 2:
         elif hdul[1].data is not None:
@@ -195,7 +195,7 @@ def read_spectra(path,spectra):
 
     elif spectra_file.endswith('.ascii'):
         data = ascii.read(spectra_file) #read in data
-        #print(data.meta)
+        ##print(data.meta)
         #assuming 3 columns: wavelength, flux/reflectance, error
         x_data = data['col1'] #converting tables to ndarrays
         y_data = data['col2']
@@ -220,7 +220,7 @@ def read_spectra(path,spectra):
 
             x_units = get_x_units(x_data)
             y_units,y_factor = get_y_units(list(ctiodata.readlines()))
-            obj_name = spectra_file.replace(path+'f','').replace('.dat','')
+            obj_name = spectra.replace('f','').replace('.dat','')
 
     elif spectra_file.endswith('.txt'):
 
@@ -235,7 +235,7 @@ def read_spectra(path,spectra):
             flux_error = np.append(flux_error, float(line.split()[2]))
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(y_data[0])
-        obj_name = "" #TEMPORARY
+        obj_name = spectra.replace('.txt','')
 
     else:
         raise ImportError("Invalid input file type")
@@ -250,8 +250,8 @@ def read_spectra(path,spectra):
 
     if not obj_name:
         print("WARNING: Could not parse object name from file")
-    else:
-        print("Object: ", obj_name)
+    #else:
+        #print("Object: ", obj_name)
 
     check_refl(wavelength,flux)
 
@@ -271,11 +271,11 @@ def smooth(x,y):
     # n=0
     # while n < len(y):
     #     if abs(y[n].value-np.nanmean(y).value) > 20*np.nanstd(y).value:
-    #         print(y[n])
-    #         print(x[n])
+    #         #print(y[n])
+    #         #print(x[n])
     #         y[n] = np.nan
     #         normy[n]= np.nan
-    #         print('hi')
+    #         #print('hi')
     #         n=0
     #     else:
     #         n+=1
@@ -286,7 +286,7 @@ def smooth(x,y):
 
 
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
-    print("noisiness: %.5f" % noisiness)
+    #print("noisiness: %.5f" % noisiness)
 
     if .0035 <= noisiness < .005:
         window = 15
@@ -295,11 +295,11 @@ def smooth(x,y):
     elif noisiness >= .01:
         window = 30
     else:
-        print("smoothing: no")
+        #print("smoothing: no")
         return x,y
 
     #smoothing
-    print("smoothing: yes")
+    #print("smoothing: yes")
     return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)] #boxcar average data
 
 def normalize(x,y,wavelength=5500*u.AA):
@@ -368,13 +368,13 @@ if __name__== "__main__":
     #sol_ref = 'calspec/sun_reference_stis_001.fits'
 
     #window = 2
-    print("\nasteroid: ")
+    #print("\nasteroid: ")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         x,y,yerr,x_units,y_units,y_factor, obj_name= read_spectra(path,spectra)
     xsmoothed,ysmoothed = smooth(x,y)#,window) #[window/2:-window/2]
 
-    print("\nreference star: ")
+    #print("\nreference star: ")
     #window_ref = 2
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -384,13 +384,13 @@ if __name__== "__main__":
     #normyerr = normalize(x,yerr) #remember to normalize y-units too
     #normyerr_ref = normalize(x_ref,yerr_ref)
 
-    #print(x.shape, y.shape, x_ref.shape, y_ref.shape, ysmoothed.shape, y_refsmoothed.shape)
+    ##print(x.shape, y.shape, x_ref.shape, y_ref.shape, ysmoothed.shape, y_refsmoothed.shape)
 
     #normy, normyerr = normalize(xsmoothed,ysmoothed,yerr) #normalizing data
     #normy_ref,normerr_ref = normalize(x_refsmoothed,y_refsmoothed,yerr_ref)
 
-    #print(yerr)
-    #print(normyerr)
+    ##print(yerr)
+    ##print(normyerr)
 
     #plotting data
     #(for 2 spectra)
