@@ -1841,7 +1841,7 @@ def make_new_catalog_entry(new_ldac_catalog, header, block):
     return num_new_frames_created
 
 
-def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_catalog=None):
+def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_catalog=None, overwrite=False):
     """New version of check_catalog_and_refit designed for BANZAI data. This
     version of the routine assumes that the astrometric fit status of <catfile>
     is likely to be good and exits if not the case. A new source extraction
@@ -1874,7 +1874,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
     catalog_frames = Frame.objects.filter(filename__in=(catfilename, reproc_catfilename),
                                           frametype__in=(Frame.BANZAI_LDAC_CATALOG, Frame.FITS_LDAC_CATALOG),
                                           astrometric_catalog=desired_catalog)
-    if len(catalog_frames) != 0:
+    if len(catalog_frames) != 0 and overwrite is False:
         logger.info("Found reprocessed frame in DB")
         return os.path.abspath(os.path.join(dest_dir, catalog_frames[0].filename)), 0
 

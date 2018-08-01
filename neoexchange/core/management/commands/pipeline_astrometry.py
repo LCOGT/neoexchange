@@ -26,6 +26,7 @@ class Command(BaseCommand):
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary dir')
         parser.add_argument('--temp-dir', dest='temp_dir', action="store", help='Name of the temporary directory to use')
         parser.add_argument('--skip-mtdlink', action="store_true", help='Whether to skip running mtdlink')
+        parser.add_argument('--overwrite', action="store_true", default=False, help='Whether to ignore store DB results and force refitting of the frame')
 
     def determine_images_and_catalogs(self, datadir, output=True):
 
@@ -76,7 +77,7 @@ class Command(BaseCommand):
 
         keep_temp = ''
         if options['keep_temp_dir']: keep_temp = ' (will keep)'
-        self.stdout.write("Using %s as temp dir%s" % (temp_dir, keep_temp))
+        self.stdout.write("Using %s as temp dir%s. Overwrite=%s" % (temp_dir, keep_temp, options['overwrite']))
 
         # create a new list of fits files to run mtdlink on
         fits_file_list = []
@@ -86,7 +87,8 @@ class Command(BaseCommand):
             # Step 1: Determine if astrometric fit in catalog is good and
             # if not, refit using SExtractor and SCAMP.
             self.stdout.write("Processing %s" % catalog)
-            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, temp_dir, catalog, desired_catalog='GAIA-DR2')
+            new_catalog_or_status, num_new_frames_created = check_catalog_and_refit(configs_dir, \
+                temp_dir, catalog, desired_catalog='GAIA-DR2', overwrite=options['overwrite'])
 
             try:
                 int(new_catalog_or_status)
