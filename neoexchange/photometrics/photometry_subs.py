@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from math import sqrt, log10, sin, cos, exp, acos, radians, degrees
+from math import sqrt, log10, sin, cos, exp, acos, radians, degrees, pi
 import logging
 
 from astropy import units as u
@@ -365,6 +365,16 @@ def compute_zp(tic_params, dbg=False, emulate_signal=False):
 
     return zp, zp_mag
 
+def compute_ab_zpt(tic_params):
+    """Computes AB mag zeropoint for given telescope area tic_params['area']"""
+
+    F_AB = 3631.0 *u.Jy
+    gain = tic_params.get('gain', 1.0 * (u.electron/u.adu))
+    zpt = (tic_params['eff_area']*F_AB.decompose()) / (gain*h)
+    zpt_ab = 2.5 * log10(zpt.decompose().value)
+
+    return zpt_ab
+
 def slit_vignette(tic_params, dbg=False):
     '''Compute the fraction of light entering the slit of width <tic_params['slit_width']>
     for an object described by a FWHM of <tic_params['fwhm']>
@@ -592,6 +602,13 @@ def construct_tic_params(instrument, passband='ip'):
                        'slit_width' : 2.0 * u.arcsec,
                        'true_vs_pred' : 0.5
                      }
+    elif instrument.upper() == '1M0-SINISTRO':
+        tic_params = {
+                        'eff_area' : (pi * (1.0*u.m/2.0)**2) - (pi * (0.452*u.m/2.0)**2),
+                        'flux_mag0' : flux_mag0_Jy,
+                        'num_mirrors' : 2,
+                     }
+
     # Calculate and store instrument efficiency
     tic_params['instrument_eff'] = instrument_throughput(tic_params)
 

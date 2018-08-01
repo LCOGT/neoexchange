@@ -26,7 +26,7 @@ import time
 from requests.exceptions import ReadTimeout
 
 from astropy.io import fits
-from astropy.table import Table
+from astropy.table import Table, join
 from astropy.coordinates import Angle
 from astroquery.vizier import Vizier
 import astropy.units as u
@@ -1642,3 +1642,40 @@ def find_first_last_frames(fits_files):
         if frame.midpoint > last_frame.midpoint:
             last_frame = frame
     return first_frame, last_frame
+
+def read_stetson_posfile(posfile):
+    """Reads in a positions table of Stetson photometric standards and returns a
+    astropy Table with ['Name', 'RA_deg', 'Dec_deg'] columns."""
+
+    colnames = ['RA_deg', 'Dec_deg', 'RA_h', 'RA_m', 'RA_s', 'Dec_d', 'Dec_m', 'Dec_s', \
+        'XOffset', 'YOffset', 'X_pix', 'Y_pix', 'Name']
+    table = Table.read(posfile, format='ascii.no_header', data_start=1, delimiter='\s', names=colnames)
+    # Subset table to get the columns we want
+    table2 = table['Name', 'RA_deg', 'Dec_deg']
+
+    return table2
+
+def read_stetson_photfile(photfile):
+    """Reads in a photometry table of Stetson photometric standards and returns a
+    astropy Table with all columns."""
+
+    colnames =  ['Name', 'U', 'U_sigma', 'U_N', 'U_n', 'B', 'B_sigma', 'B_N', 'B_n', \
+        'V', 'V_sigma', 'V_N', 'V_n', 'R', 'R_sigma', 'R_N', 'R_n', \
+        'I', 'I_sigma', 'I_N', 'I_n', 'vary?']
+
+    table = Table.read(photfile, format='ascii.no_header', data_start=1, delimiter='\s', names=colnames)
+
+    return table
+
+def read_merge_stetson(posfile, photfile=None):
+    """Reads Stetson photometric standard files from <posfile> and [photfile] and
+    returns a merged table of the name, position and photometry columns."""
+
+    photfile = photfile or posfile.replace('.pos', '.pho')
+
+    pos_table = read_stetson_posfile(posfile)
+    phot_table = read_stetson_photfile(photfile)
+
+    table = join(pos_table, phot_table)
+
+    return table
