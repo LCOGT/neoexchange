@@ -132,7 +132,7 @@ def frame_params_from_header(params, block):
     sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
     spectro_obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
 
-    frame_params = { 'midpoint' : params.get('DATE_OBS', None),
+    frame_params = { 'midpoint' : params.get('DATE_OBS', params.get('DATE-OBS', None)),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
                      'frametype': params.get('RLEVEL', 0),
@@ -180,7 +180,7 @@ def frame_params_from_header(params, block):
         try:
             midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S.%f")
         except ValueError:
-            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:M:%S")
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S")
 
         midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
         frame_params['midpoint'] = midpoint
