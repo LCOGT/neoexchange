@@ -1878,7 +1878,8 @@ def make_spec(request,pk):
     url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
 
     #data = lco_api_call(url)['data']
-    data = lco_api_call(url)
+    print(url)
+    data = lco_api_call(url)['data']
     if 'DAY_OBS' in data:
         date = data['DAY_OBS']
     elif 'DAY-OBS' in data:
@@ -1888,7 +1889,11 @@ def make_spec(request,pk):
 
 
     obj = block.body.current_name().replace(' ','')
-    req = block.tracking_number #TEMPORARY! Will have proper request# attribute later
+    #req = block.tracking_number #TEMPORARY! Will have proper request# attribute later
+    if 'REQNUM' in data:
+        req = data['REQNUM']
+    else:
+        req = '000'+block.tracking_number
     dir = base_dir+date+'/'+obj+'_*'+req+'/'
     spectra_path = ''
     prop = block.proposal.code
@@ -1896,7 +1901,7 @@ def make_spec(request,pk):
     print('ID: ',block.superblock.pk)
     print('DATE:',date)
     print('BODY:',obj)
-    print('TN: ',req)
+    print('REQNUM: ',req)
     print('DIR: ',dir)
     print('PROP:',prop)
 
@@ -1910,7 +1915,7 @@ def make_spec(request,pk):
             for tar in tar_files:
                 if req in tar:
                     tar_path = tar
-                    unpack_path = os.path.join(dir,obj+'_000'+req)
+                    unpack_path = os.path.join(dir,obj+'_'+req)
             print(tar_path)
             spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
             for spec in spec_files:

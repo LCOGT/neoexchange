@@ -12,6 +12,7 @@ from astropy import units as u
 import matplotlib.pyplot as plt
 import os
 from glob import glob
+import logging
 #import matplotlib.ticker as ticker
 import numpy as np
 import collections,warnings,re
@@ -30,7 +31,7 @@ def check_norm(values): #not perfect nor finished yet
                 try:
                     normval = float(s)
                     normloc = list(float(t) for t in re.findall(r'-?\d+\.?\d*',normstr))[-1] #reg. expres.
-                    print("WARNING: Flux normalized to ", normval, " at ", normloc)
+                    logging.warning("Flux normalized to ", normval, " at ", normloc)
                 except ValueError:
                     continue
 
@@ -56,9 +57,10 @@ def get_x_units(x_data):
     elif .1 < x_min < 1:
         x_units = u.micron
     else:
-        print("WARNING: Could not parse wavelength units from file. Assuming Angstoms")
+        logging.warning("Could not parse wavelength units from file. Assuming Angstoms")
         x_units = u.AA
-    #print("x_units: ",x_units)
+
+    #print("read x_units: ",x_units)
 
     return x_units
 
@@ -129,8 +131,9 @@ def get_y_units(info):
                     pass
     try:
         y_units
+        #print('read y_units: ', y_units)
     except NameError:
-        print("WARNING: Could not parse flux units from file. Assuming erg/cm^2/s/A")
+        logging.warning("Could not parse flux units from file. Assuming erg/cm^2/s/A")
         y_units = u.erg/(u.cm**2)/u.s/u.AA
 
     return y_units, y_factor
@@ -166,7 +169,7 @@ def read_spectra(path,spectra):
             try:
                 flux_error = np.array(data[3][0])
             except IndexError:
-                #print("WARNING: Could not parse error data")
+                #logging.warning("Could not parse error data")
                 flux_error = np.zeros(len(x_data))
     #fits standard 2:
         elif hdul[1].data is not None:
@@ -202,7 +205,7 @@ def read_spectra(path,spectra):
 
     elif spectra_file.endswith('.dat'):
         data = open(spectra_file) #read in data
-        filename = glob(os.path.join(path,'aaareadme.ctio'))
+        filename = glob(os.path.join(path,'*readme.ctio'))
         if filename:
             ctio = filename[0]
             ctiodata = open(ctio)
@@ -217,6 +220,8 @@ def read_spectra(path,spectra):
             x_units = get_x_units(x_data)
             y_units,y_factor = get_y_units(list(ctiodata.readlines()))
             obj_name = spectra.lstrip('f').replace('.dat','')
+        else:
+            raise ImportError("Could not find ctio readme file")
 
     elif spectra_file.endswith('.txt'):
 
@@ -235,18 +240,20 @@ def read_spectra(path,spectra):
         obj_name = title.lstrip('au').lstrip('0') #assuming format from NEOx Characterization page
 
     else:
-        raise ImportError("Invalid input file type")
+        raise ImportError("Invalid input file type. Input file must be '.fits', '.ascii', '.dat', or '.txt'")
 
     #eliminate negative error values
-    y_data[np.logical_not(y_data >= 0)] = np.nan
-    flux_error[np.logical_not(flux_error >= 0)] = np.nan
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        y_data[np.logical_not(y_data > 0)] = np.nan
+        flux_error[np.logical_not(flux_error > 0)] = np.nan
 
     wavelength = (x_data*x_units).to(u.AA)
     #convert all wavelengths to Angstroms because it's easy to deal with that way
     flux = y_data*y_units
 
     if not obj_name:
-        print("WARNING: Could not parse object name from file")
+        logging.warning("Could not parse object name from file")
     #else:
         #print("Object: ", obj_name)
 
@@ -287,16 +294,18 @@ def smooth(x,y):
 
     if .0035 <= noisiness < .005:
         window = 15
+        print("smoothing: yes (15)")
     elif .005 <= noisiness < .01:
         window = 20
+        print("smoothing: yes (20)")
     elif noisiness >= .01:
         window = 30
+        print("smoothing: yes(30)")
     else:
-        #print("smoothing: no")
+        print("smoothing: no")
         return x,y
 
     #smoothing
-    #print("smoothing: yes")
     return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)] #boxcar average data
 
 def normalize(x,y,wavelength=5500*u.AA):
