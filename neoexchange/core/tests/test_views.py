@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, date
 from unittest import skipIf
 import tempfile
 from glob import glob
+from math import degrees
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -41,7 +42,7 @@ from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candida
     SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.forms import EphemQuery
-#Import modules to test
+# Import modules to test
 from core.views import *
 
 # Disable logging during testing
@@ -3907,8 +3908,8 @@ class TestCreateStaticSource(TestCase):
         test_fh.close()
         self.test_flux_standards = fetch_flux_standards(test_flux_page)
 
-        test_solar_standards = os.path.join('photometrics', 'data', 'Solar_Standards')
-        self.test_solar_analogs = read_solar_standards(test_solar_standards)
+        solar_standards_test = os.path.join('photometrics', 'data', 'Solar_Standards')
+        self.test_solar_analogs = read_solar_standards(solar_standards_test)
 
         self.maxDiff = None
         self.precision = 10
@@ -3938,7 +3939,7 @@ class TestCreateStaticSource(TestCase):
         self.assertAlmostEqual(expected_src3_dec, cal_sources[2].dec, self.precision)
 
     def test_solar_standards(self):
-        expected_num = 11
+        expected_num = 46
         expected_src1_name = 'Landolt SA93-101'
         expected_src1_ra = ((((18.00/60.0)+53.0)/60.0)+1)*15.0
         expected_src1_dec = ((((25.0/60.0)+22.0)/60.0)+0.0)
@@ -3952,6 +3953,7 @@ class TestCreateStaticSource(TestCase):
         self.assertEqual(expected_src1_sptype, cal_sources[0].spectral_type)
         self.assertAlmostEqual(expected_src1_ra, cal_sources[0].ra, self.precision)
         self.assertAlmostEqual(expected_src1_dec, cal_sources[0].dec, self.precision)
+
 
 class TestFindBestFluxStandard(TestCase):
 
@@ -3971,7 +3973,6 @@ class TestFindBestFluxStandard(TestCase):
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
-
         utc_date = datetime(2017, 11, 15, 1, 10, 0)
         close_standard, close_params = find_best_flux_standard('F65', utc_date)
 
@@ -3988,7 +3989,6 @@ class TestFindBestFluxStandard(TestCase):
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
 
-
         utc_date = datetime(2017, 9, 27, 1, 10, 0)
         close_standard, close_params = find_best_flux_standard('E10', utc_date)
 
@@ -3998,6 +3998,7 @@ class TestFindBestFluxStandard(TestCase):
                 self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
             else:
                 self.assertEqual(expected_params[key], close_params[key])
+
 
 class TestFindBestSolarAnalog(TestCase):
 
@@ -4047,11 +4048,10 @@ class TestFindBestSolarAnalog(TestCase):
     def test_FTN(self):
         expected_ra = 2.7772337523336565
         expected_dec = 0.6247970652631909
-        expected_standard = StaticSource.objects.get(name='BS 4486')
-        expected_params = { 'separation_deg' : 15.019200095965104}
+        expected_standard = StaticSource.objects.get(name='35 Leo')
+        expected_params = { 'separation_deg' : 13.031726234959416}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
-
 
         utc_date = datetime(2017, 11, 15, 14, 0, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
@@ -4069,11 +4069,10 @@ class TestFindBestSolarAnalog(TestCase):
     def test_FTS(self):
         expected_ra = 4.334041503242261
         expected_dec = -0.3877173805762358
-        expected_standard = StaticSource.objects.get(name='Landolt SA107-684')
-        expected_params = { 'separation_deg' : 25.925272337905568}
+        expected_standard = StaticSource.objects.get(name='HD 140990')
+        expected_params = { 'separation_deg' : 10.838361371951908}
         # Python 3.5 dict merge; see PEP 448
         expected_params = {**expected_params, **model_to_dict(expected_standard)}
-
 
         utc_date = datetime(2014, 4, 20, 13, 30, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
@@ -4098,7 +4097,7 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp[1], self.precision)
         self.assertAlmostEqual(expected_dec, emp[2], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp[1], emp[2], min_sep=45.0)
+        close_standard, close_params = find_best_solar_analog(emp[1], emp[2], min_sep=5.0)
 
         self.assertEqual(expected_standard, close_standard)
         self.assertEqual(expected_params, close_params)
