@@ -3908,7 +3908,7 @@ class TestCreateStaticSource(TestCase):
         test_fh.close()
         self.test_flux_standards = fetch_flux_standards(test_flux_page)
 
-        solar_standards_test = os.path.join('photometrics', 'data', 'Solar_Standards')
+        solar_standards_test = os.path.join('astrometrics', 'tests', 'solar_standards_test_list.dat')
         self.test_solar_analogs = read_solar_standards(solar_standards_test)
 
         self.maxDiff = None
@@ -4009,7 +4009,7 @@ class TestFindBestSolarAnalog(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_fh = open(os.path.join('astrometrics', 'tests', 'solar_standards_test_list.dat'), 'r')
         test_flux_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
         cls.flux_standards = fetch_flux_standards(test_flux_page)
