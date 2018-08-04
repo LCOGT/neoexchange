@@ -418,6 +418,7 @@ class LookUpCalibMixin(object):
         except StaticSource.DoesNotExist:
             raise Http404("StaticSource does not exist")
 
+
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
     """
     Creates a suggested observation request, including time window and molecules
@@ -549,6 +550,7 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
         proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
         kwargs['form'].fields['proposal_code'].choices = proposal_choices
         return kwargs
+
 
 class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     """
@@ -2177,6 +2179,7 @@ def create_calib_sources(calib_sources, cal_type=StaticSource.FLUX_STANDARD):
         if created:
             num_created += 1
     return num_created
+
 
 def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards=None, debug=False):
     """Finds the "best" flux standard (closest to the zenith at the middle of

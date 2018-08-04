@@ -4,7 +4,7 @@ from .base import FunctionalTest
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from bs4 import BeautifulSoup
-#from selenium import webdriver
+# from selenium import webdriver
 from mock import patch
 
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, \
@@ -28,7 +28,7 @@ class TestCalibrationSources(FunctionalTest):
         solar_standards = { 'Landolt SA98-978' : { 'ra_rad' : radians(102.8916666666666),
                                                    'dec_rad' : radians(-0.1925),
                                                    'mag' : 10.5,
-                                                   'spec_type' : 'G2V'},
+                                                   'spectral_type' : 'G2V'},
                           }
         num_created = create_calib_sources(solar_standards, StaticSource.SOLAR_STANDARD)
 
@@ -91,8 +91,8 @@ class TestCalibrationSources(FunctionalTest):
             'Name R.A. Dec. V Mag. Spectral Type Source Type')
         testlines = ['HR9087 00:01:49.42 -03:01:39.0 5.12 B7III Spectrophotometric standard',
                      'CD-34d241 00:41:46.92 -33:39:08.5 11.23 F Spectrophotometric standard',
-                     'LTT2415 05:56:24.30 -27:51:28.8 12.21 None Spectrophotometric standard',
-                     'Landolt SA98-978 06:51:34.00 -00:11:33.0 10.50 G2V Solar spectrum standard' ]
+                     'LTT2415 05:56:24.30 -27:51:28.8 12.21 Spectrophotometric standard',
+                     'Landolt SA98-978 06:51:34.00 -00:11:33.0 10.50 G2V Solar spectrum standard']
         self.check_for_row_in_table('id_calibsources', testlines[0])
         self.check_for_row_in_table('id_calibsources', testlines[1])
         self.check_for_row_in_table('id_calibsources', testlines[2])
