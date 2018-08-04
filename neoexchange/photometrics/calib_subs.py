@@ -15,8 +15,14 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 import os
+from math import log10
 
+import numpy as np
+import astropy.units as u
 import synphot as syn
+
+from photometrics.photometry_subs import compute_ab_zpt, construct_tic_params
+from astrometrics.site_config import camtypes
 
 class BandPassSet(object):
     def __init__(self):
@@ -85,3 +91,44 @@ class BandPassSet(object):
         else:
             print("'{}' not found in filterlist {}".format(filt, self.filterlist))
         return
+
+def transform_magnitudes():
+    """Transform from GAIA-DR2 to Johnson magnitudes:
+    Johnson-Cousins relationships.
+    From Table 5.8 on
+    https://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
+
+                         V−I         (V−I)2    (V−I)3            σ
+    G−V     -0.01746    0.008092    -0.2810     0.03655         0.04670
+    GBP−V   -0.05204    0.4830      -0.2001     0.02186         0.04483
+    GRP−V    0.0002428 -0.8675      -0.02866                    0.04474
+    GBP−GRP -0.04212    1.286       -0.09494                    0.02366
+
+                        GBP−GRP     (GBP−GRP)2                   σ
+    G−V     -0.01760   -0.006860    -0.1732                     0.045858
+    G−R     -0.003226   0.3833      -0.1345                     0.04840
+    G−I      0.02085    0.7419      -0.09631                    0.04956
+    """
+
+    return
+
+def compute_mb_obs(img_header, img_table, bpset):
+
+    filt = img_header.get('filter', None)
+    exptime = img_header.get('exptime', None)
+    inst_type = camtypes.get(img_header.get('instrument', None), None)
+    if filt and exptime and inst_type:
+        tic_params = construct_tic_params(inst_type, filt)
+
+        zpt_ab = compute_ab_zpt(tic_params)
+        bp_integ = bpset.PassbandIntegral(filt)
+        time_term = 2.5 * log10(exptime)
+        bp_term = 2.5 * log10(bp_integ)
+        print(filt,exptime,inst_type, tic_params, zpt_ab, bp_integ)
+
+        mb_obs_column = []
+        for source in img_table:
+            mb_obs = -2.5 * log10(source['flux']) + time_term + bp_term + zpt_ab
+            mb_obs_column.append(mb_obs)
+        img_table['mb_obs'] = mb_obs_column * u.mag
+    return img_table

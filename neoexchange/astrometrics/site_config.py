@@ -99,3 +99,19 @@ spec_filters = [    "slit_1.2as",
                     "slit_2.0as",
                     "slit_6.0as"
                 ]
+
+onem_sinistro = '1M0-SINISTRO'
+onem_sbig = '1M0-SBIG'
+camtypes = { 'fl03' : onem_sinistro,
+             'fl04' : onem_sinistro,
+             'fl05' : onem_sinistro,
+             'fl06' : onem_sinistro,
+             'fl11' : onem_sinistro,
+             'fl12' : onem_sinistro,
+             'kb69' : onem_sbig,
+             'kb70' : onem_sbig,
+             'kb71' : onem_sbig,
+             'kb76' : onem_sbig,
+             'kb77' : onem_sbig,
+             'kb78' : onem_sbig,
+           }
