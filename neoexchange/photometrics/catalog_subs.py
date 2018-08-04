@@ -994,6 +994,7 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
     The sources in the catalog are returned as an AstroPy Table containing
     the subset of columns specified in the table mapping."""
 
+    start = time.time()
     if catalog_type == 'LCOGT':
         hdr_mapping, tbl_mapping = oracdr_catalog_mapping()
     elif catalog_type == 'FITS_LDAC':
@@ -1016,36 +1017,51 @@ def get_catalog_items(header_items, table, catalog_type='LCOGT', flag_filter=0):
     # Rename columns
     for new_name in tbl_mapping:
         new_table.rename_column(tbl_mapping[new_name], new_name)
+    end = time.time()
 
+    print("TIME: Setup {:.2f}s".format(end-start))
+
+    start = time.time()
+    # Filter table to only retain sources with flags <= flag_filter
+    if 'flags' in tbl_mapping:
+        print("Before={}".format(len(new_table)))
+        new_table = new_table[new_table['flags'] <= flag_filter]
+        print(" After={}".format(len(new_table)))
+    end = time.time()
+    print("TIME: flag filter {:.4f}s".format(end-start))
+
+    start = time.time()
     # Create a new output table (it will likely be shorter due to filtering
     # on flags value)
     out_table = Table(dtype=new_table.dtype)
 
     for source in new_table:
         source_items = {}
-        if 'flags' in tbl_mapping and source['flags'] <= flag_filter:
 
-            for item in tbl_mapping.keys():
-                value = source[item]
-                # Don't convert magnitude or magnitude error yet
-                if 'obs_mag' not in item:
-                    new_value = convert_value(item, value)
-                else:
-                    new_value = value
-                new_column = {item : new_value}
-                source_items.update(new_column)
-            # Convert flux error and flux to magnitude error and magnitude (needs to be this order as
-            # the flux is needed for the magnitude error.
-            # If a good zeropoint is available from the header, add that too.
-            source_items['obs_mag_err'] = convert_value('obs_mag_err', (source_items['obs_mag_err'], source_items['obs_mag']))
-            source_items['obs_mag'] = convert_value('obs_mag', source_items['obs_mag'])
-            # Convert MU_THRESHOLD (in magnitudes per sq. arcsec) into a THRESHOLD
-            # in counts
-            if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
-                source_items['threshold'] = convert_value('mu_threshold', (source_items['threshold'], header_items['pixel_scale']))
-            if header_items.get('zeropoint', -99) != -99:
-                source_items['obs_mag'] += header_items['zeropoint']
-            out_table.add_row(source_items)
+        for item in tbl_mapping.keys():
+            value = source[item]
+            # Don't convert magnitude or magnitude error yet
+            if 'obs_mag' not in item:
+                new_value = convert_value(item, value)
+            else:
+                new_value = value
+            new_column = {item : new_value}
+            source_items.update(new_column)
+        # Convert flux error and flux to magnitude error and magnitude (needs to be this order as
+        # the flux is needed for the magnitude error.
+        # If a good zeropoint is available from the header, add that too.
+        source_items['obs_mag_err'] = convert_value('obs_mag_err', (source_items['obs_mag_err'], source_items['obs_mag']))
+        source_items['obs_mag'] = convert_value('obs_mag', source_items['obs_mag'])
+        # Convert MU_THRESHOLD (in magnitudes per sq. arcsec) into a THRESHOLD
+        # in counts
+        if 'threshold' in tbl_mapping.keys() and 'MU_' in tbl_mapping['threshold'].upper():
+            source_items['threshold'] = convert_value('mu_threshold', (source_items['threshold'], header_items['pixel_scale']))
+        if header_items.get('zeropoint', -99) != -99:
+            source_items['obs_mag'] += header_items['zeropoint']
+        out_table.add_row(source_items)
+    end = time.time()
+
+    print("TIME: Filter table {:.2f}s".format(end-start))
     return out_table
 
 
@@ -1568,11 +1584,11 @@ def get_fits_files(fits_path):
     fits_path = os.path.join(fits_path, '')
     if os.path.isdir(fits_path):
 
-        fpacked_files = sorted(glob(fits_path + '*e91.fits.fz') + glob(fits_path + '*e11.fits.fz'))
+        fpacked_files = sorted(glob(fits_path + '*91.fits.fz') + glob(fits_path + '*11.fits.fz'))
         for fpack_file in fpacked_files:
             funpack_fits_file(fpack_file)
 
-        sorted_fits_files = sorted(glob(fits_path + '*e91.fits') + glob(fits_path + '*e11.fits'))
+        sorted_fits_files = sorted(glob(fits_path + '*91.fits') + glob(fits_path + '*11.fits'))
 
     else:
         logger.error("Not a directory")
