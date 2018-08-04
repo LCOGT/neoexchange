@@ -4009,13 +4009,13 @@ class TestFindBestSolarAnalog(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        test_fh = open(os.path.join('astrometrics', 'tests', 'solar_standards_test_list.dat'), 'r')
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
         test_flux_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
         cls.flux_standards = fetch_flux_standards(test_flux_page)
         cls.num_flux_created = create_calib_sources(cls.flux_standards)
 
-        test_file = os.path.join('photometrics', 'data', 'Solar_Standards')
+        test_file = os.path.join('astrometrics', 'tests', 'solar_standards_test_list.dat')
         cls.test_solar_analogs = read_solar_standards(test_file)
         cls.num_solar_created = create_calib_sources(cls.test_solar_analogs, cal_type=StaticSource.SOLAR_STANDARD)
         params = {
