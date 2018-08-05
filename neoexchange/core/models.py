@@ -266,7 +266,7 @@ class Body(models.Model):
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
 
-                emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+                emp_line, mag_dot, separation, beta = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
                 vmag = emp_line[3]
 
                 # Eliminate bad magnitudes
@@ -353,6 +353,16 @@ class Body(models.Model):
         # Catch the case where there is no Epoch
         else:
             return None
+
+    def compute_body_phase_angle(self, d=datetime.utcnow(), sitecode='500'):
+
+        if self.epochofel:
+            emp_line = compute_ephem(d, self, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+            # Return just phase angle
+            return degrees(emp_line[3])
+        else:
+            # Catch the case where there is no Epoch
+            return False
 
     def get_block_info(self):
         blocks = Block.objects.filter(body=self.id)

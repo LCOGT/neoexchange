@@ -27,6 +27,7 @@ except:
 from numpy import array, concatenate, zeros
 import copy
 from itertools import groupby
+from django.forms import model_to_dict
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -55,16 +56,21 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     return beta
 
 
-def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False, detailed=False):
+def compute_ephem(d, orbelems_or_body, sitecode, dbg=False, perturb=True, display=False, detailed=False):
     """Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
-    from a dictionary of orbital elements.
+    from a dictionary of orbital elements or Body instance.
     """
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
 
 # Compute MJD for UTC
     mjd_utc = datetime2mjd_utc(d)
+
+    if hasattr(orbelems_or_body, 'name'):
+        orbelems = model_to_dict(orbelems_or_body)
+    else:
+        orbelems = orbelems_or_body
 
 # Compute epoch of the elements as a MJD
     try:
@@ -363,7 +369,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
 #               0   1   2   3       4           5       6       7
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
     if detailed:
-        return emp_line, mag_dot, separation
+        return emp_line, mag_dot, separation, beta
 
     return emp_line
 
