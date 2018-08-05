@@ -251,22 +251,23 @@ class TestBody(TestCase):
         self.assertEqual(obs_window[0], expected_start)
         self.assertEqual(obs_window[1], expected_end)
 
-    def compute_body_phase_angle(self):
+    def test_compute_body_phase_angle(self):
         test_body = self.body
-        test_body.epochofel = datetime(2018,3,23)
-        test_body.orbinc = 6.36167
-        test_body.longascnode = 168.53858
-        test_body.argofperih = 248.92775
-        test_body.eccentricity = 0.1141639
-        test_body.meandist = 2.429476
-        test_body.meananom = 65.7164
+        # Values from HORIZONS
+        test_body.epochofel = datetime(2013,4, 1)
+        test_body.orbinc = 6.358274315152769
+        test_body.longascnode = 168.5860188488529
+        test_body.argofperih = 249.4666213337869
+        test_body.eccentricity = 0.1138098154416288
+        test_body.meandist = 2.429448931786747
+        test_body.meananom = 312.3257059112448
         test_body.save()
 
-        expected_phase_angle = 42
+        expected_phase_angle = 22.9803
 
-        phase_angle = test_body.compute_body_phase_angle(datetime(2016, 5, 22, 9, 48))
+        phase_angle = test_body.compute_body_phase_angle(datetime(2016, 5, 22, 9, 48), 'V37')
 
-        self.assertAlmostEqual(expected_phase_angle, phase_angle, 4)
+        self.assertAlmostEqual(expected_phase_angle, phase_angle, 2)
 
 @patch('core.models.datetime', MockDateTime)
 class TestComputeFOM(TestCase):
