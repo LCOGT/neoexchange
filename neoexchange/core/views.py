@@ -1636,6 +1636,29 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     return True
 
 
+def determine_phase_angles(date_start, date_end, bodies=None):
+    """Determine the range of phase angles that have been seen for a group
+    of bodies between <date_start> and <date_end>. A list of the Bodies
+    and the minimum and maximum phase angles seen are returned"""
+
+    bodies = Body.objects.all() if bodies is None else bodies
+
+    body_phase_angles = []
+    for body in bodies.order_by('name'):
+        blocks = Block.objects.filter(body=body, block_start__gte=date_start, block_end__lte=date_end, num_observed__gte=1).order_by('block_start')
+        if blocks.count() > 1:
+            frames = Frame.objects.filter(block__body=body, block__in=blocks, frametype=Frame.BANZAI_RED_FRAMETYPE)
+            phase_angles = np.zeros(frames.count())
+            for i, frame in enumerate(frames):
+                phase_angle = body.compute_body_phase_angle(frame.midpoint, frame.sitecode)
+                phase_angles[i] = phase_angle
+
+            body_date_start = datetime.strftime(frames.earliest('midpoint').midpoint, '%Y-%m-%d %H:%M'  )
+            body_date_end = datetime.strftime(frames.latest('midpoint').midpoint, '%Y-%m-%d %H:%M' )
+            print("{:10s} {: 2d} {} {} {: 3d} {:5.2f}--{:5.2f}".format(body.current_name(), blocks.count(), body_date_start, body_date_end, frames.count(), np.min(phase_angles), np.max(phase_angles)))
+            body_phase_angles.append((body, np.min(phase_angles), np.max(phase_angles)))
+    return body_phase_angles
+
 def create_source_measurement(obs_lines, block=None):
     measures = []
     if type(obs_lines) != list:
