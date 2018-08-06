@@ -93,7 +93,11 @@ class BandPassSet(object):
         return
 
 def transform_magnitudes(mag_in, color, desired_filter):
-    """Transform from GAIA-DR2 to Johnson magnitudes:
+    """Transform from GAIA-DR2 to Johnson or SDSS magnitudes:
+    For V, <color> should be (V-I),
+        gp, <color> should be (g-i),
+        rp, <color> should be (r-i),
+        ip, <color> should be (r-i)
     Johnson-Cousins relationships.
     From Table 5.8 on
     https://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
@@ -108,10 +112,28 @@ def transform_magnitudes(mag_in, color, desired_filter):
     G−V     -0.01760   -0.006860    -0.1732                     0.045858
     G−R     -0.003226   0.3833      -0.1345                     0.04840
     G−I      0.02085    0.7419      -0.09631                    0.04956
+
+                        g−i         (g−i)2      (g−i)3           σ
+    G−g     -0.074189  -0.51409    -0.080607   0.0016001        0.046848
+                        g−r         (g−r)2      (g−r)3           σ
+    G−g     -0.038025  -0.76988    -0.1931     0.0060376        0.065837
+                        r−i         (r−i)2      (r−i)3           σ
+    G−r      0.0014891  0.36291    -0.81282    0.14711          0.043634
+    G−i     -0.007407   1.4337     -0.95312    0.22049          0.041165
     """
 
     if desired_filter == 'V':
         mag_out = mag_in + 0.01746 - (0.008092*color) + (0.2810*color**2) - (0.03655*color**3)
+    elif desired_filter == 'gp':
+        diff = -0.074189 - (0.51409*color) - (0.080607*color**2) + (0.0016001*color**3)
+        mag_out = mag_in - diff
+    elif desired_filter == 'rp':
+        diff = 0.0014891 + (0.36291*color) - (0.81282*color**2) + (0.14711*color**3)
+        mag_out = mag_in - diff
+    elif desired_filter == 'ip':
+        diff = -0.007407 + (1.4337*color) - (0.95312*color**2) + (0.22049*color**3)
+        mag_out = mag_in - diff
+
     return mag_out
 
 def compute_mb_obs(img_header, img_table, bpset):
