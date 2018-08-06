@@ -92,7 +92,7 @@ class BandPassSet(object):
             print("'{}' not found in filterlist {}".format(filt, self.filterlist))
         return
 
-def transform_magnitudes():
+def transform_magnitudes(mag_in, color, desired_filter):
     """Transform from GAIA-DR2 to Johnson magnitudes:
     Johnson-Cousins relationships.
     From Table 5.8 on
@@ -110,7 +110,9 @@ def transform_magnitudes():
     G−I      0.02085    0.7419      -0.09631                    0.04956
     """
 
-    return
+    if desired_filter == 'V':
+        mag_out = mag_in + 0.01746 - (0.008092*color) + (0.2810*color**2) - (0.03655*color**3)
+    return mag_out
 
 def compute_mb_obs(img_header, img_table, bpset):
 
