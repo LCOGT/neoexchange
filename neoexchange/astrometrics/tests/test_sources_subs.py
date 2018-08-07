@@ -822,52 +822,6 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(molecules[6].get('exposure_count'), expected_exp_count)
             self.assertEqual(molecules[6].get('filter'), expected_filter)
 
-    def test_spectro_with_solar_analog(self):
-
-        utc_date = datetime(2018, 5, 11, 0)
-        params = {  'proposal_id' : 'LCOEngineering',
-                    'user_id'  : 'bsimpson',
-                    'spectroscopy' : True,
-                    'calibs'     : 'before',
-                    'exp_count'  : 1,
-                    'exp_time'   : 300.0,
-                    'instrument_code' : 'F65-FLOYDS',
-                    'site_code' : 'F65',
-                    'filter_pattern' : 'slit_6.0as',
-                    'group_id' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
-
-                    'start_time' :  utc_date + timedelta(hours=5),
-                    'end_time'   :  utc_date + timedelta(hours=15),
-                    'solar_analog' : True,
-                    'calibsource' : { 'name' : 'SA107-684', 'ra_deg' : 234.3254167, 'dec_deg' : -0.163889},
-                  }
-        expected_num_requests = 2
-        expected_operator = 'MANY'
-        expected_molecule_num = 3
-        expected_exp_count = 1
-        expected_ast_exptime = 300.0
-        expected_cal_exptime = 60.0
-        expected_filter = 'slit_6.0as'
-        expected_groupid = params['group_id'] + '+solstd'
-
-        user_request = make_userrequest(self.body_elements, params)
-        requests = user_request['requests']
-        self.assertEqual(expected_num_requests, len(requests))
-        self.assertEqual(expected_operator, user_request['operator'])
-        self.assertEqual(expected_groupid, user_request['group_id'])
-
-        ast_molecules = user_request['requests'][0]['molecules']
-        self.assertEqual(len(ast_molecules), expected_molecule_num)
-        self.assertEqual(ast_molecules[2]['exposure_count'], expected_exp_count)
-        self.assertEqual(ast_molecules[2]['exposure_time'], expected_ast_exptime)
-        self.assertEqual(ast_molecules[2]['spectra_slit'], expected_filter)
-
-        cal_molecules = user_request['requests'][1]['molecules']
-        self.assertEqual(len(cal_molecules), expected_molecule_num)
-        self.assertEqual(cal_molecules[2]['exposure_count'], expected_exp_count)
-        self.assertEqual(cal_molecules[2]['exposure_time'], expected_cal_exptime)
-        self.assertEqual(cal_molecules[2]['spectra_slit'], expected_filter)
-
 
 class TestFetchFilterList(TestCase):
     """Unit test for getting current filters from configdb"""
@@ -2996,6 +2950,21 @@ class TestMakeMolecules(TestCase):
         self.assertEqual(expected_num_molecules, len(molecules))
         self.assertEqual(expected_type, molecules[0]['type'])
         self.assertEqual(expected_slit, molecules[0]['spectra_slit'])
+
+    def test_2m_spectroscopy_nocalibs_1p6as_slit(self):
+
+        expected_num_molecules = 1
+        expected_type = 'SPECTRUM'
+        expected_slit = 'slit_1.6as'
+
+        params_2m0_spectroscopy = self.params_2m0_spectroscopy
+        params_2m0_spectroscopy['filter_pattern'] = 'slit_1.6as'
+        molecules = make_molecules(params_2m0_spectroscopy)
+
+        self.assertEqual(expected_num_molecules, len(molecules))
+        self.assertEqual(expected_type, molecules[0]['type'])
+        self.assertEqual(expected_slit, molecules[0]['spectra_slit'])
+
 
 class TestMakeCadence(TestCase):
 
