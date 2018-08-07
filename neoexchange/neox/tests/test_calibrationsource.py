@@ -123,7 +123,7 @@ class TestCalibrationSources(FunctionalTest):
         # He decides he would like to schedule a standard on FTN
         # He sees a Schedule Calibration Observations button
         link = self.browser.find_element_by_id('schedule-calib-ftn-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'F65-FLOYDS'}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'F65-FLOYDS', 'pk': '-'}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -188,7 +188,7 @@ class TestCalibrationSources(FunctionalTest):
         # He decides he would like to schedule a standard on FTS
         # He sees a Schedule Calibration Observations button
         link = self.browser.find_element_by_id('schedule-calib-fts-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'E10-FLOYDS'}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'E10-FLOYDS', 'pk': '-'}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -216,6 +216,108 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn('NEOx calibration scheduling | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn("CD-34d241: Confirm Scheduling", header_text)
+        filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
+        self.assertIn("slit_6.0as", filter_pattern)
+        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
+        self.assertIn('180.0 secs', exp_length)
+        # Liking the selected star parameters, he clicks Submit and is returned to the
+        # home page
+        button = self.browser.find_element_by_id('id_submit_button')
+        with self.wait_for_page_load(timeout=10):
+            button.click()
+
+        target_url = "{0}{1}".format(self.live_server_url, reverse('home'))
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # Satisfied, he goes to find a currywurst
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
+    def test_can_schedule_specific_calibsource(self):
+        self.test_login()
+        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
+
+        # A new user, Daniel, goes to a hidden calibration page on the site
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
+        self.browser.get(target_url)
+        actual_url = self.browser.current_url
+        self.assertEqual(actual_url, target_url)
+
+        # He notices the page title has the name of the site and the header
+        # mentions calibrations
+        self.assertIn('Calibration Sources | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn('Calibration Sources', header_text)
+
+        # He decides he would like to schedule a Solar Analog
+        # He sees a Solar Analog Only button
+        link = self.browser.find_element_by_id('show-solar-standards')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('solarstandard-view'))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        table_text = self.browser.find_element_by_id('id_calibsources').text
+        self.assertIn('Spectrophotometric', table_text)
+
+        # He clicks the button to remove non-solar statndards
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        table_text = self.browser.find_element_by_id('id_calibsources').text
+        self.assertNotIn('Spectrophotometric', table_text)
+
+        # He picks a star
+        link = self.browser.find_element_by_link_text('Landolt SA98-978')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': 4}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to visit the Solar Standard detail page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        # He sees the detail page for his standard
+        table_text = self.browser.find_element_by_id('id_staticsource_detail').text
+        self.assertIn('06:51:34.00', table_text)
+        self.assertIn('G2V', table_text)
+        self.assertIn('Solar spectrum standard', self.browser.find_element_by_class_name("section-title").text)
+
+        # He schedules a spectra
+        link = self.browser.find_element_by_id('schedule-spectro-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'E10-FLOYDS', 'pk': '4'}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to schedule a spectra
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        # He sees the scheduling parameters are displayed
+        self.assertIn('NEOx spectroscopy scheduling | LCO NEOx', self.browser.title)
+        self.assertIn("E10-FLOYDS", self.browser.current_url)
+        header_text = self.browser.find_element_by_class_name('section-title').text
+        self.assertIn('Parameters for: Landolt SA98-978', header_text)
+        self.assertIn("06:51:34.00", header_text)
+        self.assertIn("-00:11:33.0", header_text)
+        self.assertIn('V=10.5', header_text)
+
+        # Liking the selected star, he clicks Verify and is taken to a confirmation
+        # page
+        button = self.browser.find_element_by_id('verify-scheduling')
+        with self.wait_for_page_load(timeout=10):
+            button.click()
+
+        self.assertIn('NEOx calibration scheduling | LCO NEOx', self.browser.title)
+        header_text = self.browser.find_element_by_class_name('headingleft').text
+        self.assertIn("Landolt SA98-978: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
         exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
