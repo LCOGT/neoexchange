@@ -940,6 +940,28 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
 
+class CalibSpectroFeasibility(LookUpCalibMixin, FormView):
+
+    template_name = 'core/feasibility.html'
+    form_class = SpectroFeasibilityForm
+
+    def get(self, request, *args, **kwargs):
+        form = SpectroFeasibilityForm(body=self.target, initial={'exp_length' : 180.0})
+        return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def form_valid(self, form, request):
+        data = feasibility_check(form.cleaned_data, self.target)
+        new_form = SpectroFeasibilityForm(data, body=self.target)
+        return render(request, 'core/feasibility.html', {'form': new_form, 'data': data, 'body': self.target})
+
+    def post(self, request, *args, **kwargs):
+        form = SpectroFeasibilityForm(request.POST, body=self.target)
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+
 def feasibility_check(data, body):
     """Calculate spectroscopic feasibility
     """

@@ -27,7 +27,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
-    make_standards_plot, plotstandards
+    make_standards_plot, plotstandards, CalibSpectroFeasibility
 from analyser.views import BlockFramesView, ProcessCandidates
 
 
@@ -62,6 +62,7 @@ urlpatterns = [
     url(r'^calibsources/(?P<pk>\d+)/$', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
     url(r'^characterization/$', characterization, name='characterization'),
     url(r'^feasibility/(?P<pk>\d+)/$', SpectroFeasibility.as_view(), name='feasibility'),
+    url(r'^feasibility/calib/(?P<pk>\d+)/$', CalibSpectroFeasibility.as_view(), name='feasibility-calib'),
     url(r'^schedule/(?P<pk>\d+)/confirm/$', ScheduleSubmit.as_view(), name='schedule-confirm'),
     url(r'^schedule/(?P<pk>\d+)/$', ScheduleParameters.as_view(), name='schedule-body'),
     url(r'^schedule/(?P<pk>\d+)/cadence/$', ScheduleParametersCadence.as_view(), name='schedule-body-cadence'),

@@ -22,7 +22,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
-from .models import Body, Proposal, Block
+from .models import Body, Proposal, Block, StaticSource
 
 logger = logging.getLogger(__name__)
 
@@ -264,10 +264,12 @@ class SpectroFeasibilityForm(forms.Form):
         sfu_values = fetch_sfu()
         body = kwargs.pop('body', None)
         mag = None
-        if body:
+        if body and isinstance(body, Body):
             emp = body.compute_position()
             if emp is not False:
                 mag = round(emp[2], 1)
+        elif body and isinstance(body, StaticSource):
+            mag = body.vmag
         super(SpectroFeasibilityForm, self).__init__(*args, **kwargs)
         self.fields['magnitude'].initial = mag
         # Set default SFU value of 70; replace with value from fetch if it isn't None

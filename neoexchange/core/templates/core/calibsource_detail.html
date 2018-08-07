@@ -53,7 +53,7 @@
                                 </tbody>
                             </table>
 
-                            <a class="button button-primary" href="{% url 'feasibility' staticsource.id %}" id="check-feasibility">Check Spectroscopic Feasibility</a>
+                            <a class="button button-primary" href="{% url 'feasibility-calib' staticsource.id %}" id="check-feasibility">Check Spectroscopic Feasibility</a>
                             <h5  class="section-title">Recent Blocks Scheduled</h5>
                             <ul class="block-status">
                                 {% for b in blocks %}
