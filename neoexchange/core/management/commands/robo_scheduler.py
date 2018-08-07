@@ -6,21 +6,8 @@ from django.core.management.base import BaseCommand, CommandError
 from core.models import Body, Block
 from core.views import schedule_check, schedule_submit, record_block
 from astrometrics.ephem_subs import format_emp_line, determine_sites_to_schedule, get_sitepos,\
-    moon_ra_dec
+    moon_ra_dec, compute_moon_sep
 from astrometrics.sources_subs import get_site_status
-from pyslalib.slalib import sla_dsep
-
-def compute_moon_sep(date, object_ra, object_dec, site='500'):
-    '''Compute the separation between an object at <object_ra>, <object_dec> and the Moon
-    at time <date> from the specified [site] (defaults to geocenter if not specified.
-    The separation is returned in degrees.'''
-
-    site_name, site_long, site_lat, site_hgt = get_sitepos(site)
-    moon_ra, moon_dec, diam = moon_ra_dec(date, site_long, site_lat, site_hgt)
-    moon_obj_sep = sla_dsep(object_ra, object_dec, moon_ra, moon_dec)
-    moon_obj_sep = degrees(moon_obj_sep)
-
-    return moon_obj_sep
 
 def filter_bodies(bodies, obs_date = datetime.utcnow(), bright_limit = 19.0, faint_limit = 22.0, spd_south_cut=95.0, speed_cutoff=5.0, moon_sep_cutoff=30.0, too=False):
     north_1m0_list = []

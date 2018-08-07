@@ -1298,6 +1298,17 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
 
     return mphase
 
+def compute_moon_sep(date, object_ra, object_dec, site='500'):
+    '''Compute the separation between an object at <object_ra>, <object_dec> and the Moon
+    at time <date> from the specified [site] (defaults to geocenter if not specified.
+    The separation is returned in degrees.'''
+
+    site_name, site_long, site_lat, site_hgt = get_sitepos(site)
+    moon_ra, moon_dec, diam = moon_ra_dec(date, site_long, site_lat, site_hgt)
+    moon_obj_sep = S.sla_dsep(object_ra, object_dec, moon_ra, moon_dec)
+    moon_obj_sep = degrees(moon_obj_sep)
+
+    return moon_obj_sep
 
 def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec, dbg=False):
 
