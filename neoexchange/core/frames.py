@@ -213,7 +213,7 @@ def frame_params_from_log(params, block):
         else:
             frame_type = Frame.STACK_FRAMETYPE
     else:
-        if params.get('obs_type', None) == 'S':
+        if params.get('obs_type', None) == 'S' or params.get('obs_type', None) == 's':
             frame_type = Frame.SATELLITE_FRAMETYPE
         else:
             frame_type = Frame.NONLCO_FRAMETYPE

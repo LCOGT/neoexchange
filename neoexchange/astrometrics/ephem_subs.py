@@ -55,6 +55,53 @@ def compute_phase_angle(r, delta, es_Rsq, dbg=False):
     return beta
 
 
+def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
+    """
+    Convert Orbital elements into radians.
+    Return Perturbed elements if requested.
+    """
+
+    if comet is True:
+        jform = 3
+        p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
+                      'Inc' : radians(orbelems['orbinc']),
+                      'ArgPeri' : radians(orbelems['argofperih']),
+                      'SemiAxisOrQ' : orbelems['perihdist'],
+                      'Ecc' : orbelems['eccentricity'],
+                     }
+        orbelems['meananom'] = 0.0
+        aorq = orbelems['perihdist']
+        epoch_mjd = datetime2mjd_utc(orbelems['epochofperih'])
+    else:
+        jform = 2
+        p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
+                      'Inc' : radians(orbelems['orbinc']),
+                      'ArgPeri' : radians(orbelems['argofperih']),
+                      'SemiAxisOrQ' : orbelems['meandist'],
+                      'Ecc' : orbelems['eccentricity']
+                     }
+        try:
+            p_orbelems['MeanAnom'] = radians(orbelems['meananom'])
+        except TypeError:
+            p_orbelems['MeanAnom'] = 0.0
+            orbelems['meananom'] = 0.0
+        try:
+            aorq = float(orbelems['meandist'])
+        except TypeError:
+            aorq = 0.0
+    p_orbelems['H'] = orbelems['abs_mag']
+    p_orbelems['G'] = orbelems['slope']
+    if perturb is True:
+        (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
+         p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd,
+                                                                                                  mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
+                                                                                                  radians(orbelems['argofperih']), aorq, orbelems['eccentricity'], radians(orbelems['meananom']))
+    else:
+        p_epoch_mjd = epoch_mjd
+        j = 0
+    return p_orbelems, p_epoch_mjd, j
+
+
 def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False, detailed=False):
     """Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
@@ -73,18 +120,18 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         epochofel = orbelems['epochofel']
     epoch_mjd = datetime2mjd_utc(epochofel)
 
-    logger.debug('Element Epoch= %.1f' % (epoch_mjd))
-    logger.debug('MJD(UTC) =   %.15f' % (mjd_utc))
+    logger.debug('Element Epoch= %.1f' % epoch_mjd)
+    logger.debug('MJD(UTC) =   %.15f' % mjd_utc)
     logger.debug(' JD(UTC) = %.8f' % (mjd_utc + 2400000.5))
 
 # Convert MJD(UTC) to MJD(TT)
     mjd_tt = mjd_utc2mjd_tt(mjd_utc)
-    logger.debug('MJD(TT)  =   %.15f' % (mjd_tt))
+    logger.debug('MJD(TT)  =   %.15f' % mjd_tt)
 
 # Compute UT1-UTC
 
     dut = ut1_minus_utc(mjd_utc)
-    logger.debug("UT1-UTC  = %.15f" % (dut))
+    logger.debug("UT1-UTC  = %.15f" % dut)
 
 # Obtain precession-nutation 3x3 rotation matrix
 # Should really be TDB but "TT will do" says The Wallace...
@@ -100,7 +147,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
     logger.debug("Site code/name, lat/long/height=%s %s %f %f %.1f" % (sitecode, site_name, site_long, site_lat, site_hgt))
 
-    if site_name == '?'  or sitecode == '500':
+    if site_name == '?' or sitecode == '500':
         if site_name == '?':
             logger.warning("WARN: No site co-ordinates found, computing for geocenter")
         pvobs = zeros(6)
@@ -161,44 +208,8 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         comet = True
         jform = 3
 
-# Perturb elements
-
-    if comet is True:
-        p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
-                      'Inc' : radians(orbelems['orbinc']),
-                      'ArgPeri' : radians(orbelems['argofperih']),
-                      'SemiAxisOrQ' : orbelems['perihdist'],
-                      'Ecc' : orbelems['eccentricity'],
-                     }
-        orbelems['meananom'] = 0.0
-        aorq = orbelems['perihdist']
-        epoch_mjd = datetime2mjd_utc(orbelems['epochofperih'])
-    else:
-        p_orbelems = {'LongNode' : radians(orbelems['longascnode']),
-                      'Inc' : radians(orbelems['orbinc']),
-                      'ArgPeri' : radians(orbelems['argofperih']),
-                      'SemiAxisOrQ' : orbelems['meandist'],
-                      'Ecc' : orbelems['eccentricity']
-                     }
-        try:
-            p_orbelems['MeanAnom'] = radians(orbelems['meananom'])
-        except TypeError:
-            p_orbelems['MeanAnom'] = 0.0
-            orbelems['meananom'] = 0.0
-        try:
-            aorq = float(orbelems['meandist'])
-        except TypeError:
-            aorq = 0.0
-    p_orbelems['H'] = orbelems['abs_mag']
-    p_orbelems['G'] = orbelems['slope']
-    if perturb is True:
-        (p_epoch_mjd, p_orbelems['Inc'], p_orbelems['LongNode'], p_orbelems['ArgPeri'],
-                p_orbelems['SemiAxisOrQ'], p_orbelems['Ecc'], p_orbelems['MeanAnom'], j) = S.sla_pertel( jform, epoch_mjd, mjd_tt, epoch_mjd, radians(orbelems['orbinc']), radians(orbelems['longascnode']),
-                    radians(orbelems['argofperih']), aorq, orbelems['eccentricity'],
-                    radians(orbelems['meananom']))
-    else:
-        p_epoch_mjd = epoch_mjd
-        j = 0
+    # Convert orbital elements into radians and perturb if requested
+    p_orbelems, p_epoch_mjd, j = perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb)
 
     if j != 0:
         logger.error("Perturbing error=%s" % j)
@@ -410,7 +421,7 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
 
 def compute_sky_motion(sky_vel, delta, dbg=True):
     """Computes the total motion and Position Angle, along with the RA, Dec
-    components, of an asteroids' sky motion. Motion is in "/min, PA in degrees.
+    components, of an asteroids' sky motion. Motion is in "/min, PA in degrees East of North.
 
     Adapted from the Bill Gray/find_orb routine of the same name."""
 
@@ -521,6 +532,83 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
         emp.append(format_emp_line(line, site_code))
 
     return emp
+
+
+def read_findorb_ephem(empfile):
+    """Routine to read find_orb produced ephemeris.emp files from non-interactive
+    mode.
+    Returns a dictionary containing the ephemeris details (object id, time system,
+    motion rate units, sitecode) and a list of tuples containing:
+    Datetime, RA, Dec, magnitude, rate, altitude"""
+
+    emp = []
+    emp_fh = open(empfile, 'r')
+    uncertain_mag = False
+    for line in emp_fh.readlines():
+        # Skip blank lines first off all
+        if len(line.lstrip()) != 0:
+            if line.lstrip()[0] == '#' :
+                # print(line.lstrip())
+                # First line contains object id and the sitecode the ephemeris is for. Fetch...
+                chunks = line.lstrip()[1:].split()
+                if len(chunks) == 3:
+                    ephem_info = {'obj_id' : chunks[0], 'emp_sitecode' : chunks[2]}
+                elif len(chunks) == 4:
+                    ephem_info = {'obj_id' : chunks[0] + chunks[1],
+                                   'emp_sitecode' : chunks[3]}
+                elif 6 <= len(chunks) <= 9:
+                    object_name = chunks[-2] + chunks[-1]
+                    if ' = ' in line:
+                        object_name = chunks[-4].replace('(', '').replace(')', '')
+                    ephem_info = {'emp_sitecode' : chunks[0].replace('(', '').replace(')', ''),
+                                   'obj_id' : object_name}
+                else:
+                    logger.warning("Unexpected number of chunks in header line1 ({:d})".format(len(chunks)))
+                    return None, None
+            elif line.lstrip()[0:4] == 'Date':
+                # next line has the timescale of the ephemeris and the units of the motion
+                # rate. We *hope* it's always UTC and arcmin/hr but grab and check anyway...
+                chunks = line.strip().split()
+                if len(chunks) != 13 and len(chunks) != 14 :
+                    logger.warning("Unexpected number of chunks in header line2 ({:d})".format(len(chunks)))
+                    return None, None
+                ephem_info2 = {'emp_timesys' : chunks[1], 'emp_rateunits' : chunks[9]}
+            elif line.lstrip()[0:4] == '----':
+                pass
+            else:
+                # Read main ephemeris
+                line = line.strip()
+                chunks = line.split()
+                emp_datetime = datetime(int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3][0:2]), int(chunks[3][3:5]))
+                emp_ra, status = S.sla_dtf2r(chunks[4], chunks[5], chunks[6])
+                if status != 0:
+                    logger.error("Error converting RA value")
+                decstr = ' '.join([chunks[x] for x in range(7, 10)])
+                nstrt = 1
+                nstrt, emp_dec, status = S.sla_dafin(decstr, nstrt)
+                if status != 0:
+                    logger.error("Error converting Dec value")
+                    logger.error("Decstr=", decstr)
+                    logger.error(chunks)
+                if '?' in chunks[13]:
+                    # Phase angle >120deg, magnitude uncertain
+                    if uncertain_mag is False:
+                        logger.warning("Phase angle >120deg, magnitude uncertain")
+                    chunks[13] = chunks[13].replace('?', '')
+                    uncertain_mag = True
+                emp_mag = float(chunks[13])
+                emp_rate = float(chunks[14])
+                emp_alt = float(chunks[16])
+                emp_line = (emp_datetime, emp_ra, emp_dec, emp_mag, emp_rate, emp_alt)
+                # print(emp_line)
+                emp.append(emp_line)
+    # Done, close file
+    emp_fh.close()
+
+    # Join ephem_info dictionaries together
+    ephem_info.update(ephem_info2)
+
+    return ephem_info, emp
 
 
 def make_unit_vector(angle):

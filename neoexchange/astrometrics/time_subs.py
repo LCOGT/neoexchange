@@ -229,6 +229,18 @@ def jd_utc2datetime(jd):
     return dt
 
 
+def mjd_utc2datetime(mjd):
+    """Converts a passed Modified Julian date to a Python datetime object. 'None' is
+    returned if the conversion was not possible."""
+
+    year, month, day, frac, status = S.sla_djcl(mjd)
+    if status != 0:
+        return None
+    sign, hms = S.sla_dd2tf(0, frac)
+    dt = datetime(year, month, day, hms[0], hms[1], hms[2])
+    return dt
+
+
 def datetime2mjd_utc(d):
     """Converts a passed datetime object in UTC to the equivalent Modified Julian
     Date (MJD), which is returned"""
