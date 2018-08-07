@@ -309,6 +309,7 @@ class StaticSourceView(ListView):
     context_object_name = "calibsources"
     paginate_by = 20
 
+
 class StaticSourceDetailView(DetailView):
     template_name = 'core/calibsource_detail.html'
     model = StaticSource
@@ -317,6 +318,7 @@ class StaticSourceDetailView(DetailView):
         context = super(StaticSourceDetailView, self).get_context_data(**kwargs)
         context['blocks'] = Block.objects.filter(calibsource=self.object).order_by('block_start')
         return context
+
 
 def generate_new_candidate_id(prefix='LNX'):
 
@@ -411,8 +413,12 @@ class LookUpCalibMixin(object):
     """
     def dispatch(self, request, *args, **kwargs):
         try:
-            sitecode = kwargs['instrument_code'][0:3]
-            target, target_params = find_best_flux_standard(sitecode)
+            calib_id = kwargs['pk']
+            if calib_id == '-':
+                sitecode = kwargs['instrument_code'][0:3]
+                target, target_params = find_best_flux_standard(sitecode)
+            else:
+                target = StaticSource.objects.get(pk=calib_id)
             self.target = target
             return super(LookUpCalibMixin, self).dispatch(request, *args, **kwargs)
         except StaticSource.DoesNotExist:
@@ -533,7 +539,7 @@ class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
     def post(self, request, *args, **kwargs):
         form = ScheduleSpectraForm(request.POST)
         if form.is_valid():
-            return self.form_valid(form,request)
+            return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, body=self.target))
 
@@ -2222,6 +2228,7 @@ def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards
         close_params = model_to_dict(close_standard)
         close_params['separation_rad'] = min_sep
     return close_standard, close_params
+
 
 def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=None, debug=False):
     """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
