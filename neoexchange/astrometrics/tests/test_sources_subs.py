@@ -481,7 +481,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_spectra_for_ogg(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820, 'target': {'type': 'NON_SIDEREAL'}}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
