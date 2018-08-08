@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import HourLocator, DateFormatter
 
 from core.models import Block, Frame, SuperBlock, SourceMeasurement
-from astrometrics.ephem_subs import compute_ephem, radec2strings
+from astrometrics.ephem_subs import compute_ephem, radec2strings, compute_moon_sep
 from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box
 
@@ -23,7 +23,7 @@ class Command(BaseCommand):
     help = 'Extract lightcurves of a target from a given SuperBlock. Can look back at earlier SuperBlocks for same object if requested.'
 
     def add_arguments(self, parser):
-        parser.add_argument('supblock', type=int, help='SuperBlock (tracking number) to analyze')
+        parser.add_argument('supblock', type=str, help='SuperBlock (tracking number) to analyze')
         parser.add_argument('-ts', '--timespan', type=float, default=0.0, help='Days prior to referenced SuperBlock that should be included')
         parser.add_argument('-bw', '--boxwidth', type=float, default=5.0, help='Boxwidth in arcsec to search')
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
@@ -76,7 +76,7 @@ class Command(BaseCommand):
         try:
             start_super_block = SuperBlock.objects.get(tracking_number=options['supblock'])
         except SuperBlock.DoesNotExist:
-            self.stdout.write("Cannot find SuperBlock with Tracking Number %d" % options['supblock'])
+            self.stdout.write("Cannot find SuperBlock with Tracking Number %s" % options['supblock'])
             exit(-1)
 
         start_blocks = Block.objects.filter(superblock=start_super_block.id)
@@ -112,9 +112,11 @@ class Command(BaseCommand):
                         dec = emp_line[2]
                         mag_estimate = emp_line[3]
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
+                        moon_sep = compute_moon_sep(frame.midpoint, ra, dec, frame.sitecode)
+                        phase_angle = frame.block.body.compute_body_phase_angle(frame.midpoint, frame.sitecode)
                         sources = search_box(frame, ra, dec, options['boxwidth'])
                         midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
-                        self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
+                        self.stdout.write("%s %s %s V=%.1f %s (%d) M.Sep=%5.1f α=%4.1f %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), moon_sep, phase_angle, frame.filename))
                         if len(sources) != 0:
                             if len(sources) == 1:
                                 best_source = sources[0]
