@@ -463,6 +463,44 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
         return kwargs
 
 
+class ScheduleCalibParameters(LoginRequiredMixin, LookUpCalibMixin, FormView):
+    """
+    Creates a suggested observation request for a static source, including time window and molecules
+    """
+    template_name = 'core/schedule.html'
+    form_class = ScheduleForm
+    ok_to_schedule = False
+
+    def get(self, request, *args, **kwargs):
+        form = self.get_form()
+        cadence_form = ScheduleCadenceForm()
+        return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.target))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.target, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/calib_schedule_confirm.html', {'form': new_form, 'data': data, 'calibrator': self.target})
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        cadence_form = ScheduleCadenceForm()
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.target))
+
+    def get_context_data(self, **kwargs):
+        """
+        Only show proposals the current user is a member of
+        """
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        if kwargs['cad_form']:
+            kwargs['cad_form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
+
+
 class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     """
     Creates a suggested cadenced observation request, including time window and molecules

@@ -14,7 +14,7 @@
             <!-- Main body -->
             <div class="container" id="main">
                     <div class="row">
-                        <a class="button button-primary" href="{% url 'schedule-body' staticsource.id %}" id="schedule-obs">Schedule Observations</a>
+                        <!--<a class="button button-primary" href="{% url 'schedule-calib' staticsource.id %}" id="schedule-obs">Schedule Observations</a>-->
                         {% if staticsource.dec > 0 %}
                             <a class="button button-primary" href="{% url 'schedule-calib-spectra' instrument_code='F65-FLOYDS' pk=staticsource.id %}" id="schedule-spectro-obs">Schedule Spectroscopic Observations</a>
                         {% else %}
