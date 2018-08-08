@@ -1013,7 +1013,11 @@ def feasibility_check(data, body):
                     'moon_phase' : data['moon_phase'],
                     'airmass'    : data['airmass']
                  }
-    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params)
+    if isinstance(body, Body):
+        spectral_type = 'Mean'
+    else:
+        spectral_type = 'Solar'
+    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
     calibs = data.get('calibs', 'both')
     slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
     slot_length /= 60.0
