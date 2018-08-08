@@ -1720,7 +1720,7 @@ def create_source_measurement(obs_lines, block=None):
 
     if obs_body:
         # initialize DB products
-        frame_list = Frame.objects.filter(sourcemeasurement__body__name=obs_body.name)
+        frame_list = Frame.objects.filter(sourcemeasurement__body=obs_body)
         source_list = SourceMeasurement.objects.filter(body=obs_body)
         block_list = Block.objects.filter(body=obs_body)
         measure_count = len(source_list)
