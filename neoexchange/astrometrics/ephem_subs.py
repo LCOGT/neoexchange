@@ -366,10 +366,13 @@ def compute_ephem(d, orbelems_or_body, sitecode, dbg=False, perturb=True, displa
     else:
         spd = None
 
+# Compute correction to magnitude from distance
+    red_mag = 5.0 * log10(r * delta)
+
 #               0   1   2   3       4           5       6       7
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
     if detailed:
-        return emp_line, mag_dot, separation, beta
+        return emp_line, mag_dot, separation, beta, red_mag
 
     return emp_line
 

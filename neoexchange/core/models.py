@@ -266,7 +266,7 @@ class Body(models.Model):
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
 
-                emp_line, mag_dot, separation, beta = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+                emp_line, mag_dot, separation, beta, mag_corr = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
                 vmag = emp_line[3]
 
                 # Eliminate bad magnitudes
@@ -360,6 +360,16 @@ class Body(models.Model):
             emp_line = compute_ephem(d, self, sitecode, dbg=False, perturb=False, display=False, detailed=True)
             # Return just phase angle
             return degrees(emp_line[3])
+        else:
+            # Catch the case where there is no Epoch
+            return False
+
+    def compute_body_mag_correction(self, d=datetime.utcnow(), sitecode='500'):
+
+        if self.epochofel:
+            emp_line = compute_ephem(d, self, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+            # Return just mag correction
+            return emp_line[4]
         else:
             # Catch the case where there is no Epoch
             return False

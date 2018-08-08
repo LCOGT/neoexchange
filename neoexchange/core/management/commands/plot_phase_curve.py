@@ -59,8 +59,9 @@ class Command(BaseCommand):
         phase_angle_meas = []
         for src in srcmeas:
             phase_angle = body.compute_body_phase_angle(src.frame.midpoint, src.frame.sitecode)
-            print(phase_angle)
-            phase_angle_meas.append((phase_angle, src.obs_mag, src.err_obs_mag))
+            mag_corr = body.compute_body_mag_correction(src.frame.midpoint, src.frame.sitecode)
+            print(phase_angle, mag_corr)
+            phase_angle_meas.append((phase_angle, src.obs_mag-mag_corr, src.err_obs_mag))
 
         plottitle = "Phase curve for {}".format(body.current_name())
         self.plot_phase_curve(phase_angle_meas, title=plottitle)
