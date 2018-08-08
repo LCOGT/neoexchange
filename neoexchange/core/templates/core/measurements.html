@@ -5,7 +5,7 @@
 {% block bodyclass %}page{% endblock %}
 {% block extramenu %}
 					<div class="headingleft">
-						<h1>Source Measurements: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+						<h1>Source Measurements: <a href="{% url 'target' body.id %}">{{body.current_name}}</a>{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
 					</div>
 {% endblock%}
 {% block main-content %}

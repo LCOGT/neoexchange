@@ -14,13 +14,19 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime
+from math import radians, degrees
+import os
+import tempfile
+from glob import glob
+import mock
+
 from django.test import TestCase
 from django.forms.models import model_to_dict
-from math import radians
 
 # Import module to test
 from astrometrics.ephem_subs import *
 from core.models import Body
+from astrometrics.time_subs import datetime2mjd_utc, mjd_utc2mjd_tt
 
 
 class TestGetMountLimits(TestCase):
@@ -1842,6 +1848,74 @@ class TestGetSitePos(TestCase):
         self.assertNotEqual(site_hgt, 0.0)
 
 
+class TestDetermineSitesToSchedule(TestCase):
+
+    def test_CA_morning(self):
+        '''Morning in CA so CPT and TFN should be open, ELP should be
+        schedulable for Northern targets'''
+        d = datetime(2017, 3,  9,  19, 27, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['Z21','Z17'], '1m0' : ['V37',] },
+                           'south' : { '0m4' : ['L09', ]    , '1m0' : ['K93', 'K92', 'K91'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+    def test_CA_afternoon1(self):
+        '''Afternoon in CA (pre UTC date roll) so LSC should be opening, ELP
+        should be schedulable for Northern targets, OGG for bright targets'''
+        d = datetime(2017, 3,  9,  23, 27, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38'], '1m0' : ['V37',] },
+                           'south' : { '0m4' : ['W89', 'W79'], '1m0' : ['W87', 'W85'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+    def test_CA_afternoon2(self):
+        '''Afternoon in CA (post UTC date roll) so LSC should be opening, ELP
+        should be schedulable for Northern targets, OGG for bright targets'''
+
+        d = datetime(2017, 3, 10,  00, 2, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03', 'V38'], '1m0' : ['V37',] },
+                           'south' : { '0m4' : ['W89', 'W79']       , '1m0' : ['W87', 'W85'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+    def test_UK_morning(self):
+        '''Morning in UK so COJ is open and a little bit of OGG 0.4m is available'''
+        d = datetime(2017, 3,  10,  8, 27, 5)
+
+        expected_sites = { 'north' : { '0m4' : ['T04', 'T03'], '1m0' : [ ] },
+                           'south' : { '0m4' : ['Q58',], '1m0' : ['Q63', 'Q64'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+    def test_UK_late_morning(self):
+        '''Late morning in UK so only COJ is open; not enough time at the
+        OGG 0.4m is available'''
+        d = datetime(2017, 3,  10, 12,  0, 1)
+
+        expected_sites = { 'north' : { '0m4' : [ ],         '1m0' : [ ] },
+                           'south' : { '0m4' : [ 'Q58', ] , '1m0' : ['Q63', 'Q64'] }
+                         }
+
+        sites = determine_sites_to_schedule(d)
+
+        self.assertEqual(expected_sites, sites)
+
+
 class TestLCOGT_domes_to_site_codes(TestCase):
 
     def test_point4m_tfn_1(self):
@@ -2071,3 +2145,315 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         self.assertEqual(expected_exptime, exp_time)
         self.assertEqual(expected_expcount, exp_count)
 
+
+class Test_perturb_elements(TestCase):
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+        self.body_elements = model_to_dict(self.body)
+
+        comet_params = { 'abs_mag': 11.1,
+                         'active': False,
+                         'arc_length': None,
+                         'argofperih': 12.796,
+                         'discovery_date': None,
+                         'eccentricity': 0.640872,
+                         'elements_type': u'MPC_COMET',
+                         'epochofel': datetime(2015, 8, 6, 0, 0),
+                         'epochofperih': datetime(2015, 8, 13, 2, 1, 19),
+                         'fast_moving': False,
+                         'ingest': datetime(2015, 10, 30, 20, 17, 53),
+                         'longascnode': 50.1355,
+                         'meananom': None,
+                         'meandist': 3.461895,
+                         'name': u'67P',
+                         'not_seen': None,
+                         'num_obs': None,
+                         'orbinc': 7.0402,
+                         'origin': u'M',
+                         'perihdist': 1.2432627,
+                         'provisional_name': u'',
+                         'provisional_packed': u'',
+                         'score': None,
+                         'slope': 4.8,
+                         'source_type': u'C',
+                         'update_time': None,
+                         'updated': False,
+                         'urgency': None}
+        self.comet, created = Body.objects.get_or_create(**comet_params)
+        self.comet_elements = model_to_dict(self.comet)
+
+        close_params = { 'abs_mag': 25.8,
+                         'active': True,
+                         'arc_length': 0.03,
+                         'argofperih': 11.00531,
+                         'discovery_date': datetime(2017, 1, 24, 4, 48),
+                         'eccentricity': 0.5070757,
+                         'elements_type': u'MPC_MINOR_PLANET',
+                         'epochofel': datetime(2017, 1, 7, 0, 0),
+                         'epochofperih': None,
+                         'longascnode': 126.11232,
+                         'meananom': 349.70053,
+                         'meandist': 2.0242057,
+                         'orbinc': 12.91839,
+                         'origin': u'M',
+                         'perihdist': None,
+                         'provisional_name': u'P10yMB1',
+                         'slope': 0.15,
+                         'source_type': u'U',
+                         'updated': True,
+                         'urgency': None}
+        self.close, created = Body.objects.get_or_create(**close_params)
+        self.close_elements = model_to_dict(self.close)
+
+        perturb_params = { 'abs_mag': 30.1,
+                        'active': False,
+                        'arc_length': 0.04,
+                        'argofperih': 88.46163,
+                        'discovery_date': datetime(2018, 5, 8, 9, 36),
+                        'eccentricity': 0.5991733,
+                        'elements_type': 'MPC_MINOR_PLANET',
+                        'epochofel': datetime(2018, 5, 2, 0, 0),
+                        'epochofperih': None,
+                        'fast_moving': False,
+                        'ingest': datetime(2018, 5, 8, 18, 20, 12),
+                        'longascnode': 47.25654,
+                        'meananom': 23.36326,
+                        'meandist': 1.5492508,
+                        'name': '',
+                        'not_seen': 0.378,
+                        'num_obs': 5,
+                        'orbinc': 8.13617,
+                        'origin': 'M',
+                        'perihdist': None,
+                        'provisional_name': 'A106MHy',
+                        'provisional_packed': None,
+                        'score': 100,
+                        'slope': 0.15,
+                        'source_type': 'X',
+                        'update_time': datetime(2018, 5, 8, 18, 9, 43),
+                        'updated': False,
+                        'urgency': None}
+        self.perturb_target, created = Body.objects.get_or_create(**perturb_params)
+        self.perturb_elements = model_to_dict(self.perturb_target)
+
+        self.precision = 4
+
+    def test_no_perturb(self):
+        try:
+            epochofel = datetime.strptime(self.body_elements['epochofel'], '%Y-%m-%d %H:%M:%S')
+        except TypeError:
+            epochofel = self.body_elements['epochofel']
+        epoch_mjd = datetime2mjd_utc(epochofel)
+        expected_inc = self.body_elements['orbinc']
+        expected_a = self.body_elements['meandist']
+        expected_e = self.body_elements['eccentricity']
+        expected_epoch_mjd = epoch_mjd
+        expected_j = 0
+
+        test_time = datetime(2015, 4, 20, 1, 30, 0)
+        mjd_utc = datetime2mjd_utc(test_time)
+        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+
+        p_orbelems, p_epoch_mjd, j = perturb_elements(self.body_elements, epoch_mjd, mjd_tt, False, False)
+
+        self.assertEqual(expected_j, j)
+        self.assertEqual(expected_epoch_mjd, p_epoch_mjd)
+        self.assertAlmostEqual(expected_inc, degrees(p_orbelems['Inc']), self.precision)
+        self.assertAlmostEqual(expected_a, p_orbelems['SemiAxisOrQ'], self.precision)
+        self.assertAlmostEqual(expected_e, p_orbelems['Ecc'], self.precision)
+
+    def test_yes_perturb(self):
+        try:
+            epochofel = datetime.strptime(self.body_elements['epochofel'], '%Y-%m-%d %H:%M:%S')
+        except TypeError:
+            epochofel = self.body_elements['epochofel']
+        epoch_mjd = datetime2mjd_utc(epochofel)
+
+        expected_inc = 8.34565
+        expected_a = 1.21746
+        expected_e = 0.189599
+
+        expected_j = 0
+
+        test_time = datetime(2015, 4, 20, 12, 00, 0)
+        mjd_utc = datetime2mjd_utc(test_time)
+        expected_epoch_mjd = mjd_utc
+        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+
+        p_orbelems, p_epoch_mjd, j = perturb_elements(self.body_elements, epoch_mjd, mjd_tt, False, True)
+
+        self.assertEqual(expected_j, j)
+        self.assertAlmostEqual(expected_epoch_mjd, p_epoch_mjd, 2)
+        self.assertAlmostEqual(expected_inc, degrees(p_orbelems['Inc']), self.precision)
+        self.assertAlmostEqual(expected_a, p_orbelems['SemiAxisOrQ'], self.precision)
+        self.assertAlmostEqual(expected_e, p_orbelems['Ecc'], self.precision)
+
+    def test_close_perturb(self):
+        try:
+            epochofel = datetime.strptime(self.close_elements['epochofel'], '%Y-%m-%d %H:%M:%S')
+        except TypeError:
+            epochofel = self.close_elements['epochofel']
+        epoch_mjd = datetime2mjd_utc(epochofel)
+
+        expected_inc = 12.919617  # 12.91839
+        expected_a = 2.024077  # 2.0242057
+        expected_e = 0.5071387  # 0.5991733
+
+        expected_j = 0
+
+        test_time = datetime(2015, 4, 20, 12, 00, 0)
+        mjd_utc = datetime2mjd_utc(test_time)
+        expected_epoch_mjd = mjd_utc
+        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+
+        p_orbelems, p_epoch_mjd, j = perturb_elements(self.close_elements, epoch_mjd, mjd_tt, False, True)
+
+        self.assertEqual(expected_j, j)
+        self.assertAlmostEqual(expected_epoch_mjd, p_epoch_mjd, 2)
+        self.assertAlmostEqual(expected_inc, degrees(p_orbelems['Inc']), self.precision)
+        self.assertAlmostEqual(expected_a, p_orbelems['SemiAxisOrQ'], self.precision)
+        self.assertAlmostEqual(expected_e, p_orbelems['Ecc'], self.precision)
+
+    def test_perturb_perturb(self):
+        try:
+            epochofel = datetime.strptime(self.perturb_elements['epochofel'], '%Y-%m-%d %H:%M:%S')
+        except TypeError:
+            epochofel = self.perturb_elements['epochofel']
+        epoch_mjd = datetime2mjd_utc(epochofel)
+
+        expected_inc = 8.13529  # 8.13617
+        expected_a = 1.548882  # 1.5492508
+        expected_e = 0.599262  # 0.5991733
+
+        expected_j = 0
+
+        test_time = datetime(2015, 9, 20, 12, 00, 0)
+        mjd_utc = datetime2mjd_utc(test_time)
+        expected_epoch_mjd = mjd_utc
+        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+
+        p_orbelems, p_epoch_mjd, j = perturb_elements(self.perturb_elements, epoch_mjd, mjd_tt, False, True)
+
+        self.assertEqual(expected_j, j)
+        self.assertAlmostEqual(expected_epoch_mjd, p_epoch_mjd, 2)
+        self.assertAlmostEqual(expected_inc, degrees(p_orbelems['Inc']), self.precision)
+        self.assertAlmostEqual(expected_a, p_orbelems['SemiAxisOrQ'], self.precision)
+        self.assertAlmostEqual(expected_e, p_orbelems['Ecc'], self.precision)
+
+class TestReadFindorbEphem(TestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def create_empfile(self, lines):
+        outfile = os.path.join(self.test_dir, 'new.ephem')
+        outfile_fh = open(outfile, 'w')
+        for line in lines:
+            print(line, file=outfile_fh)
+        outfile_fh.close()
+        return outfile
+
+    def compare_ephemeris(self, expected, given):
+        expected_empinfo = expected[0]
+        expected_emp = expected[1]
+
+        empinfo = given[0]
+        emp = given[1]
+
+        self.assertEqual(expected_empinfo, empinfo)
+        self.assertEqual(len(expected_emp), len(emp))
+        expected_line = expected_emp[0]
+        emp_line = emp[0]
+        self.assertEqual(expected_line[0], emp_line[0])
+        self.assertAlmostEqual(expected_line[1], emp_line[1], 10)
+        self.assertAlmostEqual(expected_line[2], emp_line[2], 10)
+        self.assertAlmostEqual(expected_line[3], emp_line[3], 2)
+        self.assertAlmostEqual(expected_line[4], emp_line[4], 2)
+        self.assertAlmostEqual(expected_line[5], emp_line[5], 2)
+
+    def test_unnumbered_ast(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'F65',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '2017YE5'}
+
+        expected_emp = [(datetime(2018,6,30,6,10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
+
+        lines = [ '#(F65) Haleakala-Faulkes Telescope North: 2017 YE5',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 06 30 06:10  21 05 24.970   -12 13 43.30  .08487 1.0854 142.8 15.8   7.26 215.5   .05  27'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+
+    def test_numbered_ast(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'F65',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '398188'}
+        expected_emp = [(datetime(2018,7,19,21,48), 5.31473475745, 0.460169195739, 16.4, 3.50, 0.039)]
+
+        lines = [ '#(F65) Haleakala-Faulkes Telescope North: (398188) = 2010 LE15',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 21:48  20 18 02.849   +26 21 56.71  .10109 1.0871 132.6 16.4   3.50 233.1  .039 172',
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+
+    def test_E10_numbered_ast(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'E10',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '1627'}
+        expected_emp = [(datetime(2018,7,19,22,11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
+
+        lines = [ '#(E10) Siding Spring-Faulkes Telescope South: (1627) = 1929 SH',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  22.2  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))

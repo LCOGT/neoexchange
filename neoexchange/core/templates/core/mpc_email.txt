@@ -1,12 +1,12 @@
 COD {{measures.0.frame.sitecode}}
 CON LCO, 6740 Cortona Drive Suite 102, Goleta, CA 93117
 CON [tlister@lco.global]
-OBS T. Lister, S. Greenstreet, E. Gomez
+OBS T. Lister, J. Chatelain, S. Greenstreet, E. Gomez
 MEA T. Lister
 TEL {{measures.0.frame.return_tel_string}}
 ACK NEOx_{{body.current_name}}_{{measures.0.frame.sitecode}}_{{measures.0.frame.instrument}}
 COM {{measures.0.frame.return_site_string}}
-AC2 tlister@lco.global,sgreenstreet@lco.global
+AC2 tlister@lco.global,sgreenstreet@lco.global,jchatelain@lco.global
 NET {{measures.0.frame.astrometric_catalog}}
 BND {{measures.0.frame.map_filter}}
 {% for line in measures %}{{line.format_mpc_line}}

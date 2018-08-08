@@ -687,7 +687,7 @@ class TestRecordBlock(TestCase):
         body_params = { 'name' : '4' }
         self.spectro_body = Body.objects.create(**body_params)
 
-        proposal_params = { 'code' : self.spectro_params['proposal_id'],}
+        proposal_params = { 'code' : self.spectro_params['proposal_id'], }
         self.proposal = Proposal.objects.create(**proposal_params)
 
         self.imaging_tracknum = '576013'
@@ -718,7 +718,7 @@ class TestRecordBlock(TestCase):
                               'exp_count' : self.imaging_params['exp_count'],
                               'exp_length' : self.imaging_params['exp_time'],
                             }
-        body_params = { 'provisional_name' : 'N999r0q' }
+        body_params = {'provisional_name' : 'N999r0q'}
         self.imaging_body = Body.objects.create(**body_params)
 
         ssource_params = { 'name'   : 'Landolt SA107-684',
@@ -900,6 +900,7 @@ class TestSchedule_Check(TestCase):
                         'jitter' : None,
                         'instrument_code' : '',
                         'snr' : None,
+                        'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
@@ -1055,6 +1056,7 @@ class TestSchedule_Check(TestCase):
                         'total_time' : 1.0,
                         'instrument_code' : '',
                         'snr' : None,
+                        'too_mode': False,
                         'calibs' : '',
                         'spectroscopy' : False,
                         'calibsource' : {},
@@ -1106,6 +1108,7 @@ class TestSchedule_Check(TestCase):
                         'num_times' : 3,
                         'total_time' : 1.0,
                         'instrument_code' : '',
+                        'too_mode': False,
                         'snr' : None,
                         'calibs' : '',
                         'spectroscopy' : False,
@@ -1556,6 +1559,76 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Arecibo_better_exists(self):
+        params = {'name': '2014 UR',
+                  'abs_mag': 21.0,
+                  'slope': 0.1,
+                  'epochofel': '2017-03-19 00:00:00',
+                  'elements_type': u'MPC_MINOR_PLANET',
+                  'meananom': 325.2636,
+                  'argofperih': 85.19251,
+                  'longascnode': 147.81325,
+                  'orbinc': 8.34739,
+                  'eccentricity': 0.1896865,
+                  'meandist': 1.2176312,
+                  'source_type': 'U',
+                  'num_obs': 1596,
+                  'origin': 'M',
+                  }
+
+        self.body, created = Body.objects.get_or_create(**params)
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'A'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+
+        test_elements = ['epochofel', 'meananom', 'argofperih', 'longascnode', 'orbinc', 'eccentricity']
+        for key in test_elements:
+            self.assertNotEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Arecibo_older_exists(self):
+        params = {'name': '2014 UR',
+                  'abs_mag': 26.6,
+                  'slope': 0.1,
+                  'epochofel': '2013-03-19 00:00:00',
+                  'elements_type': u'MPC_MINOR_PLANET',
+                  'meananom': 325.2636,
+                  'argofperih': 85.19251,
+                  'longascnode': 147.81325,
+                  'orbinc': 8.34739,
+                  'eccentricity': 0.1896865,
+                  'meandist': 1.2176312,
+                  'source_type': 'U',
+                  'num_obs': 15,
+                  'origin': 'M',
+                  }
+
+        self.body, created = Body.objects.get_or_create(**params)
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'A'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key != 'id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
     def test_2014UR_goldstone_then_arecibo(self):
 
         expected_elements = self.expected_elements
@@ -1620,6 +1693,108 @@ class TestUpdate_MPC_orbit(TestCase):
         for key in expected_elements:
             if key not in self.nocheck_keys and key != 'id':
                 self.assertEqual(expected_elements[key], new_body_elements[key])
+
+
+class TestUpdate_MPC_obs(TestCase):
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        self.test_mpcobs_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_13553.dat'), 'r')
+        self.test_mpcobs_page2 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_13553_old.dat'), 'r')
+        self.test_mpcobs_page3 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_215426.dat'), 'r')
+        self.test_mpcobs_page4 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+    @classmethod
+    def setUpTestData(cls):
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        cls.test_body = Body.objects.create(**WSAE9A6_params)
+
+        params_13553 = { 'name' : '13553',
+                         'provisional_name' : '1992 JE'
+                         }
+        cls.test_body2 = Body.objects.create(**params_13553)
+
+        params_215426 = { 'name' : '215426',
+                         'provisional_name' : '2002 JF45'
+                         }
+        cls.test_body3 = Body.objects.create(**params_215426)
+
+    def test1(self):
+        expected_num_srcmeas = 6
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 27, 12, int(0.672*1e6)),
+                            'obs_ra'    : 325.2828333333333,
+                            'obs_dec'   : -10.8525,
+                            'obs_mag'   : 21.8,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'G96'
+                          }
+
+        measures = update_MPC_obs(self.test_mpcobs_page)
+
+        self.assertEqual(expected_num_srcmeas, len(measures))
+        source_measures = SourceMeasurement.objects.filter(body=self.test_body)
+        self.assertEqual(expected_num_srcmeas, source_measures.count())
+        source_measure = source_measures[len(source_measures) - 1]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+
+    def test2_multiple_designations(self):
+        expected_measures = 23
+        measures = update_MPC_obs(self.test_mpcobs_page2)
+        self.assertEqual(len(measures), expected_measures)
+
+    def test_repeat_sources(self):
+        expected_measures = 11
+        total_measures = 23
+        expected_frames = 23
+        first_date = datetime(1998, 2, 21, 2, 13, 10, 272000)
+        last_date = datetime(2018, 7, 10, 3, 35, 44, 448000)
+
+        # Read in old measures
+        initial_measures = update_MPC_obs(self.test_mpcobs_page3)
+        # update with new ones
+        final_measures = update_MPC_obs(self.test_mpcobs_page2)
+        self.assertEqual(len(final_measures), expected_measures)
+
+        source_measures = SourceMeasurement.objects.filter(body=self.test_body2)
+        sorted_source_measures = sorted(source_measures, key=lambda sm: sm.frame.midpoint)
+        self.assertEqual(total_measures, source_measures.count())
+        source_measure1 = sorted_source_measures[len(source_measures) - 1]
+        source_measure2 = sorted_source_measures[0]
+        self.assertEqual(last_date, source_measure1.frame.midpoint)
+        self.assertEqual(first_date, source_measure2.frame.midpoint)
+
+        frames = Frame.objects.all()
+        self.assertEqual(len(frames), expected_frames)
+
+    def test_packed_name_with_change(self):
+        expected_measures = 15
+
+        measures = update_MPC_obs(self.test_mpcobs_page4)
+        self.assertEqual(len(measures), expected_measures)
 
 
 class TestClean_mpcorbit(TestCase):
@@ -4101,3 +4276,54 @@ class TestFindBestSolarAnalog(TestCase):
 
         self.assertEqual(expected_standard, close_standard)
         self.assertEqual(expected_params, close_params)
+
+
+class Test_Export_Measurements(TestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.debug_print = False
+        self.maxDiff = None
+
+    @classmethod
+    def setUpTestData(cls):
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        cls.test_body = Body.objects.create(**WSAE9A6_params)
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        test_obslines = test_fh.readlines()
+        test_fh.close()
+        source_measures = create_source_measurement(test_obslines)
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test1(self):
+        expected_num_sources = 6
+        sources = SourceMeasurement.objects.all()
+        self.assertEqual(expected_num_sources, sources.count())
+
+    def test_export(self):
+        expected_filename = os.path.join(self.test_dir, 'WSAE9A6.mpc')
+        expected_num_lines = 6
+
+        body = Body.objects.get(provisional_name='WSAE9A6')
+        filename, num_lines = export_measurements(body.id, self.test_dir)
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_num_lines, num_lines)
