@@ -20,10 +20,6 @@ class Command(BaseCommand):
         parser.add_argument('-H', type=float, help='H magnitude value')
         parser.add_argument('-G', type=float, default=0.15, help='G parameter')
 
-    def residuals(self, params, y, x):
-        err = y - self.compute_phase_function(x, params)
-        return err
-
     def a1a2_to_HG(self, params):
         res = np.zeros(2)
         x = params.sum()
@@ -63,6 +59,10 @@ class Command(BaseCommand):
         vals =  self.a1a2_to_HG(params)
         return vals
 
+    def residuals(self, params, y, x):
+        err = y - self.compute_phase_function(x, params)
+        return err
+
     def compute_phase_function(self, beta, params):
         """Computes the Bowell et al. 1989 phase function for phase angle <beta>
         using the H and G parameters.
@@ -80,17 +80,34 @@ class Command(BaseCommand):
 
         pname = (['H','G'])
         params0 = np.array([self.H, self.G])
-        plsq = leastsq(self.residuals, params0, args=(yval, xval), maxfev=2000)
+        plsq , pcov, infodict, errmsg, success = leastsq(self.residuals, params0, args=(yval, xval), full_output=True, maxfev=2000)
+        # Compute rms of residuals, normalized by no. of degrees of freedom (no.
+        # of data points minus no. of model parameters)
+        if (len(yval) > len(params0)) and pcov is not None:
+            s_sq = (self.residuals(plsq, yval, xval)**2).sum()/(len(yval)-len(plsq))
+            pcov = pcov * s_sq
+        else:
+            pcov = np.inf
+
+        # Use rescaled covariance matrix to estimate errors on paramaters
+        error = []
+        for i in range(len(plsq)):
+            try:
+              error.append(np.absolute(pcov[i][i])**0.5)
+            except:
+              error.append( 0.00 )
+        plsq_err = np.array(error)
         #
         # The sum of the residuals
         #
-        resid = sum(np.sqrt((yval-self.compute_phase_function(xval,plsq[0]))**2))
-        return plsq[0], resid
+        resid = sum(np.sqrt((self.residuals(plsq, yval, xval))**2))
+
+        return plsq, plsq_err, resid
 
     def plot_phase_curve(self, measures, colors='r', title='', sub_title=''):
-        phases = [x[0] for x in measures]
-        mags = [x[1] for x in measures]
-        mag_errs = [x[2] for x in measures]
+        phases = measures[:, 0]
+        mags = measures[:, 1]
+        mag_errs = measures[:, 2]
 
         fig, ax = plt.subplots()
         ax.plot(phases, mags, color=colors, marker='.', linestyle=' ')
@@ -134,20 +151,15 @@ class Command(BaseCommand):
             srcmeas = SourceMeasurement.objects.filter(body=body)
             self.stdout.write("Found %d SourceMeasurements for %s" % (srcmeas.count(), body_name))
 
-            phase_angle_meas = []
-            for src in srcmeas:
+            phase_angle_meas = np.zeros((srcmeas.count(), 3))
+            for i, src in enumerate(srcmeas):
                 phase_angle = body.compute_body_phase_angle(src.frame.midpoint, src.frame.sitecode)
                 mag_corr = body.compute_body_mag_correction(src.frame.midpoint, src.frame.sitecode)
                 print(phase_angle, mag_corr)
-                phase_angle_meas.append((phase_angle, src.obs_mag-mag_corr, src.err_obs_mag))
+                phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr, src.err_obs_mag)
         else:
-            phase_angle_meas = []
-            with open('44_Nysa.dat', 'r') as fh:
-                for line in fh:
-                    if line.lstrip()[0] == '#':
-                        continue
-                    chunks = line.split()
-                    phase_angle_meas.append((float(chunks[0]), float(chunks[1]), float(chunks[2])))
+            phase_angle_meas = np.loadtxt("44_Nysa.dat", skiprows=2)
+
             body_name = '(44) Nysa'
 
         plottitle = "Phase curve for {}".format(body_name)
