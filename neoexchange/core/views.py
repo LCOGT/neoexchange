@@ -47,7 +47,7 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
     read_mtds_file
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, \
-    get_reference_catalog
+    get_reference_catalog, reset_database_connection
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
@@ -1650,7 +1650,7 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             # Get new output filename
             fits_file_output = increment_red_level(fits_file)
             fits_file_output = os.path.join(dest_dir, fits_file_output.replace('[SCI]', ''))
-            logger.info("Updating bad WCS in image file: %s. Output to: %s" % (fits_file, fits_file_output))
+            logger.info("Updating refitted WCS in image file: %s. Output to: %s" % (fits_file, fits_file_output))
             status, new_header = updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output)
             logger.info("Return status for updateFITSWCS: {}".format(status))
 #           XXX In principle, this is an alternative way of doing it without
@@ -1672,7 +1672,8 @@ def check_catalog_and_refit(configs_dir, dest_dir, catfile, dbg=False, desired_c
             if status != 0:
                 logger.error("Execution of second SExtractor failed")
                 return -4, 0
-
+    # Reset DB connection after potentially long-running process.
+    reset_database_connection()
     # Find Block for original frame
     block = find_block_for_frame(catfile)
     if block is None:
