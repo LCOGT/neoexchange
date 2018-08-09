@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.optimize import leastsq
 
 from core.models import Body, SourceMeasurement
 
@@ -18,13 +19,30 @@ class Command(BaseCommand):
         parser.add_argument('-H', type=float, help='H magnitude value')
         parser.add_argument('-G', type=float, default=0.15, help='G parameter')
 
-    def compute_phase_function(self, beta, H, G=0.15):
+    def residuals(self, params, y, x):
+        err = y - self.compute_phase_function(x, params)
+        return err
 
-        phi1 = exp(-3.33 * (tan(beta/2.0))**0.63)
-        phi2 = exp(-1.87 * (tan(beta/2.0))**1.22)
-        mag = H - 2.5 * log10((1.0-G)*phi1+G*phi2)
+    def compute_phase_function(self, beta, params):
+
+        phi1 = np.exp(-3.33 * (np.tan(beta/2.0))**0.63)
+        phi2 = np.exp(-1.87 * (np.tan(beta/2.0))**1.22)
+        mag = params[0] - 2.5 * np.log10((1.0-params[1])*phi1 + params[1]*phi2)
 
         return mag
+
+    def fit_hg(self, data, degrees=True):
+        xval = np.radians(data[:, 0]) if degrees else data[:, 0]
+        yval = data[:, 1]
+
+        pname = (['H','G'])
+        params0 = np.array([self.H, self.G])
+        plsq = leastsq(self.residuals, params0, args=(yval, xval), maxfev=2000)
+        #
+        # The sum of the residuals
+        #
+        resid = sum(np.sqrt((yval-self.compute_phase_function(xval,plsq[0]))**2))
+        return plsq[0], resid
 
     def plot_phase_curve(self, measures, colors='r', title='', sub_title=''):
         phases = [x[0] for x in measures]
@@ -39,16 +57,13 @@ class Command(BaseCommand):
         ax.set_xlim(0, xmax)
         # Compute and plot phase function
         phase_angles = np.linspace(0, xmax, 100)
-        func_mags = [self.compute_phase_function(radians(beta), self.H, self.G) for beta in phase_angles]
+        func_mags = self.compute_phase_function(np.radians(phase_angles), (self.H, self.G))
         plt.plot(phase_angles, func_mags, color='k', linestyle='-')
         ax.set_xlabel('Phase angle')
         ax.set_ylabel('Magnitude')
         fig.suptitle(title)
         ax.set_title(sub_title)
         ax.minorticks_on()
-#        ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
-#        ax.fmt_xdata = DateFormatter('%H:%M:%S')
-#        fig.autofmt_xdate()
         plt.savefig("phasecurve.png")
         plt.show()
 
