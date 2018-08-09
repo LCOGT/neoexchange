@@ -2637,7 +2637,7 @@ class TestConfigureDefaults(TestCase):
     def test_2m_ogg_floyds_solar_analog(self):
         expected_params = { 'spectroscopy': True,
                             'binning'     : 1,
-                            'spectra_slit': 'slit_2.0as',
+                            'spectra_slit': 'slit_6.0as',
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
                             'exp_type'    : 'SPECTRUM',
@@ -2645,15 +2645,14 @@ class TestConfigureDefaults(TestCase):
                             'site'        : 'OGG',
                             'site_code'   : 'F65',
                             'instrument_code' : 'F65-FLOYDS',
-                            'solar_analog' : True,
-                            'calibsrc_exptime' : 60.0,
+                            'solar_analog' : False,
                             'calibsource' : {'name' : 'SA107-684'}
                             }
 
         params = { 'site_code' : 'F65',
                    'instrument_code' : 'F65-FLOYDS',
                    'spectroscopy' : True,
-                   'solar_analog' : True,
+                   'solar_analog' : False,
                    'calibsource' : {'name' : 'SA107-684'}
                    }
 
@@ -2664,7 +2663,7 @@ class TestConfigureDefaults(TestCase):
     def test_2m_ogg_floyds_unmatched_solar_analog(self):
         expected_params = { 'spectroscopy': True,
                             'binning'     : 1,
-                            'spectra_slit': 'slit_2.0as',
+                            'spectra_slit': 'slit_6.0as',
                             'instrument'  : '2M0-FLOYDS-SCICAM',
                             'observatory' : '',
                             'exp_type'    : 'SPECTRUM',
@@ -2672,20 +2671,21 @@ class TestConfigureDefaults(TestCase):
                             'site'        : 'OGG',
                             'site_code'   : 'F65',
                             'instrument_code' : 'F65-FLOYDS',
-                            'solar_analog' : True,
+                            'solar_analog' : False,
                             'calibsource' : {}
                             }
 
         params = { 'site_code' : 'F65',
                    'instrument_code' : 'F65-FLOYDS',
                    'spectroscopy' : True,
-                   'solar_analog' : True,
+                   'solar_analog' : False,
                    'calibsource' : {}
                    }
 
         params = configure_defaults(params)
 
         self.assertEqual(params, expected_params)
+
 
 class TestMakeMolecule(TestCase):
 
