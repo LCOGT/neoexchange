@@ -104,10 +104,11 @@ class Command(BaseCommand):
 
         return plsq, plsq_err, resid
 
-    def plot_phase_curve(self, measures, colors='r', title='', sub_title=''):
+    def plot_phase_curve(self, measures, colors='r', title='', sub_title='', filename=None):
         phases = measures[:, 0]
         mags = measures[:, 1]
         mag_errs = measures[:, 2]
+        filename = "phasecurve.png" if filename is None else filename
 
         fig, ax = plt.subplots()
         ax.plot(phases, mags, color=colors, marker='.', linestyle=' ')
@@ -124,7 +125,7 @@ class Command(BaseCommand):
         fig.suptitle(title)
         ax.set_title(sub_title)
         ax.minorticks_on()
-        plt.savefig("phasecurve.png")
+        plt.savefig(filename)
         plt.show()
 
         return
@@ -157,10 +158,12 @@ class Command(BaseCommand):
                 mag_corr = body.compute_body_mag_correction(src.frame.midpoint, src.frame.sitecode)
                 print(phase_angle, mag_corr)
                 phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr, src.err_obs_mag)
+            plot_filename = "phasecurve_{}".format(body_name.replace(' ', ''))
         else:
             phase_angle_meas = np.loadtxt("44_Nysa.dat", skiprows=2)
 
             body_name = '(44) Nysa'
+            plot_filename = 'phasecurve_44_Nysa_fit.png'
 
         pfit, perr, residuals = self.fit_hg(phase_angle_meas, degrees=True)
         fit_results = "Results of fit: H={:.2f} (+/- {:.4f}), G={:.2f} (+/- {:.4f})".format(pfit[0], perr[0], pfit[1], perr[1])
@@ -170,4 +173,4 @@ class Command(BaseCommand):
         self.G = pfit[1]
 
         plottitle = "Phase curve for {}".format(body_name)
-        self.plot_phase_curve(phase_angle_meas, title=plottitle, sub_title=fit_results)
+        self.plot_phase_curve(phase_angle_meas, title=plottitle, sub_title=fit_results, filename=plot_filename)
