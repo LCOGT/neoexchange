@@ -1222,8 +1222,17 @@ def make_target(params):
                'type' : 'SIDEREAL',
                'name' : params['source_id'],
                'ra'   : ra_degs,
-               'dec'  : dec_degs
+               'dec'  : dec_degs,
+               'rot_mode' : 'VFLOAT'
              }
+    if 'vmag' in params:
+        target['vmag'] = params['vmag']
+    if 'pm_ra' in params:
+        target['proper_motion_ra'] = params['pm_ra']
+    if 'pm_dec' in params:
+        target['proper_motion_dec'] = params['pm_dec']
+    if 'parallax' in params:
+        target['parallax'] = params['parallax']
     return target
 
 
@@ -1299,7 +1308,10 @@ def make_molecule(params, exp_filter):
         molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
         molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['acquire_radius_arcsec'] = 15.0  # NOTE: if this keyword exists, 'acquire_mode' is ignored, and will acquire on brightest
+        if 'source_type' in params:  # then Sidereal target (use smaller window)
+            molecule['acquire_radius_arcsec'] = 5.0
+        else:
+            molecule['acquire_radius_arcsec'] = 15.0  # NOTE: if this keyword exists, 'acquire_mode' is ignored, and will acquire on brightest
     else:
         molecule['filter'] = exp_filter[0]
         molecule['ag_mode'] = 'OPTIONAL'  # ON, OFF, or OPTIONAL. Must be uppercase now...
@@ -1368,7 +1380,7 @@ def make_single(params, ipp_value, request):
     }
 
 # If the ToO mode is set, change the observation_type
-    if params.get('too_mode', False) == True:
+    if params.get('too_mode', False) is True:
         user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
 
     return user_request
@@ -1389,6 +1401,7 @@ def make_many(params, ipp_value, request, cal_request):
     }
 
     return user_request
+
 
 def make_proposal(params):
     proposal = { 

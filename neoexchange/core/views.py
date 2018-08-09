@@ -1060,9 +1060,14 @@ def schedule_submit(data, body, username):
         params['jitter'] = data['jitter']
     # If we have a (static) StaticSource object, fill in details needed by make_target
     if type(body) == StaticSource:
-        params['ra_deg' ] = body.ra
+        params['ra_deg'] = body.ra
         params['dec_deg'] = body.dec
         params['source_id'] = body.current_name()
+        params['pm_ra'] = body.pm_ra
+        params['pm_dec'] = body.pm_dec
+        params['parallax'] = body.parallax
+        params['source_type'] = body.source_type
+        params['vmag'] = body.vmag
     # Check for pre-existing block
     tracking_number = None
     resp_params = None
