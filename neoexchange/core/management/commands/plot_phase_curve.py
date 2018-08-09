@@ -162,5 +162,12 @@ class Command(BaseCommand):
 
             body_name = '(44) Nysa'
 
+        pfit, perr, residuals = self.fit_hg(phase_angle_meas, degrees=True)
+        fit_results = "Results of fit: H={:.2f} (+/- {:.4f}), G={:.2f} (+/- {:.4f})".format(pfit[0], perr[0], pfit[1], perr[1])
+        self.stdout.write(fit_results)
+
+        self.H = pfit[0]
+        self.G = pfit[1]
+
         plottitle = "Phase curve for {}".format(body_name)
-        self.plot_phase_curve(phase_angle_meas, title=plottitle)
+        self.plot_phase_curve(phase_angle_meas, title=plottitle, sub_title=fit_results)
