@@ -953,6 +953,7 @@ class TestSchedule_Check(TestCase):
                         'snr' : 3.2107142545718275,
                         'calibs' : 'both',
                         'spectroscopy' : True,
+                        'too_mode': False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
                         'solar_analog' : False
@@ -1004,6 +1005,7 @@ class TestSchedule_Check(TestCase):
                         'snr' : 3.2107142545718275,
                         'calibs' : 'both',
                         'spectroscopy' : True,
+                        'too_mode': False,
                         'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
                         'calibsource_id' : 1,
                         'solar_analog' : True

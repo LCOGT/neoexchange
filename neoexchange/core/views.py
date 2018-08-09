@@ -903,8 +903,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
-
-
     # Determine pattern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
@@ -938,14 +936,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         suffix += "_spectra"
     if data.get('too_mode', False) is True:
         suffix += '_ToO'
-
-    groupid = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
-    if len(groupid) > 30:
-        if spectroscopy:
-            suffix = suffix[:-3]
-            groupid = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
-        else:
-            groupid = groupid[0:30]
+    group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
 
     resp = {
         'target_name': body.current_name(),
@@ -961,7 +952,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'too_mode' : data.get('too_mode', False),
         'site_code': data['site_code'],
         'proposal_code': data['proposal_code'],
-        'group_id': groupid,
+        'group_id': group_id,
         'utc_date': utc_date.isoformat(),
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
@@ -1015,7 +1006,7 @@ def schedule_submit(data, body, username):
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
 
     emp_at_start = None
-    if data.get('spectroscopy', False) is not False:
+    if isinstance(body, Body) and data.get('spectroscopy', False) is not False:
         # Update MPC observations assuming too many updates have not been done recently
         cut_off_time = timedelta(minutes=1)
         now = datetime.utcnow()
@@ -1029,12 +1020,12 @@ def schedule_submit(data, body, username):
             emp_info = new_ephemeris[0]
             ephemeris = new_ephemeris[1]
             emp_at_start = ephemeris[0]
-    body.refresh_from_db()
 
-    body_elements = model_to_dict(body)
-    body_elements['epochofel_mjd'] = body.epochofel_mjd()
-    body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
-    body_elements['current_name'] = body.current_name()
+        body.refresh_from_db()
+        body_elements = model_to_dict(body)
+        body_elements['epochofel_mjd'] = body.epochofel_mjd()
+        body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
+        body_elements['current_name'] = body.current_name()
 
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])

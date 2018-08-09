@@ -272,7 +272,9 @@ class TestCalibrationSources(FunctionalTest):
 
         # He picks a star
         link = self.browser.find_element_by_link_text('Landolt SA98-978')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': 4}))
+        target = StaticSource.objects.filter(name='Landolt SA98-978')
+        tarket_key = target[0].id
+        target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource' , kwargs={'pk': tarket_key}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -290,7 +292,7 @@ class TestCalibrationSources(FunctionalTest):
 
         # He schedules a spectra
         link = self.browser.find_element_by_id('schedule-spectro-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'E10-FLOYDS', 'pk': '4'}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-calib-spectra', kwargs={'instrument_code': 'E10-FLOYDS', 'pk': tarket_key}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
