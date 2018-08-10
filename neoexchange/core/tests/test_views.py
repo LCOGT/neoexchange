@@ -672,7 +672,7 @@ class TestRecordBlock(TestCase):
                                  'start': '2018-03-16T11:20:00'}]],
                               'site': 'COJ',
                               'site_code': 'E10',
-                              'spectra_slit': 'slit_2.0as',
+                              'spectra_slit': 'slit_6.0as',
                               'spectroscopy': True,
                               'start_time': datetime(2018, 3, 16, 9, 20),
                               'user_id': 'tlister@lcogt.net'}
@@ -815,6 +815,30 @@ class TestRecordBlock(TestCase):
         self.assertEqual(solar_analogs[0], blocks[1].calibsource)
         self.assertEqual(None, blocks[1].body)
         self.assertEqual(spectro_params['calibsrc_exptime'], blocks[1].exp_length)
+
+    def test_solo_solar_spectro_block(self):
+        # adjust parameters for sidereal target
+        self.spectro_params['request_numbers'] = {1450339: 'SIDEREAL'}
+        self.spectro_params['group_id'] = 'Landolt SA107-684_E10-20180316_spectra'
+        self.spectro_form['group_id'] = self.spectro_params['group_id']
+        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.solar_analog)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_SPECTRA_CALIB, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+
 
 class TestSchedule_Check(TestCase):
 

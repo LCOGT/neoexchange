@@ -590,7 +590,6 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
 
-
     def test_make_too_userrequest(self):
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -845,6 +844,47 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(cal_molecules[2]['exposure_count'], expected_exp_count)
         self.assertEqual(cal_molecules[2]['exposure_time'], expected_cal_exptime)
         self.assertEqual(cal_molecules[2]['spectra_slit'], expected_filter)
+
+    def test_solo_solar_spectrum(self):
+
+        utc_date = datetime(2018, 5, 11, 0)
+        params = {  'proposal_id' : 'LCOEngineering',
+                    'user_id'  : 'bsimpson',
+                    'spectroscopy' : True,
+                    'calibs'     : 'before',
+                    'exp_count'  : 1,
+                    'exp_time'   : 300.0,
+                    'instrument_code' : 'F65-FLOYDS',
+                    'site_code' : 'F65',
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_id' : 'SA107-684' + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'start_time' :  utc_date + timedelta(hours=5),
+                    'end_time'   :  utc_date + timedelta(hours=15),
+                    'solar_analog' : False,
+                    'ra_deg' : 234.3254167,
+                    'dec_deg' : -0.163889,
+                    'vmag' : 12.4,
+                    'source_type' : 4
+                  }
+        expected_num_requests = 1
+        expected_operator = 'SINGLE'
+        expected_molecule_num = 3
+        expected_exp_count = 1
+        expected_exptime = 300.0
+        expected_filter = 'slit_6.0as'
+        expected_groupid = params['group_id']
+
+        user_request = make_userrequest(self.body_elements, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['group_id'])
+
+        sol_molecules = user_request['requests'][0]['molecules']
+        self.assertEqual(len(sol_molecules), expected_molecule_num)
+        self.assertEqual(sol_molecules[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(sol_molecules[2]['exposure_time'], expected_exptime)
+        self.assertEqual(sol_molecules[2]['spectra_slit'], expected_filter)
 
 
 class TestFetchFilterList(TestCase):
