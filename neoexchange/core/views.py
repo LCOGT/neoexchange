@@ -728,14 +728,14 @@ class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             if request.user.is_authenticated():
                 username = request.user.get_username()
             tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
+
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-# Not possible to store StaticSources in Blocks/SuperBlocks yet
-#                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
-#                if block_resp:
-#                    messages.success(self.request, "Block recorded")
-#                else:
-#                    messages.warning(self.request, "Record not created")
+                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                if block_resp:
+                    messages.success(self.request, "Block recorded")
+                else:
+                    messages.warning(self.request, "Record not created")
             else:
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
@@ -978,7 +978,6 @@ def schedule_check(data, body, ok_to_schedule=True):
 
 
 def schedule_submit(data, body, username):
-
     # Assemble request
     # Send to scheduler
     if type(body) == StaticSource:
@@ -1352,7 +1351,7 @@ def check_for_block(form_data, params, new_body):
         return 1
 
 
-def record_block(tracking_number, params, form_data, body):
+def record_block(tracking_number, params, form_data, target):
     """Records a just-submitted observation as a SuperBlock and Block(s) in the database.
     """
 
@@ -1363,7 +1362,6 @@ def record_block(tracking_number, params, form_data, body):
         if len(params.get('request_numbers', [])) > 1 and params.get('period', -1.0) > 0.0 and params.get('jitter', -1.0) > 0.0:
             cadence = True
         sblock_kwargs = {
-                         'body'     : body,
                          'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                          'groupid'  : form_data['group_id'],
                          'block_start' : form_data['start_time'],
@@ -1376,6 +1374,10 @@ def record_block(tracking_number, params, form_data, body):
                          'rapid_response' : params.get('too_mode', False),
                          'active'   : True,
                        }
+        if isinstance(target, StaticSource):
+            sblock_kwargs['calibsource'] = target
+        else:
+            sblock_kwargs['body'] = target
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
@@ -1385,7 +1387,7 @@ def record_block(tracking_number, params, form_data, body):
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
-                if request_type == 'SIDEREAL' and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+                if request_type == 'SIDEREAL':
                     obstype = Block.OPT_SPECTRA_CALIB
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
@@ -1409,8 +1411,11 @@ def record_block(tracking_number, params, form_data, body):
                 block_kwargs['body'] = None
                 block_kwargs['calibsource'] = calib_source
                 block_kwargs['exp_length'] = params['calibsrc_exptime']
+            elif request_type == 'SIDEREAL':
+                block_kwargs['body'] = None
+                block_kwargs['calibsource'] = target
             else:
-                block_kwargs['body'] = body
+                block_kwargs['body'] = target
                 block_kwargs['calibsource'] = None
             pk = Block.objects.create(**block_kwargs)
             i += 1
