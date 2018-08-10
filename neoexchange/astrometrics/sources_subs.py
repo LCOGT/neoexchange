@@ -1918,3 +1918,58 @@ def fetch_list_targets(list_targets):
 
     return new_target_list
 
+def fetch_sbdb(target):
+    """Query the JPL Small Bodies Database API for <target>, including the
+    physical parameter data (`phys-par=1` in the query URL). Returns a JSON
+    dictionary containing `object`, `orbit`, `phys_par` and `signature`.
+    Further details: https://ssd-api.jpl.nasa.gov/doc/sbdb.html
+    """
+
+    ssd_url = 'https://ssd-api.jpl.nasa.gov/sbdb.api'
+
+    query_params = '?sstr=' + str(target) + '&phys-par=1'
+    query_url = urljoin(ssd_url, query_params)
+
+    try:
+        resp = requests.get(query_url, timeout=60)
+    except requests.exceptions.Timeout:
+        msg = "JPL SBDB API timed out"
+        logger.error(msg)
+        return False, msg
+
+    if resp.status_code not in [200, 201]:
+        msg = "JPL SBDB API returned error code {}".format(resp.status_code)
+        logger.error(msg)
+        status = resp.json()
+        return status, msg
+
+    response = resp.json()
+    return response, resp.reason
+
+def fetch_rotation_period(target):
+    period = None
+    response, msg = fetch_sbdb(target)
+    if msg == 'OK':
+        phys_params = response.get('phys_par', None)
+        if phys_params:
+            rotation_periods = [(ref['value'], ref['units']) for ref in phys_params if ref['name'] == 'rot_per']
+            if len(rotation_periods) == 1:
+                period = float(rotation_periods[0][0])
+                unit = None
+                if rotation_periods[0][1] == 'h':
+                    unit = u.h
+                elif rotation_periods[0][1] == 'd':
+                    unit = u.day
+                else:
+                    logger.warning("Unknown unit")
+                if unit:
+                    period = period * unit
+            elif len(rotation_periods) > 1:
+                logger.warning("Multiple rotation periods found")
+            else:
+                logger.warning("No rotation period found")
+        else:
+            logger.warning("No physical parameters found")
+    else:
+        logger.warning("Error retrieving data from SBDB")
+    return period
