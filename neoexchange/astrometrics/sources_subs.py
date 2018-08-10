@@ -1304,6 +1304,8 @@ def make_molecule(params, exp_filter):
             ag_mode = 'OFF'
             molecule['exposure_count'] = 1
             molecule['exposure_time'] = 60.0
+            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit'] and 'COJ' in params['site'].upper():
+                molecule['exposure_time'] = 20.0
         molecule['spectra_slit'] = params['spectra_slit']
         molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
