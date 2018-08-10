@@ -120,11 +120,13 @@ class Command(BaseCommand):
         phase_angles = np.linspace(0, xmax, 100)
         func_mags = self.compute_phase_function(np.radians(phase_angles), (self.H, self.G))
         ax.plot(phase_angles, func_mags, color='k', linestyle='-')
+
         ax.set_xlabel('Phase angle')
         ax.set_ylabel('Reduced Magnitude')
         fig.suptitle(title)
         ax.set_title(sub_title)
         ax.minorticks_on()
+
         plt.savefig(filename)
         plt.show()
 
@@ -152,12 +154,34 @@ class Command(BaseCommand):
             srcmeas = SourceMeasurement.objects.filter(body=body)
             self.stdout.write("Found %d SourceMeasurements for %s" % (srcmeas.count(), body_name))
 
+            block_ids = srcmeas.values_list('frame__block_id',flat=True).distinct()
+            all_block_colors = {}
+            for block_id in block_ids:
+                mags = srcmeas.filter(frame__block_id=block_id).values('obs_mag', 'frame__filter')
+                obs_filters = mags.values_list('frame__filter',flat=True).distinct()
+                block_colors = {}
+                for obs_filter in obs_filters:
+                    mean_mags = [x['obs_mag'] for x in mags if x['frame__filter'] == obs_filter]
+                    mean_mag = np.sum(mean_mags)/float(len(mean_mags))
+                    block_colors[obs_filter] = mean_mag
+                for obs_filter in obs_filters:
+                    if obs_filter != 'V':
+                        color = 'V-' + obs_filter
+                        block_colors[color] = block_colors['V'] - block_colors[obs_filter]
+                all_block_colors[block_id] = block_colors
+            print(all_block_colors)
             phase_angle_meas = np.zeros((srcmeas.count(), 3))
             for i, src in enumerate(srcmeas):
                 phase_angle = body.compute_body_phase_angle(src.frame.midpoint, src.frame.sitecode)
                 mag_corr = body.compute_body_mag_correction(src.frame.midpoint, src.frame.sitecode)
-                print(phase_angle, mag_corr)
-                phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr, src.err_obs_mag)
+                obs_filter = src.frame.filter
+                block_id = src.frame.block_id
+                color_corr = 0.0
+                if obs_filter != 'V':
+                    color = 'V-' + obs_filter
+                    color_corr = all_block_colors[block_id].get(color)
+                print(phase_angle, mag_corr, obs_filter, block_id, color_corr)
+                phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr+color_corr, src.err_obs_mag)
             plot_filename = "phasecurve_{}".format(body_name.replace(' ', ''))
         else:
             phase_angle_meas = np.loadtxt("44_Nysa.dat", skiprows=2)
