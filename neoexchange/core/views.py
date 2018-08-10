@@ -1000,7 +1000,9 @@ def schedule_submit(data, body, username):
                                     'dec_deg' : calibsource.dec,
                                     'pm_ra'   : calibsource.pm_ra,
                                     'pm_dec'  : calibsource.pm_dec,
-                                    'parallax': calibsource.parallax
+                                    'parallax': calibsource.parallax,
+                                    'source_type' : calibsource.source_type,
+                                    'vmag' : calibsource.vmag
                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
