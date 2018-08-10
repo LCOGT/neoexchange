@@ -124,6 +124,10 @@ def transform_magnitudes(mag_in, color, desired_filter):
 
     if desired_filter == 'V':
         mag_out = mag_in + 0.01746 - (0.008092*color) + (0.2810*color**2) - (0.03655*color**3)
+    elif desired_filter == 'I':
+        Gbp_Grp = -0.04212 + (1.286*color) - (0.09494*color**2)
+        diff = 0.02085 + (0.7419*Gbp_Grp) - (0.09631*Gbp_Grp**2)
+        mag_out = mag_in - diff
     elif desired_filter == 'gp':
         diff = -0.074189 - (0.51409*color) - (0.080607*color**2) + (0.0016001*color**3)
         mag_out = mag_in - diff
