@@ -70,6 +70,7 @@ geckodriver.log
 
 lightcurve.png
 lightcurve_data.txt
+environ.dat
 mpc_positions.txt
 
 ingest/static/ingest/css/admin.css

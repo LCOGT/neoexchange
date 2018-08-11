@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.6.0
+
+Calculate and forward more precise orbital elements for spectroscopic observations
+
 ### 2.5.3
 
 Update light curve extraction.

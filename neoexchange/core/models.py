@@ -998,10 +998,13 @@ class SourceMeasurement(models.Model):
             mag, self.frame.map_filter(), catalog_code, self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
-            if self.body.name:
-                name, status = normal_to_packed(self.body.name)
-                if status == 0:
-                    extrainfo = name + extrainfo[12:]
+            if extrainfo:
+                if self.body.name:
+                    name, status = normal_to_packed(self.body.name)
+                    if status == 0:
+                        extrainfo = name + extrainfo[12:]
+            else:
+                extrainfo = ''
             mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
