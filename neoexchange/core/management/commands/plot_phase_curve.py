@@ -20,6 +20,7 @@ class Command(BaseCommand):
         parser.add_argument('-H', type=float, help='H magnitude value')
         parser.add_argument('-G', type=float, default=0.15, help='G parameter value (0.15 default)')
         parser.add_argument('--correct', default=False, action='store_true', help='Whether to correct non-V data')
+        parser.add_argument('--Vonly', default=False, action='store_true', help='Whether to include non-V data')
 
     def a1a2_to_HG(self, params):
         res = np.zeros(2)
@@ -182,8 +183,11 @@ class Command(BaseCommand):
                 if obs_filter != 'V' and options['correct'] is True:
                     color = 'V-' + obs_filter
                     color_corr = all_block_colors[block_id].get(color, 0.0)
-                print(phase_angle, mag_corr, obs_filter, block_id, color_corr)
-                phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr+color_corr, src.err_obs_mag)
+                included = False
+                if obs_filter == 'V' or options['Vonly'] is False:
+                    included = True
+                    phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr+color_corr, src.err_obs_mag)
+                print(phase_angle, mag_corr, obs_filter, block_id, color_corr, included)
             plot_filename = "phasecurve_{}".format(body_name.replace(' ', ''))
         else:
             phase_angle_meas = np.loadtxt("44_Nysa.dat", skiprows=2)
