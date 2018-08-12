@@ -18,7 +18,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('body', type=str, help='Name of body to analyze')
         parser.add_argument('-H', type=float, help='H magnitude value')
-        parser.add_argument('-G', type=float, default=0.15, help='G parameter')
+        parser.add_argument('-G', type=float, default=0.15, help='G parameter value (0.15 default)')
+        parser.add_argument('--correct', default=False, action='store_true', help='Whether to correct non-V data')
 
     def a1a2_to_HG(self, params):
         res = np.zeros(2)
@@ -154,22 +155,23 @@ class Command(BaseCommand):
             srcmeas = SourceMeasurement.objects.filter(body=body)
             self.stdout.write("Found %d SourceMeasurements for %s" % (srcmeas.count(), body_name))
 
-            block_ids = srcmeas.values_list('frame__block_id',flat=True).distinct()
-            all_block_colors = {}
-            for block_id in block_ids:
-                mags = srcmeas.filter(frame__block_id=block_id).values('obs_mag', 'frame__filter')
-                obs_filters = mags.values_list('frame__filter',flat=True).distinct()
-                block_colors = {}
-                for obs_filter in obs_filters:
-                    mean_mags = [x['obs_mag'] for x in mags if x['frame__filter'] == obs_filter]
-                    mean_mag = np.sum(mean_mags)/float(len(mean_mags))
-                    block_colors[obs_filter] = mean_mag
-                for obs_filter in obs_filters:
-                    if obs_filter != 'V':
-                        color = 'V-' + obs_filter
-                        block_colors[color] = block_colors['V'] - block_colors[obs_filter]
-                all_block_colors[block_id] = block_colors
-            print(all_block_colors)
+            if options['correct'] is True:
+                block_ids = srcmeas.values_list('frame__block_id',flat=True).distinct()
+                all_block_colors = {}
+                for block_id in block_ids:
+                    mags = srcmeas.filter(frame__block_id=block_id).values('obs_mag', 'frame__filter')
+                    obs_filters = mags.values_list('frame__filter',flat=True).distinct()
+                    block_colors = {}
+                    for obs_filter in obs_filters:
+                        mean_mags = [x['obs_mag'] for x in mags if x['frame__filter'] == obs_filter]
+                        mean_mag = np.sum(mean_mags)/float(len(mean_mags))
+                        block_colors[obs_filter] = mean_mag
+                    for obs_filter in obs_filters:
+                        if obs_filter != 'V' and 'V' in obs_filters:
+                            color = 'V-' + obs_filter
+                            block_colors[color] = block_colors['V'] - block_colors[obs_filter]
+                    all_block_colors[block_id] = block_colors
+                print(all_block_colors)
             phase_angle_meas = np.zeros((srcmeas.count(), 3))
             for i, src in enumerate(srcmeas):
                 phase_angle = body.compute_body_phase_angle(src.frame.midpoint, src.frame.sitecode)
@@ -177,9 +179,9 @@ class Command(BaseCommand):
                 obs_filter = src.frame.filter
                 block_id = src.frame.block_id
                 color_corr = 0.0
-                if obs_filter != 'V':
+                if obs_filter != 'V' and options['correct'] is True:
                     color = 'V-' + obs_filter
-                    color_corr = all_block_colors[block_id].get(color)
+                    color_corr = all_block_colors[block_id].get(color, 0.0)
                 print(phase_angle, mag_corr, obs_filter, block_id, color_corr)
                 phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr+color_corr, src.err_obs_mag)
             plot_filename = "phasecurve_{}".format(body_name.replace(' ', ''))
