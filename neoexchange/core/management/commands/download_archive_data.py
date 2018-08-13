@@ -16,11 +16,12 @@ class Command(BaseCommand):
         out_path = os.path.join(os.environ.get('HOME'), 'Asteroids')
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
         parser.add_argument('--numdays', action="store", default=0.0, type=float, help='How many extra days to look for')
+        parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
         obstypes = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
-        if options['proposal'] == 'LCOEngineering':
+        if options['proposal'] == 'LCOEngineering' or options['spectraonly'] is True:
             # Not interested in imaging frames
             obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
 
@@ -38,8 +39,9 @@ class Command(BaseCommand):
             verbose = False
 
         username = os.environ.get('NEOX_ODIN_USER', None)
-        password = os.environ.get('NEOX_ODIN_PASSWD',None)
-        if username and password:
+        password = os.environ.get('NEOX_ODIN_PASSWD', None)
+        archive_token = os.environ.get('ARCHIVE_TOKEN', None)
+        if (username is not None and password is not None) or archive_token is not None:
             auth_headers = archive_login(username, password)
             start_date, end_date = determine_archive_start_end(obs_date)
             end_date = end_date + timedelta(days=options['numdays'])
@@ -80,4 +82,4 @@ class Command(BaseCommand):
             dl_frames = download_files(all_frames, out_path, verbose)
             self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
         else:
-            self.stdout.write("No username or password defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD)")
+            self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")
