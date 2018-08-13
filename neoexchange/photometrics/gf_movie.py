@@ -57,7 +57,7 @@ def update(files):
             data = hdu.data
             header = hdu.header
     else:
-        hdu1 = fits.open(files[0])[1]
+        hdu1 = fits.open(files)[1]
         data = hdu1.data
         header = hdu1.header
 
