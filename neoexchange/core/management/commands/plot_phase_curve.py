@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import leastsq
 from numpy.linalg import lstsq as solve_leastsq, inv
+from HG1G2tools import Basis, fit_HG12, simulate_errors
 
 from core.models import Body, SourceMeasurement
 
@@ -21,6 +22,7 @@ class Command(BaseCommand):
         parser.add_argument('-G', type=float, default=0.15, help='G parameter value (0.15 default)')
         parser.add_argument('--correct', default=False, action='store_true', help='Whether to correct non-V data')
         parser.add_argument('--Vonly', default=False, action='store_true', help='Whether to include non-V data')
+        parser.add_argument('--fit-type', default='HG', help='Type of fit (HG, HG12)')
 
     def a1a2_to_HG(self, params):
         res = np.zeros(2)
@@ -120,7 +122,11 @@ class Command(BaseCommand):
         ax.set_xlim(0, xmax)
         # Compute and plot phase function
         phase_angles = np.linspace(0, xmax, 100)
-        func_mags = self.compute_phase_function(np.radians(phase_angles), (self.H, self.G))
+        if self.fit_type == 'HG':
+            func_mags = self.compute_phase_function(np.radians(phase_angles), (self.H, self.G))
+        elif self.fit_type == 'HG12':
+            B = Basis()
+            func_mags = B.predict_HG12((self.H, self.G12), phase_angles)
         ax.plot(phase_angles, func_mags, color='k', linestyle='-')
 
         ax.set_xlabel('Phase angle')
@@ -141,6 +147,8 @@ class Command(BaseCommand):
         name = options['body']
         self.H = options['H']
         self.G = options['G']
+        self.fit_type = options['fit_type']
+
         if name != '44':
             try:
                 body = Body.objects.get(Q(provisional_name__exact=name) | Q(provisional_packed__exact=name) | Q(name__exact=name))
@@ -154,7 +162,12 @@ class Command(BaseCommand):
             body_name = body.current_name()
             self.stdout.write("Processing %s" % body_name)
             srcmeas = SourceMeasurement.objects.filter(body=body)
-            self.stdout.write("Found %d SourceMeasurements for %s" % (srcmeas.count(), body_name))
+            total =''
+            if options['Vonly'] is True:
+                total = " (of %d total)" % srcmeas.count()
+                srcmeas = srcmeas.filter(frame__filter='V')
+
+            self.stdout.write("Found %d%s SourceMeasurements for %s" % (srcmeas.count(), total, body_name))
 
             if options['correct'] is True:
                 block_ids = srcmeas.values_list('frame__block_id',flat=True).distinct()
@@ -183,11 +196,9 @@ class Command(BaseCommand):
                 if obs_filter != 'V' and options['correct'] is True:
                     color = 'V-' + obs_filter
                     color_corr = all_block_colors[block_id].get(color, 0.0)
-                included = False
-                if obs_filter == 'V' or options['Vonly'] is False:
-                    included = True
-                    phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr+color_corr, src.err_obs_mag)
-                print(phase_angle, mag_corr, obs_filter, block_id, color_corr, included)
+
+                phase_angle_meas[i, :] = (phase_angle, src.obs_mag-mag_corr+color_corr, src.err_obs_mag)
+                print("{:>4.1f} {:.3f} {:.3f} {} {} {:.2f}".format(phase_angle, mag_corr, src.obs_mag-mag_corr+color_corr, obs_filter, block_id, color_corr))
             plot_filename = "phasecurve_{}".format(body_name.replace(' ', ''))
         else:
             phase_angle_meas = np.loadtxt("44_Nysa.dat", skiprows=2)
@@ -195,12 +206,27 @@ class Command(BaseCommand):
             body_name = '(44) Nysa'
             plot_filename = 'phasecurve_44_Nysa_fit.png'
 
-        pfit, perr, residuals = self.fit_hg(phase_angle_meas, degrees=True)
-        fit_results = "Results of fit: H={:.2f} (+/- {:.4f}), G={:.2f} (+/- {:.4f})".format(pfit[0], perr[0], pfit[1], perr[1])
-        self.stdout.write(fit_results)
+        if options['fit_type'] == 'HG':
+            self.stdout.write("Peforming Bowell HG fit")
+            pfit, perr, residuals = self.fit_hg(phase_angle_meas, degrees=True)
+            fit_results = "Results of fit: H={:.2f} (+/- {:.4f}), G={:.2f} (+/- {:.4f})".format(pfit[0], perr[0], pfit[1], perr[1])
+            self.stdout.write(fit_results)
 
-        self.H = pfit[0]
-        self.G = pfit[1]
+            self.H = pfit[0]
+            self.G = pfit[1]
+        elif options['fit_type'] == 'HG12':
+            self.stdout.write("Performing Muinonen HG12 2 parameter fit")
+            pfit, covmatrix = fit_HG12(phase_angle_meas, weight=phase_angle_meas[:,2], degrees=True)
+            error_estimates = simulate_errors(pfit, covmatrix, N=100000)
+            # Compute difference of Monte Carlo sample
+            perr_lower = error_estimates[4,:]
+            perr_higher = error_estimates[5,:]
+            perr = ((pfit-perr_lower)+(perr_higher-pfit))/2.0
+            fit_results = "Results of fit: H={:.2f} (+/- {:.4f}), G12={:.2f} (+/- {:.4f})".format(pfit[0], perr[0], pfit[1], perr[1])
+            self.stdout.write(fit_results)
+
+            self.H = pfit[0]
+            self.G12 = pfit[1]
 
         plottitle = "Phase curve for {}".format(body_name)
         self.plot_phase_curve(phase_angle_meas, title=plottitle, sub_title=fit_results, filename=plot_filename)
