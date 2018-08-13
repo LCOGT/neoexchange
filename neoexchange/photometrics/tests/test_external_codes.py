@@ -783,21 +783,22 @@ class TestReadMTDSFile(TestCase):
             for column in expected_array.dtype.names:
                 self.assertAlmostEqual(expected_array[column][frame], det1[column][frame], 7)
 
+
 class TestUnpackTarball(TestCase):
     def setUp(self):
-        self.dir_path = os.path.join(os.getcwd(),'photometrics','tests')
-        self.tar_path = os.path.join(self.dir_path,'test_tar.tar.gz')
-        self.unpack_dir = os.path.join(self.dir_path,'test_unpacked')
+        self.dir_path = os.path.join(os.getcwd(), 'photometrics', 'tests')
+        self.tar_path = os.path.join(self.dir_path, 'test_tar2.tar.gz')
+        self.unpack_dir = os.path.join(self.dir_path, 'test_unpacked')
         # self.spectra_path = os.path.join(self.dir_path,'LCOEngineering_0001588447_ftn_20180714_58314.tar.gz')
         # self.spectra_unpack_dir = os.path.join(self.dir_path,'spectra_unpacked')
 
     def test_unpack(self):
-        expected_file_name = os.path.join(self.unpack_dir,'file1.txt')
+        expected_file_name = os.path.join(self.unpack_dir, 'file1.txt')
         expected_num_files = 3
-        files = unpack_tarball(self.tar_path,self.unpack_dir)
+        files = unpack_tarball(self.tar_path, self.unpack_dir)
 
-        self.assertEqual(expected_num_files,len(files))
-        self.assertEqual(expected_file_name,files[0])
+        self.assertEqual(expected_num_files, len(files))
+        self.assertEqual(expected_file_name, files[0])
 
     # def test_unpack_spectra(self):
     #     expected_file_name = os.path.join(self.spectra_unpack_dir,'ogg2m001-en06-20180713-0009-e00.fits')

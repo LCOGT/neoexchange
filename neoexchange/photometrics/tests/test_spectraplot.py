@@ -7,6 +7,7 @@ from collections import OrderedDict
 
 from photometrics.spectraplot import *
 
+
 class Test_Read_Spectra(TestCase):
 
     def setUp(self):
