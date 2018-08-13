@@ -52,7 +52,7 @@ from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
 from photometrics.spectraplot import read_spectra, smooth, plot_spectra
-from photometrics.gf_movie import make_gif
+from photometrics.gf_movie import make_gif, test_display
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
@@ -2246,12 +2246,13 @@ def make_movie(request,pk):
 
     if filename: #If first order tarball is unpacked
             movie_dir = glob(os.path.join(dir,"Guide_frames"))
-            print('MOVIE DIR :',movie_dir[0])
             if movie_dir: #if 2nd order tarball is unpacked
+                print('MOVIE DIR :',movie_dir[0])
                 movie_file = glob(os.path.join(movie_dir[0],"*.gif"))
                 if movie_file:
                     print('MOVIE FILE: ',movie_file[0])
-                    return HttpResponse(movie_file[0], content_type="Image/gif")
+                    movie = open(movie_file[0], 'rb').read()
+                    return HttpResponse(movie, content_type="Image/gif")
                 else:
                     frames = glob(os.path.join(movie_dir[0],"*.fits.fz"))
             else:
@@ -2259,6 +2260,7 @@ def make_movie(request,pk):
                 if tarintar:
                     unpack_path = dir+'Guide_frames'
                     guide_files = unpack_tarball(tarintar[0],unpack_path)
+                    print("Unpacking tar in tar")
                     frames = []
                     for file in guide_files:
                         if '.fits.fz' in file:
@@ -2294,10 +2296,14 @@ def make_movie(request,pk):
             logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
         return None
     if frames is not None and len(frames) > 1:
+        #print(frames)
+        print("Making Movie")
         movie_file = make_gif(frames)
+        #movie_file = test_display(frames[0])
         print('MOVIE FILE: ',movie_file)
         plt.close()
-        return HttpResponse(movie_file, content_type="Image/gif")
+        movie = open(movie_file, 'rb').read()
+        return HttpResponse(movie, content_type="Image/gif")
     else:
         logger.error("There must be at least 2 frames to make guide movie. Found: %d" % len(frames))
         return None

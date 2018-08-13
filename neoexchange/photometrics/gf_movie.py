@@ -12,14 +12,16 @@ import os
 
 def make_gif(frames):
     files = np.sort(frames)
-    dir = os.path.dirname(frames[0])
+    dir = os.path.dirname(frames[0]).lstrip(' ')
 
     hdu = fits.open(files[0])[0]
-    if not hdu.data:
-        hdu = fits.open(files[0])[1]
-
-    data = hdu.data
-    header = hdu.header
+    if hdu.data:
+            data = hdu.data
+            header = hdu.header
+    else:
+        hdu1 = fits.open(files[0])[1]
+        data = hdu1.data
+        header = hdu1.header
 
     obj = header['OBJECT']
     tn = header['TRACKNUM'].lstrip('0')
@@ -37,7 +39,34 @@ def make_gif(frames):
     fig = plt.figure()
     #fig.add_subplot(111,projection=wcs)
     fig.suptitle('Observation '+tn+' for '+obj+' at '+site)
-    image = plt.imshow(fits.getdata(files[0]),cmap='gray',vmin=interval[0],vmax=interval[1])
+
+
+    anim = FuncAnimation(fig,update,frames=files,blit=True,interval=333)
+
+
+    savefile = os.path.join(dir,'guidemovie.gif')
+    print('SAVE FILE: ',savefile)
+    anim.save(savefile, dpi=100, writer='imagemagick')
+
+    return savefile
+
+def update(files):
+
+    hdu = fits.open(files)[0]
+    if hdu.data:
+            data = hdu.data
+            header = hdu.header
+    else:
+        hdu1 = fits.open(files[0])[1]
+        data = hdu1.data
+        header = hdu1.header
+
+    try:
+        date = header['DATE-OBS'][:-4]
+    except KeyError:
+        date = header['DATE_OBS'][:-4]
+    #wcs = WCS(header)
+    interval = ZScaleInterval().get_limits(data)
     ax = plt.gca()
     ax.set_title('Date: '+date)
     ax.set_xlabel('RA Dec: '+header['RA']+ ' '+header['DEC'])
@@ -49,35 +78,38 @@ def make_gif(frames):
     labelbottom=False,
     labelleft=False)
 
-    anim = FuncAnimation(fig,update,frames=np.arange(len(files)),blit=True,interval=333)
-
-    savefile = dir+'guidemovie.gif'
-    anim.save(savefile, dpi=80, writer='imagemagick')
-
-    return savefile
-
-def update(i):
-
-    data = fits.getdata(files[i])
-    header = fits.open(files[i])[0].header
-    try:
-        date = header['DATE-OBS'][:-4]
-    except KeyError:
-        date = header['DATE_OBS'][:-4]
-    #wcs = WCS(header)
-    interval = ZScaleInterval().get_limits(data)
-    ax = plt.gca()
-    #lon = ax.coords['ra']
 
     return plt.imshow(data,cmap='gray',vmin=interval[0],vmax=interval[1]),ax.set_title('Date: '+date),ax.set_xlabel('RA Dec: '+header['RA']+ ' '+header['DEC'])
+
+def test_display(file):
+
+    hdu = fits.open(file)[0]
+    if not any(hdu.data):
+        hdu = fits.open(file)[1]
+
+    dir = os.path.dirname(file)
+    data = hdu.data
+    header = hdu.header
+
+    interval = ZScaleInterval().get_limits(data)
+    plt.imshow(data,cmap='gray',vmin=interval[0],vmax=interval[1])
+    testname = os.path.join(dir,'test.png')
+    plt.savefig(testname)
+    return testname
 
 if __name__ == '__main__':
 
     dir = '/home/atedeschi/Asteroids/20180731/398188_0001604640/Guide_Frames/'
     files = np.sort(glob(dir+'*.fits'))
     hdu = fits.open(files[0])[0]
-    data = hdu.data
-    header = hdu.header
+    if hdu.data.any():
+            data = hdu.data
+            header = hdu.header
+    else:
+        hdu1 = fits.open(files[0])[1]
+        data = hdu1.data
+        header = hdu1.header
+
 
     minind = np.unravel_index(np.argmin(data, axis=None), data.shape)
     min = data[minind]
@@ -129,4 +161,5 @@ if __name__ == '__main__':
     #plt.show()
 
     savefile = dir+'guidemovie.gif'
+    print('SAVE FILE: ', savefile)
     anim.save(savefile, dpi=80, writer='imagemagick')
