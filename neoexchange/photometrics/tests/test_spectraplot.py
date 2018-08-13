@@ -11,13 +11,13 @@ from photometrics.spectraplot import *
 class Test_Read_Spectra(TestCase):
 
     def setUp(self):
-        self.fitsdir  = '/home/atedeschi/test_spectra/398188/'
-        self.fitsfile = 'ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
-        self.asciidir = '/home/atedeschi/test_spectra/calspec/'
-        self.asciifile= 'eros_visnir_reference_to1um.ascii'
-        self.txtdir   = '/home/atedeschi/test_spectra/'
+        self.fitsdir  = os.getcwd()+'/photometrics/tests/'
+        self.fitsfile = 'test_fits.fits'
+        self.asciidir = os.getcwd()+'/photometrics/tests/'
+        self.asciifile= 'test_ascii.ascii'
+        self.txtdir   = os.getcwd()+'/photometrics/tests/'
         self.txtfile  = 'a001981.4.txt'
-        self.datdir   = '/home/atedeschi/test_spectra/calspec/'
+        self.datdir   = os.getcwd()+'/photometrics/tests/'
         self.datfile  = 'fhr9087.dat'
 
         self.tolerance = 1
