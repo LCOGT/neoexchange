@@ -4,6 +4,14 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.0a
+
+Flux Standards
+* Add Static Source Model
+* Add Calibrations List page
+* Add Callibration detail descriptions
+* Allow for sorting out and scheduling spectra for Solar analogs
+
 ### 2.6.0
 
 Calculate and forward more precise orbital elements for spectroscopic observations
