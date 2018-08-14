@@ -2290,7 +2290,7 @@ def make_movie(request,pk):
             for file in spec_files:
                 if '.tar' in file:
                     tarintar = file
-                    unpack_path = os.path.join(dir,'Guide_frames')
+                    unpack_path = os.path.join(dir,obj+'_'+req+'/Guide_frames')
                     print("Unpacking tar in tar")
                     guide_files = unpack_tarball(tarintar,unpack_path)
                     break

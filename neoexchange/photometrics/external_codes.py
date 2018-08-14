@@ -691,7 +691,6 @@ def unpack_tarball(tar_path, unpack_dir):
     unpack_archive(tar_path,extract_dir=unpack_dir,format="gztar")
 
     files = glob(unpack_dir+'/*')
-    for file in files:
-        os.chmod(file,0o664) #make files readable and writeble for group
+    os.chmod(unpack_dir,0o775)
 
     return files
