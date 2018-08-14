@@ -45,8 +45,7 @@ def make_gif(frames):
 
 
     savefile = os.path.join(dir,'guidemovie.gif')
-    print('SAVE FILE: ',savefile)
-    anim.save(savefile, dpi=100, writer='imagemagick')
+    anim.save(savefile, dpi=90, writer='imagemagick')
 
     return savefile
 

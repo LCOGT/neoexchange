@@ -2154,13 +2154,7 @@ def find_spec(pk):
     dir = base_dir+date+'/'+obj+'_'+req+'/'
     spectra_path = ''
     prop = block.proposal.code
-    #debugging
-    print('ID: ',pk)
-    print('DATE:',date)
-    print('BODY:',obj)
-    print('REQNUM: ',req)
-    print('DIR: ',dir)
-    print('PROP:',prop)
+
     return date,obj,req,dir,prop
 
 def make_spec(request,pk):
@@ -2174,6 +2168,12 @@ def make_spec(request,pk):
     import matplotlib.pyplot as plt
 
     date,obj,req,dir,prop = find_spec(pk)
+    print('ID: ',pk)
+    print('DATE:',date)
+    print('BODY:',obj)
+    print('REQNUM: ',req)
+    print('DIR: ',dir)
+    print('PROP:',prop)
 
     filename = glob(os.path.join(dir,'*2df_ex.fits')) #checks for file in path
     if filename:
@@ -2233,8 +2233,9 @@ class GuideMovie(View): #make loging required later
         return render(request, self.template_name, params)
 
 def make_movie(request,pk):
-    """Make gif of FLOYDS Guide Frames
-    NOT FINISHED YET"""
+    """Make gif of FLOYDS Guide Frames given a spectral block
+    <pk> principle key for SuperBlock
+    """
     # import matplotlib
     # matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -2262,7 +2263,7 @@ def make_movie(request,pk):
             else:
                 tarintar = glob(os.path.join(dir,"*.tar"))
                 if tarintar:
-                    unpack_path = dir+'Guide_frames'
+                    unpack_path = os.path.join(dir,'Guide_frames')
                     guide_files = unpack_tarball(tarintar[0],unpack_path)
                     print("Unpacking tar in tar")
                     frames = []
@@ -2274,7 +2275,7 @@ def make_movie(request,pk):
                     return HttpResponse("")
 
     else: #else, unpack both tarballs
-        dir = base_dir+date
+        dir = os.path.join('/apophis/eng/rocks/',date)
         tar_files = glob(os.path.join(dir,prop+"_"+req+"*.tar.gz")) #if file not found, looks fror tarball
         if tar_files:
             for tar in tar_files:
@@ -2283,25 +2284,28 @@ def make_movie(request,pk):
                     unpack_path = os.path.join(dir,obj+'_'+req)
                     break
             #print(tar_path)
-            spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
             print("Unpacking 1st tar")
+            spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
+
             for file in spec_files:
                 if '.tar' in file:
-                    file = tarintar
-                    unpack_path = dir+'Guide_frames'
-                    guide_files = unpack_tarball(tarintar[0],unpack_path)
+                    tarintar = file
+                    unpack_path = os.path.join(dir,'Guide_frames')
                     print("Unpacking tar in tar")
-                    #print(guide_files)
-                    frames = []
-                    for file in guide_files:
-                        if '.fits.fz' in file:
-                            frames.append(file)
+                    guide_files = unpack_tarball(tarintar,unpack_path)
+                    break
+
+            frames = []
+            for file in guide_files:
+                if '.fits.fz' in file:
+                    frames.append(file)
+
         else:
             logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
-        return HttpResponse("")
+            return HttpResponse("")
     if frames is not None and len(frames) > 1:
-        #print(frames)
-        print("Making Movie")
+        print("#Frames = ", len(frames))
+        print("Making Movie...")
         movie_file = make_gif(frames)
         #movie_file = test_display(frames[0])
         print('MOVIE FILE: ',movie_file)

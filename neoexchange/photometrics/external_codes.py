@@ -687,8 +687,11 @@ def read_mtds_file(mtdsfile, dbg=False):
     return dets
 
 def unpack_tarball(tar_path, unpack_dir):
+    """unpacks tarballs and puts files in appropriately named directory"""
     unpack_archive(tar_path,extract_dir=unpack_dir,format="gztar")
 
     files = glob(unpack_dir+'/*')
+    for file in files:
+        os.chmod(file,0o664) #make files readable and writeble for group
 
     return files
