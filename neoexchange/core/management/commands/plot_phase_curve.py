@@ -1,3 +1,4 @@
+import os
 from sys import exit
 from datetime import datetime
 from math import exp, log10, tan
@@ -201,7 +202,8 @@ class Command(BaseCommand):
                 print("{:>4.1f} {:.3f} {:.3f} {} {} {:.2f}".format(phase_angle, mag_corr, src.obs_mag-mag_corr+color_corr, obs_filter, block_id, color_corr))
             plot_filename = "phasecurve_{}".format(body_name.replace(' ', ''))
         else:
-            phase_angle_meas = np.loadtxt("44_Nysa.dat", skiprows=2)
+            datafile = os.path.join('photometrics', 'data', '44_Nysa.dat')
+            phase_angle_meas = np.loadtxt(datafile, skiprows=2)
 
             body_name = '(44) Nysa'
             plot_filename = 'phasecurve_44_Nysa_fit.png'
