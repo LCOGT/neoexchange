@@ -2128,6 +2128,7 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 def find_spec(pk):
+    """find directory of spectra for a certain block"""
     block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
     base_dir = settings.DATA_ROOT
     #url = check_for_archive_images(block.tracking_number,'')[0][0]['headers']
@@ -2154,16 +2155,19 @@ def find_spec(pk):
     spectra_path = ''
     prop = block.proposal.code
     #debugging
-    # print('ID: ',pk)
-    # print('DATE:',date)
-    # print('BODY:',obj)
-    # print('REQNUM: ',req)
-    # print('DIR: ',dir)
-    # print('PROP:',prop)
+    print('ID: ',pk)
+    print('DATE:',date)
+    print('BODY:',obj)
+    print('REQNUM: ',req)
+    print('DIR: ',dir)
+    print('PROP:',prop)
     return date,obj,req,dir,prop
 
 def make_spec(request,pk):
-    """Creates plot of spectra data for spectra blocks"""
+    """Creates plot of spectra data for spectra blocks
+       NOTE: Can take ~5-10 seconds to load if building new gif. Wait a bit
+       before assuming something is wrong
+    """
     import io
     # import matplotlib
     # matplotlib.use('Agg')
@@ -2175,7 +2179,7 @@ def make_spec(request,pk):
     if filename:
         spectra_path = filename[0]
     else:
-        dir = base_dir+date
+        dir = dir+date
         tar_files = glob(os.path.join(dir,prop+'_*'+req+'*.tar.gz')) #if file not found, looks fror tarball
         if tar_files:
             for tar in tar_files:
@@ -2190,7 +2194,7 @@ def make_spec(request,pk):
                     break
         else:
             logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
-            return None
+            return HttpResponse("")
 
     if spectra_path: #plots spectra
         spec_file = os.path.basename(spectra_path)
@@ -2208,7 +2212,7 @@ def make_spec(request,pk):
 
     else:
         logger.error("Could not find spectrum data for block: %s" % pk)
-        return None
+        return HttpResponse("")
 
 class PlotSpec(View): #make loging required later
 
@@ -2267,7 +2271,7 @@ def make_movie(request,pk):
                             frames.append(file)
                 else:
                     logger.error("Could not Guide Frames or Guide Frame tarball for block: %s" %pk)
-                    return None
+                    return HttpResponse("")
 
     else: #else, unpack both tarballs
         dir = base_dir+date
@@ -2294,7 +2298,7 @@ def make_movie(request,pk):
                             frames.append(file)
         else:
             logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
-        return None
+        return HttpResponse("")
     if frames is not None and len(frames) > 1:
         #print(frames)
         print("Making Movie")
@@ -2306,7 +2310,7 @@ def make_movie(request,pk):
         return HttpResponse(movie, content_type="Image/gif")
     else:
         logger.error("There must be at least 2 frames to make guide movie. Found: %d" % len(frames))
-        return None
+        return HttpResponse("")
 
 
 def update_taxonomy(taxobj, dbg=False):
