@@ -24,39 +24,68 @@ class GuideMovieTest(FunctionalTest):
             self.bart.save()
 
             sblock_params = {
-                 'cadence' : False,
-                 'body'     : self.body,
-                 'proposal' : self.test_proposal,
-                 'block_start' : '2015-04-20 13:00:00',
-                 'block_end'   : '2015-04-22 03:00:00',
+                 'cadence'         : False,
+                 'body'            : self.body,
+                 'proposal'        : self.test_proposal,
+                 'block_start'     : '2015-04-20 13:00:00',
+                 'block_end'       : '2015-04-22 03:00:00',
                  'tracking_number' : '4242',
-                 'active'   : True
+                 'active'          : True
                }
             self.test_sblock = SuperBlock.objects.create(pk=3, **sblock_params)
 
             block_params = { 'telclass' : '2m0',
-                 'site'     : 'ogg',
-                 'body'     : self.body,
-                 'proposal' : self.test_proposal,
-                 'superblock' : self.test_sblock,
-                 'obstype'  : Block.OPT_SPECTRA,
-                 'block_start' : '2015-04-20 13:00:00',
-                 'block_end'   : '2015-04-21 03:00:00',
+                 'site'            : 'ogg',
+                 'body'            : self.body,
+                 'proposal'        : self.test_proposal,
+                 'superblock'      : self.test_sblock,
+                 'obstype'         : Block.OPT_SPECTRA,
+                 'block_start'     : '2015-04-20 13:00:00',
+                 'block_end'       : '2015-04-21 03:00:00',
                  'tracking_number' : '12345',
-                 'num_exposures' : 1,
-                 'exp_length' : 1800.0,
-                 'active'   : True,
+                 'num_exposures'   : 1,
+                 'exp_length'      : 1800.0,
+                 'active'          : True,
                }
             self.test_block = Block.objects.create(**block_params)
-            fparams = { 'sitecode'      : 'F65',
-                        'filename'      : 'gf1.fits',
-                        'exptime'       : 1800.0,
-                        'midpoint'      : '2018-01-01 00:00:00',
-                        'frametype'     : Frame.SPECTRUM_FRAMETYPE,
-                        'block'         : self.test_block,
-                        'frameid'       : 1,
-                      }
+            fparams = {
+                'sitecode'      : 'F65',
+                'filename'      : 'gf1.fits',
+                'exptime'       : 1800.0,
+                'midpoint'      : '2018-01-01 00:00:00',
+                'frametype'     : Frame.SPECTRUM_FRAMETYPE,
+                'block'         : self.test_block,
+                'frameid'       : 1,
+               }
             self.spec_frame = Frame.objects.create(**fparams)
+
+
+            sblock_params2 = {
+                 'cadence'         : False,
+                 'body'            : self.body,
+                 'proposal'        : self.test_proposal,
+                 'block_start'     : '2015-04-20 13:00:00',
+                 'block_end'       : '2015-04-22 03:00:00',
+                 'tracking_number' : '4242',
+                 'active'          : False
+               }
+            self.test_sblock2 = SuperBlock.objects.create(pk=4, **sblock_params2)
+
+            block_params2 = { 'telclass' : '2m0',
+                 'site'            : 'ogg',
+                 'body'            : self.body,
+                 'proposal'        : self.test_proposal,
+                 'superblock'      : self.test_sblock2,
+                 'obstype'         : 0,
+                 'block_start'     : '2015-04-20 13:00:00',
+                 'block_end'       : '2015-04-21 03:00:00',
+                 'tracking_number' : '12345',
+                 'num_exposures'   : 1,
+                 'exp_length'      : 1800.0,
+                 'active'          : False,
+               }
+            self.test_block2 = Block.objects.create(**block_params2)
+
             update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
         @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
@@ -73,6 +102,21 @@ class GuideMovieTest(FunctionalTest):
 
         @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
         @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+        def test_failed_block(self):
+            self.login()
+            blocks_url = reverse('blocklist')
+            self.browser.get(self.live_server_url + blocks_url)
+            with self.wait_for_page_load(timeout=10):
+                self.browser.find_element_by_link_text('4').click()
+            side_text = self.browser.find_element_by_class_name('block-status').text
+            block_lines = side_text.splitlines()
+            testlines = ['2015-04-20', '13:00 2015-04-21', '03:00']
+            for line in testlines:
+                self.assertIn(line, block_lines)
+            self.assertIn('Block details | LCO NEOx', self.browser.title)
+
+        @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
         def test_can_view_guide_movie(self):
             self.login()
             self.browser.get(self.live_server_url)
@@ -80,10 +124,9 @@ class GuideMovieTest(FunctionalTest):
             self.browser.get(self.live_server_url + blocks_url)
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_element_by_link_text(str(self.test_sblock.pk)).click()
-            with self.wait_for_page_load(timeout=20):
+            with self.wait_for_page_load(timeout=10):
                 self.browser.find_element_by_link_text('Guide Movie').click()
             actual_url = self.browser.current_url
             target_url = self.live_server_url+'/block/'+str(self.test_sblock.pk)+'/guidemovie/'
-
             self.assertIn('Guide Movie | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
