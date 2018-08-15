@@ -23,31 +23,6 @@ class GuideMovieTest(FunctionalTest):
             self.bart.is_active=1
             self.bart.save()
 
-            # sbparams = {  'body'           :  self.body,
-            #               'proposal'       :  self.test_proposal,
-            #               'tracking_number':  '00045',
-            #            }
-            # self.test_spec_sblock = SuperBlock.objects.create(pk=99,**sbparams)
-            # bparams = { 'body'           :  self.body,
-            #             'proposal'       :  self.test_proposal,
-            #             'block_start'    :  '2018-08-01 06:00:00',
-            #             'tracking_number':  '00045',
-            #             'superblock'     :  self.test_sblock,
-            #             'num_exposures'  :  1,
-            #             'exp_length'     :  1800.0,
-            #             'obstype'        :  Block.OPT_SPECTRA,
-            #             'num_observed'   :  1
-            #           }
-            # self.test_spec_block = Block.objects.create(pk=99,**bparams)
-            # fparams = { 'sitecode'      : 'F65',
-            #             'filename'      : 'gf1.fits',
-            #             'exptime'       : 1800.0,
-            #             'midpoint'      : '2018-01-01 00:00:00',
-            #             'frametype'     : Frame.SPECTRUM_FRAMETYPE,
-            #             'block'         : self.test_spec_block,
-            #             'frameid'       : 1,
-            #           }
-            # self.spec_frame = Frame.objects.create(**fparams)
             sblock_params = {
                  'cadence' : False,
                  'body'     : self.body,

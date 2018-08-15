@@ -2178,17 +2178,19 @@ def make_spec(request,pk):
     print('DIR: ',dir)
     print('PROP:',prop)
 
+    base_dir = os.path.join(settings.DATA_ROOT,date)
+
     filename = glob(os.path.join(dir,'*2df_ex.fits')) #checks for file in path
     if filename:
         spectra_path = filename[0]
     else:
         dir = dir+date
-        tar_files = glob(os.path.join(dir,prop+'_*'+req+'*.tar.gz')) #if file not found, looks fror tarball
+        tar_files = glob(os.path.join(base_dir,prop+'_*'+req+'*.tar.gz')) #if file not found, looks fror tarball
         if tar_files:
             for tar in tar_files:
                 if req in tar:
                     tar_path = tar
-                    unpack_path = os.path.join(dir,obj+'_'+req)
+                    unpack_path = os.path.join(base_dir,obj+'_'+req)
             print(tar_path)
             spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
             for spec in spec_files:
