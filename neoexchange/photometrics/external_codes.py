@@ -690,7 +690,8 @@ def unpack_tarball(tar_path, unpack_dir):
     """unpacks tarballs and puts files in appropriately named directory"""
     unpack_archive(tar_path,extract_dir=unpack_dir,format="gztar")
 
-    files = glob(unpack_dir+'/*')
     os.chmod(unpack_dir,0o775)
+    files = glob(unpack_dir+'/*')
+
 
     return files

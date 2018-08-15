@@ -171,19 +171,19 @@ class Test_Read_Spectra(TestCase):
 
     def test_get_fits_y_units1(self):
         test_hdr1 = Header()
-        test_hdr1.append(('BUNIT ','erg/cm2/s/A  10^20'))
+        test_hdr1.append(('BUNIT ','erg/cm2/s/A  10^20')) #given valid key and unit and factor
         test_hdr2 = Header()
-        test_hdr2.append(('TUNIT2','erg/cm2/s/A'))
+        test_hdr2.append(('TUNIT2','erg/cm2/s/A')) #given valid key and unit
         test_hdr3 = Header()
-        test_hdr3.append(('HI','LOL'))
+        test_hdr3.append(('HI','LOL')) #given invalid key and invalid unit
         test_hdr4 = Header()
-        test_hdr4.append(('BUNIT','HI'))
+        test_hdr4.append(('BUNIT','HI')) #given valid keys and invalid unit
         test_hdr4.append(('TUNIT2','LOL'))
         test_hdr5 = Header()
-        test_hdr5.append(('BUNIT','Normalized'))
+        test_hdr5.append(('BUNIT','Normalized')) #given valid key and norm unit
         exp_y5 = u.dimensionless_unscaled
         test_hdr6 = Header()
-        test_hdr6.append(('BUNIT','FLAM'))
+        test_hdr6.append(('BUNIT','FLAM')) #given valid key and valid unit
 
         exp_y1 = u.erg/(u.cm**2)/u.s/u.AA
         exp_f1 = 1E+20
@@ -217,10 +217,10 @@ class Test_Read_Spectra(TestCase):
         self.assertEqual(exp_f6,f6)
 
     def test_get_ascii_y_units(self):
-        test_dict1 = OrderedDict({'col1':'microns','col2':'erg/cm2/s/A','col3':'error'})
-        test_dict2 = OrderedDict({'col1':'microns','col2':'Normalized','col3':'error'})
+        test_dict1 = OrderedDict({'col1':'microns','col2':'erg/cm2/s/A','col3':'error'}) #given valid x and y units
+        test_dict2 = OrderedDict({'col1':'microns','col2':'Normalized','col3':'error'}) #given valid x unit and norm y
         test_dict3 = OrderedDict({'col1':'microns','col2':'Normalized Reflectance','col3':'error'})
-        test_dict4 = OrderedDict({'col1':'microns','col2':'something else','col3':'error'})
+        test_dict4 = OrderedDict({'col1':'microns','col2':'something else','col3':'error'}) #given valid x unit and invalid y unit
 
         exp_y1 = u.erg/(u.cm**2)/u.s/u.AA
         exp_f1 = 1
@@ -245,11 +245,11 @@ class Test_Read_Spectra(TestCase):
         self.assertEqual(exp_f4,f4)
 
     def test_get_x_units(self):
-        test_x_data1 = [3103.14013672,3104.88222365,3106.62431058]
-        test_x_data2 = [0.435,0.4375,0.44]
-        test_x_data3 = [404,404.5,405]
-        test_x_data4 = [15,16,17]
-        test_x_data5 = [1500,800,500]
+        test_x_data1 = [3103.14013672,3104.88222365,3106.62431058] #given x range expected for Angstroms
+        test_x_data2 = [0.435,0.4375,0.44] #given x range expected for microns
+        test_x_data3 = [404,404.5,405] #given x range expected for nm
+        test_x_data4 = [15,16,17] #given nonsense
+        test_x_data5 = [1500,800,500] #given expected x range for nm, but not in order
 
         exp_x1 = u.AA
         x1 = get_x_units(test_x_data1)

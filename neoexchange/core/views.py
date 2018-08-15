@@ -2128,12 +2128,15 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 def find_spec(pk):
-    """find directory of spectra for a certain block"""
-    block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
+    """find directory of spectra for a certain block
+    NOTE: Currently will only pull first spectrum of a superblock
+    """
     base_dir = settings.DATA_ROOT
-    #url = check_for_archive_images(block.tracking_number,'')[0][0]['headers']
-    url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
-
+    try:
+        block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
+        url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
+    except IndexError:
+        return '','','','',''
     #data = lco_api_call(url)['data']
     #print(url)
     data = lco_api_call(url)['data']
@@ -2264,7 +2267,7 @@ def make_movie(request,pk):
                 tarintar = glob(os.path.join(dir,"*.tar"))
                 if tarintar:
                     unpack_path = os.path.join(dir,'Guide_frames')
-                    guide_files = unpack_tarball(tarintar[0],unpack_path)
+                    guide_files = unpack_tarball(tarintar[0],unpack_path) #unpacks tar
                     print("Unpacking tar in tar")
                     frames = []
                     for file in guide_files:
@@ -2275,13 +2278,13 @@ def make_movie(request,pk):
                     return HttpResponse("")
 
     else: #else, unpack both tarballs
-        dir = os.path.join('/apophis/eng/rocks/',date)
-        tar_files = glob(os.path.join(dir,prop+"_"+req+"*.tar.gz")) #if file not found, looks fror tarball
+        base_dir = os.path.join(settings.DATA_ROOT,date)
+        tar_files = glob(os.path.join(base_dir,prop+"_"+req+"*.tar.gz")) #if file not found, looks fror tarball
         if tar_files:
             for tar in tar_files:
                 if req in tar:
                     tar_path = tar
-                    unpack_path = os.path.join(dir,obj+'_'+req)
+                    unpack_path = os.path.join(base_dir,obj+'_'+req)
                     break
             #print(tar_path)
             print("Unpacking 1st tar")
@@ -2290,9 +2293,9 @@ def make_movie(request,pk):
             for file in spec_files:
                 if '.tar' in file:
                     tarintar = file
-                    unpack_path = os.path.join(dir,obj+'_'+req+'/Guide_frames')
+                    unpack_path = os.path.join(base_dir,obj+'_'+req+'/Guide_frames')
                     print("Unpacking tar in tar")
-                    guide_files = unpack_tarball(tarintar,unpack_path)
+                    guide_files = unpack_tarball(tarintar,unpack_path) #unpacks tar in tar
                     break
 
             frames = []
