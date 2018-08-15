@@ -846,13 +846,13 @@ def get_mag_mapping(site_code):
     slot length (in minutes) assuming minimum exposure count is 4. A null
     dictionary is returned if the site name isn't recognized"""
 
-    twom_site_codes = ['F65', 'E10']
-    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64']
+    twom_site_codes = ['F65', 'E10', '2M']
+    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M']
     # COJ normally has bad seeing, allow more time
     # Disabled by TAL 2018/8/10 after mirror recoating
 #    bad_onem_site_codes = ['Q63', 'Q64']
-    bad_onem_site_codes = []
-    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09']
+    bad_onem_site_codes = ['BAD1M']
+    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', '0M4']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
@@ -924,8 +924,10 @@ def determine_slot_length(mag, site_code, debug=False):
 
 # Obtain magnitude->slot length mapping dictionary
     mag_mapping = get_mag_mapping(site_code)
-    if debug: print(mag_mapping)
-    if mag_mapping == {}: return 0
+    if debug:
+        print(mag_mapping)
+    if mag_mapping == {}:
+        return 0
 
     # Derive your tuple from the magnitude->slot length mapping data structure
     upper_mags = tuple(sorted(mag_mapping.keys()))
