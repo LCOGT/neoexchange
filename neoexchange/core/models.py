@@ -808,7 +808,7 @@ class Frame(models.Model):
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
-    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
+    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
     block       = models.ForeignKey(Block, null=True, blank=True)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
