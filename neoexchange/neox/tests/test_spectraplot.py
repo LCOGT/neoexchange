@@ -68,7 +68,7 @@ class SpectraplotTest(FunctionalTest):
                  'exp_length'      : 1800.0,
                  'active'          : True,
                }
-            self.test_block = Block.objects.create(**block_params)
+            self.test_block = Block.objects.create(pk=3, **block_params)
             fparams = {
                 'sitecode'      : 'F65',
                 'filename'      : 'sp233/a265962.sp233.txt',
@@ -105,7 +105,7 @@ class SpectraplotTest(FunctionalTest):
                  'exp_length'      : 1800.0,
                  'active'          : False,
                }
-            self.test_block2 = Block.objects.create(**block2_params)
+            self.test_block2 = Block.objects.create(pk=4, **block2_params)
 
             msblock_params = {
                  'cadence'         : False,
@@ -132,7 +132,7 @@ class SpectraplotTest(FunctionalTest):
                  'exp_length'      : 1800.0,
                  'active'          : True,
                }
-            self.test_mblock1 = Block.objects.create(pk=6, **mblock1_params)
+            self.test_mblock1 = Block.objects.create(pk=5, **mblock1_params)
             mfparams1 = {
                 'sitecode'      : 'F65',
                 'filename'      : 'sp233/a265962.sp233.txt',
@@ -158,7 +158,7 @@ class SpectraplotTest(FunctionalTest):
                  'exp_length'      : 1800.0,
                  'active'          : True,
                }
-            self.test_mblock2 = Block.objects.create(pk=7, **mblock2_params)
+            self.test_mblock2 = Block.objects.create(pk=6, **mblock2_params)
             mfparams2 = {
                 'sitecode'      : 'F65',
                 'filename'      : 'sp233/a265962.sp233.txt',
