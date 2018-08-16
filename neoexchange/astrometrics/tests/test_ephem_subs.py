@@ -2356,10 +2356,11 @@ class Test_perturb_elements(TestCase):
         self.assertAlmostEqual(expected_a, p_orbelems['SemiAxisOrQ'], self.precision)
         self.assertAlmostEqual(expected_e, p_orbelems['Ecc'], self.precision)
 
+
 class TestReadFindorbEphem(TestCase):
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         self.debug_print = False
         self.maxDiff = None
 
@@ -2374,7 +2375,8 @@ class TestReadFindorbEphem(TestCase):
                 print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print("Removed", self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
 
@@ -2410,7 +2412,7 @@ class TestReadFindorbEphem(TestCase):
                              'emp_timesys': '(UTC)',
                              'obj_id': '2017YE5'}
 
-        expected_emp = [(datetime(2018,6,30,6,10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
+        expected_emp = [(datetime(2018, 6, 30, 6, 10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
 
         lines = [ '#(F65) Haleakala-Faulkes Telescope North: 2017 YE5',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
@@ -2421,14 +2423,14 @@ class TestReadFindorbEphem(TestCase):
 
         empinfo, emp = read_findorb_ephem(outfile)
 
-        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
 
     def test_numbered_ast(self):
         expected_empinfo = { 'emp_rateunits': "'/hr",
                              'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
                              'obj_id': '398188'}
-        expected_emp = [(datetime(2018,7,19,21,48), 5.31473475745, 0.460169195739, 16.4, 3.50, 0.039)]
+        expected_emp = [(datetime(2018, 7, 19, 21, 48), 5.31473475745, 0.460169195739, 16.4, 3.50, 0.039)]
 
         lines = [ '#(F65) Haleakala-Faulkes Telescope North: (398188) = 2010 LE15',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
@@ -2439,14 +2441,14 @@ class TestReadFindorbEphem(TestCase):
 
         empinfo, emp = read_findorb_ephem(outfile)
 
-        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
 
     def test_E10_numbered_ast(self):
         expected_empinfo = { 'emp_rateunits': "'/hr",
                              'emp_sitecode': 'E10',
                              'emp_timesys': '(UTC)',
                              'obj_id': '1627'}
-        expected_emp = [(datetime(2018,7,19,22,11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
 
         lines = [ '#(E10) Siding Spring-Faulkes Telescope South: (1627) = 1929 SH',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
@@ -2457,4 +2459,58 @@ class TestReadFindorbEphem(TestCase):
 
         empinfo, emp = read_findorb_ephem(outfile)
 
-        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_E10_numbered_ast_nocrossid(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'E10',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '1627'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
+
+        lines = [ '#(E10) Siding Spring-Faulkes Telescope South: (1627)',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  22.2  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_F65_numbered_ast_nocrossid(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'E10',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '1627'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
+
+        lines = [ '#(E10) Faulkes Telescope North: (1627)',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  22.2  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_F65_numbered_ast_high_certainty(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'E10',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '1627'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
+
+        lines = [ '#(E10) Faulkes Telescope North: (1627)',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))

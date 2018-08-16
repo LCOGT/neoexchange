@@ -2116,6 +2116,7 @@ def create_source_measurement(obs_lines, block=None):
                             measures.append(measure)
                             measure_count += 1
                         # End loop when measurements are in the DB for all MPC lines
+                        logger.info('Previously recorded {} of {} total MPC obs'.format(measure_count, useful_obs))
                         if measure_count >= useful_obs:
                             break
 

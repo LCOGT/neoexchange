@@ -27,6 +27,7 @@ except:
 from numpy import array, concatenate, zeros
 import copy
 from itertools import groupby
+import re
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -550,21 +551,24 @@ def read_findorb_ephem(empfile):
             if line.lstrip()[0] == '#' :
                 # print(line.lstrip())
                 # First line contains object id and the sitecode the ephemeris is for. Fetch...
-                chunks = line.lstrip()[1:].split()
-                if len(chunks) == 3:
-                    ephem_info = {'obj_id' : chunks[0], 'emp_sitecode' : chunks[2]}
-                elif len(chunks) == 4:
-                    ephem_info = {'obj_id' : chunks[0] + chunks[1],
-                                   'emp_sitecode' : chunks[3]}
-                elif 6 <= len(chunks) <= 9:
-                    object_name = chunks[-2] + chunks[-1]
-                    if ' = ' in line:
-                        object_name = chunks[-4].replace('(', '').replace(')', '')
-                    ephem_info = {'emp_sitecode' : chunks[0].replace('(', '').replace(')', ''),
-                                   'obj_id' : object_name}
-                else:
-                    logger.warning("Unexpected number of chunks in header line1 ({:d})".format(len(chunks)))
-                    return None, None
+                chunks = list(filter(None, re.split("[,(,),\n,:]+", line.lstrip()[1:])))
+                try:
+                    chunks.remove(' ')
+                except ValueError:
+                    pass
+                obj_id = ''
+                for chunk in chunks[::-1]:
+                    if chunk.isdigit():
+                        obj_id = chunk
+                        break
+                if not obj_id:
+                    if '19' in chunks[-1] or '20' in chunks[-1]:
+                        obj_id = chunks[-1].replace(' ', '').replace('=', '')
+                    else:
+                        logger.warning("Could not pull Object ID from header line1 ({:s})".format(line))
+                        return None, None
+                ephem_info = {'obj_id' : obj_id,
+                              'emp_sitecode' : chunks[0]}
             elif line.lstrip()[0:4] == 'Date':
                 # next line has the timescale of the ephemeris and the units of the motion
                 # rate. We *hope* it's always UTC and arcmin/hr but grab and check anyway...
@@ -598,7 +602,13 @@ def read_findorb_ephem(empfile):
                     uncertain_mag = True
                 emp_mag = float(chunks[13])
                 emp_rate = float(chunks[14])
-                emp_alt = float(chunks[16])
+                try:
+                    emp_alt = float(chunks[16])
+                except ValueError:
+                    if 'm' in chunks[16]:
+                        emp_alt = float(chunks[16][:-1])/1000
+                    else:
+                        emp_alt = emp[-1][-1]
                 emp_line = (emp_datetime, emp_ra, emp_dec, emp_mag, emp_rate, emp_alt)
                 # print(emp_line)
                 emp.append(emp_line)
