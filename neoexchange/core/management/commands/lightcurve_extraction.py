@@ -34,10 +34,9 @@ class Command(BaseCommand):
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
 
-
     def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title=''):
-    #alltimes=[],L1MEDIAN=[], L1SIGMA=[], MOONDIST=[], MOONALT=[], WMSCLOUD=[], L1FWHM=[]):
-        fig, (ax0,ax1) = plt.subplots(nrows=2,sharex=True,gridspec_kw = {'height_ratios':[15,4]})
+        # alltimes=[],L1MEDIAN=[], L1SIGMA=[], MOONDIST=[], MOONALT=[], WMSCLOUD=[], L1FWHM=[]):
+        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True,gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
         ax0.invert_yaxis()
@@ -47,7 +46,7 @@ class Command(BaseCommand):
         ax1.set_ylabel('Magnitude')
         fig.suptitle(title)
         ax0.set_title(sub_title)
-        ax1.set_title('Zero Point',size='medium')
+        ax1.set_title('Zero Point', size='medium')
         ax0.minorticks_on()
         ax1.minorticks_on()
         ax0.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
@@ -57,15 +56,15 @@ class Command(BaseCommand):
         fig.autofmt_xdate()
         fig.savefig("lightcurve.png")
 
-        fig2,(ax2,ax3) = plt.subplots(nrows=2,sharex=True)
-        ax2.plot(times,fwhm,marker='.',color=colors, linestyle=' ')
+        fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
+        ax2.plot(times, fwhm, marker='.', color=colors, linestyle=' ')
         ax2.set_ylabel('FWHM')
-        #ax2.set_title('FWHM')
+        # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
-        ax3.plot(times,air_mass,marker='.',color=colors, linestyle=' ')
+        ax3.plot(times, air_mass, marker='.', color=colors, linestyle=' ')
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Airmass')
-        #ax3.set_title('Airmass')
+        # ax3.set_title('Airmass')
         ax2.minorticks_on()
         ax3.minorticks_on()
         ax3.invert_yaxis()
@@ -92,7 +91,7 @@ class Command(BaseCommand):
         # ax9.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
         # ax9.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         # fig3.autofmt_xdate()
-        #plt.tight_layout(pad=2)
+        # plt.tight_layout(pad=2)
         plt.show()
 
         return
@@ -166,7 +165,7 @@ class Command(BaseCommand):
                     elements = model_to_dict(block.body)
 
                     for frame in frames:
-                        #####For figureing out issues from fits headers#####
+                        # === For figureing out issues from fits headers #####
                         # alltimes.append(frame.midpoint)
                         # fits_file = '/apophis/eng/rocks/20180720/'+frame.filename
                         # fits_header = open_fits_catalog(fits_file,header_only=True)[0]
@@ -177,20 +176,20 @@ class Command(BaseCommand):
                         # WMSCLOUD.append(fits_header.get('WMSCLOUD'))
                         # L1FWHM.append(fits_header.get('L1FWHM'))
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
-                        ra  = emp_line[1]
+                        ra = emp_line[1]
                         dec = emp_line[2]
                         mag_estimate = emp_line[3]
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                         sources = search_box(frame, ra, dec, options['boxwidth'])
                         midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
                         self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
+                        best_source = None
                         if len(sources) != 0:
                             if len(sources) == 1:
                                 best_source = sources[0]
             #                    print("%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag))
                             elif len(sources) > 1:
                                 min_sep = options['boxwidth'] * options['boxwidth']
-                                best_source = None
                                 for source in sources:
                                     sep = S.sla_dsep(ra, dec, radians(source.obs_ra), radians(source.obs_dec))
                                     sep = degrees(sep) * 3600.0
@@ -210,9 +209,8 @@ class Command(BaseCommand):
                                 zps.append(frame.zeropoint)
                                 zp_errs.append(frame.zeropoint_err)
                                 fwhm.append(frame.fwhm)
-                                air_mass.append(S.sla_airmas(moon_alt_az(frame.midpoint,best_source.obs_ra,
-                                best_source.obs_dec,*get_sitepos(frame.sitecode)[1:])[1]))
-
+                                air_mass.append(S.sla_airmas(moon_alt_az(frame.midpoint, best_source.obs_ra,
+                                best_source.obs_dec, *get_sitepos(frame.sitecode)[1:])[1]))
 
                     if frame.sitecode not in mpc_site:
                         mpc_site.append(frame.sitecode)
@@ -231,7 +229,7 @@ class Command(BaseCommand):
             for time in times:
                 time_jd = datetime2mjd_utc(time)
                 time_jd_truncated = time_jd - mjd_offset
-                if i ==0:
+                if i == 0:
                     lightcurve_file.write('Object: %s\n' % start_super_block.body.current_name())
                     lightcurve_file.write("#MJD-%.1f Mag. Mag. error\n" % mjd_offset)
                 lightcurve_file.write("%7.5lf %6.3lf %5.3lf\n" % (time_jd_truncated, mags[i], mag_errs[i]))
@@ -246,12 +244,12 @@ class Command(BaseCommand):
                 try:
                     if options['timespan'] < 1:
                         plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
-                        start_block.site.upper(), frame.sitecode, start_super_block.block_end.strftime("%Y-%m-%d"))
+                                                                start_block.site.upper(), frame.sitecode, start_super_block.block_end.strftime("%Y-%m-%d"))
                         subtitle = ''
                     else:
                         plot_title = '%s from %s to %s' % (start_block.body.current_name(),
-                        (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
-                        start_super_block.block_end.strftime("%Y-%m-%d"))
+                                                           (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
+                                                           start_super_block.block_end.strftime("%Y-%m-%d"))
                         subtitle = 'Sites: ' + ", ".join(mpc_site)
                 except TypeError:
                     plot_title = 'LC for %s' % (start_super_block.body.current_name())
@@ -260,9 +258,9 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
-            #self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, fwhm, air_mass,
-            #alltimes, L1MEDIAN, L1SIGMA, MOONDIST, MOONALT, WMSCLOUD, L1FWHM,
-            #title=plot_title, sub_title=subtitle)
+            # self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, fwhm, air_mass,
+            # alltimes, L1MEDIAN, L1SIGMA, MOONDIST, MOONALT, WMSCLOUD, L1FWHM,
+            # title=plot_title, sub_title=subtitle)
             self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle)
         else:
             self.stdout.write("No sources matched.")
