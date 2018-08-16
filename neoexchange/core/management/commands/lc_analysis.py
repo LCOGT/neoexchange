@@ -1,3 +1,5 @@
+"""Analyses output of lightcure_extraction for """
+
 import os
 from datetime import datetime, timedelta, time
 from math import floor
@@ -14,15 +16,15 @@ from astropy.time import Time
 
 class Command(BaseCommand):
 
-    help = 'Something useful should go here explaining the purpose of this command and how/when to use it.'
+    help = 'Takes in the output of \'lightcurve_extraction\' and analyses it for period while producing phase folded lightcurve plots. \'lightcure_extraction\' must have been run first.'
 
     def add_arguments(self, parser):
         parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
         parser.add_argument('-e', '--epoch', type=float, default=0.0, help='Epoch (MJD) to set initial phase with respect to')
 
-    def read_data(self, path):
-
-        f = open(path)
+    def read_data(self):
+        """ reads lightcurve_data.txt outputed by lightcurve_extraction"""
+        f = open('lightcurve_data.txt')
         lines = f.readlines()
         body = lines[0][8:-1]
         day1 = lines[1][5:10]
@@ -40,7 +42,9 @@ class Command(BaseCommand):
         return times, mags, mag_errs, body
 
     def find_period(self, times, mags, mag_errs):
-
+        """ Uses LombScargle routine to find period of light curve
+            NOTE: currently not accurate nor finished yet
+        """
         utimes = Time(times, format='mjd')
         ls = LombScargle(utimes.unix*u.s, mags*u.mag, mag_errs*u.mag)
         freq, power = ls.autopower()
@@ -59,8 +63,15 @@ class Command(BaseCommand):
         self.stdout.write("Period: %.3f h" % period.value)
         return period.value
 
-    def plot_fold_phase(self, phases, mags, mag_errs, period, title, epoch):
-
+    def plot_fold_phase(self, phases, mags, mag_errs, period, epoch, title=''):
+        """ plots phase-folded lightcurve given phases, magnitude, error, a period to fold over, and an epoch
+            <phases>: list of phases or fraction each point in time is through a period from epoch.
+            <mags>: magnitudes at each phase
+            <mag_errs>: error in magnitudes at each phase
+            <period>: period to fold against. (time at phase=1)-(time at phase=0)=period
+            <epoch>: time to start first period at. Default is 0
+            [title]: title of plot
+        """
         fig, ax = plt.subplots()
         ax.errorbar(phases, mags, mag_errs, marker='.', linestyle=' ')
         ax.set_xlabel('phase')
@@ -76,9 +87,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         try:
-            times, mags, mag_errs, body = self.read_data('lightcurve_data.txt')
+            times, mags, mag_errs, body = self.read_data()
         except FileNotFoundError:
-            raise FileNotFoundError('\"lightcurve_data.txt\" not found. Please make sure you are in the correct directory and the \"lightcurve_extraction\" command has run')
+            raise FileNotFoundError('\"lightcurve_data.txt\" not found. Please make sure you are in the correct directory and that \"lightcurve_extraction\" command has run')
         if options['period'] == 0:
             period = self.find_period(times, mags, mag_errs)
         else:
@@ -113,7 +124,7 @@ class Command(BaseCommand):
 
         phasetitle = 'Phase Folded LC for %s' % body
 
-        self.plot_fold_phase(phases, mags, mag_errs, period, phasetitle, epoch)
+        self.plot_fold_phase(phases, mags, mag_errs, period, epoch, phasetitle)
         plt.show()
 
         return
