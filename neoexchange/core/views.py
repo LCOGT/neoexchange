@@ -2417,16 +2417,28 @@ def make_standards_plot(request):
     ax = plt.figure().gca()
     plotScatter(ax,scoords,'b*')
     plotScatter(ax,fcoords,'g*')
-    plotFormat(ax)
+    plotFormat(ax,0)
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
     plt.close()
 
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
-def plotstandards(request):
+def make_solar_standards_plot(request):
+    """creates solar standards plot to be added to page"""
 
-    return render(request, 'core/standards_plot.html')
+    import matplotlib.pyplot as plt
+    import io
+    scoords = readSources('Solar')
+    ax = plt.figure().gca()
+    plotScatter(ax,scoords,'b*')
+    plotFormat(ax,1)
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    plt.close()
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
 
 
 def update_taxonomy(taxobj, dbg=False):

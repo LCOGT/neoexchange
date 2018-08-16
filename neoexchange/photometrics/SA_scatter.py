@@ -77,7 +77,7 @@ def plotScatter(ax,coords,style='b.'):
     for coord in coords: #stars
         ax.plot(coord.ra.hour,coord.dec,style)
 
-def plotFormat(ax):
+def plotFormat(ax,solar=0):
     """Formats plot, plots reference ecliptic and galactic plane
        inputs: <ax> plot axis
     """
@@ -89,10 +89,16 @@ def plotFormat(ax):
     plt.ylim(-90,90)
     plt.xticks(np.arange(24,0,-2))
     plt.yticks(np.arange(-90,90,15))
-    leg = ax.legend(loc='best',
-    handles=[mpatches.Patch(color='blue',label='Solar Standard'),
-    mpatches.Patch(color='green',label='Flux Standard')])
+    if not solar:
+        leg = ax.legend(loc='best',
+        handles=[mpatches.Patch(color='blue',label='Solar Standard'),
+        mpatches.Patch(color='green',label='Flux Standard')])
+    else:
+        leg = ax.legend(loc='best',
+        handles=[mpatches.Patch(color='blue',label='Solar Standard')])
     leg.get_frame().set_alpha(.5)
+    plt.text(24,68,'Galactic Plane',fontsize=7,rotation=-25,color='#938200')
+    plt.text(9.5,14,'Ecliptic',fontsize=7,rotation=25,color='r')
     plt.title("Stellar Standards Distribution")
 
     plt.grid(True)

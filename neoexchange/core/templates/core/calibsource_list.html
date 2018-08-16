@@ -15,7 +15,11 @@
     <div id="main" class="fill-height">
         <div class="container">
             <div class="row">
-              <img src="{% url 'make-standards-plot' %}">
+                {% if "solar" in request.get_full_path %}
+                    <img src="{% url 'make-solar-standards-plot' %}">
+                {% else %}
+                    <img src="{% url 'make-standards-plot' %}">
+                {% endif %}
             </div>
             <div class="row">
                 {% if "solar" in request.get_full_path %}
