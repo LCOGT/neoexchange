@@ -2009,7 +2009,7 @@ def create_source_measurement(obs_lines, block=None):
                     unpacked_name = packed_to_normal(params['body'])
                 except PackedError:
                     try:
-                        unpacked_name = str(int(param['body']))
+                        unpacked_name = str(int(params['body']))
                     except ValueError:
                         unpacked_name = 'ZZZZZZ'
                 # if new name, reset obs_body
@@ -2019,7 +2019,7 @@ def create_source_measurement(obs_lines, block=None):
                             unpacked_name = packed_to_normal(params['body'])
                         except PackedError:
                             try:
-                                unpacked_name = str(int(param['body']))
+                                unpacked_name = str(int(params['body']))
                             except ValueError:
                                 unpacked_name = 'ZZZZZZ'
                         obs_body = Body.objects.get(Q(provisional_name__startswith=params['body']) |
