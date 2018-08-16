@@ -107,8 +107,8 @@
                               {% if blk.obstype == blk.OPT_SPECTRA %}
                                 <div class="block-control">{{blk.num_spectro_frames}}</div>
                                 {% if "SPECTRUM" in blk.num_spectro_frames %}
-                                  <div class="block-control"><a href="{% url 'plotspec' object.pk %}">Spectrum Plot</a></div>
-                                  <div class="block-control"><a href="{% url 'guidemovie' object.pk %}">Guide Movie</a></div>
+                                  <div class="block-control"><a href="{% url 'plotspec' blk.pk %}">Spectrum Plot</a></div>
+                                  <div class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Guide Movie</a></div>
                                 {% endif %}
                               {% else %}
                                   {% if blk.num_observed > 0 and blk.num_unique_red_frames < 10 and blk.num_candidates > 0 %}

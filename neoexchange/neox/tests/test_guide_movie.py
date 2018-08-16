@@ -17,8 +17,6 @@ class GuideMovieTest(FunctionalTest):
             super(GuideMovieTest,self).setUp()
 
             settings.DATA_ROOT = os.getcwd()+'/photometrics/tests/'
-            if settings.DEBUG is False:
-                settings.DEBUG = True
 
             self.username = 'bart'
             self.password = 'simpson'
@@ -119,7 +117,10 @@ class GuideMovieTest(FunctionalTest):
             testlines = ['2015-04-20', '13:00 2015-04-21', '03:00']
             for line in testlines:
                 self.assertIn(line, block_lines)
+            actual_url = self.browser.current_url
+            target_url = self.live_server_url+'/block/'+'4/'
             self.assertIn('Block details | LCO NEOx', self.browser.title)
+            self.assertEqual(target_url, actual_url)
 
         @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
         @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
@@ -135,6 +136,6 @@ class GuideMovieTest(FunctionalTest):
                 #note: block and body do not match guide movie.
                 #mismatch due to recycling and laziness
             actual_url = self.browser.current_url
-            target_url = self.live_server_url+'/block/'+str(self.test_sblock.pk)+'/guidemovie/'
-            self.assertIn('Guide Movie | LCO NEOx', self.browser.title)
+            target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/guidemovie/'
+            self.assertIn('Guide Movie for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)

@@ -2133,7 +2133,8 @@ def find_spec(pk):
     """
     base_dir = settings.DATA_ROOT
     try:
-        block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
+        #block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
+        block = Block.objects.get(pk=pk)
         url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
     except IndexError:
         return '','','','',''
@@ -2171,12 +2172,12 @@ def make_spec(request,pk):
     import matplotlib.pyplot as plt
 
     date,obj,req,dir,prop = find_spec(pk)
-    logger.debug('ID: ',pk)
-    logger.debug('DATE:',date)
-    logger.debug('BODY:',obj)
-    logger.debug('REQNUM: ',req)
-    logger.debug('DIR: ',dir)
-    logger.debug('PROP:',prop)
+    print('ID: ',pk)
+    print('DATE:',date)
+    print('BODY:',obj)
+    print('REQNUM: ',req)
+    print('DIR: ',dir)
+    print('PROP:',prop)
 
     base_dir = os.path.join(settings.DATA_ROOT,date)
 
@@ -2191,7 +2192,7 @@ def make_spec(request,pk):
                 if req in tar:
                     tar_path = tar
                     unpack_path = os.path.join(base_dir,obj+'_'+req)
-            logger.debug(tar_path)
+            print(tar_path)
             spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
             for spec in spec_files:
                 if '2df_ex.fits' in spec:
@@ -2224,16 +2225,7 @@ class PlotSpec(View): #make loging required later
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
-        params = {'pk': kwargs['pk']}
-
-        return render(request, self.template_name, params)
-
-class GuideMovie(View): #make loging required later
-
-    template_name = 'core/guide_movie.html'
-
-    def get(self, request, *args, **kwargs):
-        params = {'pk': kwargs['pk']}
+        params = {'pk' : kwargs['pk']}
 
         return render(request, self.template_name, params)
 
@@ -2247,20 +2239,20 @@ def make_movie(request,pk):
 
     date,obj,req,dir,prop = find_spec(pk)
     filename = glob(os.path.join(dir,'*2df_ex.fits')) #checking if unpacked
-    logger.debug('ID: ',pk)
-    logger.debug('DATE:',date)
-    logger.debug('BODY:',obj)
-    logger.debug('REQNUM: ',req)
-    logger.debug('DIR: ',dir)
-    logger.debug('PROP:',prop)
+    print('ID: ',pk)
+    print('DATE:',date)
+    print('BODY:',obj)
+    print('REQNUM: ',req)
+    print('DIR: ',dir)
+    print('PROP:',prop)
 
     if filename: #If first order tarball is unpacked
             movie_dir = glob(os.path.join(dir,"Guide_frames"))
             if movie_dir: #if 2nd order tarball is unpacked
-                logger.debug('MOVIE DIR :',movie_dir[0])
+                print('MOVIE DIR :',movie_dir[0])
                 movie_file = glob(os.path.join(movie_dir[0],"*.gif"))
                 if movie_file:
-                    logger.debug('MOVIE FILE: ',movie_file[0])
+                    print('MOVIE FILE: ',movie_file[0])
                     movie = open(movie_file[0], 'rb').read()
                     return HttpResponse(movie, content_type="Image/gif")
                 else:
@@ -2270,7 +2262,7 @@ def make_movie(request,pk):
                 if tarintar:
                     unpack_path = os.path.join(dir,'Guide_frames')
                     guide_files = unpack_tarball(tarintar[0],unpack_path) #unpacks tar
-                    logger.debug("Unpacking tar in tar")
+                    print("Unpacking tar in tar")
                     frames = []
                     for file in guide_files:
                         if '.fits.fz' in file:
@@ -2289,14 +2281,14 @@ def make_movie(request,pk):
                     unpack_path = os.path.join(base_dir,obj+'_'+req)
                     break
             #print(tar_path)
-            logger.debug("Unpacking 1st tar")
+            print("Unpacking 1st tar")
             spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
 
             for file in spec_files:
                 if '.tar' in file:
                     tarintar = file
                     unpack_path = os.path.join(base_dir,obj+'_'+req+'/Guide_frames')
-                    logger.debug("Unpacking tar in tar")
+                    print("Unpacking tar in tar")
                     guide_files = unpack_tarball(tarintar,unpack_path) #unpacks tar in tar
                     break
 
@@ -2309,11 +2301,11 @@ def make_movie(request,pk):
             logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
             return HttpResponse("")
     if frames is not None and len(frames) > 1:
-        logger.debug("#Frames = ", len(frames))
-        logger.debug("Making Movie...")
+        print("#Frames = ", len(frames))
+        print("Making Movie...")
         movie_file = make_gif(frames)
         #movie_file = test_display(frames[0])
-        logger.debug('MOVIE FILE: ',movie_file)
+        print('MOVIE FILE: ',movie_file)
         plt.close()
         movie = open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")
@@ -2321,6 +2313,14 @@ def make_movie(request,pk):
         logger.error("There must be at least 2 frames to make guide movie. Found: %d" % len(frames))
         return HttpResponse("")
 
+class GuideMovie(View): #make loging required later
+
+    template_name = 'core/guide_movie.html'
+
+    def get(self, request, *args, **kwargs):
+        params = {'pk': kwargs['pk']}
+
+        return render(request, self.template_name, params)
 
 def update_taxonomy(taxobj, dbg=False):
     """Update the passed <taxobj> for a new taxonomy update.
