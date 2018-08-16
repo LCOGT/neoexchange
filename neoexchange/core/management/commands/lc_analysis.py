@@ -14,6 +14,8 @@ from astropy.time import Time
 
 class Command(BaseCommand):
 
+    help = 'Something useful should go here explaining the purpose of this command and how/when to use it.'
+
     def add_arguments(self, parser):
         parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
         parser.add_argument('-e', '--epoch', type=float, default=0.0, help='Epoch (MJD) to set initial phase with respect to')
@@ -86,7 +88,7 @@ class Command(BaseCommand):
             epoch = times[np.argmin(times)]
         else:
             try:
-                epoch = Time(options['epoch'],format='mjd').mjd
+                epoch = Time(options['epoch'], format='mjd').mjd
             except ValueError:
                 raise ValueError('Epoch input in unrecognized format. Please input as MJD')
 
