@@ -2150,17 +2150,19 @@ def find_spec(pk):
 
 
     obj = block.body.current_name().replace(' ','')
-    #req = block.tracking_number #TEMPORARY! Will have proper request# attribute later
+
     if 'REQNUM' in data:
         req = data['REQNUM']
     else:
-        req = '000'+block.tracking_number
+        req = '000' + block.tracking_number
     dir = base_dir+date+'/'+obj+'_'+req+'/'
-    spectra_path = ''
+
     prop = block.proposal.code
 
-    return date,obj,req,dir,prop
+    if not glob(os.path.join(base_dir,prop+'_*'+req+'*.tar.gz')):
+        date = str(int(date)-1)
 
+    return date,obj,req,dir,prop
 def make_spec(request,pk):
     """Creates plot of spectra data for spectra blocks
        NOTE: Can take ~5-10 seconds to load if building new gif. Wait a bit
@@ -2274,6 +2276,8 @@ def make_movie(request,pk):
     else: #else, unpack both tarballs
         base_dir = os.path.join(settings.DATA_ROOT,date)
         tar_files = glob(os.path.join(base_dir,prop+"_"+req+"*.tar.gz")) #if file not found, looks fror tarball
+        frames = []
+        guide_files = []
         if tar_files:
             for tar in tar_files:
                 if req in tar:
@@ -2292,10 +2296,10 @@ def make_movie(request,pk):
                     guide_files = unpack_tarball(tarintar,unpack_path) #unpacks tar in tar
                     break
 
-            frames = []
-            for file in guide_files:
-                if '.fits.fz' in file:
-                    frames.append(file)
+            if guide_files:
+                for file in guide_files:
+                    if '.fits.fz' in file:
+                        frames.append(file)
 
         else:
             logger.error("Clould not find spectrum data or tarball for block: %s" %pk)

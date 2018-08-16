@@ -32,13 +32,14 @@ class GuideMovieTest(FunctionalTest):
                  'body'            : self.body,
                  'proposal'        : self.test_proposal,
                  'block_start'     : '2015-04-20 13:00:00',
-                 'block_end'       : '2015-04-22 03:00:00',
+                 'block_end'       : '2015-04-24 03:00:00',
                  'tracking_number' : '4242',
                  'active'          : True
                }
             self.test_sblock = SuperBlock.objects.create(pk=3, **sblock_params)
 
-            block_params = { 'telclass' : '2m0',
+            block_params = {
+                 'telclass'        : '2m0',
                  'site'            : 'ogg',
                  'body'            : self.body,
                  'proposal'        : self.test_proposal,
@@ -54,9 +55,9 @@ class GuideMovieTest(FunctionalTest):
             self.test_block = Block.objects.create(**block_params)
             fparams = {
                 'sitecode'      : 'F65',
-                'filename'      : 'gf1.fits',
+                'filename'      : 'sp233/a265962.sp233.txt',
                 'exptime'       : 1800.0,
-                'midpoint'      : '2018-01-01 00:00:00',
+                'midpoint'      : '2015-04-21 00:00:00',
                 'frametype'     : Frame.SPECTRUM_FRAMETYPE,
                 'block'         : self.test_block,
                 'frameid'       : 1,
@@ -64,31 +65,95 @@ class GuideMovieTest(FunctionalTest):
             self.spec_frame = Frame.objects.create(**fparams)
 
 
-            sblock_params2 = {
+            sblock2_params = {
                  'cadence'         : False,
                  'body'            : self.body,
                  'proposal'        : self.test_proposal,
                  'block_start'     : '2015-04-20 13:00:00',
                  'block_end'       : '2015-04-22 03:00:00',
-                 'tracking_number' : '4242',
+                 'tracking_number' : '4243',
                  'active'          : False
                }
-            self.test_sblock2 = SuperBlock.objects.create(pk=4, **sblock_params2)
+            self.test_sblock2 = SuperBlock.objects.create(pk=4, **sblock2_params)
 
-            block_params2 = { 'telclass' : '2m0',
+            block2_params = {
+                 'telclass'        : '2m0',
                  'site'            : 'ogg',
                  'body'            : self.body,
                  'proposal'        : self.test_proposal,
                  'superblock'      : self.test_sblock2,
                  'obstype'         : 0,
-                 'block_start'     : '2015-04-20 13:00:00',
-                 'block_end'       : '2015-04-21 03:00:00',
-                 'tracking_number' : '12345',
+                 'block_start'     : '2015-04-22 13:00:00',
+                 'block_end'       : '2015-04-24 03:00:00',
+                 'tracking_number' : '54321',
                  'num_exposures'   : 1,
                  'exp_length'      : 1800.0,
                  'active'          : False,
                }
-            self.test_block2 = Block.objects.create(**block_params2)
+            self.test_block2 = Block.objects.create(**block2_params)
+
+            msblock_params = {
+                 'cadence'         : False,
+                 'body'            : self.body,
+                 'proposal'        : self.test_proposal,
+                 'block_start'     : '2018-01-01 00:00:00',
+                 'block_end'       : '2018-01-01 03:00:00',
+                 'tracking_number' : '4244',
+                 'active'          : True
+               }
+            self.test_msblock = SuperBlock.objects.create(pk=5, **msblock_params)
+            mblock1_params = {
+                 'telclass'        : '2m0',
+                 'site'            : 'ogg',
+                 'body'            : self.body,
+                 'proposal'        : self.test_proposal,
+                 'superblock'      : self.test_msblock,
+                 'obstype'         : Block.OPT_SPECTRA,
+                 'block_start'     : '2018-01-01 00:00:00',
+                 'block_end'       : '2018-01-01 02:00:00',
+                 'tracking_number' : '54322',
+                 'num_exposures'   : 1,
+                 'num_observed'    : 1,
+                 'exp_length'      : 1800.0,
+                 'active'          : True,
+               }
+            self.test_mblock1 = Block.objects.create(pk=6,**mblock1_params)
+            mfparams1 = {
+                'sitecode'      : 'F65',
+                'filename'      : 'sp233/a265962.sp233.txt',
+                'exptime'       : 1800.0,
+                'midpoint'      : '2018-01-01 01:00:00',
+                'frametype'     : Frame.SPECTRUM_FRAMETYPE,
+                'block'         : self.test_mblock1,
+                'frameid'       : 1,
+               }
+            self.mspec_frame1 = Frame.objects.create(**mfparams1)
+            mblock2_params = {
+                 'telclass'        : '2m0',
+                 'site'            : 'ogg',
+                 'body'            : self.body,
+                 'proposal'        : self.test_proposal,
+                 'superblock'      : self.test_msblock,
+                 'obstype'         : Block.OPT_SPECTRA,
+                 'block_start'     : '2018-01-01 01:00:00',
+                 'block_end'       : '2018-01-01 03:00:00',
+                 'tracking_number' : '54323',
+                 'num_exposures'   : 1,
+                 'num_observed'    : 1,
+                 'exp_length'      : 1800.0,
+                 'active'          : True,
+               }
+            self.test_mblock2 = Block.objects.create(pk=7,**mblock2_params)
+            mfparams2 = {
+                'sitecode'      : 'F65',
+                'filename'      : 'sp233/a265962.sp233.txt',
+                'exptime'       : 1800.0,
+                'midpoint'      : '2018-01-01 02:00:00',
+                'frametype'     : Frame.SPECTRUM_FRAMETYPE,
+                'block'         : self.test_mblock2,
+                'frameid'       : 1,
+               }
+            self.mspec_frame2 = Frame.objects.create(**mfparams2)
 
             update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
@@ -114,7 +179,7 @@ class GuideMovieTest(FunctionalTest):
                 self.browser.find_element_by_link_text('4').click()
             side_text = self.browser.find_element_by_class_name('block-status').text
             block_lines = side_text.splitlines()
-            testlines = ['2015-04-20', '13:00 2015-04-21', '03:00']
+            testlines = ['2015-04-22', '13:00 2015-04-24', '03:00']
             for line in testlines:
                 self.assertIn(line, block_lines)
             actual_url = self.browser.current_url
@@ -139,3 +204,27 @@ class GuideMovieTest(FunctionalTest):
             target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/guidemovie/'
             self.assertIn('Guide Movie for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
+
+        @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+        def test_multi_spec_block(self):    #test opening 2 different movies in same superblock
+            self.login()
+            blocks_url = reverse('blocklist')
+            self.browser.get(self.live_server_url + blocks_url)
+            self.browser.find_element_by_link_text('5').click()
+            with self.wait_for_page_load(timeout=10):
+                plots = self.browser.find_elements_by_link_text('Guide Movie')[0].click()
+                actual_url = self.browser.current_url
+                target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/guidemovie/'
+            self.assertIn('Guide Movie for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
+            self.assertEqual(target_url, actual_url)
+
+            self.wait_for_element_with_id('page')
+            self.browser.back()
+            with self.wait_for_page_load(timeout=10):
+                self.browser.find_elements_by_link_text('Guide Movie')[1].click()
+            #note: this movie is same as first one. really just checking if pages are different.
+                actual_url2 = self.browser.current_url
+                target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/guidemovie/'
+            self.assertIn('Guide Movie for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
+            self.assertEqual(target_url2, actual_url2)
