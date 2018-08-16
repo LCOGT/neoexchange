@@ -18,7 +18,7 @@ class Command(BaseCommand):
         parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
         parser.add_argument('-e', '--epoch', type=float, default=0.0, help='Epoch (MJD) to set initial phase with respect to')
 
-    def read_data(self,path):
+    def read_data(self, path):
 
         f = open(path)
         lines = f.readlines()
@@ -29,9 +29,9 @@ class Command(BaseCommand):
         mag_errs = np.array([])
         for line in lines:
             try:
-                times = np.append(times,float(day1+line[1:7]))
-                mags = np.append(mags,float(line[8:13]))
-                mag_errs = np.append(mag_errs,float(line[15:20]))
+                times = np.append(times, float(day1+line[1:7]))
+                mags = np.append(mags, float(line[8:13]))
+                mag_errs = np.append(mag_errs, float(line[15:20]))
             except ValueError:
                 continue
 
@@ -39,17 +39,17 @@ class Command(BaseCommand):
 
     def find_period(self, times, mags, mag_errs):
 
-        utimes = Time(times,format='mjd')
-        ls = LombScargle(utimes.unix*u.s,mags*u.mag,mag_errs*u.mag)
+        utimes = Time(times, format='mjd')
+        ls = LombScargle(utimes.unix*u.s, mags*u.mag, mag_errs*u.mag)
         freq, power = ls.autopower()
 
         fig, ax = plt.subplots()
-        ax.plot(freq,power)
+        ax.plot(freq, power)
         ax.set_xlabel('Frequencies Hz')
         ax.set_ylabel('L-S Power')
 
         fig2, ax2 = plt.subplots()
-        ax2.plot(1/(freq*3600),power)
+        ax2.plot(1/(freq*3600), power)
         ax2.set_xlabel('Period h')
         ax2.set_ylabel('L-S Power')
 
@@ -57,13 +57,13 @@ class Command(BaseCommand):
         self.stdout.write("Period: %.3f h" % period.value)
         return period.value
 
-    def plot_fold_phase(self,phases,mags,mag_errs,period,title,epoch):
+    def plot_fold_phase(self, phases, mags, mag_errs, period, title, epoch):
 
         fig, ax = plt.subplots()
-        ax.errorbar(phases,mags,mag_errs, marker='.', linestyle=' ')
+        ax.errorbar(phases, mags, mag_errs, marker='.', linestyle=' ')
         ax.set_xlabel('phase')
         ax.set_ylabel('magnitude')
-        ax.set_xlim(-.1,1.1)
+        ax.set_xlim(-.1, 1.1)
         ax.invert_yaxis()
         fig.suptitle(title)
         ax.set_title('(Period = %.3f h  Epoch = MJD%d)' % (period, epoch))
@@ -78,7 +78,7 @@ class Command(BaseCommand):
         except FileNotFoundError:
             raise FileNotFoundError('\"lightcurve_data.txt\" not found. Please make sure you are in the correct directory and the \"lightcurve_extraction\" command has run')
         if options['period'] == 0:
-            period = self.find_period(times, mags,mag_errs)
+            period = self.find_period(times, mags, mag_errs)
         else:
             period = options['period']
 
@@ -93,25 +93,25 @@ class Command(BaseCommand):
         subtime = times-epoch
 
         divtime = (subtime*24)/period
-        phases = np.modf(divtime)[0] #phases array built
+        phases = np.modf(divtime)[0]  # phases array built
 
-        data = sorted(zip(phases,mags,mag_errs)) #building buffers
+        data = sorted(zip(phases, mags, mag_errs))  # building buffers
         end = np.array([])
         start = np.array([])
         for n in range(len(data)):
             if data[n][0] >= .90:
-                start = np.append(start,[data[n][0]-1,data[n][1],data[n][2]])
+                start = np.append(start, [data[n][0]-1, data[n][1], data[n][2]])
             if data[n][0] <= .1:
-                end = np.append(end,[data[n][0]+1,data[n][1],data[n][2]])
+                end = np.append(end, [data[n][0]+1, data[n][1], data[n][2]])
         data = np.append(data, end)
-        data = np.append(start,data)
+        data = np.append(start, data)
         phases = data[::3]
         mags = data[1::3]
         mag_errs = data[2::3]
 
         phasetitle = 'Phase Folded LC for %s' % body
 
-        self.plot_fold_phase(phases,mags,mag_errs,period,phasetitle,epoch)
+        self.plot_fold_phase(phases, mags, mag_errs, period, phasetitle, epoch)
         plt.show()
 
         return
