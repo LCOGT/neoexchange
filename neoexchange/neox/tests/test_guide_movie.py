@@ -7,12 +7,18 @@ from selenium import webdriver
 from core.models import Block, SuperBlock, Frame
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames
+from django.conf import settings
+import os
 
 class GuideMovieTest(FunctionalTest):
 
         def setUp(self):
 
             super(GuideMovieTest,self).setUp()
+
+            settings.DATA_ROOT = os.getcwd()+'/photometrics/tests/'
+            if settings.DEBUG is False:
+                settings.DEBUG = True
 
             self.username = 'bart'
             self.password = 'simpson'
@@ -117,7 +123,7 @@ class GuideMovieTest(FunctionalTest):
 
         @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
         @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
-        def test_can_view_guide_movie(self):
+        def test_can_view_guide_movie(self):    #test opening a guide movie associated with a block
             self.login()
             self.browser.get(self.live_server_url)
             blocks_url = reverse('blocklist')
@@ -126,6 +132,8 @@ class GuideMovieTest(FunctionalTest):
                 self.browser.find_element_by_link_text(str(self.test_sblock.pk)).click()
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_element_by_link_text('Guide Movie').click()
+                #note: block and body do not match guide movie.
+                #mismatch due to recycling and laziness
             actual_url = self.browser.current_url
             target_url = self.live_server_url+'/block/'+str(self.test_sblock.pk)+'/guidemovie/'
             self.assertIn('Guide Movie | LCO NEOx', self.browser.title)

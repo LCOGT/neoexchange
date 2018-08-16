@@ -7,12 +7,18 @@ from selenium import webdriver
 from core.models import Block, SuperBlock, Frame
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames
+from django.conf import settings
+import os
 
 class SpectraplotTest(FunctionalTest):
 
         def setUp(self):
 
             super(SpectraplotTest,self).setUp()
+
+            settings.DATA_ROOT = os.getcwd()+'/photometrics/tests/'
+            if settings.DEBUG is False:
+                settings.DEBUG = True
 
             self.username = 'bart'
             self.password = 'simpson'
@@ -50,7 +56,7 @@ class SpectraplotTest(FunctionalTest):
             self.test_block = Block.objects.create(**block_params)
             fparams = {
                 'sitecode'      : 'F65',
-                'filename'      : 'gf1.fits',
+                'filename'      : 'sp233/a265962.sp233.txt',
                 'exptime'       : 1800.0,
                 'midpoint'      : '2018-01-01 00:00:00',
                 'frametype'     : Frame.SPECTRUM_FRAMETYPE,
@@ -117,7 +123,7 @@ class SpectraplotTest(FunctionalTest):
 
         @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
         @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
-        def test_can_view_spectrum(self):
+        def test_can_view_spectrum(self):   #test opening up a spectrum file associated with a block
             self.login()
             self.browser.get(self.live_server_url)
             blocks_url = reverse('blocklist')
@@ -126,6 +132,8 @@ class SpectraplotTest(FunctionalTest):
                 self.browser.find_element_by_link_text(str(self.test_sblock.pk)).click()
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_element_by_link_text('Spectrum Plot').click()
+                #note: block and body do not match spectra.
+                #mismatch due to recycling and laziness
             actual_url = self.browser.current_url
             target_url = self.live_server_url+'/block/'+str(self.test_sblock.pk)+'/spectra/'
             self.assertIn('Spectrum for block: '+str(self.test_sblock.pk)+' | LCO NEOx', self.browser.title)
