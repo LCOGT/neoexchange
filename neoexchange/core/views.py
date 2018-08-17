@@ -2166,29 +2166,25 @@ def find_spec(pk):
 
 def make_spec(request, pk):
     """Creates plot of spectra data for spectra blocks
-       NOTE: Can take ~5-10 seconds to load if building new gif. Wait a bit
-       before assuming something is wrong
+       <pk>: pk of block (not superblock)
     """
     import io
-    # import matplotlib
-    # matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
     date, obj, req, dir, prop = find_spec(pk)
-    print('ID: ', pk)
-    print('DATE:', date)
-    print('BODY:', obj)
-    print('REQNUM: ', req)
-    print('DIR: ', dir)
-    print('PROP:', prop)
-
-    base_dir = os.path.join(settings.DATA_ROOT, date)
+    logger.debug('ID: ', pk)
+    logger.debug('DATE:', date)
+    logger.debug('BODY:', obj)
+    logger.debug('REQNUM: ', req)
+    logger.debug('DIR: ', dir)  # where it thinks the data is at
+    logger.debug('PROP:', prop)
 
     filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checks for file in path
     spectra_path = None
     if filename:
         spectra_path = filename[0]
     else:
+        base_dir = os.path.join(settings.DATA_ROOT, date) #new base_dir for method
         tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
         if tar_files:
             for tar in tar_files:
@@ -2238,28 +2234,32 @@ class PlotSpec(View):  # make loging required later
 
 def make_movie(request, pk):
     """Make gif of FLOYDS Guide Frames given a spectral block
-    <pk> principle key for SuperBlock
+    <pk> principle key for block (not superblock)
+    NOTE: Can take a while to load if building new gif with many frames.
+    Might want to add something that reduces number of frames used if
+    there are too many
     """
     # import matplotlib
     # matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
     date, obj, req, dir, prop = find_spec(pk)
+    logger.debug('ID: ', pk)
+    logger.debug('DATE:', date)
+    logger.debug('BODY:', obj)
+    logger.debug('REQNUM: ', req)
+    logger.debug('DIR: ', dir)  # where it thinks an unpacked tar is at
+    logger.debug('PROP:', prop)
+
     filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checking if unpacked
-    print('ID: ', pk)
-    print('DATE:', date)
-    print('BODY:', obj)
-    print('REQNUM: ', req)
-    print('DIR: ', dir)
-    print('PROP:', prop)
 
     if filename:  # If first order tarball is unpacked
             movie_dir = glob(os.path.join(dir,"Guide_frames"))
             if movie_dir:  # if 2nd order tarball is unpacked
-                print('MOVIE DIR :', movie_dir[0])
+                logger.debug('MOVIE DIR :', movie_dir[0])
                 movie_file = glob(os.path.join(movie_dir[0], "*.gif"))
                 if movie_file:
-                    print('MOVIE FILE: ', movie_file[0])
+                    logger.debug('MOVIE FILE: ', movie_file[0])
                     movie = open(movie_file[0], 'rb').read()
                     return HttpResponse(movie, content_type="Image/gif")
                 else:
@@ -2269,7 +2269,7 @@ def make_movie(request, pk):
                 if tarintar:
                     unpack_path = os.path.join(dir, 'Guide_frames')
                     guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
-                    print("Unpacking tar in tar")
+                    logger.info("Unpacking tar in tar")
                     frames = []
                     for file in guide_files:
                         if '.fits.fz' in file:
@@ -2314,11 +2314,11 @@ def make_movie(request, pk):
             logger.error("Clould not find spectrum data or tarball for block: %s" % pk)
             return HttpResponse("")
     if frames is not None and len(frames) > 1:
-        print("#Frames = ", len(frames))
-        print("Making Movie...")
+        logger.debug("#Frames = ", len(frames))
+        logger.info("Making Movie...")
         movie_file = make_gif(frames)
         # movie_file = test_display(frames[0])
-        print('MOVIE FILE: ', movie_file)
+        logger.debug('MOVIE FILE: ', movie_file)
         plt.close()
         movie = open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")

@@ -17,12 +17,13 @@ import logging
 import numpy as np
 import collections,warnings,re
 
+logger = logging.getLogger(__name__)
+
 #np.set_#printoptions(threshold=np.inf)
 
-def check_norm(values): #not perfect nor finished yet
+def check_norm(values): #not perfect
     """checks with fits standard parsing and notifies if flux data has been normalized already
        input: <values>: array of text values in .fits header to parse
-       ouptuts: boolean?
     """
     for value in values:
         if "NORMALIZED TO" in str(value).upper():
@@ -31,16 +32,12 @@ def check_norm(values): #not perfect nor finished yet
                 try:
                     normval = float(s)
                     normloc = list(float(t) for t in re.findall(r'-?\d+\.?\d*',normstr))[-1] #reg. expres.
-                    logging.warning("Flux normalized to ", normval, " at ", normloc)
+                    logger.info("Flux normalized to ", normval, " at ", normloc)
                 except ValueError:
                     continue
 
 def check_refl(x,y): #TEMPORARY CHECK
-    if x[y.argmax()] > 6000*u.AA:
-        #print("Normalized Reflectance")
-        return True
-    else:
-        return False
+    return x[y.argmax()] > 6000*u.AA:
 
 def get_x_units(x_data):
     """finds wavelength units from x_data
@@ -57,16 +54,14 @@ def get_x_units(x_data):
     elif .1 < x_min < 1:
         x_units = u.micron
     else:
-        logging.warning("Could not parse wavelength units from file. Assuming Angstoms")
+        logger.warning("Could not parse wavelength units from file. Assuming Angstoms")
         x_units = u.AA
-
-    #print("read x_units: ",x_units)
 
     return x_units
 
 def get_y_units(info):
     """finds flux/reflectance units
-       inputs: <info>: .fits header, .ascii metadata, or point from .txt file
+       inputs: <info>: .fits header, .ascii metadata, point from .txt file, or ESO spec standard readme
        outputs: y_units,factor
     """
     y_factor = 1
@@ -75,7 +70,7 @@ def get_y_units(info):
     norm_id = ["NORM", "UNITLESS", "NONE"] #IDs to look for normalizations with
     refl_id = ["REFLECT"] #IDs to look for normalized reflectance
 
-    if isinstance(info, list):
+    if isinstance(info, list): #from ESO aaareadme.ctio
         for line in info:
             if 'ergs' in line:
                 normlocs = list(float(t) for t in re.findall(r'-?\d+\.?\d*',line))
@@ -85,7 +80,6 @@ def get_y_units(info):
                 except IndexError:
                     pass
                 break
-        #print("y_units: ",y_units)
 
     elif isinstance(info, float): #from .txt file (assuming normalized reflectance)
         y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
@@ -109,7 +103,7 @@ def get_y_units(info):
             pass
 
     elif isinstance(info, fits.header.Header):  #from .fits
-        possible_keys = ['BUNIT','TUNIT2'] #maybe add more later
+        possible_keys = ['BUNIT','TUNIT2'] #can add more  if needed
         keys = list(info.keys())
         for n in range(len(keys)):
             if any(key_id in keys[n] for key_id in possible_keys):
@@ -133,7 +127,7 @@ def get_y_units(info):
         y_units
         #print('read y_units: ', y_units)
     except NameError:
-        logging.warning("Could not parse flux units from file. Assuming erg/cm^2/s/A")
+        logger.warning("Could not parse flux units from file. Assuming erg/cm^2/s/A")
         y_units = u.erg/(u.cm**2)/u.s/u.AA
 
     return y_units, y_factor
@@ -169,7 +163,7 @@ def read_spectra(path,spectra):
             try:
                 flux_error = np.array(data[3][0])
             except IndexError:
-                #logging.warning("Could not parse error data")
+                #logger.warning("Could not parse error data")
                 flux_error = np.zeros(len(x_data))
     #fits standard 2:
         elif hdul[1].data is not None:
@@ -200,10 +194,10 @@ def read_spectra(path,spectra):
         flux_error = data['col3']
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(data.meta)
-        obj_name = "" #TEMPORARY
+        obj_name = "" #No way to read object name from ascii files right now.
 
 
-    elif spectra_file.endswith('.dat'):
+    elif spectra_file.endswith('.dat'): #assuming origin is ESO spec standards
         data = open(spectra_file) #read in data
         filename = glob(os.path.join(path,'*readme.ctio'))
         if filename:
@@ -237,7 +231,7 @@ def read_spectra(path,spectra):
         x_units = get_x_units(x_data)
         y_units,y_factor = get_y_units(y_data[0])
         title = spectra.split('.')[0]
-        obj_name = title.lstrip('au').lstrip('0') #assuming format from NEOx Characterization page
+        obj_name = title.lstrip('au').lstrip('0') #assuming filename format from NEOx Characterization page
 
     else:
         raise ImportError("Invalid input file type. Input file must be '.fits', '.ascii', '.dat', or '.txt'")
@@ -253,11 +247,7 @@ def read_spectra(path,spectra):
     flux = y_data*y_units
 
     if not obj_name:
-        logging.warning("Could not parse object name from file")
-    #else:
-        #print("Object: ", obj_name)
-
-    check_refl(wavelength,flux)
+        logger.warning("Could not parse object name from file")
 
     return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name
 
@@ -267,45 +257,34 @@ def smooth(x,y):
        inputs: <ydata>: raw flux data
        outputs: smoothed flux data
     """
-    #determining if smoothing is needed and to what degree
+    # determining if smoothing is needed and to what degree
     stds=np.array([])
     normy = normalize(x,y)
-    loc = 5
-    #OUTLIER DEBUGGING
-    # n=0
-    # while n < len(y):
-    #     if abs(y[n].value-np.nanmean(y).value) > 20*np.nanstd(y).value:
-    #         #print(y[n])
-    #         #print(x[n])
-    #         y[n] = np.nan
-    #         normy[n]= np.nan
-    #         #print('hi')
-    #         n=0
-    #     else:
-    #         n+=1
+    noise_window = 5
+    loc = noise_window
+    N = 8
 
     while loc <= len(x):
-        stds = np.append(stds,np.nanstd(normy[loc-5:loc]).value)
-        loc += int(len(x)/8)
-
+        stds = np.append(stds,np.nanstd(normy[loc-noise_window:loc]).value)
+        loc += int(len(x)/N)
 
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
-    #print("noisiness: %.5f" % noisiness)
-
+    # determines 'noisiness' by looking at the std. dev. of chuncks points of size
+    # 'noise_window' at N spots in the data
     if .0035 <= noisiness < .005:
         window = 15
-        print("smoothing: yes (15)")
+        logger.info("smoothing: yes (15)")
     elif .005 <= noisiness < .01:
         window = 20
-        print("smoothing: yes (20)")
+        logger.info("smoothing: yes (20)")
     elif noisiness >= .01:
         window = 30
-        print("smoothing: yes(30)")
+        logger.info("smoothing: yes(30)")
     else:
-        print("smoothing: no")
+        logger.info("smoothing: no")
         return x,y
 
-    #smoothing
+    # smoothing
     return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)] #boxcar average data
 
 def normalize(x,y,wavelength=5500*u.AA):
@@ -323,14 +302,14 @@ def normalize(x,y,wavelength=5500*u.AA):
     if not normval.value or np.isnan(normval.value):
         normval = 1
 
-    return y/normval #REMEMBER to normalize y-units too
+    return y/normval #REMEMBER to normalize y-units too if normalizing final data
 
 def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
                <y>: flux data for y axis
                <ax>: matplotlib axis
-               <title>: plot title (shoudl be object)
+               <title>: plot title (should be object name)
                [ref]: 1 for sol_ref, 0 for asteroid
                [norm]: normalizes data when set to 1
     """
@@ -373,33 +352,16 @@ if __name__== "__main__":
     #sol_ref =  'solar_standard_V2.fits'
     #sol_ref = 'calspec/sun_reference_stis_001.fits'
 
-    #window = 2
-    #print("\nasteroid: ")
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         x,y,yerr,x_units,y_units,y_factor, obj_name= read_spectra(path,spectra)
     xsmoothed,ysmoothed = smooth(x,y)#,window) #[window/2:-window/2]
 
-    #print("\nreference star: ")
-    #window_ref = 2
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units,y_factor_ref, obj_name_ref = read_spectra(sol_path,sol_ref)
     x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref)#,window_ref)
 
-    #normyerr = normalize(x,yerr) #remember to normalize y-units too
-    #normyerr_ref = normalize(x_ref,yerr_ref)
-
-    ##print(x.shape, y.shape, x_ref.shape, y_ref.shape, ysmoothed.shape, y_refsmoothed.shape)
-
-    #normy, normyerr = normalize(xsmoothed,ysmoothed,yerr) #normalizing data
-    #normy_ref,normerr_ref = normalize(x_refsmoothed,y_refsmoothed,yerr_ref)
-
-    ##print(yerr)
-    ##print(normyerr)
-
-    #plotting data
-    #(for 2 spectra)
     fig, ax = plt.subplots(nrows=2,sharex=True)
     plot_spectra(xsmoothed,ysmoothed/y_factor,y_units.to_string('latex'),ax[0], obj_name, ref=0)
     plot_spectra(x_refsmoothed,y_refsmoothed/y_factor_ref,y_ref_units.to_string('latex'),ax[1], obj_name_ref, ref=1)
