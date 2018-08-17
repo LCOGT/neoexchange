@@ -2155,17 +2155,18 @@ def find_spec(pk):
         req = data['REQNUM']
     else:
         req = '000' + block.tracking_number
-    dir = base_dir+date+'/'+obj+'_'+req+'/'
 
     prop = block.proposal.code
 
     if not glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz')):
         date = str(int(date)-1)
 
+    dir = base_dir + date + '/' + obj + '_' + req + '/'
+
     return date, obj, req, dir, prop
 
 
-def make_spec(request,pk):
+def make_spec(request, pk):
     """Creates plot of spectra data for spectra blocks
        NOTE: Can take ~5-10 seconds to load if building new gif. Wait a bit
        before assuming something is wrong
@@ -2186,10 +2187,10 @@ def make_spec(request,pk):
     base_dir = os.path.join(settings.DATA_ROOT, date)
 
     filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checks for file in path
+    spectra_path = None
     if filename:
         spectra_path = filename[0]
     else:
-        dir = dir+date
         tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
         if tar_files:
             for tar in tar_files:
@@ -2199,7 +2200,6 @@ def make_spec(request,pk):
                 else:
                     logger.error("Could not find tarball for block: %s" % pk)
                     return HttpResponse("")
-            print(tar_path)
             spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
             for spec in spec_files:
                 if '2df_ex.fits' in spec:
