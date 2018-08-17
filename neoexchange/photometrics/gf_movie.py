@@ -11,6 +11,10 @@ from glob import glob
 import os
 
 def make_gif(frames):
+""" takes in list of .fits guide frames and turns them into a moving gif.
+    <frames> = list of .fits frames
+    output = savefile (path of gif)
+    """
     files = np.sort(frames)
     dir = os.path.dirname(frames[0]).lstrip(' ')
 
@@ -40,9 +44,7 @@ def make_gif(frames):
     #fig.add_subplot(111,projection=wcs)
     fig.suptitle('Observation '+tn+' for '+obj+' at '+site)
 
-
-    anim = FuncAnimation(fig,update,frames=files,blit=True,interval=333)
-
+    anim = FuncAnimation(fig,update,frames=files,blit=True,interval=333) #takes in fig, update function, and frame rate set to 3fps
 
     savefile = os.path.join(dir,'guidemovie.gif')
     anim.save(savefile, dpi=90, writer='imagemagick')
@@ -50,7 +52,10 @@ def make_gif(frames):
     return savefile
 
 def update(files):
-
+""" this method is requred to build FuncAnimation
+    <files> = frames to iterate through
+    output: methods returned in this function are the things that are updated in each frame.
+"""
     hdu = fits.open(files)[0]
     if hdu.data:
             data = hdu.data
@@ -80,8 +85,7 @@ def update(files):
 
     return plt.imshow(data,cmap='gray',vmin=interval[0],vmax=interval[1]),ax.set_title('Date: '+date),ax.set_xlabel('RA Dec: '+header['RA']+ ' '+header['DEC'])
 
-def test_display(file):
-
+def test_display(file): #Leftover from debugging
     hdu = fits.open(file)[0]
     if not any(hdu.data):
         hdu = fits.open(file)[1]

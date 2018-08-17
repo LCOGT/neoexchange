@@ -26,7 +26,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
-    make_spec, PlotSpec,make_movie,GuideMovie
+    make_spec, PlotSpec, make_movie, GuideMovie
 from analyser.views import BlockFramesView, ProcessCandidates
 
 
