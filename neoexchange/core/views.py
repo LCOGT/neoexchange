@@ -2155,13 +2155,11 @@ def find_spec(pk):
         req = data['REQNUM']
     else:
         req = '000' + block.tracking_number
-
-    prop = block.proposal.code
-
-    if not glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz')):
-        date = str(int(date)-1)
-
     dir = base_dir + date + '/' + obj + '_' + req + '/'
+    prop = block.proposal.code
+    if not glob(os.path.join(base_dir, date, prop+'_*'+req+'*.tar.gz')):
+        date = str(int(date)-1)
+        dir = base_dir + date + '/' + obj + '_' + req + '/'
 
     return date, obj, req, dir, prop
 
