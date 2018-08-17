@@ -1,4 +1,4 @@
-"""Analyses output of lightcure_extraction for """
+"""Analyses output of lightcure_extraction for period and plots folded lightcurve"""
 
 import os
 from datetime import datetime, timedelta, time
