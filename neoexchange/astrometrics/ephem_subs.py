@@ -751,7 +751,7 @@ def crude_astro_darkness(sitecode, utc_date):
     return ad_start, ad_end
 
 
-def accurate_astro_darkness(sitecode, utc_date, debug=False):
+def accurate_astro_darkness(sitecode, utc_date, solar_pos=False, debug=False):
 
     # Convert passed UTC date to MJD and then Julian centuries
 
@@ -785,6 +785,9 @@ def accurate_astro_darkness(sitecode, utc_date, debug=False):
     sun_app_ra = atan2(cos(radians(eps)) * sin(radians(sun_app_long)), cos(radians(sun_app_long)))
     sun_app_ra = S.sla_dranrm(sun_app_ra)
     sun_app_dec = asin(sin(radians(eps)) * sin(radians(sun_app_long)))
+
+    if solar_pos is not False:
+        return sun_app_ra, sun_app_dec
 
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
 

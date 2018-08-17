@@ -16,7 +16,7 @@ GNU General Public License for more details.
 import os
 from glob import glob
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees, radians
+from math import floor, ceil, degrees, radians, pi
 import json
 import urllib
 import logging
@@ -52,7 +52,7 @@ from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_per
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
-    determine_spectro_slot_length, get_sitepos, read_findorb_ephem
+    determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
@@ -411,6 +411,17 @@ class StaticSourceView(ListView):
     queryset = StaticSource.objects.order_by('ra')
     context_object_name = "calibsources"
     paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super(StaticSourceView, self).get_context_data(**kwargs)
+        sun_ra, sun_dec = accurate_astro_darkness('500', datetime.now(), solar_pos=True)
+        night_ra = degrees(sun_ra - pi)
+        if night_ra < 0:
+            night_ra += 360
+        night_ra = degreestohms(night_ra, ':')
+        night_dec = degreestodms(degrees(-sun_dec), ':')
+        context['night'] = {'ra': night_ra, 'dec': night_dec}
+        return context
 
 
 class StaticSourceDetailView(DetailView):
