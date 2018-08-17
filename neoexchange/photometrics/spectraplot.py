@@ -36,9 +36,6 @@ def check_norm(values): #not perfect
                 except ValueError:
                     continue
 
-def check_refl(x,y): #TEMPORARY CHECK
-    return x[y.argmax()] > 6000*u.AA:
-
 def get_x_units(x_data):
     """finds wavelength units from x_data
        inputs: <xdata>: unitless wavelength data
