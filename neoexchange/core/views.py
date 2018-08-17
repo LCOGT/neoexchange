@@ -2127,19 +2127,20 @@ def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
+
 def find_spec(pk):
     """find directory of spectra for a certain block
     NOTE: Currently will only pull first spectrum of a superblock
     """
     base_dir = settings.DATA_ROOT
     try:
-        #block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
+        # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
         block = Block.objects.get(pk=pk)
         url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
     except IndexError:
-        return '','','','',''
-    #data = lco_api_call(url)['data']
-    #print(url)
+        return '', '', '', '', ''
+    # data = lco_api_call(url)['data']
+    # print(url)
     data = lco_api_call(url)['data']
     if 'DAY_OBS' in data:
         date = data['DAY_OBS']
@@ -2148,8 +2149,7 @@ def find_spec(pk):
     else:
         date = str(int(block.block_start.strftime('%Y%m%d'))-1)
 
-
-    obj = block.body.current_name().replace(' ','')
+    obj = block.body.current_name().replace(' ', '')
 
     if 'REQNUM' in data:
         req = data['REQNUM']
@@ -2159,10 +2159,12 @@ def find_spec(pk):
 
     prop = block.proposal.code
 
-    if not glob(os.path.join(base_dir,prop+'_*'+req+'*.tar.gz')):
+    if not glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz')):
         date = str(int(date)-1)
 
-    return date,obj,req,dir,prop
+    return date, obj, req, dir, prop
+
+
 def make_spec(request,pk):
     """Creates plot of spectra data for spectra blocks
        NOTE: Can take ~5-10 seconds to load if building new gif. Wait a bit
@@ -2173,48 +2175,51 @@ def make_spec(request,pk):
     # matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    date,obj,req,dir,prop = find_spec(pk)
-    print('ID: ',pk)
-    print('DATE:',date)
-    print('BODY:',obj)
-    print('REQNUM: ',req)
-    print('DIR: ',dir)
-    print('PROP:',prop)
+    date, obj, req, dir, prop = find_spec(pk)
+    print('ID: ', pk)
+    print('DATE:', date)
+    print('BODY:', obj)
+    print('REQNUM: ', req)
+    print('DIR: ', dir)
+    print('PROP:', prop)
 
-    base_dir = os.path.join(settings.DATA_ROOT,date)
+    base_dir = os.path.join(settings.DATA_ROOT, date)
 
-    filename = glob(os.path.join(dir,'*2df_ex.fits')) #checks for file in path
+    filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checks for file in path
     if filename:
         spectra_path = filename[0]
     else:
         dir = dir+date
-        tar_files = glob(os.path.join(base_dir,prop+'_*'+req+'*.tar.gz')) #if file not found, looks fror tarball
+        tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
         if tar_files:
             for tar in tar_files:
                 if req in tar:
                     tar_path = tar
-                    unpack_path = os.path.join(base_dir,obj+'_'+req)
+                    unpack_path = os.path.join(base_dir, obj+'_'+req)
+                else:
+                    logger.error("Could not find tarball for block: %s" % pk)
+                    return HttpResponse("")
             print(tar_path)
-            spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
+            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
             for spec in spec_files:
                 if '2df_ex.fits' in spec:
                     spectra_path = spec
                     break
         else:
-            logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
+            logger.error("Could not find spectrum data or tarball for block: %s" % pk)
             return HttpResponse("")
 
-    if spectra_path: #plots spectra
+    if spectra_path:  # plots spectra
         spec_file = os.path.basename(spectra_path)
         spec_dir = os.path.dirname(spectra_path)
-        #spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
-        x,y,yerr,xunits,yunits,yfactor,name = read_spectra(spec_dir,spec_file)
-        xsmooth,ysmooth = smooth(x,y)
-        fig,ax = plt.subplots()
-        plot_spectra(xsmooth,ysmooth/yfactor,yunits.to_string('latex'),ax,name)
+        # spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
+        x, y, yerr, xunits, yunits, yfactor, name = read_spectra(spec_dir, spec_file)
+        xsmooth, ysmooth = smooth(x, y)
+        fig, ax = plt.subplots()
+        plot_spectra(xsmooth, ysmooth/yfactor, yunits.to_string('latex'), ax, name)
         buffer = io.BytesIO()
         fig.savefig(buffer, format='png')
-        #fig.savefig(spectra_path.replace('.fits', '.png'), format='png')
+        # fig.savefig(spectra_path.replace('.fits', '.png'), format='png')
         plt.close()
         return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
@@ -2222,7 +2227,8 @@ def make_spec(request,pk):
         logger.error("Could not find spectrum data for block: %s" % pk)
         return HttpResponse("")
 
-class PlotSpec(View): #make loging required later
+
+class PlotSpec(View):  # make loging required later
 
     template_name = 'core/plot_spec.html'
 
@@ -2231,7 +2237,8 @@ class PlotSpec(View): #make loging required later
 
         return render(request, self.template_name, params)
 
-def make_movie(request,pk):
+
+def make_movie(request, pk):
     """Make gif of FLOYDS Guide Frames given a spectral block
     <pk> principle key for SuperBlock
     """
@@ -2239,61 +2246,65 @@ def make_movie(request,pk):
     # matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    date,obj,req,dir,prop = find_spec(pk)
-    filename = glob(os.path.join(dir,'*2df_ex.fits')) #checking if unpacked
-    print('ID: ',pk)
-    print('DATE:',date)
-    print('BODY:',obj)
-    print('REQNUM: ',req)
-    print('DIR: ',dir)
-    print('PROP:',prop)
+    date, obj, req, dir, prop = find_spec(pk)
+    filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checking if unpacked
+    print('ID: ', pk)
+    print('DATE:', date)
+    print('BODY:', obj)
+    print('REQNUM: ', req)
+    print('DIR: ', dir)
+    print('PROP:', prop)
 
-    if filename: #If first order tarball is unpacked
+    if filename:  # If first order tarball is unpacked
             movie_dir = glob(os.path.join(dir,"Guide_frames"))
-            if movie_dir: #if 2nd order tarball is unpacked
-                print('MOVIE DIR :',movie_dir[0])
-                movie_file = glob(os.path.join(movie_dir[0],"*.gif"))
+            if movie_dir:  # if 2nd order tarball is unpacked
+                print('MOVIE DIR :', movie_dir[0])
+                movie_file = glob(os.path.join(movie_dir[0], "*.gif"))
                 if movie_file:
-                    print('MOVIE FILE: ',movie_file[0])
+                    print('MOVIE FILE: ', movie_file[0])
                     movie = open(movie_file[0], 'rb').read()
                     return HttpResponse(movie, content_type="Image/gif")
                 else:
-                    frames = glob(os.path.join(movie_dir[0],"*.fits.fz"))
+                    frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
             else:
-                tarintar = glob(os.path.join(dir,"*.tar"))
+                tarintar = glob(os.path.join(dir, "*.tar"))
                 if tarintar:
-                    unpack_path = os.path.join(dir,'Guide_frames')
-                    guide_files = unpack_tarball(tarintar[0],unpack_path) #unpacks tar
+                    unpack_path = os.path.join(dir, 'Guide_frames')
+                    guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
                     print("Unpacking tar in tar")
                     frames = []
                     for file in guide_files:
                         if '.fits.fz' in file:
                             frames.append(file)
                 else:
-                    logger.error("Could not Guide Frames or Guide Frame tarball for block: %s" %pk)
+                    logger.error("Could not Guide Frames or Guide Frame tarball for block: %s" % pk)
                     return HttpResponse("")
 
-    else: #else, unpack both tarballs
-        base_dir = os.path.join(settings.DATA_ROOT,date)
-        tar_files = glob(os.path.join(base_dir,prop+"_"+req+"*.tar.gz")) #if file not found, looks fror tarball
+    else:  # else, unpack both tarballs
+        base_dir = os.path.join(settings.DATA_ROOT, date)
+        tar_files = glob(os.path.join(base_dir, prop+"_"+req+"*.tar.gz"))  # if file not found, looks fror tarball
         frames = []
         guide_files = []
+        tar_path = None
+        unpack_path = None
         if tar_files:
             for tar in tar_files:
                 if req in tar:
                     tar_path = tar
-                    unpack_path = os.path.join(base_dir,obj+'_'+req)
+                    unpack_path = os.path.join(base_dir, obj+'_'+req)
                     break
-            #print(tar_path)
-            print("Unpacking 1st tar")
-            spec_files = unpack_tarball(tar_path,unpack_path) #upacks tarball
+            if tar_path is None or unpack_path is None:
+                logger.error("Clould not find tarball for block: %s" % pk)
+                return HttpResponse("")
+            logger.info("Unpacking 1st tar")
+            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
 
             for file in spec_files:
                 if '.tar' in file:
                     tarintar = file
-                    unpack_path = os.path.join(base_dir,obj+'_'+req+'/Guide_frames')
-                    print("Unpacking tar in tar")
-                    guide_files = unpack_tarball(tarintar,unpack_path) #unpacks tar in tar
+                    unpack_path = os.path.join(base_dir, obj+'_'+req+'/Guide_frames')
+                    logger.info("Unpacking tar in tar")
+                    guide_files = unpack_tarball(tarintar, unpack_path)  # unpacks tar in tar
                     break
 
             if guide_files:
@@ -2302,22 +2313,26 @@ def make_movie(request,pk):
                         frames.append(file)
 
         else:
-            logger.error("Clould not find spectrum data or tarball for block: %s" %pk)
+            logger.error("Clould not find spectrum data or tarball for block: %s" % pk)
             return HttpResponse("")
     if frames is not None and len(frames) > 1:
         print("#Frames = ", len(frames))
         print("Making Movie...")
         movie_file = make_gif(frames)
-        #movie_file = test_display(frames[0])
-        print('MOVIE FILE: ',movie_file)
+        # movie_file = test_display(frames[0])
+        print('MOVIE FILE: ', movie_file)
         plt.close()
         movie = open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")
     else:
+        if frames is None:
+            frames = []
         logger.error("There must be at least 2 frames to make guide movie. Found: %d" % len(frames))
         return HttpResponse("")
 
-class GuideMovie(View): #make loging required later
+
+class GuideMovie(View):
+    # make loging required later
 
     template_name = 'core/guide_movie.html'
 
@@ -2325,6 +2340,7 @@ class GuideMovie(View): #make loging required later
         params = {'pk': kwargs['pk']}
 
         return render(request, self.template_name, params)
+
 
 def update_taxonomy(taxobj, dbg=False):
     """Update the passed <taxobj> for a new taxonomy update.
