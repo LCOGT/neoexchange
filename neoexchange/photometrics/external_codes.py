@@ -687,7 +687,7 @@ def read_mtds_file(mtdsfile, dbg=False):
     return dets
 
 def unpack_tarball(tar_path, unpack_dir):
-    """unpacks tarballs and puts files in appropriately named directory"""
+    """unpacks tarballs and puts files in appropriately named directory with appriopriate permissions"""
     unpack_archive(tar_path,extract_dir=unpack_dir,format="gztar")
 
     os.chmod(unpack_dir,0o775)
