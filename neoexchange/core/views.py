@@ -2172,12 +2172,12 @@ def make_spec(request, pk):
     import matplotlib.pyplot as plt
 
     date, obj, req, dir, prop = find_spec(pk)
-    logger.debug('ID: ', pk)
-    logger.debug('DATE:', date)
-    logger.debug('BODY:', obj)
-    logger.debug('REQNUM: ', req)
-    logger.debug('DIR: ', dir)  # where it thinks the data is at
-    logger.debug('PROP:', prop)
+    logger.debug('ID: {}'.format(pk))
+    logger.debug('DATE: {}'.format(date))
+    logger.debug('BODY: {}'.format(obj))
+    logger.debug('REQNUM: {}'.format(req))
+    logger.debug('DIR: {}'.format(dir))  # where it thinks an unpacked tar is at
+    logger.debug('PROP: {}'.format(prop))
 
     filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checks for file in path
     spectra_path = None
@@ -2244,22 +2244,22 @@ def make_movie(request, pk):
     import matplotlib.pyplot as plt
 
     date, obj, req, dir, prop = find_spec(pk)
-    logger.debug('ID: ', pk)
-    logger.debug('DATE:', date)
-    logger.debug('BODY:', obj)
-    logger.debug('REQNUM: ', req)
-    logger.debug('DIR: ', dir)  # where it thinks an unpacked tar is at
-    logger.debug('PROP:', prop)
+    logger.debug('ID: {}'.format(pk))
+    logger.debug('DATE: {}'.format(date))
+    logger.debug('BODY: {}'.format(obj))
+    logger.debug('REQNUM: {}'.format(req))
+    logger.debug('DIR: {}'.format(dir))  # where it thinks an unpacked tar is at
+    logger.debug('PROP: {}'.format(prop))
 
     filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checking if unpacked
 
     if filename:  # If first order tarball is unpacked
             movie_dir = glob(os.path.join(dir,"Guide_frames"))
             if movie_dir:  # if 2nd order tarball is unpacked
-                logger.debug('MOVIE DIR :', movie_dir[0])
+                logger.debug('MOVIE DIR : {}'.format(movie_dir[0]))
                 movie_file = glob(os.path.join(movie_dir[0], "*.gif"))
                 if movie_file:
-                    logger.debug('MOVIE FILE: ', movie_file[0])
+                    logger.debug('MOVIE FILE: {}'.format(movie_file[0]))
                     movie = open(movie_file[0], 'rb').read()
                     return HttpResponse(movie, content_type="Image/gif")
                 else:
@@ -2314,11 +2314,11 @@ def make_movie(request, pk):
             logger.error("Clould not find spectrum data or tarball for block: %s" % pk)
             return HttpResponse("")
     if frames is not None and len(frames) > 1:
-        logger.debug("#Frames = ", len(frames))
+        logger.debug("#Frames = {}".format(len(frames)))
         logger.info("Making Movie...")
         movie_file = make_gif(frames)
         # movie_file = test_display(frames[0])
-        logger.debug('MOVIE FILE: ', movie_file)
+        logger.debug('MOVIE FILE: {}'.format(movie_file))
         plt.close()
         movie = open(movie_file, 'rb').read()
         return HttpResponse(movie, content_type="Image/gif")

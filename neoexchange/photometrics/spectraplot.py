@@ -32,7 +32,7 @@ def check_norm(values): #not perfect
                 try:
                     normval = float(s)
                     normloc = list(float(t) for t in re.findall(r'-?\d+\.?\d*',normstr))[-1] #reg. expres.
-                    logger.info("Flux normalized to ", normval, " at ", normloc)
+                    logger.info("Flux normalized to {} at {}".format(normval,normloc))
                 except ValueError:
                     continue
 
