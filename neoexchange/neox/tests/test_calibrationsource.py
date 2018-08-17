@@ -72,7 +72,9 @@ class TestCalibrationSources(FunctionalTest):
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
 
+    @patch('core.views.datetime', MockDateTime)
     def test_can_view_calibsources(self):
+        MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
         target_url = "{0}{1}".format(self.live_server_url, reverse('calibsource-view'))
@@ -85,6 +87,12 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn('Calibration Sources | LCO NEOx', self.browser.title)
         header_text = self.browser.find_element_by_class_name('headingleft').text
         self.assertIn('Calibration Sources', header_text)
+
+        # He notices the position of the Solar antinode is given.
+        expected_coords=['15:55:45.42', '-20:22:15.3']
+        coords_text = self.browser.find_element_by_id('anti_solar_point').text
+        for coor in expected_coords:
+            self.assertIn(coor,coords_text)
 
         # He notices there are several calibration sources that are listed
         self.check_for_header_in_table('id_calibsources',

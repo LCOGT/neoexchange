@@ -32,7 +32,7 @@
                     <a class="button button-primary" href="{% url 'solarstandard-view' %}" id="show-solar-standards">Show only Solar Analogs</a>
                 {% endif %}
             </div>
-            <span> <b> Current Anti-Solar Point: RA = {{night.ra}} / Dec = {{night.dec}} </b></span>
+            <span id="anti_solar_point"> <b> Current Anti-Solar Point: RA = {{night.ra}} / Dec = {{night.dec}} </b></span>
             <div class="row">
                 <table class="datatable u-full-width" id="id_calibsources">
                     <thead>
