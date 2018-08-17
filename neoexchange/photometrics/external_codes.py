@@ -693,5 +693,7 @@ def unpack_tarball(tar_path, unpack_dir):
     os.chmod(unpack_dir,0o775)
     files = glob(unpack_dir+'/*')
 
+    for file in files:
+        os.chmod(file,0o664)
 
     return files
