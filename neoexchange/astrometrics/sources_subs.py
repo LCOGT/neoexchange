@@ -1608,9 +1608,9 @@ def make_userrequest(elements, params):
         cal_request = {}
 
 # If site is ELP, increase IPP value
-    ipp_value = 1.05
+    ipp_value = 1.00
     if params['site_code'] == 'V37':
-        ipp_value = 1.05
+        ipp_value = 1.00
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
