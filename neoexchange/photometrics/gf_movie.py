@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 from matplotlib.animation import FuncAnimation
 from astropy.io import fits
 from astropy.wcs import WCS
@@ -45,7 +46,7 @@ def make_gif(frames):
     # fig.add_subplot(111,projection=wcs)
     fig.suptitle('Superblock {} for {} at {}'.format(tn, obj, site))
 
-    anim = FuncAnimation(fig, update, frames=fits_files, blit=True, interval=333)  # takes in fig, update function, and frame rate set to 3fps
+    anim = FuncAnimation(fig, update, frames=fits_files, blit=False, interval=333)  # takes in fig, update function, and frame rate set to 3fps
 
     savefile = os.path.join(dir, 'guidemovie.gif')
     anim.save(savefile, dpi=90, writer='imagemagick')
@@ -53,17 +54,18 @@ def make_gif(frames):
     return savefile
 
 
-def update(files):
+def update(file):
     """ this method is requred to build FuncAnimation
-    <files> = frames to iterate through
+    <file> = frame currently being iterated
     output: methods returned in this function are the things that are updated in each frame.
     """
-    hdu = fits.open(files)[0]
+
+    hdu = fits.open(file)[0]
     if hdu.data:
             data = hdu.data
             header = hdu.header
     else:
-        hdu1 = fits.open(files)[1]
+        hdu1 = fits.open(file)[1]
         data = hdu1.data
         header = hdu1.header
 
@@ -71,20 +73,34 @@ def update(files):
         date = header['DATE-OBS'][:-4]
     except KeyError:
         date = header['DATE_OBS'][:-4]
-    # wcs = WCS(header)
+
+    wcs = WCS(header)
     interval = ZScaleInterval().get_limits(data)
     ax = plt.gca()
-    date_lable = ax.set_title('Date: {}'.format(date))
-    position_lable = ax.set_xlabel('RA, Dec: {} {}'.format(header['RA'], header['DEC']))
-    plt.tick_params(
-        axis='both',
-        which='both',
-        bottom=False,
-        left=False,
-        labelbottom=False,
-        labelleft=False)
+    ax.clear()
+    ax.axis('off')
+    ax = plt.gca(projection=wcs)
+    ax.set_title('Date: {}'.format(date), pad=10)
+    ra = ax.coords['ra']
+    dec = ax.coords['dec']
+    # ra_lab = ra.set_axislabel('Right Ascension (J2000)')
+    # dec_lab = dec.set_axislabel('Declination (J2000)')
+    ra.set_major_formatter('hh:mm:ss')
+    dec.set_major_formatter('dd:mm')
+    ra.set_ticks_position('lb')
+    ra.set_ticklabel_position('lb')
+    dec.set_ticks_position('br')
+    dec.set_ticklabel_position('br')
+    # dec.set_axislabel('Dec', rotation=90)  # I know it's reversed. It works though.
+    # ra.set_axislabel('RA')
+    # ra.set_ticks(number=5)
+    # dec.set_ticks(number=5)
+    ra.set_ticklabel(fontsize=10)
+    dec.set_ticklabel(fontsize=10)
+    ax.coords.grid(color='black', ls='solid', alpha=0.5)
+    plt.imshow(data, cmap='gray', vmin=interval[0], vmax=interval[1])
 
-    return plt.imshow(data, cmap='gray', vmin=interval[0], vmax=interval[1]), date_lable, position_lable
+    return ax
 
 
 def test_display(file):  # Leftover from debugging
