@@ -52,7 +52,7 @@ from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
 from photometrics.spectraplot import read_spectra, smooth, plot_spectra
-from photometrics.gf_movie import make_gif, test_display
+from photometrics.gf_movie import make_gif
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
@@ -2310,7 +2310,6 @@ def make_movie(request, pk):
         logger.debug("#Frames = {}".format(len(frames)))
         logger.info("Making Movie...")
         movie_file = make_gif(frames)
-        # movie_file = test_display(frames[0])
         logger.debug('MOVIE FILE: {}'.format(movie_file))
         plt.close()
         movie = open(movie_file, 'rb').read()
