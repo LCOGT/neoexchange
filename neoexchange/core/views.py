@@ -2172,12 +2172,8 @@ def make_spec(request, pk):
     import matplotlib.pyplot as plt
 
     date, obj, req, dir, prop = find_spec(pk)
-    logger.debug('ID: {}'.format(pk))
-    logger.debug('DATE: {}'.format(date))
-    logger.debug('BODY: {}'.format(obj))
-    logger.debug('REQNUM: {}'.format(req))
+    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date, req, prop))
     logger.debug('DIR: {}'.format(dir))  # where it thinks an unpacked tar is at
-    logger.debug('PROP: {}'.format(prop))
 
     filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checks for file in path
     spectra_path = None
@@ -2244,19 +2240,16 @@ def make_movie(request, pk):
     import matplotlib.pyplot as plt
 
     date, obj, req, dir, prop = find_spec(pk)
-    logger.debug('ID: {}'.format(pk))
-    logger.debug('DATE: {}'.format(date))
-    logger.debug('BODY: {}'.format(obj))
-    logger.debug('REQNUM: {}'.format(req))
+    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date, req, prop))
     logger.debug('DIR: {}'.format(dir))  # where it thinks an unpacked tar is at
-    logger.debug('PROP: {}'.format(prop))
 
     filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checking if unpacked
 
     if filename:  # If first order tarball is unpacked
-            movie_dir = glob(os.path.join(dir,"Guide_frames"))
+            movie_dir = glob(os.path.join(dir, "Guide_frames"))
             if movie_dir:  # if 2nd order tarball is unpacked
                 logger.debug('MOVIE DIR : {}'.format(movie_dir[0]))
+                # read in ANY .gif file and assume correct.
                 movie_file = glob(os.path.join(movie_dir[0], "*.gif"))
                 if movie_file:
                     logger.debug('MOVIE FILE: {}'.format(movie_file[0]))
