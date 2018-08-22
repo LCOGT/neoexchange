@@ -1,4 +1,9 @@
-"""Creates a guide frame movie gif when given a series of guide frames"""
+"""
+Creates a guide frame movie gif when given a series of guide frames
+Author: Adam Tedeschi
+Date: 8/10/2018
+for NeoExchange
+"""
 
 import sys
 import numpy as np
