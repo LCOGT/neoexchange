@@ -2143,11 +2143,11 @@ def find_spec(pk):
     # print(url)
     data = lco_api_call(url)['data']
     if 'DAY_OBS' in data:
-        date = data['DAY_OBS']
+        date_obs = data['DAY_OBS']
     elif 'DAY-OBS' in data:
-        date = data['DAY-OBS']
+        date_obs = data['DAY-OBS']
     else:
-        date = str(int(block.block_start.strftime('%Y%m%d'))-1)
+        date_obs = str(int(block.block_start.strftime('%Y%m%d'))-1)
 
     obj = block.body.current_name().replace(' ', '')
 
@@ -2155,13 +2155,13 @@ def find_spec(pk):
         req = data['REQNUM']
     else:
         req = '000' + block.tracking_number
-    dir = base_dir + date + '/' + obj + '_' + req + '/'
+    path = base_dir + date_obs + '/' + obj + '_' + req + '/'
     prop = block.proposal.code
-    if not glob(os.path.join(base_dir, date, prop+'_*'+req+'*.tar.gz')):
-        date = str(int(date)-1)
-        dir = base_dir + date + '/' + obj + '_' + req + '/'
+    if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
+        date_obs = str(int(date_obs)-1)
+        path = base_dir + date + '/' + obj + '_' + req + '/'
 
-    return date, obj, req, dir, prop
+    return date_obs, obj, req, path, prop
 
 
 def make_spec(request, pk):
@@ -2171,16 +2171,16 @@ def make_spec(request, pk):
     import io
     import matplotlib.pyplot as plt
 
-    date, obj, req, dir, prop = find_spec(pk)
-    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date, req, prop))
-    logger.debug('DIR: {}'.format(dir))  # where it thinks an unpacked tar is at
+    date_obs, obj, req, path, prop = find_spec(pk)
+    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checks for file in path
+    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checks for file in path
     spectra_path = None
     if filename:
         spectra_path = filename[0]
     else:
-        base_dir = os.path.join(settings.DATA_ROOT, date) #new base_dir for method
+        base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
         tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
         if tar_files:
             for tar in tar_files:
@@ -2239,14 +2239,14 @@ def make_movie(request, pk):
     # matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
-    date, obj, req, dir, prop = find_spec(pk)
-    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date, req, prop))
-    logger.debug('DIR: {}'.format(dir))  # where it thinks an unpacked tar is at
+    date_obs, obj, req, path, prop = find_spec(pk)
+    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    filename = glob(os.path.join(dir, '*2df_ex.fits'))  # checking if unpacked
+    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
 
     if filename:  # If first order tarball is unpacked
-            movie_dir = glob(os.path.join(dir, "Guide_frames"))
+            movie_dir = glob(os.path.join(path, "Guide_frames"))
             if movie_dir:  # if 2nd order tarball is unpacked
                 logger.debug('MOVIE DIR : {}'.format(movie_dir[0]))
                 # read in ANY .gif file and assume correct.
@@ -2258,9 +2258,9 @@ def make_movie(request, pk):
                 else:
                     frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
             else:
-                tarintar = glob(os.path.join(dir, "*.tar"))
+                tarintar = glob(os.path.join(path, "*.tar"))
                 if tarintar:
-                    unpack_path = os.path.join(dir, 'Guide_frames')
+                    unpack_path = os.path.join(path, 'Guide_frames')
                     guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
                     logger.info("Unpacking tar in tar")
                     frames = []
@@ -2272,7 +2272,7 @@ def make_movie(request, pk):
                     return HttpResponse("")
 
     else:  # else, unpack both tarballs
-        base_dir = os.path.join(settings.DATA_ROOT, date)
+        base_dir = os.path.join(settings.DATA_ROOT, date_obs)
         tar_files = glob(os.path.join(base_dir, prop+"_"+req+"*.tar.gz"))  # if file not found, looks fror tarball
         frames = []
         guide_files = []
