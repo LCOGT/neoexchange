@@ -2159,7 +2159,7 @@ def find_spec(pk):
     prop = block.proposal.code
     if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
         date_obs = str(int(date_obs)-1)
-        path = base_dir + date + '/' + obj + '_' + req + '/'
+        path = base_dir + date_obs + '/' + obj + '_' + req + '/'
 
     return date_obs, obj, req, path, prop
 
