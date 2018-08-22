@@ -6,22 +6,23 @@ for NeoExchange
 """
 
 from astropy.io import fits, ascii
-from astropy.convolution import convolve, Box1DKernel #Gaussian1DKernel
+from astropy.convolution import convolve, Box1DKernel  # Gaussian1DKernel
 from astropy.wcs import WCS
 from astropy import units as u
 import matplotlib.pyplot as plt
 import os
 from glob import glob
 import logging
-#import matplotlib.ticker as ticker
+# import matplotlib.ticker as ticker
 import numpy as np
-import collections,warnings,re
+import collections, warnings, re
 
 logger = logging.getLogger(__name__)
 
-#np.set_#printoptions(threshold=np.inf)
+# np.set_#printoptions(threshold=np.inf)
 
-def check_norm(values): #not perfect
+
+def check_norm(values):  # not perfect
     """checks with fits standard parsing and notifies if flux data has been normalized already
        input: <values>: array of text values in .fits header to parse
     """
@@ -31,10 +32,11 @@ def check_norm(values): #not perfect
             for s in normstr.split():
                 try:
                     normval = float(s)
-                    normloc = list(float(t) for t in re.findall(r'-?\d+\.?\d*',normstr))[-1] #reg. expres.
-                    logger.info("Flux normalized to {} at {}".format(normval,normloc))
+                    normloc = list(float(t) for t in re.findall(r'-?\d+\.?\d*', normstr))[-1]
+                    logger.info("Flux normalized to {} at {}".format(normval, normloc))
                 except ValueError:
                     continue
+
 
 def get_x_units(x_data):
     """finds wavelength units from x_data
@@ -43,9 +45,9 @@ def get_x_units(x_data):
     """
     x_min = np.amin(x_data)
 
-    #assuming visible to NIR range (~3000-10000A)
-    if x_min >1000:
-        x_units = u.AA #(Angstroms)
+    # assuming visible to NIR range (~3000-10000A)
+    if x_min > 1000:
+        x_units = u.AA  # (Angstroms)
     elif 100 < x_min < 800:
         x_units = u.nm
     elif .1 < x_min < 1:
@@ -56,21 +58,23 @@ def get_x_units(x_data):
 
     return x_units
 
+
 def get_y_units(info):
     """finds flux/reflectance units
        inputs: <info>: .fits header, .ascii metadata, point from .txt file, or ESO spec standard readme
        outputs: y_units,factor
     """
     y_factor = 1
-    flux_id = ["ERG", "FLAM"] #IDs to look for units with
-    #I know erg isn't the full unit, but it's a good indicator.
-    norm_id = ["NORM", "UNITLESS", "NONE"] #IDs to look for normalizations with
-    refl_id = ["REFLECT"] #IDs to look for normalized reflectance
+    y_units = None
+    flux_id = ["ERG", "FLAM"]  # IDs to look for units with
+    # I know erg isn't the full unit, but it's a good indicator.
+    norm_id = ["NORM", "UNITLESS", "NONE"]  # IDs to look for normalizations with
+    refl_id = ["REFLECT"]  # IDs to look for normalized reflectance
 
-    if isinstance(info, list): #from ESO aaareadme.ctio
+    if isinstance(info, list):  # from ESO aaareadme.ctio
         for line in info:
             if 'ergs' in line:
-                normlocs = list(float(t) for t in re.findall(r'-?\d+\.?\d*',line))
+                normlocs = list(float(t) for t in re.findall(r'-?\d+\.?\d*', line))
                 y_units = u.erg/(u.cm**2)/u.s/u.AA
                 try:
                     y_factor = normlocs[-2]**normlocs[-1]
@@ -78,56 +82,55 @@ def get_y_units(info):
                     pass
                 break
 
-    elif isinstance(info, float): #from .txt file (assuming normalized reflectance)
-        y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
+    elif isinstance(info, float):  # from .txt file (assuming normalized reflectance)
+        y_units = u.def_unit("Normalized_Reflectance", u.dimensionless_unscaled)
 
-    elif isinstance(info, collections.OrderedDict): #from .ascii
+    elif isinstance(info, collections.OrderedDict):  # from .ascii
         head = np.array(info.values())
-        col_head = ''.join(map(str,head.flatten()))
-        if any(unit_id in col_head.upper() for unit_id in flux_id): #checking for flam
+        col_head = ''.join(map(str, head.flatten()))
+        if any(unit_id in col_head.upper() for unit_id in flux_id):  # checking for flam
             y_units = u.erg/(u.cm**2)/u.s/u.AA
-        elif any(unit_id in col_head.upper() for unit_id in norm_id): #checking for normalized
-            if any(unit_id2 in col_head.upper() for unit_id2 in refl_id): #checking for normalization
-                y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
-                #print("y_units: ",y_units)
+        elif any(unit_id in col_head.upper() for unit_id in norm_id):  # checking for normalized
+            if any(unit_id2 in col_head.upper() for unit_id2 in refl_id):  # checking for normalization
+                y_units = u.def_unit("Normalized_Reflectance", u.dimensionless_unscaled)
+                logger.info("Spectra y_units: {}".format(y_units))
             else:
-                y_units = u.def_unit("Normalized_Flux",u.dimensionless_unscaled)
-                #print("y_units: normalized")
-        elif any(unit_id in col_head.upper() for unit_id in refl_id): #checking for normalized reflectance
-            y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
-            #print("y_units: ",y_units)
+                y_units = u.def_unit("Normalized_Flux", u.dimensionless_unscaled)
+                logger.info("Spectra y_units: normalized")
+        elif any(unit_id in col_head.upper() for unit_id in refl_id):  # checking for normalized reflectance
+            y_units = u.def_unit("Normalized_Reflectance", u.dimensionless_unscaled)
+            logger.info("Spectra y_units: {}".format(y_units))
         else:
             pass
 
-    elif isinstance(info, fits.header.Header):  #from .fits
-        possible_keys = ['BUNIT','TUNIT2'] #can add more  if needed
+    elif isinstance(info, fits.header.Header):  # from .fits
+        possible_keys = ['BUNIT', 'TUNIT2']  # can add more  if needed
         keys = list(info.keys())
         for n in range(len(keys)):
             if any(key_id in keys[n] for key_id in possible_keys):
                 if any(unit_id in info[keys[n]].upper() for unit_id in flux_id):
-                    if "10^20" in info[keys[n]]: #special LCO standard case
-                        y_factor=10**20
+                    if "10^20" in info[keys[n]]:  # special LCO standard case
+                        y_factor = 10**20
                     y_units = u.erg/(u.cm**2)/u.s/u.AA
                 elif any(unit_id in info[keys[n]].upper() for unit_id in norm_id):
-                    if any(unit_id in info[keys[n]].upper() for unit_id in refl_id): #checking for normalization
-                        y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
-                        #print("y_units: ",y_units)
+                    if any(unit_id in info[keys[n]].upper() for unit_id in refl_id):  # checking for normalization
+                        y_units = u.def_unit("Normalized_Reflectance", u.dimensionless_unscaled)
+                        logger.info("Spectra y_units: {}".format(y_units))
                     else:
-                        y_units = u.def_unit("Normalized_Flux",u.dimensionless_unscaled)
-                        #print("y_units: normalized")
-                elif any(unit_id in info[keys[n]].upper() for unit_id in refl_id): #checking for normalized reflectance
-                    y_units = u.def_unit("Normalized_Reflectance",u.dimensionless_unscaled)
-                    #print("y_units: ",y_units)
+                        y_units = u.def_unit("Normalized_Flux", u.dimensionless_unscaled)
+                        logger.info("Spectra y_units: normalized")
+                elif any(unit_id in info[keys[n]].upper() for unit_id in refl_id):  # checking for normalized reflectance
+                    y_units = u.def_unit("Normalized_Reflectance", u.dimensionless_unscaled)
+                    logger.info("Spectra y_units: {}".format(y_units))
                 else:
                     pass
-    try:
-        y_units
-        #print('read y_units: ', y_units)
-    except NameError:
+
+    if y_units is None:
         logger.warning("Could not parse flux units from file. Assuming erg/cm^2/s/A")
         y_units = u.erg/(u.cm**2)/u.s/u.AA
 
     return y_units, y_factor
+
 
 def read_object(hdr):
     """tries to identify object name from .fits header
@@ -140,29 +143,30 @@ def read_object(hdr):
         obj_name = ""
     return obj_name
 
-def read_spectra(path,spectra):
+
+def read_spectra(path, spectra):
     """reads in all inportant data from spectra file (Works for .ascii 2 .fits standards, and .txt)
        inputs: <spectra_file>: path and file name to spectra
        outputs: wavelength (Quantity type), flux, flux_error, x_units, y_units, obj_name
     """
-    spectra_file = os.path.join(path,spectra)
+    spectra_file = os.path.join(path, spectra)
     if spectra_file.endswith('.fits'):
-        hdul = fits.open(spectra_file) #read in data
-    #LCO fits standard:
+        hdul = fits.open(spectra_file)  # read in data
+        # LCO fits standard:
         if hdul[0].data is not None:
             data = hdul[0].data
             hdr = hdul[0].header
             y_data = data.flatten()[:max(data.shape)]
-            w = WCS(hdr, naxis=1,relax=False,fix=False)
+            w = WCS(hdr, naxis=1, relax=False, fix=False)
 
-            x_data = w.wcs_pix2world(np.arange(len(y_data)),0)[0]
+            x_data = w.wcs_pix2world(np.arange(len(y_data)), 0)[0]
 
             try:
                 flux_error = np.array(data[3][0])
             except IndexError:
-                #logger.warning("Could not parse error data")
+                logger.warning("Could not parse error data for spectra")
                 flux_error = np.zeros(len(x_data))
-    #fits standard 2:
+        # fits standard 2:
         elif hdul[1].data is not None:
             data = hdul[1].data
             hdr = hdul[1].header
@@ -179,24 +183,22 @@ def read_spectra(path,spectra):
         obj_name = read_object(hdr)
 
         x_units = get_x_units(x_data)
-        y_units,y_factor = get_y_units(hdr)
-        check_norm(hdul[0].header.values()) #check if data is already normalized
+        y_units, y_factor = get_y_units(hdr)
+        check_norm(hdul[0].header.values())  # check if data is already normalized
 
     elif spectra_file.endswith('.ascii'):
-        data = ascii.read(spectra_file) #read in data
-        ##print(data.meta)
-        #assuming 3 columns: wavelength, flux/reflectance, error
-        x_data = data['col1'] #converting tables to ndarrays
+        data = ascii.read(spectra_file)  # read in data
+        # assuming 3 columns: wavelength, flux/reflectance, error
+        x_data = data['col1']  # converting tables to ndarrays
         y_data = data['col2']
         flux_error = data['col3']
         x_units = get_x_units(x_data)
-        y_units,y_factor = get_y_units(data.meta)
-        obj_name = "" #No way to read object name from ascii files right now.
+        y_units, y_factor = get_y_units(data.meta)
+        obj_name = ""  # No way to read object name from ascii files right now.
 
-
-    elif spectra_file.endswith('.dat'): #assuming origin is ESO spec standards
-        data = open(spectra_file) #read in data
-        filename = glob(os.path.join(path,'*readme.ctio'))
+    elif spectra_file.endswith('.dat'):  # assuming origin is ESO spec standards
+        data = open(spectra_file)  # read in data
+        filename = glob(os.path.join(path, '*readme.ctio'))
         if filename:
             ctio = filename[0]
             ctiodata = open(ctio)
@@ -209,15 +211,14 @@ def read_spectra(path,spectra):
                 flux_error = np.append(flux_error, np.nan)
 
             x_units = get_x_units(x_data)
-            y_units,y_factor = get_y_units(list(ctiodata.readlines()))
-            obj_name = spectra.lstrip('f').replace('.dat','')
+            y_units, y_factor = get_y_units(list(ctiodata.readlines()))
+            obj_name = spectra.lstrip('f').replace('.dat', '')
         else:
             raise ImportError("Could not find ctio readme file")
 
     elif spectra_file.endswith('.txt'):
-
-        data = open(spectra_file) #read in data
-        #assuming 3 columns: wavelength, reflectance, error
+        data = open(spectra_file)  # read in data
+        # assuming 3 columns: wavelength, reflectance, error
         x_data = np.array([])
         y_data = np.array([])
         flux_error = np.array([])
@@ -226,21 +227,21 @@ def read_spectra(path,spectra):
             y_data = np.append(y_data, float(line.split()[1]))
             flux_error = np.append(flux_error, float(line.split()[2]))
         x_units = get_x_units(x_data)
-        y_units,y_factor = get_y_units(y_data[0])
+        y_units, y_factor = get_y_units(y_data[0])
         title = spectra.split('.')[0]
-        obj_name = title.lstrip('au').lstrip('0') #assuming filename format from NEOx Characterization page
+        obj_name = title.lstrip('au').lstrip('0')  # assuming filename format from NEOx Characterization page
 
     else:
         raise ImportError("Invalid input file type. Input file must be '.fits', '.ascii', '.dat', or '.txt'")
 
-    #eliminate negative error values
+    # eliminate negative error values
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         y_data[np.logical_not(y_data > 0)] = np.nan
         flux_error[np.logical_not(flux_error > 0)] = np.nan
 
     wavelength = (x_data*x_units).to(u.AA)
-    #convert all wavelengths to Angstroms because it's easy to deal with that way
+    # convert all wavelengths to Angstroms because it's easy to deal with that way
     flux = y_data*y_units
 
     if not obj_name:
@@ -249,20 +250,20 @@ def read_spectra(path,spectra):
     return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name
 
 
-def smooth(x,y):
+def smooth(x, y):
     """uses boxcar averaging to smooth flux data if necessary
        inputs: <ydata>: raw flux data
        outputs: smoothed flux data
     """
     # determining if smoothing is needed and to what degree
-    stds=np.array([])
-    normy = normalize(x,y)
+    stds = np.array([])
+    normy = normalize(x, y)
     noise_window = 5
     loc = noise_window
     N = 8
 
     while loc <= len(x):
-        stds = np.append(stds,np.nanstd(normy[loc-noise_window:loc]).value)
+        stds = np.append(stds, np.nanstd(normy[loc-noise_window:loc]).value)
         loc += int(len(x)/N)
 
     noisiness = np.nanmean(stds/((x[-1]-x[0])/len(x)).value)
@@ -279,12 +280,13 @@ def smooth(x,y):
         logger.info("smoothing: yes(30)")
     else:
         logger.info("smoothing: no")
-        return x,y
+        return x, y
 
     # smoothing
-    return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)] #boxcar average data
+    return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)]  # boxcar average data
 
-def normalize(x,y,wavelength=5500*u.AA):
+
+def normalize(x, y, wavelength=5500*u.AA):
     """normalizes flux data with a specific wavelength flux value
        inputs: <x>: wavelenth data (Quantity type)
                <y>: flux data (Quantity type)
@@ -294,14 +296,15 @@ def normalize(x,y,wavelength=5500*u.AA):
     n = np.abs(x-wavelength).argmin()
     normval = y[n]
     while (not normval.value or np.isnan(normval.value)) and n < len(x)-2:
-        normval = y[n] #uses closest data point to target wavelength
+        normval = y[n]  # uses closest data point to target wavelength
         n += 1
     if not normval.value or np.isnan(normval.value):
         normval = 1
 
-    return y/normval #REMEMBER to normalize y-units too if normalizing final data
+    return y/normval  # REMEMBER to normalize y-units too if normalizing final data
 
-def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
+
+def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
                <y>: flux data for y axis
@@ -312,11 +315,11 @@ def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
     """
 
     if norm == 1:
-        yyy = normalize(x,y)
+        yyy = normalize(x, y)
     else:
         yyy = y
 
-    ax.plot(x,yyy,linewidth=1)
+    ax.plot(x, yyy, linewidth=1)
     ax.set_xlabel(r"wavelength ($\AA$)")
     ax.set_ylabel(y_units)
     if title:
@@ -327,41 +330,42 @@ def plot_spectra(x,y,y_units,ax,title, ref=0, norm=0,):
         else:
             ax.set_title("Asteroid")
 
-if __name__== "__main__":
 
-    #path = '/home/adam/test_spectra/' #will make m9ore general file passing later
+if __name__ == "__main__":
+
+    # path = '/home/adam/test_spectra/' #will make m9ore general file passing later
     sol_path = '/home/atedeschi/test_spectra/calspec/'
     path = '/home/atedeschi/test_spectra/1627/'
-    #spectra = '398188/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
+    # spectra = '398188/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
     spectra = '20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
-    #spectra = '60/ntt60_ftn_20180612_merge_2.0_58282_1_2df_ex.fits'
-    #spectra = '16/ntt16_ftn_20180606_merge_2.0_58276_1_2df_ex.fits'
-    #spectra = 'eros_visnir_reference_to1um.ascii'
-    #spectra = 'alpha_lyr_stis_008.fits' #vega?
-    #spectra = 'bd17d4708_stis_001.fits'
-    #spectra = 'a001981.4.txt'
-    #spectra = 'fcd_34d241.dat'
-    #spectra = 'fhr718.dat'
+    # spectra = '60/ntt60_ftn_20180612_merge_2.0_58282_1_2df_ex.fits'
+    # spectra = '16/ntt16_ftn_20180606_merge_2.0_58276_1_2df_ex.fits'
+    # spectra = 'eros_visnir_reference_to1um.ascii'
+    # spectra = 'alpha_lyr_stis_008.fits' #vega?
+    # spectra = 'bd17d4708_stis_001.fits'
+    # spectra = 'a001981.4.txt'
+    # spectra = 'fcd_34d241.dat'
+    # spectra = 'fhr718.dat'
     sol_ref = 'fhr9087.dat'
-    #sol_path = '/home/atedeschi/test_spectra/Solar_analogs/HD209847/'
-    #sol_ref = 'calspec/sun_mod_001.fits'
-    #sol_ref = 'nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
-    #sol_ref =  'solar_standard_V2.fits'
-    #sol_ref = 'calspec/sun_reference_stis_001.fits'
+    # sol_path = '/home/atedeschi/test_spectra/Solar_analogs/HD209847/'
+    # sol_ref = 'calspec/sun_mod_001.fits'
+    # sol_ref = 'nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
+    # sol_ref =  'solar_standard_V2.fits'
+    # sol_ref = 'calspec/sun_reference_stis_001.fits'
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        x,y,yerr,x_units,y_units,y_factor, obj_name= read_spectra(path,spectra)
-    xsmoothed,ysmoothed = smooth(x,y)#,window) #[window/2:-window/2]
+        x, y, yerr, x_units, y_units, y_factor, obj_name = read_spectra(path, spectra)
+    xsmoothed, ysmoothed = smooth(x, y)  # ,window) #[window/2:-window/2]
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        x_ref,y_ref,yerr_ref,x_ref_units,y_ref_units,y_factor_ref, obj_name_ref = read_spectra(sol_path,sol_ref)
-    x_refsmoothed,y_refsmoothed = smooth(x_ref, y_ref)#,window_ref)
+        x_ref, y_ref, yerr_ref, x_ref_units, y_ref_units, y_factor_ref, obj_name_ref = read_spectra(sol_path, sol_ref)
+    x_refsmoothed, y_refsmoothed = smooth(x_ref, y_ref)  # ,window_ref)
 
-    fig, ax = plt.subplots(nrows=2,sharex=True)
-    plot_spectra(xsmoothed,ysmoothed/y_factor,y_units.to_string('latex'),ax[0], obj_name, ref=0)
-    plot_spectra(x_refsmoothed,y_refsmoothed/y_factor_ref,y_ref_units.to_string('latex'),ax[1], obj_name_ref, ref=1)
+    fig, ax = plt.subplots(nrows=2, sharex=True)
+    plot_spectra(xsmoothed, ysmoothed/y_factor, y_units.to_string('latex'), ax[0], obj_name, ref=0)
+    plot_spectra(x_refsmoothed, y_refsmoothed/y_factor_ref, y_ref_units.to_string('latex'), ax[1], obj_name_ref, ref=1)
     plt.tight_layout(pad=1, w_pad=.5, h_pad=.5)
 
     plt.show()
