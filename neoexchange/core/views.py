@@ -2202,14 +2202,12 @@ def make_spec(request, pk):
     if spectra_path:  # plots spectra
         spec_file = os.path.basename(spectra_path)
         spec_dir = os.path.dirname(spectra_path)
-        # spectra_path = '/apophis/eng/rocks/20180721/398188_0001598411/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
         x, y, yerr, xunits, yunits, yfactor, name = read_spectra(spec_dir, spec_file)
         xsmooth, ysmooth = smooth(x, y)
         fig, ax = plt.subplots()
         plot_spectra(xsmooth, ysmooth/yfactor, yunits.to_string('latex'), ax, name)
         buffer = io.BytesIO()
         fig.savefig(buffer, format='png')
-        # fig.savefig(spectra_path.replace('.fits', '.png'), format='png')
         plt.close()
         return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
