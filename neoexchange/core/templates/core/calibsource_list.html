@@ -16,13 +16,6 @@
         <div class="container">
             <div class="row">
                 {% if "solar" in request.get_full_path %}
-                    <img src="{% url 'make-solar-standards-plot' %}">
-                {% else %}
-                    <img src="{% url 'make-standards-plot' %}">
-                {% endif %}
-            </div>
-            <div class="row">
-                {% if "solar" in request.get_full_path %}
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'F65-FLOYDS' '-' %}" id="schedule-solar-ftn-obs">Schedule FTN Calib Observations</a>
                     <a class="button button-primary" href="{% url 'schedule-calib-spectra' 'E10-FLOYDS' '-' %}" id="schedule-solar-fts-obs">Schedule FTS Calib Observations</a>
                     <a class="button button-primary" href="{% url 'calibsource-view' %}" id="show-all-calibsources">Show all Calibration Sources</a>
@@ -98,6 +91,13 @@
                             {% endif %}
                             </span>
                     </div>
+                {% endif %}
+            </div>
+            <div class="row">
+                {% if "solar" in request.get_full_path %}
+                    <img src="{% url 'make-solar-standards-plot' %}" class="pic_center">
+                {% else %}
+                    <img src="{% url 'make-standards-plot' %}" class="pic_center">
                 {% endif %}
             </div>
         </div>
