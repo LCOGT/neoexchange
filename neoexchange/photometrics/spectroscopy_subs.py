@@ -54,6 +54,13 @@ def sptype_to_pickles_standard(sp_type):
 
     return mapping.get(sp_type.upper(), None)
 
+def get_filter_transmission(optics_path, filename='FLOYDS_AG_filter.csv'):
+    header, wavelengths, trans = specio.read_ascii_spec(os.path.join(optics_path, filename), wave_unit=u.nm, flux_unit='%', delimiter=',', header_start=0, data_start=64)
+    trans *= 100
+    bp = SpectralElement(Empirical1D, points=wavelengths, lookup_table=trans)
+
+    return bp
+
 def get_mirror_reflectivity(optics_path):
     header, wavelengths, refl = specio.read_ascii_spec(os.path.join(optics_path, 'Protected_Al_mirror.dat'), wave_unit=u.nm, flux_unit='%')
     mirror = BaseUnitlessSpectrum(Empirical1D, points=wavelengths, lookup_table=refl)
@@ -68,6 +75,21 @@ def calculate_tel_throughput(optics_path, tic_params):
     for x in range(0, tic_params['num_mirrors']-1):
         optics *= mirror
     return optics
+
+def calculate_ag_throughput(optics_path, tic_params):
+    header, wavelengths, trans = specio.read_ascii_spec(os.path.join(optics_path, 'FLOYDS_AG_lens.dat'), wave_unit=u.nm, flux_unit='%')
+    lens = BaseUnitlessSpectrum(Empirical1D, points=wavelengths, lookup_table=trans)
+
+    header, wavelengths, trans = specio.read_ascii_spec(os.path.join(optics_path, 'FLOYDS_AG_CCD_qe.dat'), wave_unit=u.nm, flux_unit='%')
+    ccd = BaseUnitlessSpectrum(Empirical1D, points=wavelengths, lookup_table=trans)
+
+    mirror = get_mirror_reflectivity(optics_path)
+
+    ag_filter = get_filter_transmission(optics_path)
+
+    throughput = mirror * lens * ag_filter * ccd
+
+    return throughput
 
 def calculate_inst_throughput(optics_path, tic_params):
     header, wavelengths, trans = specio.read_ascii_spec(os.path.join(optics_path, 'FLOYDS_AR_coating.dat'), wave_unit=u.nm, flux_unit='transmission')
