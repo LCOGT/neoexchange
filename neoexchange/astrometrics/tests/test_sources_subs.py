@@ -2825,6 +2825,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'ON',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2847,6 +2848,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2870,6 +2872,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2892,6 +2895,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2915,6 +2919,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2935,6 +2940,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'ON',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
