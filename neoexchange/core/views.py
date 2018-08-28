@@ -2242,7 +2242,7 @@ def make_movie(request, pk):
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
     filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
-
+    frames = []
     if filename:  # If first order tarball is unpacked
             movie_dir = glob(os.path.join(path, "Guide_frames"))
             if movie_dir:  # if 2nd order tarball is unpacked
@@ -2255,24 +2255,24 @@ def make_movie(request, pk):
                     return HttpResponse(movie, content_type="Image/gif")
                 else:
                     frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
+                    if not frames:
+                        frames = glob(os.path.join(movie_dir[0], "*.fits"))
             else:
                 tarintar = glob(os.path.join(path, "*.tar"))
                 if tarintar:
                     unpack_path = os.path.join(path, 'Guide_frames')
                     guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
                     logger.info("Unpacking tar in tar")
-                    frames = []
                     for file in guide_files:
                         if '.fits.fz' in file:
                             frames.append(file)
                 else:
                     logger.error("Could not Guide Frames or Guide Frame tarball for block: %s" % pk)
-                    return HttpResponse("")
+                    return HttpResponse()
 
     else:  # else, unpack both tarballs
         base_dir = os.path.join(settings.DATA_ROOT, date_obs)
         tar_files = glob(os.path.join(base_dir, prop+"_"+req+"*.tar.gz"))  # if file not found, looks fror tarball
-        frames = []
         guide_files = []
         tar_path = None
         unpack_path = None
@@ -2283,8 +2283,8 @@ def make_movie(request, pk):
                     unpack_path = os.path.join(base_dir, obj+'_'+req)
                     break
             if tar_path is None or unpack_path is None:
-                logger.error("Clould not find tarball for block: %s" % pk)
-                return HttpResponse("")
+                logger.error("Could not find tarball for block: %s" % pk)
+                return HttpResponse()
             logger.info("Unpacking 1st tar")
             spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
 
@@ -2298,12 +2298,12 @@ def make_movie(request, pk):
 
             if guide_files:
                 for file in guide_files:
-                    if '.fits.fz' in file:
+                    if '.fits.fz' or '.fits' in file:
                         frames.append(file)
 
         else:
             logger.error("Clould not find spectrum data or tarball for block: %s" % pk)
-            return HttpResponse("")
+            return HttpResponse()
     if frames is not None and len(frames) > 1:
         logger.debug("#Frames = {}".format(len(frames)))
         logger.info("Making Movie...")
@@ -2316,7 +2316,7 @@ def make_movie(request, pk):
         if frames is None:
             frames = []
         logger.error("There must be at least 2 frames to make guide movie. Found: %d" % len(frames))
-        return HttpResponse("")
+        return HttpResponse()
 
 
 class GuideMovie(View):

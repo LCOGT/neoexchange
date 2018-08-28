@@ -34,7 +34,7 @@ def make_gif(frames, title=None, sort=True, fr=333):
     if title is None:
         # pull header information from first fits file
         hdu = fits.open(fits_files[0])[0]
-        if hdu.data:
+        if hdu.data.any:
                 header = hdu.header
         else:
             hdu1 = fits.open(fits_files[0])[1]
@@ -66,7 +66,7 @@ def update(file):
 
     # get data/Header from Fits
     hdu = fits.open(file)[0]
-    if hdu.data:
+    if hdu.data.any:
             data = hdu.data
             header = hdu.header
     else:
