@@ -2417,39 +2417,38 @@ def plotframe(request):
 
     return render(request, 'core/frame_plot.html')
 
+
 def make_standards_plot(request):
     """creates stellar standards plot to be added to page"""
-
     import matplotlib.pyplot as plt
     import io
     scoords = readSources('Solar')
     fcoords = readSources('Flux')
 
     ax = plt.figure().gca()
-    plotScatter(ax,scoords,'b*')
-    plotScatter(ax,fcoords,'g*')
-    plotFormat(ax,0)
+    plotScatter(ax, scoords, 'b*')
+    plotScatter(ax, fcoords, 'g*')
+    plotFormat(ax, 0)
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
     plt.close()
 
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
+
 def make_solar_standards_plot(request):
     """creates solar standards plot to be added to page"""
-
     import matplotlib.pyplot as plt
     import io
     scoords = readSources('Solar')
     ax = plt.figure().gca()
-    plotScatter(ax,scoords,'b*')
-    plotFormat(ax,1)
+    plotScatter(ax, scoords, 'b*')
+    plotFormat(ax, 1)
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
     plt.close()
 
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
-
 
 
 def update_taxonomy(taxobj, dbg=False):
