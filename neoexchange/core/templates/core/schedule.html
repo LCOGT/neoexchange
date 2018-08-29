@@ -30,12 +30,20 @@
     <div class="container">
         <div id="main">
             {% if body.id  and form %}
-            <h5 class="section-title">Parameters for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h5>
+            {% if body.ingest %}
+                <h5 class="section-title">Parameters for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h5>
+            {% else %}
+                <h5 class="section-title">Parameters for: <a href="{% url 'calibsource' body.id %}">{{body.current_name}}</a></h5>
+            {% endif %}
             <div class="section-title">
               <a class="button mode-switch" href="#" id="single-switch">Switch to cadence observations</a>
               <a class="button mode-switch" href="#" id="cadence-switch">Switch to single observation</a>
             <div  id="single_request" class="mode-container">
-            <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
+            {% if body.ingest %}
+                <form action="{% url 'schedule-body' body.id %}" method="POST" style="display:inline-block;">
+            {% else %}
+                <form action="{% url 'schedule-calib' body.id %}" method="POST" style="display:inline-block;">
+            {% endif %}
             <div class="row">
               {% csrf_token %}
               <div class="inline-fields">

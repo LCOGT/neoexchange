@@ -19,6 +19,7 @@ from socket import error
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from unittest import skipIf
+from math import radians
 
 import astropy.units as u
 from bs4 import BeautifulSoup
@@ -28,11 +29,17 @@ from django.forms.models import model_to_dict
 from core.models import Body, Proposal, Block
 from astrometrics.ephem_subs import determine_darkness_times
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
-from core.views import record_block
+from core.views import record_block, create_calib_sources
 # Import module to test
 from astrometrics.sources_subs import *
 from astrometrics.time_subs import datetime2mjd_utc
 
+
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
 
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
@@ -383,6 +390,9 @@ class TestSubmitBlockToScheduler(TestCase):
                     'origin'        : 'M',
                     }
         self.body, created = Body.objects.get_or_create(**params)
+        self.body_elements = model_to_dict(self.body)
+        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
+        self.body_elements['current_name'] = self.body.current_name()
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
@@ -393,11 +403,8 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_body_for_cpt(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
 
-        body_elements = model_to_dict(self.body)
-        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        body_elements['current_name'] = self.body.current_name()
         site_code = 'K92'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -408,11 +415,11 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson'
                  }
 
-        resp, sched_params = submit_block_to_scheduler(body_elements, params)
+        resp, sched_params = submit_block_to_scheduler(self.body_elements, params)
         self.assertEqual(resp, '999')
 
         # store block
@@ -433,13 +440,10 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_cadence(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820},
-                                                                               {'id': '222', 'duration' : 1820},
-                                                                               {'id': '333', 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820},
+                                                                               {'id': '222', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820},
+                                                                               {'id': '333', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
 
-        body_elements = model_to_dict(self.body)
-        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        body_elements['current_name'] = self.body.current_name()
         site_code = 'V38'
         utc_date = datetime(2015, 3, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -450,12 +454,12 @@ class TestSubmitBlockToScheduler(TestCase):
                     'start_time' : dark_start,
                     'end_time' : dark_end,
                     'filter_pattern' : 'w',
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'period'    : 2.0,
                     'jitter'    : 0.25
                  }
-        tracking_num, sched_params = submit_block_to_scheduler(body_elements, params)
+        tracking_num, sched_params = submit_block_to_scheduler(self.body_elements, params)
 
         # store Blocks
         data = params
@@ -477,7 +481,7 @@ class TestSubmitBlockToScheduler(TestCase):
     def test_submit_spectra_for_ogg(self, mock_post):
         mock_post.return_value.status_code = 200
 
-        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820}]}
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'duration' : 1820, 'target': {'type': 'NON_SIDEREAL'}}]}
 
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -515,9 +519,7 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(block.block_end, block.superblock.block_end)
 
     def test_make_userrequest(self):
-        body_elements = model_to_dict(self.body)
-        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        body_elements['current_name'] = self.body.current_name()
+
         site_code = 'K92'
         utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -527,12 +529,12 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
 
-        user_request = make_userrequest(body_elements, params)
+        user_request = make_userrequest(self.body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
@@ -567,9 +569,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_1m_sinistro_lsc_doma_userrequest(self):
 
-        body_elements = model_to_dict(self.body)
-        body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        body_elements['current_name'] = self.body.current_name()
         site_code = 'W85'
         utc_date = datetime.now()+timedelta(days=1)
         dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -579,18 +578,17 @@ class TestSubmitBlockToScheduler(TestCase):
                     'site_code' : site_code,
                     'start_time' : dark_start,
                     'end_time' : dark_end,
-                    'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                     'user_id'  : 'bsimpson',
                     'filter_pattern' : 'w'
                  }
 
-        user_request = make_userrequest(body_elements, params)
+        user_request = make_userrequest(self.body_elements, params)
 
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['location']['telescope'], '1m0a')
         self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '1m0')
         self.assertEqual(user_request['requests'][0]['location']['site'], 'lsc')
-
 
     def test_make_too_userrequest(self):
         body_elements = model_to_dict(self.body)
@@ -621,9 +619,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_multi_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -633,12 +628,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,I'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 9
             expected_exp_count = 2
@@ -650,9 +645,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_uneven_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -662,12 +654,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,I'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 13
             expected_exp_count = 1
@@ -679,9 +671,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_single_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -691,12 +680,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 1
             expected_exp_count = 18
@@ -708,9 +697,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_overlap_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -720,12 +706,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,I,V'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 8
             expected_exp_count = 3
@@ -737,9 +723,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_overlap_nooverlap_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -749,12 +732,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,I,V'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 10
             expected_exp_count = 1
@@ -766,9 +749,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_partial_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -778,12 +758,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,V,V,V,V,R,R,R,R,R,I,I,I,I,I,I'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 3
             expected_exp_count = 4
@@ -795,9 +775,6 @@ class TestSubmitBlockToScheduler(TestCase):
 
     def test_partial_overlap_filter_userrequest(self):
 
-            body_elements = model_to_dict(self.body)
-            body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-            body_elements['current_name'] = self.body.current_name()
             site_code = 'W85'
             utc_date = datetime.now()+timedelta(days=1)
             dark_start, dark_end = determine_darkness_times(site_code, utc_date)
@@ -807,12 +784,12 @@ class TestSubmitBlockToScheduler(TestCase):
                         'site_code' : site_code,
                         'start_time' : dark_start,
                         'end_time' : dark_end,
-                        'group_id' : body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                        'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
                         'user_id'  : 'bsimpson',
                         'filter_pattern' : 'V,V,R,R,I,V'
                      }
 
-            user_request = make_userrequest(body_elements, params)
+            user_request = make_userrequest(self.body_elements, params)
             molecules = user_request.get('requests')[0].get('molecules')
             expected_molecule_num = 8
             expected_exp_count = 3
@@ -821,6 +798,93 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(len(molecules), expected_molecule_num)
             self.assertEqual(molecules[6].get('exposure_count'), expected_exp_count)
             self.assertEqual(molecules[6].get('filter'), expected_filter)
+
+    def test_spectro_with_solar_analog(self):
+
+        utc_date = datetime(2018, 5, 11, 0)
+        params = {  'proposal_id' : 'LCOEngineering',
+                    'user_id'  : 'bsimpson',
+                    'spectroscopy' : True,
+                    'calibs'     : 'before',
+                    'exp_count'  : 1,
+                    'exp_time'   : 300.0,
+                    'instrument_code' : 'F65-FLOYDS',
+                    'site_code' : 'F65',
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_id' : self.body_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+
+                    'start_time' :  utc_date + timedelta(hours=5),
+                    'end_time'   :  utc_date + timedelta(hours=15),
+                    'solar_analog' : True,
+                    'calibsource' : { 'name' : 'SA107-684', 'ra_deg' : 234.3254167, 'dec_deg' : -0.163889},
+                  }
+        expected_num_requests = 2
+        expected_operator = 'MANY'
+        expected_molecule_num = 3
+        expected_exp_count = 1
+        expected_ast_exptime = 300.0
+        expected_cal_exptime = 60.0
+        expected_filter = 'slit_6.0as'
+        expected_groupid = params['group_id'] + '+solstd'
+
+        user_request = make_userrequest(self.body_elements, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['group_id'])
+
+        ast_molecules = user_request['requests'][0]['molecules']
+        self.assertEqual(len(ast_molecules), expected_molecule_num)
+        self.assertEqual(ast_molecules[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(ast_molecules[2]['exposure_time'], expected_ast_exptime)
+        self.assertEqual(ast_molecules[2]['spectra_slit'], expected_filter)
+
+        cal_molecules = user_request['requests'][1]['molecules']
+        self.assertEqual(len(cal_molecules), expected_molecule_num)
+        self.assertEqual(cal_molecules[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(cal_molecules[2]['exposure_time'], expected_cal_exptime)
+        self.assertEqual(cal_molecules[2]['spectra_slit'], expected_filter)
+
+    def test_solo_solar_spectrum(self):
+
+        utc_date = datetime(2018, 5, 11, 0)
+        params = {  'proposal_id' : 'LCOEngineering',
+                    'user_id'  : 'bsimpson',
+                    'spectroscopy' : True,
+                    'calibs'     : 'before',
+                    'exp_count'  : 1,
+                    'exp_time'   : 300.0,
+                    'instrument_code' : 'F65-FLOYDS',
+                    'site_code' : 'F65',
+                    'filter_pattern' : 'slit_6.0as',
+                    'group_id' : 'SA107-684' + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d') + "_spectra",
+                    'start_time' :  utc_date + timedelta(hours=5),
+                    'end_time'   :  utc_date + timedelta(hours=15),
+                    'solar_analog' : False,
+                    'ra_deg' : 234.3254167,
+                    'dec_deg' : -0.163889,
+                    'vmag' : 12.4,
+                    'source_type' : 4
+                  }
+        expected_num_requests = 1
+        expected_operator = 'SINGLE'
+        expected_molecule_num = 3
+        expected_exp_count = 1
+        expected_exptime = 300.0
+        expected_filter = 'slit_6.0as'
+        expected_groupid = params['group_id']
+
+        user_request = make_userrequest(self.body_elements, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['group_id'])
+
+        sol_molecules = user_request['requests'][0]['molecules']
+        self.assertEqual(len(sol_molecules), expected_molecule_num)
+        self.assertEqual(sol_molecules[2]['exposure_count'], expected_exp_count)
+        self.assertEqual(sol_molecules[2]['exposure_time'], expected_exptime)
+        self.assertEqual(sol_molecules[2]['spectra_slit'], expected_filter)
 
 
 class TestFetchFilterList(TestCase):
@@ -2610,6 +2674,58 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(params, expected_params)
 
+    def test_2m_ogg_floyds_solar_analog(self):
+        expected_params = { 'spectroscopy': True,
+                            'binning'     : 1,
+                            'spectra_slit': 'slit_6.0as',
+                            'instrument'  : '2M0-FLOYDS-SCICAM',
+                            'observatory' : '',
+                            'exp_type'    : 'SPECTRUM',
+                            'pondtelescope' : '2m0',
+                            'site'        : 'OGG',
+                            'site_code'   : 'F65',
+                            'instrument_code' : 'F65-FLOYDS',
+                            'solar_analog' : False,
+                            'calibsource' : {'name' : 'SA107-684'}
+                            }
+
+        params = { 'site_code' : 'F65',
+                   'instrument_code' : 'F65-FLOYDS',
+                   'spectroscopy' : True,
+                   'solar_analog' : False,
+                   'calibsource' : {'name' : 'SA107-684'}
+                   }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
+    def test_2m_ogg_floyds_unmatched_solar_analog(self):
+        expected_params = { 'spectroscopy': True,
+                            'binning'     : 1,
+                            'spectra_slit': 'slit_6.0as',
+                            'instrument'  : '2M0-FLOYDS-SCICAM',
+                            'observatory' : '',
+                            'exp_type'    : 'SPECTRUM',
+                            'pondtelescope' : '2m0',
+                            'site'        : 'OGG',
+                            'site_code'   : 'F65',
+                            'instrument_code' : 'F65-FLOYDS',
+                            'solar_analog' : False,
+                            'calibsource' : {}
+                            }
+
+        params = { 'site_code' : 'F65',
+                   'instrument_code' : 'F65-FLOYDS',
+                   'spectroscopy' : True,
+                   'solar_analog' : False,
+                   'calibsource' : {}
+                   }
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
+
 
 class TestMakeMolecule(TestCase):
 
@@ -2709,6 +2825,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'ON',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2731,6 +2848,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2754,6 +2872,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2776,6 +2895,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2799,6 +2919,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'OFF',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -2819,6 +2940,7 @@ class TestMakeMolecule(TestCase):
                              'ag_mode'     : 'ON',
                              'ag_name'     : '',
                              'acquire_mode': 'BRIGHTEST',
+                             'ag_exp_time': 10,
                              'acquire_radius_arcsec': 15.0
                             }
 
@@ -3419,6 +3541,85 @@ class TestFetchTargetsFromList(TestCase):
         out_list = ['588', '2759', '4035', '1930 UB', '1989 AL2', '4063']
         self.assertEqual(out_list, fetch_list_targets(test_file))
 
+
+class TestFetchFluxStandards(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        self.test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        self.maxDiff = None
+        self.precision = 10
+
+    def test_badpage(self):
+        expected_standards = {}
+
+        standards = fetch_flux_standards('wibble')
+
+        self.assertEqual(expected_standards, standards)
+
+    def test_standards_no_filter(self):
+        expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spectral_type' : 'B7III', 'notes' : ''},
+                               'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spectral_type' : 'F', 'notes' : ''},
+                               'BPM16274' : { 'ra_rad' : radians(12.51325), 'dec_rad' : radians(-52.138166666666667), 'mag' : 14.20, 'spectral_type' : 'DA2', 'notes' : 'Mod.'},
+                               'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spectral_type' : '', 'notes' : ''},
+                             }
+
+        standards = fetch_flux_standards(self.test_flux_page, filter_optical_model=False)
+
+        self.assertEqual(len(expected_standards), len(standards))
+        for fluxstd in expected_standards:
+            for key in expected_standards[fluxstd]:
+                if '_rad' in key:
+                    self.assertAlmostEqual(expected_standards[fluxstd][key], standards[fluxstd][key], places=self.precision)
+                else:
+                    self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
+
+    def test_standards_filter_models(self):
+        expected_standards = { 'HR9087'   : { 'ra_rad' : radians(0.030394444444444444*15.0), 'dec_rad' : radians(-3.0275), 'mag' : 5.12, 'spectral_type' : 'B7III', 'notes' : ''},
+                               'CD-34d241': { 'ra_rad' : radians(10.4455), 'dec_rad' : radians(-33.652361111111111), 'mag' : 11.23, 'spectral_type' : 'F', 'notes' : ''},
+                               'LTT2415'  : { 'ra_rad' : radians(89.10125), 'dec_rad' : radians(-27.858), 'mag' : 12.21, 'spectral_type' : '', 'notes' : ''},
+                             }
+
+        standards = fetch_flux_standards(self.test_flux_page, filter_optical_model=True)
+
+        self.assertEqual(len(expected_standards), len(standards))
+        for fluxstd in expected_standards:
+            for key in expected_standards[fluxstd]:
+                if '_rad' in key:
+                    self.assertAlmostEqual(expected_standards[fluxstd][key], standards[fluxstd][key], places=self.precision)
+                else:
+                    self.assertEqual(expected_standards[fluxstd][key], standards[fluxstd][key])
+
+
+class TestReadSolarStandards(TestCase):
+
+    def setUp(self):
+        self.test_file = os.path.join('photometrics', 'data', 'Solar_Standards')
+
+        self.maxDiff = None
+        self.precision = 10
+
+    def test1(self):
+
+        expected_num_sources = 46
+        expected_standards = { 'Landolt SA93-101' : { 'ra_rad' : radians(28.325), 'dec_rad' : radians(0.373611111111111), 'mag' : 9.7, 'spectral_type' : 'G2V'},
+                               'Hyades 64'        : { 'ra_rad' : 1.1635601068681027, 'dec_rad' : 0.2922893202041282, 'mag' : 8.1, 'spectral_type' : 'G2V'},
+                               'Landolt SA98-978' : { 'ra_rad' : radians(102.8916666666666), 'dec_rad' : radians(-0.1925), 'mag' : 10.5, 'spectral_type' : 'G2V'},
+                               'Landolt SA107-684' : { 'ra_rad' : radians(234.3254166666666), 'dec_rad' : radians(-0.163888888888), 'mag' : 8.4, 'spectral_type' : 'G2V'},
+                               'Landolt SA107-998' : { 'ra_rad' : radians(234.5683333333333), 'dec_rad' : radians(0.2563888888888), 'mag' : 10.4, 'spectral_type' : 'G2V'},  
+                             }
+
+        standards = read_solar_standards(self.test_file)
+
+        self.assertEqual(expected_num_sources, len(standards))
+        for solstd in expected_standards:
+            for key in expected_standards[solstd]:
+                if '_rad' in key:
+                    self.assertAlmostEqual(expected_standards[solstd][key], standards[solstd][key], places=self.precision, msg="Mismatch for {} on {}".format(solstd, key))
+                else:
+                    self.assertEqual(expected_standards[solstd][key], standards[solstd][key])
 
 class TestCheckForPerturbation(TestCase):
 

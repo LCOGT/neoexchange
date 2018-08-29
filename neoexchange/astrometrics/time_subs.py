@@ -333,6 +333,30 @@ def compute_ut1(mjd_utc, dbg=False):
 
     return ut1
 
+def datetime2st(d, obsvr_long=0.0):
+    """Converts the passed datetime object in UTC to a Sidereal Time.
+    If the site longitude [obsvr_long] (East +ve; radians) is passed, then
+    the returned `stl` will be the Local Apparent Sidereal Time.
+    If not passed (or zero), then the Greenwich Apparent Sidereal Time
+    will be returned (Greenwich Mean Sidereal Time (GMST) plus the equation
+    of the equinoxes.
+    `stl`, the sidereal time, is returned in radians, normalized to the
+    range 0...2*PI
+    """
+
+    # Compute MJD_UTC and MJD_TT
+    mjd_utc = datetime2mjd_utc(d)
+    mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+    # Determine UT1-UTC and hence MJD_UT1
+    dut = ut1_minus_utc(mjd_utc)
+    mjd_ut1 = mjd_utc+(dut/86400.0)
+    # Greenwich Mean Sidereal Time (GMST), just a function of UT1 ("Earth Rotation Angle")
+    gmst = S.sla_gmst(mjd_ut1)
+    # Compute Local Apparent Sidereal Time
+    stl = gmst + obsvr_long + S.sla_eqeqx(mjd_tt)
+    stl = S.sla_dranrm(stl)
+
+    return stl
 
 def hourstodegrees(value, arg):
     """Converts decimal hours to decimal degrees"""

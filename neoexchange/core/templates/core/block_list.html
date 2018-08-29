@@ -53,7 +53,13 @@
                                 {% for block in block_list %}
                                         <tr class="{% cycle 'odd' 'even' %}">
                                                 <td class="list_title"  data-label="Block #"><a href="{% url 'block-view' block.pk %}">{{block.pk}}</a></td>
-                                                <td class="list_title"  data-label="Target Name"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
+                                                {% if block.body %}
+                                                    <td class="list_title"  data-label="Target Name"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
+                                                {% elif block.calibsource %}
+                                                    <td class="list_title"  data-label="Target Name"><a href="{% url 'calibsource' block.calibsource.pk %}">{{block.calibsource.current_name}}</a></td>
+                                                {% else %}
+                                                    <td class="list_title"  data-label="Target Name">None!?</td>
+                                                {% endif %}
                                                 <td data-label="Site">{{block.get_sites|upper}}</td>
                                                 <td data-label="Telescope Type">{{block.get_telclass}}</td>
                                                 <td data-label="Proposal">{{block.proposal.code}}</td>

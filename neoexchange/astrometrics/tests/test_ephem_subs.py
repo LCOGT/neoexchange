@@ -1008,6 +1008,7 @@ class TestDetermineRatesAndPA(TestCase):
         self.assertAlmostEqual(expected_pa, pa, self.precision)
         self.assertAlmostEqual(expected_deltapa, deltapa, self.precision)
 
+
 class TestDetermineSlotLength(TestCase):
 
     def test_bad_site_code(self):
@@ -1019,7 +1020,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_good1m_lc(self):
-        site_code = 'k91'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 17.58
         expected_length = 15
@@ -1027,7 +1028,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_good1m(self):
-        site_code = 'K91'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 17.58
         expected_length = 15
@@ -1035,7 +1036,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_good1m(self):
-        site_code = 'K92'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 19.9
         expected_length = 20
@@ -1043,7 +1044,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_good1m(self):
-        site_code = 'K93'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 20.1
         expected_length = 22.5
@@ -1051,7 +1052,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_good1m(self):
-        site_code = 'V37'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 20.6
         expected_length = 25
@@ -1059,7 +1060,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_good1m(self):
-        site_code = 'W85'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 21.0
         expected_length = 30
@@ -1067,7 +1068,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_good1m(self):
-        site_code = 'W86'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 21.51
         expected_length = 40
@@ -1075,7 +1076,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_reallyfaint_nonNEOWISE_good1m(self):
-        site_code = 'W87'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 22.1
         expected_length = 45
@@ -1083,21 +1084,21 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_nonNEOWISE_good1m(self):
-        site_code = 'W87'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 23.1
         with self.assertRaises(MagRangeError):
             slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_good1m(self):
-        site_code = 'W87'
+        site_code = 'good1m'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
             slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_very_bright_nonNEOWISE_bad1m(self):
-        site_code = 'Q63'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 17.58
         expected_length = 17.5
@@ -1105,7 +1106,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_bad1m(self):
-        site_code = 'Q63'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 19.9
         expected_length = 22.5
@@ -1113,7 +1114,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_bad1m(self):
-        site_code = 'Q64'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 20.1
         expected_length = 25
@@ -1121,7 +1122,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_bad1m(self):
-        site_code = 'Q63'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 20.6
         expected_length = 27.5
@@ -1129,7 +1130,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_bad1m(self):
-        site_code = 'Q63'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 21.0
         expected_length = 32.5
@@ -1137,7 +1138,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_bad1m(self):
-        site_code = 'Q64'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 21.51
         expected_length = 35
@@ -1145,28 +1146,28 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_for_coj_nonNEOWISE_bad1m(self):
-        site_code = 'Q64'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 22.1
         with self.assertRaises(MagRangeError):
             slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toofaint_nonNEOWISE_bad1m(self):
-        site_code = 'Q64'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 23.1
         with self.assertRaises(MagRangeError):
             slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_bad1m(self):
-        site_code = 'Q64'
+        site_code = 'bad1m'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
             slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_very_bright_nonNEOWISE_2m_lc(self):
-        site_code = 'f65'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 17.58
         expected_length = 10
@@ -1174,7 +1175,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_2m(self):
-        site_code = 'E10'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 17.58
         expected_length = 10
@@ -1182,7 +1183,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_bright_nonNEOWISE_2m(self):
-        site_code = 'E10'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 19.9
         expected_length = 20
@@ -1190,7 +1191,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_medium_nonNEOWISE_2m(self):
-        site_code = 'E10'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 20.1
         expected_length = 22.5
@@ -1198,7 +1199,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_mediumfaint_nonNEOWISE_2m(self):
-        site_code = 'F65'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 20.6
         expected_length = 25
@@ -1206,7 +1207,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_faint_nonNEOWISE_2m(self):
-        site_code = 'F65'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 21.0
         expected_length = 27.5
@@ -1214,7 +1215,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_veryfaint_nonNEOWISE_2m(self):
-        site_code = 'F65'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 21.51
         expected_length = 30
@@ -1222,7 +1223,7 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_reallyfaint_nonNEOWISE_2m(self):
-        site_code = 'F65'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 23.2
         expected_length = 35
@@ -1230,14 +1231,14 @@ class TestDetermineSlotLength(TestCase):
         self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_nonNEOWISE_2m(self):
-        site_code = 'F65'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 23.4
         with self.assertRaises(MagRangeError):
             slot_length = determine_slot_length(mag, site_code)
 
     def test_slot_length_toobright_nonNEOWISE_2m(self):
-        site_code = 'F65'
+        site_code = '2m'
         name = 'WH2845B'
         mag = 3.1
         with self.assertRaises(MagRangeError):
@@ -2355,10 +2356,11 @@ class Test_perturb_elements(TestCase):
         self.assertAlmostEqual(expected_a, p_orbelems['SemiAxisOrQ'], self.precision)
         self.assertAlmostEqual(expected_e, p_orbelems['Ecc'], self.precision)
 
+
 class TestReadFindorbEphem(TestCase):
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
         self.debug_print = False
         self.maxDiff = None
 
@@ -2373,7 +2375,8 @@ class TestReadFindorbEphem(TestCase):
                 print("Error removing files in temporary test directory", self.test_dir)
             try:
                 os.rmdir(self.test_dir)
-                if self.debug_print: print("Removed", self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
             except OSError:
                 print("Error removing temporary test directory", self.test_dir)
 
@@ -2409,7 +2412,7 @@ class TestReadFindorbEphem(TestCase):
                              'emp_timesys': '(UTC)',
                              'obj_id': '2017YE5'}
 
-        expected_emp = [(datetime(2018,6,30,6,10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
+        expected_emp = [(datetime(2018, 6, 30, 6, 10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
 
         lines = [ '#(F65) Haleakala-Faulkes Telescope North: 2017 YE5',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
@@ -2420,14 +2423,14 @@ class TestReadFindorbEphem(TestCase):
 
         empinfo, emp = read_findorb_ephem(outfile)
 
-        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
 
     def test_numbered_ast(self):
         expected_empinfo = { 'emp_rateunits': "'/hr",
                              'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
                              'obj_id': '398188'}
-        expected_emp = [(datetime(2018,7,19,21,48), 5.31473475745, 0.460169195739, 16.4, 3.50, 0.039)]
+        expected_emp = [(datetime(2018, 7, 19, 21, 48), 5.31473475745, 0.460169195739, 16.4, 3.50, 0.039)]
 
         lines = [ '#(F65) Haleakala-Faulkes Telescope North: (398188) = 2010 LE15',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
@@ -2438,14 +2441,14 @@ class TestReadFindorbEphem(TestCase):
 
         empinfo, emp = read_findorb_ephem(outfile)
 
-        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
 
     def test_E10_numbered_ast(self):
         expected_empinfo = { 'emp_rateunits': "'/hr",
                              'emp_sitecode': 'E10',
                              'emp_timesys': '(UTC)',
                              'obj_id': '1627'}
-        expected_emp = [(datetime(2018,7,19,22,11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
 
         lines = [ '#(E10) Siding Spring-Faulkes Telescope South: (1627) = 1929 SH',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
@@ -2456,4 +2459,58 @@ class TestReadFindorbEphem(TestCase):
 
         empinfo, emp = read_findorb_ephem(outfile)
 
-        self.compare_ephemeris((expected_empinfo,expected_emp), (empinfo,emp))
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_E10_numbered_ast_nocrossid(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'E10',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '1627'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
+
+        lines = [ '#(E10) Siding Spring-Faulkes Telescope South: (1627)',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  22.2  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_F65_numbered_ast_nocrossid(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'E10',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '1627'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
+
+        lines = [ '#(E10) Faulkes Telescope North: (1627)',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  22.2  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_F65_numbered_ast_high_certainty(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'E10',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': '1627'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
+
+        lines = [ '#(E10) Faulkes Telescope North: (1627)',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
