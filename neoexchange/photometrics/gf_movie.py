@@ -33,12 +33,8 @@ def make_gif(frames, title=None, sort=True, fr=333):
 
     if title is None:
         # pull header information from first fits file
-        hdu = fits.open(fits_files[0])[0]
-        if hdu.data.any:
-                header = hdu.header
-        else:
-            hdu1 = fits.open(fits_files[0])[1]
-            header = hdu1.header
+        with fits.open(fits_files[0]) as hdul:
+            header = hdul['SCI'].header
         # create title
         obj = header['OBJECT']
         tn = header['TRACKNUM'].lstrip('0')
@@ -58,21 +54,16 @@ def make_gif(frames, title=None, sort=True, fr=333):
     return savefile
 
 
-def update(file):
+def update(fits_file):
     """ this method is requred to build FuncAnimation
     <file> = frame currently being iterated
     output: return plot.
     """
 
     # get data/Header from Fits
-    hdu = fits.open(file)[0]
-    if hdu.data.any:
-            data = hdu.data
-            header = hdu.header
-    else:
-        hdu1 = fits.open(file)[1]
-        data = hdu1.data
-        header = hdu1.header
+    with fits.open(fits_file) as hdul:
+        header = hdul['SCI'].header
+        data = hdul['SCI'].data
 
     # pull Date from Header
     try:
