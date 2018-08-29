@@ -4,7 +4,7 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
-### 2.7.0a
+### 2.7.0
 
 Flux Standards
 * Add Static Source Model
