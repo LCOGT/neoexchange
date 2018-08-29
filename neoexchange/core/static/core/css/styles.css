@@ -350,6 +350,13 @@ li.dropdown-menu:after {
     color: #fff;
 }
 
+.pic_center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 65%;
+}
+
 .title input {
 	display: block;
 	width: auto;

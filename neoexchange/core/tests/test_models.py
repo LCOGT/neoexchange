@@ -28,7 +28,8 @@ from neox.tests.mocks import MockDateTime
 
 # Import module to test
 from core.models import Body, Proposal, SuperBlock, Block, Frame, \
-    SourceMeasurement, CatalogSources, Candidate, WCSField, PreviousSpectra
+    SourceMeasurement, CatalogSources, Candidate, WCSField, PreviousSpectra,\
+    StaticSource
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -497,6 +498,121 @@ class TestSuperBlock(TestCase):
         obs_types = new_sblock.get_obstypes()
 
         self.assertEqual(expected_obstypes, obs_types)
+
+
+class TestBlock(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        cls.body, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'LCOEngineering',
+                   'title' : 'Engineering proposal'
+                 }
+        cls.proposal = Proposal.objects.create(**params)
+
+        sblock_params = {   'cadence' : False,
+                            'body' : cls.body,
+                            'proposal' : cls.proposal,
+                            'block_start' : datetime(2015, 4, 20, 3),
+                            'block_end' : datetime(2015, 4, 20, 23),
+                            'active' : True
+                        }
+        cls.sblock = SuperBlock.objects.create(**sblock_params)
+
+        staticsrc_params = { 'name' : 'Landolt SA107-684',
+                             'ra'   : 234.325,
+                             'dec'  : -0.164,
+                             'vmag' : 8.2,
+                             'source_type' : StaticSource.SOLAR_STANDARD,
+                             'spectral_type' : 'G2V'
+                           }
+        cls.staticsrc = StaticSource.objects.create(**staticsrc_params)
+
+        cls.params_spectro = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'proposal' : cls.proposal,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'tracking_number' : '1',
+                    'num_exposures' : 1,
+                    'exp_length' : 1800
+                  }
+        cls.params_imaging1 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'proposal' : cls.proposal,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 6, 15),
+                    'block_end' : datetime(2015, 4, 20, 6, 30),
+                    'tracking_number' : '2',
+                    'num_exposures' : 4,
+                    'exp_length' : 120.0
+                  }
+
+        cls.params_imaging2 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'proposal' : cls.proposal,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 8, 0),
+                    'block_end' : datetime(2015, 4, 20, 10, 15),
+                    'tracking_number' : '3',
+                    'num_exposures' : 120,
+                    'exp_length' : 60.0
+                  }
+
+        cls.params_calib = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : None,
+                    'calibsource' : cls.staticsrc,
+                    'proposal' : cls.proposal,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'tracking_number' : '4',
+                    'num_exposures' : 1,
+                    'exp_length' : 300.0
+                  }
+
+    def test_spectro_block(self):
+
+        block = Block.objects.create(**self.params_spectro)
+
+        self.assertEqual(self.body.current_name(), block.current_name())
+
+    def test_solar_analog_block(self):
+
+        block = Block.objects.create(**self.params_calib)
+
+        self.assertEqual(self.staticsrc.current_name(), block.current_name())
 
 class TestFrame(TestCase):
 

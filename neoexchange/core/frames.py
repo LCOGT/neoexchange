@@ -101,7 +101,18 @@ def create_frame(params, block=None, frameid=None):
         frame_params = frame_params_from_log(params, block)
 
     try:
-        frame, frame_created = Frame.objects.get_or_create(**frame_params)
+        frame_list = Frame.objects.filter(midpoint=frame_params['midpoint'])
+        if len(frame_list) >= 1:
+            frame_test = frame_list.filter(**frame_params)
+            if frame_test:
+                frame = Frame.objects.get(**frame_params)
+                frame_created = False
+            else:
+                frame = Frame.objects.create(**frame_params)
+                frame_created = True
+        else:
+            frame = Frame.objects.create(**frame_params)
+            frame_created = True
         frame.frameid = frameid
         frame.save()
     except Frame.MultipleObjectsReturned:

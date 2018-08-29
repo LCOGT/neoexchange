@@ -1,19 +1,19 @@
 {% extends 'base.html' %}
 {% load staticfiles basic_tags %}
-{% block header %}NEOx scheduling{% endblock %}
+{% block header %}NEOx calibration scheduling{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1><a href="{% url 'target' body.id %}">{{body.current_name}}</a>: Confirm Scheduling</h1>
+        <h1><a href="{% url 'calibsource' calibrator.id %}">{{calibrator.current_name}}</a>: Confirm Scheduling</h1>
     </div>
 {% endblock%}
 
 {% block main-content %}
     <div class="container" id="main">
-        <form action="{% url  'schedule-confirm' body.id %}" method="POST" >
+        <form action="{% url  'schedule-calib-confirm' calibrator.id %}" method="POST" >
         {% csrf_token %}
           <div class="row">
                   {% for key, error in form.errors.items %}
@@ -49,24 +49,19 @@
                     </tr>
                 </tbody>
             </table>
-            <h6 class="section-title">Calculated characteristics at {{ data.mid_time }}</h6>
             <table class="keyvalue-table" style="width:100%">
                 <tbody>
                     <tr id="id_ra">
                         <td class="kv-key">Right Ascension</td>
-                        <td class="kv-value">{{ data.ra_midpoint|radianstohms:" " }}</td>
+                        <td class="kv-value">{{ data.ra_midpoint|degreestohms:" " }}</td>
                     </tr>
                     <tr id="id_dec">
                         <td class="kv-key">Declination</td>
-                        <td class="kv-value">{{ data.dec_midpoint|radianstodms:" " }}</td>
+                        <td class="kv-value">{{ data.dec_midpoint|degreestodms:" " }}</td>
                     </tr>
                      <tr id="id_magnitude">
                         <td class="kv-key">Magnitude</td>
                         <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
-                    </tr>
-                    <tr id="id_speed">
-                        <td class="kv-key">Speed</td>
-                        <td class="kv-value">{{ data.speed|floatformat:2 }} '/min</td>
                     </tr>
                     {% if data.spectroscopy %}
                     <tr id="id_slit_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
@@ -146,16 +141,6 @@
                         <td class="kv-key">Calibs</td>
                         <td class="kv-value">{{ data.calibs }}</td>
                     </tr>
-                    {% if data.solar_analog %}
-                    <tr id="id_solaranalog">
-                        <td class="kv-key">Solar Analog</td>
-                        <td class="kv-value">{{ data.calibsource.name }}</td>
-                    </tr>
-                    <tr id="id_solaranalag_params">
-                        <td class="kv-key">Position/V magnitude</td>
-                        <td class="kv-value">{{ data.calibsource.ra|degreestohms:" " }} {{data.calibsource.dec|degreestodms:" "}}/{{data.calibsource.vmag|floatformat:1 }}</td>
-                    </tr>
-                    {% endif %}
                     {% endif %}
                 </tbody>
             </table>
@@ -164,9 +149,9 @@
       <div class="four columns">
         {% if form.errors%}
           {% if form.spectroscopy.value == 'True' %}
-            <a href="{% url 'schedule-body-spectra' body.id %}">Return to schedule spectra page</a>
+            <a href="{% url 'calibsources' %}">Return to schedule calib spectra page</a>
           {% else %}
-            <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
+            <a href="{% url 'schedule-calib-spectra' instrument_code=form.instrument_code.value %}">Return to schedule parameters page</a>
           {% endif %}
         {% else %}
         <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
@@ -186,8 +171,6 @@
           {{forms.pattern_iterations}}
           {{form.spectroscopy}}
           {{form.calibs}}
-          {{form.solar_analog}}
-          {{form.calibsource_id}}
         </div>
       </div>
 

@@ -27,6 +27,7 @@ except:
 from numpy import array, concatenate, zeros
 import copy
 from itertools import groupby
+import re
 
 # Local imports
 from astrometrics.time_subs import datetime2mjd_utc, datetime2mjd_tdb, mjd_utc2mjd_tt, ut1_minus_utc, round_datetime
@@ -550,21 +551,24 @@ def read_findorb_ephem(empfile):
             if line.lstrip()[0] == '#' :
                 # print(line.lstrip())
                 # First line contains object id and the sitecode the ephemeris is for. Fetch...
-                chunks = line.lstrip()[1:].split()
-                if len(chunks) == 3:
-                    ephem_info = {'obj_id' : chunks[0], 'emp_sitecode' : chunks[2]}
-                elif len(chunks) == 4:
-                    ephem_info = {'obj_id' : chunks[0] + chunks[1],
-                                   'emp_sitecode' : chunks[3]}
-                elif 6 <= len(chunks) <= 9:
-                    object_name = chunks[-2] + chunks[-1]
-                    if ' = ' in line:
-                        object_name = chunks[-4].replace('(', '').replace(')', '')
-                    ephem_info = {'emp_sitecode' : chunks[0].replace('(', '').replace(')', ''),
-                                   'obj_id' : object_name}
-                else:
-                    logger.warning("Unexpected number of chunks in header line1 ({:d})".format(len(chunks)))
-                    return None, None
+                chunks = list(filter(None, re.split("[,(,),\n,:]+", line.lstrip()[1:])))
+                try:
+                    chunks.remove(' ')
+                except ValueError:
+                    pass
+                obj_id = ''
+                for chunk in chunks[::-1]:
+                    if chunk.isdigit():
+                        obj_id = chunk
+                        break
+                if not obj_id:
+                    if '19' in chunks[-1] or '20' in chunks[-1]:
+                        obj_id = chunks[-1].replace(' ', '').replace('=', '')
+                    else:
+                        logger.warning("Could not pull Object ID from header line1 ({:s})".format(line))
+                        return None, None
+                ephem_info = {'obj_id' : obj_id,
+                              'emp_sitecode' : chunks[0]}
             elif line.lstrip()[0:4] == 'Date':
                 # next line has the timescale of the ephemeris and the units of the motion
                 # rate. We *hope* it's always UTC and arcmin/hr but grab and check anyway...
@@ -598,7 +602,13 @@ def read_findorb_ephem(empfile):
                     uncertain_mag = True
                 emp_mag = float(chunks[13])
                 emp_rate = float(chunks[14])
-                emp_alt = float(chunks[16])
+                try:
+                    emp_alt = float(chunks[16])
+                except ValueError:
+                    if 'm' in chunks[16]:
+                        emp_alt = float(chunks[16][:-1])/1000
+                    else:
+                        emp_alt = emp[-1][-1]
                 emp_line = (emp_datetime, emp_ra, emp_dec, emp_mag, emp_rate, emp_alt)
                 # print(emp_line)
                 emp.append(emp_line)
@@ -741,7 +751,7 @@ def crude_astro_darkness(sitecode, utc_date):
     return ad_start, ad_end
 
 
-def accurate_astro_darkness(sitecode, utc_date, debug=False):
+def accurate_astro_darkness(sitecode, utc_date, solar_pos=False, debug=False):
 
     # Convert passed UTC date to MJD and then Julian centuries
 
@@ -775,6 +785,9 @@ def accurate_astro_darkness(sitecode, utc_date, debug=False):
     sun_app_ra = atan2(cos(radians(eps)) * sin(radians(sun_app_long)), cos(radians(sun_app_long)))
     sun_app_ra = S.sla_dranrm(sun_app_ra)
     sun_app_dec = asin(sin(radians(eps)) * sin(radians(sun_app_long)))
+
+    if solar_pos is not False:
+        return sun_app_ra, sun_app_dec
 
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
 
@@ -846,11 +859,13 @@ def get_mag_mapping(site_code):
     slot length (in minutes) assuming minimum exposure count is 4. A null
     dictionary is returned if the site name isn't recognized"""
 
-    twom_site_codes = ['F65', 'E10']
-    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87']
+    twom_site_codes = ['F65', 'E10', '2M']
+    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M']
     # COJ normally has bad seeing, allow more time
-    bad_onem_site_codes = ['Q63', 'Q64']
-    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09']
+    # Disabled by TAL 2018/8/10 after mirror recoating
+#    bad_onem_site_codes = ['Q63', 'Q64']
+    bad_onem_site_codes = ['BAD1M']
+    point4m_site_codes = ['Z21', 'Z17', 'W89', 'W79', 'T04', 'T03', 'Q58', 'Q59', 'V38', 'L09', '0M4']
 
 # Magnitudes represent upper bin limits
     site_code = site_code.upper()
@@ -922,8 +937,10 @@ def determine_slot_length(mag, site_code, debug=False):
 
 # Obtain magnitude->slot length mapping dictionary
     mag_mapping = get_mag_mapping(site_code)
-    if debug: print(mag_mapping)
-    if mag_mapping == {}: return 0
+    if debug:
+        print(mag_mapping)
+    if mag_mapping == {}:
+        return 0
 
     # Derive your tuple from the magnitude->slot length mapping data structure
     upper_mags = tuple(sorted(mag_mapping.keys()))

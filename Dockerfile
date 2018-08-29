@@ -80,10 +80,10 @@ RUN mkdir /tmp/git_find_orb \
     && git clone https://github.com/Bill-Gray/sat_code.git \
     && git clone https://github.com/Bill-Gray/jpl_eph.git \
     && git clone https://github.com/Bill-Gray/find_orb.git \
-    && cd lunar && make && make install && cd .. \
-    && cd jpl_eph && make && make install && cd .. \
+    && cd lunar && git checkout 5cc1b3f5^ && make && make install && cd .. \
+    && cd jpl_eph && git checkout 812f38e^ && make && make install && cd .. \
     && cd lunar && make integrat && make install && cd .. \
-    && cd sat_code && make && make install && cd .. \
+    && cd sat_code && git checkout 98fea32^ && make && make install && cd .. \
     && cd find_orb && make && make install && cp ps_1996.dat elp82.dat /root/.find_orb && cd .. \
     && cp /root/bin/fo /usr/local/bin/ \
     && chmod 755 /root \

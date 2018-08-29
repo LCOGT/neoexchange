@@ -862,3 +862,6 @@ def mock_fetch_sfu(sfu_value=None):
         sfu_value = 42.0 * sfu
 
     return datetime(2018, 4, 20, 5, 0, 0), sfu_value
+
+def mock_submit_to_scheduler(elements, params):
+    return -42, params
