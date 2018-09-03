@@ -32,13 +32,15 @@ var archive_token = "{{archive_token}}";
 var blockcandidate;
 
 $(document).ajaxStop(function() {
-  // place code to be executed on completion of last outstanding ajax call here
-  frames = loadThumbnails(frames);
+  // Load all thumbnails once the ajax call to get their URLs has completed
+  loadThumbnails(frames);
 });
 
 	$(document).ready(function(){
 		setUp();
-    get_images(frames, options='?width=1000&height=1000&median=98')
+    for(i=0; i<frames.length; i++){
+      frames[i] = get_images(frames[i], options=img_params)
+    }
 
 		$('.candidate-select').click(function(){
 			var ind = $(this).data('cand_id');

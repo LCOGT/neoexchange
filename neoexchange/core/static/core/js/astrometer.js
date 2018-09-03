@@ -385,11 +385,10 @@ function changeImage(ind, cand_index=0, allcandidates=false) {
 
 function loadThumbnails(frames){
 
-      console.log("Starting image stuff")
-      console.log(frames)
-      for(i=0; i<frames.length; i++){
+    console.log("Starting image stuff")
+    for(i=0; i<frames.length; i++){
       // Add the URL of each image to the frames array
-      var resp = deferred_imgs[i]['url'];
+      var resp = frames[i]['url'];
       // Preload the image
       var image = new Image();
       image.src = resp;
@@ -400,21 +399,19 @@ function loadThumbnails(frames){
 }
 
 
-function get_images(frames, options=''){
-  for(i=0; i<frames.length; i++){
+function get_images(frame, options=''){
 
-    $.get({url:'https://thumbnails.lco.global/'+frames[i].img+'/'+options,
+    $.get({url:'https://thumbnails.lco.global/'+frame.img+'/'+options,
           headers: {'Authorization': 'Token '+archive_token},
           dataType: 'json',
           contentType: 'application/json'}
         )
       .success(function(data){
-        console.log(i);
-        frames[i]['url'] = data['url'];
+        frame['url'] = data['url'];
       })
       .fail(function(data){
         console.log("FAILED to get thumbnail");
       })
-    }
-    return frames
+
+    return frame
   }
