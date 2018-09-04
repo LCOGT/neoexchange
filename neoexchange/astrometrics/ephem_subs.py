@@ -607,8 +607,11 @@ def read_findorb_ephem(empfile):
                 except ValueError:
                     if 'm' in chunks[16]:
                         emp_alt = float(chunks[16][:-1])/1000
+                    elif "'" in chunks[16]:
+                        emp_alt = float(chunks[16][:-1])*60
                     else:
-                        emp_alt = emp[-1][-1]
+                        logger.warning("Unable to read Ephemeris sig err {}".format(chunks[16]))
+                        return None, None
                 emp_line = (emp_datetime, emp_ra, emp_dec, emp_mag, emp_rate, emp_alt)
                 # print(emp_line)
                 emp.append(emp_line)
