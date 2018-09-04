@@ -191,7 +191,7 @@ def frame_params_from_header(params, block):
         try:
             midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S.%f")
         except ValueError:
-            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:M:%S")
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S")
 
         midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
         frame_params['midpoint'] = midpoint
