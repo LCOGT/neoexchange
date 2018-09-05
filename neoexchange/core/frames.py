@@ -298,7 +298,7 @@ def block_status(block_id):
         if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
             obstype = 'EXPOSE'
             try:
-                if block.obstype == Block.OPT_SPECTRA:
+                if block.obstype == Block.OPT_SPECTRA or block.obstype == Block.OPT_SPECTRA_CALIB:
                     # Set OBSTYPE to null string for archive search so we get all
                     # types of frames
                     obstype = ''
