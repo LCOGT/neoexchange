@@ -2556,12 +2556,12 @@ def make_movie(request, pk):
                         if '.fits.fz' in file:
                             frames.append(file)
                 else:
-                    logger.error("Could not Guide Frames or Guide Frame tarball for block: %s" % pk)
+                    logger.error("Could not find Guide Frames or Guide Frame tarball for block: %s" % pk)
                     return HttpResponse()
 
     else:  # else, unpack both tarballs
         base_dir = os.path.join(settings.DATA_ROOT, date_obs)
-        tar_files = glob(os.path.join(base_dir, prop+"_"+req+"*.tar.gz"))  # if file not found, looks fror tarball
+        tar_files = glob(os.path.join(base_dir, prop+"_"+req+"*.tar.gz"))  # if file not found, looks for tarball
         guide_files = []
         tar_path = None
         unpack_path = None
@@ -2575,7 +2575,7 @@ def make_movie(request, pk):
                 logger.error("Could not find tarball for block: %s" % pk)
                 return HttpResponse()
             logger.info("Unpacking 1st tar")
-            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
+            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
 
             for file in spec_files:
                 if '.tar' in file:
