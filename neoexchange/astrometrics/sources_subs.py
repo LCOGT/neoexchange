@@ -205,7 +205,7 @@ def fetch_previous_NEOCP_desigs(dbg=False):
     it and returns a list of lists of object, provisional designation or failure
     reason, date and MPEC."""
 
-    previous_NEOs_url = 'http://www.minorplanetcenter.net/iau/NEO/ToConfirm_PrevDes.html'
+    previous_NEOs_url = 'https://www.minorplanetcenter.net/iau/NEO/ToConfirm_PrevDes.html'
 
     page = fetchpage_and_make_soup(previous_NEOs_url, parser="html5lib")
     if page is None:
@@ -233,7 +233,7 @@ def fetch_NEOCP(dbg=False):
     """Fetches the NEO Confirmation Page and returns a BeautifulSoup object
     of the page."""
 
-    NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
+    NEOCP_url = 'https://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
     neocp_page = fetchpage_and_make_soup(NEOCP_url)
     return neocp_page
@@ -264,7 +264,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
     discovery date, update date, # obs, arc length (in days) and not seen (in days)
     which are returned."""
 
-    PCCP_url = 'http://www.minorplanetcenter.net/iau/NEO/pccp_tabular.html'
+    PCCP_url = 'https://www.minorplanetcenter.net/iau/NEO/pccp_tabular.html'
 
     if type(neocp_page) != BeautifulSoup:
         return None
@@ -446,7 +446,7 @@ def fetch_NEOCP_observations(obj_id_or_page):
 
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
-        NEOCP_obs_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
+        NEOCP_obs_url = 'https://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
         neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
     else:
         neocp_obs_page = obj_id_or_page
@@ -468,7 +468,7 @@ def fetch_mpcobs(asteroid, debug=False):
     resulting observation as a list of text observations."""
 
     asteroid = asteroid.strip().replace(' ', '+')
-    query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
     page = fetchpage_and_make_soup(query_url)
     if page is None:
@@ -487,7 +487,7 @@ def fetch_mpcobs(asteroid, debug=False):
     if len(link) == 1:
         # Replace the '..' part with proper URL
 
-        astfile_link = link[0].replace('../', 'http://www.minorplanetcenter.net/')
+        astfile_link = link[0].replace('../', 'https://www.minorplanetcenter.net/')
         obs_page = fetchpage_and_make_soup(astfile_link)
 
         if obs_page is not None:
@@ -500,7 +500,7 @@ def fetch_mpcobs(asteroid, debug=False):
 def translate_catalog_code(code_or_name):
     """Mapping between the single character in column 72 of MPC records
     and the astrometric reference catalog used.
-    Documentation at: http://www.minorplanetcenter.net/iau/info/CatalogueCodes.html"""
+    Documentation at: https://www.minorplanetcenter.net/iau/info/CatalogueCodes.html"""
 
     catalog_codes = {
                   "a" : "USNO-A1",
@@ -568,7 +568,7 @@ def parse_mpcobs(line):
 
     Be ware of potential confusion between obs_type of 'S' and 's'. This
     enforced by MPC, see
-    http://www.minorplanetcenter.net/iau/info/SatelliteObs.html
+    https://www.minorplanetcenter.net/iau/info/SatelliteObs.html
     """
 
     params = {}
@@ -666,7 +666,7 @@ def fetch_mpcdb_page(asteroid, dbg=False):
     asteroid = asteroid.strip().replace(' ', '+')
     if dbg:
         print("Asteroid  after=", asteroid)
-    query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
     page = fetchpage_and_make_soup(query_url)
     if page is None:
@@ -715,7 +715,7 @@ class PackedError(Exception):
 def validate_packcode(packcode):
     """Method to validate that <packcode> is a valid MPC packed designation.
     Format is as described at:
-    http://www.minorplanetcenter.org/iau/info/PackedDes.html"""
+    https://www.minorplanetcenter.org/iau/info/PackedDes.html"""
 
     valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
