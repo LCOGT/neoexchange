@@ -1484,7 +1484,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     b) If the object's parameters have changed they will be updated and a revision logged
     c) New objects get marked as active = True automatically
     """
-    NEOCP_orb_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
+    NEOCP_orb_url = 'https://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
 
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
 
