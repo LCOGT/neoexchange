@@ -22,7 +22,7 @@ def make_gif(frames, title=None, sort=True, fr=333):
     <frames> = list of .fits frame paths
     <title> = [optional] string containing gif title, set to empty string or False for no title
     <sort> = [optional] bool to sort frames by title (Which usually corresponds to date)
-    <fr> = frame rate for ouput gif in ms/frame [default = 333 ms/frame or 3fps]
+    <fr> = frame rate for output gif in ms/frame [default = 333 ms/frame or 3fps]
     output = savefile (path of gif)
     """
     if sort is True:
@@ -35,12 +35,12 @@ def make_gif(frames, title=None, sort=True, fr=333):
         # pull header information from first fits file
         with fits.open(fits_files[0]) as hdul:
             header = hdul['SCI'].header
-        # create title
-        obj = header['OBJECT']
-        tn = header['TRACKNUM'].lstrip('0')
-        site = header['SITEID'].upper()
-        inst = header['INSTRUME'].upper()
-        title = 'Tracking Number {} -- {} at {} ({})'.format(tn, obj, site, inst)
+            # create title
+            obj = header['OBJECT']
+            tn = header['TRACKNUM'].lstrip('0')
+            site = header['SITEID'].upper()
+            inst = header['INSTRUME'].upper()
+            title = 'Tracking Number {} -- {} at {} ({})'.format(tn, obj, site, inst)
 
     fig = plt.figure()
     if title:
