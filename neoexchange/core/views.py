@@ -42,6 +42,12 @@ try:
     import pyslalib.slalib as S
 except ImportError:
     pass
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import io
+
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
@@ -2388,10 +2394,7 @@ def store_detections(mtdsfile, dbg=False):
 
 def make_plot(request):
 
-    import matplotlib
-    matplotlib.use('Agg')
     import aplpy
-    import io
 
     fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
     fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
@@ -2457,8 +2460,6 @@ def make_spec(request, pk):
     """Creates plot of spectra data for spectra blocks
        <pk>: pk of block (not superblock)
     """
-    import io
-    import matplotlib.pyplot as plt
 
     date_obs, obj, req, path, prop = find_spec(pk)
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
@@ -2522,9 +2523,6 @@ def make_movie(request, pk):
     Might want to add something that reduces number of frames used if
     there are too many
     """
-    # import matplotlib
-    # matplotlib.use('Agg')
-    import matplotlib.pyplot as plt
 
     date_obs, obj, req, path, prop = find_spec(pk)
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
@@ -2591,7 +2589,7 @@ def make_movie(request, pk):
                         frames.append(file)
 
         else:
-            logger.error("Clould not find spectrum data or tarball for block: %s" % pk)
+            logger.error("Could not find spectrum data or tarball for block: %s" % pk)
             return HttpResponse()
     if frames is not None and len(frames) > 1:
         logger.debug("#Frames = {}".format(len(frames)))
@@ -2609,7 +2607,7 @@ def make_movie(request, pk):
 
 
 class GuideMovie(View):
-    # make loging required later
+    # make logging required later
 
     template_name = 'core/guide_movie.html'
 
@@ -2621,8 +2619,7 @@ class GuideMovie(View):
 
 def make_standards_plot(request):
     """creates stellar standards plot to be added to page"""
-    import matplotlib.pyplot as plt
-    import io
+
     scoords = readSources('Solar')
     fcoords = readSources('Flux')
 
@@ -2639,8 +2636,7 @@ def make_standards_plot(request):
 
 def make_solar_standards_plot(request):
     """creates solar standards plot to be added to page"""
-    import matplotlib.pyplot as plt
-    import io
+
     scoords = readSources('Solar')
     ax = plt.figure().gca()
     plotScatter(ax, scoords, 'b*')
