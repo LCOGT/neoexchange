@@ -3,6 +3,7 @@
 source /var/www/apps/neoexchange/cronwrapper
 export PYTHONPATH="/var/www/apps/neoexchange/"
 dataroot=/data/eng/rocks
+umask 002
 
 date_options=""
 if [[ $# -eq 1 ]]; then
