@@ -44,6 +44,10 @@ RUN yum -y install epel-release \
                 git gcc-c++ ncurses-devel\
         && yum -y update
 
+# Install Developer Toolset 7 for newer g++ version
+RUN yum -y install centos-release-scl \
+        && yum -y install devtoolset-7
+
 # Enable LCO repo and install extra packages
 COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
 RUN yum -y install lcogt-python36 sextractor cdsclient scamp mtdlink\
@@ -79,11 +83,15 @@ RUN mkdir /tmp/git_find_orb \
     && git clone https://github.com/Bill-Gray/lunar.git \
     && git clone https://github.com/Bill-Gray/sat_code.git \
     && git clone https://github.com/Bill-Gray/jpl_eph.git \
-    && git clone https://github.com/Bill-Gray/find_orb.git \
-    && cd lunar && git checkout 5cc1b3f5^ && make && make install && cd .. \
-    && cd jpl_eph && git checkout 812f38e^ && make && make install && cd .. \
+    && git clone https://github.com/Bill-Gray/find_orb.git
+
+# Start a new shell and enable the Developer Toolset 7 toolchain so we get newer (7.3) g++
+SHELL ["scl", "enable devtoolset-7"]
+RUN cd /tmp/git_find_orb \
+    && cd lunar && make && make install && cd .. \
+    && cd jpl_eph && make && make install && cd .. \
     && cd lunar && make integrat && make install && cd .. \
-    && cd sat_code && git checkout 98fea32^ && make && make install && cd .. \
+    && cd sat_code && make && make install && cd .. \
     && cd find_orb && make && make install && cp ps_1996.dat elp82.dat /root/.find_orb && cd .. \
     && cp /root/bin/fo /usr/local/bin/ \
     && chmod 755 /root \
