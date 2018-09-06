@@ -50,7 +50,12 @@ class SuperBlockAdmin(VersionAdmin):
     format_block_start.admin_order_field = 'block_start'
 
     def body_name(self, obj):
-        return obj.current_name()
+        name = ''
+        if obj.body is not None:
+            name = obj.body.current_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
 
     list_display = ('groupid', 'body_name', 'proposal', 'block_start', 'active', )
     list_filter = ('proposal', 'block_start', 'active', )
@@ -81,7 +86,12 @@ class BlockAdmin(VersionAdmin):
     sent_to_zoo.boolean = True
 
     def body_name(self, obj):
-        return obj.current_name()
+        name = ''
+        if obj.body is not None:
+            name = obj.body.current_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
 
     list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported', 'zoo_friendly', 'sent_to_zoo')
     list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
