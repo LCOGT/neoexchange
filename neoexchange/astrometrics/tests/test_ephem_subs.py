@@ -1692,6 +1692,18 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
 
+    def test_tenerife_point4m_num2_by_code(self):
+        site_code = 'Z17'
+
+        expected_site_name = 'LCO TFN Node 0m4b Aqawan A at Tenerife'
+
+        site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+
+        self.assertEqual(expected_site_name, site_name)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
+
     def test_tenerife_point4m_num1_by_name(self):
         site_code = 'TFN-AQWA-0M4A'
 
@@ -1704,19 +1716,18 @@ class TestGetSitePos(TestCase):
         self.assertGreater(site_lat, 0.0)
         self.assertGreater(site_hgt, 0.0)
 
-    def test_tenerife_unknown_point4m_num2_by_name(self):
+    def test_tenerife_point4m_num2_by_name(self):
         site_code = 'TFN-AQWA-0M4B'
 
-        expected_site_name = '?'
+        expected_site_name = 'LCO TFN Node 0m4b Aqawan A at Tenerife'
 
         site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
 
         self.assertEqual(expected_site_name, site_name)
         self.assertNotEqual('LCO TFN Node 0m4a Aqawan A at Tenerife', site_name)
-        self.assertNotEqual('LCO TFN Node 0m4b Aqawan A at Tenerife', site_name)
-        self.assertEqual(0.0, site_long)
-        self.assertEqual(0.0, site_lat)
-        self.assertEqual(0.0, site_hgt)
+        self.assertLess(site_long, 0.0)
+        self.assertGreater(site_lat, 0.0)
+        self.assertGreater(site_hgt, 0.0)
 
     def test_maui_point4m_num2_by_code(self):
         site_code = 'T04'
