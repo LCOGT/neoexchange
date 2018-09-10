@@ -33,7 +33,7 @@ def make_gif(frames, title=None, sort=True, fr=333):
 
     if title is None:
         # pull header information from first fits file
-        with fits.open(fits_files[0]) as hdul:
+        with fits.open(fits_files[0], ignore_missing_end=True) as hdul:
             header = hdul['SCI'].header
             # create title
             obj = header['OBJECT']
@@ -52,7 +52,7 @@ def make_gif(frames, title=None, sort=True, fr=333):
         output: return plot.
         """
         # get data/Header from Fits
-        with fits.open(fits_files[n]) as hdul:
+        with fits.open(fits_files[n], ignore_missing_end=True) as hdul:
             header = hdul['SCI'].header
             data = hdul['SCI'].data
         # pull Date from Header
