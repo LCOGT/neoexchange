@@ -1579,6 +1579,7 @@ def make_userrequest(elements, params):
 
     request = {
             "location": location,
+            "acceptability_threshold": 90,
             "constraints": constraints,
             "target": target,
             "molecules": molecule_list,
