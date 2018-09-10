@@ -2534,8 +2534,8 @@ def make_movie(request, pk):
             movie_dir = glob(os.path.join(path, "Guide_frames"))
             if movie_dir:  # if 2nd order tarball is unpacked
                 logger.debug('MOVIE DIR : {}'.format(movie_dir[0]))
-                # read in ANY .gif file and assume correct.
-                movie_file = glob(os.path.join(movie_dir[0], "*.gif"))
+                # read in .gif file created by NeoExchange.
+                movie_file = glob(os.path.join(movie_dir[0], "guidemovie.gif"))
                 if movie_file:
                     logger.debug('MOVIE FILE: {}'.format(movie_file[0]))
                     movie = open(movie_file[0], 'rb').read()
