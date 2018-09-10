@@ -55,7 +55,7 @@ def make_gif(frames, title=None, sort=True, fr=333):
 
 
 def update(fits_file):
-    """ this method is requred to build FuncAnimation
+    """ this method is required to build FuncAnimation
     <file> = frame currently being iterated
     output: return plot.
     """
@@ -85,6 +85,8 @@ def update(fits_file):
     ra = ax.coords['ra']
     dec = ax.coords['dec']
     ra.set_major_formatter('hh:mm:ss')
+    ra.set_ticks(exclude_overlapping=True)
+    dec.set_ticks(exclude_overlapping=True)
     dec.set_major_formatter('dd:mm')
     ra.set_ticks_position('lb')
     ra.set_ticklabel_position('lb')
