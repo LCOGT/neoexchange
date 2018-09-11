@@ -3857,6 +3857,40 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('A/2018 C2', body.name)
         self.assertEqual('MPC_COMET', body.elements_type)
 
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_same_obj_different_provids(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.provisional_name = 'P10jZsv'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('A', body.origin)
+        self.assertEqual('2015 FP118', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+        self.assertIsNot(None, body.perihdist)
+
 class TestStoreDetections(TestCase):
 
     def setUp(self):
