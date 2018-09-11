@@ -1252,6 +1252,13 @@ def get_sitepos(site_code, dbg=False):
         site_long = -site_long # West of Greenwich !
         site_hgt = 2390.0
         site_name = 'LCO TFN Node 0m4a Aqawan A at Tenerife'
+    elif site_code == 'TFN-AQWA-0M4B' or site_code == 'Z17':
+        # Latitude, longitude from Todd B./Google Earth
+        (site_lat, status)  =  S.sla_daf2r(28, 18, 1.11)
+        (site_long, status) =  S.sla_daf2r(16, 30, 42.21)
+        site_long = -site_long # West of Greenwich !
+        site_hgt = 2390.0
+        site_name = 'LCO TFN Node 0m4b Aqawan A at Tenerife'
     elif site_code == 'OGG-CLMA-0M4B' or site_code == 'T04':
         # Latitude, longitude from Google Earth, SW corner of clamshell, probably wrong
         (site_lat, status)  =  S.sla_daf2r(20, 42, 25.1)
