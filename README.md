@@ -4,17 +4,21 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.1
+
+Add latitude, longitude, height for 0m4b at Tenerife (Z17). Update find_orb build procedure.
+
 ### 2.7.0
 
 Flux Standards
-* Add Static Source Model
-* Add Calibrations List page
-* Add Callibration detail descriptions
-* Allow for sorting out and scheduling spectra for Solar analogs
+* Add Static Source Model to hold flux, spectral, solar and RV standards.
+* Add Calibrations List page.
+* Add Calibration detail descriptions.
+* Allow for sorting out and scheduling spectra for Solar analogs.
 
 ### 2.6.0
 
-Calculate and forward more precise orbital elements for spectroscopic observations
+Calculate and forward more precise orbital elements for spectroscopic observations.
 
 ### 2.5.3
 
