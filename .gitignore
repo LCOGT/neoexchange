@@ -68,7 +68,7 @@ neox.db
 neox.log
 geckodriver.log
 
-lightcurve.png
+lightcurve*.png
 lightcurve_data.txt
 mpc_positions.txt
 *.json
