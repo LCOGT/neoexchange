@@ -475,7 +475,8 @@ class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
     rapid_response  = models.BooleanField('Is this a ToO/Rapid Response observation?', default=False)
-    body            = models.ForeignKey(Body)
+    body            = models.ForeignKey(Body, null=True, blank=True)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     proposal        = models.ForeignKey(Proposal)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -485,6 +486,14 @@ class SuperBlock(models.Model):
     jitter          = models.FloatField('Acceptable deviation before or after strict period (hours)', null=True, blank=True)
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
+
+    def current_name(self):
+        name = ''
+        if self.body is not None:
+            name = self.body.current_name()
+        elif self.calibsource is not None:
+            name = self.calibsource.current_name()
+        return name
 
     def make_obsblock_link(self):
         url = ''
@@ -501,7 +510,7 @@ class SuperBlock(models.Model):
         qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
         # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
-        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_IMAGING), '') for x in qs]
+        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_SPECTRA_CALIB),'(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
 
         return ", ".join(class_obstype)
 
@@ -576,14 +585,19 @@ class Block(models.Model):
 
     OPT_IMAGING = 0
     OPT_SPECTRA = 1
+    OPT_IMAGING_CALIB = 2
+    OPT_SPECTRA_CALIB = 3
     OBSTYPE_CHOICES = (
                         (OPT_IMAGING, 'Optical imaging'),
                         (OPT_SPECTRA, 'Optical spectra'),
+                        (OPT_IMAGING_CALIB, 'Optical imaging calibration'),
+                        (OPT_SPECTRA_CALIB, 'Optical spectro calibration')
                       )
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES)
-    body            = models.ForeignKey(Body)
+    body            = models.ForeignKey(Body, null=True, blank=True)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     proposal        = models.ForeignKey(Proposal)
     superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
     obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
@@ -598,6 +612,14 @@ class Block(models.Model):
     active          = models.BooleanField(default=False)
     reported        = models.BooleanField(default=False)
     when_reported   = models.DateTimeField(null=True, blank=True)
+
+    def current_name(self):
+        name = ''
+        if self.body is not None:
+            name = self.body.current_name()
+        elif self.calibsource is not None:
+            name = self.calibsource.name
+        return name
 
     def make_obsblock_link(self):
         url = ''
@@ -638,6 +660,7 @@ class Block(models.Model):
         if not self.superblock:
             sblock_kwargs = {
                                 'body' : self.body,
+                                'calibsource' : self.calibsource,
                                 'proposal' : self.proposal,
                                 'block_start' : self.block_start,
                                 'block_end' : self.block_end,
@@ -785,7 +808,7 @@ class Frame(models.Model):
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
-    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
+    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
     block       = models.ForeignKey(Block, null=True, blank=True)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
@@ -1000,10 +1023,13 @@ class SourceMeasurement(models.Model):
             mag, self.frame.map_filter(), catalog_code, self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
-            if self.body.name:
-                name, status = normal_to_packed(self.body.name)
-                if status == 0:
-                    extrainfo = name + extrainfo[12:]
+            if extrainfo:
+                if self.body.name:
+                    name, status = normal_to_packed(self.body.name)
+                    if status == 0:
+                        extrainfo = name + extrainfo[12:]
+            else:
+                extrainfo = ''
             mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
@@ -1205,3 +1231,53 @@ class PanoptesReport(models.Model):
 
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
+
+@python_2_unicode_compatible
+class StaticSource(models.Model):
+    """
+    Class for static (sidereal) sources, normally calibration sources (solar
+    standards, RV standards, flux standards etc)
+    """
+    UNKNOWN_SOURCE = 0
+    FLUX_STANDARD = 1
+    RV_STANDARD = 2
+    SOLAR_STANDARD = 4
+    SPECTRAL_STANDARD = 8
+    SOURCETYPE_CHOICES = [
+                            (UNKNOWN_SOURCE, 'Unknown source type'),
+                            (FLUX_STANDARD, 'Spectrophotometric standard'),
+                            (RV_STANDARD, 'Radial velocity standard'),
+                            (SOLAR_STANDARD, 'Solar spectrum standard'),
+                            (SPECTRAL_STANDARD, 'Spectral standard')
+                         ]
+
+    name = models.CharField('Name of calibration source', max_length=55)
+    ra = models.FloatField('RA of source (degrees)')
+    dec = models.FloatField('Dec of source (degrees)')
+    pm_ra = models.FloatField('Proper motion in RA of source (pmra*cos(dec); mas/yr)', default=0.0)
+    pm_dec = models.FloatField('Proper motion in Dec of source (mas/yr)', default=0.0)
+    parallax = models.FloatField('Parallax (mas)', default=0.0)
+    vmag = models.FloatField('V magnitude')
+    spectral_type = models.CharField('Spectral type of source', max_length=10, blank=True)
+    source_type = models.IntegerField('Source Type', null=False, blank=False, default=0, choices=SOURCETYPE_CHOICES)
+    notes = models.TextField(blank=True)
+    quality = models.SmallIntegerField('Source quality', default=0, blank=True, null=True)
+    reference = models.CharField('Reference for the source', max_length=255, blank=True)
+
+    def return_source_type(self):
+        srctype_name = "Undefined type"
+        srctype = [x[1] for x in self.SOURCETYPE_CHOICES if x[0] == self.source_type]
+        if len(srctype) == 1:
+            srctype_name = srctype[0]
+        return srctype_name
+
+    def current_name(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _('Static Source')
+        verbose_name_plural = _('Static Sources')
+        db_table = 'ingest_staticsource'
+
+    def __str__(self):
+        return "{} ({})".format(self.name, self.return_source_type())

@@ -101,7 +101,18 @@ def create_frame(params, block=None, frameid=None):
         frame_params = frame_params_from_log(params, block)
 
     try:
-        frame, frame_created = Frame.objects.get_or_create(**frame_params)
+        frame_list = Frame.objects.filter(midpoint=frame_params['midpoint'])
+        if len(frame_list) >= 1:
+            frame_test = frame_list.filter(**frame_params)
+            if frame_test:
+                frame = Frame.objects.get(**frame_params)
+                frame_created = False
+            else:
+                frame = Frame.objects.create(**frame_params)
+                frame_created = True
+        else:
+            frame = Frame.objects.create(**frame_params)
+            frame_created = True
         frame.frameid = frameid
         frame.save()
     except Frame.MultipleObjectsReturned:
@@ -180,7 +191,7 @@ def frame_params_from_header(params, block):
         try:
             midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S.%f")
         except ValueError:
-            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:M:%S")
+            midpoint = datetime.strptime(frame_params['midpoint'], "%Y-%m-%dT%H:%M:%S")
 
         midpoint = midpoint + timedelta(seconds=float(frame_params['exptime']) / 2.0)
         frame_params['midpoint'] = midpoint
@@ -213,7 +224,7 @@ def frame_params_from_log(params, block):
         else:
             frame_type = Frame.STACK_FRAMETYPE
     else:
-        if params.get('obs_type', None) == 'S':
+        if params.get('obs_type', None) == 'S' or params.get('obs_type', None) == 's':
             frame_type = Frame.SATELLITE_FRAMETYPE
         else:
             frame_type = Frame.NONLCO_FRAMETYPE

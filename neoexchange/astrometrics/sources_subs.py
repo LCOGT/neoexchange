@@ -38,10 +38,11 @@ try:
 except:
     pass
 from django.conf import settings
+from astropy.io import ascii
 
 import astrometrics.site_config as cfg
-from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
+from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
@@ -204,7 +205,7 @@ def fetch_previous_NEOCP_desigs(dbg=False):
     it and returns a list of lists of object, provisional designation or failure
     reason, date and MPEC."""
 
-    previous_NEOs_url = 'http://www.minorplanetcenter.net/iau/NEO/ToConfirm_PrevDes.html'
+    previous_NEOs_url = 'https://www.minorplanetcenter.net/iau/NEO/ToConfirm_PrevDes.html'
 
     page = fetchpage_and_make_soup(previous_NEOs_url, parser="html5lib")
     if page is None:
@@ -232,7 +233,7 @@ def fetch_NEOCP(dbg=False):
     """Fetches the NEO Confirmation Page and returns a BeautifulSoup object
     of the page."""
 
-    NEOCP_url = 'http://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
+    NEOCP_url = 'https://www.minorplanetcenter.net/iau/NEO/toconfirm_tabular.html'
 
     neocp_page = fetchpage_and_make_soup(NEOCP_url)
     return neocp_page
@@ -263,7 +264,7 @@ def parse_NEOCP_extra_params(neocp_page, dbg=False):
     discovery date, update date, # obs, arc length (in days) and not seen (in days)
     which are returned."""
 
-    PCCP_url = 'http://www.minorplanetcenter.net/iau/NEO/pccp_tabular.html'
+    PCCP_url = 'https://www.minorplanetcenter.net/iau/NEO/pccp_tabular.html'
 
     if type(neocp_page) != BeautifulSoup:
         return None
@@ -445,7 +446,7 @@ def fetch_NEOCP_observations(obj_id_or_page):
 
     if type(obj_id_or_page) != BeautifulSoup:
         obj_id = obj_id_or_page
-        NEOCP_obs_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
+        NEOCP_obs_url = 'https://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj='+obj_id+'&obs=y'
         neocp_obs_page = fetchpage_and_make_soup(NEOCP_obs_url)
     else:
         neocp_obs_page = obj_id_or_page
@@ -467,7 +468,7 @@ def fetch_mpcobs(asteroid, debug=False):
     resulting observation as a list of text observations."""
 
     asteroid = asteroid.strip().replace(' ', '+')
-    query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
     page = fetchpage_and_make_soup(query_url)
     if page is None:
@@ -486,7 +487,7 @@ def fetch_mpcobs(asteroid, debug=False):
     if len(link) == 1:
         # Replace the '..' part with proper URL
 
-        astfile_link = link[0].replace('../', 'http://www.minorplanetcenter.net/')
+        astfile_link = link[0].replace('../', 'https://www.minorplanetcenter.net/')
         obs_page = fetchpage_and_make_soup(astfile_link)
 
         if obs_page is not None:
@@ -499,7 +500,7 @@ def fetch_mpcobs(asteroid, debug=False):
 def translate_catalog_code(code_or_name):
     """Mapping between the single character in column 72 of MPC records
     and the astrometric reference catalog used.
-    Documentation at: http://www.minorplanetcenter.net/iau/info/CatalogueCodes.html"""
+    Documentation at: https://www.minorplanetcenter.net/iau/info/CatalogueCodes.html"""
 
     catalog_codes = {
                   "a" : "USNO-A1",
@@ -567,7 +568,7 @@ def parse_mpcobs(line):
 
     Be ware of potential confusion between obs_type of 'S' and 's'. This
     enforced by MPC, see
-    http://www.minorplanetcenter.net/iau/info/SatelliteObs.html
+    https://www.minorplanetcenter.net/iau/info/SatelliteObs.html
     """
 
     params = {}
@@ -609,7 +610,7 @@ def parse_mpcobs(line):
     if obs_type == 'C' or obs_type == 'S' or obs_type == 'A':
         # Regular CCD observations, first line of satellite observations or
         # observations that have been rotated from B1950 to J2000 ('A')
-#        print("Date=",line[15:32])
+        # print("Date=",line[15:32])
         params = { 'body'     : body,
                    'flags'    : flag,
                    'obs_type' : obs_type,
@@ -665,7 +666,7 @@ def fetch_mpcdb_page(asteroid, dbg=False):
     asteroid = asteroid.strip().replace(' ', '+')
     if dbg:
         print("Asteroid  after=", asteroid)
-    query_url = 'http://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
 
     page = fetchpage_and_make_soup(query_url)
     if page is None:
@@ -714,11 +715,13 @@ class PackedError(Exception):
 def validate_packcode(packcode):
     """Method to validate that <packcode> is a valid MPC packed designation.
     Format is as described at:
-    http://www.minorplanetcenter.org/iau/info/PackedDes.html"""
+    https://www.minorplanetcenter.org/iau/info/PackedDes.html"""
 
     valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
 
+    if len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
+        return True
     if len(packcode) != 7:
         raise PackedError("Invalid packcode length")
     if packcode[0] not in valid_cent_codes:
@@ -734,7 +737,8 @@ def validate_packcode(packcode):
 
 def packed_to_normal(packcode):
     """Converts MPC packed provisional designations e.g. K10V01F to unpacked
-    normal desigination i.e. 2010 VF1"""
+    normal desigination i.e. 2010 VF1 including packed 5 digit number designations
+    i.e. L5426 to 215426"""
 
 # Convert initial letter to century
     cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
@@ -742,6 +746,10 @@ def packed_to_normal(packcode):
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
         return None
+    elif len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
+        cycle = cycle_mpc_character_code(packcode[0])
+        normal_code = str(cycle) + packcode[1:]
+        return normal_code
     else:
         mpc_cent = cent_codes[packcode[0]]
 
@@ -750,13 +758,7 @@ def packed_to_normal(packcode):
     no_in_halfmonth = packcode[3] + packcode[6]
 # Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
 # consecutive integer by converting to ASCII code and skipping the non-alphanumerics
-    cycle = ord(packcode[4])
-    if cycle >= ord('a'):
-        cycle = cycle - 61
-    elif ord('A') <= cycle < ord('Z'):
-        cycle = cycle - 55
-    else:
-        cycle = cycle - ord('0')
+    cycle = cycle_mpc_character_code(packcode[4])
     digit = int(packcode[5])
     count = cycle * 10 + digit
 # No digits on the end of the unpacked designation if it's the first loop through
@@ -767,6 +769,18 @@ def packed_to_normal(packcode):
     normal_code = str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count)
 
     return normal_code
+
+
+def cycle_mpc_character_code(char):
+    """Convert MPC character code into a number 0--9, A--Z, a--z and return interger"""
+    cycle = ord(char)
+    if cycle >= ord('a'):
+        cycle = cycle - 61
+    elif ord('A') <= cycle < ord('Z'):
+        cycle = cycle - 55
+    else:
+        cycle = cycle - ord('0')
+    return cycle
 
 
 def parse_goldstone_chunks(chunks, dbg=False):
@@ -1201,14 +1215,24 @@ def make_target(params):
     """Make a target dictionary for the request. RA and Dec need to be
     decimal degrees"""
 
-    ra_degs = degrees(params['ra_rad'])
-    dec_degs = degrees(params['dec_rad'])
+    ra_degs = params['ra_deg']
+    dec_degs = params['dec_deg']
+    # XXX Todo: Add in proper motion and parallax if present
     target = {
                'type' : 'SIDEREAL',
                'name' : params['source_id'],
                'ra'   : ra_degs,
-               'dec'  : dec_degs
+               'dec'  : dec_degs,
+               'rot_mode' : 'VFLOAT'
              }
+    if 'vmag' in params:
+        target['vmag'] = params['vmag']
+    if 'pm_ra' in params:
+        target['proper_motion_ra'] = params['pm_ra']
+    if 'pm_dec' in params:
+        target['proper_motion_dec'] = params['pm_dec']
+    if 'parallax' in params:
+        target['parallax'] = params['parallax']
     return target
 
 
@@ -1235,6 +1259,11 @@ def make_moving_target(elements):
     else:
         target['meandist'] = elements['meandist']
         target['meananom'] = elements['meananom']
+    if 'v_mag' in elements:
+        target['vmag'] = round(elements['v_mag'], 2)
+    if 'sky_pa' in elements:
+        target['rot_mode'] = 'SKY'
+        target['rot_angle'] = round(elements['sky_pa'], 1)
 
     return target
 
@@ -1269,15 +1298,23 @@ def make_molecule(params, exp_filter):
     if params.get('spectroscopy', False):
         # Autoguider mode, one of ON, OFF, or OPTIONAL.
         # Must be uppercase now and ON for spectra, and OFF for arcs and lamp flats
+        params['spectra_slit'] = exp_filter[0]
         ag_mode = 'ON'
         if params['exp_type'].upper() in ['ARC', 'LAMP_FLAT']:
             ag_mode = 'OFF'
             molecule['exposure_count'] = 1
             molecule['exposure_time'] = 60.0
+            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit'] and 'COJ' in params['site'].upper():
+                molecule['exposure_time'] = 20.0
         molecule['spectra_slit'] = params['spectra_slit']
         molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
-        molecule['acquire_mode'] = 'WCS'
+        molecule['acquire_mode'] = 'BRIGHTEST'
+        molecule['ag_exp_time'] = 10
+        if 'source_type' in params:  # then Sidereal target (use smaller window)
+            molecule['acquire_radius_arcsec'] = 5.0
+        else:
+            molecule['acquire_radius_arcsec'] = 15.0  # NOTE: if this keyword exists, 'acquire_mode' is ignored, and will acquire on brightest
     else:
         molecule['filter'] = exp_filter[0]
         molecule['ag_mode'] = 'OPTIONAL'  # ON, OFF, or OPTIONAL. Must be uppercase now...
@@ -1298,6 +1335,7 @@ def make_molecules(params):
     calib_mode = params.get('calibs', 'none').lower()
     if params.get('spectroscopy', False) is True:
         # Spectroscopy mode
+        params['spectra_slit'] = params['filter_pattern']
         spectrum_molecule = make_molecule(params, filt_list[0])
         if calib_mode != 'none':
             old_type = params['exp_type']
@@ -1345,8 +1383,25 @@ def make_single(params, ipp_value, request):
     }
 
 # If the ToO mode is set, change the observation_type
-    if params.get('too_mode', False) == True:
+    if params.get('too_mode', False) is True:
         user_request['observation_type'] = 'TARGET_OF_OPPORTUNITY'
+
+    return user_request
+
+
+def make_many(params, ipp_value, request, cal_request):
+    """Create a user_request for a MANY observation of the asteroid
+    target (<request>) and calibration source (<cal_request>)"""
+
+    user_request = {
+                    'submitter' : params['user_id'],
+                    'requests'  : [request, cal_request],
+                    'group_id'  : params['group_id'],
+                    'observation_type': "NORMAL",
+                    'operator'  : "MANY",
+                    'ipp_value' : ipp_value,
+                    'proposal'  : params['proposal_id']
+    }
 
     return user_request
 
@@ -1471,9 +1526,11 @@ def configure_defaults(params):
             params['exp_type'] = 'SPECTRUM'
             params['instrument'] = '2M0-FLOYDS-SCICAM'
             params['binning'] = 1
+            if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
+                params['calibsrc_exptime'] = 60.0
             if params.get('filter', None):
                 del(params['filter'])
-            params['spectra_slit'] = 'slit_2.0as'
+            params['spectra_slit'] = 'slit_6.0as'
     elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
@@ -1528,15 +1585,39 @@ def make_userrequest(elements, params):
             "windows": [window],
             "observation_note": note,
         }
+    if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
+        # Assemble solar analog request
+        params['group_id'] += "+solstd"
+        params['source_id'] = params['calibsource']['name']
+        params['ra_deg'] = params['calibsource']['ra_deg']
+        params['dec_deg'] = params['calibsource']['dec_deg']
+        cal_target = make_target(params)
+        exp_time = params['exp_time']
+        params['exp_time'] = params['calibsrc_exptime']
+        cal_molecule_list = make_molecules(params)
+        params['exp_time'] = exp_time
+
+        cal_request = {
+                        "location": location,
+                        "constraints": constraints,
+                        "target": cal_target,
+                        "molecules": cal_molecule_list,
+                        "windows": [window],
+                        "observation_note": note,
+                    }
+    else:
+        cal_request = {}
 
 # If site is ELP, increase IPP value
-    ipp_value = 1.05
+    ipp_value = 1.00
     if params['site_code'] == 'V37':
-        ipp_value = 1.05
+        ipp_value = 1.00
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
         user_request = make_cadence(elements, params, ipp_value, request)
+    elif len(cal_request) > 0:
+        user_request = make_many(params, ipp_value, request, cal_request)
     else:
         user_request = make_single(params, ipp_value, request)
 
@@ -1545,7 +1626,83 @@ def make_userrequest(elements, params):
     return user_request
 
 
+def check_for_perturbation(elements, params):
+    """
+    Check if target orbit needs perturbed elements sent to telescope
+    """
+
+    # compare unperturbed and perturbed coordinates at begining of night
+    emp_line_base = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=False, display=False)
+    emp_line_perturb = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=True, display=False)
+
+    # assaign Magnitude and position angle
+    if emp_line_base[3] and emp_line_base[3] > 0:
+        elements['v_mag'] = emp_line_base[3]
+    elements['sky_pa'] = emp_line_base[7]
+
+    # Calculate offset in arcseconds between two coordinates
+    try:
+        offset = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_line_perturb[1], emp_line_perturb[2])) * 3600
+    except IndexError:
+        logger.error("Could not compute perturbation coordinates")
+        offset = 0
+
+    # Compare with find_orb generated ephemeris
+    offset2 = 0
+    if params.get('findorb_ephem', None) is not None:
+        emp_start = params['findorb_ephem']
+        if emp_start is not None:
+            offset2 = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_start[1], emp_start[2])) * 3600
+
+    logger.info("Offset between perturbed and unperturbed position is %s arcseconds" % offset)
+    logger.info("Offset between find_orb  and unperturbed position is %s arcseconds" % offset2)
+
+    # Check if offset is "reasonable"
+    # Ignore if too small (won't matter)
+    # Ignore if too large (possible error. Should calculate new orbit instead)
+    if 1 < offset < 300:
+        logger.info("Perturbing Elements")
+        comet = False
+        if 'elements_type' in elements and str(elements['elements_type']).upper() == 'MPC_COMET':
+            comet = True
+
+        # Convert MJD(UTC) to MJD(TT)
+        mjd_utc = datetime2mjd_utc(params['start_time'])
+        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
+
+        p_orbelems, p_epoch_mjd, j = perturb_elements(elements, elements['epochofel_mjd'], mjd_tt, comet, True)
+
+        if j != 0:
+            logger.error("Perturbing error=%s" % j)
+            return elements
+        if comet is True:
+            elements['epochofperih'] = p_epoch_mjd
+            elements['perihdist']    = p_orbelems['SemiAxisOrQ']
+        else:
+            elements['epochofel'] = mjd_utc2datetime(p_epoch_mjd)
+            elements['epochofel_mjd'] = p_epoch_mjd
+            elements['meandist']  = p_orbelems['SemiAxisOrQ']
+        elements['longascnode'] = degrees(p_orbelems['LongNode'])
+        elements['orbinc']      = degrees(p_orbelems['Inc'])
+        elements['argofperih']  = degrees(p_orbelems['ArgPeri'])
+        elements['eccentricity']= p_orbelems['Ecc']
+        elements['meananom']    = degrees(p_orbelems['MeanAnom'])
+        if emp_line_perturb[3] and emp_line_perturb[3] > 0:
+            elements['v_mag'] = emp_line_perturb[3]
+        elements['sky_pa'] = emp_line_perturb[7]
+    elif offset >= 100:
+        logger.error("Position offset large (%s arcsec). Consider updating orbit." % offset)
+
+    return elements
+
+
 def submit_block_to_scheduler(elements, params):
+
+    try:
+        if params['spectroscopy'] is not False and abs(elements['epochofel'] - params['start_time']) > timedelta(days=1):
+            elements = check_for_perturbation(elements, params)
+    except KeyError:
+        pass
 
     user_request = make_userrequest(elements, params)
 
@@ -1585,16 +1742,18 @@ def submit_block_to_scheduler(elements, params):
 
     request_numbers = [_['id'] for _ in request_items]
 
-    request_windows = [r['windows'] for r in user_request['requests']]
-
     if not tracking_number or not request_numbers:
         msg = "No Tracking/Request number received"
         logger.error(msg)
         params['error_msg'] = msg
         return False, params
-    params['request_numbers'] = request_numbers
+
+    request_types = dict([(r['id'], r['target']['type']) for r in request_items])
+    request_windows = [r['windows'] for r in user_request['requests']]
+
     params['block_duration'] = sum([float(_['duration']) for _ in request_items])
     params['request_windows'] = request_windows
+    params['request_numbers'] = request_types
 
     request_number_string = ", ".join([str(x) for x in request_numbers])
     logger.info("Tracking, Req number=%s, %s" % (tracking_number, request_number_string))
@@ -1918,3 +2077,93 @@ def fetch_list_targets(list_targets):
 
     return new_target_list
 
+
+def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
+    """Parses either the passed [page] or fetches the table of
+    spectrophotometric flux standards from ESO's page at:
+    https://www.eso.org/sci/observing/tools/standards/spectra/stanlis.html
+    The page is parsed and a dictionary of the flux standards is returned with
+    the key set to the name of the standard. This will then points to a sub-dictionary
+    containing:
+    *  ra_rad : J2000 Right Ascension (radians),
+    * dec_rad : J2000 Declination (radians),
+    *     mag : V magnitude,
+    * sp_type : Spectral type,
+    *   notes : Notes
+    If [filter_optical_model] is True, then entries that have 'Mod' in the Notes,
+    indicating that they only modelled (not observed) optical spectra, are removed
+    from the results.
+    """
+
+    if page is None:
+        flux_standards_url = 'https://www.eso.org/sci/observing/tools/standards/spectra/stanlis.html'
+        page = fetchpage_and_make_soup(flux_standards_url)
+        if not page:
+            return None
+    flux_standards = {}
+
+    if type(page) == BeautifulSoup:
+        tables = page.find_all('div', {"class" : "richtext text parbase section"})
+        if len(tables) == 1:
+            links = tables[0].find_all('a')
+            for link in links:
+                name = link.text.strip()
+                if dbg:
+                    print("Standard=", name)
+                standard_details = {}
+                if link.next_sibling:
+                    string = link.next_sibling.encode('ascii', 'ignore')
+                    if dbg:
+                        print(string)
+                    nstart = 1
+                    nstart, ra, status = S.sla_dafin(string, nstart)
+                    if status == 0:
+                        ra = ra * 15.0
+                    else:
+                        ra = None
+                    nstart, dec, status = S.sla_dafin(string, nstart)
+                    if status != 0:
+                        dec = None
+                    info = string[nstart-1:].rstrip().split()
+                    mag = None
+                    if len(info) >= 1:
+                        try:
+                            mag = float(info[0])
+                        except ValueError:
+                            mag = None
+                    spec_type = ''
+                    if len(info) >= 2:
+                        spec_type = info[1].decode('utf-8', 'ignore')
+                    notes = ''
+                    if len(info) == 3:
+                        notes = info[2].decode('utf-8', 'ignore')
+                    if ra and dec and mag and ((notes != 'Mod.' and filter_optical_model is True) or filter_optical_model is False):
+                        flux_standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec,
+                            'mag' : mag, 'spectral_type' : spec_type, 'notes' : notes}
+        else:
+            logger.warning("Unable to find table of flux standards in page")
+    else:
+        logger.warning("Passed page object was not a BeautifulSoup object")
+    return flux_standards
+
+def read_solar_standards(standards_file):
+
+    standards = {}
+
+    data = ascii.read(standards_file, format='fixed_width_no_header', \
+        names=('Name', 'RA', 'Dec', 'Vmag'), col_starts=(4,25,37,49))
+    for row in data:
+        name = row['Name'].replace('Land', 'Landolt').replace('(SA) ', 'SA')
+        nstart = 1
+        nstart, ra, status = S.sla_dafin(row['RA'].replace(':', ' '), nstart)
+        if status == 0:
+            ra = ra * 15.0
+        else:
+            ra = None
+        nstart = 1
+        nstart, dec, status = S.sla_dafin(row['Dec'].replace(':', ' '), nstart)
+        if status != 0:
+            dec = None
+        Vmag = row['Vmag']
+        standards[name] = { 'ra_rad' : ra, 'dec_rad' : dec, 'mag' : Vmag, 'spectral_type' : 'G2V' }
+    return standards

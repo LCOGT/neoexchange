@@ -41,7 +41,12 @@ RUN yum -y install epel-release \
                 supervisor libssl libffi libffi-devel \
                 mariadb-devel gcc gcc-gfortran openssl-devel ImageMagick \
                 less wget which tcsh plplot plplot-libs plplot-devel \
+                git gcc-c++ ncurses-devel\
         && yum -y update
+
+# Install Developer Toolset 7 for newer g++ version
+RUN yum -y install centos-release-scl \
+        && yum -y install devtoolset-7
 
 # Enable LCO repo and install extra packages
 COPY config/lcogt.repo /etc/yum.repos.d/lcogt.repo
@@ -71,3 +76,27 @@ COPY docker/ /
 
 # Copy the LCO NEOexchange webapp files
 COPY neoexchange /var/www/apps/neoexchange
+
+# Download and build find_orb
+RUN mkdir /tmp/git_find_orb \
+    && cd /tmp/git_find_orb \
+    && git clone https://github.com/Bill-Gray/lunar.git \
+    && git clone https://github.com/Bill-Gray/sat_code.git \
+    && git clone https://github.com/Bill-Gray/jpl_eph.git \
+    && git clone https://github.com/Bill-Gray/find_orb.git
+
+# Start a new shell and enable the Developer Toolset 7 toolchain so we get newer (7.3) g++
+SHELL ["scl", "enable devtoolset-7"]
+RUN cd /tmp/git_find_orb \
+    && cd lunar && make && make install && cd .. \
+    && cd jpl_eph && make && make install && cd .. \
+    && cd lunar && make integrat && make install && cd .. \
+    && cd sat_code && make && make install && cd .. \
+    && cd find_orb && make && make install && cp ps_1996.dat elp82.dat /root/.find_orb && cd .. \
+    && cp /root/bin/fo /usr/local/bin/ \
+    && chmod 755 /root \
+    && chown nginx:nginx /root/.find_orb \
+    && rm -rf /tmp/git_find_orb
+
+# Copy default findorb config file
+COPY neoexchange/photometrics/configs/environ.def /root/.find_orb/
