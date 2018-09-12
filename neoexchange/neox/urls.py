@@ -26,7 +26,7 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
-    make_spec, PlotSpec, display_movie, GuideMovie, \
+    display_spec, PlotSpec, display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     make_standards_plot, make_solar_standards_plot, CalibSpectroFeasibility, ScheduleCalibParameters
 
@@ -43,7 +43,7 @@ urlpatterns = [
     url(r'^make-solar-standards-plot/$', make_solar_standards_plot, name='make-solar-standards-plot'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
-    url(r'^block/(?P<pk>\d+)/spectra/spectra.png$', make_spec, name='make_spec'),
+    url(r'^block/(?P<pk>\d+)/spectra/spectra.png$', display_spec, name='display_spec'),
     url(r'^block/(?P<pk>\d+)/spectra/$', PlotSpec.as_view(), name='plotspec'),
     url(r'^block/(?P<pk>\d+)/guidemovie/$', GuideMovie.as_view(), name='guidemovie'),
     url(r'^block/(?P<pk>\d+)/spectra/guidemovie.gif$', display_movie, name='display_movie'),

@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files
-from core.views import make_movie
-import pprint
+from core.views import make_movie, make_spec
 
 
 class Command(BaseCommand):
@@ -83,5 +82,6 @@ class Command(BaseCommand):
             for frame in all_frames['']:
                 if "tar.gz" in frame['filename']:
                     make_movie(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'])
+                    make_spec(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'])
         else:
             self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")

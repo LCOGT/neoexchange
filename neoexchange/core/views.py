@@ -42,10 +42,6 @@ try:
     import pyslalib.slalib as S
 except ImportError:
     pass
-
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import io
 
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
@@ -74,6 +70,10 @@ from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
+
+# import matplotlib
+# matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -2454,21 +2454,37 @@ def find_spec(pk):
     return date_obs, obj, req, path, prop
 
 
-def make_spec(request, pk):
-    """Creates plot of spectra data for spectra blocks
-       <pk>: pk of block (not superblock)
-    """
-
+def display_spec(request, pk):
     date_obs, obj, req, path, prop = find_spec(pk)
+    base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
+    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+".png"))
+    if spec_files:
+        spec_file = spec_files[0]
+    else:
+        spec_file = ''
+    if not spec_file:
+        spec_file = make_spec(date_obs, obj, req, base_dir, prop)
+    if spec_file:
+        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
+        spec_plot = open(spec_file, 'rb').read()
+        return HttpResponse(spec_plot, content_type="Image/png")
+    else:
+        return HttpResponse()
+
+
+def make_spec(date_obs, obj, req, base_dir, prop):
+    """Creates plot of spectra data for spectra blocks
+       <pk>: pk of block (not superblock)
+    """
+    path = os.path.join(base_dir, obj + '_' + req)
     filename = glob(os.path.join(path, '*2df_ex.fits'))  # checks for file in path
     spectra_path = None
     if filename:
         spectra_path = filename[0]
     else:
-        base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
         tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
         if tar_files:
             for tar in tar_files:
@@ -2477,7 +2493,7 @@ def make_spec(request, pk):
                     unpack_path = os.path.join(base_dir, obj+'_'+req)
                 else:
                     logger.error("Could not find tarball for block: %s" % pk)
-                    return HttpResponse()
+                    return None
             spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
             for spec in spec_files:
                 if '2df_ex.fits' in spec:
@@ -2485,17 +2501,17 @@ def make_spec(request, pk):
                     break
         else:
             logger.error("Could not find spectrum data or tarball for block: %s" % pk)
-            return HttpResponse()
+            return None
 
     if spectra_path:  # plots spectra
         spec_file = os.path.basename(spectra_path)
         spec_dir = os.path.dirname(spectra_path)
-        fig, buffer = get_spec_plot(spec_dir, spec_file)
-        return HttpResponse(buffer.getvalue(), content_type="Image/png")
+        spec_plot = get_spec_plot(spec_dir, spec_file)
+        return spec_plot
 
     else:
         logger.error("Could not find spectrum data for block: %s" % pk)
-        return HttpResponse()
+        return None
 
 
 class PlotSpec(View):  # make loging required later

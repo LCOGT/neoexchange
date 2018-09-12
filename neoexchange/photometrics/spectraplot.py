@@ -357,8 +357,9 @@ def get_spec_plot(path, spectra):
         title = name
     xsmooth, ysmooth = smooth(x, y)
     plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, title)
-    buffer = io.BytesIO()
-    fig.savefig(buffer, format='png')
+
+    save_file = os.path.join(path, name.replace(' ', '_') + "spectra.png")
+    fig.savefig(save_file, format='png')
     plt.close()
 
-    return fig, buffer
+    return save_file
