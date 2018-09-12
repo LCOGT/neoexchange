@@ -1791,6 +1791,223 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 
+def find_spec(pk):
+    """find directory of spectra for a certain block
+    NOTE: Currently will only pull first spectrum of a superblock
+    """
+    base_dir = settings.DATA_ROOT
+    try:
+        # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
+        block = Block.objects.get(pk=pk)
+        url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
+    except IndexError:
+        return '', '', '', '', ''
+    data = lco_api_call(url)['data']
+    if 'DAY_OBS' in data:
+        date_obs = data['DAY_OBS']
+    elif 'DAY-OBS' in data:
+        date_obs = data['DAY-OBS']
+    else:
+        date_obs = str(int(block.block_start.strftime('%Y%m%d'))-1)
+
+    obj = block.current_name().replace(' ', '_')
+
+    if 'REQNUM' in data:
+        req = data['REQNUM']
+    else:
+        req = block.tracking_number
+    path = os.path.join(base_dir, '', date_obs, obj + '_' + req, '')
+    prop = block.proposal.code
+    if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
+        date_obs = str(int(date_obs)-1)
+        path = os.path.join(base_dir, '', date_obs, obj + '_' + req, '')
+
+    return date_obs, obj, req, path, prop
+
+
+def make_spec(request, pk):
+    """Creates plot of spectra data for spectra blocks
+       <pk>: pk of block (not superblock)
+    """
+
+    date_obs, obj, req, path, prop = find_spec(pk)
+    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
+
+    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checks for file in path
+    spectra_path = None
+    if filename:
+        spectra_path = filename[0]
+    else:
+        base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
+        tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
+        if tar_files:
+            for tar in tar_files:
+                if req in tar:
+                    tar_path = tar
+                    unpack_path = os.path.join(base_dir, obj+'_'+req)
+                else:
+                    logger.error("Could not find tarball for block: %s" % pk)
+                    return HttpResponse()
+            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
+            for spec in spec_files:
+                if '2df_ex.fits' in spec:
+                    spectra_path = spec
+                    break
+        else:
+            logger.error("Could not find spectrum data or tarball for block: %s" % pk)
+            return HttpResponse()
+
+    if spectra_path:  # plots spectra
+        spec_file = os.path.basename(spectra_path)
+        spec_dir = os.path.dirname(spectra_path)
+        x, y, yerr, xunits, yunits, yfactor, name = read_spectra(spec_dir, spec_file)
+        xsmooth, ysmooth = smooth(x, y)
+        fig, ax = plt.subplots()
+        plot_spectra(xsmooth, ysmooth/yfactor, yunits.to_string('latex'), ax, name)
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format='png')
+        plt.close()
+        return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+    else:
+        logger.error("Could not find spectrum data for block: %s" % pk)
+        return HttpResponse()
+
+
+class PlotSpec(View):  # make loging required later
+
+    template_name = 'core/plot_spec.html'
+
+    def get(self, request, *args, **kwargs):
+        params = {'pk' : kwargs['pk']}
+
+        return render(request, self.template_name, params)
+
+
+def display_movie(request, pk):
+    """Display previously made guide movie, or make one if no movie found."""
+
+    date_obs, obj, req, path, prop = find_spec(pk)
+    base_dir = os.path.join(settings.DATA_ROOT, date_obs)
+    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
+
+    movie_files = glob(os.path.join(path, "Guide_frames", "guidemovie.gif"))
+    if movie_files:
+        movie_file = movie_files[0]
+    else:
+        movie_file = ''
+    if not movie_file:
+        movie_file = make_movie(date_obs, obj, req, base_dir, prop)
+    if movie_file:
+        logger.debug('MOVIE FILE: {}'.format(movie_file))
+        movie = open(movie_file, 'rb').read()
+        return HttpResponse(movie, content_type="Image/gif")
+    else:
+        return HttpResponse()
+
+
+def make_movie(date_obs, obj, req, base_dir, prop):
+    """Make gif of FLOYDS Guide Frames given the following:
+    <date_obs> -- Day of Observation (i.e. '20180910')
+    <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
+    <req> -- Request number of the observation
+    <base_dir> -- Directory of data. This will be the DATA_ROOT/date_obs/
+    <prop> -- Proposal ID
+    NOTE: Can take a while to load if building new gif with many frames.
+    """
+
+    path = os.path.join(base_dir, obj + '_' + req)
+    logger.info('BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
+
+    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
+    frames = []
+    if not filename:
+        unpack_path = os.path.join(base_dir, obj+'_'+req)
+        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
+        if tar_files:
+            tar_path = tar_files[0]
+            logger.info("Unpacking 1st tar")
+            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
+            filename = spec_files[0]
+        else:
+            logger.error("Could not find tarball for request: %s" % req)
+            return None
+    if filename:  # If first order tarball is unpacked
+        movie_dir = glob(os.path.join(path, "Guide_frames"))
+        if movie_dir:  # if 2nd order tarball is unpacked
+            frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
+            if not frames:
+                frames = glob(os.path.join(movie_dir[0], "*.fits"))
+        else:  # unpack 2nd tarball
+            tarintar = glob(os.path.join(path, "*.tar"))
+            if tarintar:
+                unpack_path = os.path.join(path, 'Guide_frames')
+                guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
+                logger.info("Unpacking tar in tar")
+                for file in guide_files:
+                    if '.fits.fz' in file:
+                        frames.append(file)
+            else:
+                logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
+                return None
+    else:
+        logger.error("Could not find spectrum data or tarball for request: %s" % req)
+        return None
+    if frames is not None and len(frames) > 0:
+        logger.debug("#Frames = {}".format(len(frames)))
+        logger.info("Making Movie...")
+        movie_file = make_gif(frames)
+        return movie_file
+    else:
+        logger.error("There must be at least 1 frame to make guide movie.")
+        return None
+
+
+class GuideMovie(View):
+    # make logging required later
+
+    template_name = 'core/guide_movie.html'
+
+    def get(self, request, *args, **kwargs):
+        params = {'pk': kwargs['pk']}
+
+        return render(request, self.template_name, params)
+
+
+def make_standards_plot(request):
+    """creates stellar standards plot to be added to page"""
+
+    scoords = readSources('Solar')
+    fcoords = readSources('Flux')
+
+    ax = plt.figure().gca()
+    plotScatter(ax, scoords, 'b*')
+    plotScatter(ax, fcoords, 'g*')
+    plotFormat(ax, 0)
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    plt.close()
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+
+def make_solar_standards_plot(request):
+    """creates solar standards plot to be added to page"""
+
+    scoords = readSources('Solar')
+    ax = plt.figure().gca()
+    plotScatter(ax, scoords, 'b*')
+    plotFormat(ax, 1)
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    plt.close()
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+
 def update_taxonomy(taxobj, dbg=False):
     """Update the passed <taxobj> for a new taxonomy update.
     <taxobj> is expected to be a list of:
