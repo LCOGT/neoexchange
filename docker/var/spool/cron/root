@@ -7,4 +7,4 @@
 30 */6 * * * source /var/www/apps/neoexchange/cronwrapper; python3 /var/www/apps/neoexchange/manage.py zoo_mtd_confirm
 10 7 * * 0 source /var/www/apps/neoexchange/cronwrapper; python3 /var/www/apps/neoexchange/manage.py update_taxonomy_data
 30 7 * * 0 source /var/www/apps/neoexchange/cronwrapper; python3 /var/www/apps/neoexchange/manage.py update_external_spectroscopy_data -a
-15 18,22 * * * source ~/download_FLOYDS_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
+30 19,22 * * * source ~/download_FLOYDS_data_cron "$(date --date '1 day ago' +\%Y\%m\%d)"
