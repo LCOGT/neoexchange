@@ -67,7 +67,7 @@ from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from photometrics.spectraplot import read_spectra, smooth, plot_spectra
+from photometrics.spectraplot import get_spec_plot
 from photometrics.gf_movie import make_gif
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
@@ -2490,13 +2490,7 @@ def make_spec(request, pk):
     if spectra_path:  # plots spectra
         spec_file = os.path.basename(spectra_path)
         spec_dir = os.path.dirname(spectra_path)
-        x, y, yerr, xunits, yunits, yfactor, name = read_spectra(spec_dir, spec_file)
-        xsmooth, ysmooth = smooth(x, y)
-        fig, ax = plt.subplots()
-        plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, name)
-        buffer = io.BytesIO()
-        fig.savefig(buffer, format='png')
-        plt.close()
+        fig, buffer = get_spec_plot(spec_dir, spec_file)
         return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
     else:

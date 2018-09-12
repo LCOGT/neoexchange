@@ -11,6 +11,7 @@ from astropy.wcs import WCS
 from astropy import units as u
 import matplotlib.pyplot as plt
 import os
+import io
 from glob import glob
 import logging
 # import matplotlib.ticker as ticker
@@ -341,41 +342,14 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
     ax.axis([x[0].value, x[-1].value, 0, (y[peak_idx]*2)])
 
 
-# if __name__ == "__main__":
-#
-#     # path = '/home/adam/test_spectra/' #will make m9ore general file passing later
-#     sol_path = '/home/atedeschi/test_spectra/calspec/'
-#     path = '/home/atedeschi/test_spectra/1627/'
-#     # spectra = '398188/ntt398188_ftn_20180722_merge_6.0_58322_1_2df_ex.fits'
-#     spectra = '20180618/ntt1627_ftn_20180618_merge_6.0_58288_2_2df_ex.fits'
-#     # spectra = '60/ntt60_ftn_20180612_merge_2.0_58282_1_2df_ex.fits'
-#     # spectra = '16/ntt16_ftn_20180606_merge_2.0_58276_1_2df_ex.fits'
-#     # spectra = 'eros_visnir_reference_to1um.ascii'
-#     # spectra = 'alpha_lyr_stis_008.fits' #vega?
-#     # spectra = 'bd17d4708_stis_001.fits'
-#     # spectra = 'a001981.4.txt'
-#     # spectra = 'fcd_34d241.dat'
-#     # spectra = 'fhr718.dat'
-#     sol_ref = 'fhr9087.dat'
-#     # sol_path = '/home/atedeschi/test_spectra/Solar_analogs/HD209847/'
-#     # sol_ref = 'calspec/sun_mod_001.fits'
-#     # sol_ref = 'nttHD209847_ftn_20180625_merge_2.0_58295_2_2df_ex.fits'
-#     # sol_ref =  'solar_standard_V2.fits'
-#     # sol_ref = 'calspec/sun_reference_stis_001.fits'
-#
-#     with warnings.catch_warnings():
-#         warnings.simplefilter("ignore")
-#         x, y, yerr, x_units, y_units, y_factor, obj_name = read_spectra(path, spectra)
-#     xsmoothed, ysmoothed = smooth(x, y)  # ,window) #[window/2:-window/2]
-#
-#     with warnings.catch_warnings():
-#         warnings.simplefilter("ignore")
-#         x_ref, y_ref, yerr_ref, x_ref_units, y_ref_units, y_factor_ref, obj_name_ref = read_spectra(sol_path, sol_ref)
-#     x_refsmoothed, y_refsmoothed = smooth(x_ref, y_ref)  # ,window_ref)
-#
-#     fig, ax = plt.subplots(nrows=2, sharex=True)
-#     plot_spectra(xsmoothed, ysmoothed/y_factor, y_units.to_string('latex'), ax[0], obj_name, ref=0)
-#     plot_spectra(x_refsmoothed, y_refsmoothed/y_factor_ref, y_ref_units.to_string('latex'), ax[1], obj_name_ref, ref=1)
-#     plt.tight_layout(pad=1, w_pad=.5, h_pad=.5)
-#
-#     plt.show()
+def get_spec_plot(path, spectra):
+
+    fig, ax = plt.subplots()
+    x, y, yerr, xunits, yunits, yfactor, name = read_spectra(path, spectra)
+    xsmooth, ysmooth = smooth(x, y)
+    plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, name)
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png')
+    plt.close()
+
+    return fig, buffer
