@@ -15,9 +15,9 @@ import os
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi
-import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import json
 import urllib
 import logging
