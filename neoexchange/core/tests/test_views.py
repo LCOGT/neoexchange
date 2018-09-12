@@ -3895,7 +3895,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('A', body.origin)
         self.assertEqual('2015 FP118', body.name)
         self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
-        self.assertIsNot(None, body.perihdist)
+        self.assertIs(None, body.perihdist)
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)
@@ -3939,7 +3939,7 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('A', body.origin)
         self.assertEqual('2015 FP118', body.name)
         self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
-        self.assertIsNot(None, body.perihdist)
+        self.assertIs(None, body.perihdist)
 
     @patch('core.views.datetime', MockDateTime)
     @patch('astrometrics.time_subs.datetime', MockDateTime)

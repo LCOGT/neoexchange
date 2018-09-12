@@ -1720,8 +1720,15 @@ def update_crossids(astobj, dbg=False):
         # than the MPC. In this case, leave it active.
         if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
             kwargs['active'] = True
+        # Check if we are trying to "downgrade" a NEO or other target type
+        # to an asteroid
+        if body.source_type != 'A' and body.origin != 'M' and kwargs['source_type'] == 'A':
+            logger.warning("Not downgrading type for %s from %s to %s" % (body.current_name(), body.source_type, kwargs['source_type']))
+            kwargs['source_type'] = body.source_type
         if kwargs['source_type'] in ['C', 'H']:
             kwargs = convert_ast_to_comet(kwargs, body)
+        if dbg:
+            print(kwargs)
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
