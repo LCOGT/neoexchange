@@ -18,8 +18,6 @@ import numpy as np
 import collections
 import warnings
 import re
-import matplotlib
-matplotlib.use('Agg')
 
 logger = logging.getLogger(__name__)
 

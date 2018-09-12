@@ -15,6 +15,9 @@ import os
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 import json
 import urllib
 import logging
@@ -70,8 +73,6 @@ from core.mpc_submit import email_report_to_mpc
 from core.archive_subs import lco_api_call
 from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
     plotFormat
-
-import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
