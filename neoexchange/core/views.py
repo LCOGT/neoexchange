@@ -2439,12 +2439,12 @@ def find_spec(pk):
     else:
         date_obs = str(int(block.block_start.strftime('%Y%m%d'))-1)
 
-    obj = block.current_name().replace(' ', '')
+    obj = block.current_name().replace(' ', '_')
 
     if 'REQNUM' in data:
         req = data['REQNUM']
     else:
-        req = '000' + block.tracking_number
+        req = block.tracking_number
     path = os.path.join(base_dir, '', date_obs, obj + '_' + req, '')
     prop = block.proposal.code
     if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
@@ -2518,6 +2518,7 @@ def display_movie(request, pk):
     """Display previously made guide movie, or make one if no movie found."""
 
     date_obs, obj, req, path, prop = find_spec(pk)
+    base_dir = os.path.join(settings.DATA_ROOT, date_obs)
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
@@ -2527,7 +2528,7 @@ def display_movie(request, pk):
     else:
         movie_file = ''
     if not movie_file:
-        movie_file = make_movie(pk)
+        movie_file = make_movie(date_obs, obj, req, base_dir, prop)
     if movie_file:
         logger.debug('MOVIE FILE: {}'.format(movie_file))
         movie = open(movie_file, 'rb').read()
@@ -2536,29 +2537,32 @@ def display_movie(request, pk):
         return HttpResponse()
 
 
-def make_movie(pk):
-    """Make gif of FLOYDS Guide Frames given a spectral block
-    <pk> principle key for block (not superblock)
+def make_movie(date_obs, obj, req, base_dir, prop):
+    """Make gif of FLOYDS Guide Frames given the following:
+    <date_obs> -- Day of Observation (i.e. '20180910')
+    <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
+    <req> -- Request number of the observation
+    <base_dir> -- Directory of data. This will be the DATA_ROOT/date_obs/
+    <prop> -- Proposal ID
     NOTE: Can take a while to load if building new gif with many frames.
     """
 
-    date_obs, obj, req, path, prop = find_spec(pk)
-    base_dir = os.path.join(settings.DATA_ROOT, date_obs)
-    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
+    path = os.path.join(base_dir, obj + '_' + req)
+    logger.info('BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
     filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
     frames = []
     if not filename:
         unpack_path = os.path.join(base_dir, obj+'_'+req)
-        tar_files = glob(os.path.join(base_dir, prop+"_"+req+"*.tar.gz"))  # if file not found, looks for tarball
+        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
         if tar_files:
             tar_path = tar_files[0]
             logger.info("Unpacking 1st tar")
             spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
             filename = spec_files[0]
         else:
-            logger.error("Could not find tarball for block: %s" % pk)
+            logger.error("Could not find tarball for request: %s" % req)
             return None
     if filename:  # If first order tarball is unpacked
         movie_dir = glob(os.path.join(path, "Guide_frames"))
@@ -2576,10 +2580,10 @@ def make_movie(pk):
                     if '.fits.fz' in file:
                         frames.append(file)
             else:
-                logger.error("Could not find Guide Frames or Guide Frame tarball for block: %s" % pk)
+                logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
                 return None
     else:
-        logger.error("Could not find spectrum data or tarball for block: %s" % pk)
+        logger.error("Could not find spectrum data or tarball for request: %s" % req)
         return None
     if frames is not None and len(frames) > 0:
         logger.debug("#Frames = {}".format(len(frames)))
