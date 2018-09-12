@@ -33,6 +33,7 @@ class Command(BaseCommand):
         parser.add_argument('-dm', '--deltamag', type=float, default=0.5, help='delta magnitude tolerance for multiple matches')
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
+        parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
 
     def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title=''):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True,gridspec_kw={'height_ratios': [15, 4]})
@@ -110,7 +111,11 @@ class Command(BaseCommand):
             exit(-1)
         start_blocks = Block.objects.filter(superblock=start_super_block.id)
         start_block = start_blocks[0]
-        super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
+        if options['single'] is True:
+            super_blocks = [start_super_block,]
+        else:
+            super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
+
         times = []
         alltimes = []
         mags = []
