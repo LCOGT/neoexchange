@@ -135,59 +135,61 @@ def get_y_units(info):
     return y_units, y_factor
 
 
-def read_object(hdr):
-    """tries to identify object name from .fits header
-       input: <hdr>: fits header
-       output: obj_name
-    """
-    try:
-        obj_name = hdr['OBJECT']
-    except KeyError:
-        obj_name = ""
-    return obj_name
-
-
 def read_spectra(path, spectra):
     """reads in all important data from spectra file (Works for .ascii 2 .fits standards, and .txt)
        inputs: <spectra_file>: path and file name to spectra
        outputs: wavelength (Quantity type), flux, flux_error, x_units, y_units, obj_name
     """
     spectra_file = os.path.join(path, spectra)
+    other = None
     if spectra_file.endswith('.fits'):
-        hdul = fits.open(spectra_file)  # read in data
-        # LCO fits standard:
-        if hdul[0].data is not None:
-            data = hdul[0].data
-            hdr = hdul[0].header
-            y_data = data.flatten()[:max(data.shape)]
-            w = WCS(hdr, naxis=1, relax=False, fix=False)
+        with fits.open(spectra_file, ignore_missing_end=True) as hdul:  # read in data
+            # LCO fits standard:
+            if hdul[0].data is not None:
+                data = hdul[0].data
+                hdr = hdul[0].header
+                y_data = data.flatten()[:max(data.shape)]
+                w = WCS(hdr, naxis=1, relax=False, fix=False)
 
-            x_data = w.wcs_pix2world(np.arange(len(y_data)), 0)[0]
+                x_data = w.wcs_pix2world(np.arange(len(y_data)), 0)[0]
+
+                try:
+                    flux_error = np.array(data[3][0])
+                except IndexError:
+                    logger.warning("Could not parse error data for spectra")
+                    flux_error = np.zeros(len(x_data))
+            # fits standard 2:
+            elif hdul[1].data is not None:
+                data = hdul[1].data
+                hdr = hdul[1].header
+                x_data = np.array(list(n[0] for n in data))
+                y_data = np.array(list(n[1] for n in data))
+
+                if len(data[0]) > 2:
+                    flux_error = np.array(list(n[2] for n in data))
+                else:
+                    flux_error = np.zeros(len(x_data))
+            else:
+                raise ImportError("Could not read data from .fits file")
 
             try:
-                flux_error = np.array(data[3][0])
-            except IndexError:
-                logger.warning("Could not parse error data for spectra")
-                flux_error = np.zeros(len(x_data))
-        # fits standard 2:
-        elif hdul[1].data is not None:
-            data = hdul[1].data
-            hdr = hdul[1].header
-            x_data = np.array(list(n[0] for n in data))
-            y_data = np.array(list(n[1] for n in data))
+                obj_name = hdr['OBJECT']
+            except KeyError:
+                obj_name = ''
+            try:
+                tn = hdr['TRACKNUM'].lstrip('0')
+                site = hdr['SITEID'].upper()
+            except KeyError:
+                tn = site = inst = None
+            try:
+                date_obs = hdr['DATE-OBS']
+            except KeyError:
+                date_obs = hdr['DATE_OBS']
 
-            if len(data[0]) > 2:
-                flux_error = np.array(list(n[2] for n in data))
-            else:
-                flux_error = np.zeros(len(x_data))
-        else:
-            raise ImportError("Could not read data from .fits file")
-
-        obj_name = read_object(hdr)
-
-        x_units = get_x_units(x_data)
-        y_units, y_factor = get_y_units(hdr)
-        check_norm(hdul[0].header.values())  # check if data is already normalized
+            other = [date_obs, tn, site]
+            x_units = get_x_units(x_data)
+            y_units, y_factor = get_y_units(hdr)
+            check_norm(hdul[0].header.values())  # check if data is already normalized
 
     elif spectra_file.endswith('.ascii'):
         data = ascii.read(spectra_file)  # read in data
@@ -250,7 +252,7 @@ def read_spectra(path, spectra):
     if not obj_name:
         logger.warning("Could not parse object name from file")
 
-    return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name
+    return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name, other
 
 
 def smooth(x, y):
@@ -345,9 +347,16 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
 def get_spec_plot(path, spectra):
 
     fig, ax = plt.subplots()
-    x, y, yerr, xunits, yunits, yfactor, name = read_spectra(path, spectra)
+    x, y, yerr, xunits, yunits, yfactor, name, details = read_spectra(path, spectra)
+    if not name:
+        name = "????"
+    if details:
+        title = 'UT Date: {}'.format(details[0])
+        fig.suptitle('Tracking Number {} -- {} at {}'.format(details[1], name, details[2]))
+    else:
+        title = name
     xsmooth, ysmooth = smooth(x, y)
-    plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, name)
+    plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, title)
     buffer = io.BytesIO()
     fig.savefig(buffer, format='png')
     plt.close()
