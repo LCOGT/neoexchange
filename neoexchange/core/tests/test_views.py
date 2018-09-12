@@ -3923,7 +3923,7 @@ class TestUpdate_Crossids(TestCase):
         body = Body.objects.get(pk=self.body.pk)
         body.pk = None
         body.provisional_name = 'A9999'
-        body.origin = 'M'
+        body.origin = 'N'
         body.ingest = datetime(2018, 9, 2, 12, 13, 14)
         body.save()
         self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
@@ -3932,6 +3932,50 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual(2, Body.objects.count(), msg="After update_crossids; should be 2 Bodies")
 
         body = Body.objects.get(name='2015 FP118')
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('A', body.origin)
+        self.assertEqual('2015 FP118', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+        self.assertIs(None, body.perihdist)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_same_obj_multiple_copies_different_provids_from_MPC(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.provisional_name = 'P10jZsv'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+        self.body.save()
+
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'A9999'
+        body.origin = 'M'
+        body.ingest = datetime(2018, 9, 2, 12, 13, 14)
+        body.save()
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(3, Body.objects.count(), msg="After update_crossids; should still be 3 Bodies (MPC origin)")
+
+        body = Body.objects.get(pk=1)
 
         self.assertEqual(True, status)
         self.assertEqual(True, body.active)

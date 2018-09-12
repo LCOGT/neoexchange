@@ -1705,10 +1705,13 @@ def update_crossids(astobj, dbg=False):
             logger.info("Removing %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
             num_sblocks = SuperBlock.objects.filter(body=del_body).count()
             num_blocks = Block.objects.filter(body=del_body).count()
-            if num_sblocks == 0 and num_blocks == 0:
-                del_body.delete()
+            if del_body.origin != 'M':
+                if num_sblocks == 0 and num_blocks == 0 and del_body.origin != 'M':
+                    del_body.delete()
+                else:
+                    logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
             else:
-                logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
+                logger.info("Origin of Body is MPC, not removing")
 
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
@@ -1732,7 +1735,7 @@ def update_crossids(astobj, dbg=False):
         check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
-            logger.info("Updated cross identification for %s" % temp_id)
+            logger.info("Updated cross identification for %s" % body.current_name())
     elif kwargs != {}:
         # Didn't know about this object before so create but make inactive
         kwargs['active'] = False
