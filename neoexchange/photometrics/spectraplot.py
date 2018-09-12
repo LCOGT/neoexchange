@@ -147,7 +147,7 @@ def read_object(hdr):
 
 
 def read_spectra(path, spectra):
-    """reads in all inportant data from spectra file (Works for .ascii 2 .fits standards, and .txt)
+    """reads in all important data from spectra file (Works for .ascii 2 .fits standards, and .txt)
        inputs: <spectra_file>: path and file name to spectra
        outputs: wavelength (Quantity type), flux, flux_error, x_units, y_units, obj_name
     """
@@ -324,10 +324,12 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
         yyy = y
 
     ax.plot(x, yyy, linewidth=1)
-    ax.set_xlabel(r"wavelength ($\AA$)")
-    ax.set_ylabel(y_units)
+    ax.set_xlabel(r"Wavelength ($\AA$)")
+    ax.set_ylabel(y_units.to_string('latex_inline'))
+    ax.minorticks_on()
+    ax.tick_params(axis='y', which='minor', left=False)
     if title:
-        ax.set_title('Spectra for: '+title)
+        ax.set_title(title)
     else:
         if ref:
             ax.set_title("Solar Analog")

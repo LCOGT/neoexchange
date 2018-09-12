@@ -2493,7 +2493,7 @@ def make_spec(request, pk):
         x, y, yerr, xunits, yunits, yfactor, name = read_spectra(spec_dir, spec_file)
         xsmooth, ysmooth = smooth(x, y)
         fig, ax = plt.subplots()
-        plot_spectra(xsmooth, ysmooth/yfactor, yunits.to_string('latex'), ax, name)
+        plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, name)
         buffer = io.BytesIO()
         fig.savefig(buffer, format='png')
         plt.close()
