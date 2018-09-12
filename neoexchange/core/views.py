@@ -1688,12 +1688,14 @@ def update_crossids(astobj, dbg=False):
     desig = astobj[1]
 
     created = False
-    try:
-        body = Body.objects.get(Q(provisional_name=temp_id) | Q(name=desig))
-    except Body.DoesNotExist:
+    bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig))
+    
+    if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
         created = True
-    except Body.MultipleObjectsReturned:
+    elif bodies.count() == 1:
+        body = bodies[0]
+    else:
         logger.warning("Multiple objects found called %s or %s" % (temp_id, desig))
         return False
     # Determine what type of new object it is and whether to keep it active
