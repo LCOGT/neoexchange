@@ -184,7 +184,6 @@ def fetch_archive_frames(auth_header, archive_url, frames):
 def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False):
     """Tries to determine whether a higher reduction level of the file exists. If it does, True is
     returned otherwise False is returned"""
-
     path = os.path.dirname(filename)
     uncomp_filepath = os.path.splitext(filename)[0]
     output_file = os.path.splitext(os.path.basename(filename))[0]
@@ -235,7 +234,14 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                     if verbose:
                         print("Uncompressed -91 level reduction file already exists.")
                     return True
-
+    elif ".tar.gz" in filename:  # check for existing tarballs
+        if os.path.exists(filename) and archive_md5 is not None:
+                md5sum = md5(open(filename, 'rb').read()).hexdigest()
+                logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
+                if md5sum == archive_md5:
+                    if verbose:
+                        print("Tarball exists with correct MD5 sum")
+                    return True
     return False
 
 
