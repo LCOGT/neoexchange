@@ -1678,18 +1678,23 @@ def clean_NEOCP_object(page_list):
 def update_crossids(astobj, dbg=False):
     """Update the passed <astobj> for a new cross-identification.
     <astobj> is expected to be a list of:
-    provisional id, final id/failure reason, reference, confirmation date
+    temporary/tracklet id, final id/failure reason, reference, confirmation date
     normally produced by the fetch_previous_NEOCP_desigs() method."""
 
     if len(astobj) != 4:
         return False
 
-    obj_id = astobj[0].rstrip()
+    temp_id = astobj[0].rstrip()
+    desig = astobj[1]
 
+    created = False
     try:
-        body, created = Body.objects.get_or_create(provisional_name=obj_id)
-    except:
-        logger.warning("Multiple objects found called %s" % obj_id)
+        body = Body.objects.get(Q(provisional_name=temp_id) | Q(name=desig))
+    except Body.DoesNotExist:
+        body = Body.objects.create(provisional_name=temp_id, name=desig)
+        created = True
+    except Body.MultipleObjectsReturned:
+        logger.warning("Multiple objects found called %s or %s" % (temp_id, desig))
         return False
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
@@ -1703,15 +1708,15 @@ def update_crossids(astobj, dbg=False):
             kwargs['active'] = True
         if kwargs['source_type'] in ['C', 'H']:
             kwargs = convert_ast_to_comet(kwargs, body)
-        check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
+        check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
-            logger.info("Updated cross identification for %s" % obj_id)
+            logger.info("Updated cross identification for %s" % temp_id)
     elif kwargs != {}:
         # Didn't know about this object before so create but make inactive
         kwargs['active'] = False
         save_and_make_revision(body, kwargs)
-        logger.info("Added cross identification for %s" % obj_id)
+        logger.info("Added cross identification for %s" % temp_id)
     else:
         logger.warning("Could not add cross identification for %s" % obj_id)
         return False

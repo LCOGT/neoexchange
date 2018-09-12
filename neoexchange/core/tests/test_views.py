@@ -3869,6 +3869,7 @@ class TestUpdate_Crossids(TestCase):
         self.body.origin = u'A'
         self.body.source_type = u'N'
         self.body.provisional_name = 'P10jZsv'
+        self.body.name = '2015 FP118'
         self.body.epochofel = datetime(2018, 9, 5, 0, 0)
         self.body.eccentricity = 0.5415182
         self.body.meandist = 5.8291288
