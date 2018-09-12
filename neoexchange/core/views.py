@@ -1696,8 +1696,20 @@ def update_crossids(astobj, dbg=False):
     elif bodies.count() == 1:
         body = bodies[0]
     else:
-        logger.warning("Multiple objects found called %s or %s" % (temp_id, desig))
-        return False
+        logger.warning("Multiple objects (%d) found called %s or %s" % (bodies.count(), temp_id, desig))
+        # Sort by ingest time and remove extras (if there are no Block or SuperBlocks)
+        sorted_bodies = bodies.order_by('ingest')
+        body = sorted_bodies[0]
+        logger.info("Taking %s as canonical Body" % body.current_name())
+        for del_body in sorted_bodies[1:]:
+            logger.info("Removing %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
+            num_sblocks = SuperBlock.objects.filter(body=del_body).count()
+            num_blocks = Block.objects.filter(body=del_body).count()
+            if num_sblocks == 0 and num_blocks == 0:
+                del_body.delete()
+            else:
+                logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
+
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
     if not created:
