@@ -14,15 +14,14 @@ import os
 import io
 from glob import glob
 import logging
-# import matplotlib.ticker as ticker
 import numpy as np
 import collections
 import warnings
 import re
+import matplotlib
+matplotlib.use('Agg')
 
 logger = logging.getLogger(__name__)
-
-# np.set_#printoptions(threshold=np.inf)
 
 
 def check_norm(values):  # not perfect
