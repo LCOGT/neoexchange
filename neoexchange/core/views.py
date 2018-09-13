@@ -2453,19 +2453,19 @@ def find_spec(pk):
     return date_obs, obj, req, path, prop
 
 
-def display_spec(request, pk):
+def display_spec(request, pk, obs_num):
     date_obs, obj, req, path, prop = find_spec(pk)
     base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
     logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
     logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
 
-    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+".png"))
+    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
     if spec_files:
         spec_file = spec_files[0]
     else:
         spec_file = ''
     if not spec_file:
-        spec_file = make_spec(date_obs, obj, req, base_dir, prop)
+        spec_file = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
     if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
         spec_plot = open(spec_file, 'rb').read()
@@ -2474,12 +2474,13 @@ def display_spec(request, pk):
         return HttpResponse()
 
 
-def make_spec(date_obs, obj, req, base_dir, prop):
+def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     """Creates plot of spectra data for spectra blocks
        <pk>: pk of block (not superblock)
     """
     path = os.path.join(base_dir, obj + '_' + req)
-    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checks for file in path
+    filename = glob(os.path.join(path, '*_' + obs_num + '_2df_ex.fits'))  # checks for file in path
+    print(filename)
     spectra_path = None
     if filename:
         spectra_path = filename[0]
@@ -2491,25 +2492,25 @@ def make_spec(date_obs, obj, req, base_dir, prop):
                     tar_path = tar
                     unpack_path = os.path.join(base_dir, obj+'_'+req)
                 else:
-                    logger.error("Could not find tarball for block: %s" % pk)
+                    logger.error("Could not find tarball for request: %s" % req)
                     return None
             spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
             for spec in spec_files:
-                if '2df_ex.fits' in spec:
+                if obs_num + '_2df_ex.fits' in spec:
                     spectra_path = spec
                     break
         else:
-            logger.error("Could not find spectrum data or tarball for block: %s" % pk)
+            logger.error("Could not find spectrum data or tarball for request: %s" % req)
             return None
 
     if spectra_path:  # plots spectra
         spec_file = os.path.basename(spectra_path)
         spec_dir = os.path.dirname(spectra_path)
-        spec_plot = get_spec_plot(spec_dir, spec_file)
+        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num)
         return spec_plot
 
     else:
-        logger.error("Could not find spectrum data for block: %s" % pk)
+        logger.error("Could not find spectrum data for request: %s" % req)
         return None
 
 
@@ -2518,7 +2519,7 @@ class PlotSpec(View):  # make loging required later
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
-        params = {'pk' : kwargs['pk']}
+        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num']}
 
         return render(request, self.template_name, params)
 

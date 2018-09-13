@@ -338,10 +338,10 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
 
     # set axis values
     peak_idx = np.searchsorted(x, 5000*u.AA)
-    ax.axis([x[0].value, x[-1].value, 0, (y[peak_idx]*2)])
+    ax.axis([x[0].value, x[-1].value, 0, (yyy[peak_idx]*2)])
 
 
-def get_spec_plot(path, spectra):
+def get_spec_plot(path, spectra, obs_num):
 
     fig, ax = plt.subplots()
     x, y, yerr, xunits, yunits, yfactor, name, details = read_spectra(path, spectra)
@@ -355,7 +355,7 @@ def get_spec_plot(path, spectra):
     xsmooth, ysmooth = smooth(x, y)
     plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, title)
 
-    save_file = os.path.join(path, name.replace(' ', '_') + "_spectra.png")
+    save_file = os.path.join(path, name.replace(' ', '_') + "_spectra_" + obs_num + ".png")
     fig.savefig(save_file, format='png')
     plt.close()
 

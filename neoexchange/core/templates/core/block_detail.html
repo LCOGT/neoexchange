@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load staticfiles %}
+{% load staticfiles basic_tags %}
 
 {% block header %}
     {% if object.cadence %}
@@ -119,8 +119,14 @@
                               {% if blk.obstype == blk.OPT_SPECTRA or blk.obstype == blk.OPT_SPECTRA_CALIB %}
                                 <div class="block-control">{{blk.num_spectro_frames}}</div>
                                 <div class="block-control">Target: {{blk.current_name}}</div>
-                                {% if "SPECTRUM" in blk.num_spectro_frames %}
-                                  <div class="block-control"><a href="{% url 'plotspec' blk.pk %}">Spectrum Plot</a></div>
+                                {% if "TAR" in blk.num_spectro_frames %}
+                                    {% if blk.num_observed > 1 %}
+                                        {% for obs_num in blk.num_observed|make_int_list %}
+                                            <div class="block-control"><a href="{% url 'plotspec' blk.pk obs_num %}">Spectrum Plot {{obs_num}}</a></div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="block-control"><a href="{% url 'plotspec' blk.pk 1 %}">Spectrum Plot</a></div>
+                                    {% endif %}
                                   <div class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Guide Movie</a></div>
                                 {% endif %}
                               {% else %}

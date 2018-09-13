@@ -14,7 +14,7 @@
 <!-- Main body -->
 <div class="container" id="main">
     {% block graphic %}
-        <img src="{% url 'display_spec' pk %}" alt="Could not find or create spectra file to plot."> <!-- TO DO: Make alternate when image not found-->
+        <img src="{% url 'display_spec' pk  obs_num %}" alt="Could not find or create spectra file to plot."> <!-- TO DO: Make alternate when image not found-->
     {% endblock %}
 </div>
 {% endblock %}
