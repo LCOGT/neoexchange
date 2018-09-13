@@ -86,6 +86,9 @@ class Command(BaseCommand):
             for frame in all_frames['']:
                 if "tar.gz" in frame['filename']:
                     make_movie(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'])
-                    make_spec(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'])
+                    spec_plot, spec_count = make_spec(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'], 1)
+                    if spec_count > 1:
+                        for obs in range(2, spec_count+1):
+                            make_spec(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'], obs)
         else:
             self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")

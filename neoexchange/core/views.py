@@ -1852,7 +1852,7 @@ def display_spec(request, pk):
     else:
         spec_file = ''
     if not spec_file:
-        spec_file = make_spec(date_obs, obj, req, base_dir, prop)
+        spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
     if spec_file:
         logger.debug('Spectroscopy Plot: {}'.format(spec_file))
         spec_plot = open(spec_file, 'rb').read()
@@ -1866,10 +1866,12 @@ def make_spec(date_obs, obj, req, base_dir, prop):
        <pk>: pk of block (not superblock)
     """
     path = os.path.join(base_dir, obj + '_' + req)
-    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checks for file in path
+    filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
     spectra_path = None
-    if filename:
-        spectra_path = filename[0]
+    obs_num = str(obs_num)
+    if filenames:
+        spectra_path = [filename for filename in filenames if obs_num + '_2df_ex.fits' in filename][0]
+        spec_count = len(filenames)
     else:
         tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
         if tar_files:
@@ -1881,10 +1883,12 @@ def make_spec(date_obs, obj, req, base_dir, prop):
                     logger.error("Could not find tarball for block: %s" % pk)
                     return None
             spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
+            spec_count = 0
             for spec in spec_files:
-                if '2df_ex.fits' in spec:
+                if '_' + obs_num + '_2df_ex.fits' in spec:
                     spectra_path = spec
-                    break
+                if '_2df_ex.fits' in spec:
+                    spec_count += 1
         else:
             logger.error("Could not find spectrum data or tarball for block: %s" % pk)
             return None
@@ -1892,8 +1896,8 @@ def make_spec(date_obs, obj, req, base_dir, prop):
     if spectra_path:  # plots spectra
         spec_file = os.path.basename(spectra_path)
         spec_dir = os.path.dirname(spectra_path)
-        spec_plot = get_spec_plot(spec_dir, spec_file)
-        return spec_plot
+        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num)
+        return spec_plot, spec_count
 
     else:
         logger.error("Could not find spectrum data for block: %s" % pk)
