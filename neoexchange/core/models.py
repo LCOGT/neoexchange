@@ -110,17 +110,17 @@ TAX_REFERENCE_CHOICES = (
                      )
 
 SPECTRAL_WAV_CHOICES = (
-                        ('Vis','Visible'),
-                        ('NIR','Near Infrared'),
-                        ('Vis+NIR','Both Visible and Near IR'),
-                        ('NA','None Yet.'),
+                        ('Vis', 'Visible'),
+                        ('NIR', 'Near Infrared'),
+                        ('Vis+NIR', 'Both Visible and Near IR'),
+                        ('NA', 'None Yet.'),
                      )
 
 SPECTRAL_SOURCE_CHOICES = (
-                        ('S','SMASS'),
-                        ('M','MANOS'),
-                        ('U','Unknown'),
-                        ('O','Other')
+                        ('S', 'SMASS'),
+                        ('M', 'MANOS'),
+                        ('U', 'Unknown'),
+                        ('O', 'Other')
                      )
 
 
@@ -641,13 +641,13 @@ class Block(models.Model):
         return total_exposure_number
 
     def num_spectro_frames(self):
-        '''Returns the numbers of different types of spectroscopic frames'''
+        """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
         data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
         if num_frames > 0:
-            moltypes = [x['OBSTYPE'] for x in data]
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
             num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
-            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(),reverse=True))
+            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string
 
