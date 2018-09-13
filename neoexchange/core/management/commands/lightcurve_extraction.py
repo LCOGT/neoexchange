@@ -180,8 +180,11 @@ class Command(BaseCommand):
                                 zps.append(frame.zeropoint)
                                 zp_errs.append(frame.zeropoint_err)
                                 fwhm.append(frame.fwhm)
-                                air_mass.append(S.sla_airmas(moon_alt_az(frame.midpoint, best_source.obs_ra,
-                                best_source.obs_dec, *get_sitepos(frame.sitecode)[1:])[1]))
+                                azimuth, altitude = moon_alt_az(frame.midpoint, \
+                                    radians(best_source.obs_ra), radians(best_source.obs_dec), \
+                                    *get_sitepos(frame.sitecode)[1:])
+                                zenith_distance = radians(90) - altitude
+                                air_mass.append(S.sla_airmas(zenith_distance))
 
                     if frame.sitecode not in mpc_site:
                         mpc_site.append(frame.sitecode)
