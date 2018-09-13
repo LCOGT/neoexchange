@@ -338,7 +338,10 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
 
     # set axis values
     peak_idx = np.searchsorted(x, 5000*u.AA)
-    ax.axis([x[0].value, x[-1].value, 0, (yyy[peak_idx]*2)])
+    try:
+        ax.axis([x[0].value, x[-1].value, 0, (yyy[peak_idx]*2)])
+    except ValueError:
+        pass
 
 
 def get_spec_plot(path, spectra, obs_num):
