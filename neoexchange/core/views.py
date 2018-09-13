@@ -2483,7 +2483,7 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     spectra_path = None
     obs_num = str(obs_num)
     if filenames:
-        spectra_path = [filename for filename in filenames if obs_num + '_2df_ex.fits' in filename][0]
+        spectra_path = filenames[int(obs_num)-1]
         spec_count = len(filenames)
     else:
         tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
@@ -2494,17 +2494,14 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
                     unpack_path = os.path.join(base_dir, obj+'_'+req)
                 else:
                     logger.error("Could not find tarball for request: %s" % req)
-                    return None
+                    return None, None
             spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
-            spec_count = 0
-            for spec in spec_files:
-                if '_' + obs_num + '_2df_ex.fits' in spec:
-                    spectra_path = spec
-                if '_2df_ex.fits' in spec:
-                    spec_count += 1
+            spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
+            spectra_path = spec_list[int(obs_num)-1]
+            spec_count = len(spec_list)
         else:
             logger.error("Could not find spectrum data or tarball for request: %s" % req)
-            return None
+            return None, None
 
     if spectra_path:  # plots spectra
         spec_file = os.path.basename(spectra_path)
@@ -2514,7 +2511,7 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
 
     else:
         logger.error("Could not find spectrum data for request: %s" % req)
-        return None
+        return None, None
 
 
 class PlotSpec(View):  # make loging required later
