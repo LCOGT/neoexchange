@@ -35,10 +35,10 @@ class Command(BaseCommand):
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
 
-    def plot_timeseries(self, times, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title=''):
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title=''):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True,gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
-        ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
+        ax1.errorbar(alltimes, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
         ax0.invert_yaxis()
         ax1.invert_yaxis()
         ax1.set_xlabel('Time')
@@ -57,11 +57,11 @@ class Command(BaseCommand):
         fig.savefig("lightcurve.png")
 
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
-        ax2.plot(times, fwhm, marker='.', color=colors, linestyle=' ')
+        ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
         ax2.set_ylabel('FWHM')
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
-        ax3.plot(times, air_mass, marker='.', color=colors, linestyle=' ')
+        ax3.plot(alltimes, air_mass, marker='.', color=colors, linestyle=' ')
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Airmass')
         # ax3.set_title('Airmass')
@@ -172,19 +172,21 @@ class Command(BaseCommand):
                                         best_source = source
 
                             if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 3 * options['deltamag']:
+                                times.append(frame.midpoint)
                                 mpc_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
                                 mpc_lines.append(mpc_line)
-                                times.append(frame.midpoint)
                                 mags.append(best_source.obs_mag)
                                 mag_errs.append(best_source.err_obs_mag)
-                                zps.append(frame.zeropoint)
-                                zp_errs.append(frame.zeropoint_err)
-                                fwhm.append(frame.fwhm)
-                                azimuth, altitude = moon_alt_az(frame.midpoint, \
-                                    radians(best_source.obs_ra), radians(best_source.obs_dec), \
-                                    *get_sitepos(frame.sitecode)[1:])
-                                zenith_distance = radians(90) - altitude
-                                air_mass.append(S.sla_airmas(zenith_distance))
+                        # We append these even if we don't have a matching source
+                        # so we can plot conditions for all frames
+                        alltimes.append(frame.midpoint)
+                        zps.append(frame.zeropoint)
+                        zp_errs.append(frame.zeropoint_err)
+                        fwhm.append(frame.fwhm)
+                        azimuth, altitude = moon_alt_az(frame.midpoint, ra, dec, \
+                            *get_sitepos(frame.sitecode)[1:])
+                        zenith_distance = radians(90) - altitude
+                        air_mass.append(S.sla_airmas(zenith_distance))
 
                     if frame.sitecode not in mpc_site:
                         mpc_site.append(frame.sitecode)
@@ -232,6 +234,6 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
-            self.plot_timeseries(times, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle)
+            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle)
         else:
             self.stdout.write("No sources matched.")
