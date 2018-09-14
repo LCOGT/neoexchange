@@ -6,7 +6,7 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Block: {{pk}}</h1>
+        <h1>Block: <a href="{% url 'block-view' sb_id %}">{{pk}}</a></h1>
     </div>
 {% endblock%}
 

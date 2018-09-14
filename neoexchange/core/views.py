@@ -2519,7 +2519,8 @@ class PlotSpec(View):  # make loging required later
     template_name = 'core/plot_spec.html'
 
     def get(self, request, *args, **kwargs):
-        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num']}
+        block = Block.objects.get(pk=kwargs['pk'])
+        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
 
         return render(request, self.template_name, params)
 
@@ -2611,7 +2612,8 @@ class GuideMovie(View):
     template_name = 'core/guide_movie.html'
 
     def get(self, request, *args, **kwargs):
-        params = {'pk': kwargs['pk']}
+        block = Block.objects.get(pk=kwargs['pk'])
+        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
 
         return render(request, self.template_name, params)
 
