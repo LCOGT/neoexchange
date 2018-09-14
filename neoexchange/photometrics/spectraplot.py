@@ -363,4 +363,7 @@ def get_spec_plot(path, spectra, obs_num):
     fig.savefig(save_file, format='png')
     plt.close()
 
+    # Write raw data to ascii file
+    ascii.write([x, y, yerr], save_file.replace('.png', '.ascii'), names=['Wavelength ({})'.format(xunits), 'Flux ({})'.format(yunits), 'Flux_error'], overwrite=True)
+
     return save_file
