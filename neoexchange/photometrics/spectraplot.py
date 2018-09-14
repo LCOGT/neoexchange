@@ -305,7 +305,7 @@ def normalize(x, y, wavelength=5500*u.AA, width=500*u.AA):
     return y/normval  # REMEMBER to normalize y-units too if normalizing final data
 
 
-def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
+def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0,):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
                <y>: flux data for y axis
@@ -321,7 +321,7 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
         yyy = y
 
     ax.plot(x, yyy, linewidth=1)
-    ax.set_xlabel(r"Wavelength ($\AA$)")
+    ax.set_xlabel('Wavelength ({})'.format(x_units.to_string('latex_inline')))
     ax.set_ylabel(y_units.to_string('latex_inline'))
     ax.minorticks_on()
     ax.tick_params(axis='y', which='minor', left=False)
@@ -350,12 +350,15 @@ def get_spec_plot(path, spectra, obs_num):
     if not name:
         name = "????"
     if details:
-        title = 'UT Date: {}'.format(details[0])
+        date_obs = details[0].split("T")
+        day = date_obs[0]
+        time = date_obs[1][:-4]
+        title = 'UTC Date: {} {}'.format(day, time)
         fig.suptitle('Tracking Number {} -- {} at {}'.format(details[1], name, details[2]))
     else:
         title = name
     xsmooth, ysmooth = smooth(x, y)
-    plot_spectra(xsmooth, ysmooth, yunits, ax, title)
+    plot_spectra(xsmooth, ysmooth, yunits, xunits, ax, title)
 
     save_file = os.path.join(path, name.replace(' ', '_') + "_spectra_" + obs_num + ".png")
     fig.savefig(save_file, format='png')
