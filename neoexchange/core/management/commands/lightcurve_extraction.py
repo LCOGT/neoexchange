@@ -38,7 +38,7 @@ class Command(BaseCommand):
     def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title=''):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True,gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
-        ax1.errorbar(alltimes, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
+        ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
         ax0.invert_yaxis()
         ax1.invert_yaxis()
         ax1.set_xlabel('Time')
@@ -58,7 +58,7 @@ class Command(BaseCommand):
 
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
-        ax2.set_ylabel('FWHM')
+        ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
         ax3.plot(alltimes, air_mass, marker='.', color=colors, linestyle=' ')
@@ -133,19 +133,20 @@ class Command(BaseCommand):
             for block in block_list:
                 self.stdout.write("Analyzing Block# %d" % block.id)
 
-                frames_red = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
-                frames_ql = Frame.objects.filter(block=block.id, zeropoint__isnull=False, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('midpoint')
+                frames_red = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
+                frames_ql = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('midpoint')
                 if len(frames_red) >= len(frames_ql):
-                    frames = frames_red
+                    frames_all_zp = frames_red
                 else:
-                    frames = frames_ql
-                self.stdout.write("Found %d frames for Block# %d with good ZPs" % (len(frames), block.id))
+                    frames_all_zp = frames_ql
+                frames = frames_all_zp.filter(zeropoint__isnull=False)
+                self.stdout.write("Found %d frames (of %d total) for Block# %d with good ZPs" % (frames.count(), frames_all_zp.count(), block.id))
                 self.stdout.write("Searching within %.1f arcseconds and +/-%.1f delta magnitudes" % (options['boxwidth'], options['deltamag']))
-                total_frame_count += len(frames)
-                if len(frames) != 0:
+                total_frame_count += frames.count()
+                if frames_all_zp.count() != 0:
                     elements = model_to_dict(block.body)
 
-                    for frame in frames:
+                    for frame in frames_all_zp:
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
                         ra = emp_line[1]
                         dec = emp_line[2]
@@ -155,7 +156,7 @@ class Command(BaseCommand):
                         midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')
                         self.stdout.write("%s %s %s V=%.1f %s (%d) %s" % (midpoint_string, ra_string, dec_string, mag_estimate, frame.sitecode, len(sources), frame.filename))
                         best_source = None
-                        if len(sources) != 0:
+                        if len(sources) != 0 and frame.zeropoint is not None:
                             if len(sources) == 1:
                                 best_source = sources[0]
             #                    print("%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag))
@@ -177,11 +178,11 @@ class Command(BaseCommand):
                                 mpc_lines.append(mpc_line)
                                 mags.append(best_source.obs_mag)
                                 mag_errs.append(best_source.err_obs_mag)
-                        # We append these even if we don't have a matching source
+                                zps.append(frame.zeropoint)
+                                zp_errs.append(frame.zeropoint_err)
+                        # We append these even if we don't have a matching source or zeropoint
                         # so we can plot conditions for all frames
                         alltimes.append(frame.midpoint)
-                        zps.append(frame.zeropoint)
-                        zp_errs.append(frame.zeropoint_err)
                         fwhm.append(frame.fwhm)
                         azimuth, altitude = moon_alt_az(frame.midpoint, ra, dec, \
                             *get_sitepos(frame.sitecode)[1:])
