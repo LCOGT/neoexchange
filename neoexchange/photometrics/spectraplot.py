@@ -245,7 +245,6 @@ def read_spectra(path, spectra):
     wavelength = (x_data*x_units).to(u.AA)
     # convert all wavelengths to Angstroms because it's easy to deal with that way
     flux = y_data*y_units
-
     if not obj_name:
         logger.warning("Could not parse object name from file")
 
@@ -341,6 +340,8 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
     try:
         ax.axis([x[0].value, x[-1].value, 0, (yyy[peak_idx]*2)])
     except ValueError:
+        pass
+    except u.UnitsError:
         pass
 
 
