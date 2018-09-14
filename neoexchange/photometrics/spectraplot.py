@@ -245,11 +245,11 @@ def read_spectra(path, spectra):
 
     wavelength = (x_data*x_units).to(u.AA)
     # convert all wavelengths to Angstroms because it's easy to deal with that way
-    flux = y_data*y_units
+    flux = y_data/y_factor*y_units
     if not obj_name:
         logger.warning("Could not parse object name from file")
 
-    return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name, other
+    return wavelength, flux, flux_error, x_units, y_units, obj_name, other
 
 
 def smooth(x, y):
@@ -290,20 +290,17 @@ def smooth(x, y):
     return x[int(window/2):-int(window/2)], convolve(y, Box1DKernel(window))[int(window/2):-int(window/2)]  # boxcar average data
 
 
-def normalize(x, y, wavelength=5500*u.AA):
+def normalize(x, y, wavelength=5500*u.AA, width=500*u.AA):
     """normalizes flux data with a specific wavelength flux value
        inputs: <x>: wavelenth data (Quantity type)
                <y>: flux data (Quantity type)
                [wavelength]: target wavelength to normalize at (Quantity type)
+               [width]: width of region overwhich to draw the normalization value
        outputs: normalized flux data
     """
-    n = np.abs(x-wavelength).argmin()
-    normval = y[n]
-    while (not normval.value or np.isnan(normval.value)) and n < len(x)-2:
-        normval = y[n]  # uses closest data point to target wavelength
-        n += 1
-    if not normval.value or np.isnan(normval.value):
-        normval = 1
+    n_high = np.abs(x-wavelength-width/2).argmin()
+    n_low = np.abs(x-wavelength+width/2).argmin()
+    normval = np.nanmean(y[n_low:n_high])
 
     return y/normval  # REMEMBER to normalize y-units too if normalizing final data
 
@@ -349,7 +346,7 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
 def get_spec_plot(path, spectra, obs_num):
 
     fig, ax = plt.subplots()
-    x, y, yerr, xunits, yunits, yfactor, name, details = read_spectra(path, spectra)
+    x, y, yerr, xunits, yunits, name, details = read_spectra(path, spectra)
     if not name:
         name = "????"
     if details:
@@ -358,7 +355,7 @@ def get_spec_plot(path, spectra, obs_num):
     else:
         title = name
     xsmooth, ysmooth = smooth(x, y)
-    plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, title)
+    plot_spectra(xsmooth, ysmooth, yunits, ax, title)
 
     save_file = os.path.join(path, name.replace(' ', '_') + "_spectra_" + obs_num + ".png")
     fig.savefig(save_file, format='png')
