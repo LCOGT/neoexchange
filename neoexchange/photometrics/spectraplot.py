@@ -191,9 +191,10 @@ def read_spectra(path, spectra):
     elif spectra_file.endswith('.ascii'):
         data = ascii.read(spectra_file)  # read in data
         # assuming 3 columns: wavelength, flux/reflectance, error
-        x_data = data['col1']  # converting tables to ndarrays
-        y_data = data['col2']
-        flux_error = data['col3']
+        columns = data.keys()
+        x_data = data[columns[0]]  # converting tables to ndarrays
+        y_data = data[columns[1]]
+        flux_error = data[columns[2]]
         x_units = get_x_units(x_data)
         y_units, y_factor = get_y_units(data.meta)
         obj_name = ""  # No way to read object name from ascii files right now.
