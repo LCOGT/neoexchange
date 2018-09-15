@@ -1358,9 +1358,9 @@ class TestSchedule_Check(TestCase):
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-09-30T18:50:00',
-                        'end_time'   : '2017-10-01T04:50:00',
-                        'mid_time': '2017-09-30T23:50:00',
+                        'start_time' : '2017-09-30T19:50:00',
+                        'end_time'   : '2017-10-01T05:50:00',
+                        'mid_time': '2017-10-01T00:50:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1380,9 +1380,9 @@ class TestSchedule_Check(TestCase):
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-11-30T18:50:00',
+                        'start_time' : '2017-11-30T19:10:00',
                         'end_time'   : '2017-11-30T23:59:59',
-                        'mid_time': '2017-11-30T21:24:59.500000',
+                        'mid_time': '2017-11-30T21:34:59.500000',
 
                         }
         resp = schedule_check(data, self.body_mp)
