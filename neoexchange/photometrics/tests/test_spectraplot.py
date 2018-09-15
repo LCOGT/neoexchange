@@ -11,13 +11,13 @@ from photometrics.spectraplot import *
 class TestReadSpectra(TestCase):
 
     def setUp(self):
-        self.fitsdir  = os.getcwd()+'/photometrics/tests/'
+        self.fitsdir  = os.getcwd()+'/photometrics/tests/test_spectra/'
         self.fitsfile = 'test_fits.fits'
-        self.asciidir = os.getcwd()+'/photometrics/tests/'
+        self.asciidir = os.getcwd()+'/photometrics/tests/test_spectra/'
         self.asciifile= 'test_ascii.ascii'
-        self.txtdir   = os.getcwd()+'/photometrics/tests/'
+        self.txtdir   = os.getcwd()+'/photometrics/tests/test_spectra/'
         self.txtfile  = 'a001981.4.txt'
-        self.datdir   = os.getcwd()+'/photometrics/tests/'
+        self.datdir   = os.getcwd()+'/photometrics/tests/test_spectra/'
         self.datfile  = 'fhr9087.dat'
 
         self.tolerance = 1
@@ -35,7 +35,7 @@ class TestReadSpectra(TestCase):
         self.assertEqual(exp_x_units, x_units)
 
     def test_read_fits_y(self):
-        exp_y = 10.494265
+        exp_y = 10.494265/10**20
         exp_y_units = u.erg/(u.cm**2)/u.s/u.AA
         exp_y_len = 4560
 
@@ -130,7 +130,7 @@ class TestReadSpectra(TestCase):
         self.assertEqual(exp_x_units, x_units)
 
     def test_read_dat_y(self):
-        exp_y = 7.1022E+05
+        exp_y = 7.1022E+05/10**16
         exp_y_units = u.erg/(u.cm**2)/u.s/u.AA
         exp_y_len = 445
 
@@ -151,21 +151,21 @@ class TestReadSpectra(TestCase):
     def test_read_fits_obj(self):
         exp_obj = '398188'
 
-        obj_name = read_spectra(self.fitsdir, self.fitsfile)[6]
+        obj_name = read_spectra(self.fitsdir, self.fitsfile)[5]
 
         self.assertEqual(exp_obj, obj_name)
 
     def test_read_txt_obj(self):
         exp_obj = '1981'
 
-        obj_name = read_spectra(self.txtdir, self.txtfile)[6]
+        obj_name = read_spectra(self.txtdir, self.txtfile)[5]
 
         self.assertEqual(exp_obj, obj_name)
 
     def test_read_dat_obj(self):
         exp_obj = 'hr9087'
 
-        obj_name = read_spectra(self.datdir, self.datfile)[6]
+        obj_name = read_spectra(self.datdir, self.datfile)[5]
 
         self.assertEqual(exp_obj, obj_name)
 

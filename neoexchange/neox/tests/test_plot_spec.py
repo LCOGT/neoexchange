@@ -216,13 +216,13 @@ class SpectraplotTest(FunctionalTest):
                 # note: block and body do not match spectra.
                 # mismatch due to recycling and laziness
             actual_url = self.browser.current_url
-            target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/spectra/'
+            target_url = self.live_server_url+'/block/'+str(self.test_block.pk)+'/spectra/1/'
             self.assertIn('Spectrum for block: '+str(self.test_block.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
 
         @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
         @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
-        def test_multi_spec_block(self):    # test opening 2 different spectra in same superblock
+        def test_multi_request_block(self):    # test opening 2 different blocks in same superblock
             self.login()
             blocks_url = reverse('blocklist')
             self.browser.get(self.live_server_url + blocks_url)
@@ -230,7 +230,7 @@ class SpectraplotTest(FunctionalTest):
             with self.wait_for_page_load(timeout=10):
                 plots = self.browser.find_elements_by_link_text('Spectrum Plot')[0].click()
                 actual_url = self.browser.current_url
-                target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/'
+                target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
             self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
 
@@ -238,8 +238,35 @@ class SpectraplotTest(FunctionalTest):
             self.browser.back()
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_elements_by_link_text('Spectrum Plot')[1].click()
-            # note: this spectrum is same as first one. really just checking if pages are different.
                 actual_url2 = self.browser.current_url
-                target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/'
+                target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/1/'
             self.assertIn('Spectrum for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
+            self.assertEqual(target_url2, actual_url2)
+
+        @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+        def test_multi_spectra_block(self):    # test opening 2 different spectra in same block
+            self.mspec_frame2.block = self.test_mblock1
+            self.mspec_frame2.save()
+            self.test_mblock1.num_observed = 2
+            self.test_mblock1.save()
+
+            self.login()
+            blocks_url = reverse('blocklist')
+            self.browser.get(self.live_server_url + blocks_url)
+            self.browser.find_element_by_link_text('5').click()
+            with self.wait_for_page_load(timeout=10):
+                plots = self.browser.find_element_by_link_text('Spectrum Plot 1').click()
+                actual_url = self.browser.current_url
+                target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+            self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
+            self.assertEqual(target_url, actual_url)
+
+            self.wait_for_element_with_id('page')
+            self.browser.back()
+            with self.wait_for_page_load(timeout=10):
+                self.browser.find_element_by_link_text('Spectrum Plot 2').click()
+                actual_url2 = self.browser.current_url
+                target_url2 = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/2/'
+            self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url2, actual_url2)
