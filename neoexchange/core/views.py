@@ -178,6 +178,7 @@ class BodySearchView(ListView):
 
     def get_queryset(self):
         name = self.request.GET.get("q", "")
+        name = name.strip()
         if name != '':
             if name.isdigit():
                 object_list = self.model.objects.filter(name=name)
