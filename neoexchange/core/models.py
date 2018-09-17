@@ -496,7 +496,7 @@ class SuperBlock(models.Model):
     def make_obsblock_link(self):
         url = ''
         if self.tracking_number is not None and self.tracking_number != '':
-            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
+            url = urljoin(settings.PORTAL_USERREQUEST_URL, self.tracking_number)
         return url
 
     def get_sites(self):

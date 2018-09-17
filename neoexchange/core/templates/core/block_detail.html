@@ -102,6 +102,7 @@
                         {% for blk in object.block_set.all %}
                         <li class="{% cycle 'odd' 'even' %}">
                             <span class="block-status-line">
+                                <span class="block-control">Request Number: <a href="{{blk.make_obsblock_link}}">{{blk.tracking_number}}</a></span>
                               <span class="block-status-item">
                               {% if blk.reported and blk.when_observed %}
                               <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>

@@ -2438,7 +2438,7 @@ def find_spec(pk):
     else:
         date_obs = str(int(block.block_start.strftime('%Y%m%d'))-1)
 
-    obj = block.current_name().replace(' ', '_')
+    obj = data['OBJECT'].replace(' ', '_')
 
     if 'REQNUM' in data:
         req = data['REQNUM'].lstrip("0")
@@ -2481,6 +2481,7 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     path = os.path.join(base_dir, obj + '_' + req)
     filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
     spectra_path = None
+    tar_path = unpack_path = None
     obs_num = str(obs_num)
     if filenames:
         spectra_path = filenames[int(obs_num)-1]
@@ -2492,9 +2493,9 @@ def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
                 if req in tar:
                     tar_path = tar
                     unpack_path = os.path.join(base_dir, obj+'_'+req)
-                else:
-                    logger.error("Could not find tarball for request: %s" % req)
-                    return None, None
+            if not tar_path and not unpack_path:
+                logger.error("Could not find tarball for request: %s" % req)
+                return None, None
             spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
             spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
             spectra_path = spec_list[int(obs_num)-1]
