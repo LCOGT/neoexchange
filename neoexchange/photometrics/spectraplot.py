@@ -176,6 +176,7 @@ def read_spectra(path, spectra):
             try:
                 tn = hdr['TRACKNUM'].lstrip('0')
                 site = hdr['SITEID'].upper()
+                rn = hdr['REQNUM'].lstrip('0')
             except KeyError:
                 tn = site = inst = None
             try:
@@ -183,7 +184,7 @@ def read_spectra(path, spectra):
             except KeyError:
                 date_obs = hdr['DATE_OBS']
 
-            other = [date_obs, tn, site]
+            other = [date_obs, tn, site, rn]
             x_units = get_x_units(x_data)
             y_units, y_factor = get_y_units(hdr)
             check_norm(hdul[0].header.values())  # check if data is already normalized
@@ -249,6 +250,7 @@ def read_spectra(path, spectra):
     if not obj_name:
         logger.warning("Could not parse object name from file")
 
+    #  Other --> [date_obs, tracking number, site code, Request Number]
     return wavelength, flux, flux_error, x_units, y_units, obj_name, other
 
 
@@ -354,13 +356,13 @@ def get_spec_plot(path, spectra, obs_num):
         day = date_obs[0]
         time = date_obs[1][:-4]
         title = 'UTC Date: {} {}'.format(day, time)
-        fig.suptitle('Tracking Number {} -- {} at {}'.format(details[1], name, details[2]))
+        fig.suptitle('Request Number {} -- {} at {}'.format(details[3], name, details[2]))
     else:
         title = name
     xsmooth, ysmooth = smooth(x, y)
     plot_spectra(xsmooth, ysmooth, yunits, xunits, ax, title)
 
-    save_file = os.path.join(path, name.replace(' ', '_') + "_spectra_" + obs_num + ".png")
+    save_file = os.path.join(path, name.replace(' ', '_') + "_" + details[3] + "_spectra_" + obs_num + ".png")
     fig.savefig(save_file, format='png')
     plt.close()
 

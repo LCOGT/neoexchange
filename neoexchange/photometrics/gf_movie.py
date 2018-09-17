@@ -31,16 +31,17 @@ def make_gif(frames, title=None, sort=True, fr=333):
         fits_files = frames
     path = os.path.dirname(frames[0]).lstrip(' ')
 
-    if title is None:
         # pull header information from first fits file
-        with fits.open(fits_files[0], ignore_missing_end=True) as hdul:
-            header = hdul['SCI'].header
-            # create title
-            obj = header['OBJECT']
-            tn = header['TRACKNUM'].lstrip('0')
-            site = header['SITEID'].upper()
-            inst = header['INSTRUME'].upper()
-            title = 'Tracking Number {} -- {} at {} ({})'.format(tn, obj, site, inst)
+    with fits.open(fits_files[0], ignore_missing_end=True) as hdul:
+        header = hdul['SCI'].header
+        # create title
+        obj = header['OBJECT']
+        rn = header['REQNUM'].lstrip('0')
+        site = header['SITEID'].upper()
+        inst = header['INSTRUME'].upper()
+
+    if title is None:
+        title = 'Request Number {} -- {} at {} ({})'.format(rn, obj, site, inst)
 
     fig = plt.figure()
     if title:
@@ -93,7 +94,7 @@ def make_gif(frames, title=None, sort=True, fr=333):
 
     anim = FuncAnimation(fig, update, frames=len(fits_files), blit=False, interval=fr)  # takes in fig, update function, and frame rate set to 3fps
 
-    savefile = os.path.join(path, 'guidemovie.gif')
+    savefile = os.path.join(path, obj.replace(' ', '_') + '_' + rn + '_guidemovie.gif')
     anim.save(savefile, dpi=90, writer='imagemagick')
 
     return savefile
