@@ -31,7 +31,7 @@ def make_gif(frames, title=None, sort=True, fr=333):
         fits_files = frames
     path = os.path.dirname(frames[0]).lstrip(' ')
 
-        # pull header information from first fits file
+    # pull header information from first fits file
     with fits.open(fits_files[0], ignore_missing_end=True) as hdul:
         header = hdul['SCI'].header
         # create title
@@ -84,7 +84,7 @@ def make_gif(frames, title=None, sort=True, fr=333):
         ra.set_ticklabel(fontsize=10)
         ax.coords.grid(color='black', ls='solid', alpha=0.5)
         # finish up plot
-        ax.set_title('UTC Date: {} ({} of {})'.format(date.strftime('%x %X'), n+1, len(fits_files)), pad=10)
+        ax.set_title('UTC Date: {} ({} of {})'.format(date.strftime('%Y/%m/%d %X'), n+1, len(fits_files)), pad=10)
 
         plt.imshow(data, cmap='gray', vmin=z_interval[0], vmax=z_interval[1])
         return ax

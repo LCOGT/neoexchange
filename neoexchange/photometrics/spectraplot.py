@@ -9,6 +9,7 @@ from astropy.io import fits, ascii
 from astropy.convolution import convolve, Box1DKernel  # Gaussian1DKernel
 from astropy.wcs import WCS
 from astropy import units as u
+from datetime import datetime
 import matplotlib.pyplot as plt
 import os
 import io
@@ -183,8 +184,8 @@ def read_spectra(path, spectra):
                 date_obs = hdr['DATE-OBS']
             except KeyError:
                 date_obs = hdr['DATE_OBS']
-
-            other = [date_obs, tn, site, rn]
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+            other = [date, tn, site, rn]
             x_units = get_x_units(x_data)
             y_units, y_factor = get_y_units(hdr)
             check_norm(hdul[0].header.values())  # check if data is already normalized
@@ -307,6 +308,42 @@ def normalize(x, y, wavelength=5500*u.AA, width=500*u.AA):
     return y/normval  # REMEMBER to normalize y-units too if normalizing final data
 
 
+def update_label(old_label, exponent_text):
+    if exponent_text == "":
+        return old_label
+
+    try:
+        units = old_label[old_label.index("[") + 1:old_label.rindex("]")]
+    except ValueError:
+        units = ""
+    label = old_label.replace("[{}]".format(units), "")
+
+    exponent_text = exponent_text.replace("\\times", "")
+
+    return "{} [{} {}]".format(label, exponent_text, units)
+
+
+def format_label_string_with_exponent(ax, axis='both'):
+    """ Format the label string with the exponent from the ScalarFormatter
+    http://greg-ashton.physics.monash.edu/setting-nice-axes-labels-in-matplotlib.html
+    """
+    ax.ticklabel_format(axis=axis, style='sci')
+
+    axes_instances = []
+    if axis in ['x', 'both']:
+        axes_instances.append(ax.xaxis)
+    if axis in ['y', 'both']:
+        axes_instances.append(ax.yaxis)
+
+    for ax in axes_instances:
+        ax.major.formatter._useMathText = True
+        plt.draw()  # Update the text
+        exponent_text = ax.get_offset_text().get_text()
+        label = ax.get_label().get_text()
+        ax.offsetText.set_visible(False)
+        ax.set_label_text(update_label(label, exponent_text))
+
+
 def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0,):
     """plots spectra data
        imputs: <x>: wavelength data for x axis
@@ -325,8 +362,9 @@ def plot_spectra(x, y, y_units, x_units, ax, title, ref=0, norm=0,):
     ax.plot(x, yyy, linewidth=1)
     ax.set_xlabel('Wavelength ({})'.format(x_units.to_string('latex_inline')))
     ax.set_ylabel(y_units.to_string('latex_inline'))
+    format_label_string_with_exponent(ax, axis='y')
     ax.minorticks_on()
-    ax.tick_params(axis='y', which='minor', left=False)
+
     if title:
         ax.set_title(title)
     else:
@@ -352,10 +390,7 @@ def get_spec_plot(path, spectra, obs_num):
     if not name:
         name = "????"
     if details:
-        date_obs = details[0].split("T")
-        day = date_obs[0]
-        time = date_obs[1][:-4]
-        title = 'UTC Date: {} {}'.format(day, time)
+        title = 'UTC Date: {}'.format(details[0].strftime('%Y/%m/%d %X'))
         fig.suptitle('Request Number {} -- {} at {}'.format(details[3], name, details[2]))
     else:
         title = name
