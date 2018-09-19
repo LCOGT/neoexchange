@@ -4,7 +4,7 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
-### 2.7.2b
+### 2.7.2
 
 Spectroscopic Graphical tools
 * Create and display a gif of the guidefreames during an observation
