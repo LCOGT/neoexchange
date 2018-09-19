@@ -212,7 +212,7 @@ class FunctionalTest(StaticLiveServerTestCase):
 
     def tearDown(self):
         self.browser.refresh()
-#        self.browser.implicitly_wait(5)
+#       self.browser.implicitly_wait(5)
         self.browser.quit()
 
     def check_for_row_in_table(self, table_id, row_text):

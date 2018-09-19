@@ -37,14 +37,39 @@ def dictsortreversed_with_none(value, arg):
     except TypeError:
         return ''
 
+
+def make_int_list(value):
+    """
+    Filter - returns a list of integers 1 -> n where n is the given value
+    Usage (in template):
+
+    <ul>{% for i in 3|get_range %}
+      <li>{{ i }}. Do something</li>
+    {% endfor %}</ul>
+
+    Results with the HTML:
+    <ul>
+      <li>1. Do something</li>
+      <li>2. Do something</li>
+      <li>3. Do something</li>
+    </ul>
+
+    Instead of 3 one may use a variable set in the views
+    """
+    return range(1, value+1)
+
+
 @register.simple_tag
 def format_mpc_line_upload(measure):
     return measure.format_mpc_line(include_catcode=False)
+
 
 @register.simple_tag
 def format_mpc_line_catcode(measure):
     return measure.format_mpc_line(include_catcode=True)
 
+
+register.filter('make_int_list', make_int_list)
 register.filter('dictsortreversed_with_none', dictsortreversed_with_none)
 register.filter('subsblank', subsblank)
 register.filter('degreestohours', degreestohours)

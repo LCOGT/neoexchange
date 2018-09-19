@@ -1,12 +1,10 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -112,17 +110,17 @@ TAX_REFERENCE_CHOICES = (
                      )
 
 SPECTRAL_WAV_CHOICES = (
-                        ('Vis','Visible'),
-                        ('NIR','Near Infrared'),
-                        ('Vis+NIR','Both Visible and Near IR'),
-                        ('NA','None Yet.'),
+                        ('Vis', 'Visible'),
+                        ('NIR', 'Near Infrared'),
+                        ('Vis+NIR', 'Both Visible and Near IR'),
+                        ('NA', 'None Yet.'),
                      )
 
 SPECTRAL_SOURCE_CHOICES = (
-                        ('S','SMASS'),
-                        ('M','MANOS'),
-                        ('U','Unknown'),
-                        ('O','Other')
+                        ('S', 'SMASS'),
+                        ('M', 'MANOS'),
+                        ('U', 'Unknown'),
+                        ('O', 'Other')
                      )
 
 
@@ -185,20 +183,20 @@ class Body(models.Model):
         else:
             return False
 
-    def diameter(self):        
+    def diameter(self):
         m = self.abs_mag
         avg = 0.167
         d_avg = asteroid_diameter(avg, m)
         return d_avg
-        
+
     def diameter_range(self):
         m = self.abs_mag
         mn = 0.01
-        mx = 0.6       
+        mx = 0.6
         d_max = asteroid_diameter(mn, m)
         d_min = asteroid_diameter(mx, m)
         return d_min, d_max
-        
+
     def epochofel_mjd(self):
         mjd = None
         try:
@@ -498,7 +496,7 @@ class SuperBlock(models.Model):
     def make_obsblock_link(self):
         url = ''
         if self.tracking_number is not None and self.tracking_number != '':
-            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
+            url = urljoin(settings.PORTAL_USERREQUEST_URL, self.tracking_number)
         return url
 
     def get_sites(self):
@@ -643,15 +641,24 @@ class Block(models.Model):
         return total_exposure_number
 
     def num_spectro_frames(self):
-        '''Returns the numbers of different types of spectroscopic frames'''
+        """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
         data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
         if num_frames > 0:
-            moltypes = [x['OBSTYPE'] for x in data]
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
             num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
-            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(),reverse=True))
+            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string
+
+    def num_spectra_complete(self):
+        """Returns the number of actually completed spectra excluding lamps/arcs"""
+        num_spectra = 0
+        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            num_spectra = moltypes.count('SPECTRUM')
+        return num_spectra
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
