@@ -651,6 +651,15 @@ class Block(models.Model):
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string
 
+    def num_spectra_complete(self):
+        """Returns the number of actually completed spectra excluding lamps/arcs"""
+        num_spectra = 0
+        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            num_spectra = moltypes.count('SPECTRUM')
+        return num_spectra
+
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
 
