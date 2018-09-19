@@ -511,11 +511,14 @@ def mock_check_request_status_cadence(tracking_num):
 
     return status
 
+
 def mock_check_request_status_null(tracking_num):
     return []
 
+
 def mock_check_request_status_notfound(tracking_num):
     return {u'detail': u'Not found.'}
+
 
 def mock_check_for_images_no_millisecs(request_id):
     header = { "data": {
@@ -531,6 +534,7 @@ def mock_check_for_images_no_millisecs(request_id):
         }
     return header
 
+
 def mock_check_for_images_bad_date(request_id):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43",
@@ -545,8 +549,45 @@ def mock_check_for_images_bad_date(request_id):
         }
     return header
 
+
 def mock_ingest_frames(images, block):
     return ['99999']
+
+
+def mock_fetch_archive_frames_2spectra(auth_header, archive_url, frames=[]):
+    data = [{
+              u'OBSTYPE': u'SPECTRUM',
+              u'REQNUM': 1391169,
+              u'RLEVEL': 90,
+              u'basename': u'LCOEngineering_0001391169_ftn_20180111_58130',
+              u'filename': u'LCOEngineering_0001391169_ftn_20180111_58130.tar.gz',
+              u'id': 7783593,
+              u'related_frames': [7780755, 7780756],
+              u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/372a/LCOEngineering_0001391169_ftn_20180111_58130?versionId=eK7.aDucOKWaiM3AhTPZ8AGDMxBFdNtH&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=x8mve2svKirG7BAiWaEBTyFsHrY%3D&Expires=1521319897',
+             },
+            {
+              u'OBSTYPE': u'SPECTRUM',
+              u'REQNUM': 1391169,
+              u'RLEVEL': 0,
+              u'basename': u'ogg2m001-en06-20180110-0005-e00',
+              u'filename': u'ogg2m001-en06-20180110-0005-e00.fits.fz',
+              u'id': 7780755,
+              u'related_frames': [7783593],
+              u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/dd9f/ogg2m001-en06-20180110-0005-e00?versionId=c1X8nfL_LSwptv_c0m7dultGCOfVJJr3&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=fjmzi9KK%2FqNi3DnvjyEjSP%2BJG8o%3D&Expires=1521319897',
+             },
+            {
+              u'OBSTYPE': u'SPECTRUM',
+              u'REQNUM': 1391169,
+              u'RLEVEL': 0,
+              u'basename': u'ogg2m001-en06-20180110-0006-e00',
+              u'filename': u'ogg2m001-en06-20180110-0006-e00.fits.fz',
+              u'id': 7780756,
+              u'related_frames': [7783593],
+              u'url': u'https://s3.us-west-2.amazonaws.com/archive.lcogt.net/dd9f/ogg2m001-en06-20180110-00056-e00?versionId=c1X8nfL_LSwptv_c0m7dultGCOfVJJr3&AWSAccessKeyId=AKIAIJQVPYFWOR234BCA&Signature=fjmzi9KK%2FqNi3DnvjyEjSP%2BJG8o%3D&Expires=1521319897',
+             }
+            ]
+    return data
+
 
 def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
     if 'SPECTRUM' in archive_url:
@@ -631,6 +672,7 @@ def mock_fetch_archive_frames(auth_header, archive_url, frames=[]):
                 ]
     return data
 
+
 def mock_check_for_images(request_id, obstype='EXPOSE'):
 
     if obstype == 'SPECTRUM':
@@ -664,11 +706,14 @@ def mock_check_for_images(request_id, obstype='EXPOSE'):
 
 # Authentication/login related mocks
 
+
 def mock_odin_login(username, password):
     return {}
 
+
 def mock_lco_authenticate(request, username, password):
     return None
+
 
 def mock_lco_login(email, password, request=None):
     profile = {'username': 'bart',
@@ -702,6 +747,7 @@ def mock_lco_login(email, password, request=None):
 
 # Data download/processing mocks
 
+
 def mock_archive_frame_header(archive_headers):
     header = { "data": {
                     "DATE_OBS": "2016-06-01T09:43:28.067",
@@ -718,17 +764,21 @@ def mock_archive_frame_header(archive_headers):
         }
     return header
 
+
 def mock_find_images_for_block(blockid):
     data = ([{'img': '1'}, {'img': '2'}, ], [{'coords': [{'y': 1086.004, 'x': 1278.912}, {'y': 1086.047, 'x': 1278.9821}], 'id': '15'}], 2028, 2028)
     return data
+
 
 def mock_fetch_observations(tracking_num):
     images = ['1', '2', '3']
     return images
 
+
 def mock_run_sextractor_make_catalog(configs_dir, dest_dir, fits_file):
 
     return -1, None
+
 
 class MockCandidate(object):
 
@@ -748,6 +798,7 @@ def mock_fetch_filter_list(site, spec):
     test_filter_map = os.path.join('astrometrics', 'tests', 'test_camera_mapping.dat')
 
     return fetch_filter_list(site, spec, test_filter_map)
+
 
 def mock_expand_cadence(user_request):
 
@@ -856,12 +907,14 @@ def mock_expand_cadence(user_request):
                  u'submitter': u'tlister@lcogt.net'}
     return True, cadence
 
+
 def mock_fetch_sfu(sfu_value=None):
     if sfu_value is None:
         sfu = u.def_unit(['sfu', 'solar flux unit'], 10000.0*u.Jy)
         sfu_value = 42.0 * sfu
 
     return datetime(2018, 4, 20, 5, 0, 0), sfu_value
+
 
 def mock_submit_to_scheduler(elements, params):
     return -42, params

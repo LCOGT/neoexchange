@@ -21,7 +21,7 @@ from neox.auth_backend import update_proposal_permissions
 from selenium import webdriver
 from core.models import Block, SuperBlock, Frame
 from mock import patch
-from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames
+from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_archive_frames, mock_fetch_archive_frames_2spectra
 from django.conf import settings
 import os
 
@@ -244,7 +244,7 @@ class SpectraplotTest(FunctionalTest):
             self.assertEqual(target_url2, actual_url2)
 
         @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
-        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+        @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames_2spectra)
         def test_multi_spectra_block(self):    # test opening 2 different spectra in same block
             self.mspec_frame2.block = self.test_mblock1
             self.mspec_frame2.save()
