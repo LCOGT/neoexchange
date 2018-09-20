@@ -180,6 +180,12 @@ class TestNormalToPacked(TestCase):
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, 0)
 
+    def test_comet_packed1(self):
+        expected_desig = '0060P       '
+        packed_desig, ret_code = normal_to_packed('0060P  ')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
     def test_provdesig_t1(self):
         expected_desig = '     K15D00D'
         packed_desig, ret_code = normal_to_packed('2015   DD')
