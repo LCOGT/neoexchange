@@ -1029,7 +1029,7 @@ def schedule_submit(data, body, username):
         cut_off_time = timedelta(minutes=1)
         now = datetime.utcnow()
         recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
-        if len(recent_updates) < 1:
+        if len(recent_updates) < 1 and body.name:
             update_MPC_obs(body.name)
 
         # Invoke find_orb to update Body's elements and return ephemeris
