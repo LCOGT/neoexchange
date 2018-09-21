@@ -562,7 +562,7 @@ fieldset legend { font-weight: bold; }
 	float:none;
 	margin-left:auto;
 	margin-right:auto;
-	padding: 8px 32px;
+	padding: 8px 15px;
 }
 
 #show-messages .warning, #show-messages .error, .messages .warning, .messages .error {  border-bottom: 1px solid #ccc; }
