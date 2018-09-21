@@ -556,15 +556,12 @@ def read_findorb_ephem(empfile):
                     chunks.remove(' ')
                 except ValueError:
                     pass
-                obj_id = chunks[-1].replace(' ', '')
+                obj_id = chunks[-1].strip()
                 if '=' in obj_id:
                     if chunks[-2].isdigit():
                         obj_id = chunks[-2]
                     else:
                         obj_id = obj_id.replace('=', '')
-                if 'Telescope' in obj_id:
-                    logger.warning("Could not pull Object ID from header line1 ({:s})".format(line))
-                    return None, None
                 ephem_info = {'obj_id' : obj_id,
                               'emp_sitecode' : chunks[0]}
             elif line.lstrip()[0:4] == 'Date':

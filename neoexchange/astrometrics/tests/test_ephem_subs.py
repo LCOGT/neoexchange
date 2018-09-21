@@ -2421,7 +2421,7 @@ class TestReadFindorbEphem(TestCase):
         expected_empinfo = { 'emp_rateunits': "'/hr",
                              'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
-                             'obj_id': '2017YE5'}
+                             'obj_id': '2017 YE5'}
 
         expected_emp = [(datetime(2018, 6, 30, 6, 10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
 
