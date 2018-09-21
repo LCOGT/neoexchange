@@ -1572,8 +1572,9 @@ def clean_NEOCP_object(page_list):
     if page_list[0][:6] == 'Object':
         page_list.pop(0)
     for line in page_list:
+        line = line.strip()
         if 'NEOCPNomin' in line:
-            current = line.strip().split()
+            current = line.split()
             break
     if current:
         if len(current) == 16:
@@ -1630,23 +1631,53 @@ def clean_NEOCP_object(page_list):
             if arc_length:
                 params['arc_length'] = arc_length
 
-        elif len(current) == 22 or len(current) == 23 or len(current) == 24:
+        elif len(current) >= 21 and len(current) <= 25:
+            # The first 20 characters can get very messy if there is a temporary
+            # and permanent desigination as the absolute magntiude and slope gets
+            # pushed up and partially overwritten. Sort this mess out and then the
+            # rest obeys the documentation on the MPC site:
+            # https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html)
+
+            # First see if the absolute mag. and slope are numbers in the correct place
+            try:
+                abs_mag = float(line[8:13])
+                slope = float(line[14:19])
+            except ValueError:
+                # Nope, we have a mess and will have to assume a slope
+                abs_mag = float(line[12:17])
+                slope = 0.15
+
+            # See if there is a "readable desigination" towards the end of the line
+            readable_desig = None
+            if len(line) > 194:
+                readable_desig = line[166:194].strip()
+            elements_type = 'MPC_MINOR_PLANET'
+            source_type = 'U'
+            if readable_desig and readable_desig[0:2] =='P/':
+                elements_type = 'MPC_COMET'
+                source_type = 'C'
+
+            # See if this is a local discovery
+            provisional_name = line[0:6]
+            origin = 'M'
+            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
+                origin = 'L'
             params = {
-                'abs_mag': float(current[1]),
-                'slope': float(current[2]),
-                'epochofel': extract_mpc_epoch(current[3]),
-                'meananom': float(current[4]),
-                'argofperih': float(current[5]),
-                'longascnode': float(current[6]),
-                'orbinc': float(current[7]),
-                'eccentricity': float(current[8]),
-                'meandist': float(current[10]),
-                'source_type': 'U',
-                'elements_type': 'MPC_MINOR_PLANET',
+                'abs_mag': abs_mag,
+                'slope': slope,
+                'epochofel': extract_mpc_epoch(line[20:25]),
+                'meananom': float(line[26:35]),
+                'argofperih': float(line[37:46]),
+                'longascnode': float(line[48:57]),
+                'orbinc': float(line[59:68]),
+                'eccentricity': float(line[70:79]),
+                'meandist': float(line[92:103]),
+                'source_type': source_type,
+                'elements_type': elements_type,
                 'active': True,
-                'origin': 'L',
-                'provisional_name' : current[0],
-                'num_obs' : int(current[13]),
+                'origin': origin,
+                'provisional_name' : provisional_name,
+                'num_obs' : int(line[117:122]),
                 'update_time' : datetime.utcnow(),
                 'arc_length' : None,
                 'not_seen' : None
@@ -1654,13 +1685,25 @@ def clean_NEOCP_object(page_list):
             # If this is a find_orb produced orbit, try and fill in the
             # 'arc length' and 'not seen' values.
             arc_length = None
-            arc_units = current[16]
+            arc_units = line[132:136].rstrip()
             if arc_units == 'days':
-                arc_length = float(current[15])
+                arc_length = float(line[127:131])
             elif arc_units == 'hrs':
-                arc_length = float(current[15]) / 24.0
+                arc_length = float(line[127:131]) / 24.0
             elif arc_units == 'min':
-                arc_length = float(current[15]) / 1440.0
+                arc_length = float(line[127:131]) / 1440.0
+            elif arc_units.isdigit():
+                try:
+                    first_obs_year = datetime(int(line[127:131]), 1, 1)
+                except:
+                    first_obs_year = None
+                try:
+                    last_obs_year = datetime(int(arc_units)+1, 1, 1)
+                except:
+                    last_obs_year = None
+                if first_obs_year and last_obs_year:
+                    td = last_obs_year - first_obs_year
+                    arc_length = td.days
             if arc_length:
                 params['arc_length'] = arc_length
             try:
@@ -1674,7 +1717,7 @@ def clean_NEOCP_object(page_list):
             params = {}
         if params != {}:
             # Check for objects that should be treated as comets (e>0.9)
-            if params['eccentricity'] > 0.9:
+            if params['eccentricity'] > 0.9 or params['elements_type'] == 'MPC_COMET':
                 params = convert_ast_to_comet(params, None)
     else:
         params = {}
