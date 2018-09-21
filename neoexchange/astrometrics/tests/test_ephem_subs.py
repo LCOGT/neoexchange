@@ -2548,10 +2548,10 @@ class TestReadFindorbEphem(TestCase):
         expected_empinfo = { 'emp_rateunits': "'/hr",
                              'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
-                             'obj_id': 'ZR9CB15'}
+                             'obj_id': 'P/60'}
         expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
 
-        lines = [ '#(F65) Faulkes Telescope North: ZR9CB15',
+        lines = [ '#(F65) Faulkes Telescope North: P/60',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
                   '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
                   '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'
