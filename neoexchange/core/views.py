@@ -1658,7 +1658,7 @@ def clean_NEOCP_object(page_list):
                 source_type = 'C'
 
             # See if this is a local discovery
-            provisional_name = line[0:6]
+            provisional_name = line[0:7]
             origin = 'M'
             if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
                 origin = 'L'

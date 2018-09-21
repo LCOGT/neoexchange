@@ -286,6 +286,36 @@ class TestClean_NEOCP_Object(TestCase):
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_local_discovery(self):
+
+        MockDateTime.change_datetime(2016, 11, 19, 18, 00, 00)
+
+        obs_page_list = [u'LSCTLGj 16.54  0.15 K16B8 258.25752   52.27105  101.57581   16.82829  0.0258753  0.17697056   3.1419699    FO 161108    11   1    3 days 0.09         NEOCPNomin 0000 LSCTLGj                     20161108',
+                         u'',
+                         u'']
+
+        expected_elements = { 'provisional_name' : 'LSCTLGj',
+                              'abs_mag'     : 16.54,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2016,11,  8, 0, 0, 0),
+                              'meananom'    : 258.25752,
+                              'argofperih'  :  52.27105,
+                              'longascnode' : 101.57581,
+                              'orbinc'      :  16.82829,
+                              'eccentricity':  0.0258753,
+                              'meandist'    :  3.1419699,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'L',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'arc_length'  : 3.0,
+                              'not_seen'    : 11.75,
+                            }
+        elements = clean_NEOCP_object(obs_page_list)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
     def save_N007riz(self):
         obj_id = 'N007riz'
         elements = { 'abs_mag'     : 23.9,
