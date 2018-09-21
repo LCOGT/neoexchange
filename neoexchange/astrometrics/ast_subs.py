@@ -97,7 +97,11 @@ def normal_to_packed(obj_name, dbg=False):
         comet = True
         comet_type = obj_name[0]
         obj_name = obj_name[2:]
-    
+    elif obj_name.rstrip()[-1] in 'PCXDA' and obj_name.rstrip()[:-1].isdigit():
+        comet = True
+        comet_type = obj_name.rstrip()[-1]
+        obj_name = obj_name.rstrip()[:-1]
+
     buff = obj_name.replace(" ", "")
     if dbg: print("len(buff)=", len(buff))
 
