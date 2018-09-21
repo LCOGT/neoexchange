@@ -311,7 +311,7 @@ def export_measurements(body_id, output_path=''):
     measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).order_by('frame__midpoint')
     data = { 'measures' : measures}
 
-    filename = "{}.mpc".format(body.current_name().replace(' ', ''))
+    filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
     filename = os.path.join(output_path, filename)
 
     output_fh = open(filename, 'w')
