@@ -1045,6 +1045,13 @@ def schedule_submit(data, body, username):
         body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
         body_elements['current_name'] = body.current_name()
 
+    if type(body) != StaticSource:
+        emp_line_base = compute_ephem(data['start_time'], body_elements, data['site_code'], dbg=False, perturb=False, display=False)
+        # assign Magnitude and position angle
+        if emp_line_base[3] and emp_line_base[3] > 0:
+            body_elements['v_mag'] = emp_line_base[3]
+        body_elements['sky_pa'] = emp_line_base[7]
+
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
