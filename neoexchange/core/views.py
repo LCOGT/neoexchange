@@ -1729,6 +1729,7 @@ def update_crossids(astobj, dbg=False):
             logger.warning("Not downgrading type for %s from %s to %s" % (body.current_name(), body.source_type, kwargs['source_type']))
             kwargs['source_type'] = body.source_type
         if kwargs['source_type'] in ['C', 'H']:
+            if dbg: print("Converting to comet")
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
@@ -1760,7 +1761,7 @@ def clean_crossid(astobj, dbg=False):
     interesting_cutoff = 3 * 86400  # 3 days in seconds
 
     obj_id = astobj[0].rstrip()
-    desig = astobj[1]
+    desig = astobj[1].rstrip()
     reference = astobj[2]
     confirm_date = parse_neocp_date(astobj[3])
 
@@ -1773,23 +1774,27 @@ def clean_crossid(astobj, dbg=False):
     active = True
     objtype = ''
     if obj_id != '' and desig == 'wasnotconfirmed':
+        if dbg: print("Case 1")
         # Unconfirmed, no longer interesting so set inactive
         objtype = 'U'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'doesnotexist':
         # Did not exist, no longer interesting so set inactive
+        if dbg: print("Case 2")
         objtype = 'X'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'wasnotminorplanet':
         # "was not a minor planet"; set to satellite and no longer interesting
+        if dbg: print("Case 3")
         objtype = 'J'
         desig = ''
         active = False
     elif obj_id != '' and desig == '' and reference == '':
         # "Was not interesting" (normally a satellite), no longer interesting
         # so set inactive
+        if dbg: print("Case 4")
         objtype = 'W'
         desig = ''
         active = False
@@ -1798,19 +1803,33 @@ def clean_crossid(astobj, dbg=False):
         if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
             # There is a reference to an CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
+            if dbg: print("Case 5a")
             objtype = 'C'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif 'MPEC' in reference:
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
+            if dbg: print("Case 5b")
             objtype = 'N'
             if 'A/' in desig:
                 # Check if it is an inactive hyperbolic asteroid
                 objtype = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
+        elif desig[-1] == 'P' and desig[0:-1].isdigit():
+            # Crossid from NEO candidate to comet
+            if dbg: print("Case 5c")
+            objtype = 'C'
+            try:
+                desig = str(int(desig[0:-1]))
+                desig += 'P'
+            except ValueError:
+                pass
+            if time_from_confirm > interesting_cutoff:
+                active = False
         else:
+            if dbg: print("Case 5z")
             objtype = 'A'
             active = False
 
