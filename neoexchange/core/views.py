@@ -16,7 +16,10 @@ GNU General Public License for more details.
 import os
 from glob import glob
 from datetime import datetime, timedelta, date
-from math import floor, ceil
+from math import floor, ceil, degrees, radians, pi
+import json
+import urllib
+import logging
 import tempfile
 from django.db.models import Q
 from django.forms.models import model_to_dict
@@ -32,35 +35,39 @@ from django.views.generic.detail import SingleObjectMixin
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.template.loader import get_template
 from http.client import HTTPSConnection
+from django.conf import settings
 from bs4 import BeautifulSoup
-import urllib
-from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
-    determine_darkness_times, determine_slot_length, determine_exp_time_count, \
-    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
-    determine_spectro_slot_length, read_findorb_ephem
+import reversion
+import requests
+import numpy as np
+try:
+    import pyslalib.slalib as S
+except ImportError:
+    pass
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
+from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
+    convert_ast_to_comet
+from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
+    determine_darkness_times, determine_slot_length, determine_exp_time_count, \
+    MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
+    determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
-    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
+    parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
     read_mtds_file, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
-    convert_ast_to_comet
+from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
+    plotFormat
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
-import logging
-import reversion
-import json
-import requests
-import numpy as np
-from django.conf import settings
+
 
 logger = logging.getLogger(__name__)
 
@@ -398,6 +405,35 @@ class CandidatesViewBlock(LoginRequiredMixin, View):
         return render(request, self.template, {'body': block.body, 'candidates': candidates, 'slot': block})
 
 
+class StaticSourceView(ListView):
+    template_name = 'core/calibsource_list.html'
+    model = StaticSource
+    queryset = StaticSource.objects.order_by('ra')
+    context_object_name = "calibsources"
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super(StaticSourceView, self).get_context_data(**kwargs)
+        sun_ra, sun_dec = accurate_astro_darkness('500', datetime.now(), solar_pos=True)
+        night_ra = degrees(sun_ra - pi)
+        if night_ra < 0:
+            night_ra += 360
+        night_ra = degreestohms(night_ra, ':')
+        night_dec = degreestodms(degrees(-sun_dec), ':')
+        context['night'] = {'ra': night_ra, 'dec': night_dec}
+        return context
+
+
+class StaticSourceDetailView(DetailView):
+    template_name = 'core/calibsource_detail.html'
+    model = StaticSource
+
+    def get_context_data(self, **kwargs):
+        context = super(StaticSourceDetailView, self).get_context_data(**kwargs)
+        context['blocks'] = Block.objects.filter(calibsource=self.object).order_by('block_start')
+        return context
+
+
 def generate_new_candidate_id(prefix='LNX'):
 
     new_id = None
@@ -485,6 +521,24 @@ class LookUpBodyMixin(object):
             raise Http404("Body does not exist")
 
 
+class LookUpCalibMixin(object):
+    """
+    A Mixin for finding a StaticSource for a sitecode and if it exists, return the Target instance.
+    """
+    def dispatch(self, request, *args, **kwargs):
+        try:
+            calib_id = kwargs['pk']
+            if calib_id == '-':
+                sitecode = kwargs['instrument_code'][0:3]
+                target, target_params = find_best_flux_standard(sitecode)
+            else:
+                target = StaticSource.objects.get(pk=calib_id)
+            self.target = target
+            return super(LookUpCalibMixin, self).dispatch(request, *args, **kwargs)
+        except StaticSource.DoesNotExist:
+            raise Http404("StaticSource does not exist")
+
+
 class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
     """
     Creates a suggested observation request, including time window and molecules
@@ -510,6 +564,44 @@ class ScheduleParameters(LoginRequiredMixin, LookUpBodyMixin, FormView):
             return self.form_valid(form, request)
         else:
             return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.body))
+
+    def get_context_data(self, **kwargs):
+        """
+        Only show proposals the current user is a member of
+        """
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        if kwargs['cad_form']:
+            kwargs['cad_form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
+
+
+class ScheduleCalibParameters(LoginRequiredMixin, LookUpCalibMixin, FormView):
+    """
+    Creates a suggested observation request for a static source, including time window and molecules
+    """
+    template_name = 'core/schedule.html'
+    form_class = ScheduleForm
+    ok_to_schedule = False
+
+    def get(self, request, *args, **kwargs):
+        form = self.get_form()
+        cadence_form = ScheduleCadenceForm()
+        return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.target))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.target, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/calib_schedule_confirm.html', {'form': new_form, 'data': data, 'calibrator': self.target})
+
+    def post(self, request, *args, **kwargs):
+        form = self.get_form()
+        cadence_form = ScheduleCadenceForm()
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, cad_form=cadence_form, body=self.target))
 
     def get_context_data(self, **kwargs):
         """
@@ -579,6 +671,93 @@ class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
         return kwargs
 
 
+class ScheduleCalibSpectra(LoginRequiredMixin, LookUpCalibMixin, FormView):
+    """
+    Creates a suggested spectroscopic calibration observation request, including time
+    window, calibrations and molecules
+    """
+    template_name = 'core/schedule_spectra.html'
+    form_class = ScheduleSpectraForm
+    ok_to_schedule = False
+
+    def get(self, request, *args, **kwargs):
+        # Override default exposure time for brighter calib targets and set the initial
+        # instrument code to that which came in via the URL and the kwargs
+        form = ScheduleSpectraForm(initial={'exp_length' : 180.0,
+                                            'instrument_code' : kwargs.get('instrument_code', '')}
+                                  )
+        return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def post(self, request, *args, **kwargs):
+        form = ScheduleSpectraForm(request.POST)
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def form_valid(self, form, request):
+        data = schedule_check(form.cleaned_data, self.target, self.ok_to_schedule)
+        new_form = ScheduleBlockForm(data)
+        return render(request, 'core/calib_schedule_confirm.html', {'form': new_form, 'data': data, 'calibrator': self.target})
+
+    def get_context_data(self, **kwargs):
+        """
+        Only show proposals the current user is a member of
+        """
+        proposals = user_proposals(self.request.user)
+        proposal_choices = [(proposal.code, proposal.title) for proposal in proposals]
+        kwargs['form'].fields['proposal_code'].choices = proposal_choices
+        return kwargs
+
+
+class ScheduleCalibSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
+    """
+    Takes the hidden form input from ScheduleParameters, validates them as a double check.
+    Then submits to the scheduler. If a tracking number is returned, the object has been scheduled and we record a Block.
+    """
+    template_name = 'core/calib_schedule_confirm.html'
+    form_class = ScheduleBlockForm
+    model = StaticSource
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.form_invalid(form)
+
+    def form_valid(self, form, request):
+        if 'edit' in request.POST:
+            # Recalculate the parameters by amending the block length
+            data = schedule_check(form.cleaned_data, self.object)
+            new_form = ScheduleBlockForm(data)
+            return render(request, self.template_name, {'form': new_form, 'data': data, 'calibrator': self.object})
+        elif 'submit' in request.POST:
+            target = self.get_object()
+            username = ''
+            if request.user.is_authenticated():
+                username = request.user.get_username()
+            tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
+
+            if tracking_num:
+                messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
+                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                if block_resp:
+                    messages.success(self.request, "Block recorded")
+                else:
+                    messages.warning(self.request, "Record not created")
+            else:
+                msg = "It was not possible to submit your request to the scheduler."
+                if sched_params.get('error_msg', None):
+                    msg += "\nAdditional information:" + sched_params['error_msg']
+                messages.warning(self.request, msg)
+            return super(ScheduleCalibSubmit, self).form_valid(form)
+
+    def get_success_url(self):
+        return reverse('home')
+
+
 class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
     """
     Takes the hidden form input from ScheduleParameters, validates them as a double check.
@@ -629,6 +808,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 def schedule_check(data, body, ok_to_schedule=True):
 
     spectroscopy = data.get('spectroscopy', False)
+    solar_analog = data.get('solar_analog', False)
     body_elements = model_to_dict(body)
 
     if spectroscopy:
@@ -637,7 +817,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         data['instrument_code'] = ''
 
     # Check if we have a high eccentricity object and it's not of comet type
-    if body_elements['eccentricity'] >= 0.9 and body_elements['elements_type'] != 'MPC_COMET':
+    if body_elements.get('eccentricity', 0.0) >= 0.9 and body_elements.get('elements_type', None) != 'MPC_COMET':
         logger.warning("Preventing attempt to schedule high eccentricity non-Comet")
         ok_to_schedule = False
 
@@ -666,13 +846,31 @@ def schedule_check(data, body, ok_to_schedule=True):
     dark_end = min(dark_end, semester_end)
 
     dark_midpoint = dark_start + (dark_end - dark_start) / 2
-    emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
-        dbg=False, perturb=False, display=False)
-    if emp == []:
-        emp = [-99 for x in range(5)]
-    magnitude = emp[3]
-    speed = emp[4]
-    
+
+    solar_analog_id = -1
+    solar_analog_params = {}
+    if type(body) == Body:
+        emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
+            dbg=False, perturb=False, display=False)
+        if emp == []:
+            emp = [-99 for x in range(5)]
+        ra = emp[1]
+        dec = emp[2]
+        magnitude = emp[3]
+        speed = emp[4]
+        if spectroscopy and solar_analog:
+            # Try and find a suitable solar analog "close" to RA, Dec midpoint
+            # of block
+            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec)
+            if close_solarstd is not None:
+                solar_analog_id = close_solarstd.id
+                solar_analog_params = close_solarstd_params
+    else:
+        magnitude = body.vmag
+        speed = 0.0
+        ra = body.ra
+        dec = body.dec
+
     # Determine filter pattern
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
@@ -715,8 +913,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
-
-
 
     # Determine pattern iterations
     if exp_count:
@@ -772,14 +968,17 @@ def schedule_check(data, body, ok_to_schedule=True):
         'start_time': dark_start.isoformat(),
         'end_time': dark_end.isoformat(),
         'mid_time': dark_midpoint.isoformat(),
-        'ra_midpoint': emp[1],
-        'dec_midpoint': emp[2],
+        'ra_midpoint': ra,
+        'dec_midpoint': dec,
         'period' : period,
         'jitter' : jitter,
         'snr' : snr,
         'spectroscopy' : spectroscopy,
         'calibs' : data.get('calibs', ''),
-        'instrument_code' : data['instrument_code']
+        'instrument_code' : data['instrument_code'],
+        'solar_analog' : solar_analog,
+        'calibsource' : solar_analog_params,
+        'calibsource_id' : solar_analog_id
     }
 
     if period and jitter:
@@ -790,11 +989,36 @@ def schedule_check(data, body, ok_to_schedule=True):
 
 
 def schedule_submit(data, body, username):
-
     # Assemble request
     # Send to scheduler
+    if type(body) == StaticSource:
+        body_elements = {}
+    else:
+        body_elements = model_to_dict(body)
+        body_elements['epochofel_mjd'] = body.epochofel_mjd()
+        body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
+        body_elements['current_name'] = body.current_name()
+    # If we have a solar analog requested, retrieve corresponding StaticSource
+    # object and assemble parameters
+    calibsource_params = {}
+    if data.get('solar_analog', False) and data.get('calibsource_id', -1) > 0:
+        try:
+            calibsource = StaticSource.objects.get(pk=data['calibsource_id'])
+            calibsource_params = {  'id'      : calibsource.pk,
+                                    'name'    : calibsource.name,
+                                    'ra_deg'  : calibsource.ra,
+                                    'dec_deg' : calibsource.dec,
+                                    'pm_ra'   : calibsource.pm_ra,
+                                    'pm_dec'  : calibsource.pm_dec,
+                                    'parallax': calibsource.parallax,
+                                    'source_type' : calibsource.source_type,
+                                    'vmag' : calibsource.vmag
+                                 }
+        except StaticSource.DoesNotExist:
+            logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
+
     emp_at_start = None
-    if data.get('spectroscopy', False) is not False:
+    if isinstance(body, Body) and data.get('spectroscopy', False) is not False:
         # Update MPC observations assuming too many updates have not been done recently
         cut_off_time = timedelta(minutes=1)
         now = datetime.utcnow()
@@ -808,12 +1032,13 @@ def schedule_submit(data, body, username):
             emp_info = new_ephemeris[0]
             ephemeris = new_ephemeris[1]
             emp_at_start = ephemeris[0]
-    body.refresh_from_db()
 
-    body_elements = model_to_dict(body)
-    body_elements['epochofel_mjd'] = body.epochofel_mjd()
-    body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
-    body_elements['current_name'] = body.current_name()
+        body.refresh_from_db()
+        body_elements = model_to_dict(body)
+        body_elements['epochofel_mjd'] = body.epochofel_mjd()
+        body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
+        body_elements['current_name'] = body.current_name()
+
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
     my_proposals = user_proposals(username)
@@ -838,11 +1063,23 @@ def schedule_submit(data, body, username):
               'spectroscopy' : data.get('spectroscopy', False),
               'calibs' : data.get('calibs', ''),
               'instrument_code' : data['instrument_code'],
+              'solar_analog' : data.get('solar_analog', False),
+              'calibsource' : calibsource_params,
               'findorb_ephem' : emp_at_start
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
         params['jitter'] = data['jitter']
+    # If we have a (static) StaticSource object, fill in details needed by make_target
+    if type(body) == StaticSource:
+        params['ra_deg'] = body.ra
+        params['dec_deg'] = body.dec
+        params['source_id'] = body.current_name()
+        params['pm_ra'] = body.pm_ra
+        params['pm_dec'] = body.pm_dec
+        params['parallax'] = body.parallax
+        params['source_type'] = body.source_type
+        params['vmag'] = body.vmag
     # Check for pre-existing block
     tracking_number = None
     resp_params = None
@@ -856,7 +1093,7 @@ def schedule_submit(data, body, username):
         # Multiple blocks found
         resp_params = {'error_msg' : 'Multiple Blocks for same day and site found'}
     if check_for_block(data, params, body) == 0:
-        # Record block and submit to scheduler
+        # Submit to scheduler and then record block
         tracking_number, resp_params = submit_block_to_scheduler(body_elements, params)
     return tracking_number, resp_params
 
@@ -883,6 +1120,28 @@ class SpectroFeasibility(LookUpBodyMixin, FormView):
             return self.render_to_response(self.get_context_data(form=form, body=self.body))
 
 
+class CalibSpectroFeasibility(LookUpCalibMixin, FormView):
+
+    template_name = 'core/feasibility.html'
+    form_class = SpectroFeasibilityForm
+
+    def get(self, request, *args, **kwargs):
+        form = SpectroFeasibilityForm(body=self.target, initial={'exp_length' : 180.0})
+        return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+    def form_valid(self, form, request):
+        data = feasibility_check(form.cleaned_data, self.target)
+        new_form = SpectroFeasibilityForm(data, body=self.target)
+        return render(request, 'core/feasibility.html', {'form': new_form, 'data': data, 'body': self.target})
+
+    def post(self, request, *args, **kwargs):
+        form = SpectroFeasibilityForm(request.POST, body=self.target)
+        if form.is_valid():
+            return self.form_valid(form, request)
+        else:
+            return self.render_to_response(self.get_context_data(form=form, body=self.target))
+
+
 def feasibility_check(data, body):
     """Calculate spectroscopic feasibility
     """
@@ -896,7 +1155,11 @@ def feasibility_check(data, body):
                     'moon_phase' : data['moon_phase'],
                     'airmass'    : data['airmass']
                  }
-    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params)
+    if isinstance(body, Body):
+        spectral_type = 'Mean'
+    else:
+        spectral_type = 'Solar'
+    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
     calibs = data.get('calibs', 'both')
     slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
     slot_length /= 60.0
@@ -1099,7 +1362,7 @@ def check_for_block(form_data, params, new_body):
         return 1
 
 
-def record_block(tracking_number, params, form_data, body):
+def record_block(tracking_number, params, form_data, target):
     """Records a just-submitted observation as a SuperBlock and Block(s) in the database.
     """
 
@@ -1107,10 +1370,9 @@ def record_block(tracking_number, params, form_data, body):
     logger.debug("   params=%s" % params)
     if tracking_number:
         cadence = False
-        if len(params.get('request_numbers', [])) > 1:
+        if len(params.get('request_numbers', [])) > 1 and params.get('period', -1.0) > 0.0 and params.get('jitter', -1.0) > 0.0:
             cadence = True
         sblock_kwargs = {
-                         'body'     : body,
                          'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                          'groupid'  : form_data['group_id'],
                          'block_start' : form_data['start_time'],
@@ -1123,29 +1385,49 @@ def record_block(tracking_number, params, form_data, body):
                          'rapid_response' : params.get('too_mode', False),
                          'active'   : True,
                        }
+        if isinstance(target, StaticSource):
+            sblock_kwargs['calibsource'] = target
+        else:
+            sblock_kwargs['body'] = target
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
-        for request in params.get('request_numbers', []):
+        for request, request_type in params.get('request_numbers', {}).items():
             # cut off json UTC timezone remnant
             no_timezone_blk_start = params['request_windows'][i][0]['start'][:-1]
             no_timezone_blk_end = params['request_windows'][i][0]['end'][:-1]
             obstype = Block.OPT_IMAGING
             if params.get('spectroscopy', False):
                 obstype = Block.OPT_SPECTRA
+                if request_type == 'SIDEREAL':
+                    obstype = Block.OPT_SPECTRA_CALIB
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
                              'site'     : params['site'].lower(),
-                             'body'     : body,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'obstype'  : obstype,
-                             'groupid'  : form_data['group_id'],
+                             'groupid'  : params['group_id'],
                              'block_start' : datetime.strptime(no_timezone_blk_start, '%Y-%m-%dT%H:%M:%S'),
                              'block_end'   : datetime.strptime(no_timezone_blk_end, '%Y-%m-%dT%H:%M:%S'),
                              'tracking_number' : request,
-                             'num_exposures'   : form_data['exp_count'],
-                             'exp_length'      : form_data['exp_length'],
+                             'num_exposures'   : params['exp_count'],
+                             'exp_length'      : params['exp_time'],
                              'active'   : True
                            }
+            if request_type == 'SIDEREAL' and params.get('solar_analog', False) is True and len(params.get('calibsource', {})) > 0:
+                try:
+                    calib_source = StaticSource.objects.get(pk=params['calibsource']['id'])
+                except StaticSource.DoesNotExist:
+                    logger.error("Tried to refetch a StaticSource (# %d) which now does not exist" % params['calibsource']['id'])
+                    return False
+                block_kwargs['body'] = None
+                block_kwargs['calibsource'] = calib_source
+                block_kwargs['exp_length'] = params['calibsrc_exptime']
+            elif request_type == 'SIDEREAL':
+                block_kwargs['body'] = None
+                block_kwargs['calibsource'] = target
+            else:
+                block_kwargs['body'] = target
+                block_kwargs['calibsource'] = None
             pk = Block.objects.create(**block_kwargs)
             i += 1
         return True
@@ -1202,7 +1484,7 @@ def update_NEOCP_orbit(obj_id, extra_params={}):
     b) If the object's parameters have changed they will be updated and a revision logged
     c) New objects get marked as active = True automatically
     """
-    NEOCP_orb_url = 'http://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
+    NEOCP_orb_url = 'https://cgi.minorplanetcenter.net/cgi-bin/showobsorbs.cgi?Obj=%s&orb=y' % obj_id
 
     neocp_obs_page = fetchpage_and_make_soup(NEOCP_orb_url)
 
@@ -1702,7 +1984,10 @@ def create_source_measurement(obs_lines, block=None):
                 try:
                     unpacked_name = packed_to_normal(param['body'])
                 except PackedError:
-                    unpacked_name = 'ZZZZZZ'
+                    try:
+                        unpacked_name = str(int(param['body']))
+                    except ValueError:
+                        unpacked_name = 'ZZZZZZ'
                 obs_body = Body.objects.get(Q(provisional_name__startswith=param['body']) |
                                             Q(name=param['body']) |
                                             Q(name=unpacked_name) |
@@ -1734,14 +2019,20 @@ def create_source_measurement(obs_lines, block=None):
                 try:
                     unpacked_name = packed_to_normal(params['body'])
                 except PackedError:
-                    unpacked_name = 'ZZZZZZ'
+                    try:
+                        unpacked_name = str(int(params['body']))
+                    except ValueError:
+                        unpacked_name = 'ZZZZZZ'
                 # if new name, reset obs_body
                 if params['body'] != obs_body.name and unpacked_name != obs_body.provisional_name and unpacked_name != obs_body.name and params['body'] != obs_body.provisional_name:
                     try:
                         try:
                             unpacked_name = packed_to_normal(params['body'])
                         except PackedError:
-                            unpacked_name = 'ZZZZZZ'
+                            try:
+                                unpacked_name = str(int(params['body']))
+                            except ValueError:
+                                unpacked_name = 'ZZZZZZ'
                         obs_body = Body.objects.get(Q(provisional_name__startswith=params['body']) |
                                                     Q(name=params['body']) |
                                                     Q(name=unpacked_name)
@@ -1836,6 +2127,7 @@ def create_source_measurement(obs_lines, block=None):
                             measures.append(measure)
                             measure_count += 1
                         # End loop when measurements are in the DB for all MPC lines
+                        logger.info('Previously recorded {} of {} total MPC obs'.format(measure_count, useful_obs))
                         if measure_count >= useful_obs:
                             break
 
@@ -2126,6 +2418,39 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 
+def make_standards_plot(request):
+    """creates stellar standards plot to be added to page"""
+    import matplotlib.pyplot as plt
+    import io
+    scoords = readSources('Solar')
+    fcoords = readSources('Flux')
+
+    ax = plt.figure().gca()
+    plotScatter(ax, scoords, 'b*')
+    plotScatter(ax, fcoords, 'g*')
+    plotFormat(ax, 0)
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    plt.close()
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+
+def make_solar_standards_plot(request):
+    """creates solar standards plot to be added to page"""
+    import matplotlib.pyplot as plt
+    import io
+    scoords = readSources('Solar')
+    ax = plt.figure().gca()
+    plotScatter(ax, scoords, 'b*')
+    plotFormat(ax, 1)
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    plt.close()
+
+    return HttpResponse(buffer.getvalue(), content_type="Image/png")
+
+
 def update_taxonomy(taxobj, dbg=False):
     """Update the passed <taxobj> for a new taxonomy update.
     <taxobj> is expected to be a list of:
@@ -2215,4 +2540,94 @@ def update_previous_spectra(specobj, source='U', dbg=False):
     return True
 
 
+def create_calib_sources(calib_sources, cal_type=StaticSource.FLUX_STANDARD):
+    """Creates StaticSources from the passed dictionary of <calib_sources>. This
+    would normally come from fetch_flux_standards() but other sources are possible.
+    The number of sources created is returned"""
 
+    num_created = 0
+
+    for standard in calib_sources:
+
+        params = {
+                    'name' : standard,
+                    'ra'  : degrees(calib_sources[standard]['ra_rad']),
+                    'dec' : degrees(calib_sources[standard]['dec_rad']),
+                    'vmag' : calib_sources[standard]['mag'],
+                    'spectral_type' : calib_sources[standard].get('spectral_type', ''),
+                    'source_type' : cal_type,
+                    'notes' : calib_sources[standard].get('notes', '')
+                 }
+        calib_source, created = StaticSource.objects.get_or_create(**params)
+        if created:
+            num_created += 1
+    return num_created
+
+
+def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards=None, debug=False):
+    """Finds the "best" flux standard (closest to the zenith at the middle of
+    the night (given by [utc_date]; defaults to UTC "now") for the passed <sitecode>
+    [flux_standards] is expected to be a dictionary of standards with the keys as the
+    name of the standards and pointing to a dictionary with the details. This is
+    normally produced by sources_subs.fetch_flux_standards(); which will be
+    called if standards=None
+    """
+    close_standard = None
+    close_params = {}
+    if flux_standards is None:
+        flux_standards = StaticSource.objects.filter(source_type=StaticSource.FLUX_STANDARD)
+
+    site_name, site_long, site_lat, site_hgt = get_sitepos(sitecode)
+    if site_name != '?':
+
+        # Compute midpoint of the night
+        dark_start, dark_end = determine_darkness_times(sitecode, utc_date)
+
+        dark_midpoint = dark_start + (dark_end - dark_start) / 2.0
+
+        if debug:
+            print("\nDark midpoint, start, end", dark_midpoint, dark_start, dark_end)
+
+        # Compute Local Sidereal Time at the dark midpoint
+        stl = datetime2st(dark_midpoint, site_long)
+
+        if debug:
+            print("RA, Dec of zenith@midpoint:", stl, site_lat)
+        # Loop through list of standards, recording closest
+        min_sep = 360.0
+        for standard in flux_standards:
+            sep = S.sla_dsep(radians(standard.ra), radians(standard.dec), stl, site_lat)
+            if debug:
+                print("%10s %.7f %.7f %.3f %7.3f (%10s)" % (standard, standard.ra, standard.dec, sep, min_sep, close_standard))
+            if sep < min_sep:
+                min_sep = sep
+                close_standard = standard
+        close_params = model_to_dict(close_standard)
+        close_params['separation_rad'] = min_sep
+    return close_standard, close_params
+
+
+def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=None, debug=False):
+    """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
+    from e.g. compute_ephem)) within [min_sep] degrees (defaults to 60deg (=4 hours
+    of HA).
+    If a match is found, the StaticSource object is returned along with a
+    dictionary of parameters, including the additional 'seperation_deg' with the
+    minimum separation found (in degrees)"""
+
+    close_standard = None
+    close_params = {}
+    if solar_standards is None:
+        solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
+
+    for standard in solar_standards:
+        sep = degrees(S.sla_dsep(radians(standard.ra), radians(standard.dec), ra_rad, dec_rad))
+        if debug:
+            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, min_sep, close_standard))
+        if sep < min_sep:
+            min_sep = sep
+            close_standard = standard
+    if close_standard is not None:
+        close_params = model_to_dict(close_standard)
+        close_params['separation_deg'] = min_sep
+    return close_standard, close_params
