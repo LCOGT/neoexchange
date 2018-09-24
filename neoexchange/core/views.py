@@ -1024,7 +1024,7 @@ def schedule_submit(data, body, username):
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
 
     emp_at_start = None
-    if isinstance(body, Body) and data.get('spectroscopy', False) is not False and body.source_type != 'C' and body.elements_type != 'MPC_comet':
+    if isinstance(body, Body) and data.get('spectroscopy', False) is not False and body.source_type != 'C' and body.elements_type != 'MPC_COMET':
         # Update MPC observations assuming too many updates have not been done recently and target is not a comet
         cut_off_time = timedelta(minutes=1)
         now = datetime.utcnow()
