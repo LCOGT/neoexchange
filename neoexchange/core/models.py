@@ -1124,8 +1124,8 @@ class CatalogSources(models.Model):
         2:  The object was originally blended with another one,
         4:  At least one pixel of the object is saturated (or very close to),
         8:  The object is truncated (too close to an image boundary),
-        16: Object’s aperture data are incomplete or corrupted,
-        32: Object’s isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
+        16: Object's aperture data are incomplete or corrupted,
+        32: Object's isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
         64: A memory overflow occurred during deblending,
         128:A memory overflow occurred during extraction.
         """
