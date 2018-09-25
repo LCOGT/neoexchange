@@ -52,6 +52,7 @@ from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockF
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
+import astrometrics.site_config as cfg
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
@@ -895,6 +896,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
 
+    # Pull out LCO Site, Telescope Class using site_config.py
+    lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
+
     # Determine slot length
     if data.get('slot_length'):
         slot_length = data.get('slot_length')
@@ -982,6 +986,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'spectroscopy' : spectroscopy,
         'calibs' : data.get('calibs', ''),
         'instrument_code' : data['instrument_code'],
+        'lco_site' : lco_site_code[0:3],
+        'lco_tel' : lco_site_code[-4:-1],
+        'lco_enc' : lco_site_code[4:8],
         'solar_analog' : solar_analog,
         'calibsource' : solar_analog_params,
         'calibsource_id' : solar_analog_id

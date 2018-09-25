@@ -35,12 +35,12 @@
                     {% if data.instrument_code %}
                         <tr id="id_site">
                             <td class="kv-key">Site/Instrument</td>
-                            <td class="kv-value">{{data.instrument_code}}</td>
+                            <td class="kv-value">{{data.instrument_code}} <i class="fa fa-arrow-right"></i> {{data.lco_site}} {{data.lco_tel}} ({{data.lco_enc}})</td>
                         </tr>
                     {% else %}
                         <tr id="id_site">
                             <td class="kv-key">Site</td>
-                            <td class="kv-value">{{data.site_code}}</td>
+                            <td class="kv-value">{{data.site_code}} <i class="fa fa-arrow-right"></i> {{data.lco_site}} {{data.lco_tel}} ({{data.lco_enc}})</td>
                         </tr>
                     {% endif %}
                     <tr id="id_utc_date">
