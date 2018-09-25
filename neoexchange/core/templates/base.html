@@ -64,6 +64,10 @@
 						{% block login %}
 						<div id="login" class="block">
 							<ul>
+								<li>
+									<span id="clock"></span>
+									<script type="text/javascript" src="{% static 'core/js/utc_clock.js' %}" charset="UTF-8"></script>
+								</li>
 								{% if user.is_authenticated %}
 								<li>
 									<a href="#" id="messages-inbox" class="fa fa-inbox{% if messages %} highlight{% endif %}"></a>
