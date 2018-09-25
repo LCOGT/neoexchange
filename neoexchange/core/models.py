@@ -1,22 +1,21 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 from __future__ import unicode_literals
-from datetime import datetime
-from math import pi, log10
-from collections import Counter
+from datetime import datetime, timedelta, date
+from math import pi, log10, sqrt, cos, degrees
+from collections import Counter, OrderedDict
 import reversion
+import logging
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -41,6 +40,9 @@ from astrometrics.ephem_subs import compute_ephem, comp_FOM, get_sitecam_params,
 from astrometrics.sources_subs import translate_catalog_code
 from astrometrics.time_subs import dttodecimalday, degreestohms, degreestodms
 from astrometrics.albedo import asteroid_albedo, asteroid_diameter
+from core.archive_subs import check_for_archive_images
+
+logger = logging.getLogger(__name__)
 
 
 OBJECT_TYPES = (
@@ -107,6 +109,20 @@ TAX_REFERENCE_CHOICES = (
                         ('BZ04', 'Binzel, et al. (2004).'),
                      )
 
+SPECTRAL_WAV_CHOICES = (
+                        ('Vis', 'Visible'),
+                        ('NIR', 'Near Infrared'),
+                        ('Vis+NIR', 'Both Visible and Near IR'),
+                        ('NA', 'None Yet.'),
+                     )
+
+SPECTRAL_SOURCE_CHOICES = (
+                        ('S', 'SMASS'),
+                        ('M', 'MANOS'),
+                        ('U', 'Unknown'),
+                        ('O', 'Other')
+                     )
+
 
 @python_2_unicode_compatible
 class Proposal(models.Model):
@@ -159,20 +175,28 @@ class Body(models.Model):
     ingest              = models.DateTimeField(default=now)
     update_time         = models.DateTimeField(blank=True, null=True)
 
-    def diameter(self):        
+    def characterization_target(self):
+        # If we change the definition of Characterization Target,
+        # also update views.build_characterization_list
+        if self.active is True and self.origin != 'M':
+            return True
+        else:
+            return False
+
+    def diameter(self):
         m = self.abs_mag
         avg = 0.167
         d_avg = asteroid_diameter(avg, m)
         return d_avg
-        
+
     def diameter_range(self):
         m = self.abs_mag
         mn = 0.01
-        mx = 0.6       
+        mx = 0.6
         d_max = asteroid_diameter(mn, m)
         d_min = asteroid_diameter(mx, m)
         return d_min, d_max
-        
+
     def epochofel_mjd(self):
         mjd = None
         try:
@@ -212,7 +236,103 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6]
+            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
+        else:
+            # Catch the case where there is no Epoch
+            return False
+
+    def compute_obs_window(self, d=None, dbg=False):
+        """
+        Compute rough window during which target may be observable based on when it is brighter than a
+        given mag_limit amd further from the sun than sep_limit.
+        """
+        if not isinstance(d, datetime):
+            d = datetime.utcnow()
+        d0 = d
+        df = 90  # days to look forward
+        delta_t = 10  # size of steps in days
+        mag_limit = 18
+        sep_limit = 45  # degrees away from Sun
+        i = 0
+        dstart = ''
+        dend = ''
+        if self.epochofel:
+            if dbg:
+                logger.debug('Body: {}'.format(self.name))
+            orbelems = model_to_dict(self)
+            sitecode = '500'
+            # calculate the ephemeris for each step (delta_t) within the time span df.
+            while i <= df / delta_t + 1:
+
+                emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+                vmag = emp_line[3]
+
+                # Eliminate bad magnitudes
+                if vmag < 0:
+                    return dstart, dend, d0
+
+                # Calculate time since/until reaching Magnitude limit
+                t_diff = (mag_limit - vmag) / mag_dot
+                if abs(t_diff) > 10000:
+                    t_diff = 10000*t_diff/abs(t_diff)
+
+                # create separation test.
+                sep_test = degrees(separation) > sep_limit
+
+                # Filter likely results based on Mag/mag_dot to speed results.
+                # Cuts load time by 60% will occasionally and temporarily miss
+                # objects with either really short windows or unusual behavior
+                # at the edges. These objects will be found as the date changes.
+
+                # Check first and last dates first
+                if d == d0 + timedelta(days=df) and i == 1:
+                    # if Valid for beginning and end of window, assume valid for window
+                    if vmag <= mag_limit and dstart and sep_test:
+                        if dbg:
+                            logger.debug("good at begining and end, mag: {}, sep {}".format(vmag, sep_test))
+                        return dstart, dend, d0
+                    elif not dstart:
+                        # If not valid for beginning of window or end of window, check if Change in mag implies it will ever be good.
+                        if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                            if dbg:
+                                logger.debug("bad at begining and end, Delta Mag no good, mag:{}, sep: {}".format(vmag, sep_test))
+                            return dstart, dend, d0
+                        else:
+                            d = d0 + timedelta(days=delta_t)
+                    else:
+                        d = d0 + timedelta(days=delta_t)
+                # if a valid start has been found, check if we are now invalid. Exit if so.
+                elif (vmag > mag_limit or not sep_test) and dstart:
+                    dend = d
+                    if dbg:
+                        logger.debug("Ended at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
+                    return dstart, dend, d0
+                # If no start date, and we are valid, set start date
+                elif vmag <= mag_limit and not dstart and sep_test:
+                    dstart = d
+                    if dbg:
+                        logger.debug("started at {}, mag: {}, sep: {}".format(i, vmag, sep_test))
+                    # if this is our first iteration (i.e. we started valid) test end date
+                    if i == 0:
+                        d += timedelta(days=df)
+                    # otherwise step forward
+                    else:
+                        d += timedelta(days=delta_t)
+                # if we are not valid from the start, check if we might be valid in middle. Otherwise, check end.
+                elif vmag > mag_limit and i == 0:
+                    if d + timedelta(days=t_diff) < d0 or d + timedelta(days=t_diff) > d0 + timedelta(days=df):
+                        d += timedelta(days=df)
+                    else:
+                        d += timedelta(days=delta_t)
+                # if nothing has changed, step forward.
+                else:
+                    d += timedelta(days=delta_t)
+#                d += timedelta(days=delta_t)
+                i += 1
+            # Return dates
+            if dbg:
+                logger.debug("no end change, mag: {}, sep: {}".format(vmag, sep_test))
+            return dstart, dend, d0
         else:
             # Catch the case where there is no Epoch
             return False
@@ -330,12 +450,31 @@ class SpectralInfo(models.Model):
         return "%s is a %s-Type Asteroid" % (self.body.name, self.taxonomic_class)
 
 
+class PreviousSpectra(models.Model):
+    body                = models.ForeignKey(Body, on_delete=models.CASCADE)
+    spec_wav            = models.CharField('Wavelength', blank=True, null=True, max_length=7, choices=SPECTRAL_WAV_CHOICES)
+    spec_vis            = models.URLField('Visible Spectra Link', blank=True, null=True)
+    spec_ir             = models.URLField('IR Spectra Link', blank=True, null=True)
+    spec_ref            = models.CharField('Spectra Reference', max_length=10, blank=True, null=True)
+    spec_source         = models.CharField('Source', max_length=1, blank=True, null=True, choices=SPECTRAL_SOURCE_CHOICES)
+    spec_date           = models.DateField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = _('External Spectroscopy')
+        verbose_name_plural = _('External Spectroscopy')
+        db_table = 'ingest_previous_spectra'
+
+    def __unicode__(self):
+        return "%s has %s spectra of %s" % (self.spec_source, self.spec_wav, self.body.name)
+
+
 @python_2_unicode_compatible
 class SuperBlock(models.Model):
 
     cadence         = models.BooleanField(default=False)
     rapid_response  = models.BooleanField('Is this a ToO/Rapid Response observation?', default=False)
-    body            = models.ForeignKey(Body)
+    body            = models.ForeignKey(Body, null=True, blank=True)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     proposal        = models.ForeignKey(Proposal)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -346,10 +485,18 @@ class SuperBlock(models.Model):
     timeused        = models.FloatField('Time used (seconds)', null=True, blank=True)
     active          = models.BooleanField(default=False)
 
+    def current_name(self):
+        name = ''
+        if self.body is not None:
+            name = self.body.current_name()
+        elif self.calibsource is not None:
+            name = self.calibsource.current_name()
+        return name
+
     def make_obsblock_link(self):
         url = ''
         if self.tracking_number is not None and self.tracking_number != '':
-            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
+            url = urljoin(settings.PORTAL_USERREQUEST_URL, self.tracking_number)
         return url
 
     def get_sites(self):
@@ -358,11 +505,16 @@ class SuperBlock(models.Model):
         return ", ".join(qs)
 
     def get_telclass(self):
-        qs = Block.objects.filter(superblock=self.id).values_list('telclass', flat=True).distinct()
+        qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
 
-        return ", ".join(qs)
+        # Convert obstypes into "(S)" suffix for spectra, nothing for imaging
+        class_obstype = [x[0]+str(x[1]).replace(str(Block.OPT_SPECTRA),'(S)').replace(str(Block.OPT_SPECTRA_CALIB),'(SC)').replace(str(Block.OPT_IMAGING), '') for x in qs]
+
+        return ", ".join(class_obstype)
 
     def get_obsdetails(self):
+        obs_details_str = ""
+
         qs = Block.objects.filter(superblock=self.id).values_list('num_exposures', 'exp_length')
 
         # Count number of unique N exposure x Y exposure length combinations
@@ -374,7 +526,7 @@ class SuperBlock(models.Model):
                 obs_details.append("%d of %dx%.1f secs" % (c[1], c[0][0], c[0][1]))
 
             obs_details_str = ", ".join(obs_details)
-        else:
+        elif len(counts) == 1:
             c = list(counts)
             obs_details_str = "%dx%.1f secs" % (c[0][0], c[0][1])
 
@@ -406,6 +558,12 @@ class SuperBlock(models.Model):
 
         return last_reported
 
+    def get_obstypes(self):
+        obstype = []
+        obstypes = Block.objects.filter(superblock=self.id).values_list('obstype', flat=True).distinct()
+
+        return ",".join([str(x) for x in obstypes])
+
     class Meta:
         verbose_name = _('SuperBlock')
         verbose_name_plural = _('SuperBlocks')
@@ -423,11 +581,24 @@ class SuperBlock(models.Model):
 @python_2_unicode_compatible
 class Block(models.Model):
 
+    OPT_IMAGING = 0
+    OPT_SPECTRA = 1
+    OPT_IMAGING_CALIB = 2
+    OPT_SPECTRA_CALIB = 3
+    OBSTYPE_CHOICES = (
+                        (OPT_IMAGING, 'Optical imaging'),
+                        (OPT_SPECTRA, 'Optical spectra'),
+                        (OPT_IMAGING_CALIB, 'Optical imaging calibration'),
+                        (OPT_SPECTRA_CALIB, 'Optical spectro calibration')
+                      )
+
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
     site            = models.CharField(max_length=3, choices=SITE_CHOICES)
-    body            = models.ForeignKey(Body)
+    body            = models.ForeignKey(Body, null=True, blank=True)
+    calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     proposal        = models.ForeignKey(Proposal)
     superblock      = models.ForeignKey(SuperBlock, null=True, blank=True)
+    obstype         = models.SmallIntegerField('Observation Type', null=False, blank=False, default=0, choices=OBSTYPE_CHOICES)
     groupid         = models.CharField(max_length=55, null=True, blank=True)
     block_start     = models.DateTimeField(null=True, blank=True)
     block_end       = models.DateTimeField(null=True, blank=True)
@@ -439,6 +610,14 @@ class Block(models.Model):
     active          = models.BooleanField(default=False)
     reported        = models.BooleanField(default=False)
     when_reported   = models.DateTimeField(null=True, blank=True)
+
+    def current_name(self):
+        name = ''
+        if self.body is not None:
+            name = self.body.current_name()
+        elif self.calibsource is not None:
+            name = self.calibsource.name
+        return name
 
     def make_obsblock_link(self):
         url = ''
@@ -461,6 +640,26 @@ class Block(models.Model):
             total_exposure_number = ql_frames.count()
         return total_exposure_number
 
+    def num_spectro_frames(self):
+        """Returns the numbers of different types of spectroscopic frames"""
+        num_moltypes_string = 'No data'
+        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
+            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
+            num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
+        return num_moltypes_string
+
+    def num_spectra_complete(self):
+        """Returns the number of actually completed spectra excluding lamps/arcs"""
+        num_spectra = 0
+        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            num_spectra = moltypes.count('SPECTRUM')
+        return num_spectra
+
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
 
@@ -468,6 +667,7 @@ class Block(models.Model):
         if not self.superblock:
             sblock_kwargs = {
                                 'body' : self.body,
+                                'calibsource' : self.calibsource,
                                 'proposal' : self.proposal,
                                 'block_start' : self.block_start,
                                 'block_end' : self.block_end,
@@ -615,7 +815,7 @@ class Frame(models.Model):
     filter      = models.CharField('filter class', max_length=15, blank=False, default="B")
     filename    = models.CharField('FITS filename', max_length=50, blank=True, null=True)
     exptime     = models.FloatField('Exposure time in seconds', null=True, blank=True)
-    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False)
+    midpoint    = models.DateTimeField('UTC date/time of frame midpoint', null=False, blank=False, db_index=True)
     block       = models.ForeignKey(Block, null=True, blank=True)
     quality     = models.CharField('Frame Quality flags', help_text='Comma separated list of frame/condition flags', max_length=40, blank=True, default=' ')
     zeropoint   = models.FloatField('Frame zeropoint (mag.)', null=True, blank=True)
@@ -817,7 +1017,7 @@ class SourceMeasurement(models.Model):
             else:
                 flags = ' ' + self.flags
         elif len(self.flags) > 2:
-            logger.warn("Flags longer than will fit into field - needs mapper")
+            logger.warning("Flags longer than will fit into field - needs mapper")
             flags = self.flags[0:2]
 
         # Catalog code for column 72 (if desired)
@@ -830,10 +1030,13 @@ class SourceMeasurement(models.Model):
             mag, self.frame.map_filter(), catalog_code, self.frame.sitecode)
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             extrainfo = self.frame.extrainfo
-            if self.body.name:
-                name, status = normal_to_packed(self.body.name)
-                if status == 0:
-                    extrainfo = name + extrainfo[12:]
+            if extrainfo:
+                if self.body.name:
+                    name, status = normal_to_packed(self.body.name)
+                    if status == 0:
+                        extrainfo = name + extrainfo[12:]
+            else:
+                extrainfo = ''
             mpc_line = mpc_line + '\n' + extrainfo
         return mpc_line
 
@@ -921,8 +1124,8 @@ class CatalogSources(models.Model):
         2:  The object was originally blended with another one,
         4:  At least one pixel of the object is saturated (or very close to),
         8:  The object is truncated (too close to an image boundary),
-        16: Object’s aperture data are incomplete or corrupted,
-        32: Object’s isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
+        16: Object's aperture data are incomplete or corrupted,
+        32: Object's isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
         64: A memory overflow occurred during deblending,
         128:A memory overflow occurred during extraction.
         """
@@ -1035,3 +1238,53 @@ class PanoptesReport(models.Model):
 
     def __str__(self):
         return "Block {} Candidate {} is Subject {}".format(self.block.id, self.candidate.id, self.subject_id)
+
+@python_2_unicode_compatible
+class StaticSource(models.Model):
+    """
+    Class for static (sidereal) sources, normally calibration sources (solar
+    standards, RV standards, flux standards etc)
+    """
+    UNKNOWN_SOURCE = 0
+    FLUX_STANDARD = 1
+    RV_STANDARD = 2
+    SOLAR_STANDARD = 4
+    SPECTRAL_STANDARD = 8
+    SOURCETYPE_CHOICES = [
+                            (UNKNOWN_SOURCE, 'Unknown source type'),
+                            (FLUX_STANDARD, 'Spectrophotometric standard'),
+                            (RV_STANDARD, 'Radial velocity standard'),
+                            (SOLAR_STANDARD, 'Solar spectrum standard'),
+                            (SPECTRAL_STANDARD, 'Spectral standard')
+                         ]
+
+    name = models.CharField('Name of calibration source', max_length=55)
+    ra = models.FloatField('RA of source (degrees)')
+    dec = models.FloatField('Dec of source (degrees)')
+    pm_ra = models.FloatField('Proper motion in RA of source (pmra*cos(dec); mas/yr)', default=0.0)
+    pm_dec = models.FloatField('Proper motion in Dec of source (mas/yr)', default=0.0)
+    parallax = models.FloatField('Parallax (mas)', default=0.0)
+    vmag = models.FloatField('V magnitude')
+    spectral_type = models.CharField('Spectral type of source', max_length=10, blank=True)
+    source_type = models.IntegerField('Source Type', null=False, blank=False, default=0, choices=SOURCETYPE_CHOICES)
+    notes = models.TextField(blank=True)
+    quality = models.SmallIntegerField('Source quality', default=0, blank=True, null=True)
+    reference = models.CharField('Reference for the source', max_length=255, blank=True)
+
+    def return_source_type(self):
+        srctype_name = "Undefined type"
+        srctype = [x[1] for x in self.SOURCETYPE_CHOICES if x[0] == self.source_type]
+        if len(srctype) == 1:
+            srctype_name = srctype[0]
+        return srctype_name
+
+    def current_name(self):
+        return self.name
+
+    class Meta:
+        verbose_name = _('Static Source')
+        verbose_name_plural = _('Static Sources')
+        db_table = 'ingest_staticsource'
+
+    def __str__(self):
+        return "{} ({})".format(self.name, self.return_source_type())

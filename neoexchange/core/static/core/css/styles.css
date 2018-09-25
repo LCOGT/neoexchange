@@ -205,6 +205,18 @@ ul.navlist, ol.navlist { list-style: none; margin: 0px; padding: 0px; 	display: 
 
 li.dropdown-menu {
 	position: relative;
+  color: #888 !important;
+  font-size: 17px;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-family: Oswald,'Trebuchet MS','Open Sans',arial,sans-serif;
+  background: 0 0;
+  border: none;
+  text-decoration: none;
+}
+
+li.dropdown-menu:hover {
+    background: #eee
 }
 
 li.dropdown-menu:after {
@@ -222,6 +234,7 @@ li.dropdown-menu:after {
 #navigation .navlist  li ul.dropdown {
 	display: none;
 	position: absolute;
+	z-index: 9999;
 	left: 0;
 	padding: 5px;
 	margin: 0;
@@ -240,6 +253,12 @@ li.dropdown-menu:after {
 }
 #navigation .navlist  li ul.dropdown li {
 	padding: 5px 7px;
+	display: block;
+}
+
+#navigation .navlist  li ul.dropdown li a:hover {
+	color: #888;
+    background: #eee
 }
 
 #navigation .navlist li:hover ul.dropdown {
@@ -331,6 +350,13 @@ li.dropdown-menu:after {
     color: #fff;
 }
 
+.pic_center {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 65%;
+}
+
 .title input {
 	display: block;
 	width: auto;
@@ -383,10 +409,11 @@ li.dropdown-menu:after {
 }
 
 #main-holder { display: inline-block; }
-#main { width:100%; overflow-x: hidden; }
+#main { width:100%; overflow-x: hidden; position: relative; z-index: 1;}
 .container-lg {
   width:1170px;
   overflow-x: hidden;
+  overflow: visible;
   padding-right: 15px;
   padding-left: 15px;
   margin-right: auto;

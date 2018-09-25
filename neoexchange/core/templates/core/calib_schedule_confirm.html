@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% load staticfiles basic_tags %}
+{% block header %}NEOx calibration scheduling{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1><a href="{% url 'calibsource' calibrator.id %}">{{calibrator.current_name}}</a>: Confirm Scheduling</h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+    <div class="container" id="main">
+        <form action="{% url  'schedule-calib-confirm' calibrator.id %}" method="POST" >
+        {% csrf_token %}
+          <div class="row">
+                  {% for key, error in form.errors.items %}
+                          <div class="messages error">
+                              {{ error }}
+                          </div>
+                  {% endfor %}
+          </div>
+        <div class="row">
+          <div class="eight columns">
+            {% if data %}
+            <h6 class="section-title">Submitted Parameters</h6>
+            <table class="keyvalue-table" style="width:100%">
+                <tbody>
+                    <tr id="id_proposal">
+                        <td class="kv-key">Proposal</td>
+                        <td class="kv-value">{{ data.proposal_code }}</td>
+                    </tr>
+                    {% if data.instrument_code %}
+                        <tr id="id_site">
+                            <td class="kv-key">Site/Instrument</td>
+                            <td class="kv-value">{{data.instrument_code}}</td>
+                        </tr>
+                    {% else %}
+                        <tr id="id_site">
+                            <td class="kv-key">Site</td>
+                            <td class="kv-value">{{data.site_code}}</td>
+                        </tr>
+                    {% endif %}
+                    <tr id="id_utc_date">
+                        <td class="kv-key">UTC date</td>
+                        <td class="kv-value">{{ data.utc_date}}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <table class="keyvalue-table" style="width:100%">
+                <tbody>
+                    <tr id="id_ra">
+                        <td class="kv-key">Right Ascension</td>
+                        <td class="kv-value">{{ data.ra_midpoint|degreestohms:" " }}</td>
+                    </tr>
+                    <tr id="id_dec">
+                        <td class="kv-key">Declination</td>
+                        <td class="kv-value">{{ data.dec_midpoint|degreestodms:" " }}</td>
+                    </tr>
+                     <tr id="id_magnitude">
+                        <td class="kv-key">Magnitude</td>
+                        <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
+                    </tr>
+                    {% if data.spectroscopy %}
+                    <tr id="id_slit_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                            <div class="tooltip">Slit Pattern
+                            <span class="tooltiptext" style="left:75%">Comma Separated Pattern
+                            <br>(e.g.: slit_6.0as,slit_2.0as,slit_6.0as)<br>
+                            <br><u>Slits Available at {{data.site_code}}:</u>
+                            <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
+                        <td class="kv-value">{{ form.filter_pattern }}</td>
+                    </tr>
+                    {% else %}
+                    <tr id="id_filter_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
+                            <div class="tooltip">Filter Pattern
+                            <span class="tooltiptext" style="left:75%">Comma Separated Pattern
+                            <br>(e.g.: rp,gp,rp,ip,rp)<br>
+                            <br><u>Filters Available at {{data.site_code}}:</u>
+                            <br><span name="filters">{{data.available_filters}}</span></span></div></td><td></td></tr></table></td>
+                        <td class="kv-value">{{ form.filter_pattern }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr id="id_pattern_iterations">
+                        <td class="kv-key">Pattern Iterations</td>
+                        {% if data.pattern_iterations < 1 %}
+                        <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">{{ data.pattern_iterations }}
+                            <span class="tooltiptext" style="width: 150px;"><u>Too Few Exposures To Finish Sequence</u>
+                            <br>Consider Increasing Slot Length <br></span></div></td></tr></table></td>
+                        {% else %}
+                        <td class="kv-value">{{ data.pattern_iterations }}</td>
+                        {% endif %}
+                    </tr>
+                    <tr id="id_slot_length">
+                        <td class="kv-key">Slot length</td>
+                        <td class="kv-value">{{ form.slot_length }} mins</td>
+                    </tr>
+                    <tr id="id_no_of_exps">
+                        <td class="kv-key">No. of exposures</td>
+                        <td class="kv-value">{{ data.exp_count }}</td>
+                    </tr>
+                    <tr id="id_exp_length">
+                        <td class="kv-key">Exposure length</td>
+                        <td class="kv-value">{{ data.exp_length|floatformat:1 }} secs</td>
+                    </tr>
+                    {% if data.snr %}
+                    <tr id="id_snr">
+                        <td class="kv-key">SNR</td>
+                        <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                    </tr>
+                    {% endif %}
+                    <tr id="id_window">
+                        <td class="kv-key">Window (UTC)</td>
+                        <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
+                    </tr>
+                    {% if data.jitter %}
+                    <tr id="id_jitter">
+                        <td class="kv-key">Jitter (hours)</td>
+                        <td class="kv-value">{{ data.jitter }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if data.period %}
+                    <tr id="id_period">
+                        <td class="kv-key">Period (hours)</td>
+                        <td class="kv-value">{{ data.period }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if data.num_times and data.total_time %}
+                    <tr id="id_cadence_cost">
+                        <td class="kv-key">No. of repeats / Total time (hours)</td>
+                        <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if data.spectroscopy %}
+                    <tr id="id_spectroscopy">
+                        <td class="kv-key">Spectroscopy</td>
+                        <td class="kv-value">{{ data.spectroscopy }}</td>
+                    </tr>
+                    <tr id="id_spectroscopy">
+                        <td class="kv-key">Calibs</td>
+                        <td class="kv-value">{{ data.calibs }}</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        {% endif %}
+      </div>
+      <div class="four columns">
+        {% if form.errors%}
+          {% if form.spectroscopy.value == 'True' %}
+            <a href="{% url 'calibsources' %}">Return to schedule calib spectra page</a>
+          {% else %}
+            <a href="{% url 'schedule-calib-spectra' instrument_code=form.instrument_code.value %}">Return to schedule parameters page</a>
+          {% endif %}
+        {% else %}
+        <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
+        <input type="submit" class="button button-primary" value="Edit Parameters" id="id_edit_button" name="edit">
+        {% endif%}
+          {{form.start_time}}
+          {{form.end_time}}
+          {{form.exp_count}}
+          {{form.exp_length}}
+          {{form.proposal_code}}
+          {{form.site_code}}
+          {{form.instrument_code}}
+          {{form.group_id}}
+          {{form.utc_date}}
+          {{form.jitter}}
+          {{form.period}}
+          {{forms.pattern_iterations}}
+          {{form.spectroscopy}}
+          {{form.calibs}}
+        </div>
+      </div>
+
+    </form>
+    </div>
+{% endblock %}

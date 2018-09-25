@@ -146,6 +146,16 @@
                         <td class="kv-key">Calibs</td>
                         <td class="kv-value">{{ data.calibs }}</td>
                     </tr>
+                    {% if data.solar_analog %}
+                    <tr id="id_solaranalog">
+                        <td class="kv-key">Solar Analog</td>
+                        <td class="kv-value">{{ data.calibsource.name }}</td>
+                    </tr>
+                    <tr id="id_solaranalag_params">
+                        <td class="kv-key">Position/V magnitude</td>
+                        <td class="kv-value">{{ data.calibsource.ra|degreestohms:" " }} {{data.calibsource.dec|degreestodms:" "}}/{{data.calibsource.vmag|floatformat:1 }}</td>
+                    </tr>
+                    {% endif %}
                     {% endif %}
                 </tbody>
             </table>
@@ -175,7 +185,9 @@
           {{form.period}}
           {{forms.pattern_iterations}}
           {{form.spectroscopy}}
-          {{form.calibs}}          
+          {{form.calibs}}
+          {{form.solar_analog}}
+          {{form.calibsource_id}}
         </div>
       </div>
 

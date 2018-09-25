@@ -14,14 +14,16 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime, date, timedelta
+import logging
+
 from django import forms
 from django.db.models import Q
-from .models import Body, Proposal, Block
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
-import logging
+from .models import Body, Proposal, Block, StaticSource
+
 logger = logging.getLogger(__name__)
 
 
@@ -143,13 +145,15 @@ class ScheduleBlockForm(forms.Form):
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=30, widget=forms.HiddenInput())
+    group_id = forms.CharField(max_length=50, widget=forms.HiddenInput())
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
+    solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
+    calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
@@ -219,6 +223,7 @@ class ScheduleSpectraForm(forms.Form):
     exp_count = forms.IntegerField(initial=1, widget=forms.NumberInput(attrs={'size': '5'}), required=True)
     exp_length = forms.FloatField(initial=1800.0, required=True)
     calibs = forms.ChoiceField(required=True, choices=CALIBS)
+    solar_analog = forms.BooleanField(initial=False, required=False)
     spectroscopy = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
 
     def clean_utc_date(self):
@@ -259,10 +264,14 @@ class SpectroFeasibilityForm(forms.Form):
         sfu_values = fetch_sfu()
         body = kwargs.pop('body', None)
         mag = None
-        if body:
+        if body and isinstance(body, Body):
             emp = body.compute_position()
             if emp is not False:
                 mag = round(emp[2], 1)
+        elif body and isinstance(body, StaticSource):
+            mag = body.vmag
         super(SpectroFeasibilityForm, self).__init__(*args, **kwargs)
         self.fields['magnitude'].initial = mag
-        self.fields['sfu'].initial = sfu_values[1].value
+        # Set default SFU value of 70; replace with value from fetch if it isn't None
+        self.fields['sfu'].initial = 70.0
+        self.fields['sfu'].initial = self.fields['sfu'].initial if sfu_values[1] is None else sfu_values[1].value

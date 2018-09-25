@@ -16,7 +16,7 @@ from django.core.urlresolvers import reverse
 from django.contrib import admin
 
 from core.models import *
-from astrometrics.time_subs import degreestohms, degreestodms
+from astrometrics.time_subs import degreestohms, degreestodms, radianstohms, radianstodms
 
 from reversion.admin import VersionAdmin
 
@@ -50,7 +50,12 @@ class SuperBlockAdmin(VersionAdmin):
     format_block_start.admin_order_field = 'block_start'
 
     def body_name(self, obj):
-        return obj.body.current_name()
+        name = ''
+        if obj.body is not None:
+            name = obj.body.current_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
 
     list_display = ('groupid', 'body_name', 'proposal', 'block_start', 'active', )
     list_filter = ('proposal', 'block_start', 'active', )
@@ -81,7 +86,12 @@ class BlockAdmin(VersionAdmin):
     sent_to_zoo.boolean = True
 
     def body_name(self, obj):
-        return obj.body.current_name()
+        name = ''
+        if obj.body is not None:
+            name = obj.body.current_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
 
     list_display = ('groupid', 'body_name', 'site', 'proposal', 'block_start', 'num_observed', 'active', 'reported', 'zoo_friendly', 'sent_to_zoo')
     list_filter = ('site', 'telclass', 'proposal', 'block_start', 'num_observed', 'active', 'reported',)
@@ -124,6 +134,16 @@ class SpectralInfoAdmin(VersionAdmin):
 
     list_display = ('body_name', 'taxonomic_class', 'tax_scheme', 'tax_reference', 'make_readable_tax_notes')
     list_filter = ('taxonomic_class', 'tax_scheme')
+
+
+@admin.register(PreviousSpectra)
+class PreviousSpectraAdmin(VersionAdmin):
+
+    def body_name(self, obj):
+        return obj.body.current_name()
+
+    list_display = ('body_name', 'spec_wav', 'spec_source', 'spec_date')
+    list_filter = ('spec_wav', 'spec_source')
 
 
 class ProposalAdmin(admin.ModelAdmin):
@@ -233,9 +253,26 @@ class CandidateAdmin(admin.ModelAdmin):
     search_fields = ('block__body__provisional_name', )
 
 
+class StaticSourceAdmin(admin.ModelAdmin):
+
+    def calib_ra_hms(self, obj):
+        return degreestohms(obj.ra, ' ')
+    calib_ra_hms.short_description = "RA (h m s)"
+
+    def calib_dec_dms(self, obj):
+        return degreestodms(obj.dec, ' ')
+    calib_dec_dms.short_description = "Dec (d ' \")"
+
+    list_display = ['id', 'name', 'calib_ra_hms', 'calib_dec_dms', 'vmag', 'spectral_type', 'source_type', 'notes']
+    list_filter = ['spectral_type', 'source_type']
+
+    ordering = [ 'ra', ]
+
+
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
 admin.site.register(ProposalPermission)
 admin.site.register(CatalogSources, CatalogSourcesAdmin)
 admin.site.register(Candidate, CandidateAdmin)
 admin.site.register(PanoptesReport)
+admin.site.register(StaticSource, StaticSourceAdmin)

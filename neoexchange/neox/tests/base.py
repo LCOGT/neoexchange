@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
-from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo
+from core.models import Body, Proposal, Block, SuperBlock, SpectralInfo, PreviousSpectra
 
 
 class FunctionalTest(StaticLiveServerTestCase):
@@ -52,39 +52,65 @@ class FunctionalTest(StaticLiveServerTestCase):
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
 
-    def insert_test_spectra(self):
+    def insert_test_taxonomy(self):
 
-        spectra_params = {'body'          : self.body,
+        taxonomy_params = {'body'          : self.body,
                           'taxonomic_class' : 'Sq',
                           'tax_scheme'    :   'BD',
                           'tax_reference' : 'PDS6',
                           'tax_notes'     : 'b',
                           }
-        self.test_spectra = SpectralInfo.objects.create(pk=1, **spectra_params)
+        self.test_taxonomy = SpectralInfo.objects.create(pk=1, **taxonomy_params)
 
-        spectra_params2 = {'body'          : self.body,
+        taxonomy_params2 = {'body'          : self.body,
                           'taxonomic_class' : 'T',
                           'tax_scheme'    :   'H',
                           'tax_reference' : 'PDS6',
                           'tax_notes'     : '7 | Other notes maybe.',
                           }
-        self.test_spectra2 = SpectralInfo.objects.create(pk=2, **spectra_params2)
+        self.test_taxonomy2 = SpectralInfo.objects.create(pk=2, **taxonomy_params2)
 
-        spectra_params3 = {'body'          : self.body,
+        taxonomy_params3 = {'body'          : self.body,
                           'taxonomic_class' : 'Sa',
                           'tax_scheme'    :   'T',
                           'tax_reference' : 'PDS6',
                           'tax_notes'     : '2G',
                           }
-        self.test_spectra3 = SpectralInfo.objects.create(pk=3, **spectra_params3)
+        self.test_taxonomy3 = SpectralInfo.objects.create(pk=3, **taxonomy_params3)
 
-        spectra_params4 = {'body'          : self.body,
+        taxonomy_params4 = {'body'          : self.body,
                           'taxonomic_class' : 'L',
                           'tax_scheme'    :   'B',
                           'tax_reference' : 'PDS6',
                           'tax_notes'     : 'S',
                           }
-        self.test_spectra4 = SpectralInfo.objects.create(pk=4, **spectra_params4)
+        self.test_taxonomy4 = SpectralInfo.objects.create(pk=4, **taxonomy_params4)
+
+    def insert_previous_spectra(self):
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'Vis+NIR',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_ir'      : 'sp233/a265962.sp233.txt',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spectra_params)
+
+        spectra_params2 = {'body'         : self.body,
+                          'spec_wav'     : 'NIR',
+                          'spec_source'  : 'M',
+                          'spec_ir'     : '2014/09/1999sh10.png',
+                          'spec_date'    : '2017-08-25',
+                          }
+        self.test_spectra2 = PreviousSpectra.objects.create(pk=2, **spectra_params2)
+
+        spectra_params3 = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2010-10-25',
+                          }
+        self.test_spectra3 = PreviousSpectra.objects.create(pk=3, **spectra_params3)
 
     def insert_test_proposals(self):
 
@@ -181,11 +207,12 @@ class FunctionalTest(StaticLiveServerTestCase):
         self.insert_test_body()
         self.insert_test_proposals()
         self.insert_test_blocks()
-        self.insert_test_spectra()
+        self.insert_test_taxonomy()
+        self.insert_previous_spectra()
 
     def tearDown(self):
         self.browser.refresh()
-#        self.browser.implicitly_wait(5)
+#       self.browser.implicitly_wait(5)
         self.browser.quit()
 
     def check_for_row_in_table(self, table_id, row_text):

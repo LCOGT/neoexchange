@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from django.db import connection
@@ -26,9 +26,10 @@ from unittest import skipIf
 from mock import patch
 from neox.tests.mocks import MockDateTime
 
-#Import module to test
-from core.models import Body, Proposal, Block, Frame, SourceMeasurement, \
-    CatalogSources, Candidate, WCSField
+# Import module to test
+from core.models import Body, Proposal, SuperBlock, Block, Frame, \
+    SourceMeasurement, CatalogSources, Candidate, WCSField, PreviousSpectra,\
+    StaticSource
 from astrometrics.ephem_subs import compute_ephem
 
 
@@ -146,6 +147,15 @@ class TestBody(TestCase):
                        }
         self.test_block5b = Block.objects.create(**block_params5b)
 
+        spectra_params = {'body'         : self.body,
+                          'spec_wav'     : 'Vis',
+                          'spec_vis'     : 'sp233/a265962.sp233.txt',
+                          'spec_ref'     : 'sp[233]',
+                          'spec_source'  : 'S',
+                          'spec_date'    : '2017-09-25',
+                          }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spectra_params)
+
     def test_get_block_info_NoBlock(self):
         expected = ('Not yet', 'Not yet')
 
@@ -182,7 +192,7 @@ class TestBody(TestCase):
         self.assertEqual(expected, result)
 
     def test_no_absmag(self):
-        test_body=self.body
+        test_body = self.body
         test_body.abs_mag = None
         test_body.save()
 
@@ -190,12 +200,56 @@ class TestBody(TestCase):
         self.assertEqual(None, diameter)
 
     def test_bad_absmag(self):
-        test_body=self.body
+        test_body = self.body
         test_body.abs_mag = -99
         test_body.save()
 
         diameter = test_body.diameter()
         self.assertEqual(None, diameter)
+
+    def test_compute_obs_window_mid(self):
+        test_body = self.body
+        test_body.abs_mag = 19.0
+        test_body.save()
+
+        expected_start = datetime(2015, 8, 10, 17, 0)
+        expected_end = datetime(2015, 9, 29, 17, 0)
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_full(self):
+        test_body = self.body
+        test_body.abs_mag = 17.0
+        test_body.save()
+
+        expected_start = datetime(2015, 7, 1, 17, 0, )
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_none(self):
+        test_body = self.body
+        test_body.save()
+
+        expected_start = ''
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
+
+    def test_compute_obs_window_sun(self):
+        test_body = self.body
+        test_body.abs_mag = 8.0
+        test_body.meananom = 180
+        test_body.save()
+
+        expected_start = ''
+        expected_end = ''
+        obs_window = test_body.compute_obs_window(d=datetime(2015, 7, 1, 17, 0, 0))
+        self.assertEqual(obs_window[0], expected_start)
+        self.assertEqual(obs_window[1], expected_end)
 
 
 @patch('core.models.datetime', MockDateTime)
@@ -319,6 +373,246 @@ class TestComputeFOM(TestCase):
 
         self.assertEqual(expected_FOM, FOM)
 
+class TestSuperBlock(TestCase):
+
+    def setUp(self):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'LCOEngineering',
+                   'title' : 'Engineering proposal'
+                 }
+        self.proposal = Proposal.objects.create(**params)
+
+        sblock_params = {   'cadence' : False,
+                            'body' : self.body,
+                            'proposal' : self.proposal,
+                            'block_start' : datetime(2015, 4, 20, 3),
+                            'block_end' : datetime(2015, 4, 20, 23),
+                            'active' : True
+                        }
+        self.sblock = SuperBlock.objects.create(**sblock_params)
+
+        params1 = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'tracking_number' : '1',
+                    'num_exposures' : 1,
+                    'exp_length' : 1800
+                  }
+        self.block1 = Block.objects.create(**params1)
+
+        params2 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 6, 15),
+                    'block_end' : datetime(2015, 4, 20, 6, 30),
+                    'tracking_number' : '2',
+                    'num_exposures' : 4,
+                    'exp_length' : 120.0
+                  }
+        self.block2 = Block.objects.create(**params2)
+
+        params3 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : self.body,
+                    'proposal' : self.proposal,
+                    'superblock' : self.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 8, 0),
+                    'block_end' : datetime(2015, 4, 20, 10, 15),
+                    'tracking_number' : '3',
+                    'num_exposures' : 120,
+                    'exp_length' : 60.0
+                  }
+        self.block3 = Block.objects.create(**params3)
+
+    def test_telclass(self):
+        expected_telclass = "2m0(S), 1m0"
+
+        tel_class = self.sblock.get_telclass()
+
+        self.assertEqual(expected_telclass, tel_class)
+
+    def test_telclass_spectro_only(self):
+        # Remove non spectroscopic blocks
+        self.block2.delete()
+        self.block3.delete()
+
+        expected_telclass = "2m0(S)"
+
+        tel_class = self.sblock.get_telclass()
+
+        self.assertEqual(expected_telclass, tel_class)
+
+    def test_obstypes(self):
+        expected_obstypes = "1,0"
+
+        obs_types = self.sblock.get_obstypes()
+
+        self.assertEqual(expected_obstypes, obs_types)
+
+    def test_obstypes_noblocks(self):
+        expected_obstypes = ''
+
+        # Create new SuperBlock for the next day and assert that there are
+        # no Block's associated with it.
+        new_sblock = SuperBlock(body = self.body,
+                                proposal = self.proposal,
+                                block_start = self.sblock.block_start + timedelta(days=1, seconds=300),
+                                block_end   = self.sblock.block_end + timedelta(days=1, seconds=300)
+                               )
+        new_sblock.save()
+
+        self.assertEqual(2, SuperBlock.objects.count())
+        num_assoc_blocks = Block.objects.filter(superblock=new_sblock.id).count()
+
+        self.assertEqual(0, num_assoc_blocks)
+
+        obs_types = new_sblock.get_obstypes()
+
+        self.assertEqual(expected_obstypes, obs_types)
+
+
+class TestBlock(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'not_seen'      : 2.3942,
+                    'arc_length'    : 0.4859,
+                    'score'         : 83,
+                    'abs_mag'       : 19.8
+                    }
+        cls.body, created = Body.objects.get_or_create(**params)
+
+        params = { 'code' : 'LCOEngineering',
+                   'title' : 'Engineering proposal'
+                 }
+        cls.proposal = Proposal.objects.create(**params)
+
+        sblock_params = {   'cadence' : False,
+                            'body' : cls.body,
+                            'proposal' : cls.proposal,
+                            'block_start' : datetime(2015, 4, 20, 3),
+                            'block_end' : datetime(2015, 4, 20, 23),
+                            'active' : True
+                        }
+        cls.sblock = SuperBlock.objects.create(**sblock_params)
+
+        staticsrc_params = { 'name' : 'Landolt SA107-684',
+                             'ra'   : 234.325,
+                             'dec'  : -0.164,
+                             'vmag' : 8.2,
+                             'source_type' : StaticSource.SOLAR_STANDARD,
+                             'spectral_type' : 'G2V'
+                           }
+        cls.staticsrc = StaticSource.objects.create(**staticsrc_params)
+
+        cls.params_spectro = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'proposal' : cls.proposal,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'tracking_number' : '1',
+                    'num_exposures' : 1,
+                    'exp_length' : 1800
+                  }
+        cls.params_imaging1 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'proposal' : cls.proposal,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 6, 15),
+                    'block_end' : datetime(2015, 4, 20, 6, 30),
+                    'tracking_number' : '2',
+                    'num_exposures' : 4,
+                    'exp_length' : 120.0
+                  }
+
+        cls.params_imaging2 = { 'telclass' : '1m0',
+                    'site' : 'coj',
+                    'body' : cls.body,
+                    'calibsource' : None,
+                    'proposal' : cls.proposal,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_IMAGING,
+                    'block_start' : datetime(2015, 4, 20, 8, 0),
+                    'block_end' : datetime(2015, 4, 20, 10, 15),
+                    'tracking_number' : '3',
+                    'num_exposures' : 120,
+                    'exp_length' : 60.0
+                  }
+
+        cls.params_calib = { 'telclass' : '2m0',
+                    'site' : 'coj',
+                    'body' : None,
+                    'calibsource' : cls.staticsrc,
+                    'proposal' : cls.proposal,
+                    'superblock' : cls.sblock,
+                    'obstype' : Block.OPT_SPECTRA,
+                    'block_start' : datetime(2015, 4, 20, 4, 0),
+                    'block_end' : datetime(2015, 4, 20, 5, 15),
+                    'tracking_number' : '4',
+                    'num_exposures' : 1,
+                    'exp_length' : 300.0
+                  }
+
+    def test_spectro_block(self):
+
+        block = Block.objects.create(**self.params_spectro)
+
+        self.assertEqual(self.body.current_name(), block.current_name())
+
+    def test_solar_analog_block(self):
+
+        block = Block.objects.create(**self.params_calib)
+
+        self.assertEqual(self.staticsrc.current_name(), block.current_name())
 
 class TestFrame(TestCase):
 
@@ -663,6 +957,7 @@ class TestFrame(TestCase):
         self.assertEqual(self.w._naxis1, frame.wcs._naxis1)
         self.assertEqual(self.w._naxis2, frame.wcs._naxis2)
 
+
 class TestWCSField(TestCase):
 
     def setUp(self):
@@ -687,6 +982,7 @@ class TestWCSField(TestCase):
     def test_db_parameters_respects_db_type(self):
         f = WCSField()
         self.assertEqual(f.db_parameters(connection)['type'], 'text')
+
 
 class TestSourceMeasurement(TestCase):
 
@@ -1183,3 +1479,4 @@ class TestCandidate(TestCase):
         for frame in arange(self.dets_array.shape[0]):
             for column in self.dets_array.dtype.names:
                 self.assertAlmostEqual(self.dets_array[column][frame], new_dets_array[column][frame], 7)
+

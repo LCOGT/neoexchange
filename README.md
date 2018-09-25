@@ -1,8 +1,50 @@
-# NEO Exchange
+## NEO Exchange
 
 Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
+
+### 2.7.2
+
+Spectroscopic Graphical tools
+* Create and display a gif of the guidefreames during an observation
+* Create and display a spectroscopic trace based on the reduced data
+
+### 2.7.1
+
+Add latitude, longitude, height for 0m4b at Tenerife (Z17). Update find_orb build procedure.
+
+### 2.7.0
+
+Flux Standards
+* Add Static Source Model to hold flux, spectral, solar and RV standards.
+* Add Calibrations List page.
+* Add Calibration detail descriptions.
+* Allow for sorting out and scheduling spectra for Solar analogs.
+
+### 2.6.0
+
+Calculate and forward more precise orbital elements for spectroscopic observations.
+
+### 2.5.3
+
+Update light curve extraction.
+* Pull from Tracking Number rather than block number
+* Capable of incorporating any number of blocks for a given target within a given time frame.
+Add motion details to characterization page.
+
+### 2.5.2
+
+Robotic scheduler and low-level ToO support.
+
+### 2.5.1
+Add block record keeping for spectroscopy.
+
+### 2.5.0
+Create a characterization page for spectroscopy support
+* Pull out targets of interest.
+* Check of previous spectroscopy from SMASS and MANOS.
+* Calculate observing window for the next 3 months for each target.
 
 ### 2.4.1
 
@@ -22,7 +64,7 @@ Bite the Bullet and Update to Python 3.6
 
 ### 2.2.0
 
-Added capability of requesting multiple filters when making a user request. 
+Added capability of requesting multiple filters when making a user request.
 
 ### 2.1.6
 
@@ -59,7 +101,7 @@ Add cadence support.
 ### 1.8.3
 
 Add check for and marking of 'was not a minor planet' in the Previous NEOCP page
-as spacecraft. 
+as spacecraft.
 Fixes for POND submitted blocks and lightcurve extraction.
 Changes for the new semester boundaries.
 

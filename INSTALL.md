@@ -74,6 +74,13 @@ docker push docker.lco.global/neoexchange:latest
 ```
 Starting a Docker container from this image can be done with a `docker run` command or using `docker-compose`.
 
+In order for the updating of orbital elements for close-passing objects to work,
+there needs to be a mapping of a filesystem containing the JPL DE430 binary
+ephemeris into the container. This needs to be available under `/ephemerides`.
+This can be done with e.g.
+`-v /mnt/docker/neoexchange/ephemerides:/ephemerides:ro`
+on the Docker command line or adding this to the 'Volumes' tab in Rancher when
+upgrading.
 
 Local Testing
 -------------

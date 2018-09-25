@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, date
 from unittest import skipIf
 import tempfile
 from glob import glob
+from math import degrees
 
 from django.test import TestCase
 from django.forms.models import model_to_dict
@@ -34,27 +35,24 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
 
-#Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
-from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs
+from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
+    fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
-from core.views import home, clean_NEOCP_object, save_and_make_revision, \
-    update_MPC_orbit, check_for_block, clean_mpcorbit, \
-    create_source_measurement, clean_crossid, create_frame, \
-    schedule_check, summarise_block_efficiency, \
-    store_detections, update_crossids, \
-    check_catalog_and_refit, find_matching_image_file, \
-    run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy, updateFITSWCS
 from core.frames import block_status, create_frame, frame_params_from_block
-from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
+from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate,\
+    SuperBlock, SpectralInfo, PreviousSpectra, StaticSource
+from core.frames import block_status, create_frame, frame_params_from_block
 from core.forms import EphemQuery
+# Import modules to test
+from core.views import *
 
 # Disable logging during testing
 import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
+
 
 class TestClean_NEOCP_Object(TestCase):
 
@@ -284,6 +282,7 @@ class TestClean_NEOCP_Object(TestCase):
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
+
 
 class TestCheck_for_block(TestCase):
 
@@ -651,6 +650,198 @@ class TestCheck_for_block(TestCase):
         self.assertEqual(False, resp)
 
 
+class TestRecordBlock(TestCase):
+
+    def setUp(self):
+
+        self.spectro_tracknum = '606083'
+        self.spectro_params = {
+                              'binning': 1,
+                              'block_duration': 988.0,
+                              'calibs': 'both',
+                              'end_time': datetime(2018, 3, 16, 18, 50),
+                              'exp_count': 1,
+                              'exp_time': 180.0,
+                              'exp_type': 'SPECTRUM',
+                              'group_id': '4_E10-20180316_spectra',
+                              'instrument': '2M0-FLOYDS-SCICAM',
+                              'instrument_code': 'E10-FLOYDS',
+                              'observatory': '',
+                              'pondtelescope': '2m0',
+                              'proposal_id': 'LCOEngineering',
+                              'request_numbers': {1450339: 'NON_SIDEREAL'},
+                              'request_windows': [[{'end': '2018-03-16T18:30:00',
+                                 'start': '2018-03-16T11:20:00'}]],
+                              'site': 'COJ',
+                              'site_code': 'E10',
+                              'spectra_slit': 'slit_6.0as',
+                              'spectroscopy': True,
+                              'start_time': datetime(2018, 3, 16, 9, 20),
+                              'user_id': 'tlister@lcogt.net'}
+
+        self.spectro_form = { 'start_time' : self.spectro_params['start_time'],
+                              'end_time' : self.spectro_params['end_time'],
+                              'proposal_code' : self.spectro_params['proposal_id'],
+                              'group_id' : self.spectro_params['group_id'],
+                              'exp_count' : self.spectro_params['exp_count'],
+                              'exp_length' : self.spectro_params['exp_time'],
+                            }
+        body_params = { 'name' : '4' }
+        self.spectro_body = Body.objects.create(**body_params)
+
+        proposal_params = { 'code' : self.spectro_params['proposal_id'], }
+        self.proposal = Proposal.objects.create(**proposal_params)
+
+        self.imaging_tracknum = '576013'
+        self.imaging_params = {
+                              'binning': 1,
+                              'block_duration': 1068.0,
+                              'end_time': datetime(2018, 3, 16, 3, 50),
+                              'exp_count': 12,
+                              'exp_time': 42.0,
+                              'exp_type': 'EXPOSE',
+                              'group_id': 'N999r0q_K91-20180316',
+                              'instrument': '1M0-SCICAM-SINISTRO',
+                              'observatory': '',
+                              'pondtelescope': '1m0',
+                              'proposal_id': 'LCOEngineering',
+                              'request_numbers': {1440123: 'NON_SIDEREAL'},
+                              'request_windows': [[{'end': '2018-03-16T03:30:00',
+                                 'start': '2018-03-15T20:20:00'}]],
+                              'site': 'CPT',
+                              'site_code': 'K91',
+                              'start_time': datetime(2018, 3, 15, 18, 20),
+                              'user_id': 'tlister@lcogt.net'}
+
+        self.imaging_form = { 'start_time' : self.imaging_params['start_time'],
+                              'end_time' : self.imaging_params['end_time'],
+                              'proposal_code' : self.imaging_params['proposal_id'],
+                              'group_id' : self.imaging_params['group_id'],
+                              'exp_count' : self.imaging_params['exp_count'],
+                              'exp_length' : self.imaging_params['exp_time'],
+                            }
+        body_params = {'provisional_name' : 'N999r0q'}
+        self.imaging_body = Body.objects.create(**body_params)
+
+        ssource_params = { 'name'   : 'Landolt SA107-684',
+                           'ra'     : 234.325,
+                           'dec'    : -0.164,
+                           'vmag'   : 8.2,
+                           'source_type' : StaticSource.SOLAR_STANDARD,
+                           'spectral_type' : "G2V"
+                         }
+        self.solar_analog = StaticSource.objects.create(**ssource_params)
+
+    def test_spectro_block(self):
+        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.spectro_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_SPECTRA, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+
+    def test_imaging_block(self):
+        block_resp = record_block(self.imaging_tracknum, self.imaging_params, self.imaging_form, self.imaging_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_IMAGING, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.imaging_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.imaging_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 15, 20, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 3, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.imaging_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.imaging_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.imaging_params['block_duration'], sblocks[0].timeused)
+
+    def test_spectro_and_solar_block(self):
+        new_params =  { 'calibsource' : {  'id': 1,
+                                           'name': 'Landolt SA107-684',
+                                           'ra_deg': 234.325,
+                                           'dec_deg': -0.164,
+                                           'pm_ra': 0.0,
+                                           'pm_dec': 0.0,
+                                           'parallax': 0.0
+                                        },
+                        'calibsrc_exptime' : 60.0,
+                        'dec_deg' : -0.164,
+                        'ra_deg'  : 234.325,
+                        'solar_analog' : True
+                        }
+        spectro_params = {**new_params, **self.spectro_params}
+        spectro_params['group_id'] = self.spectro_params['group_id'] + '+solstd'
+        spectro_params['request_numbers'] = {1450339: 'NON_SIDEREAL', 1450340: 'SIDEREAL'}
+        spectro_params['request_windows'] = [[{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}],
+                                            [{'end': '2018-03-16T18:30:00', 'start': '2018-03-16T11:20:00'}]
+                                           ]
+
+        block_resp = record_block(self.spectro_tracknum, spectro_params, self.spectro_form, self.spectro_body)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        solar_analogs = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(2, blocks.count())
+        self.assertEqual(Block.OPT_SPECTRA, blocks[0].obstype)
+        self.assertEqual(Block.OPT_SPECTRA_CALIB, blocks[1].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
+        self.assertFalse(sblocks[0].cadence)
+        self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+
+        self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.spectro_body, blocks[0].body)
+
+        self.assertEqual(solar_analogs[0], blocks[1].calibsource)
+        self.assertEqual(None, blocks[1].body)
+        self.assertEqual(spectro_params['calibsrc_exptime'], blocks[1].exp_length)
+
+    def test_solo_solar_spectro_block(self):
+        # adjust parameters for sidereal target
+        self.spectro_params['request_numbers'] = {1450339: 'SIDEREAL'}
+        self.spectro_params['group_id'] = 'Landolt SA107-684_E10-20180316_spectra'
+        self.spectro_form['group_id'] = self.spectro_params['group_id']
+        block_resp = record_block(self.spectro_tracknum, self.spectro_params, self.spectro_form, self.solar_analog)
+
+        self.assertTrue(block_resp)
+        sblocks = SuperBlock.objects.all()
+        blocks = Block.objects.all()
+        self.assertEqual(1, sblocks.count())
+        self.assertEqual(1, blocks.count())
+        self.assertEqual(Block.OPT_SPECTRA_CALIB, blocks[0].obstype)
+        # Check the SuperBlock has the broader time window but the Block(s) have
+        # the (potentially) narrower per-Request windows
+        self.assertEqual(self.spectro_form['start_time'], sblocks[0].block_start)
+        self.assertEqual(self.spectro_form['end_time'], sblocks[0].block_end)
+        self.assertEqual(datetime(2018, 3, 16, 11, 20, 0), blocks[0].block_start)
+        self.assertEqual(datetime(2018, 3, 16, 18, 30, 0), blocks[0].block_end)
+        self.assertEqual(self.spectro_tracknum, sblocks[0].tracking_number)
+        self.assertTrue(self.spectro_tracknum != blocks[0].tracking_number)
+        self.assertEqual(self.spectro_params['block_duration'], sblocks[0].timeused)
+
+
 class TestSchedule_Check(TestCase):
 
     def setUp(self):
@@ -683,7 +874,7 @@ class TestSchedule_Check(TestCase):
 
         params['elements_type'] = 'MPC_COMET'
         params['perihdist'] = 1.0540487
-        params['epochofperih']  = datetime(2017, 5, 17)
+        params['epochofperih'] = datetime(2017, 5, 17)
         self.body_good_elemtype, created = Body.objects.get_or_create(**params)
 
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
@@ -691,6 +882,14 @@ class TestSchedule_Check(TestCase):
                               }
         self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
 
+        src_params = {  'name' : 'SA42-999',
+                        'ra'   : 200.0,
+                        'dec'  : -15.0,
+                        'vmag' : 9.0,
+                        'spectral_type' : "G2V",
+                        'source_type' : StaticSource.SOLAR_STANDARD
+                     }
+        self.solar_analog, created = StaticSource.objects.get_or_create(pk=1, **src_params)
         self.maxDiff = None
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
@@ -727,14 +926,121 @@ class TestSchedule_Check(TestCase):
                         'jitter' : None,
                         'instrument_code' : '',
                         'snr' : None,
+                        'too_mode': False,
                         'calibs' : '',
-                        'spectroscopy' : False
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_good_spectro(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'instrument_code' : 'E10-FLOYDS',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'spectroscopy' : True,
+                 'calibs' : 'both',
+                 'exp_length' : 300.0,
+                 'exp_count' : 1
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.09944174338544,
+                        'speed': 2.901293748154893,
+                        'slot_length': 23,
+                        'filter_pattern': 'slit_6.0as',
+                        'pattern_iterations': 1.0,
+                        'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
+                        'exp_count': 1,
+                        'exp_length': 300.0,
+                        'schedule_ok': True,
+                        'site_code': data['instrument_code'][0:3],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T19:10:00',
+                        'mid_time': '2016-04-06T14:05:00',
+                        'ra_midpoint': 3.31224872619019,
+                        'dec_midpoint': -0.16054985464643165,
+                        'period' : None,
+                        'jitter' : None,
+                        'instrument_code' : 'E10-FLOYDS',
+                        'snr' : 3.2107142545718275,
+                        'calibs' : 'both',
+                        'spectroscopy' : True,
+                        'too_mode': False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_good_spectro_solar_analog(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+
+        data = { 'instrument_code' : 'E10-FLOYDS',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'spectroscopy' : True,
+                 'calibs' : 'both',
+                 'exp_length' : 300.0,
+                 'exp_count' : 1,
+                 'solar_analog' : True
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.09944174338544,
+                        'speed': 2.901293748154893,
+                        'slot_length': 23,
+                        'filter_pattern': 'slit_6.0as',
+                        'pattern_iterations': 1.0,
+                        'available_filters': 'slit_1.2as, slit_1.6as, slit_2.0as, slit_6.0as',
+                        'exp_count': 1,
+                        'exp_length': 300.0,
+                        'schedule_ok': True,
+                        'site_code': data['instrument_code'][0:3],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': self.body_mp.current_name() + '_' + data['instrument_code'][0:3].upper() + '-' + datetime.strftime(data['utc_date'], '%Y%m%d') + '_spectra',
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T19:10:00',
+                        'mid_time': '2016-04-06T14:05:00',
+                        'ra_midpoint': 3.31224872619019,
+                        'dec_midpoint': -0.16054985464643165,
+                        'period' : None,
+                        'jitter' : None,
+                        'instrument_code' : 'E10-FLOYDS',
+                        'snr' : 3.2107142545718275,
+                        'calibs' : 'both',
+                        'spectroscopy' : True,
+                        'too_mode': False,
+                        'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
+                        'calibsource_id' : 1,
+                        'solar_analog' : True
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -778,14 +1084,18 @@ class TestSchedule_Check(TestCase):
                         'total_time' : 1.0,
                         'instrument_code' : '',
                         'snr' : None,
+                        'too_mode': False,
                         'calibs' : '',
-                        'spectroscopy' : False
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
@@ -814,7 +1124,7 @@ class TestSchedule_Check(TestCase):
                         'schedule_ok': True,
                         'site_code': data['site_code'],
                         'proposal_code': data['proposal_code'],
-                        'group_id': '2009 HA21_Q63-cad-0406-0406',
+                        'group_id': '2009 HA21_Q63-cad-20160406-0406',
                         'utc_date': data['utc_date'].isoformat(),
                         'start_time': '2016-04-06T09:00:00',
                         'end_time': '2016-04-06T23:00:00',
@@ -826,15 +1136,19 @@ class TestSchedule_Check(TestCase):
                         'num_times' : 3,
                         'total_time' : 1.0,
                         'instrument_code' : '',
+                        'too_mode': False,
                         'snr' : None,
                         'calibs' : '',
-                        'spectroscopy' : False
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False
                         }
 
         resp = schedule_check(data, self.body_mp)
 
         self.assertEqual(expected_resp, resp)
-        self.assertLessEqual(len(resp['group_id']), 30)
+        self.assertLessEqual(len(resp['group_id']), 50)
 
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_end_B_semester(self):
@@ -915,7 +1229,7 @@ class TestSchedule_Check(TestCase):
         self.assertEqual(expected_resp['mid_time'], resp['mid_time'])
         self.assertEqual(expected_resp['exp_count'], resp['exp_count'])
         self.assertEqual(expected_resp['exp_length'], resp['exp_length'])
-        self.assertAlmostEqual(expected_resp['magnitude'], resp['magnitude'],2)
+        self.assertAlmostEqual(expected_resp['magnitude'], resp['magnitude'], 2)
 
     @patch('core.views.datetime', MockDateTime)
     def test_mp_semester_mid_past_A_semester(self):
@@ -1046,9 +1360,9 @@ class TestSchedule_Check(TestCase):
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-09-30T18:50:00',
-                        'end_time'   : '2017-10-01T04:50:00',
-                        'mid_time': '2017-09-30T23:50:00',
+                        'start_time' : '2017-09-30T19:50:00',
+                        'end_time'   : '2017-10-01T05:50:00',
+                        'mid_time': '2017-10-01T00:50:00',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1068,9 +1382,9 @@ class TestSchedule_Check(TestCase):
 
         expected_resp = {
                         'target_name': self.body_mp.current_name(),
-                        'start_time' : '2017-11-30T18:50:00',
+                        'start_time' : '2017-11-30T19:10:00',
                         'end_time'   : '2017-11-30T23:59:59',
-                        'mid_time': '2017-11-30T21:24:59.500000',
+                        'mid_time': '2017-11-30T21:34:59.500000',
 
                         }
         resp = schedule_check(data, self.body_mp)
@@ -1273,6 +1587,76 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
     @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Arecibo_better_exists(self):
+        params = {'name': '2014 UR',
+                  'abs_mag': 21.0,
+                  'slope': 0.1,
+                  'epochofel': '2017-03-19 00:00:00',
+                  'elements_type': u'MPC_MINOR_PLANET',
+                  'meananom': 325.2636,
+                  'argofperih': 85.19251,
+                  'longascnode': 147.81325,
+                  'orbinc': 8.34739,
+                  'eccentricity': 0.1896865,
+                  'meandist': 1.2176312,
+                  'source_type': 'U',
+                  'num_obs': 1596,
+                  'origin': 'M',
+                  }
+
+        self.body, created = Body.objects.get_or_create(**params)
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'A'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+
+        test_elements = ['epochofel', 'meananom', 'argofperih', 'longascnode', 'orbinc', 'eccentricity']
+        for key in test_elements:
+            self.assertNotEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_2014UR_Arecibo_older_exists(self):
+        params = {'name': '2014 UR',
+                  'abs_mag': 26.6,
+                  'slope': 0.1,
+                  'epochofel': '2013-03-19 00:00:00',
+                  'elements_type': u'MPC_MINOR_PLANET',
+                  'meananom': 325.2636,
+                  'argofperih': 85.19251,
+                  'longascnode': 147.81325,
+                  'orbinc': 8.34739,
+                  'eccentricity': 0.1896865,
+                  'meandist': 1.2176312,
+                  'source_type': 'U',
+                  'num_obs': 15,
+                  'origin': 'M',
+                  }
+
+        self.body, created = Body.objects.get_or_create(**params)
+        expected_elements = self.expected_elements
+        expected_elements['origin'] = 'A'
+
+        MockDateTime.change_datetime(2015, 10, 14, 12, 0, 0)
+        status = update_MPC_orbit(self.test_mpcdb_page, origin='A')
+        self.assertEqual(True, status)
+
+        new_body = Body.objects.last()
+        new_body_elements = model_to_dict(new_body)
+
+        self.assertEqual(len(expected_elements)+len(self.nocheck_keys), len(new_body_elements))
+
+        for key in expected_elements:
+            if key not in self.nocheck_keys and key != 'id':
+                self.assertEqual(expected_elements[key], new_body_elements[key])
+
+    @patch('core.views.datetime', MockDateTime)
     def test_2014UR_goldstone_then_arecibo(self):
 
         expected_elements = self.expected_elements
@@ -1339,6 +1723,108 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
 
+class TestUpdate_MPC_obs(TestCase):
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        self.test_mpcobs_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_13553.dat'), 'r')
+        self.test_mpcobs_page2 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_13553_old.dat'), 'r')
+        self.test_mpcobs_page3 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_215426.dat'), 'r')
+        self.test_mpcobs_page4 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
+    @classmethod
+    def setUpTestData(cls):
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        cls.test_body = Body.objects.create(**WSAE9A6_params)
+
+        params_13553 = { 'name' : '13553',
+                         'provisional_name' : '1992 JE'
+                         }
+        cls.test_body2 = Body.objects.create(**params_13553)
+
+        params_215426 = { 'name' : '215426',
+                         'provisional_name' : '2002 JF45'
+                         }
+        cls.test_body3 = Body.objects.create(**params_215426)
+
+    def test1(self):
+        expected_num_srcmeas = 6
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 5, 27, 12, int(0.672*1e6)),
+                            'obs_ra'    : 325.2828333333333,
+                            'obs_dec'   : -10.8525,
+                            'obs_mag'   : 21.8,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'G96'
+                          }
+
+        measures = update_MPC_obs(self.test_mpcobs_page)
+
+        self.assertEqual(expected_num_srcmeas, len(measures))
+        source_measures = SourceMeasurement.objects.filter(body=self.test_body)
+        self.assertEqual(expected_num_srcmeas, source_measures.count())
+        source_measure = source_measures[len(source_measures) - 1]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+
+    def test2_multiple_designations(self):
+        expected_measures = 23
+        measures = update_MPC_obs(self.test_mpcobs_page2)
+        self.assertEqual(len(measures), expected_measures)
+
+    def test_repeat_sources(self):
+        expected_measures = 11
+        total_measures = 23
+        expected_frames = 23
+        first_date = datetime(1998, 2, 21, 2, 13, 10, 272000)
+        last_date = datetime(2018, 7, 10, 3, 35, 44, 448000)
+
+        # Read in old measures
+        initial_measures = update_MPC_obs(self.test_mpcobs_page3)
+        # update with new ones
+        final_measures = update_MPC_obs(self.test_mpcobs_page2)
+        self.assertEqual(len(final_measures), expected_measures)
+
+        source_measures = SourceMeasurement.objects.filter(body=self.test_body2)
+        sorted_source_measures = sorted(source_measures, key=lambda sm: sm.frame.midpoint)
+        self.assertEqual(total_measures, source_measures.count())
+        source_measure1 = sorted_source_measures[len(source_measures) - 1]
+        source_measure2 = sorted_source_measures[0]
+        self.assertEqual(last_date, source_measure1.frame.midpoint)
+        self.assertEqual(first_date, source_measure2.frame.midpoint)
+
+        frames = Frame.objects.all()
+        self.assertEqual(len(frames), expected_frames)
+
+    def test_packed_name_with_change(self):
+        expected_measures = 15
+
+        measures = update_MPC_obs(self.test_mpcobs_page4)
+        self.assertEqual(len(measures), expected_measures)
+
+
 class TestClean_mpcorbit(TestCase):
 
     def setUp(self):
@@ -1384,7 +1870,6 @@ class TestClean_mpcorbit(TestCase):
                                          'semimajor axis': None,
                                          'transverse non-grav. param.': None}
 
-
         self.expected_params = {
                              'elements_type': 'MPC_MINOR_PLANET',
                              'abs_mag' : '26.6',
@@ -1403,8 +1888,8 @@ class TestClean_mpcorbit(TestCase):
                              'num_obs': '147',
                              'arc_length': '357',
                              'not_seen' : 5.5,
-#                             'score' : None,
-                             'update_time' : datetime(2015,10,9,0),
+                             # 'score' : None,
+                             'update_time' : datetime(2015, 10, 9, 0),
                              'updated' : True
                              }
         self.expected_comet_params = {
@@ -1566,8 +2051,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_nonLCO_nocat(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1592,8 +2077,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_nonLCO_nomag(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1618,8 +2103,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.NONLCO_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test_create_nonLCO_flags(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -1730,8 +2215,8 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(Frame.SATELLITE_FRAMETYPE, source_measure.frame.frametype)
         self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
-        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra,7)
-        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec,7)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
         self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
 
     def test_create_non_existant_body(self):
@@ -1845,18 +2330,33 @@ class TestFrames(TestCase):
                        }
         self.test_block_0m4 = Block.objects.create(**block_params)
 
+        block_params = { 'obstype' : Block.OPT_SPECTRA,
+                         'telclass' : '2m0',
+                         'site'     : 'coj',
+                         'body'     : self.test_body,
+                         'proposal' : self.neo_proposal,
+                         'groupid'  : 'TEMP_GROUP_spectra',
+                         'block_start' : '2017-12-11 13:00:00',
+                         'block_end'   : '2017-12-12 03:00:00',
+                         'tracking_number' : '1509481',
+                         'num_exposures' : 1,
+                         'exp_length' : 1800.0,
+                         'active'   : True
+                       }
+        self.test_spec_block = Block.objects.create(**block_params)
+
     def test_add_frame(self):
         params = parse_mpcobs(self.test_obslines[-1])
         resp = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K93')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
 
     def test_add_frames(self):
         for line in self.test_obslines:
             params = parse_mpcobs(line)
             resp = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K93')
-        self.assertEqual(3,frames.count())
+        self.assertEqual(3, frames.count())
         # Did the block get Added
         frames = Frame.objects.filter(sitecode='K93', block__isnull=False)
         # Although there are 4 sources in the file 2 are in the same frame
@@ -1876,7 +2376,7 @@ class TestFrames(TestCase):
         frame_params = frame_params_from_block(params, self.test_block)
         frame, frame_created = Frame.objects.get_or_create(**frame_params)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
 
     def test_ingest_frames_block(self):
@@ -1896,7 +2396,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -1919,7 +2419,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].filename, params['ORIGNAME']+'.fits')
@@ -1943,7 +2443,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.SINGLE_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -1968,7 +2468,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_QL_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -1994,7 +2494,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block)
         frames = Frame.objects.filter(sitecode='K91')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2021,7 +2521,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='L09')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'L09')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2048,7 +2548,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='V38')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'V38')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2075,7 +2575,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='Z21')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'Z21')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2102,7 +2602,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='Z17')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'Z17')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2129,7 +2629,7 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='W89')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'W89')
         self.assertEqual(frames[0].midpoint, midpoint)
@@ -2156,13 +2656,164 @@ class TestFrames(TestCase):
 
         frame = create_frame(params, self.test_block_0m4)
         frames = Frame.objects.filter(sitecode='W79')
-        self.assertEqual(1,frames.count())
+        self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'W79')
         self.assertEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
+
+    def test_ingest_frames_spectro_spectrum(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "SPECTRUM",
+                    "FILTER" : "air     ",
+                    "APERTYPE" : "SLIT    ",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-e00",
+                    "EXPTIME"  : "1800.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e00.fits'))
+
+    def test_ingest_frames_spectro_arc(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T11:44:33.898",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "ARC",
+                    "FILTER" : "air     ",
+                    "APERTYPE" : "SLIT    ",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0006-a00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('a00', 'a00.fits'))
+
+    def test_ingest_frames_spectro_lampflat(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T11:42:18.352",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 2.0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0005-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0x2.0AS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
+
+    def test_ingest_frames_spectro_lampflat_badslit(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : '',
+                    "RLEVEL"  : 0,
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0xUNKAS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
+
+    def test_ingest_frames_spectro_lampflat_badslit2(self):
+        params = {
+                    "DATE_OBS": "2018-05-09T13:28:52.383",
+                    "ENCID": "clma",
+                    "SITEID" : "coj",
+                    "TELID" : "2m0a",
+                    "OBSTYPE" : "LAMPFLAT",
+                    "FILTER" : "air",
+                    "APERTYPE" : "SLIT",
+                    "APERLEN" : 30.0,
+                    "APERWID" : 'UNKNOWN',
+                    "INSTRUME" : "en05",
+                    "ORIGNAME" : "coj2m002-en05-20180509-0017-w00",
+                    "EXPTIME"  : "60.0000",
+                    "GROUPID"  : "4709_E10-20180509_spectra",
+                  }
+        midpoint = datetime.strptime(params['DATE_OBS'], "%Y-%m-%dT%H:%M:%S.%f")
+        midpoint += timedelta(seconds=float(params['EXPTIME']) / 2.0)
+
+        frame = create_frame(params, self.test_spec_block)
+        frames = Frame.objects.filter(sitecode='E10')
+        self.assertEqual(1,frames.count())
+        self.assertEqual(frames[0].frametype, Frame.SPECTRUM_FRAMETYPE)
+        self.assertEqual(frames[0].sitecode, 'E10')
+        self.assertEqual(frames[0].midpoint, midpoint)
+        self.assertEqual(frames[0].filter, 'SLIT_30.0xUNKAS')
+#        self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
+        self.assertEqual(frames[0].instrument, params['INSTRUME'])
+        self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('w00', 'w00.fits'))
 
     def test_add_source_measurements(self):
         # Test we don't get duplicate frames when adding new source measurements
@@ -2227,7 +2878,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_did_not_exist(self):
-        crossid =  [u'WTB842B', 'doesnotexist', '', u'(Oct. 9.19 UT)']
+        crossid = [u'WTB842B', 'doesnotexist', '', u'(Oct. 9.19 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
                             'source_type' : 'X'
@@ -2238,7 +2889,7 @@ class TestClean_crossid(TestCase):
         self.assertEqual(expected_params, params)
 
     def test_was_not_confirmed(self):
-        crossid =  [u'P10oYZI', 'wasnotconfirmed', '', u'(Nov. 4.81 UT)']
+        crossid = [u'P10oYZI', 'wasnotconfirmed', '', u'(Nov. 4.81 UT)']
         expected_params = { 'active' : False,
                             'name' : '',
                             'source_type' : 'U'
@@ -2404,6 +3055,7 @@ class TestClean_crossid(TestCase):
         params = clean_crossid(crossid)
 
         self.assertEqual(expected_params, params)
+
 
 class TestSummarise_Block_Efficiency(TestCase):
 
@@ -2599,7 +3251,7 @@ class TestSummarise_Block_Efficiency(TestCase):
 class TestCheckCatalogAndRefitNew(TestCase):
 
     def setUp(self):
-        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.temp_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
 #        self.phot_tests_dir = os.path.abspath(os.path.join('photometrics', 'tests'))
 #        self.test_catalog = os.path.join(self.phot_tests_dir, 'oracdr_test_catalog.fits')
@@ -2664,19 +3316,19 @@ class TestCheckCatalogAndRefitNew(TestCase):
                         }
         self.test_block, created = Block.objects.get_or_create(**block_params)
 
-        frame_params = {    'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'banzai_test_frame.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.390,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params = {    'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'banzai_test_frame.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.390,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
 
@@ -2691,7 +3343,8 @@ class TestCheckCatalogAndRefitNew(TestCase):
                 print("Error removing files in temporary test directory", self.temp_dir)
             try:
                 os.rmdir(self.temp_dir)
-                if self.debug_print: print("Removed", self.temp_dir)
+                if self.debug_print:
+                    print("Removed", self.temp_dir)
             except OSError:
                 print("Error removing temporary test directory", self.temp_dir)
 
@@ -2801,19 +3454,19 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
     def test_find_block_for_frame_multiple_frames(self):
 
-        frame_params_2 = {  'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'banzai_test_frame.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.380,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params_2 = {  'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'banzai_test_frame.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.380,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
 
@@ -2825,35 +3478,35 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
     def test_find_block_for_frame_DNE_multiple_frames(self):
 
-        frame_params = {  'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'example-sbig-e00.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.390,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params = {  'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'example-sbig-e00.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.390,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame, created = Frame.objects.get_or_create(**frame_params)
 
-        frame_params_2 = {  'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'example-sbig-e00.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.380,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params_2 = {  'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'example-sbig-e00.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.380,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
 
@@ -2895,19 +3548,19 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
     def test_make_new_catalog_entry_multiple_frames(self):
 
-        frame_params_2 = {  'sitecode':'K92',
-                            'instrument':'kb76',
-                            'filter':'w',
-                            'filename':'banzai_test_frame_ldac.fits',
-                            'exptime':225.0,
-                            'midpoint':datetime(2016, 8, 2, 2, 17, 19),
-                            'block':self.test_block,
-                            'zeropoint':-99,
-                            'zeropoint_err':-99,
-                            'fwhm':2.380,
-                            'frametype':0,
-                            'rms_of_fit':0.3,
-                            'nstars_in_fit':-4,
+        frame_params_2 = {  'sitecode': 'K92',
+                            'instrument': 'kb76',
+                            'filter': 'w',
+                            'filename': 'banzai_test_frame_ldac.fits',
+                            'exptime': 225.0,
+                            'midpoint': datetime(2016, 8, 2, 2, 17, 19),
+                            'block': self.test_block,
+                            'zeropoint': -99,
+                            'zeropoint_err': -99,
+                            'fwhm': 2.380,
+                            'frametype': 0,
+                            'rms_of_fit': 0.3,
+                            'nstars_in_fit': -4,
                         }
         self.test_frame_2, created = Frame.objects.get_or_create(**frame_params_2)
 
@@ -3294,6 +3947,7 @@ class TestStoreDetections(TestCase):
         cands = Candidate.objects.all()
         self.assertEqual(expected_num_cands, len(cands))
 
+
 class Test_Generate_New_Candidate_Id_Blank(TestCase):
 
     def test_no_discoveries(self):
@@ -3322,6 +3976,7 @@ class Test_Generate_New_Candidate_Id_Blank(TestCase):
         new_id = generate_new_candidate_id()
 
         self.assertEqual(expected_id, new_id)
+
 
 class Test_Generate_New_Candidate_Id(TestCase):
 
@@ -3369,6 +4024,7 @@ class Test_Generate_New_Candidate_Id(TestCase):
         self.assertEqual(expected_id, new_id)
         self.assertEqual(3, Body.objects.count())
 
+
 class Test_Add_New_Taxonomy_Data(TestCase):
 
     def setUp(self):
@@ -3377,7 +4033,7 @@ class Test_Add_New_Taxonomy_Data(TestCase):
                    'provisional_name' : 'LNX0003',
                    'origin' : 'L',
                  }
-        self.body = Body.objects.create(pk=1,**params)
+        self.body = Body.objects.create(pk=1, **params)
 
         tax_params = {'body'          : self.body,
                       'taxonomic_class' : 'S3',
@@ -3389,32 +4045,339 @@ class Test_Add_New_Taxonomy_Data(TestCase):
 
     def test_one_body(self):
         expected_res = True
-        test_obj=['LNX0003','SU',"T","PDS6","7G"]
+        test_obj = ['LNX0003', 'SU', "T", "PDS6", "7G"]
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_new_target(self):
         expected_res = False
-        test_obj=['4702','S',"B","PDS6","s"]
+        test_obj = ['4702', 'S', "B", "PDS6", "s"]
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data(self):
         expected_res = False
-        test_obj=['980','S3',"Ba","PDS6","7I"]
+        test_obj = ['980', 'S3', "Ba", "PDS6", "7I"]
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data_twice(self):
         expected_res = False
-        test_obj=['980','SU',"T","PDS6","7G"]
+        test_obj = ['980', 'SU', "T", "PDS6", "7G"]
         new_tax = update_taxonomy(test_obj)
         new_tax = update_taxonomy(test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
 
+class Test_Add_External_Spectroscopy_Data(TestCase):
 
+    def setUp(self):
+
+        params = { 'name' : '980',
+                   'provisional_name' : 'LNX0003',
+                   'origin' : 'L',
+                   'active' : True,
+                 }
+        self.body = Body.objects.create(pk=1, **params)
+
+        spec_params = {'body'          : self.body,
+                'spec_wav'      : 'Vis',
+                'spec_vis'      : 'spex/sp233/a265962.sp233.txt',
+                'spec_ref'      : 'sp[234]',
+                'spec_source'   : 'S',
+                'spec_date'     : '2017-09-25',
+                      }
+        self.test_spectra = PreviousSpectra.objects.create(pk=1, **spec_params)
+
+    def test_same_body_different_wavelength(self):
+        expected_res = True
+        test_obj = ['LNX0003', 'NIR', '', "spex/sp233/a416584.sp233.txt", "sp[233]", datetime.strptime('2017-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_older(self):
+        expected_res = False
+        test_obj = ['980', 'Vis', 'spex/sp233/a416584.sp234.txt', "", "sp[24]", datetime.strptime('2015-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_newer(self):
+        expected_res = True
+        test_obj = ['980', 'Vis', 'spex/sp233/a416584.sp234.txt', "", "sp[24]", datetime.strptime('2017-12-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'S', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_same_body_different_source(self):
+        expected_res = True
+        test_obj = ['980', 'Vis', '2014/09/1999sh10.png', "", "MANOS Site", datetime.strptime('2015-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'M', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+    def test_new_body(self):
+        expected_res = False
+        test_obj = ['9801', 'Vis', '2014/09/1999sh10.png', "", "MANOS Site", datetime.strptime('2015-09-25', '%Y-%m-%d').date()]
+        new_spec = update_previous_spectra(test_obj, 'M', dbg=True)
+
+        self.assertEqual(expected_res, new_spec)
+
+
+class TestCreateStaticSource(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.test_flux_standards = fetch_flux_standards(test_flux_page)
+
+        solar_standards_test = os.path.join('astrometrics', 'tests', 'solar_standards_test_list.dat')
+        self.test_solar_analogs = read_solar_standards(solar_standards_test)
+
+        self.maxDiff = None
+        self.precision = 10
+
+    def test_num_created(self):
+        expected_created = 3
+
+        num_created = create_calib_sources(self.test_flux_standards)
+
+        self.assertEqual(expected_created, num_created)
+        self.assertEqual(expected_created, StaticSource.objects.count())
+
+    def test_correct_units(self):
+        expected_num = 3
+        expected_src1_ra = ((((49.42/60.0)+1.0)/60.0)+0)*15.0
+        expected_src1_dec = -((((39.0/60.0)+1.0)/60.0)+3.0)
+        expected_src3_ra = ((((24.30/60.0)+56.0)/60.0)+5)*15.0
+        expected_src3_dec = -((((28.8/60.0)+51.0)/60.0)+27.0)
+
+        num_created = create_calib_sources(self.test_flux_standards)
+
+        cal_sources = StaticSource.objects.filter(source_type=StaticSource.FLUX_STANDARD)
+        self.assertEqual(expected_num, cal_sources.count())
+        self.assertAlmostEqual(expected_src1_ra, cal_sources[0].ra, self.precision)
+        self.assertAlmostEqual(expected_src1_dec, cal_sources[0].dec, self.precision)
+        self.assertAlmostEqual(expected_src3_ra, cal_sources[2].ra, self.precision)
+        self.assertAlmostEqual(expected_src3_dec, cal_sources[2].dec, self.precision)
+
+    def test_solar_standards(self):
+        expected_num = 46
+        expected_src1_name = 'Landolt SA93-101'
+        expected_src1_ra = ((((18.00/60.0)+53.0)/60.0)+1)*15.0
+        expected_src1_dec = ((((25.0/60.0)+22.0)/60.0)+0.0)
+        expected_src1_sptype = 'G2V'
+
+        num_created = create_calib_sources(self.test_solar_analogs, cal_type=StaticSource.SOLAR_STANDARD)
+
+        cal_sources = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
+        self.assertEqual(expected_num, cal_sources.count())
+        self.assertEqual(expected_src1_name, cal_sources[0].name)
+        self.assertEqual(expected_src1_sptype, cal_sources[0].spectral_type)
+        self.assertAlmostEqual(expected_src1_ra, cal_sources[0].ra, self.precision)
+        self.assertAlmostEqual(expected_src1_dec, cal_sources[0].dec, self.precision)
+
+
+class TestFindBestFluxStandard(TestCase):
+
+    def setUp(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.flux_standards = fetch_flux_standards(test_flux_page)
+        num_created = create_calib_sources(self.flux_standards)
+
+        self.maxDiff = None
+        self.precision = 8
+
+    def test_FTN(self):
+        expected_standard = StaticSource.objects.get(name='HR9087')
+        expected_params = { 'separation_rad' : 0.9379758789119819}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+        utc_date = datetime(2017, 11, 15, 1, 10, 0)
+        close_standard, close_params = find_best_flux_standard('F65', utc_date)
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+    def test_FTS(self):
+        expected_standard = StaticSource.objects.get(name='CD-34d241')
+        expected_params = { 'separation_rad' : 0.11565764559405214}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+        utc_date = datetime(2017, 9, 27, 1, 10, 0)
+        close_standard, close_params = find_best_flux_standard('E10', utc_date)
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+
+class TestFindBestSolarAnalog(TestCase):
+
+    def setUp(self):
+
+        self.maxDiff = None
+        self.precision = 8
+
+    @classmethod
+    def setUpTestData(cls):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        cls.flux_standards = fetch_flux_standards(test_flux_page)
+        cls.num_flux_created = create_calib_sources(cls.flux_standards)
+
+        test_file = os.path.join('astrometrics', 'tests', 'solar_standards_test_list.dat')
+        cls.test_solar_analogs = read_solar_standards(test_file)
+        cls.num_solar_created = create_calib_sources(cls.test_solar_analogs, cal_type=StaticSource.SOLAR_STANDARD)
+        params = {
+                 'name': '1093',
+                 'origin': 'M',
+                 'source_type': 'A',
+                 'elements_type': 'MPC_MINOR_PLANET',
+                 'epochofel': datetime(2018, 3, 23, 0, 0),
+                 'orbinc': 25.21507,
+                 'longascnode': 55.63599,
+                 'argofperih': 251.40338,
+                 'eccentricity': 0.2712664,
+                 'meandist': 3.1289388,
+                 'meananom': 211.36057,
+                 'abs_mag': 8.83,
+                 'slope': 0.15,
+                 'num_obs': 2187,
+                }
+        cls.test_body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def test_ingest(self):
+        calib_sources = StaticSource.objects.all()
+        flux_standards = calib_sources.filter(source_type=StaticSource.FLUX_STANDARD)
+        solar_standards = calib_sources.filter(source_type=StaticSource.SOLAR_STANDARD)
+
+        self.assertEqual(self.num_flux_created+self.num_solar_created, calib_sources.count())
+        self.assertEqual(self.num_flux_created, flux_standards.count())
+        self.assertEqual(self.num_solar_created, solar_standards.count())
+
+    def test_FTN(self):
+        expected_ra = 2.7772337523336565
+        expected_dec = 0.6247970652631909
+        expected_standard = StaticSource.objects.get(name='35 Leo')
+        expected_params = { 'separation_deg' : 13.031726234959416}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+        utc_date = datetime(2017, 11, 15, 14, 0, 0)
+        emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
+        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
+        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp[1], emp[2])
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_deg' in key or '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+    def test_FTS(self):
+        expected_ra = 4.334041503242261
+        expected_dec = -0.3877173805762358
+        expected_standard = StaticSource.objects.get(name='HD 140990')
+        expected_params = { 'separation_deg' : 10.838361371951908}
+        # Python 3.5 dict merge; see PEP 448
+        expected_params = {**expected_params, **model_to_dict(expected_standard)}
+
+        utc_date = datetime(2014, 4, 20, 13, 30, 0)
+        emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
+        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
+        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp[1], emp[2])
+
+        self.assertEqual(expected_standard, close_standard)
+        for key in expected_params:
+            if '_deg' in key or '_rad' in key:
+                self.assertAlmostEqual(expected_params[key], close_params[key], places=self.precision)
+            else:
+                self.assertEqual(expected_params[key], close_params[key])
+
+    def test_FTS_no_match(self):
+        expected_ra = 5.840671145434903
+        expected_dec = -0.9524603478856751
+        expected_standard = None
+        expected_params = {}
+
+        utc_date = datetime(2020, 9, 5, 13, 30, 0)
+        emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
+        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
+        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp[1], emp[2], min_sep=5.0)
+
+        self.assertEqual(expected_standard, close_standard)
+        self.assertEqual(expected_params, close_params)
+
+
+class Test_Export_Measurements(TestCase):
+
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.debug_print = False
+        self.maxDiff = None
+
+    @classmethod
+    def setUpTestData(cls):
+        WSAE9A6_params = { 'provisional_name' : 'WSAE9A6',
+                         }
+
+        cls.test_body = Body.objects.create(**WSAE9A6_params)
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
+        test_obslines = test_fh.readlines()
+        test_fh.close()
+        source_measures = create_source_measurement(test_obslines)
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print: print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+
+    def test1(self):
+        expected_num_sources = 6
+        sources = SourceMeasurement.objects.all()
+        self.assertEqual(expected_num_sources, sources.count())
+
+    def test_export(self):
+        expected_filename = os.path.join(self.test_dir, 'WSAE9A6.mpc')
+        expected_num_lines = 6
+
+        body = Body.objects.get(provisional_name='WSAE9A6')
+        filename, num_lines = export_measurements(body.id, self.test_dir)
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_num_lines, num_lines)

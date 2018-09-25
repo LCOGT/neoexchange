@@ -7,7 +7,11 @@
 
 {% block extramenu %}
     <div class="headingleft">
-        <h1>Spectroscopy feasibility for: {{body.current_name}}</h1>
+        {% if body.ingest %}
+            <h1>Spectroscopy feasibility for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a></h1>
+        {% else %}
+            <h1>Spectroscopy feasibility for: <a href="{% url 'calibsource' body.id %}">{{body.current_name}}</a></h1>
+        {% endif %}
     </div>
 {% endblock%}
 
@@ -15,9 +19,15 @@
     <!-- Main body -->
     <div class="container" id="main">
         <div class="section-title">
-            <form action="{% url 'feasibility' body.id %}" method="POST" style="display:inline-block;">
+            {% if body.ingest %}
+                <form action="{% url 'feasibility' body.id %}" method="POST" style="display:inline-block;">
                 {% csrf_token %}
                 Right Ascension: {{ body.compute_position.0|radianstohms:" "}} Declination: {{ body.compute_position.1|radianstodms:" " }}
+            {% else %}
+                <form action="{% url 'feasibility-calib' body.id %}" method="POST" style="display:inline-block;">
+                {% csrf_token %}
+                Right Ascension: {{ body.ra|degreestohms:" "}} Declination: {{ body.dec|degreestodms:" " }}
+            {% endif %}
                 <div class="inline-fields">
                     <div class="compact-field">
                     {{ form.instrument_code }}<label for="id_instrument_code">Instrument</label>
