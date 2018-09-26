@@ -268,6 +268,8 @@ class StaticSourceAdmin(admin.ModelAdmin):
 
     ordering = [ 'ra', ]
 
+    search_fields = ('name',)
+
 
 admin.site.register(Proposal, ProposalAdmin)
 admin.site.register(SourceMeasurement, SourceMeasurementAdmin)
