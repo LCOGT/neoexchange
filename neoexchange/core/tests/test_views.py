@@ -2996,6 +2996,32 @@ class TestClean_crossid(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_comet_numbered(self):
+        MockDateTime.change_datetime(2018, 9, 19, 0, 30, 0)
+
+        crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
+        expected_params = { 'active' : True,
+                            'name' : '46P',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_numbered_past_time(self):
+        MockDateTime.change_datetime(2018, 9, 29, 0, 30, 0)
+
+        crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
+        expected_params = { 'active' : False,
+                            'name' : '46P',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
     def test_hyperbolic_asteroid1(self):
         crossid = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Nov. 4.95 UT)']
         expected_params = { 'active' : True,
@@ -4056,6 +4082,80 @@ class TestUpdate_Crossids(TestCase):
 
         status = update_crossids(crossid_info, dbg=False)
         self.assertEqual(3, Body.objects.count(), msg="After update_crossids; should still be 3 Bodies")
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_NEO_to_numbered_comet_match(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  17, 10, 40, 0)
+
+        crossid_info = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
+
+        self.body.origin = 'M'
+        self.body.source_type = 'U'
+        self.body.provisional_name = 'ZS9E891'
+        self.body.name = None
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('46P', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        q = self.body.meandist * (1.0 - self.body.eccentricity)
+        self.assertAlmostEqual(q, body.perihdist, 7)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_NEO_to_numbered_comet_match2(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  19, 10, 40, 0)
+
+        crossid_info = ['ZS0B8B9 ', '0060P  ', '', '(Sept. 18.83 UT)']
+
+        self.body.origin = 'M'
+        self.body.source_type = 'U'
+        self.body.provisional_name = 'ZS0B8B9'
+        self.body.name = None
+        self.body.epochofel = datetime(2018, 9, 18, 0, 0)
+        self.body.eccentricity = 0.5377759
+        self.body.meandist = 3.5105122
+        self.body.meananom = 347.37843
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        q = self.body.meandist * (1.0 - self.body.eccentricity)
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('60P', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertAlmostEqual(q, body.perihdist, 7)
+        self.assertIs(None, body.meananom)
+
 
 class TestStoreDetections(TestCase):
 
