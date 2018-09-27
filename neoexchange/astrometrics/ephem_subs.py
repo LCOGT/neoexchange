@@ -522,7 +522,12 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 
     full_emp = []
     while ephem_time < dark_end:
-        emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=True, display=False)
+        if 'epochofel' in elements:
+            emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=True, display=False)
+        elif 'ra' in elements and 'dec' in elements:
+            emp_line = compute_sidereal_ephem(ephem_time, elements, site_code)
+        else:
+            break
         full_emp.append(emp_line)
         ephem_time = ephem_time + timedelta(seconds=step_size_secs)
 
@@ -1327,6 +1332,7 @@ def moon_ra_dec(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     logger.debug("Moon RA, Dec, diam=%s %s %s" % (moon_ra, moon_dec, diam))
     return moon_ra, moon_dec, diam
 
+
 def atmos_params(airless):
     """Atmospheric parameters either airless or average"""
     if airless:
@@ -1612,34 +1618,35 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(emp_line))
     return FOM
 
-def determine_sites_to_schedule(sched_date = datetime.utcnow()):
-    '''Determines which sites should be attempted for scheduling based on the
+
+def determine_sites_to_schedule(sched_date=datetime.utcnow()):
+    """Determines which sites should be attempted for scheduling based on the
     time of day.
     Returns a dictionary with keys of 'north' and 'south', each of which will
     have two keys of '0m4' and '1m0' which will contain a list of sites (or an
-    empty list) that can be scheduled.'''
+    empty list) that can be scheduled."""
 
     N_point4m_sites = N_onem_sites = S_point4m_sites = S_onem_sites = []
 
-    if sched_date.hour >= 17 and sched_date.hour < 23:
+    if 17 <= sched_date.hour < 23:
         N_point4m_sites = ['Z21', 'Z17']
         N_onem_sites = ['V37', ]
-        S_point4m_sites = ['L09',]
+        S_point4m_sites = ['L09', ]
         S_onem_sites = ['K93', 'K92', 'K91']
-    elif sched_date.hour >= 23 or ( sched_date.hour >= 0 and sched_date.hour < 8):
+    elif sched_date.hour >= 23 or (0 <= sched_date.hour < 8):
         N_point4m_sites = ['T04', 'T03', 'V38']
         N_onem_sites = ['V37', ]
         S_point4m_sites = ['W89', 'W79']
         S_onem_sites = ['W87', 'W85']
-    elif sched_date.hour >= 8 and sched_date.hour < 12:
+    elif 8 <= sched_date.hour < 12:
         N_point4m_sites = ['T04', 'T03']
         N_onem_sites = [ ]
-        S_point4m_sites = ['Q58',]
+        S_point4m_sites = ['Q58', ]
         S_onem_sites = ['Q63', 'Q64']
-    elif sched_date.hour >= 12 and sched_date.hour < 17:
+    elif 12 <= sched_date.hour < 17:
         N_point4m_sites = [ ]
         N_onem_sites = [ ]
-        S_point4m_sites = ['Q58',]
+        S_point4m_sites = ['Q58', ]
         S_onem_sites = ['Q63', 'Q64']
 
     sites = {   'north' : { '0m4' : N_point4m_sites, '1m0' : N_onem_sites},
@@ -1647,6 +1654,7 @@ def determine_sites_to_schedule(sched_date = datetime.utcnow()):
             }
 
     return sites
+
 
 def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow(), date_range=30, dark_and_up_time_limit=3.0, slot_length=20, ephem_step_size='5 m'):
     """Determine when it's best to observe Yarkovsky & radar/ARM
@@ -1671,7 +1679,7 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
             moon_alt_start = int(emp_dark_and_up[0][9])
             moon_alt_end = int(emp_dark_and_up[-1][9])
             moon_up = False
-            if moon_alt_start>=30 or moon_alt_end >= 30:
+            if moon_alt_start >= 30 or moon_alt_end >= 30:
                 moon_up = True
 
             moon_phase = float(emp_dark_and_up[0][7])
@@ -1738,3 +1746,22 @@ def compute_max_altitude(emp_dark_and_up):
         prev_max_alt = max_alt
 
     return max_alt
+
+
+def compute_sidereal_ephem(ephem_time, elements, site_code):
+    site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+    az_rad, alt_rad = moon_alt_az(ephem_time, radians(elements['ra']), radians(elements['dec']), site_long, site_lat, site_hgt, dbg=False)
+    alt_deg = degrees(alt_rad)
+
+    #               0   1   2   3       4           5       6       7
+    emp_line = (ephem_time, radians(elements['ra']), radians(elements['dec']), elements['vmag'], 0, alt_deg, 0, 0)
+    return emp_line
+
+
+def get_visibility(body_elements, dark_start, dark_end, site_code, step_size='30 m', alt_limit=30):
+
+    emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, step_size, alt_limit)
+    dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
+    max_alt = compute_max_altitude(emp_dark_and_up)
+
+    return dark_and_up_time, max_alt

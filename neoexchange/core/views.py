@@ -56,7 +56,8 @@ import astrometrics.site_config as cfg
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
-    determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness
+    determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
+    get_visibility
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
@@ -898,6 +899,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # Pull out LCO Site, Telescope Class using site_config.py
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
+    dark_and_up_time, max_alt = get_visibility(body_elements, dark_start, dark_end, data['site_code'], '30 m', alt_limit=30)
 
     # Determine slot length
     if data.get('slot_length'):
@@ -989,6 +991,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'lco_site' : lco_site_code[0:3],
         'lco_tel' : lco_site_code[-4:-1],
         'lco_enc' : lco_site_code[4:8],
+        'max_alt' : max_alt,
+        'vis_time' : dark_and_up_time,
         'solar_analog' : solar_analog,
         'calibsource' : solar_analog_params,
         'calibsource_id' : solar_analog_id

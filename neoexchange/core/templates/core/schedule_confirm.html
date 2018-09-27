@@ -47,6 +47,15 @@
                         <td class="kv-key">UTC date</td>
                         <td class="kv-value">{{ data.utc_date}}</td>
                     </tr>
+                    <tr id="id_visibility">
+                        {% if data.vis_time and data.max_alt > 30 %}
+                            <td class="kv-key">Hours Visible / Max Altitude</td>
+                            <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt}}&deg</td>
+                        {% else %}
+                            <td class="kv-key">Hours Visible / Max Altitude</td>
+                        <td class="kv-value"> <span class="warning msgpadded"> Target Not Visible </span> </td>
+                        {% endif %}
+                    </tr>
                 </tbody>
             </table>
             <h6 class="section-title">Calculated characteristics at {{ data.mid_time }}</h6>
