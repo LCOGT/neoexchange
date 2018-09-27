@@ -929,7 +929,12 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 7.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -980,7 +985,12 @@ class TestSchedule_Check(TestCase):
                         'too_mode': False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 7.5,
+                        'lco_enc': 'CLMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '2M0',
+                        'max_alt': 67
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1032,7 +1042,12 @@ class TestSchedule_Check(TestCase):
                         'too_mode': False,
                         'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
                         'calibsource_id' : 1,
-                        'solar_analog' : True
+                        'solar_analog' : True,
+                        'vis_time': 7.5,
+                        'lco_enc': 'CLMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '2M0',
+                        'max_alt': 67
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1087,7 +1102,12 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 7.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1140,7 +1160,12 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 7.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67
                         }
 
         resp = schedule_check(data, self.body_mp)
