@@ -127,7 +127,6 @@ class TestClean_NEOCP_Object(TestCase):
                               'longascnode' : 335.41846,
                               'orbinc'      :   3.06258,
                               'eccentricity':  0.1506159,
-                             # 'MDM':   0.29656016,
                               'meandist'    :  2.2270374,
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'L',
@@ -157,7 +156,6 @@ class TestClean_NEOCP_Object(TestCase):
                               'longascnode' : 172.85027,
                               'orbinc'      :  25.18528,
                               'eccentricity':  0.0920324,
-                             # 'MDM':   0.36954350,
                               'meandist'    :  1.9232054,
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'L',
@@ -167,6 +165,154 @@ class TestClean_NEOCP_Object(TestCase):
                               'not_seen'    : 12.25
                             }
         elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_with_min_units(self):
+
+        MockDateTime.change_datetime(2018, 3, 10, 6, 00, 00)
+
+        obs_page = [u'ZTF00HU 32.92  0.15 K1837 199.07689  171.91365  166.14977    2.83538  0.4561885  1.73092232   0.6869909    FO 180921     8   1 87.0 min  1.21         Find_Orb   0000 ZTF00HU                     20180307',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 32.92,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2018, 3,  7, 0, 0, 0),
+                              'meananom'    : 199.07689,
+                              'argofperih'  : 171.91365,
+                              'longascnode' : 166.14977,
+                              'orbinc'      :   2.83538,
+                              'eccentricity':  0.4561885,
+                              'meandist'    :  0.6869909,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'arc_length'  : 87/1440.0,
+                              'not_seen'    :  3.25
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_with_hrs_units(self):
+
+        MockDateTime.change_datetime(2018, 3, 10, 6, 00, 00)
+
+        obs_page = [u'ZTF00HU 32.92  0.15 K1837 199.07689  171.91365  166.14977    2.83538  0.4561885  1.73092232   0.6869909    FO 180921     8   1 87.0 hrs  1.21         Find_Orb   0000 ZTF00HU                     20180307',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 32.92,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2018, 3,  7, 0, 0, 0),
+                              'meananom'    : 199.07689,
+                              'argofperih'  : 171.91365,
+                              'longascnode' : 166.14977,
+                              'orbinc'      :   2.83538,
+                              'eccentricity':  0.4561885,
+                              'meandist'    :  0.6869909,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'arc_length'  : 87/24.0,
+                              'not_seen'    :  3.25
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_with_permnumber(self):
+
+        MockDateTime.change_datetime(2015, 9, 27, 6, 00, 00)
+
+        obs_page = [u'h6724   19.6   0.16 K156R 349.64418    8.64714  286.27302    4.64985  0.3751307  0.47926447   1.6171584  0 MPO342195   185   3 2011-2015 0.37 M-h 3Eh Find_Orb   0000         (436724) 2011 UW158 20150629',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 19.6,
+                              'slope'       : 0.16,
+                              'epochofel'   : datetime(2015, 6, 27, 0, 0, 0),
+                              'meananom'    : 349.64418,
+                              'argofperih'  :   8.64714,
+                              'longascnode' : 286.27302,
+                              'orbinc'      :   4.64985,
+                              'eccentricity':  0.3751307,
+                              'meandist'    :  1.6171584,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'num_obs'     : 185,
+                              'arc_length'  : 1826.0,
+                              'not_seen'    : 90.25
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_with_permplusprov(self):
+
+        MockDateTime.change_datetime(2015, 9, 27, 6, 00, 00)
+
+        obs_page = [u'h6724K11UF8W19.55  0K157A 355.88753    8.63457  286.27078    4.65085  0.3756709  0.47863758   1.6185701    FO 180921   339   1 2011-2015 0.33         Find_Orb   0000 (436724) = 2011 UW158       20150710',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 19.55,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2015, 7, 10, 0, 0, 0),
+                              'meananom'    : 355.88753,
+                              'argofperih'  :   8.63457,
+                              'longascnode' : 286.27078,
+                              'orbinc'      :   4.65085,
+                              'eccentricity':  0.3756709,
+                              'meandist'    :  1.6185701,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'num_obs'     : 339,
+                              'arc_length'  : 1826.0,
+                              'not_seen'    : 79.25
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_local_discovery(self):
+
+        MockDateTime.change_datetime(2016, 11, 19, 18, 00, 00)
+
+        obs_page_list = [u'LSCTLGj 16.54  0.15 K16B8 258.25752   52.27105  101.57581   16.82829  0.0258753  0.17697056   3.1419699    FO 161108    11   1    3 days 0.09         NEOCPNomin 0000 LSCTLGj                     20161108',
+                         u'',
+                         u'']
+
+        expected_elements = { 'provisional_name' : 'LSCTLGj',
+                              'abs_mag'     : 16.54,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2016,11,  8, 0, 0, 0),
+                              'meananom'    : 258.25752,
+                              'argofperih'  :  52.27105,
+                              'longascnode' : 101.57581,
+                              'orbinc'      :  16.82829,
+                              'eccentricity':  0.0258753,
+                              'meandist'    :  3.1419699,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'L',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'arc_length'  : 3.0,
+                              'not_seen'    : 11.75,
+                            }
+        elements = clean_NEOCP_object(obs_page_list)
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
@@ -270,7 +416,6 @@ class TestClean_NEOCP_Object(TestCase):
                               'epochofperih': datetime(2018, 7, 18, 16, 0, 8, 802657),
                               'perihdist'   : 1136.349844 * (1.0 - 0.9976479),
                               'meananom'    : None,
-                             # 'MDM':   0.36954350,
                               'elements_type': 'MPC_COMET',
                               'origin'      : 'M',
                               'source_type' : 'U',
@@ -281,6 +426,92 @@ class TestClean_NEOCP_Object(TestCase):
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
+    @patch('core.views.datetime', MockDateTime)
+    def test_should_be_comet_lowE(self):
+
+        MockDateTime.change_datetime(2018, 9, 21, 3, 00, 00)
+
+        obs_page = [u'0046PJ54R02013.38  0K034B  41.15662  356.39037   82.16911   11.73795  0.6578477  0.18109548   3.0940760    FO 180921   621   1 1991-2003 53.4 M-N 06  NEOCPNomin 0000 P/46                        20030411',
+                   ]
+
+        expected_elements = { 'abs_mag'     : 13.38,
+                              'slope'       : 4.0,
+                              'epochofel'   : datetime(2003, 4, 11, 0, 0, 0),
+                              'argofperih'  : 356.39037,
+                              'longascnode' :  82.16911,
+                              'orbinc'      :  11.73795,
+                              'eccentricity':  0.6578477,
+                              'epochofperih': datetime(2002, 8, 26, 17, 38, 45, 1858),
+                              'perihdist'   : 3.0940760 * (1.0 - 0.6578477),
+                              'meananom'    : None,
+                              'elements_type': 'MPC_COMET',
+                              'origin'      : 'M',
+                              'source_type' : 'C',
+                              'active'      : True,
+                              'num_obs'     : 621,
+                              'arc_length'  : 4748,
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_should_be_comet_bad_start_year(self):
+
+        MockDateTime.change_datetime(2018, 9, 21, 3, 00, 00)
+
+        obs_page = [u'0046PJ54R02013.38  0K034B  41.15662  356.39037   82.16911   11.73795  0.6578477  0.18109548   3.0940760    FO 180921   621   1 cRap-2003 53.4 M-N 06  NEOCPNomin 0000 P/46                        20030411',
+                   ]
+
+        expected_elements = { 'abs_mag'     : 13.38,
+                              'slope'       : 4.0,
+                              'epochofel'   : datetime(2003, 4, 11, 0, 0, 0),
+                              'argofperih'  : 356.39037,
+                              'longascnode' :  82.16911,
+                              'orbinc'      :  11.73795,
+                              'eccentricity':  0.6578477,
+                              'epochofperih': datetime(2002, 8, 26, 17, 38, 45, 1858),
+                              'perihdist'   : 3.0940760 * (1.0 - 0.6578477),
+                              'meananom'    : None,
+                              'elements_type': 'MPC_COMET',
+                              'origin'      : 'M',
+                              'source_type' : 'C',
+                              'active'      : True,
+                              'num_obs'     : 621,
+                              'arc_length'  : None
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_should_be_comet_bad_last_year(self):
+
+        MockDateTime.change_datetime(2018, 9, 21, 3, 00, 00)
+
+        obs_page = [u'0046PJ54R02013.38  0K034B  41.15662  356.39037   82.16911   11.73795  0.6578477  0.18109548   3.0940760    FO 180921   621   1 1991-CRAP 53.4 M-N 06  NEOCPNomin 0000 P/46                        20030411',
+                   ]
+
+        expected_elements = { 'abs_mag'     : 13.38,
+                              'slope'       : 4.0,
+                              'epochofel'   : datetime(2003, 4, 11, 0, 0, 0),
+                              'argofperih'  : 356.39037,
+                              'longascnode' :  82.16911,
+                              'orbinc'      :  11.73795,
+                              'eccentricity':  0.6578477,
+                              'epochofperih': datetime(2002, 8, 26, 17, 38, 45, 1858),
+                              'perihdist'   : 3.0940760 * (1.0 - 0.6578477),
+                              'meananom'    : None,
+                              'elements_type': 'MPC_COMET',
+                              'origin'      : 'M',
+                              'source_type' : 'C',
+                              'active'      : True,
+                              'num_obs'     : 621,
+                              'arc_length'  : None
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
 
 class TestCheck_for_block(TestCase):
 

@@ -266,9 +266,11 @@ def determine_findorb_options(site_code):
     -z: use config directory for files (in $HOME/.find_orb),
     -q: quiet,
     -C <code>: set MPC site code for ephemeris to <code>,
-    -e new.ephem: output ephemeris to new.ephem"""
+    -e new.ephem: output ephemeris to new.ephem
+    -c combine designations
+    """
 
-    options = "-z -q -C {} -e new.ephem".format(site_code)
+    options = "-z -c -q -C {} -e new.ephem".format(site_code)
 
     return options
 
@@ -435,7 +437,6 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
 
     cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files)
     cmdline = cmdline.rstrip()
-    print(cmdline)
 
     if dbg is True:
         retcode_or_cmdline = cmdline

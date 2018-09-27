@@ -4,6 +4,10 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.3b
+
+Fix issues with interactions between FindOrb and candidates/comets
+
 ### 2.7.2
 
 Spectroscopic Graphical tools
