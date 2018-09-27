@@ -1688,7 +1688,10 @@ def update_crossids(astobj, dbg=False):
     desig = astobj[1]
 
     created = False
-    bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig))
+    # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
+    # but don't have a blank 'name'
+    bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
+    if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
     
     if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
@@ -1702,12 +1705,13 @@ def update_crossids(astobj, dbg=False):
         body = sorted_bodies[0]
         logger.info("Taking %s as canonical Body" % body.current_name())
         for del_body in sorted_bodies[1:]:
-            logger.info("Removing %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
+            logger.info("Trying to remove %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
             num_sblocks = SuperBlock.objects.filter(body=del_body).count()
             num_blocks = Block.objects.filter(body=del_body).count()
             if del_body.origin != 'M':
                 if num_sblocks == 0 and num_blocks == 0 and del_body.origin != 'M':
                     del_body.delete()
+                    logger.info("Removed %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
                 else:
                     logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
             else:
