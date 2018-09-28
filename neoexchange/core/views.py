@@ -1703,7 +1703,7 @@ def update_crossids(astobj, dbg=False):
         # Sort by ingest time and remove extras (if there are no Block or SuperBlocks)
         sorted_bodies = bodies.order_by('ingest')
         body = sorted_bodies[0]
-        logger.info("Taking %s as canonical Body" % body.current_name())
+        logger.info("Taking %s (id=%d) as canonical Body" % (body.current_name(), body.pk))
         for del_body in sorted_bodies[1:]:
             logger.info("Trying to remove %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
             num_sblocks = SuperBlock.objects.filter(body=del_body).count()
