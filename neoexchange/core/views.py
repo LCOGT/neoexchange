@@ -931,7 +931,11 @@ def schedule_check(data, body, ok_to_schedule=True):
             ok_to_schedule = False
 
     # determine stellar trailing
-    trail_len = determine_star_trails(speed, exp_length)
+    if spectroscopy:
+        ag_exp_time = 10
+        trail_len = determine_star_trails(speed, ag_exp_time)
+    else:
+        trail_len = determine_star_trails(speed, exp_length)
     if lco_site_code[-4:-1].upper() == "0M4":
         typical_seeing = 3.0
     else:

@@ -123,7 +123,7 @@
                     </tr>
                     <tr id="id_no_of_exps">
                         <td class="kv-key">No. of exposures</td>
-                        {% if data.exp_count < 4 %}
+                        {% if data.exp_count < 4 and not data.spectroscopy%}
                             <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip"><span class="warning msgpadded"> {{ data.exp_count }} </span>
                                 <span class="tooltiptext" style="width: 150px;"><u>Fewer than 4 exposures will be taken!</u>
                                 <br>4 or more observations required if reporting astrometry to the MPC. <br></span></div></td></tr></table></td>
