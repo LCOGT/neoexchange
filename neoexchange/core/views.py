@@ -57,7 +57,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count
+    get_visibility, determine_exp_count, determine_star_trails
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
@@ -930,6 +930,13 @@ def schedule_check(data, body, ok_to_schedule=True):
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
+    # determine stellar trailing
+    trail_len = determine_star_trails(speed, exp_length)
+    if lco_site_code[-4:-1].upper() == "0M4":
+        typical_seeing = 3.0
+    else:
+        typical_seeing = 2.0
+
     # Determine pattern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
@@ -997,6 +1004,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'lco_enc' : lco_site_code[4:8],
         'max_alt' : max_alt,
         'vis_time' : dark_and_up_time,
+        'trail_len' : trail_len,
+        'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
         'calibsource' : solar_analog_params,
         'calibsource_id' : solar_analog_id

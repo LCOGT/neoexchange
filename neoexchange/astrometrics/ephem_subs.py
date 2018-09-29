@@ -966,8 +966,6 @@ def estimate_exptime(rate, pixscale=0.304, roundtime=10.0):
 
     exptime = (60.0 / rate / pixscale)*1.0
     round_exptime = max(int(exptime/roundtime)*roundtime, 1.0)
-    print(round_exptime,exptime,rate,pixscale)
-    print(determine_pixel_elongation(rate, exptime, pixscale))
     return round_exptime, exptime
 
 
@@ -1062,10 +1060,9 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
     return slot_length_in_mins, exp_count
 
 
-def determine_pixel_elongation(speed, exp_time, pixel_scale):
-    """gives the estimated stellar elongation in pixels due to object motion"""
+def determine_star_trails(speed, exp_time):
+    """gives the estimated stellar elongation in arcseconds due to object motion"""
     elongation = speed/60 * exp_time
-
     return elongation
 
 

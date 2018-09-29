@@ -75,7 +75,17 @@
                     </tr>
                     <tr id="id_speed">
                         <td class="kv-key">Speed</td>
-                        <td class="kv-value">{{ data.speed|floatformat:2 }} "/min</td>
+                        {% if data.trail_len > data.typical_seeing %}
+                            <td class="kv-value">{{ data.speed|floatformat:2 }} "/min <i class="fa fa-arrow-right"></i>
+                                <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded">{{ data.trail_len|floatformat:2 }} "/exp </span>
+                                <span class="tooltiptext" style="width: 150px;">
+                                    <u>Stellar Trailing Will Cause Elongation!</u>
+                                    <br>Trailing larger than typical seeing at this telescope. ({{data.typical_seeing}}")<br>
+                                </span></div></td></tr></table></td>
+                        {% else %}
+                            <td class="kv-value">{{ data.speed|floatformat:2 }} "/min <i class="fa fa-arrow-right"></i> {{ data.trail_len|floatformat:2 }} "/exp</td>
+                        {% endif %}
                     </tr>
                     {% if data.spectroscopy %}
                     <tr id="id_slit_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
