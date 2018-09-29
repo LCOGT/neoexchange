@@ -966,6 +966,8 @@ def estimate_exptime(rate, pixscale=0.304, roundtime=10.0):
 
     exptime = (60.0 / rate / pixscale)*1.0
     round_exptime = max(int(exptime/roundtime)*roundtime, 1.0)
+    print(round_exptime,exptime,rate,pixscale)
+    print(determine_pixel_elongation(rate, exptime, pixscale))
     return round_exptime, exptime
 
 
@@ -1026,6 +1028,45 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
         exp_count = None
 
     return exp_time, exp_count
+
+
+def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern):
+    exp_count = None
+    min_exp_count = 1
+
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
+
+    slot_length = slot_length_in_mins * 60.0
+
+    # Make first estimate for exposure count ignoring molecule creation
+    exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
+    # Reduce exposure count by number of exposures necessary to accomidate molecule overhead
+    mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    # Safety while loop for edge cases
+    while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
+        exp_count -= 1
+
+    if exp_count < min_exp_count:
+        exp_count = min_exp_count
+        slot_length = ((exp_time + exp_overhead) * float(exp_count)) + (setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)))
+        logger.debug("increasing slot length to %.1f minutes to allow %.1f exposure time" % ( slot_length/60.0, exp_time))
+    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % ( slot_length/60.0, slot_length, exp_count, exp_time))
+    if exp_time is None or exp_time <= 0.0 or exp_count < 1:
+        logger.debug("Invalid exposure count")
+        exp_count = None
+
+    # pretify slotlength to nearest .5 min
+    slot_length_in_mins = slot_length/60
+    slot_length_in_mins = ceil(slot_length_in_mins*2)/2
+    return slot_length_in_mins, exp_count
+
+
+def determine_pixel_elongation(speed, exp_time, pixel_scale):
+    """gives the estimated stellar elongation in pixels due to object motion"""
+    elongation = speed/60 * exp_time
+
+    return elongation
 
 
 def determine_spectro_slot_length(exp_time, calibs, exp_count=1):

@@ -57,7 +57,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility
+    get_visibility, determine_exp_count
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
@@ -922,7 +922,11 @@ def schedule_check(data, body, ok_to_schedule=True):
         exp_length = data.get('exp_length', 1)
     else:
         # Determine exposure length and count
-        exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
+        if data.get('exp_length'):
+            exp_length = data.get('exp_length')
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern)
+        else:
+            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 
