@@ -1053,7 +1053,7 @@ def schedule_submit(data, body, username):
         body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
         body_elements['current_name'] = body.current_name()
 
-    if type(body) != StaticSource:
+    if type(body) != StaticSource and data.get('spectroscopy', False) is True:
         body_elements = compute_vmag_pa(body_elements, data)
 
     # Get proposal details
