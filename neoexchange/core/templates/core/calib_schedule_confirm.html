@@ -111,7 +111,7 @@
                     </tr>
                     <tr id="id_exp_length">
                         <td class="kv-key">Exposure length</td>
-                        <td class="kv-value">{{ data.exp_length|floatformat:1 }} secs</td>
+                        <td class="kv-value">{{ form.exp_length }} secs</td>
                     </tr>
                     {% if data.snr %}
                     <tr id="id_snr">
@@ -169,7 +169,6 @@
           {{form.start_time}}
           {{form.end_time}}
           {{form.exp_count}}
-          {{form.exp_length}}
           {{form.proposal_code}}
           {{form.site_code}}
           {{form.instrument_code}}
