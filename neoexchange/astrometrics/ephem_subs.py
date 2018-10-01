@@ -440,6 +440,25 @@ def compute_sky_motion(sky_vel, delta, dbg=True):
     return total_motion, sky_pa, ra_motion, dec_motion
 
 
+def calc_moon_sep(obsdate, obj_ra, obj_dec, site_code):
+
+    # Get site and mount parameters
+    (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
+
+    # Compute apparent RA, Dec of the Moon
+    (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(obsdate, site_long, site_lat, site_hgt)
+    # Convert to alt, az (only the alt is actually needed)
+    (moon_az, moon_alt) = moon_alt_az(obsdate, moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
+    moon_alt = degrees(moon_alt)
+    # Compute object<->Moon seperation and convert to degrees
+    moon_obj_sep = S.sla_dsep(obj_ra, obj_dec, moon_app_ra, moon_app_dec)
+    moon_obj_sep = degrees(moon_obj_sep)
+    # Calculate Moon phase (in range 0.0..1.0)
+    moon_phase = moonphase(obsdate, site_long, site_lat, site_hgt)
+
+    return moon_alt, moon_obj_sep, moon_phase
+
+
 def format_emp_line(emp_line, site_code):
 
     # Convert radians for RA, Dec into strings for printing
@@ -462,16 +481,8 @@ def format_emp_line(emp_line, site_code):
 #                         Date  RA Dec Mag   Motion P.A  Alt Mphase Msep Malt   Score HA
         blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
-# Compute apparent RA, Dec of the Moon
-        (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt)
-# Convert to alt, az (only the alt is actually needed)
-        (moon_az, moon_alt) = moon_alt_az(emp_line[0], moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
-        moon_alt = degrees(moon_alt)
-# Compute object<->Moon seperation and convert to degrees
-        moon_obj_sep = S.sla_dsep(emp_line[1], emp_line[2], moon_app_ra, moon_app_dec)
-        moon_obj_sep = degrees(moon_obj_sep)
-# Calculate Moon phase (in range 0.0..1.0)
-        moon_phase = moonphase(emp_line[0], site_long, site_lat, site_hgt)
+# get moon info
+        moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(emp_line[0], emp_line[1], emp_line[2], site_code)
 
 # Compute H.A.
         ha = compute_hourangle(emp_line[0], site_long, site_lat, site_hgt, emp_line[1], emp_line[2])

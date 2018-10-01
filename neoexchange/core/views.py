@@ -57,7 +57,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count, determine_star_trails
+    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
@@ -941,6 +941,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         typical_seeing = 2.0
 
+    # determine lunar position
+    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+
     # Determine pattern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
@@ -1008,6 +1011,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         'lco_enc' : lco_site_code[4:8],
         'max_alt' : max_alt,
         'vis_time' : dark_and_up_time,
+        'moon_alt' : moon_alt,
+        'moon_sep' : moon_obj_sep,
+        'moon_phase' : moon_phase,
         'trail_len' : trail_len,
         'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
