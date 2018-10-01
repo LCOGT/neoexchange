@@ -600,10 +600,14 @@ def read_findorb_ephem(empfile):
                 try:
                     emp_alt = float(chunks[16])
                 except ValueError:
+                    # Units of ephemeris uncertainty are normally arcseconds; convert
+                    # other units
                     if 'm' in chunks[16]:
                         emp_alt = float(chunks[16][:-1])/1000
                     elif "'" in chunks[16]:
                         emp_alt = float(chunks[16][:-1])*60
+                    elif 'd' in chunks[16]:
+                        emp_alt = float(chunks[16][:-1])*3600
                     else:
                         logger.warning("Unable to read Ephemeris sig err {}".format(chunks[16]))
                         return None, None
