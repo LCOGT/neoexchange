@@ -1650,10 +1650,13 @@ def submit_block_to_scheduler(elements, params):
         logger.error(msg)
         logger.error(resp.json())
         try:
-            error_msg = resp.json()
-            error_msg = error_msg.get('requests', msg)
+            error_json = resp.json()
+            error_msg = error_json.get('requests', msg)
             if len(error_msg) == 1:
                 error_msg = error_msg[0].get('non_field_errors', msg)
+                msg = error_msg[0]
+            elif error_json.get('non_field_errors', None) is not None:
+                error_msg = error_json.get('non_field_errors', msg)
                 msg = error_msg[0]
         except AttributeError:
             msg = "Unable to decode response from Valhalla"
