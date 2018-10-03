@@ -1770,8 +1770,8 @@ def update_crossids(astobj, dbg=False):
             num_blocks = Block.objects.filter(body=del_body).count()
             if del_body.origin != 'M':
                 if num_sblocks == 0 and num_blocks == 0 and del_body.origin != 'M':
-                    del_body.delete()
                     logger.info("Removed %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
+                    del_body.delete()
                 else:
                     logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
             else:
