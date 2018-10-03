@@ -934,7 +934,12 @@ class TestSchedule_Check(TestCase):
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
-                        'max_alt': 67
+                        'max_alt': 67,
+                        'moon_alt': -58.300710434796706,
+                        'moon_phase': 0.011439155504957221,
+                        'moon_sep': 170.66180769265674,
+                        'trail_len': 2.41774558756957,
+                        'typical_seeing': 2.0
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -990,7 +995,12 @@ class TestSchedule_Check(TestCase):
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
-                        'max_alt': 67
+                        'max_alt': 67,
+                        'moon_alt': -58.30060609532361,
+                        'moon_phase': 0.011439162208279174,
+                        'moon_sep': 170.66180760224114,
+                        'trail_len': 0.48354895802581555,
+                        'typical_seeing': 2.0
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1047,7 +1057,12 @@ class TestSchedule_Check(TestCase):
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
-                        'max_alt': 67
+                        'max_alt': 67,
+                        'moon_alt': -58.30060609532361,
+                        'moon_phase': 0.011439162208279174,
+                        'moon_sep': 170.66180760224114,
+                        'trail_len': 0.48354895802581555,
+                        'typical_seeing': 2.0
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1107,7 +1122,12 @@ class TestSchedule_Check(TestCase):
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
-                        'max_alt': 67
+                        'max_alt': 67,
+                        'moon_alt': -43.42555786736966,
+                        'moon_phase': 0.00890997165773788,
+                        'moon_sep': 171.79313958425425,
+                        'trail_len': 2.395258014908864,
+                        'typical_seeing': 2.0
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1165,7 +1185,12 @@ class TestSchedule_Check(TestCase):
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
-                        'max_alt': 67
+                        'max_alt': 67,
+                        'moon_alt': -43.42555786736966,
+                        'moon_phase': 0.00890997165773788,
+                        'moon_sep': 171.79313958425425,
+                        'trail_len': 2.395258014908864,
+                        'typical_seeing': 2.0
                         }
 
         resp = schedule_check(data, self.body_mp)

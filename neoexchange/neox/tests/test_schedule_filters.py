@@ -14,6 +14,7 @@ from core.models import Body, Proposal
 
 from neox.auth_backend import update_proposal_permissions
 
+
 @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
 @patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
 class ScheduleObservations(FunctionalTest):
@@ -25,17 +26,17 @@ class ScheduleObservations(FunctionalTest):
         self.password = 'simpson'
         self.email = 'bart@simpson.org'
         self.bart = User.objects.create_user(username=self.username, password=self.password, email=self.email)
-        self.bart.first_name= 'Bart'
+        self.bart.first_name = 'Bart'
         self.bart.last_name = 'Simpson'
-        self.bart.is_active=1
+        self.bart.is_active = 1
         self.bart.save()
         # Add Bart to the right proposal
-        update_proposal_permissions(self.bart, [{'code':self.neo_proposal.code}])
-        super(ScheduleObservations,self).setUp()
+        update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
+        super(ScheduleObservations, self).setUp()
 
     def tearDown(self):
         self.bart.delete()
-        super(ScheduleObservations,self).tearDown()
+        super(ScheduleObservations, self).tearDown()
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
@@ -63,12 +64,12 @@ class ScheduleObservations(FunctionalTest):
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
         # test_targets_validation.TargetsValidationTest
-        start_url = reverse('target',kwargs={'pk':1})
+        start_url = reverse('target', kwargs={'pk': 1})
         self.browser.get(self.live_server_url + start_url)
 
         # He sees a Schedule Observations button
         link = self.browser.find_element_by_id('schedule-obs')
-        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body',kwargs={'pk':1}))
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
         actual_url = link.get_attribute('href')
         self.assertEqual(actual_url, target_url)
 
@@ -103,26 +104,26 @@ class ScheduleObservations(FunctionalTest):
         magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
         self.assertIn('20.39', magnitude)
         speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
-        self.assertIn("2.52 '/min", speed)
+        self.assertIn('2.52 "/min', speed)
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
         self.assertIn('12', num_exp)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('60.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('60.0', exp_length)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
-        self.assertIn('Schedule this Object',submit)
+        self.assertIn('Schedule this Object', submit)
 
         # there is an option to input a filter Pattern with a default value of 'w'
         filter_pattern = self.browser.find_element_by_name('filter_pattern').get_attribute("value")
-        self.assertIn('w',filter_pattern)
+        self.assertIn('w', filter_pattern)
         
         # There is a help option listing the proper input format and available filters
         expected_filters = 'air, ND, U, B, V, R, I, B*ND, V*ND, R*ND, I*ND, up, gp, rp, ip, zs, Y, w'
         filter_help = self.browser.find_element_by_id('id_filter_pattern').find_element_by_class_name('kv-key').get_attribute("name")
-        self.assertEqual(expected_filters,filter_help)
+        self.assertEqual(expected_filters, filter_help)
 
         # There is a spot to input the number of iterations (default = number of exposures)
         pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
@@ -136,7 +137,7 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
         pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
-        self.assertEqual(iterations_expected,pattern_iterations)
+        self.assertEqual(iterations_expected, pattern_iterations)
 
         # updating the slot length increases the number of iterations
         iterations_expected = u'17.0'
@@ -146,7 +147,7 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
         pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
-        self.assertEqual(iterations_expected,pattern_iterations)
+        self.assertEqual(iterations_expected, pattern_iterations)
 
         # cannot update filter pattern with unacceptable filters with incorrect syntax
         filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
@@ -157,6 +158,4 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get an error
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('42,v,W,fg,hj,k-t,g,h are not acceptable filters at this site.',error_msg)
-
-
+        self.assertIn('42,v,W,fg,hj,k-t,g,h are not acceptable filters at this site.', error_msg)

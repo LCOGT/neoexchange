@@ -160,8 +160,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("HR9087: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')
@@ -226,8 +226,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("CD-34d241: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')
@@ -330,8 +330,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("Landolt SA98-978: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')

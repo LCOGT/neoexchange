@@ -1073,7 +1073,10 @@ def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern
 
 def determine_star_trails(speed, exp_time):
     """gives the estimated stellar elongation in arcseconds due to object motion"""
-    elongation = speed/60 * exp_time
+    if exp_time:
+        elongation = speed/60 * exp_time
+    else:
+        elongation = None
     return elongation
 
 
