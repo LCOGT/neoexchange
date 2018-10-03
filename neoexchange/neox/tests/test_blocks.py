@@ -393,7 +393,7 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
 
         side_text = self.browser.find_element_by_class_name('block-status').text
         block_lines = side_text.splitlines()
-        testlines = ['SPECTRUM: 2, LAMPFLAT: 1, ARC: 1',
+        testlines = ['TAR: 1, SPECTRUM: 1, LAMPFLAT: 1, ARC: 1',
                     ]
         for line in testlines:
             self.assertIn(line, block_lines)

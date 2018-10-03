@@ -2,6 +2,7 @@ from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
+from django.db import close_old_connections
 from django.forms.models import model_to_dict
 
 from astrometrics.sources_subs import fetch_yarkovsky_targets
@@ -44,4 +45,4 @@ class Command(BaseCommand):
                 print(emp_visible_dates[x][0][0:10], ":", round(time, 2))
                 x += 1
             self.stdout.write("========================")
-
+            close_old_connections()

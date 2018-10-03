@@ -4,6 +4,17 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.3
+
+Fix issues with interactions between FindOrb and candidates/comets
+* Remove Perturbation Code
+
+### 2.7.2
+
+Spectroscopic Graphical tools
+* Create and display a gif of the guidefreames during an observation
+* Create and display a spectroscopic trace based on the reduced data
+
 ### 2.7.1
 
 Add latitude, longitude, height for 0m4b at Tenerife (Z17). Update find_orb build procedure.
@@ -24,7 +35,7 @@ Calculate and forward more precise orbital elements for spectroscopic observatio
 
 Update light curve extraction.
 * Pull from Tracking Number rather than block number
-* Capable of incorporating any number of blocks for a given target within a given time frame. 
+* Capable of incorporating any number of blocks for a given target within a given time frame.
 Add motion details to characterization page.
 
 ### 2.5.2
@@ -58,7 +69,7 @@ Bite the Bullet and Update to Python 3.6
 
 ### 2.2.0
 
-Added capability of requesting multiple filters when making a user request. 
+Added capability of requesting multiple filters when making a user request.
 
 ### 2.1.6
 
@@ -95,7 +106,7 @@ Add cadence support.
 ### 1.8.3
 
 Add check for and marking of 'was not a minor planet' in the Previous NEOCP page
-as spacecraft. 
+as spacecraft.
 Fixes for POND submitted blocks and lightcurve extraction.
 Changes for the new semester boundaries.
 

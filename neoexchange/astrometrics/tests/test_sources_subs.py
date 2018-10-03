@@ -28,11 +28,11 @@ from django.forms.models import model_to_dict
 
 from core.models import Body, Proposal, Block
 from astrometrics.ephem_subs import determine_darkness_times
+from astrometrics.time_subs import datetime2mjd_utc
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
-from core.views import record_block, create_calib_sources
+from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
-from astrometrics.time_subs import datetime2mjd_utc
 
 
 # Disable logging during testing
@@ -560,7 +560,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'spectra_slit' : 'slit_6.0as'
                  }
 
-        body_elements = check_for_perturbation(body_elements, params)
+        body_elements = compute_vmag_pa(body_elements, params)
         user_request = make_userrequest(body_elements, params)
 
         self.assertAlmostEqual(user_request['requests'][0]['target']['vmag'], 20.88, 2)
@@ -3620,158 +3620,3 @@ class TestReadSolarStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[solstd][key], standards[solstd][key], places=self.precision, msg="Mismatch for {} on {}".format(solstd, key))
                 else:
                     self.assertEqual(expected_standards[solstd][key], standards[solstd][key])
-
-class TestCheckForPerturbation(TestCase):
-
-    def setUp(self):
-        params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
-                    'slope'         : 0.15,
-                    'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
-                    'meananom'      : 325.2636,
-                    'argofperih'    : 85.19251,
-                    'longascnode'   : 147.81325,
-                    'orbinc'        : 8.34739,
-                    'eccentricity'  : 0.1896865,
-                    'meandist'      : 1.2176312,
-                    'source_type'   : 'U',
-                    'elements_type' : 'MPC_MINOR_PLANET',
-                    'active'        : True,
-                    'origin'        : 'M',
-                    }
-        self.body, created = Body.objects.get_or_create(**params)
-
-        self.body_elements = model_to_dict(self.body)
-        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        self.body_elements['current_name'] = self.body.current_name()
-        site_code = 'K92'
-        utc_date = datetime(2015, 3, 19, 00, 00, 00)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        self.params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'spectroscopy' : False
-                 }
-
-    def test_close_in_time(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=1)
-
-        expected_e = self.body_elements['eccentricity']
-        expected_a = self.body_elements['meandist']
-        expected_i = self.body_elements['orbinc']
-        expected_long = self.body_elements['longascnode']
-        expected_epoch = self.body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(self.body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_far_away(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=100)
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 4.8
-        body_elements['eccentricity'] = 0.001
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_bad_calc(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=100)
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = .2
-        body_elements['eccentricity'] = 0.01
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_needs_perturb(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=81)
-        params['spectroscopy'] = True
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 1.5349659
-        body_elements['eccentricity'] = 0.5182788
-        body_elements['orbinc'] = 4.75381
-        body_elements['longascnode'] = 117.60203
-        body_elements['argofperih'] = 229.36323
-        body_elements['meananom'] = 286.18972
-
-        expected_e = 0.5183245048558996
-        expected_a = 1.5350441058040079
-        expected_i = 4.754401449955707
-        expected_long = 117.59466442936079
-        expected_epoch = params['start_time']
-
-        elements = check_for_perturbation(body_elements, params)
-        self.assertEqual(expected_epoch.year, elements['epochofel'].year)
-        self.assertEqual(expected_epoch.month, elements['epochofel'].month)
-        self.assertEqual(expected_epoch.day, elements['epochofel'].day)
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_needs_new_orbit(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=810)
-        params['spectroscopy'] = True
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 1.5349659
-        body_elements['eccentricity'] = 0.5182788
-        body_elements['orbinc'] = 4.75381
-        body_elements['longascnode'] = 117.60203
-        body_elements['argofperih'] = 229.36323
-        body_elements['meananom'] = 286.18972
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])

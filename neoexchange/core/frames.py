@@ -298,7 +298,7 @@ def block_status(block_id):
         if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
             obstype = 'EXPOSE'
             try:
-                if block.obstype == Block.OPT_SPECTRA:
+                if block.obstype == Block.OPT_SPECTRA or block.obstype == Block.OPT_SPECTRA_CALIB:
                     # Set OBSTYPE to null string for archive search so we get all
                     # types of frames
                     obstype = ''
@@ -335,11 +335,11 @@ def block_status(block_id):
                 # If we got at least 3 frames (i.e. usable for astrometry reporting) and
                 # at least frames for at least one block were ingested, update the blocks'
                 # observed count.
-                if len(images) >= 3 and len(block_ids) >= 1:
-                    logger.info("More than 3 reduced frames found - setting to observed")
-                    block.num_observed = len(block_ids)
-                elif len(images) >=1 and 'SPECTRUM' in obs_types and len(block_ids) >= 1:
+                if len(images) >= 1 and 'SPECTRUM' in obs_types and len(block_ids) >= 1:
                     logger.info("Spectra data found - setting to observed")
+                    block.num_observed = len(block_ids)
+                elif len(images) >= 3 and len(block_ids) >= 1:
+                    logger.info("More than 3 reduced frames found - setting to observed")
                     block.num_observed = len(block_ids)
                 block.save()
                 status = True

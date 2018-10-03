@@ -470,7 +470,7 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 class TestFindOrbRunner(ExternalCodeUnitTest):
 
     def test_sitecode_default(self):
-        expected_status = "fo_console {} -z -q -C 500 -e new.ephem".format(self.test_obs_file)
+        expected_status = "fo_console {} -z -c -q -C 500 -e new.ephem".format(self.test_obs_file)
 
         status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, binary="fo_console", dbg=True)
 
@@ -478,7 +478,7 @@ class TestFindOrbRunner(ExternalCodeUnitTest):
 
     def test_sitecode_T03(self):
         site_code = 'T03'
-        expected_status = "fo_console {} -z -q -C {} -e new.ephem".format(self.test_obs_file, site_code)
+        expected_status = "fo_console {} -z -c -q -C {} -e new.ephem".format(self.test_obs_file, site_code)
 
         status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, site_code, binary="fo_console", dbg=True)
 
@@ -723,7 +723,7 @@ class TestReadMTDSFile(TestCase):
         self.assertEqual(expected_dets, dets)
 
     def test_no_detections(self):
-    
+
         expected_dets_dict = {  'version'   : 'DETSV2.0',
                                 'num_frames': 6,
                                 'frames' : [
@@ -782,3 +782,29 @@ class TestReadMTDSFile(TestCase):
         for frame in arange(expected_dets_dict['num_frames']):
             for column in expected_array.dtype.names:
                 self.assertAlmostEqual(expected_array[column][frame], det1[column][frame], 7)
+
+
+class TestUnpackTarball(TestCase):
+    def setUp(self):
+        self.dir_path = os.path.join(os.getcwd(), 'photometrics', 'tests')
+        self.tar_path = os.path.join(self.dir_path, 'test_tar2.tar.gz')
+        self.unpack_dir = os.path.join(self.dir_path, 'test_unpacked')
+        # self.spectra_path = os.path.join(self.dir_path,'LCOEngineering_0001588447_ftn_20180714_58314.tar.gz')
+        # self.spectra_unpack_dir = os.path.join(self.dir_path,'spectra_unpacked')
+
+    def test_unpack(self):
+        expected_file_name = os.path.join(self.unpack_dir, 'file1.txt')
+        expected_num_files = 3
+        files = unpack_tarball(self.tar_path, self.unpack_dir)
+
+        self.assertEqual(expected_num_files, len(files))
+        self.assertEqual(expected_file_name, files[0])
+
+    # def test_unpack_spectra(self):
+    #     expected_file_name = os.path.join(self.spectra_unpack_dir,'ogg2m001-en06-20180713-0009-e00.fits')
+    #     expected_num_files = 27
+    #
+    #     files = unpack_tarball(self.spectra_path,self.spectra_unpack_dir)
+    #
+    #     self.assertEqual(expected_num_files,len(files))
+    #     self.assertEqual(expected_file_name,files[1])

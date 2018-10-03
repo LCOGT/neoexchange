@@ -1,12 +1,10 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
 Copyright (C) 2014-2018 LCO
-
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -17,6 +15,9 @@ import os
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 import json
 import urllib
 import logging
@@ -44,6 +45,8 @@ try:
     import pyslalib.slalib as S
 except ImportError:
     pass
+import io
+
 from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockForm, \
     ScheduleSpectraForm, MPCReportForm, SpectroFeasibilityForm
 from .models import *
@@ -59,15 +62,17 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
-    read_mtds_file, run_findorb
+    read_mtds_file, unpack_tarball, run_findorb
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
-from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
-    plotFormat
+from photometrics.spectraplot import get_spec_plot
+from photometrics.gf_movie import make_gif
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
-
+from core.archive_subs import lco_api_call
+from photometrics.SA_scatter import readSources, genGalPlane, plotScatter, \
+    plotFormat
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +183,7 @@ class BodySearchView(ListView):
 
     def get_queryset(self):
         name = self.request.GET.get("q", "")
+        name = name.strip()
         if name != '':
             if name.isdigit():
                 object_list = self.model.objects.filter(name=name)
@@ -305,7 +311,7 @@ def export_measurements(body_id, output_path=''):
     measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).order_by('frame__midpoint')
     data = { 'measures' : measures}
 
-    filename = "{}.mpc".format(body.current_name().replace(' ', ''))
+    filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
     filename = os.path.join(output_path, filename)
 
     output_fh = open(filename, 'w')
@@ -987,6 +993,14 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     return resp
 
+def compute_vmag_pa(body_elements, data):
+    emp_line_base = compute_ephem(data['start_time'], body_elements, data['site_code'], dbg=False, perturb=False, display=False)
+    # assign Magnitude and position angle
+    if emp_line_base[3] and emp_line_base[3] > 0:
+        body_elements['v_mag'] = emp_line_base[3]
+    body_elements['sky_pa'] = emp_line_base[7]
+
+    return body_elements
 
 def schedule_submit(data, body, username):
     # Assemble request
@@ -1018,13 +1032,13 @@ def schedule_submit(data, body, username):
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
 
     emp_at_start = None
-    if isinstance(body, Body) and data.get('spectroscopy', False) is not False:
-        # Update MPC observations assuming too many updates have not been done recently
+    if isinstance(body, Body) and data.get('spectroscopy', False) is not False and body.source_type != 'C' and body.elements_type != 'MPC_COMET':
+        # Update MPC observations assuming too many updates have not been done recently and target is not a comet
         cut_off_time = timedelta(minutes=1)
         now = datetime.utcnow()
         recent_updates = Body.objects.exclude(source_type='u').filter(update_time__gte=now-cut_off_time)
         if len(recent_updates) < 1:
-            update_MPC_obs(body.name)
+            update_MPC_obs(body.current_name())
 
         # Invoke find_orb to update Body's elements and return ephemeris
         new_ephemeris = refit_with_findorb(body.id, data['site_code'], data['start_time'])
@@ -1038,6 +1052,9 @@ def schedule_submit(data, body, username):
         body_elements['epochofel_mjd'] = body.epochofel_mjd()
         body_elements['epochofperih_mjd'] = body.epochofperih_mjd()
         body_elements['current_name'] = body.current_name()
+
+    if type(body) != StaticSource and data.get('spectroscopy', False) is True:
+        body_elements = compute_vmag_pa(body_elements, data)
 
     # Get proposal details
     proposal = Proposal.objects.get(code=data['proposal_code'])
@@ -1087,7 +1104,7 @@ def schedule_submit(data, body, username):
         # Append another suffix to allow 2 versions of the block. Must
         # do this to both `data` (so the next Block check works) and to
         # `params` so the correct group_id will go to the Valhalla/scheduler
-        data['group_id'] = data['group_id'] + '_2'
+        data['group_id'] += '_2'
         params['group_id'] = data['group_id']
     elif check_for_block(data, params, body) >= 2:
         # Multiple blocks found
@@ -1566,8 +1583,9 @@ def clean_NEOCP_object(page_list):
     if page_list[0][:6] == 'Object':
         page_list.pop(0)
     for line in page_list:
+        line = line.strip()
         if 'NEOCPNomin' in line:
-            current = line.strip().split()
+            current = line.split()
             break
     if current:
         if len(current) == 16:
@@ -1624,23 +1642,53 @@ def clean_NEOCP_object(page_list):
             if arc_length:
                 params['arc_length'] = arc_length
 
-        elif len(current) == 22 or len(current) == 23 or len(current) == 24:
+        elif len(current) >= 21 and len(current) <= 25:
+            # The first 20 characters can get very messy if there is a temporary
+            # and permanent desigination as the absolute magntiude and slope gets
+            # pushed up and partially overwritten. Sort this mess out and then the
+            # rest obeys the documentation on the MPC site:
+            # https://www.minorplanetcenter.net/iau/info/MPOrbitFormat.html)
+
+            # First see if the absolute mag. and slope are numbers in the correct place
+            try:
+                abs_mag = float(line[8:13])
+                slope = float(line[14:19])
+            except ValueError:
+                # Nope, we have a mess and will have to assume a slope
+                abs_mag = float(line[12:17])
+                slope = 0.15
+
+            # See if there is a "readable desigination" towards the end of the line
+            readable_desig = None
+            if len(line) > 194:
+                readable_desig = line[166:194].strip()
+            elements_type = 'MPC_MINOR_PLANET'
+            source_type = 'U'
+            if readable_desig and readable_desig[0:2] =='P/':
+                elements_type = 'MPC_COMET'
+                source_type = 'C'
+
+            # See if this is a local discovery
+            provisional_name = line[0:7]
+            origin = 'M'
+            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
+                origin = 'L'
             params = {
-                'abs_mag': float(current[1]),
-                'slope': float(current[2]),
-                'epochofel': extract_mpc_epoch(current[3]),
-                'meananom': float(current[4]),
-                'argofperih': float(current[5]),
-                'longascnode': float(current[6]),
-                'orbinc': float(current[7]),
-                'eccentricity': float(current[8]),
-                'meandist': float(current[10]),
-                'source_type': 'U',
-                'elements_type': 'MPC_MINOR_PLANET',
+                'abs_mag': abs_mag,
+                'slope': slope,
+                'epochofel': extract_mpc_epoch(line[20:25]),
+                'meananom': float(line[26:35]),
+                'argofperih': float(line[37:46]),
+                'longascnode': float(line[48:57]),
+                'orbinc': float(line[59:68]),
+                'eccentricity': float(line[70:79]),
+                'meandist': float(line[92:103]),
+                'source_type': source_type,
+                'elements_type': elements_type,
                 'active': True,
-                'origin': 'L',
-                'provisional_name' : current[0],
-                'num_obs' : int(current[13]),
+                'origin': origin,
+                'provisional_name' : provisional_name,
+                'num_obs' : int(line[117:122]),
                 'update_time' : datetime.utcnow(),
                 'arc_length' : None,
                 'not_seen' : None
@@ -1648,13 +1696,25 @@ def clean_NEOCP_object(page_list):
             # If this is a find_orb produced orbit, try and fill in the
             # 'arc length' and 'not seen' values.
             arc_length = None
-            arc_units = current[16]
+            arc_units = line[132:136].rstrip()
             if arc_units == 'days':
-                arc_length = float(current[15])
+                arc_length = float(line[127:131])
             elif arc_units == 'hrs':
-                arc_length = float(current[15]) / 24.0
+                arc_length = float(line[127:131]) / 24.0
             elif arc_units == 'min':
-                arc_length = float(current[15]) / 1440.0
+                arc_length = float(line[127:131]) / 1440.0
+            elif arc_units.isdigit():
+                try:
+                    first_obs_year = datetime(int(line[127:131]), 1, 1)
+                except:
+                    first_obs_year = None
+                try:
+                    last_obs_year = datetime(int(arc_units)+1, 1, 1)
+                except:
+                    last_obs_year = None
+                if first_obs_year and last_obs_year:
+                    td = last_obs_year - first_obs_year
+                    arc_length = td.days
             if arc_length:
                 params['arc_length'] = arc_length
             try:
@@ -1668,7 +1728,7 @@ def clean_NEOCP_object(page_list):
             params = {}
         if params != {}:
             # Check for objects that should be treated as comets (e>0.9)
-            if params['eccentricity'] > 0.9:
+            if params['eccentricity'] > 0.9 or params['elements_type'] == 'MPC_COMET':
                 params = convert_ast_to_comet(params, None)
     else:
         params = {}
@@ -1756,7 +1816,6 @@ def clean_crossid(astobj, dbg=False):
     """Takes an <astobj> (a list of new designation, provisional designation,
     reference and confirm date produced from the MPC's Previous NEOCP Objects
     page) and determines the type and whether it should still be followed.
-
     Objects that were not confirmed, did not exist or "were not interesting
     (normally a satellite) are set inactive immediately. For NEOs and comets,
     we set it to inactive if more than 3 days have passed since the
@@ -2441,10 +2500,7 @@ def store_detections(mtdsfile, dbg=False):
 
 def make_plot(request):
 
-    import matplotlib
-    matplotlib.use('Agg')
     import aplpy
-    import io
 
     fits_file = 'cpt1m010-kb70-20160428-0148-e91.fits'
     fits_filepath = os.path.join('/tmp', 'tmp_neox_9nahRl', fits_file)
@@ -2470,10 +2526,209 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 
+def find_spec(pk):
+    """find directory of spectra for a certain block
+    NOTE: Currently will only pull first spectrum of a superblock
+    """
+    base_dir = settings.DATA_ROOT
+    try:
+        # block = list(Block.objects.filter(superblock=list(SuperBlock.objects.filter(pk=pk))[0]))[0]
+        block = Block.objects.get(pk=pk)
+        url = settings.ARCHIVE_FRAMES_URL+str(Frame.objects.filter(block=block)[0].frameid)+'/headers'
+    except IndexError:
+        return '', '', '', '', ''
+    data = lco_api_call(url)['data']
+    if 'DAY_OBS' in data:
+        date_obs = data['DAY_OBS']
+    elif 'DAY-OBS' in data:
+        date_obs = data['DAY-OBS']
+    else:
+        date_obs = str(int(block.block_start.strftime('%Y%m%d'))-1)
+
+    obj = data['OBJECT'].replace(' ', '_')
+
+    if 'REQNUM' in data:
+        req = data['REQNUM'].lstrip("0")
+    else:
+        req = block.tracking_number
+    path = os.path.join(base_dir, date_obs, obj + '_' + req)
+    prop = block.proposal.code
+    if not glob(os.path.join(base_dir, date_obs, prop+'_*'+req+'*.tar.gz')):
+        date_obs = str(int(date_obs)-1)
+        path = os.path.join(base_dir, date_obs, obj + '_' + req)
+
+    return date_obs, obj, req, path, prop
+
+
+def display_spec(request, pk, obs_num):
+    date_obs, obj, req, path, prop = find_spec(pk)
+    base_dir = os.path.join(settings.DATA_ROOT, date_obs)  # new base_dir for method
+    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
+
+    spec_files = glob(os.path.join(path, obj+"*"+"spectra"+"*"+obs_num+"*"+".png"))
+    if spec_files:
+        spec_file = spec_files[0]
+    else:
+        spec_file = ''
+    if not spec_file:
+        spec_file, spec_count = make_spec(date_obs, obj, req, base_dir, prop, obs_num)
+    if spec_file:
+        logger.debug('Spectroscopy Plot: {}'.format(spec_file))
+        spec_plot = open(spec_file, 'rb').read()
+        return HttpResponse(spec_plot, content_type="Image/png")
+    else:
+        return HttpResponse()
+
+
+def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
+    """Creates plot of spectra data for spectra blocks
+       <pk>: pk of block (not superblock)
+    """
+    path = os.path.join(base_dir, obj + '_' + req)
+    filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
+    spectra_path = None
+    tar_path = unpack_path = None
+    obs_num = str(obs_num)
+    if filenames:
+        spectra_path = filenames[int(obs_num)-1]
+        spec_count = len(filenames)
+    else:
+        tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
+        if tar_files:
+            for tar in tar_files:
+                if req in tar:
+                    tar_path = tar
+                    unpack_path = os.path.join(base_dir, obj+'_'+req)
+            if not tar_path and not unpack_path:
+                logger.error("Could not find tarball for request: %s" % req)
+                return None, None
+            spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
+            spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
+            spectra_path = spec_list[int(obs_num)-1]
+            spec_count = len(spec_list)
+        else:
+            logger.error("Could not find spectrum data or tarball for request: %s" % req)
+            return None, None
+
+    if spectra_path:  # plots spectra
+        spec_file = os.path.basename(spectra_path)
+        spec_dir = os.path.dirname(spectra_path)
+        spec_plot = get_spec_plot(spec_dir, spec_file, obs_num)
+        return spec_plot, spec_count
+
+    else:
+        logger.error("Could not find spectrum data for request: %s" % req)
+        return None, None
+
+
+class PlotSpec(View):  # make loging required later
+
+    template_name = 'core/plot_spec.html'
+
+    def get(self, request, *args, **kwargs):
+        block = Block.objects.get(pk=kwargs['pk'])
+        params = {'pk': kwargs['pk'], 'obs_num': kwargs['obs_num'], 'sb_id': block.superblock.id}
+
+        return render(request, self.template_name, params)
+
+
+def display_movie(request, pk):
+    """Display previously made guide movie, or make one if no movie found."""
+
+    date_obs, obj, req, path, prop = find_spec(pk)
+    base_dir = os.path.join(settings.DATA_ROOT, date_obs)
+    logger.info('ID: {}, BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(pk, obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
+
+    movie_files = glob(os.path.join(path, "Guide_frames", obj.replace(' ', '_') + "*guidemovie.gif"))
+    if movie_files:
+        movie_file = movie_files[0]
+    else:
+        movie_file = ''
+    if not movie_file:
+        movie_file = make_movie(date_obs, obj, req, base_dir, prop)
+    if movie_file:
+        logger.debug('MOVIE FILE: {}'.format(movie_file))
+        movie = open(movie_file, 'rb').read()
+        return HttpResponse(movie, content_type="Image/gif")
+    else:
+        return HttpResponse()
+
+
+def make_movie(date_obs, obj, req, base_dir, prop):
+    """Make gif of FLOYDS Guide Frames given the following:
+    <date_obs> -- Day of Observation (i.e. '20180910')
+    <obj> -- object name w/ spaces replaced by underscores (i.e. '144332' or '2018_EB1')
+    <req> -- Request number of the observation
+    <base_dir> -- Directory of data. This will be the DATA_ROOT/date_obs/
+    <prop> -- Proposal ID
+    NOTE: Can take a while to load if building new gif with many frames.
+    """
+
+    path = os.path.join(base_dir, obj + '_' + req)
+    logger.info('BODY: {}, DATE: {}, REQNUM: {}, PROP: {}'.format(obj, date_obs, req, prop))
+    logger.debug('DIR: {}'.format(path))  # where it thinks an unpacked tar is at
+
+    filename = glob(os.path.join(path, '*2df_ex.fits'))  # checking if unpacked
+    frames = []
+    if not filename:
+        unpack_path = os.path.join(base_dir, obj+'_'+req)
+        tar_files = glob(os.path.join(base_dir, prop+"*"+req+"*.tar.gz"))  # if file not found, looks for tarball
+        if tar_files:
+            tar_path = tar_files[0]
+            logger.info("Unpacking 1st tar")
+            spec_files = unpack_tarball(tar_path, unpack_path)  # unpacks tarball
+            filename = spec_files[0]
+        else:
+            logger.error("Could not find tarball for request: %s" % req)
+            return None
+    if filename:  # If first order tarball is unpacked
+        movie_dir = glob(os.path.join(path, "Guide_frames"))
+        if movie_dir:  # if 2nd order tarball is unpacked
+            frames = glob(os.path.join(movie_dir[0], "*.fits.fz"))
+            if not frames:
+                frames = glob(os.path.join(movie_dir[0], "*.fits"))
+        else:  # unpack 2nd tarball
+            tarintar = glob(os.path.join(path, "*.tar"))
+            if tarintar:
+                unpack_path = os.path.join(path, 'Guide_frames')
+                guide_files = unpack_tarball(tarintar[0], unpack_path)  # unpacks tar
+                logger.info("Unpacking tar in tar")
+                for file in guide_files:
+                    if '.fits.fz' in file:
+                        frames.append(file)
+            else:
+                logger.error("Could not find Guide Frames or Guide Frame tarball for request: %s" % req)
+                return None
+    else:
+        logger.error("Could not find spectrum data or tarball for request: %s" % req)
+        return None
+    if frames is not None and len(frames) > 0:
+        logger.debug("#Frames = {}".format(len(frames)))
+        logger.info("Making Movie...")
+        movie_file = make_gif(frames)
+        return movie_file
+    else:
+        logger.error("There must be at least 1 frame to make guide movie.")
+        return None
+
+
+class GuideMovie(View):
+    # make logging required later
+
+    template_name = 'core/guide_movie.html'
+
+    def get(self, request, *args, **kwargs):
+        block = Block.objects.get(pk=kwargs['pk'])
+        params = {'pk': kwargs['pk'], 'sb_id': block.superblock.id}
+
+        return render(request, self.template_name, params)
+
+
 def make_standards_plot(request):
     """creates stellar standards plot to be added to page"""
-    import matplotlib.pyplot as plt
-    import io
+
     scoords = readSources('Solar')
     fcoords = readSources('Flux')
 
@@ -2490,8 +2745,7 @@ def make_standards_plot(request):
 
 def make_solar_standards_plot(request):
     """creates solar standards plot to be added to page"""
-    import matplotlib.pyplot as plt
-    import io
+
     scoords = readSources('Solar')
     ax = plt.figure().gca()
     plotScatter(ax, scoords, 'b*')
@@ -2522,7 +2776,7 @@ def update_taxonomy(taxobj, dbg=False):
             body = Body.objects.get(provisional_name=obj_id)
         except:
             if dbg is True:
-                print("No such Body as %s" % obj_id)
+                logger.debug("No such Body as %s" % obj_id)
                 print("number of bodies: %i" % body_all.count())
             return False
     # Must be a better way to do this next bit, but I don't know what it is off the top of my head.

@@ -23,6 +23,7 @@ export NEOX_EMAIL_USERNAME="${NEOX_EMAIL_USERNAME}"
 export NEOX_EMAIL_PASSWORD="${NEOX_EMAIL_PASSWORD}"
 export ARCHIVE_TOKEN="${ARCHIVE_TOKEN}"
 export VALHALLA_TOKEN="${VALHALLA_TOKEN}"
+export DATA_ROOT="${DATA_ROOT}"
 
 EOF
 
@@ -38,6 +39,9 @@ chown -R nginx:nginx /var/www/apps/astropy*
 chown -R nginx:nginx /var/www/apps/neoexchange
 python3 /var/www/apps/neoexchange/manage.py migrate --noinput
 python3 /var/www/apps/neoexchange/manage.py collectstatic --noinput
+
+chown -R nginx:nginx /data/eng
+chmod g+s /data/eng/rocks
 
 # Run under supervisord
 exec /usr/bin/supervisord -n -c /etc/supervisord.conf

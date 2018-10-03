@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files
+from core.views import make_movie, make_spec
 
 
 class Command(BaseCommand):
@@ -15,11 +16,12 @@ class Command(BaseCommand):
         parser.add_argument('--proposal', action="store", default="LCO2018B-013", help='Proposal code to query for data (e.g. LCO2018b-013)')
         out_path = os.path.join(os.environ.get('HOME'), 'Asteroids')
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
+        parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
 
     def handle(self, *args, **options):
         usage = "Incorrect usage. Usage: %s [YYYYMMDD] [proposal code]" % ( argv[1] )
         obstypes = ['EXPOSE', 'ARC', 'LAMPFLAT', 'SPECTRUM']
-        if options['proposal'] == 'LCOEngineering':
+        if options['proposal'] == 'LCOEngineering' or options['spectraonly'] is True:
             # Not interested in imaging frames
             obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
 
@@ -37,8 +39,9 @@ class Command(BaseCommand):
             verbose = False
 
         username = os.environ.get('NEOX_ODIN_USER', None)
-        password = os.environ.get('NEOX_ODIN_PASSWD',None)
-        if username and password:
+        password = os.environ.get('NEOX_ODIN_PASSWD', None)
+        archive_token = os.environ.get('ARCHIVE_TOKEN', None)
+        if (username is not None and password is not None) or archive_token is not None:
             auth_headers = archive_login(username, password)
             start_date, end_date = determine_archive_start_end(obs_date)
             self.stdout.write("Looking for frames between %s->%s from %s" % ( start_date, end_date, proposal ))
@@ -75,5 +78,13 @@ class Command(BaseCommand):
             self.stdout.write("Downloading data to %s" % out_path)
             dl_frames = download_files(all_frames, out_path, verbose)
             self.stdout.write("Downloaded %d frames" % ( len(dl_frames) ))
+            # unpack tarballs and make movie.
+            for frame in all_frames['']:
+                if "tar.gz" in frame['filename']:
+                    make_movie(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'])
+                    spec_plot, spec_count = make_spec(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'], 1)
+                    if spec_count > 1:
+                        for obs in range(2, spec_count+1):
+                            make_spec(obs_date, frame['OBJECT'].replace(" ", "_"), str(frame['REQNUM']), out_path, frame['PROPID'], obs)
         else:
-            self.stdout.write("No username or password defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD)")
+            self.stdout.write("No username and password or token defined (set NEOX_ODIN_USER and NEOX_ODIN_PASSWD or ARCHIVE_TOKEN)")

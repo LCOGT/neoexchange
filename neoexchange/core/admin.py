@@ -50,7 +50,12 @@ class SuperBlockAdmin(VersionAdmin):
     format_block_start.admin_order_field = 'block_start'
 
     def body_name(self, obj):
-        return obj.body.current_name()
+        name = ''
+        if obj.body is not None:
+            name = obj.body.current_name()
+        elif obj.calibsource is not None:
+            name = obj.calibsource.name
+        return name
 
     list_display = ('groupid', 'body_name', 'proposal', 'block_start', 'active', )
     list_filter = ('proposal', 'block_start', 'active', )
@@ -262,6 +267,8 @@ class StaticSourceAdmin(admin.ModelAdmin):
     list_filter = ['spectral_type', 'source_type']
 
     ordering = [ 'ra', ]
+
+    search_fields = ('name',)
 
 
 admin.site.register(Proposal, ProposalAdmin)
