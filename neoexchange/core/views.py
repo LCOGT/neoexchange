@@ -1738,19 +1738,45 @@ def clean_NEOCP_object(page_list):
 def update_crossids(astobj, dbg=False):
     """Update the passed <astobj> for a new cross-identification.
     <astobj> is expected to be a list of:
-    provisional id, final id/failure reason, reference, confirmation date
+    temporary/tracklet id, final id/failure reason, reference, confirmation date
     normally produced by the fetch_previous_NEOCP_desigs() method."""
 
     if len(astobj) != 4:
         return False
 
-    obj_id = astobj[0].rstrip()
+    temp_id = astobj[0].rstrip()
+    desig = astobj[1]
 
-    try:
-        body, created = Body.objects.get_or_create(provisional_name=obj_id)
-    except:
-        logger.warning("Multiple objects found called %s" % obj_id)
-        return False
+    created = False
+    # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
+    # but don't have a blank 'name'
+    bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
+    if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
+    
+    if bodies.count() == 0:
+        body = Body.objects.create(provisional_name=temp_id, name=desig)
+        created = True
+    elif bodies.count() == 1:
+        body = bodies[0]
+    else:
+        logger.warning("Multiple objects (%d) found called %s or %s" % (bodies.count(), temp_id, desig))
+        # Sort by ingest time and remove extras (if there are no Block or SuperBlocks)
+        sorted_bodies = bodies.order_by('ingest')
+        body = sorted_bodies[0]
+        logger.info("Taking %s (id=%d) as canonical Body" % (body.current_name(), body.pk))
+        for del_body in sorted_bodies[1:]:
+            logger.info("Trying to remove %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
+            num_sblocks = SuperBlock.objects.filter(body=del_body).count()
+            num_blocks = Block.objects.filter(body=del_body).count()
+            if del_body.origin != 'M':
+                if num_sblocks == 0 and num_blocks == 0 and del_body.origin != 'M':
+                    del_body.delete()
+                    logger.info("Removed %s (id=%d) duplicate Body" % (del_body.current_name(), del_body.pk))
+                else:
+                    logger.warning("Found %d SuperBlocks and %d Blocks referring to this Body; not deleting" % (num_sblocks, num_blocks))
+            else:
+                logger.info("Origin of Body is MPC, not removing")
+
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_crossid(astobj, dbg)
     if not created:
@@ -1761,17 +1787,25 @@ def update_crossids(astobj, dbg=False):
         # than the MPC. In this case, leave it active.
         if body.source_type in ['N', 'C', 'H'] and body.origin != 'M':
             kwargs['active'] = True
+        # Check if we are trying to "downgrade" a NEO or other target type
+        # to an asteroid
+        if body.source_type != 'A' and body.origin != 'M' and kwargs['source_type'] == 'A':
+            logger.warning("Not downgrading type for %s from %s to %s" % (body.current_name(), body.source_type, kwargs['source_type']))
+            kwargs['source_type'] = body.source_type
         if kwargs['source_type'] in ['C', 'H']:
+            if dbg: print("Converting to comet")
             kwargs = convert_ast_to_comet(kwargs, body)
-        check_body = Body.objects.filter(provisional_name=obj_id, **kwargs)
+        if dbg:
+            print(kwargs)
+        check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
         if check_body.count() == 0:
             save_and_make_revision(body, kwargs)
-            logger.info("Updated cross identification for %s" % obj_id)
+            logger.info("Updated cross identification for %s" % body.current_name())
     elif kwargs != {}:
         # Didn't know about this object before so create but make inactive
         kwargs['active'] = False
         save_and_make_revision(body, kwargs)
-        logger.info("Added cross identification for %s" % obj_id)
+        logger.info("Added cross identification for %s" % temp_id)
     else:
         logger.warning("Could not add cross identification for %s" % obj_id)
         return False
@@ -1790,7 +1824,7 @@ def clean_crossid(astobj, dbg=False):
     interesting_cutoff = 3 * 86400  # 3 days in seconds
 
     obj_id = astobj[0].rstrip()
-    desig = astobj[1]
+    desig = astobj[1].rstrip()
     reference = astobj[2]
     confirm_date = parse_neocp_date(astobj[3])
 
@@ -1803,23 +1837,27 @@ def clean_crossid(astobj, dbg=False):
     active = True
     objtype = ''
     if obj_id != '' and desig == 'wasnotconfirmed':
+        if dbg: print("Case 1")
         # Unconfirmed, no longer interesting so set inactive
         objtype = 'U'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'doesnotexist':
         # Did not exist, no longer interesting so set inactive
+        if dbg: print("Case 2")
         objtype = 'X'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'wasnotminorplanet':
         # "was not a minor planet"; set to satellite and no longer interesting
+        if dbg: print("Case 3")
         objtype = 'J'
         desig = ''
         active = False
     elif obj_id != '' and desig == '' and reference == '':
         # "Was not interesting" (normally a satellite), no longer interesting
         # so set inactive
+        if dbg: print("Case 4")
         objtype = 'W'
         desig = ''
         active = False
@@ -1828,19 +1866,33 @@ def clean_crossid(astobj, dbg=False):
         if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
             # There is a reference to an CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
+            if dbg: print("Case 5a")
             objtype = 'C'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif 'MPEC' in reference:
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
+            if dbg: print("Case 5b")
             objtype = 'N'
             if 'A/' in desig:
                 # Check if it is an inactive hyperbolic asteroid
                 objtype = 'H'
             if time_from_confirm > interesting_cutoff:
                 active = False
+        elif desig[-1] == 'P' and desig[0:-1].isdigit():
+            # Crossid from NEO candidate to comet
+            if dbg: print("Case 5c")
+            objtype = 'C'
+            try:
+                desig = str(int(desig[0:-1]))
+                desig += 'P'
+            except ValueError:
+                pass
+            if time_from_confirm > interesting_cutoff:
+                active = False
         else:
+            if dbg: print("Case 5z")
             objtype = 'A'
             active = False
 
