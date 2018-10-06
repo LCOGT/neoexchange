@@ -13,6 +13,14 @@ Improve the cross-identification code for multiply desiginated objects and perio
 Fix issues with interactions between FindOrb and candidates/comets
 * Remove Perturbation Code
 
+### 2.7.5
+Update the scheduling interface to allow for more options
+* Display UT time on website
+* Display Site/Telescope class on Confirmation page
+* Display Visibility of requested target
+* Allow for Exposure time Adjustment
+* Display Moon info
+
 ### 2.7.2
 
 Spectroscopic Graphical tools
