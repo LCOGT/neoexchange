@@ -2421,7 +2421,7 @@ class TestReadFindorbEphem(TestCase):
         expected_empinfo = { 'emp_rateunits': "'/hr",
                              'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
-                             'obj_id': '2017YE5'}
+                             'obj_id': '2017 YE5'}
 
         expected_emp = [(datetime(2018, 6, 30, 6, 10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
 
@@ -2492,12 +2492,12 @@ class TestReadFindorbEphem(TestCase):
 
     def test_F65_numbered_ast_nocrossid(self):
         expected_empinfo = { 'emp_rateunits': "'/hr",
-                             'emp_sitecode': 'E10',
+                             'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
                              'obj_id': '1627'}
         expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
 
-        lines = [ '#(E10) Faulkes Telescope North: (1627)',
+        lines = [ '#(F65) Faulkes Telescope North: (1627)',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
                   '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
                   '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  22.2  90'
@@ -2508,14 +2508,68 @@ class TestReadFindorbEphem(TestCase):
 
         self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
 
-    def test_F65_numbered_ast_high_certainty(self):
+    def test_F65_numbered_ast_high_uncertainty(self):
         expected_empinfo = { 'emp_rateunits': "'/hr",
-                             'emp_sitecode': 'E10',
+                             'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
                              'obj_id': '1627'}
         expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
 
-        lines = [ '#(E10) Faulkes Telescope North: (1627)',
+        lines = [ '#(F65) Faulkes Telescope North: (1627)',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_Q63_candidate_veryhigh_uncertainty(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'Q63',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': 'ZTF01Ym'}
+        expected_emp = [(datetime(2018, 10, 1, 17, 00), 0.405840538302, -0.581830086206, 20.5, 5.08, 72000.0)]
+
+        lines = [ '#(Q63) Siding Spring-LCO A: ZTF01Ym',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 10 01 17:00  01 33 00.708   -33 20 11.07  .00873 1.0079 140.5 20.5   5.08 121.6   20d  11'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_F65_candidate(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'F65',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': 'ZR9CB15'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
+
+        lines = [ '#(F65) Faulkes Telescope North: ZR9CB15',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_F65_comet(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'F65',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': 'P/60'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
+
+        lines = [ '#(F65) Faulkes Telescope North: P/60',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
                   '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
                   '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'

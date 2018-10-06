@@ -572,17 +572,12 @@ def read_findorb_ephem(empfile):
                     chunks.remove(' ')
                 except ValueError:
                     pass
-                obj_id = ''
-                for chunk in chunks[::-1]:
-                    if chunk.isdigit():
-                        obj_id = chunk
-                        break
-                if not obj_id:
-                    if '19' in chunks[-1] or '20' in chunks[-1]:
-                        obj_id = chunks[-1].replace(' ', '').replace('=', '')
+                obj_id = chunks[-1].strip()
+                if '=' in obj_id:
+                    if chunks[-2].isdigit():
+                        obj_id = chunks[-2]
                     else:
-                        logger.warning("Could not pull Object ID from header line1 ({:s})".format(line))
-                        return None, None
+                        obj_id = obj_id.replace('=', '')
                 ephem_info = {'obj_id' : obj_id,
                               'emp_sitecode' : chunks[0]}
             elif line.lstrip()[0:4] == 'Date':
@@ -621,10 +616,14 @@ def read_findorb_ephem(empfile):
                 try:
                     emp_alt = float(chunks[16])
                 except ValueError:
+                    # Units of ephemeris uncertainty are normally arcseconds; convert
+                    # other units
                     if 'm' in chunks[16]:
                         emp_alt = float(chunks[16][:-1])/1000
                     elif "'" in chunks[16]:
                         emp_alt = float(chunks[16][:-1])*60
+                    elif 'd' in chunks[16]:
+                        emp_alt = float(chunks[16][:-1])*3600
                     else:
                         logger.warning("Unable to read Ephemeris sig err {}".format(chunks[16]))
                         return None, None

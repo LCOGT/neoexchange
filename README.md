@@ -4,6 +4,15 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.4
+
+Improve the cross-identification code for multiply desiginated objects and periodic comets.
+
+### 2.7.3
+
+Fix issues with interactions between FindOrb and candidates/comets
+* Remove Perturbation Code
+
 ### 2.7.2
 
 Spectroscopic Graphical tools
