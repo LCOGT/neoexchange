@@ -1027,6 +1027,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     return resp
 
+
 def compute_vmag_pa(body_elements, data):
     emp_line_base = compute_ephem(data['start_time'], body_elements, data['site_code'], dbg=False, perturb=False, display=False)
     # assign Magnitude and position angle
@@ -1035,6 +1036,7 @@ def compute_vmag_pa(body_elements, data):
     body_elements['sky_pa'] = emp_line_base[7]
 
     return body_elements
+
 
 def schedule_submit(data, body, username):
     # Assemble request

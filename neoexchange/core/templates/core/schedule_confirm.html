@@ -87,7 +87,7 @@
                                             document.getElementById('mooncent').innerHTML += (moon_day(today)*100).toFixed(1) + "%";
                                         </script>
                                     </td>
-                                    <td style="border: none"> {{ data.moon_sep|floatformat:2 }}'</td>
+                                    <td style="border: none"> {{ data.moon_sep|floatformat:1 }}&deg</td>
                                 </tr>
                             </table>
                         </td>
@@ -215,23 +215,12 @@
           {% endif %}
         {% else %}
         <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
-        <input type="submit" class="button button-primary" value="Edit Parameters" id="id_edit_button" name="edit">
+        <input type="submit" class="button button-primary" value="Update Parameters" id="id_edit_button" name="edit">
+          <input type="submit" class="button button-primary" value='Advanced' id="id_extra_options_button" name="extra">
         {% endif%}
-          {{form.start_time}}
-          {{form.end_time}}
-          {{form.exp_count}}
-          {{form.proposal_code}}
-          {{form.site_code}}
-          {{form.instrument_code}}
-          {{form.group_id}}
-          {{form.utc_date}}
-          {{form.jitter}}
-          {{form.period}}
-          {{forms.pattern_iterations}}
-          {{form.spectroscopy}}
-          {{form.calibs}}
-          {{form.solar_analog}}
-          {{form.calibsource_id}}
+          {% for hidden in form.hidden_fields %}
+            {{ hidden }}
+          {% endfor %}
         </div>
       </div>
 
