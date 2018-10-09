@@ -850,7 +850,13 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
 
     for x in emp:
         visible = False
-        if (dark_start <= x[0] <= dark_end - timedelta(minutes=slot_length)) and x[5] >= float(alt_limit):
+        emp_time = x[0]
+        current_alt = x[5]
+        if isinstance(emp_time, str):
+            emp_time = datetime.strptime(x[0], '%Y %m %d %H:%M')
+        if isinstance(current_alt, str):
+            current_alt = float(x[6])
+        if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= float(alt_limit):
             visible = True
             dark_up_emp.append(x)
         if debug:
@@ -1811,8 +1817,9 @@ def compute_sidereal_ephem(ephem_time, elements, site_code):
 
 def get_visibility(body_elements, dark_start, dark_end, site_code, step_size='30 m', alt_limit=30):
 
-    emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, step_size, alt_limit)
-    dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp)
-    max_alt = compute_max_altitude(emp_dark_and_up)
+    emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, step_size)
+    emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
+    dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up)
+    max_alt = compute_max_altitude(emp)
 
     return dark_and_up_time, max_alt

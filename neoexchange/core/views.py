@@ -14,7 +14,7 @@ GNU General Public License for more details.
 import os
 from glob import glob
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees, radians, pi
+from math import floor, ceil, degrees, radians, pi, acos
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -897,9 +897,14 @@ def schedule_check(data, body, ok_to_schedule=True):
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
 
+    # Get maximum airmass
+    max_airmass = data.get('max_airmass', 1.74)
+    alt_limit = degrees((pi/2.0) - acos(1/max_airmass))
+
     # Pull out LCO Site, Telescope Class using site_config.py
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
-    dark_and_up_time, max_alt = get_visibility(body_elements, dark_start, dark_end, data['site_code'], '30 m', alt_limit=30)
+    dark_and_up_time, max_alt = get_visibility(body_elements, dark_start, dark_end, data['site_code'], '30 m', alt_limit=alt_limit)
+    max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
 
     # Determine slot length
     if data.get('slot_length'):
@@ -943,6 +948,10 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # determine lunar position
     moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+    min_lunar_dist = data.get('min_lunar_dist', 30)
+
+    # get ipp value
+    ipp_value = data.get('ipp_value', 1.00)
 
     # Determine pattern iterations
     if exp_count:
@@ -1010,10 +1019,14 @@ def schedule_check(data, body, ok_to_schedule=True):
         'lco_tel' : lco_site_code[-4:-1],
         'lco_enc' : lco_site_code[4:8],
         'max_alt' : max_alt,
+        'max_alt_airmass' : max_alt_airmass,
         'vis_time' : dark_and_up_time,
         'moon_alt' : moon_alt,
         'moon_sep' : moon_obj_sep,
         'moon_phase' : moon_phase,
+        'min_lunar_dist' : min_lunar_dist,
+        'max_airmass': max_airmass,
+        'ipp_value': ipp_value,
         'trail_len' : trail_len,
         'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
