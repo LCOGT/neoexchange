@@ -1361,10 +1361,12 @@ def make_molecules(params):
 def make_constraints(params):
     constraints = {
                     # 'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
-                    'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
+                    # 'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
-                    'min_lunar_distance': 30
+                    # 'min_lunar_distance': 30
+                    'max_airmass' : params['max_airmass'],
+                    'min_lunar_distance' : params['min_lunar_distance']
                   }
     return constraints
 
@@ -1579,7 +1581,7 @@ def make_userrequest(elements, params):
 
     request = {
             "location": location,
-            "acceptability_threshold": 90,
+            "acceptability_threshold": params['acceptability_threshold'],
             "constraints": constraints,
             "target": target,
             "molecules": molecule_list,
@@ -1609,10 +1611,7 @@ def make_userrequest(elements, params):
     else:
         cal_request = {}
 
-# If site is ELP, increase IPP value
-    ipp_value = 1.00
-    if params['site_code'] == 'V37':
-        ipp_value = 1.00
+    ipp_value = params['ipp_value']
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():

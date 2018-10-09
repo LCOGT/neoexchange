@@ -157,6 +157,15 @@ class ScheduleBlockForm(forms.Form):
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+
+    def clean_ipp_value(self):
+        if self.cleaned_data['ipp_value'] < 0.5:
+            return 0.5
+        elif self.cleaned_data['ipp_value'] > 2:
+            return 2.0
+        else:
+            return self.cleaned_data['ipp_value']
 
     def clean_max_airmass(self):
         if self.cleaned_data['max_airmass'] < 1:

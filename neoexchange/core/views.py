@@ -953,6 +953,9 @@ def schedule_check(data, body, ok_to_schedule=True):
     # get ipp value
     ipp_value = data.get('ipp_value', 1.00)
 
+    # get acceptability threshold
+    acceptability_threshold = data.get('acceptability_threshold', 90)
+
     # Determine pattern iterations
     if exp_count:
         pattern_iterations = float(exp_count) / float(len(filter_pattern.split(',')))
@@ -1027,6 +1030,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'min_lunar_dist' : min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
+        'acceptability_threshold': acceptability_threshold,
         'trail_len' : trail_len,
         'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
@@ -1131,7 +1135,11 @@ def schedule_submit(data, body, username):
               'instrument_code' : data['instrument_code'],
               'solar_analog' : data.get('solar_analog', False),
               'calibsource' : calibsource_params,
-              'findorb_ephem' : emp_at_start
+              'findorb_ephem' : emp_at_start,
+              'max_airmass' : data.get('max_airmass', 1.74),
+              'ipp_value' : data.get('ipp_value', 1),
+              'min_lunar_distance' : data.get('min_lunar_dist', 30),
+              'acceptability_threshold' : data.get('acceptability_threshold', 90)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']

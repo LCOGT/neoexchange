@@ -4,6 +4,19 @@
 
 {% block bodyclass %}page{% endblock %}
 
+{% block script-content %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    // Initially hide the advanced options
+    $('#advanced_options').hide();
+
+    $('a.mode-switch').click(function(event){
+      $('.mode-container').toggle();
+    });
+
+  });
+</script>
+{% endblock %}
 
 {% block extramenu %}
     <div class="headingleft">
@@ -232,7 +245,9 @@
         {% else %}
         <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
         <input type="submit" class="button button-primary" value="Update Parameters" id="id_edit_button" name="edit">
-          <h6 class="section-title">Advanced Options:</h6>
+          <a class="button mode-switch" href="#" id="advanced-switch">Advanced Options</a>
+          <div id="advanced_options" class="mode-container">
+          <h6 class="section-title"></h6>
           <table class="keyvalue-table">
               <tr id="id_max_arimass">
                   <td class="kv-key">Max Acceptable Airmass</td>
@@ -246,7 +261,12 @@
                   <td class="kv-key">IPP</td>
                   <td class="kv-value">{{ form.ipp_value }}</td>
               </tr>
+              <tr id="id_acceptability">
+                  <td class="kv-key">Acceptability Threshold (%)</td>
+                  <td class="kv-value">{{ form.acceptability_threshold }}</td>
+              </tr>
           </table>
+          </div>
         {% endif%}
           {% for hidden in form.hidden_fields %}
             {{ hidden }}
