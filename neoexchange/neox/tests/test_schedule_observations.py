@@ -330,9 +330,11 @@ class ScheduleObservations(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
 
-        # The page refreshes and we get an error
-        error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('The slot length is too short', error_msg)
+        # The page refreshes and slot length is automatically adjusted to minimum possible length
+        new_slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        self.assertIn('3.5', new_slot_length)
+        warn_num = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('warning').text
+        self.assertIn('1', warn_num)
 
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.datetime', MockDateTime)
