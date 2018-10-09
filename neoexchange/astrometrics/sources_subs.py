@@ -1365,8 +1365,8 @@ def make_constraints(params):
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
                     # 'min_lunar_distance': 30
-                    'max_airmass' : params['max_airmass'],
-                    'min_lunar_distance' : params['min_lunar_distance']
+                    'max_airmass' : params.get('max_airmass', 1.74),
+                    'min_lunar_distance' : params.get('min_lunar_distance', 30)
                   }
     return constraints
 
@@ -1581,7 +1581,7 @@ def make_userrequest(elements, params):
 
     request = {
             "location": location,
-            "acceptability_threshold": params['acceptability_threshold'],
+            "acceptability_threshold": params.get('acceptability_threshold', 90),
             "constraints": constraints,
             "target": target,
             "molecules": molecule_list,
@@ -1611,7 +1611,7 @@ def make_userrequest(elements, params):
     else:
         cal_request = {}
 
-    ipp_value = params['ipp_value']
+    ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():

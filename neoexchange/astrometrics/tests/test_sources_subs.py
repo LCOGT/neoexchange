@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
+
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
 
