@@ -1161,7 +1161,7 @@ class TestSchedule_Check(TestCase):
                         'calibsource' : {},
                         'calibsource_id' : -1,
                         'solar_analog' : False,
-                        'vis_time': 7.5,
+                        'vis_time': 6.5,
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
@@ -1170,7 +1170,12 @@ class TestSchedule_Check(TestCase):
                         'moon_phase': 0.011439155504957221,
                         'moon_sep': 170.66180769265674,
                         'trail_len': 2.41774558756957,
-                        'typical_seeing': 2.0
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0861815238132588,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1189,7 +1194,8 @@ class TestSchedule_Check(TestCase):
                  'spectroscopy' : True,
                  'calibs' : 'both',
                  'exp_length' : 300.0,
-                 'exp_count' : 1
+                 'exp_count' : 1,
+                 'max_airmass': 2.0
                }
 
         expected_resp = {
@@ -1231,7 +1237,12 @@ class TestSchedule_Check(TestCase):
                         'moon_phase': 0.011439162208279174,
                         'moon_sep': 170.66180760224114,
                         'trail_len': 0.48354895802581555,
-                        'typical_seeing': 2.0
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'max_airmass': 2.0,
+                        'max_alt_airmass': 1.0861815238132588,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1284,7 +1295,7 @@ class TestSchedule_Check(TestCase):
                         'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
                         'calibsource_id' : 1,
                         'solar_analog' : True,
-                        'vis_time': 7.5,
+                        'vis_time': 6.5,
                         'lco_enc': 'CLMA',
                         'lco_site': 'COJ',
                         'lco_tel': '2M0',
@@ -1293,7 +1304,12 @@ class TestSchedule_Check(TestCase):
                         'moon_phase': 0.011439162208279174,
                         'moon_sep': 170.66180760224114,
                         'trail_len': 0.48354895802581555,
-                        'typical_seeing': 2.0
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0861815238132588,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1349,7 +1365,7 @@ class TestSchedule_Check(TestCase):
                         'calibsource' : {},
                         'calibsource_id' : -1,
                         'solar_analog' : False,
-                        'vis_time': 7.5,
+                        'vis_time': 6.5,
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
@@ -1358,7 +1374,12 @@ class TestSchedule_Check(TestCase):
                         'moon_phase': 0.00890997165773788,
                         'moon_sep': 171.79313958425425,
                         'trail_len': 2.395258014908864,
-                        'typical_seeing': 2.0
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0861815238132588,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1412,7 +1433,7 @@ class TestSchedule_Check(TestCase):
                         'calibsource' : {},
                         'calibsource_id' : -1,
                         'solar_analog' : False,
-                        'vis_time': 7.5,
+                        'vis_time': 6.5,
                         'lco_enc': 'DOMA',
                         'lco_site': 'COJ',
                         'lco_tel': '1M0',
@@ -1421,7 +1442,12 @@ class TestSchedule_Check(TestCase):
                         'moon_phase': 0.00890997165773788,
                         'moon_sep': 171.79313958425425,
                         'trail_len': 2.395258014908864,
-                        'typical_seeing': 2.0
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0861815238132588,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
