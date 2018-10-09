@@ -4,6 +4,19 @@
 
 {% block bodyclass %}page{% endblock %}
 
+{% block script-content %}
+<script type="text/javascript">
+  $(document).ready(function(){
+    // Initially hide the advanced options
+    $('#advanced_options').hide();
+
+    $('a.mode-switch').click(function(event){
+      $('.mode-container').toggle();
+    });
+
+  });
+</script>
+{% endblock %}
 
 {% block extramenu %}
     <div class="headingleft">
@@ -48,12 +61,18 @@
                         <td class="kv-value">{{ data.utc_date}}</td>
                     </tr>
                     <tr id="id_visibility">
-                        {% if data.vis_time and data.max_alt > 30 %}
+                        {% if data.vis_time and data.max_alt_airmass < data.max_airmass %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
                             <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt}}&deg</td>
                         {% else %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
-                        <td class="kv-value"> <span class="warning msgpadded"> Target Not Visible </span> </td>
+                        <td class="kv-value">
+                            <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded"> Target Not Visible</span>
+                                <span class="tooltiptext" style="width: 150px;">
+                                    <u>Target is never higher than Required Airmass.</u>
+                                    <br>Max altitude of target during observation window is {{data.max_alt}}&deg (airmass {{data.max_alt_airmass|floatformat:2}}) <br>
+                                </span></div></td></tr></table></td>
                         {% endif %}
                     </tr>
                 </tbody>
@@ -71,6 +90,35 @@
                      <tr id="id_magnitude">
                         <td class="kv-key">Magnitude</td>
                         <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
+                    </tr>
+                    <tr id="id_moon">
+                        <td class="kv-key">Lunar Phase / Separation </td>
+                        <td class="kv-value">
+                            <table style="margin-bottom: 0; margin-left: auto">
+                                <tr>
+                                    <td>
+                                        <svg id="moon"  xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="250 70 4.5 4.5" preserveAspectRatio="xMidYMin slice"
+                                        style="height: 1; overflow: visible" ></svg>
+                                        <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
+                                        <script type="text/javascript" charset="UTF-8">
+                                            var today = today || new Date();
+                                            document.getElementById('mooncent').innerHTML += (moon_day(today)*100).toFixed(1) + "%";
+                                        </script>
+                                    </td>
+                                    {% if data.moon_sep < data.min_lunar_dist %}
+                                    <td style="border: none">
+                                        <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                            <span class="warning msgpadded">{{ data.moon_sep|floatformat:1 }}&deg</span>
+                                            <span class="tooltiptext" style="width: 150px;">
+                                                <u>Too close to the Moon!</u>
+                                                <br>Consider decreasing Minimum Lunar Separation (currently {{data.min_lunar_dist}}&deg) if object is bright.<br>
+                                        </span></div></td></tr></table></td>
+                                    {% else %}
+                                        <td style="border: none"> {{ data.moon_sep|floatformat:1 }}&deg</td>
+                                    {% endif %}
+                                </tr>
+                            </table>
+                        </td>
                     </tr>
                     {% if data.spectroscopy %}
                     <tr id="id_slit_pattern"><td ><table align="left"  style="margin: 0px"><tr><td class="kv-key" name="{{data.available_filters}}">
@@ -164,7 +212,29 @@
           {% endif %}
         {% else %}
         <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
-        <input type="submit" class="button button-primary" value="Edit Parameters" id="id_edit_button" name="edit">
+        <input type="submit" class="button button-primary" value="Update Parameters" id="id_edit_button" name="edit">
+          <a class="button mode-switch" href="#" id="advanced-switch">Advanced Options</a>
+          <div id="advanced_options" class="mode-container">
+          <h6 class="section-title"></h6>
+          <table class="keyvalue-table">
+              <tr id="id_max_arimass">
+                  <td class="kv-key">Max Acceptable Airmass</td>
+                  <td class="kv-value">{{ form.max_airmass }}</td>
+              </tr>
+              <tr id="id_min_lunar_dist">
+                  <td class="kv-key">Minimum Lunar Separation (&deg)</td>
+                  <td class="kv-value">{{ form.min_lunar_dist }}</td>
+              </tr>
+              <tr id="id_ipp_value">
+                  <td class="kv-key">IPP</td>
+                  <td class="kv-value">{{ form.ipp_value }}</td>
+              </tr>
+              <tr id="id_acceptability">
+                  <td class="kv-key">Acceptability Threshold (%)</td>
+                  <td class="kv-value">{{ form.acceptability_threshold }}</td>
+              </tr>
+          </table>
+          </div>
         {% endif%}
           {{form.start_time}}
           {{form.end_time}}
