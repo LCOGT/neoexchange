@@ -159,6 +159,22 @@ class ScheduleBlockForm(forms.Form):
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
 
+    def clean_min_lunar_dist(self):
+        if self.cleaned_data['min_lunar_dist'] > 180:
+            return 180
+        elif self.cleaned_data['min_lunar_dist'] < 0:
+            return 0
+        else:
+            return self.cleaned_data['min_lunar_dist']
+
+    def clean_acceptability_threshold(self):
+        if self.cleaned_data['acceptability_threshold'] > 100:
+            return 100
+        elif self.cleaned_data['acceptability_threshold'] < 0:
+            return 0
+        else:
+            return self.cleaned_data['acceptability_threshold']
+
     def clean_ipp_value(self):
         if self.cleaned_data['ipp_value'] < 0.5:
             return 0.5
