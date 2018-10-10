@@ -224,7 +224,14 @@ def check_for_existing_file(filename, archive_md5=None, dbg=False, verbose=False
                 if os.path.exists(uncomp_filepath):
                     if verbose: print("Uncompressed -91 level reduction file already exists.")
                     return True
-
+    elif ".tar.gz" in filename:  # check for existing tarballs
+        if os.path.exists(filename) and archive_md5 is not None:
+                md5sum = md5(open(filename, 'rb').read()).hexdigest()
+                logger.debug("{} {} {}".format(filename, md5sum, archive_md5))
+                if md5sum == archive_md5:
+                    if verbose:
+                        print("Tarball exists with correct MD5 sum")
+                    return True
     return False
 
 def check_for_bad_file(filename, reject_dir='Bad'):
