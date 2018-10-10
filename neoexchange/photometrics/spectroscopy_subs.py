@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 from astropy import units as u
 from synphot import units, SourceSpectrum, SpectralElement, specio
 from synphot.spectrum import BaseUnitlessSpectrum, Empirical1D
@@ -152,6 +153,35 @@ def synthesize_asteroid(V_mag, ast_file, sun_file, sky_file, tic_params, optics_
     asteroid_spectrum *= tel_throughput * inst_throughput
 
     return asteroid_spectrum
+
+def region_around_line(w, flux, cont):
+    """cut out and normalize flux around a line
+
+    Parameters
+    ----------
+    w : 1 dim np.ndarray
+        array of wavelengths
+    flux : 1 dim np.ndarray
+        array of flux values
+    cont : list of lists
+        wavelengths for continuum normalization [[low1,up1],[low2, up2]]
+        that described two areas on both sides of the line
+    """
+
+    #index is true in the region where we fit the polynomial
+    indcont = ((w > cont[0][0]) & (w < cont[0][1])) |((w > cont[1][0]) & (w < cont[1][1]))
+    #index of the region we want to return
+    indrange = (w > cont[0][0]) & (w < cont[1][1])
+    # make a flux array of shape
+    # (number of spectra, number of points in indrange)
+    f = np.zeros(indrange.sum()))
+    # fit polynomial of second order to the continuum region
+    linecoeff = np.polyfit(w[indcont], flux[indcont],2)
+    # divide the flux by the polynomial and put the result in our
+    # new flux array
+    f = flux[indrange]/np.polyval(linecoeff, w[indrange])
+
+    return w[indrange], f
 
 if __name__ == 'main':
     cdbs = os.getenv('CDBS_PATH', os.path.join(os.path.sep,'data','tlister','cdbs'))
