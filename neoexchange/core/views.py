@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
+from glob import glob
 from datetime import datetime, timedelta
 from math import floor, ceil
 from django.db.models import Q
@@ -55,13 +56,15 @@ from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal,
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
-    read_mtds_file
+    read_mtds_file, unpack_tarball
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header, \
     determine_filenames, increment_red_level, update_ldac_catalog_wcs, FITSHdrException, \
     get_reference_catalog, reset_database_connection
 from photometrics.photometry_subs import calc_asteroid_snr, calc_sky_brightness
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
+from photometrics.spectraplot import get_spec_plot
+from photometrics.gf_movie import make_gif
 from core.frames import create_frame, ingest_frames, measurements_from_block
 from core.mpc_submit import email_report_to_mpc
 import logging
@@ -1861,16 +1864,17 @@ def display_spec(request, pk):
         return HttpResponse()
 
 
-def make_spec(date_obs, obj, req, base_dir, prop):
+def make_spec(date_obs, obj, req, base_dir, prop, obs_num):
     """Creates plot of spectra data for spectra blocks
        <pk>: pk of block (not superblock)
     """
     path = os.path.join(base_dir, obj + '_' + req)
     filenames = glob(os.path.join(path, '*_2df_ex.fits'))  # checks for file in path
     spectra_path = None
+    tar_path = unpack_path = None
     obs_num = str(obs_num)
     if filenames:
-        spectra_path = [filename for filename in filenames if obs_num + '_2df_ex.fits' in filename][0]
+        spectra_path = filenames[int(obs_num)-1]
         spec_count = len(filenames)
     else:
         tar_files = glob(os.path.join(base_dir, prop+'_*'+req+'*.tar.gz'))  # if file not found, looks for tarball
@@ -1882,13 +1886,13 @@ def make_spec(date_obs, obj, req, base_dir, prop):
                 else:
                     logger.error("Could not find tarball for block: %s" % pk)
                     return None
+            if not tar_path and not unpack_path:
+                logger.error("Could not find tarball for request: %s" % req)
+                return None, None
             spec_files = unpack_tarball(tar_path, unpack_path)  # upacks tarball
-            spec_count = 0
-            for spec in spec_files:
-                if '_' + obs_num + '_2df_ex.fits' in spec:
-                    spectra_path = spec
-                if '_2df_ex.fits' in spec:
-                    spec_count += 1
+            spec_list = [spec for spec in spec_files if '_2df_ex.fits' in spec]
+            spectra_path = spec_list[int(obs_num)-1]
+            spec_count = len(spec_list)
         else:
             logger.error("Could not find spectrum data or tarball for block: %s" % pk)
             return None
@@ -1901,7 +1905,7 @@ def make_spec(date_obs, obj, req, base_dir, prop):
 
     else:
         logger.error("Could not find spectrum data for block: %s" % pk)
-        return None
+        return None, None
 
 
 class PlotSpec(View):  # make loging required later

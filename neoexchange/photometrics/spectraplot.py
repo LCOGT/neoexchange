@@ -9,20 +9,18 @@ from astropy.io import fits, ascii
 from astropy.convolution import convolve, Box1DKernel  # Gaussian1DKernel
 from astropy.wcs import WCS
 from astropy import units as u
+from datetime import datetime
 import matplotlib.pyplot as plt
 import os
 import io
 from glob import glob
 import logging
-# import matplotlib.ticker as ticker
 import numpy as np
 import collections
 import warnings
 import re
 
 logger = logging.getLogger(__name__)
-
-# np.set_#printoptions(threshold=np.inf)
 
 
 def check_norm(values):  # not perfect
@@ -179,14 +177,15 @@ def read_spectra(path, spectra):
             try:
                 tn = hdr['TRACKNUM'].lstrip('0')
                 site = hdr['SITEID'].upper()
+                rn = hdr['REQNUM'].lstrip('0')
             except KeyError:
                 tn = site = inst = None
             try:
                 date_obs = hdr['DATE-OBS']
             except KeyError:
                 date_obs = hdr['DATE_OBS']
-
-            other = [date_obs, tn, site]
+            date = datetime.strptime(date_obs, '%Y-%m-%dT%H:%M:%S.%f')
+            other = [date, tn, site, rn]
             x_units = get_x_units(x_data)
             y_units, y_factor = get_y_units(hdr)
             check_norm(hdul[0].header.values())  # check if data is already normalized
@@ -247,12 +246,12 @@ def read_spectra(path, spectra):
 
     wavelength = (x_data*x_units).to(u.AA)
     # convert all wavelengths to Angstroms because it's easy to deal with that way
-    flux = y_data*y_units
+    flux = y_data/y_factor*y_units
 
     if not obj_name:
         logger.warning("Could not parse object name from file")
 
-    return wavelength, flux, flux_error, x_units, y_units, y_factor, obj_name, other
+    return wavelength, flux, flux_error, x_units, y_units, obj_name, other
 
 
 def smooth(x, y):
@@ -347,21 +346,21 @@ def plot_spectra(x, y, y_units, ax, title, ref=0, norm=0,):
         pass
 
 
-def get_spec_plot(path, spectra):
+def get_spec_plot(path, spectra, obs_num):
 
     fig, ax = plt.subplots()
-    x, y, yerr, xunits, yunits, yfactor, name, details = read_spectra(path, spectra)
+    x, y, yerr, xunits, yunits, name, details = read_spectra(path, spectra)
     if not name:
         name = "????"
     if details:
-        title = 'UT Date: {}'.format(details[0])
-        fig.suptitle('Tracking Number {} -- {} at {}'.format(details[1], name, details[2]))
+        title = 'UT Date: {}'.format(details[0].strftime('%Y/%m/%d %X'))
+        fig.suptitle('Tracking Number {} -- {} at {}'.format(details[3], name, details[2]))
     else:
         title = name
     xsmooth, ysmooth = smooth(x, y)
-    plot_spectra(xsmooth, ysmooth/yfactor, yunits, ax, title)
+    plot_spectra(xsmooth, ysmooth, yunits, ax, title)
 
-    save_file = os.path.join(path, name.replace(' ', '_') + "spectra.png")
+    save_file = os.path.join(path, name.replace(' ', '_') + "_" + details[3] + "_spectra_" + obs_num + ".png")
     fig.savefig(save_file, format='png')
     plt.close()
 

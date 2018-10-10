@@ -19,6 +19,8 @@ from math import floor
 from subprocess import call
 from collections import OrderedDict
 import warnings
+from shutil import unpack_archive
+from glob import glob
 
 from astropy.io import fits
 from astropy.io.votable import parse
@@ -591,3 +593,16 @@ def read_mtds_file(mtdsfile, dbg=False):
            }
 
     return dets
+
+
+def unpack_tarball(tar_path, unpack_dir):
+    """unpacks tarballs and puts files in appropriately named directory with appropriate permissions"""
+    unpack_archive(tar_path, extract_dir=unpack_dir, format="gztar")
+
+    os.chmod(unpack_dir, 0o775)
+    files = glob(unpack_dir+'/*')
+
+    for file in files:
+        os.chmod(file, 0o664)
+
+    return files

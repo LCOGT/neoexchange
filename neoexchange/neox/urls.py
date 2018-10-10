@@ -25,10 +25,9 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     ScheduleSubmit, ephemeris, home, BlockReport, ranking, MeasurementViewBody, MeasurementViewBlock, \
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
-    SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
+    SuperBlockListView, SuperBlockDetailView, SpectroFeasibility, \
     display_spec, PlotSpec, display_movie, GuideMovie, \
-    StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
-    make_standards_plot, make_solar_standards_plot, CalibSpectroFeasibility, ScheduleCalibParameters
+    make_standards_plot, make_solar_standards_plot
 
 from analyser.views import BlockFramesView, ProcessCandidates
 
