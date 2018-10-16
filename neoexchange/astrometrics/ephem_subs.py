@@ -1762,7 +1762,7 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
     return visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all
 
 
-def compute_dark_and_up_time(emp):
+def compute_dark_and_up_time(emp, step_size='30 m'):
     """Computes the amount of time a target is up and the
     sky is dark from emp"""
 
@@ -1772,19 +1772,31 @@ def compute_dark_and_up_time(emp):
     emp_dark_and_up = []
     start = None
 
+    if str(step_size)[-1] == 'm':
+        try:
+            step_size_secs = float(step_size[0:-1]) * 60
+        except ValueError:
+            pass
+    else:
+        step_size_secs = ephem_step_size
+
     if emp != []:
         for line in emp:
             if 'Limits' not in line[11] and start is None:
                 dark_and_up_time_start = datetime.strptime(line[0], '%Y %m %d %H:%M')
                 dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
+                dark_and_up_time = dark_and_up_time_end-dark_and_up_time_start
                 start = 1
                 emp_dark_and_up.append(line)
             elif 'Limits' not in line[11]:
+                dark_and_up_time_start = dark_and_up_time_end
                 dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
                 emp_dark_and_up.append(line)
+                additional_time = dark_and_up_time_end-dark_and_up_time_start
+                if additional_time.total_seconds() <= step_size_secs * 2:
+                    dark_and_up_time += additional_time
         if dark_and_up_time_start is not None and dark_and_up_time_end is not None:
-            dark_and_up_time = dark_and_up_time_end - dark_and_up_time_start
-            dark_and_up_time = dark_and_up_time.seconds/3600.0  # in hrs
+            dark_and_up_time = dark_and_up_time.total_seconds()/3600.0  # in hrs
 
     return dark_and_up_time, emp_dark_and_up
 
@@ -1816,10 +1828,10 @@ def compute_sidereal_ephem(ephem_time, elements, site_code):
 
 
 def get_visibility(body_elements, dark_start, dark_end, site_code, step_size='30 m', alt_limit=30):
-
+    print(dark_start, dark_end)
     emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, step_size)
     emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
-    dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up)
+    dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up, step_size)
     max_alt = compute_max_altitude(emp)
 
     return dark_and_up_time, max_alt
