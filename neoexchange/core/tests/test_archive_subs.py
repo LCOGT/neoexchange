@@ -111,16 +111,17 @@ class TestCheckForExistingFile(TestCase):
         self.test_ql_file_uncomp = os.path.join(tempfile.gettempdir(), 'cpt1m010-fl16-20170111-0211-e11.fits')
         self.test_red_file_comp = os.path.join(tempfile.gettempdir(), 'cpt1m010-fl16-20170111-0211-e91.fits.fz')
         self.test_red_file_uncomp = os.path.join(tempfile.gettempdir(), 'cpt1m010-fl16-20170111-0211-e91.fits')
+        self.test_FLOYDS_comp_tarball = os.path.join(tempfile.gettempdir(), 'LCOEngineering_0001651275_ftn_20181005_58397.tar.gz')
+        self.test_FLOYDS_uncomp_tarball = os.path.join(tempfile.gettempdir(), 'LCOEngineering_0001651275_ftn_20181005_58397.tar')
+        self.test_files = [ self.test_ql_file_comp, self.test_ql_file_uncomp,
+                            self.test_red_file_comp, self.test_red_file_uncomp,
+                            self.test_FLOYDS_comp_tarball, self.test_FLOYDS_uncomp_tarball
+                          ]
 
     def tearDown(self):
-        if os.path.exists(self.test_ql_file_comp):
-            os.remove(self.test_ql_file_comp)
-        if os.path.exists(self.test_red_file_comp):
-            os.remove(self.test_red_file_comp)
-        if os.path.exists(self.test_ql_file_uncomp):
-            os.remove(self.test_ql_file_uncomp)
-        if os.path.exists(self.test_red_file_uncomp):
-            os.remove(self.test_red_file_uncomp)
+        for test_file in self.test_files:
+            if os.path.exists(test_file):
+                os.remove(test_file)
 
     def test_ql_exists_noMD5(self):
         md5sum = self.create_temp(self.test_ql_file_comp)
@@ -173,6 +174,14 @@ class TestCheckForExistingFile(TestCase):
         md5sum = self.create_temp(self.test_ql_file_comp)
         md5sum = self.create_temp(self.test_red_file_comp)
         self.assertTrue(check_for_existing_file(self.test_red_file_comp, md5sum), "Wrong result")
+
+    def test_FLOYDS_comp_tarball(self):
+        md5sum = self.create_temp(self.test_FLOYDS_comp_tarball)
+        self.assertTrue(check_for_existing_file(self.test_FLOYDS_comp_tarball, md5sum), "Wrong result")
+
+    def test_FLOYDS_uncomp_tarball(self):
+        md5sum = self.create_temp(self.test_FLOYDS_uncomp_tarball)
+        self.assertFalse(check_for_existing_file(self.test_FLOYDS_uncomp_tarball, md5sum), "Wrong result")
 
     def test_badfile(self):
         self.assertFalse(check_for_existing_file('wibble'), "Wrong result")
