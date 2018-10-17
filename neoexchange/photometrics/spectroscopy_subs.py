@@ -174,7 +174,7 @@ def region_around_line(w, flux, cont):
     indrange = (w > cont[0][0]) & (w < cont[1][1])
     # make a flux array of shape
     # (number of spectra, number of points in indrange)
-    f = np.zeros(indrange.sum()))
+    f = np.zeros(indrange.sum())
     # fit polynomial of second order to the continuum region
     linecoeff = np.polyfit(w[indcont], flux[indcont],2)
     # divide the flux by the polynomial and put the result in our
