@@ -2888,7 +2888,7 @@ class TestMakeMolecule(TestCase):
         expected_molecule = {
                              'type' : 'LAMP_FLAT',
                              'exposure_count' : 1,
-                             'exposure_time' : 60.0,
+                             'exposure_time' : 20.0,
                              'bin_x'       : 1,
                              'bin_y'       : 1,
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
@@ -2912,7 +2912,7 @@ class TestMakeMolecule(TestCase):
         expected_molecule = {
                              'type' : 'LAMP_FLAT',
                              'exposure_count' : 1,
-                             'exposure_time' : 60.0,
+                             'exposure_time' : 20.0,
                              'bin_x'       : 1,
                              'bin_y'       : 1,
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
