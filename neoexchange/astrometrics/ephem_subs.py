@@ -1828,7 +1828,6 @@ def compute_sidereal_ephem(ephem_time, elements, site_code):
 
 
 def get_visibility(body_elements, dark_start, dark_end, site_code, step_size='30 m', alt_limit=30):
-    print(dark_start, dark_end)
     emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, step_size)
     emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
     dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up, step_size)

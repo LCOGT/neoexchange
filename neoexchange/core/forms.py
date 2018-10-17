@@ -239,8 +239,6 @@ class ScheduleBlockForm(forms.Form):
                 raise forms.ValidationError('%(bad)s is not an acceptable filter at this site.', params={'bad': ",".join(bad_filters)})
             else:
                 raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
-        elif not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
-            raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
         elif self.cleaned_data['exp_length'] < 0.1:
