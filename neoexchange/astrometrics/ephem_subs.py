@@ -1762,7 +1762,7 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
     return visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all
 
 
-def compute_dark_and_up_time(emp, step_size='30 m'):
+def compute_dark_and_up_time(emp, step_size='180 m'):
     """Computes the amount of time a target is up and the
     sky is dark from emp"""
 
@@ -1778,7 +1778,7 @@ def compute_dark_and_up_time(emp, step_size='30 m'):
         except ValueError:
             pass
     else:
-        step_size_secs = ephem_step_size
+        step_size_secs = float(step_size)
 
     if emp != []:
         for line in emp:
