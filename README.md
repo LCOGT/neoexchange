@@ -11,6 +11,10 @@ Update the scheduling interface to allow for more options
 * Display Visibility of requested target
 * Allow for Exposure time Adjustment
 * Display Moon info
+* Adjust Max Airmass
+* Adjust IPP
+* Adjust Minimum Moon Distance
+* adjust Acceptability Threshold
 
 ### 2.7.4
 
