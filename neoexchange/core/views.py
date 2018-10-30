@@ -785,7 +785,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
 
     def form_valid(self, form, request):
         if 'edit' in request.POST:
-            # Recalculate the parameters by amending the block length
+            # Recalculate the parameters using new form data
             data = schedule_check(form.cleaned_data, self.object)
             new_form = ScheduleBlockForm(data)
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
@@ -898,13 +898,22 @@ def schedule_check(data, body, ok_to_schedule=True):
     available_filters = available_filters[:-2]
 
     # Get maximum airmass
+    test_airmass = data.get('test_airmass', 0)
     max_airmass = data.get('max_airmass', 1.74)
     alt_limit = degrees((pi/2.0) - acos(1/max_airmass))
 
     # Pull out LCO Site, Telescope Class using site_config.py
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
-    dark_and_up_time, max_alt = get_visibility(body_elements, dark_start, dark_end, data['site_code'], '30 m', alt_limit=alt_limit)
-    max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
+
+    # If airmass requirements have changed (or on first load), calculate altitude, etc.
+    if test_airmass != max_airmass:
+        dark_and_up_time, max_alt = get_visibility(body_elements, dark_start, dark_end, data['site_code'], '15 m', alt_limit=alt_limit)
+        max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
+        test_airmass = max_airmass
+    else:
+        max_alt = data.get('max_alt')
+        max_alt_airmass = data.get('max_alt_airmass')
+        dark_and_up_time = data.get('dark_and_up_time')
 
     # Determine slot length
     if data.get('slot_length'):
@@ -1029,6 +1038,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'moon_phase' : moon_phase,
         'min_lunar_dist' : min_lunar_dist,
         'max_airmass': max_airmass,
+        'test_airmass': test_airmass,
         'ipp_value': ipp_value,
         'acceptability_threshold': acceptability_threshold,
         'trail_len' : trail_len,

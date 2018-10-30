@@ -139,9 +139,9 @@ class ScheduleBlockForm(forms.Form):
     start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
-    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
-    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size': '20'}))
+    exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5', "onchange": "updatePage()"}))
+    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5', "onchange": "updatePage()"}))
+    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size': '20', "onchange": "updatePage()"}))
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
@@ -154,10 +154,11 @@ class ScheduleBlockForm(forms.Form):
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
-    ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
-    min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
-    acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;', "onchange": "updatePage()"}), required=False)
+    test_airmass = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;', "onchange": "updatePage()"}), required=False)
+    min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;', "onchange": "updatePage()"}), required=False)
+    acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;', "onchange": "updatePage()"}), required=False)
 
     def clean_min_lunar_dist(self):
         if self.cleaned_data['min_lunar_dist'] > 180:
