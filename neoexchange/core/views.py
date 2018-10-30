@@ -784,20 +784,20 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return self.form_invalid(form)
 
     def form_valid(self, form, request):
+        # Recalculate the parameters using new form data
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
         if 'edit' in request.POST:
-            # Recalculate the parameters using new form data
-            data = schedule_check(form.cleaned_data, self.object)
-            new_form = ScheduleBlockForm(data)
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
-        elif 'submit' in request.POST:
+        elif 'submit' in request.POST and new_form.is_valid():
             target = self.get_object()
             username = ''
             if request.user.is_authenticated():
                 username = request.user.get_username()
-            tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
+            tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target)
                 if block_resp:
                     messages.success(self.request, "Block recorded")
                 else:
@@ -807,7 +807,7 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
                 if sched_params.get('error_msg', None):
                     msg += "\nAdditional information:" + sched_params['error_msg']
                 messages.warning(self.request, msg)
-            return super(ScheduleSubmit, self).form_valid(form)
+            return super(ScheduleSubmit, self).form_valid(new_form)
 
     def get_success_url(self):
         return reverse('home')

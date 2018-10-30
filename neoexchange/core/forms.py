@@ -139,9 +139,9 @@ class ScheduleBlockForm(forms.Form):
     start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5', "onchange": "updatePage()"}))
-    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5', "onchange": "updatePage()"}))
-    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size': '20', "onchange": "updatePage()"}))
+    exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
+    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
+    filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size': '20'}))
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
@@ -154,10 +154,10 @@ class ScheduleBlockForm(forms.Form):
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;', "onchange": "updatePage()"}), required=False)
-    ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;', "onchange": "updatePage()"}), required=False)
-    min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;', "onchange": "updatePage()"}), required=False)
-    acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;', "onchange": "updatePage()"}), required=False)
+    max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
 
     def clean_min_lunar_dist(self):
         if self.cleaned_data['min_lunar_dist'] > 180:
@@ -221,6 +221,7 @@ class ScheduleBlockForm(forms.Form):
         return cleaned_filter_pattern
 
     def clean(self):
+        cleaned_data = super(ScheduleBlockForm, self).clean()
         site = self.cleaned_data['site_code']
         spectra = self.cleaned_data['spectroscopy']
         if not fetch_filter_list(site, spectra):
@@ -246,6 +247,7 @@ class ScheduleBlockForm(forms.Form):
         elif self.cleaned_data['period'] is not None and self.cleaned_data['jitter'] is not None:
             if self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
                 raise forms.ValidationError("Jitter must be larger than slot length")
+        return cleaned_data
 
 
 class ScheduleSpectraForm(forms.Form):
