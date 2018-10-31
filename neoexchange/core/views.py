@@ -798,11 +798,13 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
                 block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target)
+                self.success = True
                 if block_resp:
                     messages.success(self.request, "Block recorded")
                 else:
                     messages.warning(self.request, "Record not created")
             else:
+                self.success = False
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
                     msg += "\nAdditional information:" + sched_params['error_msg']
@@ -810,7 +812,10 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return super(ScheduleSubmit, self).form_valid(new_form)
 
     def get_success_url(self):
-        return reverse('home')
+        if self.success:
+            return reverse('home')
+        else:
+            return reverse('target', kwargs={'pk': self.object.id})
 
 
 def schedule_check(data, body, ok_to_schedule=True):
