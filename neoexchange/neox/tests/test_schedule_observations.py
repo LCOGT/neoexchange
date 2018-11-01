@@ -101,9 +101,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -182,9 +182,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -230,9 +230,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -299,9 +299,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -369,10 +369,10 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('Tenerife, Spain (TFN - Z17,Z21; 0.4m)', [option.text for option in site_choices.options])
+        self.assertIn('TFN 0.4m - Z17,Z21; (Tenerife, Spain)', [option.text for option in site_choices.options])
 
         # He tries to use a telescope and site group that are currently unavailable
-        site_choices.select_by_visible_text('Tenerife, Spain (TFN - Z17,Z21; 0.4m)')
+        site_choices.select_by_visible_text('TFN 0.4m - Z17,Z21; (Tenerife, Spain)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')
@@ -442,9 +442,9 @@ class ScheduleObservations(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_date(2015, 4, 20)
         datebox = self.get_item_input_box('id_utc_date')

@@ -27,18 +27,18 @@ from .models import Body, Proposal, Block, StaticSource
 logger = logging.getLogger(__name__)
 
 
-SITES = (('V37', 'McDonald, Texas (ELP - V37; Sinistro)'),
-         ('F65', 'Maui, Hawaii (FTN - F65)'),
-         ('E10', 'Siding Spring, Aust. (FTS - E10)'),
-         ('W86', 'CTIO, Chile (LSC - W85-87; Sinistro)'),
-         ('K92', 'Sutherland, S. Africa (CPT - K91-93; Sinistro)'),
-         ('Q63', 'Siding Spring, Aust. (COJ - Q63-64; Sinistro)'),
-         ('Q58', 'Siding Spring, Aust. (COJ - Q58-59; 0.4m)'),
-         ('Z21', 'Tenerife, Spain (TFN - Z17,Z21; 0.4m)'),
-         ('T04', 'Maui, Hawaii (OGG - T03-04; 0.4m)'),
-         ('W89', 'CTIO, Chile (LSC - W89,W79; 0.4m)'),
-         ('V38', 'McDonald, Texas (ELP - V38; 0.4m)'),
-         ('L09', 'Sutherland, S. Africa (CPT - L09; 0.4m)'))
+SITES = (('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
+         ('V37', 'ELP 1.0m - V37; (McDonald, Texas)'),
+         ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
+         ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
+         ('W89', 'LSC 0.4m - W89,W79; (CTIO, Chile)'),
+         ('V38', 'ELP 0.4m - V38; (McDonald, Texas)'),
+         ('T04', 'OGG 0.4m - T03-04; (Maui, Hawaii)'),
+         ('Q58', 'COJ 0.4m - Q58-59; (Siding Spring, Aust.)'),
+         ('L09', 'CPT 0.4m - L09; (Sutherland, S. Africa)'),
+         ('Z21', 'TFN 0.4m - Z17,Z21; (Tenerife, Spain)'),
+         ('E10', 'FTS 2.0m - E10; (Siding Spring, Aust.)'),
+         ('F65', 'FTN 2.0m - F65; (Maui, Hawaii )'))
 
 
 SPECTRO_SITES = (('F65-FLOYDS', 'Maui, Hawaii (FTN - F65)'),

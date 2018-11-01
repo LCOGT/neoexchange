@@ -4,9 +4,10 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
 from neox.tests.mocks import MockDateTime
-#from datetime import datetime as real_datetime
+# from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
+
 
 class NewVisitorTest(FunctionalTest):
 
@@ -51,7 +52,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 None None None None',]
+        testlines =[u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 None None None None', ]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # he goes to the page from N999r0q and computes the ephemeris
@@ -64,6 +65,10 @@ class NewVisitorTest(FunctionalTest):
 
         datebox = self.get_item_input_box_and_clear('id_utc_date')
         datebox.send_keys('2015-04-21')
+
+        site_choices = Select(self.get_item_input_box('id_site_code'))
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
@@ -92,7 +97,6 @@ class NewVisitorTest(FunctionalTest):
 
         # Satisfied, he goes back to sleep
 
-
     def test_can_compute_ephemeris_for_specific_site(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -106,7 +110,7 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses FTN (F65)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('Maui, Hawaii (FTN - F65)', [option.text for option in site_choices.options])
+        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', [option.text for option in site_choices.options])
 
         # site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
         site_choices.select_by_value("F65")
@@ -144,7 +148,6 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 21 11:45 20 10 40.97 +29 56 52.8 20.4 2.44 89.0 +24 0.10 108 -49 -999 -04:54'
         )
 
-
     def test_can_compute_ephemeris_for_specific_date(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -159,9 +162,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
@@ -203,7 +206,6 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 28 10:30 20 40 38.12 +29 36 31.9 20.6 2.08 93.5 +55 0.72 136 -17 +060 -02:43'
         )
 
-
     def test_can_compute_ephemeris_for_specific_alt_limit(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -218,9 +220,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses CPT (K91)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('CPT 1.0m - K91-93; (Sutherland, S. Africa)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('Sutherland, S. Africa (CPT - K91-93; Sinistro)')
+        site_choices.select_by_visible_text('CPT 1.0m - K91-93; (Sutherland, S. Africa)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
@@ -241,7 +243,6 @@ class NewVisitorTest(FunctionalTest):
         # the default value of 30.0 degrees
         datebox = self.get_item_input_box('id_alt_limit')
         self.assertEqual(datebox.get_attribute('value'), str(30.0))
-
 
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
