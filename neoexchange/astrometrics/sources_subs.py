@@ -1718,7 +1718,7 @@ def parse_filter_file(site, spec, camera_list=None):
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if len(chunks) == 13:
-                if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
+                if (chunks[0] == siteid or siteid == 'XXX') and chunks[2][:-1] == telid[:-1]:
                     filt_list = chunks[12].split(',')
                     for filt in filter_list:
                         if filt in filt_list and filt not in site_filters:

@@ -148,7 +148,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
     logger.debug("Site code/name, lat/long/height=%s %s %f %f %.1f" % (sitecode, site_name, site_long, site_lat, site_hgt))
 
-    if site_name == '?' or sitecode == '500':
+    if site_name == '?' or site_name == 'Geocenter':
         if site_name == '?':
             logger.warning("WARN: No site co-ordinates found, computing for geocenter")
         pvobs = zeros(6)
@@ -387,7 +387,7 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
     the Heliocenter->Observer vector from the Heliocenter->Asteroid vector and
     so we don't need to do this when we form the first 3 elements of matrix."""
 
-    obj_vel = obj_vel * 86400.0
+    obj_vel *= 86400.0
     j2000_vel = zeros(3)
     matrix = zeros(9)
     i = 0
@@ -466,7 +466,9 @@ def format_emp_line(emp_line, site_code):
     # Format time and print out the overall ephemeris
     emp_time = datetime.strftime(emp_line[0], '%Y %m %d %H:%M')
 
-    if str(site_code) == '500':
+    (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
+
+    if site_name == 'Geocenter':
         # Geocentric position, so no altitude. moon parameters, score or hour angle
         geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|N/A|N/A|N/A|N/A|N/A|N/A"
 
@@ -475,7 +477,6 @@ def format_emp_line(emp_line, site_code):
 
     else:
         # Get site and mount parameters
-        (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
         (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(site_code)
 
 #                         Date  RA Dec Mag   Motion P.A  Alt Mphase Msep Malt   Score HA
@@ -762,6 +763,9 @@ def crude_astro_darkness(sitecode, utc_date):
     elif sitecode == 'K91' or sitecode == 'K92' or sitecode == 'K93':
         ad_start = utc_date + timedelta(hours=0, minutes=0)
         ad_end = utc_date + timedelta(hours=4, minutes=39)
+    elif sitecode == '1m0' or sitecode == '0m4' or sitecode == '2m0':
+        ad_start = utc_date + timedelta(hours=0, minutes=0)
+        ad_end = utc_date + timedelta(hours=24, minutes=00)
     else:
         print("Unsupported sitecode", sitecode)
         return None, None
@@ -827,13 +831,14 @@ def accurate_astro_darkness(sitecode, utc_date, solar_pos=False, debug=False):
         print(sunset, sunrise)
 
     if sunrise < sunset:
-        sunrise = sunrise + 1
+        sunrise += 1
     if debug:
         to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent,
             sun_true_long, degrees(omega), sun_app_long, degrees(eps0), eps,
             degrees(sun_app_ra), degrees(sun_app_dec), eqtime, hourangle]
         print(to_return)
-
+    elif site_name == 'Geocenter':
+        to_return = (utc_date, utc_date+timedelta(days=1))
     else:
         to_return = (utc_date+timedelta(days=sunset), utc_date+timedelta(days=sunrise))
 
@@ -1356,7 +1361,7 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(20, 48, 35.54)
         site_hgt = 1804.0
         site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
-    elif site_code == '500':
+    elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0
         site_hgt = 0.0

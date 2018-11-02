@@ -887,7 +887,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Determine filter pattern
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
-    elif data['site_code'] == 'E10' or data['site_code'] == 'F65':
+    elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2m0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
         else:

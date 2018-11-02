@@ -511,3 +511,106 @@ class ScheduleObservations(FunctionalTest):
 
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
+
+    @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
+    def test_schedule_page_Generic_1m(self):
+        MockDateTime.change_date(2015, 4, 20)
+        self.test_login()
+
+        # Bart has heard about a new website for NEOs. He goes to the
+        # page of the first target
+        # (XXX semi-hardwired but the targets link should be being tested in
+        # test_targets_validation.TargetsValidationTest
+        start_url = reverse('target', kwargs={'pk': 1})
+        self.browser.get(self.live_server_url + start_url)
+
+        # He sees a Schedule Observations button
+        link = self.browser.find_element_by_id('schedule-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the Schedule Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(new_url, actual_url)
+
+        # He notices a new selection for the proposal and site code and
+        # chooses the NEO Follow-up Network and ELP (V37)
+        proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
+        self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
+
+        proposal_choices.select_by_visible_text(self.neo_proposal.title)
+
+        site_choices = Select(self.browser.find_element_by_id('id_site_code'))
+        self.assertIn('------------ Any 1.0m ------------', [option.text for option in site_choices.options])
+
+        site_choices.select_by_visible_text('------------ Any 1.0m ------------')
+
+        MockDateTime.change_date(2015, 4, 20)
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
+        datebox.send_keys('2015-04-21')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('single-submit').click()
+
+        # The page refreshes and a series of values for magnitude, speed, slot
+        # length, number and length of exposures appear
+        magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
+        self.assertIn('20.39', magnitude)
+        speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
+        self.assertIn('2.52 "/min', speed)
+        self.assertIn('2.52 "/exp', speed)
+        speed_warn = self.browser.find_element_by_class_name('warning').text
+        self.assertIn('2.52 "/exp', speed_warn)
+        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        self.assertIn('22.5', slot_length)
+        num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
+        self.assertIn('12', num_exp)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('60.0', exp_length)
+        vis = self.browser.find_element_by_id('id_visibility').find_element_by_class_name('kv-value').text
+        self.assertIn('62', vis)
+        self.assertIn('2.0 hrs', vis)
+        moon_sep = self.browser.find_element_by_id('id_moon').find_element_by_class_name('kv-value').text
+        self.assertIn('106.3', moon_sep)
+
+        # Bart wants to change the slot length to less than 1 exposure.
+        slot_length_box = self.browser.find_element_by_name('slot_length')
+        slot_length_box.clear()
+        slot_length_box.send_keys('1')
+        self.browser.find_element_by_id("id_edit_button").click()
+
+        # The page refreshes and we get correct slot length
+        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        self.assertIn('3.5', slot_length)
+
+        # Bart wants to change the max airmass to 1.5 and min moon dist to 160.
+        self.browser.find_element_by_id("advanced-switch").click()
+        airmass_box = self.browser.find_element_by_name('max_airmass')
+        airmass_box.clear()
+        airmass_box.send_keys('1.5')
+        moon_box = self.browser.find_element_by_name('min_lunar_dist')
+        moon_box.clear()
+        moon_box.send_keys('160')
+        self.browser.find_element_by_id("id_edit_button").click()
+
+        # The page refreshes and we get correct hours visible and a warning on moon dist
+        vis = self.browser.find_element_by_id('id_visibility').find_element_by_class_name('kv-value').text
+        self.assertIn('1.5 hrs', vis)
+        moon_warn = self.browser.find_element_by_id('id_moon').find_element_by_class_name('warning').text
+        self.assertIn('106.3', moon_warn)
+
+        # Bart wants to change the max airmass to 1.1 and gets a warning
+        self.browser.find_element_by_id("advanced-switch").click()
+        airmass_box = self.browser.find_element_by_name('max_airmass')
+        airmass_box.clear()
+        airmass_box.send_keys('1.1')
+        self.browser.find_element_by_id("id_edit_button").click()
+        vis = self.browser.find_element_by_id('id_visibility').find_element_by_class_name('warning').text
+        self.assertIn('Target Not Visible', vis)
+
+        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
+        self.assertIn('Schedule this Object', submit)

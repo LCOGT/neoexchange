@@ -27,16 +27,19 @@ from .models import Body, Proposal, Block, StaticSource
 logger = logging.getLogger(__name__)
 
 
-SITES = (('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
+SITES = (('1m0', '------------ Any 1.0m ------------'),
+         ('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
          ('V37', 'ELP 1.0m - V37; (McDonald, Texas)'),
          ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
          ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
+         ('0m4', '------------ Any 0.4m ------------'),
          ('W89', 'LSC 0.4m - W89,W79; (CTIO, Chile)'),
          ('V38', 'ELP 0.4m - V38; (McDonald, Texas)'),
          ('T04', 'OGG 0.4m - T03-04; (Maui, Hawaii)'),
          ('Q58', 'COJ 0.4m - Q58-59; (Siding Spring, Aust.)'),
          ('L09', 'CPT 0.4m - L09; (Sutherland, S. Africa)'),
          ('Z21', 'TFN 0.4m - Z17,Z21; (Tenerife, Spain)'),
+         ('2m0', '------------ Any 2.0m ------------'),
          ('E10', 'FTS 2.0m - E10; (Siding Spring, Aust.)'),
          ('F65', 'FTN 2.0m - F65; (Maui, Hawaii )'))
 

@@ -60,7 +60,7 @@ class NewVisitorTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             link.click()
 
-        # He decides to using the the ephemeris formte
+        # He decides to use the ephemeris form
         inputbox = self.get_item_input_box()
 
         datebox = self.get_item_input_box_and_clear('id_utc_date')
