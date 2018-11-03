@@ -857,13 +857,16 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
         visible = False
         emp_time = x[0]
         current_alt = x[5]
-        if isinstance(emp_time, str):
-            emp_time = datetime.strptime(x[0], '%Y %m %d %H:%M')
-        if isinstance(current_alt, str):
-            current_alt = float(x[6])
-        if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= float(alt_limit):
-            visible = True
-            dark_up_emp.append(x)
+        try:
+            if isinstance(emp_time, str):
+                emp_time = datetime.strptime(x[0], '%Y %m %d %H:%M')
+            if isinstance(current_alt, str):
+                current_alt = float(x[6])
+            if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= float(alt_limit):
+                visible = True
+                dark_up_emp.append(x)
+        except ValueError:
+            return emp
         if debug:
             print(x[0].date(), x[0].time(), (dark_start <= x[0] < dark_end - timedelta(minutes=slot_length)), x[5], alt_limit, visible)
 
@@ -888,8 +891,8 @@ def get_mag_mapping(site_code):
     slot length (in minutes) assuming minimum exposure count is 4. A null
     dictionary is returned if the site name isn't recognized"""
 
-    twom_site_codes = ['F65', 'E10', '2M']
-    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M']
+    twom_site_codes = ['F65', 'E10', '2M', '2M0']
+    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M', '1M0']
     # COJ normally has bad seeing, allow more time
     # Disabled by TAL 2018/8/10 after mirror recoating
 #    bad_onem_site_codes = ['Q63', 'Q64']
@@ -1021,7 +1024,6 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     except MagRangeError:
         max_exp_time = site_max_exp_time
     # pretify max exposure time to nearest 5 seconds
-
     max_exp_time = ceil(max_exp_time/5)*5
 
     exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
@@ -1575,7 +1577,6 @@ def MPC_site_code_to_domes(site):
     """ Returns the mapped value of the MPC site code to LCO Site, Eclosure, and telescope"""
 
     key = cfg.valid_telescope_codes.get(site.upper(), '--')
-
     key = key.split('-')
     siteid = key[0].lower()
     encid = key[1].lower()
@@ -1591,10 +1592,18 @@ def get_sitecam_params(site):
     unrecognized site."""
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']
+    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']
 
     site = site.upper()
-    if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
+    if site == '2M0':
+        site_code = '2M0'
+        setup_overhead = cfg.tel_overhead['twom_setup_overhead']
+        exp_overhead = cfg.inst_overhead['twom_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        max_exp_length = 300.0
+        alt_limit = cfg.tel_alt['twom_alt_limit']
+    elif site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
         site_code = 'F65'
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
@@ -1632,7 +1641,7 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(cfg.tel_field['point4m_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['point4m_alt_limit']
-    elif site in valid_site_codes:
+    elif site in valid_site_codes or site == '1M0':
         setup_overhead = cfg.tel_overhead['onem_setup_overhead']
         exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
         pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
@@ -1836,6 +1845,9 @@ def get_visibility(body_elements, dark_start, dark_end, site_code, step_size='30
     emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, step_size)
     emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
     dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up, step_size)
-    max_alt = compute_max_altitude(emp)
+    try:
+        max_alt = compute_max_altitude(emp)
+    except ValueError:
+        max_alt = None
 
     return dark_and_up_time, max_alt

@@ -1198,10 +1198,9 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
-    location = {
-        'site'            : params['site'].lower(),
-        'telescope_class' : params['pondtelescope'][0:3]
-    }
+    location = {'telescope_class' : params['pondtelescope'][0:3]}
+    if params.get('site', None):
+        location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
         location['observatory'] = 'doma'
@@ -1515,12 +1514,15 @@ def configure_defaults(params):
 
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
-    params['site'] = site_list[params['site_code']]
+    try:
+        params['site'] = site_list[params['site_code']]
+    except KeyError:
+        pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['exp_type'] = 'EXPOSE'
 
-    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] in ['F65', 'E10', '2M0']:
         params['instrument'] = '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
@@ -1533,7 +1535,7 @@ def configure_defaults(params):
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
+    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
@@ -1718,7 +1720,7 @@ def parse_filter_file(site, spec, camera_list=None):
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if len(chunks) == 13:
-                if (chunks[0] == siteid or siteid == 'XXX') and chunks[2][:-1] == telid[:-1]:
+                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
                     filt_list = chunks[12].split(',')
                     for filt in filter_list:
                         if filt in filt_list and filt not in site_filters:

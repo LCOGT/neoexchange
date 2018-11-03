@@ -54,7 +54,11 @@
                     {% else %}
                         <tr id="id_site">
                             <td class="kv-key">Site</td>
-                            <td class="kv-value">{{data.site_code}} <i class="fa fa-arrow-right"></i> {{data.lco_site}} {{data.lco_tel}} ({{data.lco_enc}})</td>
+                            {% if data.lco_site == 'XXX' %}
+                                <td class="kv-value">Any With A {{data.site_code}} Class Telescope </td>
+                            {% else %}
+                                <td class="kv-value">{{data.site_code}} <i class="fa fa-arrow-right"></i> {{data.lco_site}} {{data.lco_tel}} ({{data.lco_enc}})</td>
+                            {% endif %}
                         </tr>
                     {% endif %}
                     <tr id="id_utc_date">
@@ -62,18 +66,34 @@
                         <td class="kv-value">{{ data.utc_date}}</td>
                     </tr>
                     <tr id="id_visibility">
-                        {% if data.vis_time and data.max_alt_airmass < data.max_airmass %}
-                            <td class="kv-key">Hours Visible / Max Altitude</td>
-                            <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt}}&deg</td>
+                        {% if data.max_alt %}
+                            {% if data.vis_time and data.max_alt_airmass < data.max_airmass %}
+                                <td class="kv-key">Hours Visible / Max Altitude</td>
+                                <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt}}&deg</td>
+                            {% else %}
+                                <td class="kv-key">Hours Visible / Max Altitude</td>
+                            <td class="kv-value">
+                                <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                    <span class="warning msgpadded"> Target Not Visible</span>
+                                    <span class="tooltiptext" style="width: 150px;">
+                                        <u>Target is never higher than Required Airmass.</u>
+                                        <br>Max altitude of target during observation window is {{data.max_alt}}&deg (airmass {{data.max_alt_airmass|floatformat:2}}) <br>
+                                    </span></div></td></tr></table></td>
+                            {% endif %}
                         {% else %}
-                            <td class="kv-key">Hours Visible / Max Altitude</td>
-                        <td class="kv-value">
-                            <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
-                                <span class="warning msgpadded"> Target Not Visible</span>
-                                <span class="tooltiptext" style="width: 150px;">
-                                    <u>Target is never higher than Required Airmass.</u>
-                                    <br>Max altitude of target during observation window is {{data.max_alt}}&deg (airmass {{data.max_alt_airmass|floatformat:2}}) <br>
-                                </span></div></td></tr></table></td>
+                            {% if data.vis_time and data.vis_time > 0 %}
+                                <td class="kv-key">Hours Visible Per Site (Max) / Solar Distance</td>
+                                <td class="kv-value">{{ data.vis_time|floatformat:1}} hrs / {{ data.sun_sep|floatformat:1}}&deg</td>
+                            {% else %}
+                                <td class="kv-key">Hours Visible Per Site (Max) / Solar Distance</td>
+                                <td class="kv-value">
+                                <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                    <span class="warning msgpadded"> Target Not Visible</span>
+                                    <span class="tooltiptext" style="width: 150px;">
+                                        <u>Target is never higher than Required Airmass.</u>
+                                        <br>Max altitude of target during observation window is {{data.max_alt}}&deg (airmass {{data.max_alt_airmass|floatformat:2}}) <br>
+                                    </span></div></td></tr></table></td>
+                            {% endif %}
                         {% endif %}
                     </tr>
                 </tbody>

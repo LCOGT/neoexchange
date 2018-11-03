@@ -887,7 +887,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Determine filter pattern
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
-    elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2m0':
+    elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2M0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
         else:
@@ -909,8 +909,15 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Pull out LCO Site, Telescope Class using site_config.py
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
 
+    # calculate visibility
     dark_and_up_time, max_alt = get_visibility(body_elements, dark_start, dark_end, data['site_code'], '30 m', alt_limit=alt_limit)
-    max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
+    sun_ra, sun_dec = accurate_astro_darkness('500', dark_midpoint, solar_pos=True)
+    sun_dist = degrees(S.sla_dsep(ra, dec, sun_ra, sun_dec))
+    if max_alt is not None:
+        max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
+    else:
+        max_alt_airmass = 13
+        dark_and_up_time = abs(ra-sun_ra)*cos(dec)*180/pi/15-(alt_limit+15)/15
 
     # Determine slot length
     if data.get('slot_length'):
@@ -927,6 +934,7 @@ def schedule_check(data, body, ok_to_schedule=True):
                 slot_length = 0.
                 ok_to_schedule = False
     snr = None
+
     if spectroscopy:
         new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
         exp_count = data['exp_count']
@@ -1030,6 +1038,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'max_alt' : max_alt,
         'max_alt_airmass' : max_alt_airmass,
         'vis_time' : dark_and_up_time,
+        'sun_sep' : sun_dist,
         'moon_alt' : moon_alt,
         'moon_sep' : moon_obj_sep,
         'moon_phase' : moon_phase,
