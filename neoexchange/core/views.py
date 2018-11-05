@@ -1489,9 +1489,25 @@ def record_block(tracking_number, params, form_data, target):
                 obstype = Block.OPT_SPECTRA
                 if request_type == 'SIDEREAL':
                     obstype = Block.OPT_SPECTRA_CALIB
+
+            # sort site vs camera
+            site = params.get('site', None)
+            if site is not None:
+                site = site.lower()
+            else:
+                inst = params.get('instrument', None)
+                if inst:
+                    chunks = inst.split('-')
+                    if chunks[-1] == 'SBIG':
+                        site = 'sbg'
+                    elif chunks[-1] == 'SPECTRAL':
+                        site = 'spc'
+                    elif chunks[-1] == 'SINISTRO':
+                        site = 'sin'
+
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
-                             'site'     : params['site'].lower(),
+                             'site'     : site,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'obstype'  : obstype,
                              'groupid'  : params['group_id'],

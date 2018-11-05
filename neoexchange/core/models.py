@@ -89,7 +89,8 @@ SITE_CHOICES = (
                     ('cpt', 'Sutherland'),
                     ('tfn', 'Tenerife'),
                     ('sbg', 'SBIG cameras'),
-                    ('sin', 'Sinistro cameras')
+                    ('sin', 'Sinistro cameras'),
+                    ('spc', 'Spectral cameras')
     )
 
 TAX_SCHEME_CHOICES = (
@@ -501,8 +502,11 @@ class SuperBlock(models.Model):
 
     def get_sites(self):
         qs = Block.objects.filter(superblock=self.id).values_list('site', flat=True).distinct()
-
-        return ", ".join(qs)
+        qs = [q for q in qs if q is not None]
+        if qs:
+            return ", ".join(qs)
+        else:
+            return None
 
     def get_telclass(self):
         qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
@@ -593,7 +597,7 @@ class Block(models.Model):
                       )
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
-    site            = models.CharField(max_length=3, choices=SITE_CHOICES)
+    site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True)
     body            = models.ForeignKey(Body, null=True, blank=True)
     calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     proposal        = models.ForeignKey(Proposal)
