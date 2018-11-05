@@ -883,9 +883,6 @@ class MagRangeError(Exception):
         return self.value
 
 
-BRIGHTEST_ALLOWABLE_MAG = 6
-
-
 def get_mag_mapping(site_code):
     """Defines the site-specific mappings from target magnitude to desired
     slot length (in minutes) assuming minimum exposure count is 4. A null
@@ -913,7 +910,8 @@ def get_mag_mapping(site_code):
                 21   : 25,
                 21.5 : 27.5,
                 22   : 30,
-                23.3 : 35
+                23.3 : 35,
+                99   : 60
                }
     elif site_code in good_onem_site_codes:
         # Mappings for McDonald. Assumes kb74+w
@@ -928,7 +926,8 @@ def get_mag_mapping(site_code):
                 21   : 25,
                 21.5 : 30,
                 22.0 : 40,
-                22.5 : 45
+                22.5 : 45,
+                99   : 60
                }
     elif site_code in bad_onem_site_codes:
         # COJ normally has bad seeing, allow more time
@@ -943,7 +942,8 @@ def get_mag_mapping(site_code):
                 20.5 : 25,
                 21   : 27.5,
                 21.5 : 32.5,
-                22.0 : 35
+                22.0 : 35,
+                99   : 60
                }
     elif site_code in point4m_site_codes:
         mag_mapping = {
@@ -954,7 +954,8 @@ def get_mag_mapping(site_code):
                 19.5 : 25,
                 20   : 27.5,
                 20.5 : 32.5,
-                21.0 : 35
+                21.0 : 35,
+                99   : 60
                }
     else:
         mag_mapping = {}
@@ -964,10 +965,7 @@ def get_mag_mapping(site_code):
 
 def determine_slot_length(mag, site_code, debug=False):
 
-    if mag < BRIGHTEST_ALLOWABLE_MAG:
-        raise MagRangeError("Target too bright")
-
-# Obtain magnitude->slot length mapping dictionary
+    # Obtain magnitude->slot length mapping dictionary
     mag_mapping = get_mag_mapping(site_code)
     if debug:
         print(mag_mapping)
@@ -1027,7 +1025,6 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     max_exp_time = ceil(max_exp_time/5)*5
 
     exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
-
     # Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
     # Reduce exposure count by number of exposures necessary to accomidate molecule overhead

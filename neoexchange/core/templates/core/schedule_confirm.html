@@ -111,7 +111,27 @@
                     </tr>
                      <tr id="id_magnitude">
                         <td class="kv-key">Magnitude</td>
-                        <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
+                         {% if data.magnitude > 22.0 %}
+                            <td class="kv-value">
+                                <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                    <span class="warning msgpadded"> {{ data.magnitude|floatformat:2 }}</span>
+                                    <span class="tooltiptext" style="width: 150px;">
+                                        <u>Target is Faint!</u>
+                                        <br> Target may be too faint to be detected with this telescope. <br>
+                                    </span></div></td></tr></table></td>
+                         {% else %}
+                            {% if data.magnitude < 6.0 %}
+                                <td class="kv-value">
+                                <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                    <span class="warning msgpadded"> {{ data.magnitude|floatformat:2 }}</span>
+                                    <span class="tooltiptext" style="width: 150px;">
+                                        <u>Target is Bright!</u>
+                                        <br> Target is brighter than the recommended magnitude for this telescope. <br>
+                                    </span></div></td></tr></table></td>
+                            {% else %}
+                                <td class="kv-value">{{ data.magnitude|floatformat:2 }}</td>
+                            {% endif %}
+                         {% endif %}
                     </tr>
                     <tr id="id_moon">
                         <td class="kv-key">Lunar Phase / Separation </td>

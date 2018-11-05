@@ -920,7 +920,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         dark_and_up_time = abs(ra-sun_ra)*cos(dec)*180/pi/15-(alt_limit+15)/15
 
     # Determine slot length
-    if data.get('slot_length'):
+    if data.get('slot_length', None):
         slot_length = data.get('slot_length')
     else:
         if spectroscopy:
@@ -931,7 +931,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             try:
                 slot_length = determine_slot_length(magnitude, data['site_code'])
             except MagRangeError:
-                slot_length = 0.
+                slot_length = 60
                 ok_to_schedule = False
     snr = None
 
@@ -941,7 +941,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         exp_length = data.get('exp_length', 1)
     else:
         # Determine exposure length and count
-        if data.get('exp_length'):
+        if data.get('exp_length', None):
             exp_length = data.get('exp_length')
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern)
         else:
