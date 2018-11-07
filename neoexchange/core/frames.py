@@ -184,6 +184,11 @@ def frame_params_from_header(params, block):
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
     rlevel = params.get('RLEVEL', 0)
+    try:
+        rlevel = int(rlevel)
+    except ValueError:
+        logger.warn("Error converting RLEVEL to integer in frame " + frame_params['filename'])
+        rlevel = 0
     frame_extn = "{0:02d}.fits".format(rlevel)
     frame_params['filename'] = frame_params['filename'].replace('00.fits', frame_extn)
     # Correct midpoint for 1/2 the exposure time
