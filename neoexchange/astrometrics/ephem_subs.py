@@ -1418,7 +1418,7 @@ def atmos_params(airless):
 
 
 def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat,
-    obsvr_hgt, dbg=False):
+        obsvr_hgt, dbg=False):
     """Calculate Moon's Azimuth, Altitude (returned in radians).
     No refraction or polar motion is assumed."""
 
@@ -1473,6 +1473,55 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     mphase = (1.0 + cosi) / 2.0
 
     return mphase
+
+
+def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m'):
+    """Calculate the visibility start/end time of a given RA/DEC for a particular site on a particular day."""
+
+    step_size_secs = 300
+    if str(step_size)[-1] == 'm':
+        try:
+            step_size_secs = float(step_size[0:-1]) * 60
+        except ValueError:
+            pass
+    else:
+        step_size_secs = step_size
+
+    ephem_time, sun_set = determine_darkness_times(sitecode, date)
+
+    # Get site and mount parameters
+    (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
+    (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(sitecode)
+
+    rise_time = None
+    set_time = None
+    max_alt = None
+    while ephem_time < sun_set:
+        obs_az, obs_alt = moon_alt_az(ephem_time, app_ra, app_dec, site_long, site_lat, site_hgt)
+        hour_angle = compute_hourangle(ephem_time, site_long, site_lat, site_hgt, app_ra, app_dec, dbg=False)
+        obs_alt = degrees(obs_alt)
+        hour_angle = degrees(hour_angle)
+
+        # calculate max altitude
+        if max_alt is None or obs_alt > max_alt:
+            max_alt = obs_alt
+
+        # Check HA is in limits, skip this slot if not
+        if hour_angle >= ha_pos_limit or hour_angle <= ha_neg_limit:
+            ha_limit = True
+        else:
+            ha_limit = False
+
+        if obs_alt > min_alt and not ha_limit and rise_time is None:
+            rise_time = ephem_time
+        elif (obs_alt < min_alt or ha_limit) and rise_time is not None:
+            break
+        ephem_time = ephem_time + timedelta(seconds=step_size_secs)
+
+    if rise_time is not None:
+        set_time = ephem_time - timedelta(seconds=step_size_secs)
+
+    return rise_time, set_time, max_alt
 
 
 def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec, dbg=False):
@@ -1777,7 +1826,7 @@ def compute_dark_and_up_time(emp, step_size='180 m'):
     """Computes the amount of time a target is up and the
     sky is dark from emp"""
 
-    dark_and_up_time = None
+    dark_and_up_time = 0
     dark_and_up_time_start = None
     dark_and_up_time_end = None
     emp_dark_and_up = []
@@ -1838,13 +1887,39 @@ def compute_sidereal_ephem(ephem_time, elements, site_code):
     return emp_line
 
 
-def get_visibility(body_elements, dark_start, dark_end, site_code, step_size='30 m', alt_limit=30):
-    emp = call_compute_ephem(body_elements, dark_start, dark_end, site_code, step_size)
-    emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
-    dark_and_up_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up, step_size)
-    try:
-        max_alt = compute_max_altitude(emp)
-    except ValueError:
-        max_alt = None
+def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, quick_n_dirty=True, body_elements=None):
+    """Calculate hours of visibility and max altitude for an object over an observing window"""
 
+    # For generic sites, include northern and southern site for visibility calculation
+    if site_code == '1M0':
+        site_list = ['V37', 'W85']
+    elif site_code == '2M0':
+        site_list = ['F65', 'E10']
+    elif site_code == '0M4':
+        site_list = ['V38', 'W89']
+    else:
+        site_list = [site_code]
+
+    dark_and_up_time = 0
+    max_alt = 0
+    for site in site_list:
+        if quick_n_dirty:
+            start_time, end_time, test_alt = target_rise_set(date, ra, dec, site, alt_limit, step_size)
+            if start_time and end_time:
+                vis_time = (end_time-start_time).total_seconds()/3600.0
+            else:
+                vis_time = 0
+        else:
+            dark_start, dark_end = determine_darkness_times(site, date)
+            emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size)
+            emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
+            vis_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up, step_size)
+            try:
+                test_alt = compute_max_altitude(emp)
+            except ValueError:
+                test_alt = 0
+        if vis_time > dark_and_up_time:
+            dark_and_up_time = vis_time
+        if test_alt > max_alt:
+            max_alt = test_alt
     return dark_and_up_time, max_alt

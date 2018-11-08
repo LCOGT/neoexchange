@@ -910,14 +910,12 @@ def schedule_check(data, body, ok_to_schedule=True):
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
 
     # calculate visibility
-    dark_and_up_time, max_alt = get_visibility(body_elements, dark_start, dark_end, data['site_code'], '30 m', alt_limit=alt_limit)
-    sun_ra, sun_dec = accurate_astro_darkness('500', dark_midpoint, solar_pos=True)
-    sun_dist = degrees(S.sla_dsep(ra, dec, sun_ra, sun_dec))
+    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '30 m', alt_limit, True, body_elements)
     if max_alt is not None:
         max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
     else:
         max_alt_airmass = 13
-        dark_and_up_time = abs(ra-sun_ra)*cos(dec)*180/pi/15-(alt_limit+15)/15
+        dark_and_up_time = 0
 
     # Determine slot length
     if data.get('slot_length', None):
@@ -1038,7 +1036,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         'max_alt' : max_alt,
         'max_alt_airmass' : max_alt_airmass,
         'vis_time' : dark_and_up_time,
-        'sun_sep' : sun_dist,
         'moon_alt' : moon_alt,
         'moon_sep' : moon_obj_sep,
         'moon_phase' : moon_phase,
