@@ -140,7 +140,7 @@ def create_frame(params, block=None, frameid=None):
 
 def frame_params_from_header(params, block):
     # In these cases we are parsing the FITS header
-    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
+    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', ''), params.get('ENCID', ''), params.get('TELID', ''))
     spectro_obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
