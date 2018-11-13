@@ -294,7 +294,12 @@
                   <td class="kv-key">Acceptability Threshold (%)</td>
                   <td class="kv-value">{{ form.acceptability_threshold }}</td>
               </tr>
-
+              {% if data.spectroscopy %}
+              <tr id="id_ag_exp_time">
+                  <td class="kv-key">GuideCam Exposure time (s)</td>
+                  <td class="kv-value">{{ form.ag_exp_time }}</td>
+              </tr>
+              {% endif %}
           </table>
           </div>
         {% endif%}

@@ -949,9 +949,10 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # determine stellar trailing
     if spectroscopy:
-        ag_exp_time = 10
+        ag_exp_time = data.get('ag_exp_time', 10)
         trail_len = determine_star_trails(speed, ag_exp_time)
     else:
+        ag_exp_time = None
         trail_len = determine_star_trails(speed, exp_length)
     if lco_site_code[-4:-1].upper() == "0M4":
         typical_seeing = 3.0
@@ -1045,6 +1046,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'min_lunar_dist' : min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,
+        'ag_exp_time': ag_exp_time,
         'acceptability_threshold': acceptability_threshold,
         'trail_len' : trail_len,
         'typical_seeing' : typical_seeing,
@@ -1154,7 +1156,8 @@ def schedule_submit(data, body, username):
               'max_airmass' : data.get('max_airmass', 1.74),
               'ipp_value' : data.get('ipp_value', 1),
               'min_lunar_distance' : data.get('min_lunar_dist', 30),
-              'acceptability_threshold' : data.get('acceptability_threshold', 90)
+              'acceptability_threshold' : data.get('acceptability_threshold', 90),
+              'ag_exp_time': data.get('ag_exp_time', 10)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']

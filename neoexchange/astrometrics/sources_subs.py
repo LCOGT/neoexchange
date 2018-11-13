@@ -1309,7 +1309,7 @@ def make_molecule(params, exp_filter):
         molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
         molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['ag_exp_time'] = 10
+        molecule['ag_exp_time'] = params['ag_exp_time']
         if 'source_type' in params:  # then Sidereal target (use smaller window)
             molecule['acquire_radius_arcsec'] = 5.0
         else:
@@ -1530,6 +1530,7 @@ def configure_defaults(params):
             params['exp_type'] = 'SPECTRUM'
             params['instrument'] = '2M0-FLOYDS-SCICAM'
             params['binning'] = 1
+            # params['ag_exp_time'] = 10
             if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
                 params['calibsrc_exptime'] = 60.0
             if params.get('filter', None):

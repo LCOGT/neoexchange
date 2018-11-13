@@ -148,7 +148,7 @@ class ScheduleBlockForm(forms.Form):
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right;'}))
+    group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available;'}))
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
@@ -161,6 +161,7 @@ class ScheduleBlockForm(forms.Form):
     ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
 
     def clean_min_lunar_dist(self):
         if self.cleaned_data['min_lunar_dist'] > 180:
@@ -177,6 +178,14 @@ class ScheduleBlockForm(forms.Form):
             return 0
         else:
             return self.cleaned_data['acceptability_threshold']
+
+    def clean_ag_exp_time(self):
+        if self.cleaned_data['ag_exp_time'] is not None and self.cleaned_data['ag_exp_time'] < 0.1:
+            return 0.1
+        elif self.cleaned_data['ag_exp_time'] is None:
+            return None
+        else:
+            return self.cleaned_data['ag_exp_time']
 
     def clean_ipp_value(self):
         if self.cleaned_data['ipp_value'] < 0.5:
