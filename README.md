@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.6
+Add Generic Telescope Classes
+
 ### 2.7.5
 Update the scheduling interface to allow for more options
 * Display UT time on website
@@ -14,7 +17,7 @@ Update the scheduling interface to allow for more options
 * Adjust Max Airmass
 * Adjust IPP
 * Adjust Minimum Moon Distance
-* adjust Acceptability Threshold
+* Adjust Acceptability Threshold
 
 ### 2.7.4
 
