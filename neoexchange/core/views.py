@@ -994,14 +994,17 @@ def schedule_check(data, body, ok_to_schedule=True):
         total_time = timedelta(seconds=slot_length*60.0) * total_requests
         total_time = total_time.total_seconds()/3600.0
 
-    suffix = datetime.strftime(utc_date, '%Y%m%d')
-    if period and jitter:
-        suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
-    elif spectroscopy:
-        suffix += "_spectra"
-    if data.get('too_mode', False) is True:
-        suffix += '_ToO'
-    group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+    if data.get('group_id', None):
+        group_id = data.get('group_id')
+    else:
+        suffix = datetime.strftime(utc_date, '%Y%m%d')
+        if period and jitter:
+            suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        elif spectroscopy:
+            suffix += "_spectra"
+        if data.get('too_mode', False) is True:
+            suffix += '_ToO'
+        group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
 
     resp = {
         'target_name': body.current_name(),

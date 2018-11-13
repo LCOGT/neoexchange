@@ -46,6 +46,10 @@
                         <td class="kv-key">Proposal</td>
                         <td class="kv-value">{{ data.proposal_code }}</td>
                     </tr>
+                    <tr id="id_group_id">
+                        <td class="kv-key">Group ID</td>
+                        <td class="kv-value">{{ form.group_id }}</td>
+                    </tr>
                     {% if data.instrument_code %}
                         <tr id="id_site">
                             <td class="kv-key">Site/Instrument</td>
@@ -290,6 +294,7 @@
                   <td class="kv-key">Acceptability Threshold (%)</td>
                   <td class="kv-value">{{ form.acceptability_threshold }}</td>
               </tr>
+
           </table>
           </div>
         {% endif%}
