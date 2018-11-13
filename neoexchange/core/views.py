@@ -60,7 +60,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
+    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -993,9 +993,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         total_time = timedelta(seconds=slot_length*60.0) * total_requests
         total_time = total_time.total_seconds()/3600.0
 
-    if data.get('group_id', None):
-        group_id = data.get('group_id')
-    else:
+    # Create Group ID
+    group_id = validate_text(data.get('group_id', None))
+
+    if not group_id:
         suffix = datetime.strftime(utc_date, '%Y%m%d')
         if period and jitter:
             suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))

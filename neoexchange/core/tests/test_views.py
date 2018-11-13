@@ -513,6 +513,7 @@ class TestClean_NEOCP_Object(TestCase):
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
+
 class TestCheck_for_block(TestCase):
 
     def setUp(self):

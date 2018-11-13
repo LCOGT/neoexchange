@@ -735,6 +735,24 @@ def validate_packcode(packcode):
     return True
 
 
+def validate_text(text_string):
+    valid_symbols = '`~!@#$%^&*()_+- ={}|[]\:;<,>.?/"'+"'"
+    valid_characters = 'abcdefghijklmnopqrstuvwxyz'
+    if text_string is None:
+        return ''
+
+    out_string = ''
+    for char in text_string:
+        if char.isdigit():
+            out_string += char
+        elif char in valid_characters or char in valid_characters.upper():
+            out_string += char
+        elif char in valid_symbols:
+            out_string += char
+
+    return out_string
+
+
 def packed_to_normal(packcode):
     """Converts MPC packed provisional designations e.g. K10V01F to unpacked
     normal desigination i.e. 2010 VF1 including packed 5 digit number designations
@@ -1107,13 +1125,14 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         return []
     return NASA_targets
 
+
 def get_site_status(site_code):
-    '''Queries the Valhalla telescope states end point to determine if the
+    """Queries the Valhalla telescope states end point to determine if the
     passed <site_code> is available for scheduling.
     Returns True if the site/telescope is available for scheduling and
     assumed True if the status can't be determined. Otherwise if the
     last event for the telescope can be found and it does not show
-    'AVAILABLE', then the good_to_schedule status is set to False.'''
+    'AVAILABLE', then the good_to_schedule status is set to False."""
 
     good_to_schedule = True
     reason = ''
@@ -2075,6 +2094,7 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
     else:
         logger.warning("Passed page object was not a BeautifulSoup object")
     return flux_standards
+
 
 def read_solar_standards(standards_file):
 
