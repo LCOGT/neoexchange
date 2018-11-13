@@ -1647,9 +1647,8 @@ def submit_block_to_scheduler(elements, params):
         return False, params
 
     if resp.status_code not in [200, 201]:
-        msg = "Parsing error"
-        logger.error(msg)
         logger.error(resp.json())
+        msg = "Parsing error"
         try:
             error_json = resp.json()
             error_msg = error_json.get('requests', msg)
@@ -1662,6 +1661,7 @@ def submit_block_to_scheduler(elements, params):
         except AttributeError:
             msg = "Unable to decode response from Valhalla"
         params['error_msg'] = msg
+        logger.error(msg)
         return False, params
 
     response = resp.json()
