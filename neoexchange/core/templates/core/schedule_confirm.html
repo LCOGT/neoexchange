@@ -196,7 +196,11 @@
                     </tr>
                     <tr id="id_slot_length">
                         <td class="kv-key">Slot length</td>
-                        <td class="kv-value">{{ form.slot_length }} mins</td>
+                        {% if data.spectroscopy %}
+                            <td class="kv-value">{{ data.slot_length }} mins</td>
+                        {% else %}
+                            <td class="kv-value">{{ form.slot_length }} mins</td>
+                        {% endif %}
                     </tr>
                     <tr id="id_no_of_exps">
                         <td class="kv-key">No. of exposures</td>

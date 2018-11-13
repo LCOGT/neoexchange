@@ -143,7 +143,7 @@ class ScheduleBlockForm(forms.Form):
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
-    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
+    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size': '20'}))
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())

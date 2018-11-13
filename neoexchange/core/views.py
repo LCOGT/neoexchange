@@ -921,22 +921,20 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('slot_length', None):
         slot_length = data.get('slot_length')
     else:
-        if spectroscopy:
-            slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
-            slot_length /= 60.0
-            slot_length = ceil(slot_length)
-        else:
-            try:
-                slot_length = determine_slot_length(magnitude, data['site_code'])
-            except MagRangeError:
-                slot_length = 60
-                ok_to_schedule = False
+        try:
+            slot_length = determine_slot_length(magnitude, data['site_code'])
+        except MagRangeError:
+            slot_length = 60
+            ok_to_schedule = False
     snr = None
 
     if spectroscopy:
         new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
         exp_count = data['exp_count']
         exp_length = data.get('exp_length', 1)
+        slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
+        slot_length /= 60.0
+        slot_length = ceil(slot_length)
     else:
         # Determine exposure length and count
         if data.get('exp_length', None):
