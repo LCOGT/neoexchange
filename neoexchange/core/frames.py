@@ -140,13 +140,21 @@ def create_frame(params, block=None, frameid=None):
 
 def frame_params_from_header(params, block):
     # In these cases we are parsing the FITS header
-    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
+    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', ''), params.get('ENCID', ''), params.get('TELID', ''))
     spectro_obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
+
+    # Extract and convert reduction level to integer
+    rlevel = params.get('RLEVEL', 0)
+    try:
+        rlevel = int(rlevel)
+    except ValueError:
+        logger.warn("Error converting RLEVEL to integer in frame " + frame_params['filename'])
+        rlevel = 0
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
-                     'frametype': params.get('RLEVEL', 0),
+                     'frametype': rlevel,
                      'block'    : block,
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
@@ -183,7 +191,6 @@ def frame_params_from_header(params, block):
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
-    rlevel = params.get('RLEVEL', 0)
     frame_extn = "{0:02d}.fits".format(rlevel)
     frame_params['filename'] = frame_params['filename'].replace('00.fits', frame_extn)
     # Correct midpoint for 1/2 the exposure time
