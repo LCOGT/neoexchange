@@ -942,6 +942,7 @@ def schedule_check(data, body, ok_to_schedule=True):
             slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern)
         else:
             exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
 

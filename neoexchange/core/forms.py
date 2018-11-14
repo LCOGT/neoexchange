@@ -163,6 +163,12 @@ class ScheduleBlockForm(forms.Form):
     acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
     ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
 
+    def clean_exp_length(self):
+        if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:
+            return 0.1
+        else:
+            return self.cleaned_data['exp_length']
+
     def clean_min_lunar_dist(self):
         if self.cleaned_data['min_lunar_dist'] > 180:
             return 180
@@ -254,8 +260,6 @@ class ScheduleBlockForm(forms.Form):
                 raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
-        elif self.cleaned_data['exp_length'] < 0.1:
-            raise forms.ValidationError("Exposure length is too short")
         elif self.cleaned_data['period'] is not None and self.cleaned_data['jitter'] is not None:
             if self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
                 raise forms.ValidationError("Jitter must be larger than slot length")

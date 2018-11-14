@@ -901,7 +901,7 @@ def get_mag_mapping(site_code):
     if site_code in twom_site_codes:
         # Mappings for FTN/FTS. Assumes Spectral+Solar filter
         mag_mapping = {
-                17   : 5.5,
+                17   : 6.0,
                 17.5 : 7.5,
                 18   : 10,
                 19   : 15,
@@ -1033,24 +1033,21 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     # Safety while loop for edge cases
     while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
         exp_count -= 1
-
     if exp_count < min_exp_count:
         exp_count = min_exp_count
         exp_time = (slot_length - setup_overhead - molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)) - (exp_overhead * float(exp_count))) / exp_count
         logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count))
     logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" %
         ( slot_length/60.0, slot_length, exp_count, exp_time))
-    if exp_time is None or exp_time <= 0.0 or exp_count < 1:
+    if exp_time is None or exp_time <= 0.1 or exp_count < 1:
         logger.debug("Invalid exposure count")
-        exp_time = None
-        exp_count = None
-
+        exp_time = 0.1
+        exp_count = min_exp_count
     return exp_time, exp_count
 
 
-def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern):
+def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1):
     exp_count = None
-    min_exp_count = 1
 
     (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
 
