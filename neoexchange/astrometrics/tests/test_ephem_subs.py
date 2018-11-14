@@ -1327,7 +1327,7 @@ class TestDetermineSlotLength(TestCase):
         site_code = '2m'
         name = 'WH2845B'
         mag = 3.1
-        expected_length = 5.5
+        expected_length = 6.0
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
 
@@ -1668,8 +1668,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = None
-        expected_expcount = None
+        expected_exptime = 0.1
+        expected_expcount = 4
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
