@@ -620,6 +620,10 @@ class ScheduleObservations(FunctionalTest):
         MockDateTime.change_date(2015, 4, 20)
         self.test_login()
 
+        # make sure works for very bright targets too.
+        self.body.abs_mag = 10
+        self.body.save()
+
         # Bart has heard about a new website for NEOs. He goes to the
         # page of the first target
         # (XXX semi-hardwired but the targets link should be being tested in
@@ -661,30 +665,28 @@ class ScheduleObservations(FunctionalTest):
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
-        self.assertIn('20.40', magnitude)
+        self.assertIn('9.40', magnitude)
         speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
         self.assertIn('2.49 "/min', speed)
-        self.assertIn('3.12 "/exp', speed)
-        speed_warn = self.browser.find_element_by_class_name('warning').text
-        self.assertIn('3.12 "/exp', speed_warn)
+        self.assertIn('0.27 "/exp', speed)
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
-        self.assertIn('22.5', slot_length)
+        self.assertIn('6', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('11', num_exp)
+        self.assertIn('4', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('75.0', exp_length)
+        self.assertIn('6.5', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon').find_element_by_class_name('kv-value').text
         self.assertIn('108.4', moon_sep)
 
-        # Bart wants to change the slot length to less than 1 exposure.
-        slot_length_box = self.browser.find_element_by_name('slot_length')
-        slot_length_box.clear()
-        slot_length_box.send_keys('1')
+        # Bart wants longer exposures
+        exp_length_box = self.browser.find_element_by_name('exp_length')
+        exp_length_box.clear()
+        exp_length_box.send_keys('750')
         self.browser.find_element_by_id("id_edit_button").click()
-
-        # The page refreshes and we get correct slot length
+        speed_warn = self.browser.find_element_by_class_name('warning').text
+        self.assertIn('31.16 "/exp', speed_warn)
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
-        self.assertIn('6.0', slot_length)
+        self.assertIn('17.5', slot_length)
 
         # Bart wants to change the min moon dist to 160.
         self.browser.find_element_by_id("advanced-switch").click()
