@@ -183,17 +183,19 @@
                         <td class="kv-value" id="">{{ form.filter_pattern }}</td>
                     </tr>
                     {% endif %}
-                    <tr id="id_pattern_iterations">
-                        <td class="kv-key">Pattern Iterations</td>
-                        {% if data.pattern_iterations < 1 %}
-                        <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
-                            <span class="warning msgpadded">{{ data.pattern_iterations }}</span>
-                            <span class="tooltiptext" style="width: 150px;"><u>Too Few Exposures To Finish Sequence</u>
-                            <br>Consider Increasing Slot Length <br></span></div></td></tr></table></td>
-                        {% else %}
-                        <td class="kv-value">{{ data.pattern_iterations }}</td>
-                        {% endif %}
-                    </tr>
+                    {% if data.pattern_iterations != data.exp_count %}
+                        <tr id="id_pattern_iterations">
+                            <td class="kv-key">Pattern Iterations</td>
+                            {% if data.pattern_iterations < 1 %}
+                            <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded">{{ data.pattern_iterations }}</span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Too Few Exposures To Finish Sequence</u>
+                                <br>Consider Increasing Slot Length <br></span></div></td></tr></table></td>
+                            {% else %}
+                            <td class="kv-value">{{ data.pattern_iterations }}</td>
+                            {% endif %}
+                        </tr>
+                    {% endif %}
                     <tr id="id_slot_length">
                         <td class="kv-key">Slot length</td>
                         {% if data.spectroscopy %}
@@ -284,7 +286,13 @@
           <table class="keyvalue-table">
               <tr id="id_max_arimass">
                   <td class="kv-key">Max Acceptable Airmass</td>
-                  <td class="kv-value">{{ form.max_airmass }}</td>
+                  <td >
+                      <table align="left"  style="margin: 0px"><tr><td class="kv-value">
+                            <div class="tooltip">{{ form.max_airmass }}
+                            <span class="tooltiptext" style="left:60%; width:75px;"><u>Altitude:</u>
+                            <span name="min_alt">{{data.max_airmass|get_alt_from_airmass|floatformat:1}}&deg</span></span></div></td><td></td></tr>
+                      </table>
+                  </td>
               </tr>
               <tr id="id_min_lunar_dist">
                   <td class="kv-key">Minimum Lunar Separation (&deg)</td>

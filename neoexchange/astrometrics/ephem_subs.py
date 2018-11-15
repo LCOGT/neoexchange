@@ -1884,6 +1884,12 @@ def compute_sidereal_ephem(ephem_time, elements, site_code):
     return emp_line
 
 
+def get_alt_from_airmass(airmass):
+    """Return the equivalent altitude (in degrees) of a given airmass."""
+    altitude = degrees((pi/2.0) - acos(1/airmass))
+    return altitude
+
+
 def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, quick_n_dirty=True, body_elements=None):
     """Calculate hours of visibility and max altitude for an object over an observing window"""
 

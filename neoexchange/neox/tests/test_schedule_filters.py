@@ -2,6 +2,7 @@ from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import NoSuchElementException
 from mock import patch
 from neox.tests.mocks import MockDateTime, mock_lco_authenticate, mock_fetch_filter_list
 from unittest import skipIf
@@ -126,8 +127,8 @@ class ScheduleObservations(FunctionalTest):
         self.assertEqual(expected_filters, filter_help)
 
         # There is a spot to input the number of iterations (default = number of exposures)
-        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
-        self.assertIn(num_exp, pattern_iterations)
+        with self.assertRaises(NoSuchElementException):
+            pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
 
         # Updating filter pattern updates the number of iterations
         iterations_expected = u'3.33'

@@ -57,7 +57,7 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
     determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
-    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep
+    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
     fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text
@@ -904,7 +904,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # Get maximum airmass
     max_airmass = data.get('max_airmass', 1.74)
-    alt_limit = degrees((pi/2.0) - acos(1/max_airmass))
+    alt_limit = get_alt_from_airmass(max_airmass)
 
     # Pull out LCO Site, Telescope Class using site_config.py
     lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
