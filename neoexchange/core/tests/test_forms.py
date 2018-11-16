@@ -225,6 +225,8 @@ class TestScheduleForm(TestCase):
         self.assertIn('value="V37"', form.as_p())
         self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', form.as_p())
         self.assertIn('value="F65"', form.as_p())
+        self.assertIn('FTN 2.0m CometCam- F65; (Maui, Hawaii )', form.as_p())
+        self.assertIn('value="F65-COMETCAM"', form.as_p())
         self.assertIn('FTS 2.0m - E10; (Siding Spring, Aust.)', form.as_p())
         self.assertIn('value="E10"', form.as_p())
         self.assertIn('LSC 1.0m - W85-87; (CTIO, Chile)', form.as_p())
