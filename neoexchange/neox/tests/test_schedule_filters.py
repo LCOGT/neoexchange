@@ -120,7 +120,7 @@ class ScheduleObservations(FunctionalTest):
         # there is an option to input a filter Pattern with a default value of 'w'
         filter_pattern = self.browser.find_element_by_name('filter_pattern').get_attribute("value")
         self.assertIn('w', filter_pattern)
-        
+
         # There is a help option listing the proper input format and available filters
         expected_filters = 'air, ND, U, B, V, R, I, B*ND, V*ND, R*ND, I*ND, up, gp, rp, ip, zs, Y, w'
         filter_help = self.browser.find_element_by_id('id_filter_pattern').find_element_by_class_name('kv-key').get_attribute("name")
@@ -135,6 +135,177 @@ class ScheduleObservations(FunctionalTest):
         filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
         filter_pattern_box.clear()
         filter_pattern_box.send_keys('V,I,R')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
+        self.assertEqual(iterations_expected, pattern_iterations)
+
+        # updating the slot length increases the number of iterations
+        iterations_expected = u'17.0'
+        slot_length_box = self.browser.find_element_by_name('slot_length')
+        slot_length_box.clear()
+        slot_length_box.send_keys('102')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+        pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
+        self.assertEqual(iterations_expected, pattern_iterations)
+
+        # cannot update filter pattern with unacceptable filters with incorrect syntax
+        filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
+        filter_pattern_box.clear()
+        filter_pattern_box.send_keys('42,V,v,W,w,gp fg, hj, k-t/g/h')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
+        # The page refreshes and we get an error
+        error_msg = self.browser.find_element_by_class_name('errorlist').text
+        self.assertIn('42,v,W,fg,hj,k-t,g,h are not acceptable filters at this site.', error_msg)
+
+@patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+@patch('core.forms.fetch_filter_list', mock_fetch_filter_list)
+class ScheduleCometObservations(FunctionalTest):
+
+    def setUp(self):
+        # Create a user to test login
+        self.insert_test_proposals()
+        self.username = 'bennis'
+        self.password = 'dodewits'
+        self.email = 'bennis@university.org'
+        self.user = User.objects.create_user(username=self.username, password=self.password, email=self.email)
+        self.user.first_name = 'Bennis'
+        self.user.last_name = 'Dodewits'
+        self.user.is_active = 1
+        self.user.save()
+        # Add user to the right proposal
+        update_proposal_permissions(self.user, [{'code': self.test_proposal.code}])
+        super(ScheduleCometObservations, self).setUp()
+
+        # Create a comet target
+        params = {  'name' : '46P',
+            'abs_mag'       : 14.0,
+            'slope'         : 6.0,
+            'epochofel'     : datetime(2018, 8, 10, 00, 00, 00),
+            'argofperih'    : 356.33056,
+            'longascnode'   :  82.16371,
+            'orbinc'        : 11.74556,
+            'eccentricity'  : 0.6585260,
+            'perihdist'     : 1.0553585,
+            'epochofperih'  : datetime(2018, 12, 12, 22, 18, 11),
+            'source_type'   : 'C',
+            'elements_type' : 'MPC_MINOR_PLANET',
+            'active'        : True,
+            'origin'        : 'M',
+            'ingest'        : '2018-05-11 17:20:00',
+            'score'         : 90,
+            'discovery_date': '1954-09-08 12:00:00',
+            'update_time'   : '2018-11-18 05:00:00',
+            'num_obs'       : 1504,
+            'arc_length'    : 4046,
+            'not_seen'      : 0.42,
+            'updated'       : True,
+            }
+        self.comet, created = Body.objects.get_or_create(pk=2, **params)
+
+    def tearDown(self):
+        self.user.delete()
+        super(ScheduleCometObservations, self).tearDown()
+
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def login(self):
+        test_login = self.client.login(username=self.username, password=self.password)
+        self.assertEqual(test_login, True)
+
+# Monkey patch the datetime used by forms otherwise it fails with 'window in the past'
+# TAL: Need to patch the datetime in views also otherwise we will get the wrong
+# semester and window bounds.
+
+    @patch('core.forms.datetime', MockDateTime)
+    @patch('core.views.datetime', MockDateTime)
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
+    def test_can_schedule_observations(self):
+        self.browser.get('%s%s' % (self.live_server_url, '/accounts/login/'))
+        username_input = self.browser.find_element_by_id("username")
+        username_input.send_keys(self.username)
+        password_input = self.browser.find_element_by_id("password")
+        password_input.send_keys(self.password)
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
+        # Wait until response is recieved
+        self.wait_for_element_with_id('page')
+        # Bennis has heard about a new camera for observing comets.
+        # He goes to the page of the first comet target
+        # (XXX semi-hardwired but the targets link should be being tested in
+        # test_targets_validation.TargetsValidationTest
+        start_url = reverse('target', kwargs={'pk': 2})
+        self.browser.get(self.live_server_url + start_url)
+
+        # He sees a Schedule Observations button
+        link = self.browser.find_element_by_id('schedule-obs')
+        target_url = "{0}{1}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 2}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+
+        # He clicks the link to go to the Schedule Observations page
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        self.browser.implicitly_wait(10)
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), target_url)
+
+        # He notices a new selection for the proposal and site code and
+        # chooses the Test Proposal and FTN (F65)
+        proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
+        self.assertIn(self.test_proposal.title, [option.text for option in proposal_choices.options])
+
+        proposal_choices.select_by_visible_text(self.test_proposal.title)
+
+        site_choices = Select(self.browser.find_element_by_id('id_site_code'))
+        self.assertIn('FTN 2.0m CometCam - F65; (Maui, Hawaii)', [option.text for option in site_choices.options])
+
+        site_choices.select_by_visible_text('FTN 2.0m CometCam - F65; (Maui, Hawaii)')
+
+        MockDateTime.change_date(2018, 11, 20)
+        datebox = self.get_item_input_box('id_utc_date')
+        datebox.clear()
+        datebox.send_keys('2018-11-20')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('single-submit').click()
+
+        # The page refreshes and a series of values for magnitude, speed, slot
+        # length, number and length of exposures appear
+        magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
+        self.assertIn('20.39', magnitude)
+        speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
+        self.assertIn('2.52 "/min', speed)
+        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        self.assertIn('22.5', slot_length)
+        num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
+        self.assertIn('12', num_exp)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('60.0', exp_length)
+
+        # At this point, a 'Schedule this object' button appears
+        submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
+        self.assertIn('Schedule this Object', submit)
+
+        # there is an option to input a filter Pattern with a default value of 'rp'
+        filter_pattern = self.browser.find_element_by_name('filter_pattern').get_attribute("value")
+        self.assertIn('rp', filter_pattern)
+
+        # There is a help option listing the proper input format and available filters
+        expected_filters = 'air, OH, C2, C3, CN, NH2, CR, B, V, R, gp, rp, ip, zs'
+        filter_help = self.browser.find_element_by_id('id_filter_pattern').find_element_by_class_name('kv-key').get_attribute("name")
+        self.assertEqual(expected_filters, filter_help)
+
+        # There is a spot to input the number of iterations (default = number of exposures)
+        with self.assertRaises(NoSuchElementException):
+            pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
+
+        # Updating filter pattern updates the number of iterations
+        iterations_expected = u'3.33'
+        filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
+        filter_pattern_box.clear()
+        filter_pattern_box.send_keys('C2,C3,CN,CR')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
         pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
