@@ -192,7 +192,7 @@ class ScheduleCometObservations(FunctionalTest):
             'perihdist'     : 1.0553585,
             'epochofperih'  : datetime(2018, 12, 12, 22, 18, 11),
             'source_type'   : 'C',
-            'elements_type' : 'MPC_MINOR_PLANET',
+            'elements_type' : 'MPC_COMET',
             'active'        : True,
             'origin'        : 'M',
             'ingest'        : '2018-05-11 17:20:00',
