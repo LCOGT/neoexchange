@@ -115,9 +115,9 @@ class ScheduleCadence(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
@@ -150,13 +150,13 @@ class ScheduleCadence(FunctionalTest):
         magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
         self.assertIn('20.39', magnitude)
         speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
-        self.assertIn("2.63 '/min", speed)
+        self.assertIn('2.63 "/min', speed)
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
         self.assertIn('13', num_exp)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('55.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('55.0', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').find_element_by_class_name('kv-value').text
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
@@ -232,9 +232,9 @@ class ScheduleCadence(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
@@ -266,13 +266,13 @@ class ScheduleCadence(FunctionalTest):
         magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
         self.assertIn('20.39', magnitude)
         speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
-        self.assertIn("2.63 '/min", speed)
+        self.assertIn('2.63 "/min', speed)
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
         self.assertIn('13', num_exp)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('55.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('55.0', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').find_element_by_class_name('kv-value').text
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
@@ -341,9 +341,9 @@ class ScheduleCadence(FunctionalTest):
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
         site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
         datebox = self.get_item_input_box('id_start_time')
@@ -375,13 +375,13 @@ class ScheduleCadence(FunctionalTest):
         magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
         self.assertIn('20.39', magnitude)
         speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
-        self.assertIn("2.63 '/min", speed)
+        self.assertIn('2.63 "/min', speed)
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
         self.assertIn('13', num_exp)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('55.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('55.0', exp_length)
         jitter = self.browser.find_element_by_id('id_jitter').find_element_by_class_name('kv-value').text
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_id('id_period').find_element_by_class_name('kv-value').text
@@ -396,6 +396,8 @@ class ScheduleCadence(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
 
-        # The page refreshes and we get an error
-        error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('The slot length is too short', error_msg)
+        # The page refreshes and slot length is automatically adjusted to minimum possible length
+        new_slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        self.assertIn('3.5', new_slot_length)
+        warn_num = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('warning').text
+        self.assertIn('1', warn_num)

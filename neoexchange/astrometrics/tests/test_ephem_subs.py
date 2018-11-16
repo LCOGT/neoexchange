@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime
-from math import radians, degrees
+from math import radians, degrees, floor
 import os
 import tempfile
 from glob import glob
@@ -443,6 +443,7 @@ class TestComputeEphem(TestCase):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
 
+
 class TestComputeFOM(TestCase):
 
     def setUp(self):
@@ -752,7 +753,7 @@ class TestLongTermScheduling(TestCase):
         site_code = 'K92'
         body_elements = model_to_dict(self.body)
 
-        expected_dark_and_up_time = None
+        expected_dark_and_up_time = 0
         expected_emp_dark_and_up = []
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
@@ -803,6 +804,85 @@ class TestLongTermScheduling(TestCase):
         max_alt = compute_max_altitude(emp)
 
         self.assertEqual(expected_max_alt, max_alt)
+
+    def test_compute_rise_set(self):
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body)
+        expected_max_alt = 88.9
+        expected_rise_time = datetime(2017, 1, 6, 1, 20, 00)
+        expected_set_time = datetime(2017, 1, 6, 6, 36, 00)
+
+        mid_time = datetime(2017, 1, 6, 3, 30, 00)
+        emp_line = compute_ephem(mid_time, body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line[1]
+        app_dec = emp_line[2]
+        min_alt = 30
+        rise_time, set_time, max_alt = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
+
+        self.assertAlmostEqual(expected_max_alt, max_alt, 1)
+        self.assertEqual(expected_rise_time, rise_time)
+        self.assertEqual(expected_set_time, set_time)
+
+    def test_visibility(self):
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body2)
+        expected_max_alt = 41.3
+        expected_up_time = 3.8333333333333335
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line[1]
+        app_dec = emp_line[2]
+        min_alt = 30
+        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 1)
+        self.assertAlmostEqual(expected_up_time, up_time, 1)
+
+    def test_visibility_general1m(self):
+        site_code = '1M0'
+        body_elements = model_to_dict(self.body2)
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line[1]
+        app_dec = emp_line[2]
+        min_alt = 30
+        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+
+    def test_visibility_general1m_single_site(self):
+        site_code = '1M0'
+        body_elements = model_to_dict(self.body)
+        expected_max_alt = 89
+        expected_up_time = 5
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line[1]
+        app_dec = emp_line[2]
+        min_alt = 30
+        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 0)
+        self.assertAlmostEqual(expected_up_time, up_time, 0)
+
+    def test_visibility_general2m_never_up(self):
+        site_code = '0M4'
+        body_elements = model_to_dict(self.body4)
+        expected_max_alt = 61
+        expected_up_time = 0
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line[1]
+        app_dec = emp_line[2]
+        min_alt = 80
+        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 0)
+        self.assertAlmostEqual(expected_up_time, up_time, 0)
 
 
 class TestDetermineRatesAndPA(TestCase):
@@ -1087,15 +1167,17 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'good1m'
         name = 'WH2845B'
         mag = 23.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 60
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toobright_nonNEOWISE_good1m(self):
         site_code = 'good1m'
         name = 'WH2845B'
         mag = 3.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 5.5
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_bad1m(self):
         site_code = 'bad1m'
@@ -1149,22 +1231,25 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'bad1m'
         name = 'WH2845B'
         mag = 22.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 60
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_nonNEOWISE_bad1m(self):
         site_code = 'bad1m'
         name = 'WH2845B'
         mag = 23.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 60
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toobright_nonNEOWISE_bad1m(self):
         site_code = 'bad1m'
         name = 'WH2845B'
         mag = 3.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 6.5
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_2m_lc(self):
         site_code = '2m'
@@ -1234,21 +1319,22 @@ class TestDetermineSlotLength(TestCase):
         site_code = '2m'
         name = 'WH2845B'
         mag = 23.4
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 60
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toobright_nonNEOWISE_2m(self):
         site_code = '2m'
         name = 'WH2845B'
         mag = 3.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 6.0
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_tfn_0m4_num1(self):
         site_code = 'Z21'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1266,7 +1352,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'T04'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1275,7 +1360,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'T03'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1284,7 +1368,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'W89'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1293,7 +1376,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'W79'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1302,7 +1384,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'V38'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1311,7 +1392,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'L09'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1588,8 +1668,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = None
-        expected_expcount = None
+        expected_exptime = 0.1
+        expected_expcount = 4
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 

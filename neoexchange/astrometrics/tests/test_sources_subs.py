@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
+
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
 
@@ -539,6 +540,32 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['submitter'], 'bsimpson')
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
         self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
+
+    def test_make_generic_userrequest(self):
+
+        site_code = '2M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
+                 }
+
+        user_request = make_userrequest(self.body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(user_request['requests'][0]['windows'][0]['end'], dark_end.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(dark_start + timedelta(days=1), dark_end)
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
+        self.assertEqual(user_request['requests'][0]['location'].get('site', None), None)
+        self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '2m0')
 
     def test_make_spectra_userrequest(self):
         body_elements = model_to_dict(self.body)
@@ -2887,7 +2914,7 @@ class TestMakeMolecule(TestCase):
         expected_molecule = {
                              'type' : 'LAMP_FLAT',
                              'exposure_count' : 1,
-                             'exposure_time' : 60.0,
+                             'exposure_time' : 20.0,
                              'bin_x'       : 1,
                              'bin_y'       : 1,
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
@@ -2911,7 +2938,7 @@ class TestMakeMolecule(TestCase):
         expected_molecule = {
                              'type' : 'LAMP_FLAT',
                              'exposure_count' : 1,
-                             'exposure_time' : 60.0,
+                             'exposure_time' : 20.0,
                              'bin_x'       : 1,
                              'bin_y'       : 1,
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
@@ -2964,6 +2991,7 @@ class TestMakeMolecules(TestCase):
                                                        'exp_time' : 60.0,
                                                        'exp_count' : 12,
                                                        'filter_pattern' : 'w'})
+
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
                                                     self.params_1m0_imaging['exp_count'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
@@ -3010,6 +3038,7 @@ class TestMakeMolecules(TestCase):
 
         self.assertEqual(expected_num_molecules, len(molecules))
         self.assertEqual(expected_type, molecules[0]['type'])
+
 
     def test_2m_spectroscopy_nocalibs(self):
 

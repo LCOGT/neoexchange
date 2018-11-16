@@ -5,6 +5,7 @@ from django.template import Library
 from django.template.defaultfilters import floatformat
 from astrometrics.time_subs import degreestohours, hourstodegrees, degreestodms, \
     degreestohms, radianstohms, radianstodms, dttodecimalday
+from astrometrics.ephem_subs import get_alt_from_airmass
 
 register = Library()
 
@@ -80,3 +81,4 @@ register.filter('radianstohms', radianstohms)
 register.filter('radianstodms', radianstodms)
 register.filter('dttodecimalday', dttodecimalday)
 register.filter('roundeddays', roundeddays)
+register.filter('get_alt_from_airmass', get_alt_from_airmass)

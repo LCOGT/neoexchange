@@ -14,7 +14,7 @@ GNU General Public License for more details.
 import os
 from glob import glob
 from datetime import datetime, timedelta, date
-from math import floor, ceil, degrees, radians, pi
+from math import floor, ceil, degrees, radians, pi, acos
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -52,13 +52,15 @@ from .forms import EphemQuery, ScheduleForm, ScheduleCadenceForm, ScheduleBlockF
 from .models import *
 from astrometrics.ast_subs import determine_asteroid_type, determine_time_of_perih, \
     convert_ast_to_comet
+import astrometrics.site_config as cfg
 from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     determine_darkness_times, determine_slot_length, determine_exp_time_count, \
     MagRangeError,  LCOGT_site_codes, LCOGT_domes_to_site_codes, \
-    determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness
+    determine_spectro_slot_length, get_sitepos, read_findorb_ephem, accurate_astro_darkness,\
+    get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs
+    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -782,33 +784,38 @@ class ScheduleSubmit(LoginRequiredMixin, SingleObjectMixin, FormView):
             return self.form_invalid(form)
 
     def form_valid(self, form, request):
+        # Recalculate the parameters using new form data
+        data = schedule_check(form.cleaned_data, self.object)
+        new_form = ScheduleBlockForm(data)
         if 'edit' in request.POST:
-            # Recalculate the parameters by amending the block length
-            data = schedule_check(form.cleaned_data, self.object)
-            new_form = ScheduleBlockForm(data)
             return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.object})
-        elif 'submit' in request.POST:
+        elif 'submit' in request.POST and new_form.is_valid():
             target = self.get_object()
             username = ''
             if request.user.is_authenticated():
                 username = request.user.get_username()
-            tracking_num, sched_params = schedule_submit(form.cleaned_data, target, username)
+            tracking_num, sched_params = schedule_submit(new_form.cleaned_data, target, username)
             if tracking_num:
                 messages.success(self.request, "Request %s successfully submitted to the scheduler" % tracking_num)
-                block_resp = record_block(tracking_num, sched_params, form.cleaned_data, target)
+                block_resp = record_block(tracking_num, sched_params, new_form.cleaned_data, target)
+                self.success = True
                 if block_resp:
                     messages.success(self.request, "Block recorded")
                 else:
                     messages.warning(self.request, "Record not created")
             else:
+                self.success = False
                 msg = "It was not possible to submit your request to the scheduler."
                 if sched_params.get('error_msg', None):
                     msg += "\nAdditional information:" + sched_params['error_msg']
                 messages.warning(self.request, msg)
-            return super(ScheduleSubmit, self).form_valid(form)
+            return super(ScheduleSubmit, self).form_valid(new_form)
 
     def get_success_url(self):
-        return reverse('home')
+        if self.success:
+            return reverse('home')
+        else:
+            return reverse('target', kwargs={'pk': self.object.id})
 
 
 def schedule_check(data, body, ok_to_schedule=True):
@@ -880,7 +887,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Determine filter pattern
     if data.get('filter_pattern'):
         filter_pattern = data.get('filter_pattern')
-    elif data['site_code'] == 'E10' or data['site_code'] == 'F65':
+    elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2M0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
         else:
@@ -895,30 +902,71 @@ def schedule_check(data, body, ok_to_schedule=True):
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
 
+    # Get maximum airmass
+    max_airmass = data.get('max_airmass', 1.74)
+    alt_limit = get_alt_from_airmass(max_airmass)
+
+    # Pull out LCO Site, Telescope Class using site_config.py
+    lco_site_code = next(key for key, value in cfg.valid_site_codes.items() if value == data['site_code'])
+
+    # calculate visibility
+    dark_and_up_time, max_alt = get_visibility(ra, dec, dark_midpoint, data['site_code'], '30 m', alt_limit, True, body_elements)
+    if max_alt is not None:
+        max_alt_airmass = S.sla_airmas((pi/2.0)-radians(max_alt))
+    else:
+        max_alt_airmass = 13
+        dark_and_up_time = 0
+
     # Determine slot length
-    if data.get('slot_length'):
+    if data.get('slot_length', None):
         slot_length = data.get('slot_length')
     else:
-        if spectroscopy:
-            slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
-            slot_length /= 60.0
-            slot_length = ceil(slot_length)
-        else:
-            try:
-                slot_length = determine_slot_length(magnitude, data['site_code'])
-            except MagRangeError:
-                slot_length = 0.
-                ok_to_schedule = False
+        try:
+            slot_length = determine_slot_length(magnitude, data['site_code'])
+        except MagRangeError:
+            slot_length = 60
+            ok_to_schedule = False
     snr = None
+
     if spectroscopy:
         new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
         exp_count = data['exp_count']
         exp_length = data.get('exp_length', 1)
+        slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
+        slot_length /= 60.0
+        slot_length = ceil(slot_length)
     else:
         # Determine exposure length and count
-        exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
+        if data.get('exp_length', None):
+            exp_length = data.get('exp_length')
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern)
+        else:
+            exp_length, exp_count = determine_exp_time_count(speed, data['site_code'], slot_length, magnitude, filter_pattern)
+            slot_length, exp_count = determine_exp_count(slot_length, exp_length, data['site_code'], filter_pattern, exp_count)
         if exp_length is None or exp_count is None:
             ok_to_schedule = False
+
+    # determine stellar trailing
+    if spectroscopy:
+        ag_exp_time = data.get('ag_exp_time', 10)
+        trail_len = determine_star_trails(speed, ag_exp_time)
+    else:
+        ag_exp_time = None
+        trail_len = determine_star_trails(speed, exp_length)
+    if lco_site_code[-4:-1].upper() == "0M4":
+        typical_seeing = 3.0
+    else:
+        typical_seeing = 2.0
+
+    # determine lunar position
+    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+    min_lunar_dist = data.get('min_lunar_dist', 30)
+
+    # get ipp value
+    ipp_value = data.get('ipp_value', 1.00)
+
+    # get acceptability threshold
+    acceptability_threshold = data.get('acceptability_threshold', 90)
 
     # Determine pattern iterations
     if exp_count:
@@ -946,14 +994,18 @@ def schedule_check(data, body, ok_to_schedule=True):
         total_time = timedelta(seconds=slot_length*60.0) * total_requests
         total_time = total_time.total_seconds()/3600.0
 
-    suffix = datetime.strftime(utc_date, '%Y%m%d')
-    if period and jitter:
-        suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
-    elif spectroscopy:
-        suffix += "_spectra"
-    if data.get('too_mode', False) is True:
-        suffix += '_ToO'
-    group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+    # Create Group ID
+    group_id = validate_text(data.get('group_id', None))
+
+    if not group_id:
+        suffix = datetime.strftime(utc_date, '%Y%m%d')
+        if period and jitter:
+            suffix = "cad-%s-%s" % (datetime.strftime(data['start_time'], '%Y%m%d'), datetime.strftime(data['end_time'], '%m%d'))
+        elif spectroscopy:
+            suffix += "_spectra"
+        if data.get('too_mode', False) is True:
+            suffix += '_ToO'
+        group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
 
     resp = {
         'target_name': body.current_name(),
@@ -982,6 +1034,22 @@ def schedule_check(data, body, ok_to_schedule=True):
         'spectroscopy' : spectroscopy,
         'calibs' : data.get('calibs', ''),
         'instrument_code' : data['instrument_code'],
+        'lco_site' : lco_site_code[0:3],
+        'lco_tel' : lco_site_code[-4:-1],
+        'lco_enc' : lco_site_code[4:8],
+        'max_alt' : max_alt,
+        'max_alt_airmass' : max_alt_airmass,
+        'vis_time' : dark_and_up_time,
+        'moon_alt' : moon_alt,
+        'moon_sep' : moon_obj_sep,
+        'moon_phase' : moon_phase,
+        'min_lunar_dist' : min_lunar_dist,
+        'max_airmass': max_airmass,
+        'ipp_value': ipp_value,
+        'ag_exp_time': ag_exp_time,
+        'acceptability_threshold': acceptability_threshold,
+        'trail_len' : trail_len,
+        'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
         'calibsource' : solar_analog_params,
         'calibsource_id' : solar_analog_id
@@ -993,6 +1061,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     return resp
 
+
 def compute_vmag_pa(body_elements, data):
     emp_line_base = compute_ephem(data['start_time'], body_elements, data['site_code'], dbg=False, perturb=False, display=False)
     # assign Magnitude and position angle
@@ -1001,6 +1070,7 @@ def compute_vmag_pa(body_elements, data):
     body_elements['sky_pa'] = emp_line_base[7]
 
     return body_elements
+
 
 def schedule_submit(data, body, username):
     # Assemble request
@@ -1082,7 +1152,12 @@ def schedule_submit(data, body, username):
               'instrument_code' : data['instrument_code'],
               'solar_analog' : data.get('solar_analog', False),
               'calibsource' : calibsource_params,
-              'findorb_ephem' : emp_at_start
+              'findorb_ephem' : emp_at_start,
+              'max_airmass' : data.get('max_airmass', 1.74),
+              'ipp_value' : data.get('ipp_value', 1),
+              'min_lunar_distance' : data.get('min_lunar_dist', 30),
+              'acceptability_threshold' : data.get('acceptability_threshold', 90),
+              'ag_exp_time': data.get('ag_exp_time', 10)
               }
     if data['period'] or data['jitter']:
         params['period'] = data['period']
@@ -1417,9 +1492,25 @@ def record_block(tracking_number, params, form_data, target):
                 obstype = Block.OPT_SPECTRA
                 if request_type == 'SIDEREAL':
                     obstype = Block.OPT_SPECTRA_CALIB
+
+            # sort site vs camera
+            site = params.get('site', None)
+            if site is not None:
+                site = site.lower()
+            else:
+                inst = params.get('instrument', None)
+                if inst:
+                    chunks = inst.split('-')
+                    if chunks[-1] == 'SBIG':
+                        site = 'sbg'
+                    elif chunks[-1] == 'SPECTRAL':
+                        site = 'spc'
+                    elif chunks[-1] == 'SINISTRO':
+                        site = 'sin'
+
             block_kwargs = { 'superblock' : sblock_pk,
                              'telclass' : params['pondtelescope'].lower(),
-                             'site'     : params['site'].lower(),
+                             'site'     : site,
                              'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
                              'obstype'  : obstype,
                              'groupid'  : params['group_id'],

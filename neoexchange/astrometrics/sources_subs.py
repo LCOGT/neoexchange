@@ -735,6 +735,24 @@ def validate_packcode(packcode):
     return True
 
 
+def validate_text(text_string):
+    valid_symbols = '`~!@#$%^&*()_+- ={}|[]\:;<,>.?/"'+"'"
+    valid_characters = 'abcdefghijklmnopqrstuvwxyz'
+    if text_string is None:
+        return ''
+
+    out_string = ''
+    for char in text_string:
+        if char.isdigit():
+            out_string += char
+        elif char in valid_characters or char in valid_characters.upper():
+            out_string += char
+        elif char in valid_symbols:
+            out_string += char
+
+    return out_string
+
+
 def packed_to_normal(packcode):
     """Converts MPC packed provisional designations e.g. K10V01F to unpacked
     normal desigination i.e. 2010 VF1 including packed 5 digit number designations
@@ -1107,13 +1125,14 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         return []
     return NASA_targets
 
+
 def get_site_status(site_code):
-    '''Queries the Valhalla telescope states end point to determine if the
+    """Queries the Valhalla telescope states end point to determine if the
     passed <site_code> is available for scheduling.
     Returns True if the site/telescope is available for scheduling and
     assumed True if the status can't be determined. Otherwise if the
     last event for the telescope can be found and it does not show
-    'AVAILABLE', then the good_to_schedule status is set to False.'''
+    'AVAILABLE', then the good_to_schedule status is set to False."""
 
     good_to_schedule = True
     reason = ''
@@ -1198,10 +1217,9 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
-    location = {
-        'site'            : params['site'].lower(),
-        'telescope_class' : params['pondtelescope'][0:3]
-    }
+    location = {'telescope_class' : params['pondtelescope'][0:3]}
+    if params.get('site', None):
+        location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
         location['observatory'] = 'doma'
@@ -1304,13 +1322,13 @@ def make_molecule(params, exp_filter):
             ag_mode = 'OFF'
             molecule['exposure_count'] = 1
             molecule['exposure_time'] = 60.0
-            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit'] and 'COJ' in params['site'].upper():
+            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
                 molecule['exposure_time'] = 20.0
         molecule['spectra_slit'] = params['spectra_slit']
         molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
         molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['ag_exp_time'] = 10
+        molecule['ag_exp_time'] = params.get('ag_exp_time', 10)
         if 'source_type' in params:  # then Sidereal target (use smaller window)
             molecule['acquire_radius_arcsec'] = 5.0
         else:
@@ -1361,10 +1379,12 @@ def make_molecules(params):
 def make_constraints(params):
     constraints = {
                     # 'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
-                    'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
+                    # 'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
-                    'min_lunar_distance': 30
+                    # 'min_lunar_distance': 30
+                    'max_airmass' : params.get('max_airmass', 1.74),
+                    'min_lunar_distance' : params.get('min_lunar_distance', 30)
                   }
     return constraints
 
@@ -1513,12 +1533,15 @@ def configure_defaults(params):
 
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
-    params['site'] = site_list[params['site_code']]
+    try:
+        params['site'] = site_list[params['site_code']]
+    except KeyError:
+        pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['exp_type'] = 'EXPOSE'
 
-    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] in ['F65', 'E10', '2M0']:
         params['instrument'] = '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
@@ -1526,12 +1549,13 @@ def configure_defaults(params):
             params['exp_type'] = 'SPECTRUM'
             params['instrument'] = '2M0-FLOYDS-SCICAM'
             params['binning'] = 1
+            # params['ag_exp_time'] = 10
             if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
                 params['calibsrc_exptime'] = 60.0
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
+    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
@@ -1579,7 +1603,7 @@ def make_userrequest(elements, params):
 
     request = {
             "location": location,
-            "acceptability_threshold": 90,
+            "acceptability_threshold": params.get('acceptability_threshold', 90),
             "constraints": constraints,
             "target": target,
             "molecules": molecule_list,
@@ -1609,10 +1633,7 @@ def make_userrequest(elements, params):
     else:
         cal_request = {}
 
-# If site is ELP, increase IPP value
-    ipp_value = 1.00
-    if params['site_code'] == 'V37':
-        ipp_value = 1.00
+    ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
@@ -1719,7 +1740,7 @@ def parse_filter_file(site, spec, camera_list=None):
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if len(chunks) == 13:
-                if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
+                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
                     filt_list = chunks[12].split(',')
                     for filt in filter_list:
                         if filt in filt_list and filt not in site_filters:
@@ -2073,6 +2094,7 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
     else:
         logger.warning("Passed page object was not a BeautifulSoup object")
     return flux_standards
+
 
 def read_solar_standards(standards_file):
 

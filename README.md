@@ -4,6 +4,21 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.6
+Add Generic Telescope Classes
+
+### 2.7.5
+Update the scheduling interface to allow for more options
+* Display UT time on website
+* Display Site/Telescope class on Confirmation page
+* Display Visibility of requested target
+* Allow for Exposure time Adjustment
+* Display Moon info
+* Adjust Max Airmass
+* Adjust IPP
+* Adjust Minimum Moon Distance
+* Adjust Acceptability Threshold
+
 ### 2.7.4
 
 Improve the cross-identification code for multiply desiginated objects and periodic comets.
@@ -12,6 +27,7 @@ Improve the cross-identification code for multiply desiginated objects and perio
 
 Fix issues with interactions between FindOrb and candidates/comets
 * Remove Perturbation Code
+
 
 ### 2.7.2
 

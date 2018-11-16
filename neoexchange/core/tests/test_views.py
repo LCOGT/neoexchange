@@ -513,6 +513,7 @@ class TestClean_NEOCP_Object(TestCase):
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
+
 class TestCheck_for_block(TestCase):
 
     def setUp(self):
@@ -1160,7 +1161,23 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 6.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.75712514525094,
+                        'moon_alt': -58.300710434796706,
+                        'moon_phase': 0.011439155504957221,
+                        'moon_sep': 170.66180769265674,
+                        'trail_len': 2.41774558756957,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0802297303647255,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1179,7 +1196,8 @@ class TestSchedule_Check(TestCase):
                  'spectroscopy' : True,
                  'calibs' : 'both',
                  'exp_length' : 300.0,
-                 'exp_count' : 1
+                 'exp_count' : 1,
+                 'max_airmass': 2.0
                }
 
         expected_resp = {
@@ -1211,7 +1229,23 @@ class TestSchedule_Check(TestCase):
                         'too_mode': False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 7.5,
+                        'lco_enc': 'CLMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '2M0',
+                        'max_alt': 67.75685165409215,
+                        'moon_alt': -58.30060609532361,
+                        'moon_phase': 0.011439162208279174,
+                        'moon_sep': 170.66180760224114,
+                        'trail_len': 0.48354895802581555,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': 10,
+                        'max_airmass': 2.0,
+                        'max_alt_airmass': 1.0802318346065136,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1263,7 +1297,23 @@ class TestSchedule_Check(TestCase):
                         'too_mode': False,
                         'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
                         'calibsource_id' : 1,
-                        'solar_analog' : True
+                        'solar_analog' : True,
+                        'vis_time': 6.5,
+                        'lco_enc': 'CLMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '2M0',
+                        'max_alt': 67.75685165409215,
+                        'moon_alt': -58.30060609532361,
+                        'moon_phase': 0.011439162208279174,
+                        'moon_sep': 170.66180760224114,
+                        'trail_len': 0.48354895802581555,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': 10,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0802318346065136,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1318,7 +1368,23 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 6.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.70515036289103,
+                        'moon_alt': -43.42555786736966,
+                        'moon_phase': 0.00890997165773788,
+                        'moon_sep': 171.79313958425425,
+                        'trail_len': 2.395258014908864,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0806302130727632,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1371,7 +1437,23 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 6.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.70515036289103,
+                        'moon_alt': -43.42555786736966,
+                        'moon_phase': 0.00890997165773788,
+                        'moon_sep': 171.79313958425425,
+                        'trail_len': 2.395258014908864,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0806302130727632,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
