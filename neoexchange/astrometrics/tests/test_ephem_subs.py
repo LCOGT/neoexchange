@@ -293,7 +293,7 @@ class TestComputeEphem(TestCase):
         self.assertAlmostEqual(expected_alt, emp_line[5], precision)
         self.assertAlmostEqual(expected_spd, emp_line[6], precision)
         self.assertAlmostEqual(expected_pa,  emp_line[7], precision)
-        
+
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
         expected_dec = 0.522637696108887
@@ -302,7 +302,7 @@ class TestComputeEphem(TestCase):
         precision = 11
         self.assertAlmostEqual(expected_dec, emp_line[2], precision)
         self.assertAlmostEqual(expected_spd, emp_line[6], precision)
-        
+
     def test_compute_south_polar_distance_with_body_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
         expected_dec = 0.522637696108887
@@ -1401,7 +1401,10 @@ class TestGetSiteCamParams(TestCase):
 
     twom_setup_overhead = 240.0
     twom_exp_overhead = 19.0
+    twom_sbig_exp_overhead = 9.0
     twom_fov = radians(10.0/60.0)
+    twom_sbig_fov = radians(6.17/60.0)
+    twom_sbig_pixscale = 0.184
     onem_sbig_fov = radians(15.5/60.0)
     onem_setup_overhead = 90.0
     onem_exp_overhead = 15.5
@@ -1582,6 +1585,16 @@ class TestGetSiteCamParams(TestCase):
         self.assertEqual(self.max_exp, max_exp_time)
         self.assertEqual(self.onem_setup_overhead, setup_overhead)
         self.assertEqual(self.sinistro_exp_overhead, exp_overhead)
+
+    def test_2m_cometcam(self):
+        site_code = 'F65-COMETCAM'
+        chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, max_exp_time, alt_limit = get_sitecam_params(site_code)
+        self.assertEqual('F65', chk_site_code)
+        self.assertEqual(self.twom_sbig_pixscale, pixel_scale)
+        self.assertEqual(self.twom_sbig_fov, ccd_fov)
+        self.assertEqual(self.max_exp, max_exp_time)
+        self.assertEqual(self.twom_setup_overhead, setup_overhead)
+        self.assertEqual(self.twom_sbig_exp_overhead, exp_overhead)
 
 
 class TestDetermineExpTimeCount(TestCase):

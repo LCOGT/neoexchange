@@ -1676,6 +1676,14 @@ def get_sitecam_params(site):
                            'per_molecule_time' : cfg.molecule_overhead['per_molecule_time'],
                            'calib_exposure_time' : cfg.inst_overhead['floyds_calib_exp_time']
                          }
+    elif site == 'F65-COMETCAM':
+        site_code = 'F65'
+        setup_overhead = cfg.tel_overhead['twom_setup_overhead']
+        exp_overhead = cfg.inst_overhead['twom_sbig_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_sbig_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_sbig_fov'])
+        max_exp_length = 300.0
+        alt_limit = cfg.tel_alt['twom_alt_limit']
     elif site in valid_point4m_codes:
         site_code = site
         setup_overhead = cfg.tel_overhead['point4m_setup_overhead']

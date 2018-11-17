@@ -9,6 +9,8 @@ tel_field = {   'onem_fov'              : 15.5,
                 'point4m_fov'           : 29.1,
                 'twom_pixscale'         : 0.304,
                 'twom_fov'              : 10.0,
+                'twom_sbig_pixscale'    : 0.184,
+                'twom_sbig_fov'         : 6.17,
                 'twom_floyds_pixscale'  : 0.337,
                 'twom_floyds_fov'       : 2.0
             }
@@ -25,7 +27,7 @@ molecule_overhead = {   'filter_change'     : 2.0,                         # tim
                     }
 
 # Per-Telescope overheads (s)
-tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front padding 
+tel_overhead = { 'onem_setup_overhead'      : 90.0,                  # front padding
                  'twom_setup_overhead'      : 240.0,                 # front padding
                  'point4m_setup_overhead'   : 90.0,                  # front padding
                }
@@ -35,6 +37,7 @@ inst_overhead = {   'onemsbig_exp_overhead'         : 15.5,
                     'point4m_exp_overhead'          : 13.0 + 1.0,       # readout + fixed overhead/exposure
                     'sinistro_exp_overhead'         : 37.0 + 1.0,      # readout + fixed overhead/exposure
                     'twom_exp_overhead'             : 10.5 + 8.5,          # readout + fixed overhead/exposure
+                    'twom_sbig_exp_overhead'        :  9.0,              # readout + fixed overhead/exposure
                     'floyds_exp_overhead'           : 25.0 + 0.5,        # readout + fixed overhead/exposure
                     'floyds_config_change_overhead' : 60.0,
                     'floyds_acq_proc_overhead'      : 60.0,
