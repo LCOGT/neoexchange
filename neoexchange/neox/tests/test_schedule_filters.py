@@ -274,15 +274,15 @@ class ScheduleCometObservations(FunctionalTest):
         # The page refreshes and a series of values for magnitude, speed, slot
         # length, number and length of exposures appear
         magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
-        self.assertIn('20.39', magnitude)
+        self.assertIn('10.69', magnitude)
         speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
-        self.assertIn('2.52 "/min', speed)
+        self.assertIn('1.62 "/min', speed)
         slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
-        self.assertIn('22.5', slot_length)
+        self.assertIn('6', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
-        self.assertIn('12', num_exp)
+        self.assertIn('4', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
-        self.assertIn('60.0', exp_length)
+        self.assertIn('6.5', exp_length)
 
         # At this point, a 'Schedule this object' button appears
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")

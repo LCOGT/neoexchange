@@ -826,6 +826,10 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     if spectroscopy:
         data['site_code'] = data['instrument_code'][0:3]
+    elif '-COMETCAM' in data['site_code']:
+        chunks = data['site_code'].split('-')
+        data['site_code'] = chunks[0]
+        data['instrument_code'] = chunks[1]
     else:
         data['instrument_code'] = ''
 
@@ -890,6 +894,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2M0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
+        elif data['instrument_code'] == 'COMETCAM':
+            filter_pattern = 'rp'
         else:
             filter_pattern = 'solar'
     else:
@@ -1843,7 +1849,7 @@ def update_crossids(astobj, dbg=False):
     # but don't have a blank 'name'
     bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
     if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
-    
+
     if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
         created = True
