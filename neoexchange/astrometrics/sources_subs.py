@@ -1427,7 +1427,7 @@ def make_many(params, ipp_value, request, cal_request):
 
 
 def make_proposal(params):
-    proposal = { 
+    proposal = {
                  'proposal_id' : params['proposal_id'],
                  'user_id' : params['user_id']
                }
@@ -1710,26 +1710,29 @@ def submit_block_to_scheduler(elements, params):
     return tracking_number, params
 
 
-def fetch_filter_list(site, spec, page=None):
+def fetch_filter_list(site, instrument, page=None):
     """Fetches the camera mappings page"""
 
     if page is None:
         camera_mappings = 'http://configdb.lco.gtn/camera_mappings/'
         data_file = fetchpage_and_make_soup(camera_mappings)
-        data_out = parse_filter_file(site, spec, data_file)
+        data_out = parse_filter_file(site, instrument, data_file)
     else:
         with open(page, 'r') as input_file:
-            data_out = parse_filter_file(site, spec, input_file.read())
+            data_out = parse_filter_file(site, instrument, input_file.read())
     return data_out
 
 
-def parse_filter_file(site, spec, camera_list=None):
+def parse_filter_file(site, instrument, camera_list=None):
     """Parses the camera mappings page and sends back a list of filters at the given site code.
     """
-    if spec is not True:
-        filter_list = cfg.phot_filters
-    else:
+    if 'FLOYDS' in instrument:
         filter_list = cfg.spec_filters
+        instrument = instrument.split('-')[1]
+    elif instrument == '2M0-SCICAM-SBIG':
+        filter_list = cfg.comet_filters
+    else:
+        filter_list = cfg.phot_filters
 
     siteid, encid, telid = MPC_site_code_to_domes(site)
 
@@ -1740,7 +1743,7 @@ def parse_filter_file(site, spec, camera_list=None):
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if len(chunks) == 13:
-                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
+                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1] and instrument in chunks[4].upper():
                     filt_list = chunks[12].split(',')
                     for filt in filter_list:
                         if filt in filt_list and filt not in site_filters:

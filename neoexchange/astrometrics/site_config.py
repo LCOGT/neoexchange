@@ -100,6 +100,21 @@ phot_filters = [    "air",
                     "w"
                     ]
 
+comet_filters = [   "air",
+                    "OH",
+                    "C2",
+                    "C3",
+                    "CN",
+                    "NH2",
+                    "CR",
+                    "B",
+                    "V",
+                    "R",
+                    "gp",
+                    "rp",
+                    "ip",
+                    "zs"
+                ]
 spec_filters = [    "slit_1.2as",
                     "slit_1.6as",
                     "slit_2.0as",

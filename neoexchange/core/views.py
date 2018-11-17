@@ -829,7 +829,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     elif '-COMETCAM' in data['site_code']:
         chunks = data['site_code'].split('-')
         data['site_code'] = chunks[0]
-        data['instrument_code'] = chunks[1]
+        data['instrument_code'] = '2M0-SCICAM-SBIG'
     else:
         data['instrument_code'] = ''
 
@@ -894,7 +894,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     elif data['site_code'] == 'E10' or data['site_code'] == 'F65' or data['site_code'] == '2M0':
         if spectroscopy:
             filter_pattern = 'slit_6.0as'
-        elif data['instrument_code'] == 'COMETCAM':
+        elif data['instrument_code'] == '2M0-SCICAM-SBIG':
             filter_pattern = 'rp'
         else:
             filter_pattern = 'solar'
@@ -903,7 +903,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     # Get string of available filters
     available_filters = ''
-    filter_list = fetch_filter_list(data['site_code'], spectroscopy)
+    filter_list = fetch_filter_list(data['site_code'], data['instrument_code'])
     for filt in filter_list:
         available_filters = available_filters + filt + ', '
     available_filters = available_filters[:-2]
@@ -1012,6 +1012,9 @@ def schedule_check(data, body, ok_to_schedule=True):
         if data.get('too_mode', False) is True:
             suffix += '_ToO'
         group_id = body.current_name() + '_' + data['site_code'].upper() + '-' + suffix
+    # If instrument was 2M0-SCICAM-SBIG, set it back to <site>-COMETCAM. XXX Seems very hacky...
+    if data['instrument_code'] == '2M0-SCICAM-SBIG':
+        data['site_code'] = data['site_code'] + '-COMETCAM'
 
     resp = {
         'target_name': body.current_name(),

@@ -302,7 +302,7 @@ class ScheduleCometObservations(FunctionalTest):
             pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
 
         # Updating filter pattern updates the number of iterations
-        iterations_expected = u'3.33'
+        iterations_expected = u'0.5'
         filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
         filter_pattern_box.clear()
         filter_pattern_box.send_keys('C2,C3,CN,CR')
@@ -311,11 +311,18 @@ class ScheduleCometObservations(FunctionalTest):
         pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
         self.assertEqual(iterations_expected, pattern_iterations)
 
+        # He decides that the exposure times are too short for these narrowband filters
+        exp_length_box = self.browser.find_element_by_name('exp_length')
+        exp_length_box.clear()
+        exp_length_box.send_keys('60')
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id("id_edit_button").click()
+
         # updating the slot length increases the number of iterations
-        iterations_expected = u'17.0'
+        iterations_expected = u'2.0'
         slot_length_box = self.browser.find_element_by_name('slot_length')
         slot_length_box.clear()
-        slot_length_box.send_keys('102')
+        slot_length_box.send_keys('18')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
         pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations').find_element_by_class_name('kv-value').text
@@ -324,10 +331,10 @@ class ScheduleCometObservations(FunctionalTest):
         # cannot update filter pattern with unacceptable filters with incorrect syntax
         filter_pattern_box = self.browser.find_element_by_name('filter_pattern')
         filter_pattern_box.clear()
-        filter_pattern_box.send_keys('42,V,v,W,w,gp fg, hj, k-t/g/h')
+        filter_pattern_box.send_keys('42,V,v,W,w,gp,fg, hj, k-t/g/h')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get an error
         error_msg = self.browser.find_element_by_class_name('errorlist').text
-        self.assertIn('42,v,W,fg,hj,k-t,g,h are not acceptable filters at this site.', error_msg)
+        self.assertIn('42,v,W,w,fg,hj,k-t,g,h are not acceptable filters at this site.', error_msg)

@@ -148,14 +148,14 @@ class ScheduleBlockForm(forms.Form):
     filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size': '20'}))
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
-    site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
+    site_code = forms.CharField(max_length=50, widget=forms.HiddenInput())
     group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
     jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
     period = forms.FloatField(widget=forms.HiddenInput(), required=False)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
-    instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
+    instrument_code = forms.CharField(max_length=80, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
     max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
@@ -240,20 +240,20 @@ class ScheduleBlockForm(forms.Form):
         return cleaned_filter_pattern
 
     def clean(self):
-        cleaned_data = super(ScheduleBlockForm, self).clean()
-        site = self.cleaned_data['site_code']
-        spectra = self.cleaned_data['spectroscopy']
-        if not fetch_filter_list(site, spectra):
+        self.cleaned_data = super(ScheduleBlockForm, self).clean()
+        site = self.cleaned_data['site_code'][0:3]
+        instrument = self.cleaned_data.get('instrument_code', '')
+        if not fetch_filter_list(site, instrument):
             raise forms.ValidationError("This Site/Telescope combination is not currently available.")
         try:
             if not self.cleaned_data['filter_pattern']:
                 raise forms.ValidationError("You must select a filter.")
         except KeyError:
             raise forms.ValidationError('Dude, you had to actively input a bunch of spaces and nothing else to see this error. '
-                                        'Why?? Just pick a filter from the list! %(filters)s', params={'filters': ",".join(fetch_filter_list(site, spectra))})
+                                        'Why?? Just pick a filter from the list! %(filters)s', params={'filters': ",".join(fetch_filter_list(site, instrument))})
         pattern = self.cleaned_data['filter_pattern']
         chunks = pattern.split(',')
-        bad_filters = [x for x in chunks if x not in fetch_filter_list(site, spectra)]
+        bad_filters = [x for x in chunks if x not in fetch_filter_list(site, instrument)]
         if len(bad_filters) > 0:
             if len(bad_filters) == 1:
                 raise forms.ValidationError('%(bad)s is not an acceptable filter at this site.', params={'bad': ",".join(bad_filters)})
@@ -264,7 +264,7 @@ class ScheduleBlockForm(forms.Form):
         elif self.cleaned_data['period'] is not None and self.cleaned_data['jitter'] is not None:
             if self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
                 raise forms.ValidationError("Jitter must be larger than slot length")
-        return cleaned_data
+        return self.cleaned_data
 
 
 class ScheduleSpectraForm(forms.Form):

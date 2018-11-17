@@ -296,7 +296,7 @@ class TestFetchGoldstoneTargets(TestCase):
                                                         Needs     Physical
                                          Target      Astrometry?  Observations?   H
 
-                2018 Jan 13 &amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                2018 Jan 13 &amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
@@ -317,7 +317,7 @@ class TestFetchGoldstoneTargets(TestCase):
                                                         Needs     Physical
                                          Target      Astrometry?  Observations?   H
 
-                2018 Jan 13&amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                2018 Jan 13&amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
@@ -338,7 +338,7 @@ class TestFetchGoldstoneTargets(TestCase):
                                                         Needs     Physical
                                          Target      Astrometry?  Observations?   H
 
-                2018 Jan 13&amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                2018 Jan 13&amp; 15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
@@ -359,7 +359,7 @@ class TestFetchGoldstoneTargets(TestCase):
                                                         Needs     Physical
                                          Target      Astrometry?  Observations?   H
 
-                2018 Jan 13 &amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7            
+                2018 Jan 13 &amp;15  <a href="https://echo.jpl.nasa.gov/asteroids/2003YO3/2003YO3_planning.html">438017 2003 YO3</a>        No         Yes         18.7
                 </body></html>
                 '''
         page = BeautifulSoup(html, 'html.parser')
@@ -924,49 +924,55 @@ class TestFetchFilterList(TestCase):
     def test_1m_cpt(self):
         expected_filter_list = ['air', 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = fetch_filter_list('K91', False, self.test_filter_map)
+        filter_list = fetch_filter_list('K91', '', self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_0m4_ogg(self):
         expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
 
-        filter_list = fetch_filter_list('T04', False, self.test_filter_map)
+        filter_list = fetch_filter_list('T04', '', self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_2m_ogg(self):
         expected_filter_list = ['air', 'Astrodon-UV', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'Skymapper-VS', 'solar', 'zs', 'Y']
 
-        filter_list = fetch_filter_list('F65', False, self.test_filter_map)
+        filter_list = fetch_filter_list('F65', '', self.test_filter_map)
+        self.assertEqual(expected_filter_list, filter_list)
+
+    def test_2m_ogg_cometcam(self):
+        expected_filter_list = ['air', 'OH', 'C2', 'C3', 'CN', 'NH2', 'CR', 'B', 'V', 'R', 'gp', 'rp', 'ip', 'zs']
+
+        filter_list = fetch_filter_list('F65', '2M0-SCICAM-SBIG', self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_1m_lsc_domeb(self):
         expected_filter_list = ['air', 'ND' , 'U', 'B', 'V', 'R', 'I', 'up', 'gp', 'rp', 'ip', 'zs', 'Y', 'w']
 
-        filter_list = fetch_filter_list('W86', False, self.test_filter_map)
+        filter_list = fetch_filter_list('W86', '', self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_unavailable_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('Z21', False, self.test_filter_map)
+        filter_list = fetch_filter_list('Z21', '', self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_lowercase_telescope(self):
         expected_filter_list = ['air', 'B', 'V', 'up', 'gp', 'rp', 'ip', 'zs', 'w']
 
-        filter_list = fetch_filter_list('t04', False, self.test_filter_map)
+        filter_list = fetch_filter_list('t04', '', self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_invalid_telescope(self):
         expected_filter_list = []
 
-        filter_list = fetch_filter_list('BESTtelescope', False, self.test_filter_map)
+        filter_list = fetch_filter_list('BESTtelescope', '', self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
     def test_spectra_telescope(self):
         expected_filter_list = ['slit_1.2as', 'slit_1.6as', 'slit_2.0as', 'slit_6.0as']
 
-        filter_list = fetch_filter_list('F65', True, self.test_filter_map)
+        filter_list = fetch_filter_list('F65', 'FLOYDS', self.test_filter_map)
         self.assertEqual(expected_filter_list, filter_list)
 
 
@@ -3126,7 +3132,7 @@ class TestMakeCadence(TestCase):
                          "name" : "3122",
                          "meandist": 1.7691326,
                          "longascnode": 336.0952,
-                         "orbinc": 22.1508, 
+                         "orbinc": 22.1508,
                          "eccentricity": 0.4233003,
                          "meananom": 351.43854,
                          "elements_type": "MPC_MINOR_PLANET",
@@ -3637,7 +3643,7 @@ class TestReadSolarStandards(TestCase):
                                'Hyades 64'        : { 'ra_rad' : 1.1635601068681027, 'dec_rad' : 0.2922893202041282, 'mag' : 8.1, 'spectral_type' : 'G2V'},
                                'Landolt SA98-978' : { 'ra_rad' : radians(102.8916666666666), 'dec_rad' : radians(-0.1925), 'mag' : 10.5, 'spectral_type' : 'G2V'},
                                'Landolt SA107-684' : { 'ra_rad' : radians(234.3254166666666), 'dec_rad' : radians(-0.163888888888), 'mag' : 8.4, 'spectral_type' : 'G2V'},
-                               'Landolt SA107-998' : { 'ra_rad' : radians(234.5683333333333), 'dec_rad' : radians(0.2563888888888), 'mag' : 10.4, 'spectral_type' : 'G2V'},  
+                               'Landolt SA107-998' : { 'ra_rad' : radians(234.5683333333333), 'dec_rad' : radians(0.2563888888888), 'mag' : 10.4, 'spectral_type' : 'G2V'},
                              }
 
         standards = read_solar_standards(self.test_file)
