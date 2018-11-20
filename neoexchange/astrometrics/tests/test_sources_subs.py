@@ -395,6 +395,35 @@ class TestSubmitBlockToScheduler(TestCase):
         self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
         self.body_elements['current_name'] = self.body.current_name()
 
+        params = {  'name'          : '46P',
+                    'abs_mag'       : 14.0,
+                    'slope'         : 6.00,
+                    'epochofel'     : datetime(2018, 8, 10, 00, 00, 00),
+                    'argofperih'    : 356.33056,
+                    'longascnode'   :  82.16371,
+                    'orbinc'        : 11.74556,
+                    'eccentricity'  : 0.6585260,
+                    'perihdist'     : 1.0553585,
+                    'epochofperih'  : datetime(2018, 12, 12, 22, 18, 11),
+                    'source_type'   : 'C',
+                    'elements_type' : 'MPC_COMET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    'ingest'        : '2018-05-11 17:20:00',
+                    'score'         : 90,
+                    'discovery_date': '1954-09-08 12:00:00',
+                    'update_time'   : '2018-11-18 05:00:00',
+                    'num_obs'       : 1504,
+                    'arc_length'    : 4046,
+                    'not_seen'      : 0.42,
+                    'updated'       : True,
+                    }
+        self.comet, created = Body.objects.get_or_create(**params)
+        self.comet_elements = model_to_dict(self.comet)
+        self.comet_elements['epochofel_mjd'] = self.comet.epochofel_mjd()
+        self.comet_elements['epochofperih_mjd'] = self.comet.epochofperih_mjd()
+        self.comet_elements['current_name'] = self.comet.current_name()
+
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
                                 'title' : 'LCOGT NEO Follow-up Network'
                               }
@@ -913,6 +942,46 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(sol_molecules[2]['exposure_time'], expected_exptime)
         self.assertEqual(sol_molecules[2]['spectra_slit'], expected_filter)
 
+    def test_make_cometcam_userrequest(self):
+
+        site_code = 'F65'
+        utc_date = datetime(2018, 11, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 4,
+                    'exp_time' : 120.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'instrument_code' : 'F65-COMETCAM',
+                    'group_id' : self.comet_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'C2,C3,CN,CR'
+                 }
+        expected_num_requests = 1
+        expected_operator = 'SINGLE'
+        expected_molecule_num = 4
+        expected_exp_count = 1
+        expected_exptime = 120.0
+        expected_filter = 'C2'
+        expected_groupid = params['group_id']
+        expected_instrument = '2M0-SCICAM-SBIG'
+
+        user_request = make_userrequest(self.comet_elements, params)
+        requests = user_request['requests']
+        self.assertEqual(expected_num_requests, len(requests))
+        self.assertEqual(expected_operator, user_request['operator'])
+        self.assertEqual(expected_groupid, user_request['group_id'])
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(requests[0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(requests[0]['location'].get('telescope', None), None)
+
+        molecules = user_request['requests'][0]['molecules']
+        self.assertEqual(len(molecules), expected_molecule_num)
+        self.assertEqual(molecules[0]['exposure_count'], expected_exp_count)
+        self.assertEqual(molecules[0]['exposure_time'], expected_exptime)
+        self.assertEqual(molecules[0]['filter'], expected_filter)
+        self.assertEqual(molecules[0]['instrument_name'], expected_instrument)
 
 class TestFetchFilterList(TestCase):
     """Unit test for getting current filters from configdb"""
@@ -2759,6 +2828,21 @@ class TestConfigureDefaults(TestCase):
 
         self.assertEqual(params, expected_params)
 
+    def test_2m_ogg_cometcam(self):
+        expected_params = { 'binning': 2,
+                            'instrument': '2M0-SCICAM-SBIG',
+                            'observatory': '',
+                            'exp_type': 'EXPOSE',
+                            'pondtelescope': '2m0',
+                            'site': 'OGG',
+                            'site_code': 'F65',
+                            'instrument_code': 'F65-COMETCAM'}
+
+        params = {'site_code': 'F65', 'instrument_code' : 'F65-COMETCAM'}
+
+        params = configure_defaults(params)
+
+        self.assertEqual(params, expected_params)
 
 class TestMakeMolecule(TestCase):
 

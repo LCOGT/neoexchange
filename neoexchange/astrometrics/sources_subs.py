@@ -1555,6 +1555,8 @@ def configure_defaults(params):
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
+        elif params.get('spectroscopy', False) is False and 'COMETCAM' in params.get('instrument_code', ''):
+            params['instrument'] = '2M0-SCICAM-SBIG'
     elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
