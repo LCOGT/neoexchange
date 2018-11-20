@@ -548,6 +548,45 @@ class TestSubmitBlockToScheduler(TestCase):
             self.assertEqual(block.block_start, block.superblock.block_start)
             self.assertEqual(block.block_end, block.superblock.block_end)
 
+    @patch('astrometrics.sources_subs.requests.post')
+    def test_submit_body_for_cometcam(self, mock_post):
+        mock_post.return_value.status_code = 200
+
+        mock_post.return_value.json.return_value = {'id': '999', 'requests' : [{'id': '111', 'target' : {'type' : 'NON-SIDEREAL' }, 'duration' : 1820}]}
+
+        site_code = 'F65'
+        utc_date = datetime.now()+timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 4,
+                    'exp_time' : 120.0,
+                    'site_code' : site_code,
+                    'instrument_code' : 'F65-COMETCAM',
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'filter_pattern' : 'C2,C3,CN,CR',
+                    'group_id' : self.comet_elements['current_name'] + '_' + 'F65' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson'
+                 }
+
+        resp, sched_params = submit_block_to_scheduler(self.comet_elements, params)
+        self.assertEqual(resp, '999')
+
+        # store block
+        data = params
+        data['proposal_code'] = 'LCO2015A-009'
+        data['exp_length'] = 91
+        block_resp = record_block(resp, sched_params, data, self.comet)
+        self.assertEqual(block_resp, True)
+
+        # Test that block has same start/end as superblock
+        blocks = Block.objects.filter(active=True)
+        for block in blocks:
+            self.assertEqual(block.block_start, block.superblock.block_start)
+            self.assertEqual(block.block_end, block.superblock.block_end)
+            self.assertEqual('2m0', block.telclass)
+            self.assertEqual('ogg', block.site)
+
     def test_make_userrequest(self):
 
         site_code = 'K92'
