@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
-        parser.add_argument('--proposal', action="store", default="LCO2018B-013", help='Proposal code to query for data (e.g. LCO2018b-013)')
+        parser.add_argument('--proposal', action="store", default="LCO2019A-006", help='Proposal code to query for data (e.g. LCO2019A-006)')
         out_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
         parser.add_argument('--numdays', action="store", default=0.0, type=float, help='How many extra days to look for')
