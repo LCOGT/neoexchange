@@ -304,6 +304,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         # Calculate magnitude of comet
         # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
         # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the elements
+        # For JPL HORIZONS, we have:
+        #   T(otal)-mag = M1 + 5*log10(delta) + k1*log10(r)
+        # N(uclear)-mag = M2 + 5*log10(delta) + k2*log10(r) + phcof*beta (not implemented)
         if p_orbelems['H'] and p_orbelems['G']:
             mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
             mag_dot = 5.0 * delta_dot / log(10) / delta + 2.5 * p_orbelems['G'] * r_dot / log(10) / r
