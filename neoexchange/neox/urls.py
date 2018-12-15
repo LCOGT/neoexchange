@@ -65,6 +65,7 @@ urlpatterns = [
     url(r'^ranking/$', ranking, name='ranking'),
     url(r'^calibsources/$', StaticSourceView.as_view(), name='calibsource-view'),
     url(r'^calibsources/solar/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD).order_by('ra')), name='solarstandard-view'),
+    url(r'^calibsources/ihw/$', StaticSourceView.as_view(queryset=StaticSource.objects.filter(source_type=StaticSource.FLUX_STANDARD, reference__contains='Farnham').order_by('ra')), name='IHWstandard-view'),
     url(r'^calibsources/(?P<pk>\d+)/$', StaticSourceDetailView.as_view(model=StaticSource), name='calibsource'),
     url(r'^characterization/$', characterization, name='characterization'),
     url(r'^feasibility/(?P<pk>\d+)/$', SpectroFeasibility.as_view(), name='feasibility'),
