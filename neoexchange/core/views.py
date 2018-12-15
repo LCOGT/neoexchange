@@ -16,7 +16,7 @@ from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import json
 import urllib
