@@ -714,8 +714,13 @@ def pickle_wcs(wcs_object):
         wcs_header = wcs_object.to_header()
         # Add back missing NAXIS keywords, change back to CD matrix
         wcs_header.insert(0, ("NAXIS", 2, "number of array dimensions"))
-        wcs_header.insert(1, ("NAXIS1", wcs_object._naxis1, ""))
-        wcs_header.insert(2, ("NAXIS2", wcs_object._naxis2, ""))
+        naxis1 = 0
+        naxis2 = 0
+        if wcs_object.pixel_shape is not None and wcs_object.naxis == 2:
+            naxis1 = wcs_object.pixel_shape[0]
+            naxis2 = wcs_object.pixel_shape[1]
+        wcs_header.insert(1, ("NAXIS1", naxis1, ""))
+        wcs_header.insert(2, ("NAXIS2", naxis2, ""))
         wcs_header.remove("CDELT1")
         wcs_header.remove("CDELT2")
         # Some of these may be missing depending on whether there was any rotation
@@ -838,7 +843,7 @@ class Frame(models.Model):
     def get_x_size(self):
         x_size = None
         try:
-            x_size = self.wcs._naxis1
+            x_size = self.wcs.pixel_shape[0]
         except AttributeError:
             pass
         return x_size
@@ -846,7 +851,7 @@ class Frame(models.Model):
     def get_y_size(self):
         y_size = None
         try:
-            y_size = self.wcs._naxis2
+            y_size = self.wcs.pixel_shape[1]
         except AttributeError:
             pass
         return y_size

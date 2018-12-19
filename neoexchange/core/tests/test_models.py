@@ -954,8 +954,8 @@ class TestFrame(TestCase):
         frame.refresh_from_db()     # Ensure pickling happens
 
         self.assertEqual(self.w.naxis, frame.wcs.naxis)
-        self.assertEqual(self.w._naxis1, frame.wcs._naxis1)
-        self.assertEqual(self.w._naxis2, frame.wcs._naxis2)
+        self.assertEqual(self.w.pixel_shape[0], frame.wcs.pixel_shape[0])
+        self.assertEqual(self.w.pixel_shape[1], frame.wcs.pixel_shape[1])
 
 
 class TestWCSField(TestCase):
