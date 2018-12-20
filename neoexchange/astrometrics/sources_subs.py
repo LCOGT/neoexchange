@@ -676,30 +676,54 @@ def fetch_mpcdb_page(asteroid, dbg=False):
     return page
 
 
-def parse_mpcorbit(page, dbg=False):
+def parse_mpcorbit(page, epoch_now=datetime.utcnow(), dbg=False):
+    """Parses a page of elements tables return from the Minor Planet Center (MPC)
+    database search page and returns an element set as a dictionary.
+    In the case of multiple element sets (normally comets), the closest in time
+    to [epoch_now] is returned."""
 
     data = []
     # Find the table of elements and then the subtables within it
-    elements_table = page.find('table', {'class' : 'nb'})
-    if elements_table is None:
-        if dbg:
-            logger.debug("No element tables found")
+    elements_tables = page.find_all('table', {'class' : 'nb'})
+    if elements_tables is None or len(elements_tables) == 0:
+        logger.warning("No element tables found")
         return {}
-    data_tables = elements_table.find_all('table')
-    for table in data_tables:
-        rows = table.find_all('tr')
-        for row in rows:
-            cols = row.find_all('td')
-            cols = [elem.text.strip() for elem in cols]
-            data.append([elem for elem in cols if elem])
 
-    elements = dict(clean_element(elem) for elem in data)
+    min_elements_dt = timedelta.max
+    best_elements = {}
+    for elements_table in elements_tables:
+        data_tables = elements_table.find_all('table')
+        for table in data_tables:
+            rows = table.find_all('tr')
+            for row in rows:
+                cols = row.find_all('td')
+                cols = [elem.text.strip() for elem in cols]
+                data.append([elem for elem in cols if elem])
 
+        elements = dict(clean_element(elem) for elem in data)
+        # Look for nearest element set in time
+        epoch = elements.get('epoch', None)
+        if dbg: print(epoch)
+        if epoch is not None:
+            try:
+                epoch_datetime = datetime.strptime(epoch, "%Y-%m-%d.0")
+                epoch_dt = epoch_now - epoch_datetime
+                if epoch_dt < min_elements_dt:
+                    # Closer match found, update best elements and minimum time
+                    # separation
+                    if dbg: print("Found closer element match", epoch_dt, min_elements_dt, epoch)
+                    best_elements = elements
+                    min_elements_dt = abs(epoch_dt)
+                else:
+                    if dbg: print("No closer match found")
+            except ValueError:
+                msg = "Couldn't parse epoch: " + epoch
+                logger.warning(msg)
     name_element = page.find('h3')
     if name_element is not None:
-        elements['obj_id'] = name_element.text.strip()
+        best_elements['obj_id'] = name_element.text.strip()
 
-    return elements
+    return best_elements
 
 
 class PackedError(Exception):

@@ -1645,10 +1645,9 @@ class TestFetchMPCOrbit(TestCase):
         elements = parse_mpcorbit(self.test_mpcdb_page)
         self.assertEqual(expected_elements, elements)
 
-    @patch('core.views.datetime', MockDateTime)
-    def test_fetch_243P_pre2018epoch(self):
+    def test_fetch_243P_post2018Augepoch(self):
 
-        MockDateTime.change_datetime(2018, 3, 5, 18, 0, 0)
+        epoch = datetime(2018, 9, 5, 18, 0, 0)
 
         expected_elements = {'epoch': '2018-08-30.0',
                              'epoch JD': '2458360.5',
@@ -1665,17 +1664,17 @@ class TestFetchMPCOrbit(TestCase):
                              'mean anomaly': '0.52489',
                              'mean daily motion': '0.13144867',
                              'aphelion distance': '5.207',
-                             'period': '7.50',
-                             'P-vector [x]': '0.97176697',
-                             'P-vector [y]': '0.23252802',
-                             'P-vector [z]': '-0.03999593',
-                             'Q-vector [x]': '-0.19494898',
-                             'Q-vector [y]': '0.88679482',
-                             'Q-vector [z]': '0.41903441',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97228322',
+                             'P-vector [y]': '0.23016404',
+                             'P-vector [z]': '-0.04110774',
+                             'Q-vector [x]': '-0.19238738',
+                             'Q-vector [y]': '0.88749145',
+                             'Q-vector [z]': '0.41874339',
                              'recip semimajor axis orig': None,
                              'recip semimajor axis future': None,
                              'recip semimajor axis error': None,
-                             'reference': 'MPEC 2018-S50',
+                             'reference': 'MPC 111774',
                              'observations used': '334',
                              'residual rms': '0.60',
                              'perturbers coarse indicator': 'M-v',
@@ -1686,7 +1685,7 @@ class TestFetchMPCOrbit(TestCase):
                              'orbit quality code': None,
                              'obj_id': '243P/NEAT'}
 
-        elements = parse_mpcorbit(self.test_multiple_epochs_page)
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
         self.assertEqual(expected_elements, elements)
 
     def test_badpage(self):
