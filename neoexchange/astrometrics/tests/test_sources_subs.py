@@ -1594,6 +1594,10 @@ class TestFetchMPCOrbit(TestCase):
         self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
+        self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         # Set to None to show all differences
         self.maxDiff = None
 
@@ -1639,6 +1643,50 @@ class TestFetchMPCOrbit(TestCase):
                              'uncertainty': '1'}
 
         elements = parse_mpcorbit(self.test_mpcdb_page)
+        self.assertEqual(expected_elements, elements)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_fetch_243P_pre2018epoch(self):
+
+        MockDateTime.change_datetime(2018, 3, 5, 18, 0, 0)
+
+        expected_elements = {'epoch': '2018-08-30.0',
+                             'epoch JD': '2458360.5',
+                             'perihelion date': '2018-08-26.00689',
+                             'perihelion JD': '2458356.50689',
+                             'argument of perihelion': '283.55482',
+                             'ascending node': '87.65877',
+                             'inclination': '7.64145',
+                             'eccentricity': '0.3593001',
+                             'perihelion distance': '2.4544438',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8308789',
+                             'mean anomaly': '0.52489',
+                             'mean daily motion': '0.13144867',
+                             'aphelion distance': '5.207',
+                             'period': '7.50',
+                             'P-vector [x]': '0.97176697',
+                             'P-vector [y]': '0.23252802',
+                             'P-vector [z]': '-0.03999593',
+                             'Q-vector [x]': '-0.19494898',
+                             'Q-vector [y]': '0.88679482',
+                             'Q-vector [z]': '0.41903441',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPEC 2018-S50',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page)
         self.assertEqual(expected_elements, elements)
 
     def test_badpage(self):
