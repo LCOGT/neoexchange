@@ -186,23 +186,6 @@ class TestCheckForExistingFile(TestCase):
     def test_badfile(self):
         self.assertFalse(check_for_existing_file('wibble'), "Wrong result")
 
-@patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
-class TestFetchArchiveFrames(TestCase):
-
-    def test_fetch_spectra(self):
-        auth_header = {'Authorization': 'Token LetMeInPrettyPlease'}
-        request_id = 1391169
-        archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (settings.ARCHIVE_FRAMES_URL, 3000, request_id, 'SPECTRUM')
-
-        expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
-                          'redlevels' : [90, 0]}
-
-        data = fetch_archive_frames(auth_header, archive_url, [])
-
-        self.assertEqual(2, len(data))
-        self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in data])
-        self.assertEqual([request_id, request_id], [x['REQNUM'] for x in data])
-        self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in data])
 
 @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
 class TestCheckArchiveImages(TestCase):
