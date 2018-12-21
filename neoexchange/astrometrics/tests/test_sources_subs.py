@@ -1645,7 +1645,7 @@ class TestFetchMPCOrbit(TestCase):
         elements = parse_mpcorbit(self.test_mpcdb_page)
         self.assertEqual(expected_elements, elements)
 
-    def test_fetch_243P_post2018Augepoch(self):
+    def test_fetch_243P_post2018Aug_epoch(self):
 
         epoch = datetime(2018, 9, 5, 18, 0, 0)
 
@@ -1675,6 +1675,139 @@ class TestFetchMPCOrbit(TestCase):
                              'recip semimajor axis future': None,
                              'recip semimajor axis error': None,
                              'reference': 'MPC 111774',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_pre2018Aug_epoch(self):
+
+        # Set epoch to 1 second after the 160/2=80 days between the 2018-03-23
+        # and 2018-08-30 elements sets
+        epoch = datetime(2018, 6, 11, 0, 0, 1)
+
+        expected_elements = {'epoch': '2018-08-30.0',
+                             'epoch JD': '2458360.5',
+                             'perihelion date': '2018-08-26.00689',
+                             'perihelion JD': '2458356.50689',
+                             'argument of perihelion': '283.55482',
+                             'ascending node': '87.65877',
+                             'inclination': '7.64145',
+                             'eccentricity': '0.3593001',
+                             'perihelion distance': '2.4544438',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8308789',
+                             'mean anomaly': '0.52489',
+                             'mean daily motion': '0.13144867',
+                             'aphelion distance': '5.207',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97228322',
+                             'P-vector [y]': '0.23016404',
+                             'P-vector [z]': '-0.04110774',
+                             'Q-vector [x]': '-0.19238738',
+                             'Q-vector [y]': '0.88749145',
+                             'Q-vector [z]': '0.41874339',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPC 111774',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_post2018Mar_epoch(self):
+
+        # Set epoch to 1 second before the 160/2=80 days between the 2018-03-23
+        # and 2018-08-30 elements sets
+        epoch = datetime(2018, 6, 10, 23, 59, 59)
+
+        expected_elements = {'epoch': '2018-03-23.0',
+                             'epoch JD': '2458200.5',
+                             'perihelion date': '2018-08-26.04162',
+                             'perihelion JD': '2458356.54162',
+                             'argument of perihelion': '283.56217',
+                             'ascending node': '87.66076',
+                             'inclination': '7.64150',
+                             'eccentricity': '0.3591386',
+                             'perihelion distance': '2.4544160',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8298701',
+                             'mean anomaly': '339.48043',
+                             'mean daily motion': '0.13150061',
+                             'aphelion distance': '5.205',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97225165',
+                             'P-vector [y]': '0.23030922',
+                             'P-vector [z]': '-0.04104137',
+                             'Q-vector [x]': '-0.19254615',
+                             'Q-vector [y]': '0.88745569',
+                             'Q-vector [z]': '0.4187462',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPEC 2018-S50',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_pre2018Mar_epoch(self):
+
+        epoch = datetime(2018, 2, 14,  1,  2,  3)
+
+        expected_elements = {'epoch': '2018-03-23.0',
+                             'epoch JD': '2458200.5',
+                             'perihelion date': '2018-08-26.04162',
+                             'perihelion JD': '2458356.54162',
+                             'argument of perihelion': '283.56217',
+                             'ascending node': '87.66076',
+                             'inclination': '7.64150',
+                             'eccentricity': '0.3591386',
+                             'perihelion distance': '2.4544160',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8298701',
+                             'mean anomaly': '339.48043',
+                             'mean daily motion': '0.13150061',
+                             'aphelion distance': '5.205',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97225165',
+                             'P-vector [y]': '0.23030922',
+                             'P-vector [z]': '-0.04104137',
+                             'Q-vector [x]': '-0.19254615',
+                             'Q-vector [y]': '0.88745569',
+                             'Q-vector [z]': '0.4187462',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPEC 2018-S50',
                              'observations used': '334',
                              'residual rms': '0.60',
                              'perturbers coarse indicator': 'M-v',
