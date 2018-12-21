@@ -2060,6 +2060,8 @@ def clean_mpcorbit(elements, dbg=False, origin='M'):
             params['perihdist'] = elements['perihelion distance']
             perihelion_date = elements['perihelion date'].replace('-', ' ')
             params['epochofperih'] = parse_neocp_decimal_date(perihelion_date)
+            params['meandist'] = None
+            params['meananom'] = None
 
         not_seen = None
         if last_obs is not None:
@@ -2089,7 +2091,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     else:
         page = obj_id_or_page
 
-    elements = parse_mpcorbit(page, dbg)
+    elements = parse_mpcorbit(page, dbg=dbg)
     if elements == {}:
         logger.warning("Could not parse elements from page for %s" % obj_id)
         return False
