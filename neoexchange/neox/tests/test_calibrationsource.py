@@ -89,10 +89,10 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn('Calibration Sources', header_text)
 
         # He notices the position of the Solar antinode is given.
-        expected_coords=['15:55:45.42', '-20:22:15.3']
+        expected_coords = ['15:55:45.42', '-20:22:15.3']
         coords_text = self.browser.find_element_by_id('anti_solar_point').text
         for coor in expected_coords:
-            self.assertIn(coor,coords_text)
+            self.assertIn(coor, coords_text)
 
         # He notices there are several calibration sources that are listed
         self.check_for_header_in_table('id_calibsources',
