@@ -188,14 +188,33 @@ class TestCheckForExistingFile(TestCase):
 
 
 @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+class TestFetchArchiveFrames(TestCase):
+
+    def test_fetch_spectra(self):
+        auth_header = {'Authorization': 'Token LetMeInPrettyPlease'}
+        request_id = 1391169
+        archive_url = '%s?limit=%d&REQNUM=%s&OBSTYPE=%s' % (settings.ARCHIVE_FRAMES_URL, 3000, request_id, 'SPECTRUM')
+
+        expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
+                          'redlevels' : [90, 0]}
+
+        data = mock_fetch_archive_frames(auth_header, archive_url, [])
+
+        self.assertEqual(2, len(data))
+        self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in data])
+        self.assertEqual([request_id, request_id], [x['REQNUM'] for x in data])
+        self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in data])
+
+
+@patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
 class TestCheckArchiveImages(TestCase):
 
     def test_fetch_imaging(self):
         request_id = 42
 
-        expected_data = { 'obstypes' : ['EXPOSE',],
+        expected_data = { 'obstypes' : ['EXPOSE', ],
                           'redlevels' : [91, ],
-                          'files' : ['ogg0m406-kb27-20160531-0063-e91.fits.fz',]
+                          'files' : ['ogg0m406-kb27-20160531-0063-e91.fits.fz', ]
                         }
         frames, num_frames = check_for_archive_images(request_id)
 
@@ -210,7 +229,7 @@ class TestCheckArchiveImages(TestCase):
 
         expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
                           'redlevels' : [90, 0],
-                          'files' : ['LCOEngineering_0001391169_ftn_20180111_58130.tar.gz', 'ogg2m001-en06-20180110-0005-e00.fits.fz',]
+                          'files' : ['LCOEngineering_0001391169_ftn_20180111_58130.tar.gz', 'ogg2m001-en06-20180110-0005-e00.fits.fz', ]
                           }
 
         frames, num_frames = check_for_archive_images(request_id, obstype)
