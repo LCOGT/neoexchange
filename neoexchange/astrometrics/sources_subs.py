@@ -676,7 +676,9 @@ def fetch_mpcdb_page(asteroid, dbg=False):
     return page
 
 
-def parse_mpcorbit(page, epoch_now=datetime.utcnow(), dbg=False):
+def parse_mpcorbit(page, epoch_now=None, dbg=False):
+    if epoch_now is None:
+        epoch_now = datetime.utcnow()
     """Parses a page of elements tables return from the Minor Planet Center (MPC)
     database search page and returns an element set as a dictionary.
     In the case of multiple element sets (normally comets), the closest in time
