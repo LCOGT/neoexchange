@@ -2157,6 +2157,7 @@ class TestClean_mpcorbit(TestCase):
         self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
         self.test_comet_elements_2018Aug_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,9,25))
+        self.test_comet_elements_2018Mar_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,2,14))
 
         self.test_hyperbolic_elements = {
                                          'argument of perihelion': '325.96205',
@@ -2275,6 +2276,29 @@ class TestClean_mpcorbit(TestCase):
                                         'update_time' : datetime(2018, 9, 19, 0),
                                         'updated' : True
                                     }
+
+        self.expected_mulepoch_Mar18_params = {
+                                        'elements_type': 'MPC_COMET',
+                                        'argofperih': '283.56217',
+                                        'longascnode' : '87.66076',
+                                        'eccentricity' : '0.3591386',
+                                        'epochofel': datetime(2018, 3, 23, 0),
+                                        'meandist' : None,
+                                        'orbinc' : '7.64150',
+                                        'meananom': None,
+                                        'perihdist' : '2.4544160',
+                                        'epochofperih': datetime(2018, 8, 26, 0, 59, 55, int(0.968*1e6)),
+                                        'slope': '4.0',
+                                        'origin' : 'M',
+                                        'active' : True,
+                                        'source_type' : 'C',
+                                        'discovery_date': datetime(2003, 8, 1, 0),
+                                        'num_obs': '334',
+                                        'arc_length': '5528',
+                                        'not_seen' :  -216.87383101851853,
+                                        'update_time' : datetime(2018, 9, 19, 0),
+                                        'updated' : True
+                                    }
         self.maxDiff = None
 
     @patch('core.views.datetime', MockDateTime)
@@ -2342,6 +2366,14 @@ class TestClean_mpcorbit(TestCase):
         params = clean_mpcorbit(self.test_comet_elements_2018Aug_epoch)
 
         self.assertEqual(self.expected_mulepoch_params, params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_243P_preMar18_epoch(self):
+
+        MockDateTime.change_datetime(2018, 2, 14, 3, 1, 41)
+        params = clean_mpcorbit(self.test_comet_elements_2018Mar_epoch)
+
+        self.assertEqual(self.expected_mulepoch_Mar18_params, params)
 
 
 class TestCreate_sourcemeasurement(TestCase):
