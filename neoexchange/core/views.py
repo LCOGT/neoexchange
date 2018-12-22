@@ -2961,7 +2961,7 @@ def create_calib_sources(calib_sources, cal_type=StaticSource.FLUX_STANDARD):
     return num_created
 
 
-def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards=None, debug=False):
+def find_best_flux_standard(sitecode, utc_date=None, flux_standards=None, debug=False):
     """Finds the "best" flux standard (closest to the zenith at the middle of
     the night (given by [utc_date]; defaults to UTC "now") for the passed <sitecode>
     [flux_standards] is expected to be a dictionary of standards with the keys as the
@@ -2969,6 +2969,8 @@ def find_best_flux_standard(sitecode, utc_date=datetime.utcnow(), flux_standards
     normally produced by sources_subs.fetch_flux_standards(); which will be
     called if standards=None
     """
+    if utc_date is None:
+        utc_date = datetime.utcnow()
     close_standard = None
     close_params = {}
     if flux_standards is None:
