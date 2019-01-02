@@ -218,6 +218,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
 
     r3 = -100.
     delta = 0.0
+    delta_dot = 0.0
     ltt = 0.0
     pos = zeros(3)
     vel = zeros(3)
@@ -314,7 +315,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     else:
         # Compute phase angle, beta (Sun-Target-Earth angle)
         beta = compute_phase_angle(r, delta, es_Rsq)
-        beta_dot = -1/sqrt(1-(cos(beta))**2)*(r*(delta**2-r**2+1)*delta_dot-delta*(delta**2-r**2-1)*r_dot)/(2*delta*delta*r*r)
+        beta_dot = -1/sqrt(1-(cos(beta))**2)*(r*(delta**2-r**2+es_Rsq)*delta_dot-delta*(delta**2-r**2-es_Rsq)*r_dot)/(2*delta*delta*r*r)
 
         phi1 = exp(-3.33 * (tan(beta/2.0))**0.63)
         phi2 = exp(-1.87 * (tan(beta/2.0))**1.22)
