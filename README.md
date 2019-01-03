@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.7
+Several patches for tests and minor issue fixes
+
 ### 2.7.6
 Add Generic Telescope Classes
 
