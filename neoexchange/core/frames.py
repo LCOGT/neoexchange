@@ -125,10 +125,11 @@ def create_frame(params, block=None, frameid=None):
     # Update catalogue information if we have it
     if params.get('astrometric_catalog', None):
         frame.astrometric_catalog = params.get('astrometric_catalog')
-        frame.save()
     if params.get('photometric_catalog', None):
         frame.photometric_catalog = params.get('photometric_catalog')
-        frame.save()
+    if params.get('L1FWHM', None):
+        frame.fwhm = params.get('L1FWHM')
+    frame.save()
 
     if frame_created:
         msg = "created"
@@ -148,7 +149,7 @@ def frame_params_from_header(params, block):
     try:
         rlevel = int(rlevel)
     except ValueError:
-        logger.warn("Error converting RLEVEL to integer in frame " + frame_params['filename'])
+        logger.warning("Error converting RLEVEL to integer in frame " + frame_params['filename'])
         rlevel = 0
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
@@ -159,7 +160,6 @@ def frame_params_from_header(params, block):
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
-                     'fwhm'      : params.get('L1FWHM', None),
                  }
     if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
         aperture_type = params.get('APERTYPE', 'SLIT').rstrip()
