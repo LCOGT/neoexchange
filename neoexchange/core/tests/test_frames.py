@@ -927,7 +927,6 @@ class TestFrameParamsFromHeader(TestCase):
                              'instrument': 'kb92',
                              'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
                              'exptime'   : 20.0,
-                             'fwhm'      : 1.42,
                              'wcs'       : WCS() }
 
         header_params = { 'SITEID'   : 'elp',
@@ -958,7 +957,6 @@ class TestFrameParamsFromHeader(TestCase):
                              'instrument': 'kb92',
                              'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
                              'exptime'   : 20.0,
-                             'fwhm'      : 1.42,
                              'wcs'       : WCS() }
 
         header_params = { 'SITEID'   : 'elp',
