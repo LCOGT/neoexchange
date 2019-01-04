@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2017-2017 LCO
+Copyright (C) 2017-2019 LCO
 
 photometry_subs.py -- Code for photometric transformations.
 
