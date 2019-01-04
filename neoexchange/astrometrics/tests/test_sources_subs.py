@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -224,14 +224,18 @@ class TestFetchGoldstoneTargets(TestCase):
 
         self.maxDiff = None
 
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_basics(self):
+        MockDateTime.change_datetime(2018, 4, 6, 2, 0, 0)
         expected_length = 49
 
         targets = fetch_goldstone_targets(self.test_goldstone_page)
 
         self.assertEqual(expected_length, len(targets))
 
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_targets(self):
+        MockDateTime.change_datetime(2018, 4, 6, 2, 0, 0)
         expected_targets = [ '3200',
                              '2017 VT14',
                              '2017 WX12',

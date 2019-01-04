@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2015-2018 LCO
+Copyright (C) 2015-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ from mock import patch, Mock
 from astropy.wcs import WCS
 
 from core.models import Body, Proposal, Block, SuperBlock
-from neox.tests.mocks import mock_fetch_archive_frames
+from neox.tests.mocks import mock_fetch_archive_frames, mock_archive_frame_header
 from core.frames import *
 
 # Disable logging during testing
@@ -28,6 +28,7 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL
 logging.disable(logging.CRITICAL)
+
 
 class TestBlockStatus(TestCase):
 
@@ -158,9 +159,9 @@ class TestBlockStatus(TestCase):
                                }
         self.spec_test_block1 = Block.objects.create(**spec_block_params1)
 
-    #Create Mocked output to image request from Valhala.
-    #Header URL and Reqnum have been changed for easy tracking.
-    #no images for last block
+    # Create Mocked output to image request from Valhala.
+    # Header URL and Reqnum have been changed for easy tracking.
+    # no images for last block
     def mock_check_for_archive_images(request_id, obstype='EXPOSE'):
         result_images_out = [{u'BLKUID': 226770074,
                               u'DATE_OBS': u'2018-02-27T04:10:51.702000Z',
@@ -261,8 +262,8 @@ class TestBlockStatus(TestCase):
         else:
             return result_images_out, 3
 
-    #Mock Header output read from Valhalla
-    #modified Origname for easy tracking
+    # Mock Header output read from Valhalla
+    # modified Origname for easy tracking
     def mock_lco_api_call(link):
         header_out= {u'data': {u'AGCAM': u'kb80',
                               u'AGDEC': u'',
@@ -850,6 +851,7 @@ class TestBlockStatus(TestCase):
 
     @patch('core.frames.check_request_status', mock_check_request_status_spectro)
     @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    @patch('core.frames.lco_api_call', mock_archive_frame_header)
     def test_check_spectro_block(self):
         self.insert_spectro_blocks()
 
@@ -925,7 +927,6 @@ class TestFrameParamsFromHeader(TestCase):
                              'instrument': 'kb92',
                              'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
                              'exptime'   : 20.0,
-                             'fwhm'      : 1.42,
                              'wcs'       : WCS() }
 
         header_params = { 'SITEID'   : 'elp',
@@ -956,7 +957,6 @@ class TestFrameParamsFromHeader(TestCase):
                              'instrument': 'kb92',
                              'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
                              'exptime'   : 20.0,
-                             'fwhm'      : 1.42,
                              'wcs'       : WCS() }
 
         header_params = { 'SITEID'   : 'elp',
