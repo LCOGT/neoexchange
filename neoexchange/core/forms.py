@@ -107,7 +107,7 @@ class ScheduleCadenceForm(forms.Form):
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
                                      initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                   initial=datetime.today, required=True, error_messages={'required': _(u'UTC end date is required')})
+                                   initial=datetime.today()+timedelta(days=1), required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
 
