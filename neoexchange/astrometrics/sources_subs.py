@@ -1526,7 +1526,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
             print('Request {0} window start: {1} window end: {2}'.format(
                 i, request['windows'][0]['start'], request['windows'][0]['end']
             ))
-            i = i + 1
+            i += 1
 
     return cadence_user_request
 

@@ -228,19 +228,19 @@
                         <td class="kv-key">Window (UTC)</td>
                         <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
                     </tr>
-                    {% if data.jitter %}
+                    {% if data.jitter is not None%}
                     <tr id="id_jitter">
-                        <td class="kv-key">Jitter (hours)</td>
-                        <td class="kv-value">{{ data.jitter }}</td>
+                        <td class="kv-key">Jitter</td>
+                        <td class="kv-value">{{ form.jitter }} hrs</td>
                     </tr>
                     {% endif %}
-                    {% if data.period %}
+                    {% if data.period is not None%}
                     <tr id="id_period">
-                        <td class="kv-key">Period (hours)</td>
-                        <td class="kv-value">{{ data.period }}</td>
+                        <td class="kv-key">Period</td>
+                        <td class="kv-value">{{ form.period }} hrs</td>
                     </tr>
                     {% endif %}
-                    {% if data.num_times and data.total_time %}
+                    {% if data.num_times is not None and data.total_time is not None%}
                     <tr id="id_cadence_cost">
                         <td class="kv-key">No. of repeats / Total time (hours)</td>
                         <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
