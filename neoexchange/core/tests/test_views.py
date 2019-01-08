@@ -1394,6 +1394,77 @@ class TestSchedule_Check(TestCase):
 
     @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
     @patch('core.views.datetime', MockDateTime)
+    def test_mp_cadence_bad_jitter(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        self.body_mp.name = '2009 HA'
+        self.body_mp.save()
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'period' : 4.0,
+                 'jitter' : 0.1,
+                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
+                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.111452844407932,
+                        'speed': 2.8743096178906367,
+                        'slot_length': 20,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 12.0,
+                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 12,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T23:00:00',
+                        'mid_time': '2016-04-06T16:00:00',
+                        'ra_midpoint': 3.3110137022045336,
+                        'dec_midpoint': -0.15949643713664577,
+                        'period' : 4.0,
+                        'jitter' : .34,
+                        'num_times' : 3,
+                        'total_time' : 1.0,
+                        'instrument_code' : '',
+                        'snr' : None,
+                        'too_mode': False,
+                        'calibs' : '',
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False,
+                        'vis_time': 6.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.70515036289103,
+                        'moon_alt': -43.42555786736966,
+                        'moon_phase': 0.00890997165773788,
+                        'moon_sep': 171.79313958425425,
+                        'trail_len': 2.395258014908864,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0806302130727632,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
     def test_mp_cadence_long_name(self):
         MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
 

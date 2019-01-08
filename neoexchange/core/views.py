@@ -980,12 +980,17 @@ def schedule_check(data, body, ok_to_schedule=True):
     jitter = data.get('jitter', None)
 
     if period and jitter:
+        # Increase Jitter if shorter than slot length
+        if jitter < slot_length / 60:
+            jitter = round(slot_length / 60, 2)+.01
+
         # Number of times the cadence request will run between start and end date
         cadence_start = data['start_time']
         cadence_end = data['end_time']
         total_run_time = cadence_end - cadence_start
         cadence_period = timedelta(seconds=data['period']*3600.0)
         total_requests = 1 + int(floor(total_run_time.total_seconds() / cadence_period.total_seconds()))
+
         # Remove the last start if the request would run past the cadence end
         if cadence_start + total_requests * cadence_period + timedelta(seconds=slot_length*60.0) > cadence_end:
             total_requests -= 1
