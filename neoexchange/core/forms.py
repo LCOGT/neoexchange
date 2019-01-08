@@ -125,10 +125,14 @@ class ScheduleCadenceForm(forms.Form):
 
     def clean(self):
         cleaned_data = super(ScheduleCadenceForm, self).clean()
-        start = cleaned_data['start_time']
-        end = cleaned_data['end_time']
-        if end < start:
-            raise forms.ValidationError("End date must be after start date")
+        try:
+            start = cleaned_data['start_time']
+            end = cleaned_data['end_time']
+            if end < start:
+                raise forms.ValidationError("End date must be after start date")
+        except KeyError:
+            # Bad datetimes should be caught by Django validation
+            pass
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)
