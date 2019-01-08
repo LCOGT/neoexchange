@@ -75,6 +75,18 @@ def make_int_list(value):
     return range(1, value+1)
 
 
+@register.filter(is_safe=False)
+def multiply(value, arg):
+    """multiply the arg by the value."""
+    try:
+        return float(value) * float(arg)
+    except (ValueError, TypeError):
+        try:
+            return value * arg
+        except Exception:
+            return ''
+
+
 @register.simple_tag
 def format_mpc_line_upload(measure):
     return measure.format_mpc_line(include_catcode=False)

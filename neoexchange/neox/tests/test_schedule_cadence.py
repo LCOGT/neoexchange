@@ -313,8 +313,12 @@ class ScheduleCadence(FunctionalTest):
         self.assertIn('0.5', jitter)
         period = self.browser.find_element_by_name('period').get_attribute('value')
         self.assertIn('0.02', period)
-        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('kv-value').text
+
+        # He sees a warning about the large number of hours now required for this cadence. As well as a message about potential overlap
+        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('warning').text
         self.assertIn('300 / 125', cadence_cost)
+        period_warning = self.browser.find_element_by_id('id_period').find_element_by_class_name('warning').text
+        self.assertIn('Period', period_warning)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 

@@ -231,19 +231,42 @@
                     {% if data.jitter is not None%}
                     <tr id="id_jitter">
                         <td class="kv-key">Jitter</td>
-                        <td class="kv-value">{{ form.jitter }} hrs</td>
+                        <td class="kv-value">{{ form.jitter }}
+                            <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value">
+                                <div class="tooltip">hrs
+                                    <span class="tooltiptext" style="left:60%; width:75px;" name="jitter_mins">
+                                        ({{data.jitter|multiply:60}} minutes)
+                                    </span>
+                                </div></td><td></td></tr>
+                            </table>
+                        </td>
                     </tr>
                     {% endif %}
                     {% if data.period is not None%}
                     <tr id="id_period">
-                        <td class="kv-key">Period</td>
+                        {% if data.period < data.jitter %}
+                            <td ><table align="left"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded"> Period </span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Potential for Overlapping Observations!</u>
+                                <br>This Cadence may result in simultanious observations from multiple telescopes. Consider increasing period or decreasing jitter. <br>
+                                </span></div></td></tr></table></td>
+                        {% else %}
+                            <td class="kv-key">Period</td>
+                        {% endif %}
                         <td class="kv-value">{{ form.period }} hrs</td>
                     </tr>
                     {% endif %}
                     {% if data.num_times is not None and data.total_time is not None%}
                     <tr id="id_cadence_cost">
                         <td class="kv-key">No. of repeats / Total time (hours)</td>
-                        <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
+                        {% if data.total_time >= 10 %}
+                            <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded">{{ data.num_times }} / {{ data.total_time|floatformat:2 }} </span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Very Large Cadence Requested!</u>
+                                <br>Are you sure you want to submit a request for {{ data.total_time|floatformat:2 }} hours on this proposal? <br></span></div></td></tr></table></td>
+                        {% else %}
+                            <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
+                        {% endif %}
                     </tr>
                     {% endif %}
                     {% if data.spectroscopy %}
