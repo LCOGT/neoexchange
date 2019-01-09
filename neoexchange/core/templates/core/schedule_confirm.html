@@ -244,7 +244,7 @@
                             <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value">
                                 <div class="tooltip">hrs
                                     <span class="tooltiptext" style="left:60%; width:75px;" name="jitter_mins">
-                                        ({{data.jitter|multiply:60}} minutes)
+                                        ({{data.jitter|multiply:60|floatformat:2}} minutes)
                                     </span>
                                 </div></td><td></td></tr>
                             </table>
@@ -267,14 +267,14 @@
                     {% endif %}
                     {% if data.num_times is not None and data.total_time is not None%}
                     <tr id="id_cadence_cost">
-                        <td class="kv-key">No. of repeats / Total time (hours)</td>
+                        <td class="kv-key">Max No. of Repeats / Total Time </td>
                         {% if data.total_time >= 10 %}
                             <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
-                                <span class="warning msgpadded">{{ data.num_times }} / {{ data.total_time|floatformat:2 }} </span>
+                                <span class="warning msgpadded">{{ data.num_times }} / {{ data.total_time|floatformat:2 }} hrs </span>
                                 <span class="tooltiptext" style="width: 150px;"><u>Very Large Cadence Requested!</u>
                                 <br>Are you sure you want to submit a request for {{ data.total_time|floatformat:2 }} hours on this proposal? <br></span></div></td></tr></table></td>
                         {% else %}
-                            <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }}</td>
+                            <td class="kv-value">{{ data.num_times }} / {{ data.total_time|floatformat:2 }} hrs</td>
                         {% endif %}
                     </tr>
                     {% endif %}

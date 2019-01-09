@@ -1708,7 +1708,10 @@ def submit_block_to_scheduler(elements, params):
             try:
                 msg = user_request['errors']
             except KeyError:
-                msg = "Unable to decode response from Valhalla"
+                try:
+                    msg = user_request['proposal'][0]
+                except KeyError:
+                    msg = "Unable to decode response from Valhalla"
         params['error_msg'] = msg
         logger.error(msg)
         return False, params
