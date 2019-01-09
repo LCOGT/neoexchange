@@ -105,7 +105,7 @@ class ScheduleCadenceForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad', }))
     site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad', }))
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                     initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
+                                     initial=datetime.today(), required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
                                    initial=datetime.today()+timedelta(days=1), required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
@@ -129,16 +129,16 @@ class ScheduleCadenceForm(forms.Form):
         else:
             return self.cleaned_data['period']
 
-    def clean(self):
-        cleaned_data = super(ScheduleCadenceForm, self).clean()
-        try:
-            start = cleaned_data['start_time']
-            end = cleaned_data['end_time']
-            if end < start:
-                raise forms.ValidationError("End date must be after start date")
-        except KeyError:
-            # Bad datetimes should be caught by Django validation
-            pass
+    # def clean(self):
+    #     cleaned_data = super(ScheduleCadenceForm, self).clean()
+    #     try:
+    #         start = cleaned_data['start_time']
+    #         end = cleaned_data['end_time']
+    #         if end < start:
+    #             raise forms.ValidationError("End date must be after start date")
+    #     except KeyError:
+    #         # Bad datetimes should be caught by Django validation
+    #         pass
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)

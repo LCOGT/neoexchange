@@ -1705,7 +1705,10 @@ def submit_block_to_scheduler(elements, params):
                 error_msg = error_json.get('non_field_errors', msg)
                 msg = error_msg[0]
         except AttributeError:
-            msg = "Unable to decode response from Valhalla"
+            try:
+                msg = user_request['errors']
+            except KeyError:
+                msg = "Unable to decode response from Valhalla"
         params['error_msg'] = msg
         logger.error(msg)
         return False, params

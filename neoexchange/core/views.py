@@ -837,10 +837,11 @@ def schedule_check(data, body, ok_to_schedule=True):
     # Check for valid proposal
     # validate_proposal_time(data['proposal_code'])
 
-    # Determine magnitude
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
+        if dark_end < dark_start:
+            dark_end = dark_start + timedelta(hours=1)
         utc_date = data.get('utc_date', dark_start.date())
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
@@ -987,8 +988,8 @@ def schedule_check(data, body, ok_to_schedule=True):
             period = 0.02
 
         # Number of times the cadence request will run between start and end date
-        cadence_start = data['start_time']
-        cadence_end = data['end_time']
+        cadence_start = dark_start
+        cadence_end = dark_end
         total_run_time = cadence_end - cadence_start
         cadence_period = timedelta(seconds=data['period']*3600.0)
         total_requests = 1 + int(floor(total_run_time.total_seconds() / cadence_period.total_seconds()))

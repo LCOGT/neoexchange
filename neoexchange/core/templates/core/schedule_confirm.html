@@ -226,12 +226,21 @@
                     {% endif %}
                     <tr id="id_window">
                         <td class="kv-key">Window (UTC)</td>
-                        <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
+                        {% if data.num_times is not None and data.num_times < 2 %}
+                            <td ><table align="left"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded"> {{ data.start_time }} -> {{ data.end_time }} </span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Window too short for Cadence!</u>
+                                <br>You cannot fit multiple observations within this observing window. Consider increasing window, decreasing period, or using single observation. <br>
+                                </span></div></td></tr></table></td>
+                        {% else %}
+                            <td class="kv-value">{{ data.start_time }} -> {{ data.end_time }}</td>
+                        {% endif %}
+
                     </tr>
                     {% if data.jitter is not None%}
                     <tr id="id_jitter">
                         <td class="kv-key">Jitter</td>
-                        <td class="kv-value">{{ form.jitter }}
+                        <td class="kv-value">{{ form.jitter }}&nbsp;
                             <table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value">
                                 <div class="tooltip">hrs
                                     <span class="tooltiptext" style="left:60%; width:75px;" name="jitter_mins">
@@ -245,7 +254,7 @@
                     {% if data.period is not None%}
                     <tr id="id_period">
                         {% if data.period < data.jitter %}
-                            <td ><table align="left"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                            <td ><table align="left"  style="margin: 0px"><tr><td></td><td class="kv-key"><div class="tooltip">
                                 <span class="warning msgpadded"> Period </span>
                                 <span class="tooltiptext" style="width: 150px;"><u>Potential for Overlapping Observations!</u>
                                 <br>This Cadence may result in simultanious observations from multiple telescopes. Consider increasing period or decreasing jitter. <br>
@@ -274,7 +283,7 @@
                         <td class="kv-key">Spectroscopy</td>
                         <td class="kv-value">{{ data.spectroscopy }}</td>
                     </tr>
-                    <tr id="id_spectroscopy">
+                    <tr id="id_spectroscopy_calibs">
                         <td class="kv-key">Calibs</td>
                         <td class="kv-value">{{ data.calibs }}</td>
                     </tr>

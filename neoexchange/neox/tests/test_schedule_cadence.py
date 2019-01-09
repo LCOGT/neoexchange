@@ -318,7 +318,7 @@ class ScheduleCadence(FunctionalTest):
         cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('warning').text
         self.assertIn('300 / 125', cadence_cost)
         period_warning = self.browser.find_element_by_id('id_period').find_element_by_class_name('warning').text
-        self.assertIn('Period', period_warning)
+        self.assertIn('PERIOD', period_warning)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
