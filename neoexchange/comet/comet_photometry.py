@@ -26,7 +26,7 @@ try:
 except ImportError:
     from photutils.background import Background2D as Background
 
-path.insert(0, os.path.join(os.getenv('HOME'), 'GIT/neoexchange/neoexchange'))
+path.insert(0, os.path.join(os.getenv('HOME'), 'git/neoexchange_stable/neoexchange'))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
 import django
 from django.conf import settings
@@ -35,7 +35,9 @@ django.setup()
 from astrometrics.ephem_subs import LCOGT_domes_to_site_codes
 from comet_subs import *
 
-datadir = os.path.join(os.getenv('HOME'), 'Asteroids', '67P', 'Pipeline', 'Temp')
+#comet = '67P'
+comet = '243P'
+datadir = os.path.join(os.getenv('HOME'), 'Asteroids', comet, 'Pipeline', 'Temp')
 datadir = os.path.join(os.path.abspath(datadir), '')
 bkg_map = True
 
@@ -45,7 +47,7 @@ FLUX2MAG = 2.5/log(10)
 images, catalogs = determine_images_and_catalogs(datadir)
 
 # Create log file, write header
-log_file = os.path.join(datadir, '67P_phot.log')
+log_file = os.path.join(datadir, comet + '_phot.log')
 
 if os.path.exists(log_file):
     os.remove(log_file)
@@ -86,7 +88,7 @@ for fits_fpath in images:
 
     #   Determine position of comet in this frame
     sitecode = LCOGT_domes_to_site_codes(header['siteid'], header['encid'], header['telid'])
-    ephem_file = "67P_ephem_%s_%s_%s.txt" % ( header['siteid'].upper(), header['instrume'].lower(), sitecode.upper())
+    ephem_file = comet + "_ephem_%s_%s_%s.txt" % ( header['siteid'].upper(), header['instrume'].lower(), sitecode.upper())
     print("Reading ephemeris from", ephem_file)
     ephem_file = os.path.join(os.getenv('HOME'), 'Asteroids', ephem_file)
 
