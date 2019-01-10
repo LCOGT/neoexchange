@@ -26,3 +26,4 @@ panoptes-client
 pillow
 gunicorn
 rollbar
+photutils>=0.3

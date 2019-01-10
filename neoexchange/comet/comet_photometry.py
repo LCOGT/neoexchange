@@ -15,16 +15,8 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 from photutils import CircularAperture, SkyCircularAperture, aperture_photometry
-try:
-    # Renamed in 0.3
-    from photutils.utils import calculate_total_error as calc_total_error
-except ImportError:
-    from photutils.utils import calc_total_error
-
-try:
-    from photutils.background import Background
-except ImportError:
-    from photutils.background import Background2D as Background
+from photutils.utils import calc_total_error
+from photutils.background import Background2D, MedianBackground
 
 path.insert(0, os.path.join(os.getenv('HOME'), 'git/neoexchange_stable/neoexchange'))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
@@ -72,16 +64,18 @@ for fits_fpath in images:
     low_clip = 100.0
     if bkg_map:
         low_clip = -50.0
-    mask = make_mask(image, header['saturate'], low_clip)
+    sat_level = header.get('saturate', 55000)
+    mask = make_mask(image, sat_level, low_clip)
 
     #   Determine background and subtract
     if bkg_map:
-        bkg = Background(image, (50, 50), filter_size=(3, 3), method='median', mask=mask)
+        bkg_estimator = MedianBackground()
+        bkg = Background2D(image, (50, 50), filter_size=(3, 3), bkg_estimator=bkg_estimator, mask=mask)
         sky_level = bkg.background
         sky_sigma = bkg.background_rms
         effective_gain = header['gain']
         print("Gain=", effective_gain)
-        error = calculate_total_error(image, sky_sigma, effective_gain)
+        error = calc_total_error(image, sky_sigma, effective_gain)
         image_sub = image - sky_level
     else:
         mean, median, std = sigma_clipped_stats(image, sigma=3.0, iters=3, mask=mask)
