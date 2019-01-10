@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from glob import glob
 from math import atan2, degrees
@@ -25,12 +26,12 @@ def determine_images_and_catalogs(datadir, output=True):
         fits_files = sorted(glob(datadir + '*e??.fits'))
         fits_catalogs = sorted(glob(datadir + '*e??_cat.fits'))
         if len(fits_files) == 0 and len(fits_catalogs) == 0:
-            print "No FITS files and catalogs found in directory %s" % datadir
+            print("No FITS files and catalogs found in directory %s" % datadir)
             fits_files, fits_catalogs = None, None
         else:
-            print "Found %d FITS files and %d catalogs" % ( len(fits_files), len(fits_catalogs))
+            print("Found %d FITS files and %d catalogs" % ( len(fits_files), len(fits_catalogs)))
     else:
-        print "Could not open directory %s" % datadir
+        print("Could not open directory %s" % datadir)
         fits_files, fits_catalogs = None, None
 
     return fits_files, fits_catalogs
@@ -43,7 +44,7 @@ def open_image(fits_file):
         header = hdulist[0].header
         image = hdulist[0].data
     except IOError as e:
-        print "Unable to open FITS file %s (Reason=%s)" % (fits_file, e)
+        print("Unable to open FITS file %s (Reason=%s)" % (fits_file, e))
 
     return header, image
 
@@ -57,8 +58,8 @@ def make_mask(image, saturation, low_clip=0.0):
     frac_low_mask = (low_mask == True).sum()
     percent_low_mask = (frac_low_mask / float(low_mask.size)) * 100.0
 
-    print "Masked %d (%.1f%%) saturated and %d (%.1f%%) low pixels" \
-        % ( frac_sat_mask, percent_sat_mask, frac_low_mask, percent_low_mask)
+    print("Masked %d (%.1f%%) saturated and %d (%.1f%%) low pixels" \
+        % ( frac_sat_mask, percent_sat_mask, frac_low_mask, percent_low_mask))
 
     mask = sat_mask + low_mask
 
@@ -104,16 +105,16 @@ def interpolate_ephemeris(ephem_file, jd):
     frac=(jd - float(ejd1)) / (float(ejd2) - float(ejd1))
     ra = ra_dec_1.ra + frac*(ra_dec_2.ra - ra_dec_1.ra)
     dec = ra_dec_1.dec + frac*(ra_dec_2.dec - ra_dec_1.dec)
-    print ra.to_string(unit=u.hour, sep=('h ', 'm ', 's')), dec.to_string(alwayssign=True, unit=u.degree, sep=('d ', "' ", '"'))
+    print (ra.to_string(unit=u.hour, sep=('h ', 'm ', 's')), dec.to_string(alwayssign=True, unit=u.degree, sep=('d ', "' ", '"')))
     return ra.degree, dec.degree, float(delta_ra), float(delta_dec), float(delta), float(phase)
 
 def retrieve_zp_err(fits_frame):
     try:
         frame = Frame.objects.get(filename=fits_frame)
     except Frame.DoesNotExist:
-        print "No DB record of %s" % fits_frame
+        print("No DB record of %s" % fits_frame)
         exit(-1)
     except Frame.MultipleObjectsReturned:
-        print "Multiple processed frame records found for %s" % fits_frame
+        print("Multiple processed frame records found for %s" % fits_frame)
         exit(-1)
     return frame.zeropoint, frame.zeropoint_err

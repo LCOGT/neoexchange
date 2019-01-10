@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import os
 from sys import path, exit
@@ -47,7 +48,7 @@ print >> log_fh, "# Filename                           Filter JD            MJD-
 # Loop over all images
 for fits_fpath in images:
     fits_frame = os.path.basename(fits_fpath)
-    print "Processing %s" % fits_frame
+    print("Processing %s" % fits_frame)
 
     # Determine if good zeropoint
     zp, zp_err = retrieve_zp_err(fits_frame)
@@ -67,76 +68,76 @@ for fits_fpath in images:
         sky_level = bkg.background
         sky_sigma = bkg.background_rms
         effective_gain = header['gain']
-        print "Gain=", effective_gain
+        print("Gain=", effective_gain)
         error = calculate_total_error(image, sky_sigma, effective_gain)
         image_sub = image - sky_level
     else:
         mean, median, std = sigma_clipped_stats(image, sigma=3.0, iters=3, mask=mask)
-        print "Mean, median, std. dev=", mean, median, std
+        print("Mean, median, std. dev=", mean, median, std)
         image_sub = image - median
 
     #   Determine position of comet in this frame
     sitecode = LCOGT_domes_to_site_codes(header['siteid'], header['encid'], header['telid'])
     ephem_file = "67P_ephem_%s_%s_%s.txt" % ( header['siteid'].upper(), header['instrume'].lower(), sitecode.upper())
-    print "Reading ephemeris from", ephem_file
+    print("Reading ephemeris from", ephem_file)
     ephem_file = os.path.join(os.getenv('HOME'), 'Asteroids', ephem_file)
 
     mjd_utc_mid = header['mjd-obs'] + (header['exptime']/2.0/86400.0)
     jd_utc_mid = mjd_utc_mid + 2400000.5
-    print "JD=", jd_utc_mid, header['date-obs'], header['exptime'], header['exptime']/2.0/86400.0
+    print("JD=", jd_utc_mid, header['date-obs'], header['exptime'], header['exptime']/2.0/86400.0)
     ra, dec, del_ra, del_dec, delta, phase = interpolate_ephemeris(ephem_file, jd_utc_mid)
-    print "RA, Dec, delta for frame=", ra, dec, delta
+    print("RA, Dec, delta for frame=", ra, dec, delta)
 
     fits_wcs = WCS(header)
     x, y = fits_wcs.wcs_world2pix(ra, dec, 1)
     pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
-    print "Pixelscales=", pixscale, header['secpix']
+    print("Pixelscales=", pixscale, header['secpix'])
 
     #   Determine aperture size and perform aperture photometry at the position
     radius = determine_aperture_size(delta, pixscale)
-    print "X, Y, Radius=", x, y, radius
+    print("X, Y, Radius=", x, y, radius)
 
     apertures = CircularAperture((x,y), r=radius)
     phot_table = aperture_photometry(image_sub, apertures, mask=mask, error=error)
-    print phot_table
+    print(phot_table)
 
     sky_position = SkyCoord(ra, dec, unit='deg', frame='icrs')
     sky_apertures = SkyCircularAperture(sky_position, r=radius * pixscale * u.arcsec)
     skypos_phot_table = aperture_photometry(image_sub, sky_apertures, wcs=fits_wcs, mask=mask, error=error)
-    print "%13.7f %16.8f %s" % (skypos_phot_table['aperture_sum'].data[0], skypos_phot_table['aperture_sum_err'].data[0], sky_position.to_string('hmsdms'))
+    print("%13.7f %16.8f %s" % (skypos_phot_table['aperture_sum'].data[0], skypos_phot_table['aperture_sum_err'].data[0], sky_position.to_string('hmsdms')))
 
     #   Convert flux to absolute magnitude
     try:
         mag = -2.5*log10(phot_table['aperture_sum'])
         magerr = FLUX2MAG * (phot_table['aperture_sum_err'] / phot_table['aperture_sum'])
     except ValueError:
-        print "-ve flux value"
+        print("-ve flux value")
         mag = magerr = -99.0
     try:
         skypos_mag = -2.5*log10(skypos_phot_table['aperture_sum'])
         skypos_magerr = FLUX2MAG * (skypos_phot_table['aperture_sum_err'] / skypos_phot_table['aperture_sum'])
     except ValueError:
-        print "-ve flux value"
+        print("-ve flux value")
         skypos_mag = skypos_magerr = -99.0
 
     # Get observed filter, Connvert 'p' to prime
     obs_filter = header['filter']
     obs_filter = obs_filter[:-1] + obs_filter[-1].replace("p", "'")
     if zp < 0 and zp_err < 0:
-        print "Bad zeropoint for %s" % fits_frame
+        print("Bad zeropoint for %s" % fits_frame)
         abs_mag = abs_mag_err = -99.0
         abs_skypos_mag = abs_skypos_mag_err = -99.0
     elif mag < -90:
-        print "Bad magntiude determination"
+        print("Bad magntiude determination")
     else:
         abs_mag = mag+zp
         abs_mag_err = sqrt(pow(magerr, 2) + pow(zp_err, 2))
         abs_skypos_mag = skypos_mag+zp
         abs_skypos_mag_err = sqrt(pow(skypos_magerr, 2) + pow(zp_err, 2))
         if obs_filter == "r'":
-            print "Correcting r' magnitude to R"
+            print("Correcting r' magnitude to R")
             abs_mag = abs_mag - 0.2105
-        print mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err
+        print(mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
 
 
     log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %9.4f %9.4f %9.4f %+8.5f %8.5f  %9.5f %+9.5f %+9.5f %+9.5f  %7.3f %7.3f"
