@@ -1,6 +1,6 @@
-'''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2015-2015 LCOGT
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 from datetime import datetime
 from django.test import TestCase
@@ -22,11 +22,14 @@ from django.views.generic import ListView
 from django.forms.models import model_to_dict
 from django.contrib.auth.models import User
 from unittest import skipIf
+from mock import patch
 
-#Import module to test
+# Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from core.models import Body, Proposal, Block
 from neox.settings import VERSION
+from neox.tests.mocks import mock_lco_authenticate
+
 
 class HomePageTest(TestCase):
 
@@ -77,8 +80,8 @@ class EphemPageTest(TestCase):
     def test_home_page_can_save_a_GET_request(self):
 
         site_code = 'V37'
-        utc_date = datetime(2015, 4, 21, 3,0,0)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date )
+        utc_date = datetime(2015, 4, 21, 3, 0, 0)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
 
         response = self.client.get(reverse('ephemeris'),
             data={'target'      : 'N999r0q',
@@ -88,19 +91,19 @@ class EphemPageTest(TestCase):
         )
         self.assertIn(u'N999r0q', response.content.decode('utf-8'))
         body_elements = model_to_dict(self.body)
-        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '5m' )
+        ephem_lines = call_compute_ephem(body_elements, dark_start, dark_end, site_code, '15m')
         expected_html = render_to_string(
             'core/ephem.html',
             {'target' : self.body,
             'ephem_lines'  : ephem_lines,
             'site_code' : site_code,
-            'neox_version' :  VERSION }
+            'neox_version' :  VERSION}
         )
         self.assertMultiLineEqual(response.content.decode('utf-8'), expected_html)
 
     def test_displays_ephem(self):
         response = self.client.get(reverse('ephemeris'),
-            data ={'target' : 'N999r0q',
+            data={'target' : 'N999r0q',
                    'utc_date' : '2015-05-11',
                    'site_code' : 'V37',
                    'alt_limit' : 30.0
@@ -110,7 +113,7 @@ class EphemPageTest(TestCase):
 
     def test_uses_ephem_template(self):
         response = self.client.get('/ephemeris/',
-            data = {'target' : 'N999r0q',
+            data={'target' : 'N999r0q',
                     'site_code' : 'W86',
                     'utc_date'  : '2015-04-20',
                     'alt_limit' : 40.0
@@ -125,13 +128,14 @@ class EphemPageTest(TestCase):
 
     def test_ephem_page_displays_site_code(self):
         response = self.client.get(reverse('ephemeris'),
-            data = {'target' : 'N999r0q',
+            data={'target' : 'N999r0q',
                     'site_code' : 'F65',
                     'utc_date'  : '2015-04-20',
                     'alt_limit' : 30.0
                     }
             )
         self.assertContains(response, 'Ephemeris for N999r0q at F65')
+
 
 class TargetsPageTest(TestCase):
 
@@ -146,6 +150,7 @@ class TargetsPageTest(TestCase):
         response = targetlist.render_to_response(targetlist)
         expected_html = render_to_string('core/body_list.html')
         self.assertEqual(response, expected_html)
+
 
 class ScheduleTargetsPageTest(TestCase):
     maxDiff = None
@@ -179,19 +184,20 @@ class ScheduleTargetsPageTest(TestCase):
                                }
         self.test_proposal, created = Proposal.objects.get_or_create(**test_proposal_params)
         # Create a user to test login
-        self.bart= User.objects.create_user(username='bart', password='simpson', email='bart@simpson.org')
-        self.bart.first_name= 'Bart'
+        self.bart = User.objects.create_user(username='bart', password='simpson', email='bart@simpson.org')
+        self.bart.first_name = 'Bart'
         self.bart.last_name = 'Simpson'
-        self.bart.is_active=1
+        self.bart.is_active = 1
         self.bart.save()
 
+    @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
         self.assertTrue(self.client.login(username='bart', password='simpson'))
 
     def test_uses_schedule_template(self):
         self.login()
-        response = self.client.get(reverse('schedule-body', kwargs={'pk':self.body.pk}),
-            data = {'body_id'   : self.body.pk,
+        response = self.client.get(reverse('schedule-body', kwargs={'pk': self.body.pk}),
+            data={'body_id'   : self.body.pk,
                     'site_code' : 'F65',
                     'utc_date'  : '2015-04-20',
                     }
@@ -200,14 +206,15 @@ class ScheduleTargetsPageTest(TestCase):
 
     def test_schedule_page_contains_object_name(self):
         self.login()
-        response = self.client.get(reverse('schedule-body', kwargs={'pk':self.body.pk}),
-            data = {'body_id'   : self.body.pk,
+        response = self.client.get(reverse('schedule-body', kwargs={'pk': self.body.pk}),
+            data={'body_id'   : self.body.pk,
                     'site_code' : 'F65',
                     'utc_date'  : '2015-04-20',
                     'proposal_code' : self.neo_proposal.code
                     }
             )
-        self.assertContains(response, 'Parameters for: ' + self.body.current_name())
+        self.assertContains(response, self.body.current_name())
+
 
 class BlocksPageTest(TestCase):
 
@@ -277,13 +284,13 @@ class BlocksPageTest(TestCase):
         self.assertTemplateUsed(response, 'core/block_list.html')
 
     def test_block_detail_url_resolves_to_block_detail_view(self):
-        found = reverse('block-view',kwargs={'pk':1})
+        found = reverse('block-view', kwargs={'pk': 1})
         self.assertEqual(found, '/block/1/')
 
     def test_block_detail_page_renders_template(self):
         self.setUp()
         blocks = Block.objects.all()
-        response = self.client.get(reverse('block-view',kwargs={'pk':blocks[0].id}))
+        response = self.client.get(reverse('block-view', kwargs={'pk': blocks[0].id}))
         self.assertTemplateUsed(response, 'core/block_detail.html')
 
 

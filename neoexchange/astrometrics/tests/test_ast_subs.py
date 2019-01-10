@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2015 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,9 +13,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.test import TestCase
 
+from core.models import Body
 #Import module to test
 from astrometrics.ast_subs import *
 
@@ -53,7 +54,7 @@ class TestIntToMutantHexChar(TestCase):
             int_to_mutant_hex_char('9')
             assert False
         except MutantError as e:
-            expected_msg = ("Number out of range 0...61")
+            expected_msg = ("Not an integer")
             self.assertEqual(e.__str__(), expected_msg)
 
     def test_bad_mutant_not_number2(self):
@@ -61,7 +62,7 @@ class TestIntToMutantHexChar(TestCase):
             int_to_mutant_hex_char('FOO')
             assert False
         except MutantError as e:
-            expected_msg = ("Number out of range 0...61")
+            expected_msg = ("Not an integer")
             self.assertEqual(e.__str__(), expected_msg)
 
     def test_num_less_than_ten(self):
@@ -179,6 +180,12 @@ class TestNormalToPacked(TestCase):
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, 0)
 
+    def test_comet_packed1(self):
+        expected_desig = '0060P       '
+        packed_desig, ret_code = normal_to_packed('0060P  ')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
     def test_provdesig_t1(self):
         expected_desig = '     K15D00D'
         packed_desig, ret_code = normal_to_packed('2015   DD')
@@ -227,11 +234,36 @@ class TestNormalToPacked(TestCase):
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, -1)
 
-    def test_baddesig_t1(self):
+    def test_baddesig_t2(self):
         expected_desig = '            '
         packed_desig, ret_code = normal_to_packed('12345 A')
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, -1)
+
+    def test_shortnumber_t1(self):
+        expected_desig = '01627       '
+        packed_desig, ret_code = normal_to_packed('1627')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
+    def test_shortnumber_t2(self):
+        expected_desig = '00433       '
+        packed_desig, ret_code = normal_to_packed('433')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
+    def test_shortnumber_t3(self):
+        expected_desig = '00016       '
+        packed_desig, ret_code = normal_to_packed('16')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
+    def test_shortnumber_t4(self):
+        expected_desig = '00004       '
+        packed_desig, ret_code = normal_to_packed('4')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
 
 class TestDetermineAsteroidType(TestCase):
 
@@ -319,3 +351,123 @@ class TestDetermineAsteroidType(TestCase):
         expected_type = 'A'
         obj_type = determine_asteroid_type(5.05, 0.0561)
         self.assertEqual(obj_type, expected_type)
+
+class TestDetermineTimeOfPerihelion(TestCase):
+
+    def test_perihelion_in_future(self):
+        meandist = 1000.0
+        meananom = 359.0
+        epochofel = datetime(2016, 7, 11, 0, 0, 0)
+
+        expected_time_of_perih = epochofel + timedelta(days=32084.54804999279)
+
+        time_of_perih = determine_time_of_perih(meandist, meananom, epochofel)
+
+        self.assertEqual(expected_time_of_perih, time_of_perih)
+
+    def test_perihelion_in_past(self):
+        meandist = 1000.0
+        meananom = 1.0
+        epochofel = datetime(2016, 7, 11, 0, 0, 0)
+
+        expected_time_of_perih = epochofel - timedelta(days=32084.54804999279)
+
+        time_of_perih = determine_time_of_perih(meandist, meananom, epochofel)
+
+        self.assertEqual(expected_time_of_perih, time_of_perih)
+
+class TestConvertAstToComet(TestCase):
+
+    def setUp(self):
+        self.params = {
+                         'provisional_name': 'P10G50L',
+                         'provisional_packed': None,
+                         'name': 'C/2018 A5',
+                         'origin': 'M',
+                         'source_type': 'C',
+                         'elements_type': 'MPC_COMET',
+                         'active': False,
+                         'fast_moving': False,
+                         'urgency': None,
+                         'epochofel': datetime(2018, 1, 2, 0, 0),
+                         'orbinc': 23.77111,
+                         'longascnode': 88.06834,
+                         'argofperih': 356.74589,
+                         'eccentricity': 0.5415182,
+                         'meandist': 5.8291288,
+                         'meananom': 7.63767,
+                         'perihdist': None,
+                         'epochofperih': None,
+                         'abs_mag': 17.0,
+                         'slope': 0.15,
+                         'score': 40,
+                         'discovery_date': datetime(2018, 1, 13, 9, 36),
+                         'num_obs': 18,
+                         'arc_length': 3.58,
+                         'not_seen': 0.757,
+                         'updated': True,
+                         'ingest': datetime(2018, 1, 14, 13, 20, 7),
+                         'update_time': datetime(2018, 1, 17, 16, 43, 16)
+                      }
+        self.body = Body.objects.create(**self.params)
+
+    def test_asteroid(self):
+        kwargs = {'source_type': 'A', 'name': '2018 AA5', 'active': False}
+
+        new_kwargs = convert_ast_to_comet(kwargs, self.body)
+
+        self.assertEqual(kwargs, new_kwargs)
+
+    def test_comet(self):
+        expected_kwargs = { 'source_type': 'C',
+                            'name': 'C/2018 A5',
+                            'active': True,
+                            'elements_type' : 'MPC_COMET',
+                            'perihdist' : 2.6725494646558405,
+                            'epochofperih' : datetime(2017, 9, 14, 22, 34, 45, 428836),
+                            'meananom' : None,
+                            'slope' : 4.0,
+                            'eccentricity' : self.body.eccentricity,
+                            'epochofel' : self.body.epochofel,
+                            'meandist' : self.body.meandist
+                          }
+        kwargs = {'source_type': 'C', 'name': 'C/2018 A5', 'active': True}
+
+        new_kwargs = convert_ast_to_comet(kwargs, self.body)
+
+        self.assertEqual(expected_kwargs, new_kwargs)
+
+    def test_new_body(self):
+        kwargs = {'source_type' : 'A', 'name' : '2018 ZZ99', 'active' : False}
+        expected_kwargs = kwargs
+
+        blank_body, created = Body.objects.get_or_create(provisional_name='Wibble')
+        self.assertTrue(created)
+        self.assertEqual(None, blank_body.meandist)
+        self.assertEqual(None, blank_body.eccentricity)
+
+        new_kwargs = convert_ast_to_comet(kwargs, blank_body)
+
+        self.assertEqual(expected_kwargs, new_kwargs)
+
+    def test_parabolic(self):
+        self.body.eccentricity = 1.0
+        self.body.save()
+        expected_kwargs = { 'source_type': 'C',
+                            'name': 'C/2018 A5',
+                            'active': True,
+                            'elements_type' : 'MPC_COMET',
+                            'epochofperih' : datetime(2017, 9, 14, 22, 34, 45, 428836),
+                            'meananom' : None,
+                            'slope' : 4.0,
+                            'eccentricity' : self.body.eccentricity,
+                            'epochofel' : self.body.epochofel,
+                            'meandist' : self.body.meandist
+                          }
+
+
+        kwargs = {'source_type': 'C', 'name': 'C/2018 A5', 'active': True}
+
+        new_kwargs = convert_ast_to_comet(kwargs, self.body)
+
+        self.assertEqual(expected_kwargs, new_kwargs)

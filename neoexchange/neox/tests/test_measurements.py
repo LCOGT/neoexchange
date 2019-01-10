@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from .base import FunctionalTest
 from selenium import webdriver
 from django.core.urlresolvers import reverse
@@ -29,7 +44,8 @@ class MeasurementsPageTests(FunctionalTest):
                     'not_seen'      : 12.29,
                     'updated'       : False
                     }
-        self.body2 = Body.objects.create(**params)
+        body2, status = Body.objects.get_or_create(**params)
+        self.body2 = body2
 
     def insert_test_measurements(self):
         frame_params = { 'sitecode' : 'K91',
@@ -40,7 +56,8 @@ class MeasurementsPageTests(FunctionalTest):
                          'midpoint' : '2015-04-20 18:00:00',
                          'block' : self.test_block
                         }
-        self.test_frame = Frame.objects.create(pk=1, **frame_params)
+        frame,status = Frame.objects.get_or_create(pk=1, **frame_params)
+        self.test_frame = frame
 
         measure_params = { 'body' : self.body,
                            'frame' : self.test_frame,
@@ -49,7 +66,8 @@ class MeasurementsPageTests(FunctionalTest):
                            'obs_mag' : 21.05,
                            'err_obs_mag' : 0.03
                          }
-        self.test_measure1 = SourceMeasurement.objects.create(pk=1, **measure_params)
+        sourcemeas,status = SourceMeasurement.objects.get_or_create(pk=1, **measure_params)
+        self.test_measure1 = sourcemeas
 
     def insert_satellite_test_measurements(self):
         sat_frame_params = { 'sitecode' : 'C51',
@@ -140,7 +158,7 @@ class MeasurementsPageTests(FunctionalTest):
 
         # He goes to the home page and performs a search for that object
         self.browser.get(self.live_server_url)
-        self.assertIn('Home | LCOGT NEOx', self.browser.title)
+        self.assertIn('Home | LCO NEOx', self.browser.title)
         inputbox = self.get_item_input_box("id_target_search")
         inputbox.send_keys('N999r0q')
         searchbutton = self.get_item_input_box("id_search_submit")
@@ -150,8 +168,9 @@ class MeasurementsPageTests(FunctionalTest):
         search_url = self.live_server_url + '/search/?q=' + \
             self.body.provisional_name
         self.assertEqual(self.browser.current_url, search_url)
-        self.assertIn('Targets | LCOGT NEOx', self.browser.title)
+        self.assertIn('Targets | LCO NEOx', self.browser.title)
 
+        self.browser.implicitly_wait(5)
         # He sees that the target he wants is in the table and clicks on it
         self.check_for_header_in_table('id_targets',
             'Name Type Origin Ingest date')
@@ -160,10 +179,12 @@ class MeasurementsPageTests(FunctionalTest):
         self.check_for_row_in_table('id_targets', testlines[0])
         self.check_for_row_not_in_table('id_targets', testlines[1])
 
-        target_url = self.live_server_url + reverse('target',kwargs={'pk':1})
         link = self.browser.find_element_by_partial_link_text('N999r0q')
-        self.assertEqual(link.get_attribute('href'), target_url)
-        link.click()
+        target_url = "{0}{1}".format(self.live_server_url, reverse('target',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         # He is taken to a page with the object's details on it.
         self.assertEqual(self.browser.current_url, target_url)
@@ -173,16 +194,18 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will show the measurements
         # available for this object.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = self.live_server_url + reverse('measurement',kwargs={'pk':1})
-        self.assertEqual(link.get_attribute('href'), target_url)
+        target_url = "{0}{1}".format(self.live_server_url, reverse('measurement',kwargs={'pk':1}))
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks on the link and sees that he is taken to a page with details
         # on the source measurements for this object
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
-        self.assertEqual(self.browser.current_url, target_url)
+        self.assertIn(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
 
         self.check_for_header_in_table('id_measurements',
             'Name Date/time RA Dec Magnitude Filter Site Code')
@@ -212,21 +235,24 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will export the measurements
         # available for this object in MPC 80 char format.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
-        self.assertEqual(link.get_attribute('href'), target_url)
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks on the link and sees that he is taken to a page with details
         # on the source measurements for this object
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
 
         # He sees a link that says it will display the measurements in MPC format
         mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
-        mpc_target_url = "%s/target/%d/measurements/mpc/" % (self.live_server_url, 1)
-        self.assertEqual(mpc_link.get_attribute('href'), mpc_target_url)
+        mpc_target_url = "{0}/target/{1}/measurements/mpc/".format(self.live_server_url, 1)
+        actual_url = mpc_link.get_attribute('href')
+        self.assertEqual(actual_url, mpc_target_url)
 
         # He clicks on the link and sees that he is taken to a page with the
         # source measurements for this object in MPC 80 char format
@@ -235,7 +261,7 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees that there is a table in which are the original
         # discovery observations from WISE (obs. code C51) and from
         # the LCOGT follow-up network.
-        testlines = [u'     N999r0q  C2015 04 20.75000002 48 24.00 -30 03 00.0          21.1 w      K91',
+        testlines = [u'     N999r0q  C2015 04 20.75000002 48 24.00 -30 03 00.0          21.1 R      K91',
                     ]
         pre_block = self.browser.find_element_by_tag_name('pre')
         rows = pre_block.text.splitlines()
@@ -258,21 +284,24 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will show the source measurements
         # available for this object.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
-        self.assertEqual(link.get_attribute('href'), target_url)
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks on the link and sees that he is taken to a page with details
         # on the source measurements for this object
-        link.click()
+        with self.wait_for_page_load(timeout=10):
+            link.click()
 
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
 
         # He sees a link that says it will display the measurements in MPC format
         mpc_link = self.browser.find_element_by_partial_link_text('View in MPC format')
-        mpc_target_url = "%s/target/%d/measurements/mpc/" % (self.live_server_url, 1)
-        self.assertEqual(mpc_link.get_attribute('href'), mpc_target_url)
+        mpc_target_url = "{0}/target/{1}/measurements/mpc/".format(self.live_server_url, 1)
+        actual_url = mpc_link.get_attribute('href')
+        self.assertEqual(actual_url, mpc_target_url)
 
         # He clicks on the link and sees that he is taken to a page with the
         # source measurements for this object in MPC 80 char format
@@ -306,16 +335,17 @@ class MeasurementsPageTests(FunctionalTest):
         # He sees a link that says it will show the source measurements
         # available for this object.
         link = self.browser.find_element_by_id('show-measurements')
-        target_url = "%s/target/%d/measurements/" % (self.live_server_url, 1)
-        self.assertEqual(link.get_attribute('href'), target_url)
+        target_url = "{0}/target/{1}/measurements/".format(self.live_server_url, 1)
+        actual_url = link.get_attribute('href')
+        self.assertEqual(actual_url, target_url)
 
         # He clicks on the link and sees that he is taken to a page with details
         # on the source measurements for this object
-        link.click()
-
+        with self.wait_for_page_load(timeout=10):
+            link.click()
         self.assertEqual(self.browser.current_url, target_url)
         header_text = self.browser.find_element_by_class_name('headingleft').text
-        self.assertIn('Source Measurements for: ' + self.body.current_name(), header_text)
+        self.assertIn('Source Measurements: ' + self.body.current_name(), header_text)
 
         # He has just found some precovery observations from a month earlier
         # from PanSTARRS (site code F51) and wants to see if they appear in the

@@ -3,9 +3,9 @@
 <html>
 	<head>
         <base href="{{base_url}}">
-		<title>{%block header %}{% endblock %} | LCOGT NEOx</title>
+		<title>{%block header %}{% endblock %} | LCO NEOx</title>
 		<meta charset="UTF-8" />
-		<meta name="author" content="Las Cumbres Observatory Global Telescope Network" />
+		<meta name="author" content="Las Cumbres Observatory" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes" />
 		<meta name="version" content="{{site_version}}" />
 		{% block meta %}{% endblock %}
@@ -14,7 +14,7 @@
 		{% endblock %}
 		<link href="http://fonts.googleapis.com/css?family=Open+Sans:400,800,300,600,300italic,400italic,600italic" rel="stylesheet" type="text/css">
 		{% block css-content %}{% endblock %}
-		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="{% static "core/css/font-awesome.min.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/skeleton.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/normalize.css" %}">
 		<link rel="stylesheet" href="{% static "core/css/styles.css" %}">
@@ -25,15 +25,25 @@
         <!--[if lt IE 9]>
         <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
         <![endif]-->
-		<script type="text/javascript" src="{% static "core/js/jquery-1.10.2.js" %}"></script>
-		<script type="text/javascript" src="{% static "core/js/jquery-ui-1.10.3.min.js" %}"></script>
+		<script type="text/javascript" src="{% static "core/js/jquery-1.12.3.js" %}"></script>
+		<script type="text/javascript" src="{% static "core/js/jquery-ui-1.12.1.min.js" %}"></script>
 		<script type="text/javascript">
 			$(document).ready(function(){
 
+				/* Grab the token from localstorage and makes sure we can use it */
+				$.ajaxPrefilter(function(options, originalOptions, jqXHR){
+				  if(options.url.indexOf('lcogt.net/') >= 0 && localStorage.getItem('token')){
+				    jqXHR.setRequestHeader('Authorization', 'Token ' + localStorage.getItem('token'));
+				  }
+				});
+
 				$(document).on('click','#messages-inbox',function(event){
-					centreDiv('#show-messages');
 					if ($('#show-messages').is(':visible')) $('#show-messages').fadeOut("fast");
 					else $('#show-messages').fadeIn("fast");
+				})
+
+				$(window).on('load',function(event){
+					centreDiv('#show-messages');
 					$('#show-messages-close').bind("click",function(){
 						$('#show-messages').fadeOut("fast");
 					});
@@ -57,6 +67,10 @@
 						{% block login %}
 						<div id="login" class="block">
 							<ul>
+								<li>
+									<span id="clock"></span>
+									<script type="text/javascript" src="{% static 'core/js/utc_clock.js' %}" charset="UTF-8"></script>
+								</li>
 								{% if user.is_authenticated %}
 								<li>
 									<a href="#" id="messages-inbox" class="fa fa-inbox{% if messages %} highlight{% endif %}"></a>
@@ -65,7 +79,7 @@
 									{% if user.first_name %}{{ user.first_name }}{% else %}{{user.username}}{% endif %}
 								</li>
 								<li>
-									<a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}"> Logout</a>
+									<a target="_parent" href="{% url 'auth_logout' as logouturl %}{{ logouturl }}" id="logout-btn"> Logout</a>
 								</li>
 								{% else %}
 								<li>
@@ -76,7 +90,7 @@
 						</div>
 						{% endblock %}
 						<div id="lcogt-name">
-							<a target="_parent" href="http://lcogt.net/" title="LCOGT Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory </span><span class="g">G</span><span class="wide">lobal </span><span class="t">T</span><span class="wide">elescope Network</span></a>
+							<a target="_parent" href="http://lco.global/" title="LCO Homepage"><span class="l">L</span><span class="wide">as </span><span class="c">C</span><span class="wide">umbres </span><span class="o">O</span><span class="wide">bservatory</span></a>
 						</div>
 					</div>
 					<div class="container-lg">
@@ -91,8 +105,8 @@
 							</div>
 						</div>
 						<div id="powered-by">
-							<a href="http://lcogt.net" title="LCOGT Home" rel="home">
-								<img src="{% static 'core/images/logo-gray-poweredby.png' %}" alt="Home" id="logo-image2" />
+							<a href="http://lco.global" title="LCO Home" rel="home">
+								<img src="{% static 'core/images/LCO_bw_poweredby.png' %}" alt="Home" id="logo-image2" />
 							</a>
 						</div>
 					</div>
@@ -101,7 +115,6 @@
 							<!-- Header region -->
 				<div id="{% block extramenucss %}extramenu{% endblock %}">
 					<div class="container-lg">
-						<div class="extramenu_padder" role="menubar">
 							{% block extramenu %}
 							{% endblock %}
 							<nav id="navigation" role="navigation">
@@ -112,8 +125,14 @@
 										<a rel="home" title="Home" class="navitem" href="{% url 'home'  %}">Home</a>
 									</li>
 									{% endblock %}
-									<li>
-										<a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Targets</a>
+									<li class="dropdown-menu">
+										Targets
+											<ul class="dropdown">
+												<li><a href="{% url 'targetlist' %}" title="NEO targets being actively followed" class="navitem">Active</a></li>
+												<li><a href="{% url 'ranking' %}" title="Ranked target list for NEO candidates" class="navitem">Candidates</a></li>
+												<li><a href="{% url 'characterization' %}" title="Targets slated for Characterization" class="navitem">Characterization</a></li>
+												<li><a href="{% url 'calibsource-view' %}" title="Calibration Sources" class="navitem">Standards</a></li>
+											</ul>
 									</li>
 									<li>
 										<a href="{% url 'blocklist' %}" title="Blocks scheduled for NEO follow-up" class="navitem">Blocks</a>
@@ -130,13 +149,24 @@
 									<input type="submit" class="button keepvisible" role="menuitem" value="Search" id="id_search_submit">
 								</form>
 							</nav>
-						</div>
 					</div>
 				</div>
 				{% block main-content %}{% endblock %}
 				{% block content %}{% endblock %}
 			</div>
 		</div>
+		{% if messages %}
+		<div id="show-messages" style="display:block;">
+			<div id="show-messages-inner">
+			<div id="show-messages-close">×</div>
+			{% for m in messages %}
+			<li class="{{m.tags}}">{{m}}</li>
+			{% empty %}
+			<li>No messages.</li>
+			{% endfor %}
+			</div>
+		</div>
+		{% else %}
 		<div id="show-messages" style="display:none;">
 			<div id="show-messages-inner">
 			<div id="show-messages-close">×</div>
@@ -147,6 +177,7 @@
 			{% endfor %}
 			</div>
 		</div>
+		{% endif %}
 		{% block end-scripts %}
 		{% endblock %}
 		<script>

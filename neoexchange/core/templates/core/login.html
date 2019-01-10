@@ -6,6 +6,8 @@
 	<link rel="stylesheet" href="{% static "core/css/forms.css" %}">
 {% endblock %}
 
+{% block script-content %}
+{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 {% block main-content %}
@@ -21,22 +23,31 @@
 
 				<div class="container">
 					<div class="row">
-					<form action="" method="post"  id="customForm" >
+					<form action="" method="post"  id="login-form" class="customForm" >
 						{% csrf_token %}
 						<div class="row">
-							<label for="username">Username/Email Address:</label>
-							<input type="text" name="username" value="{% if form.username.value %}{{ form.username.value }}{% endif %}" id="username">
-							<div class="red">{{form.username.errors.as_text}}</div>
+							<div class="four columns">
+								<label for="username">Username/Email Address:</label>
+							</div>
+							<div class="eight columns">
+								<input type="text" name="username" value="{% if form.username.value %}{{ form.username.value }}{% endif %}" id="username">
+								<div class="red">{{form.username.errors.as_text}}</div>
+							</div>
 						</div>
 						<div class="row">
+							<div class="four columns">
 							<label for="password">Password:</label>
+						</div>
+						<div class="eight columns">
 							<input type="password" name="password" value="" id="password">
 							<div class="red">{{form.password.errors.as_text}}</div>
 						</div>
+						</div>
 						<input type="hidden" name="next" value="{{ next }}">
 						<div class="row">
-							<input type="submit" value="login" class="button" />
-                            <div class="tos">By logging in, you agree to <a href="http://lcogt.net/observatory/termsofuse" target="_blank">the LCOGT terms of use</a>.</div>
+
+							<input type="submit" class="button" id="login-btn" value="Log in" />
+              <div class="tos">By logging in, you agree to <a href="https://lco.global/observatory/termsofuse" target="_blank">the LCO terms of use</a>.</div>
 						</div>
 						<div class="row">
 							{% if form.errors %}

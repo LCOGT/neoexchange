@@ -1,18 +1,20 @@
 {% extends 'base.html' %}
 {% load staticfiles basic_tags %}
 
-{% block css-content %}<link rel="stylesheet" href="{% static "core/css/forms.css" %}">{% endblock %}
+{% block css-content %}<link rel="stylesheet" href="{% static 'core/css/forms.css' %}">{% endblock %}
 
 {% block header %}Ranking Page{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
-{% block extramenucss %}extramenu-home{% endblock %}
 
 {% block extramenu %}
+ <div class="headingleft">
+        <h1>Ranked Target List</h1>
+    </div>
 {% endblock%}
 
 {% block main-content %}
-    <div class="fullwidth">
+    <div id="main" class="fullwidth">
         <table id="id_ranked_targets" class="datatable">
             <thead>
                 <tr>
@@ -67,7 +69,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for body in newest|dictsortreversed:"FOM" %}
+                {% for body in newest|dictsortreversed_with_none:"FOM" %}
                 <tr class="{% cycle 'odd' 'even' %}">
                     <td data-label="Rank">{{forloop.counter}}</td>
                     <td data-label="FOM">{{body.FOM|stringformat:".1e" }}</td>
@@ -80,9 +82,9 @@
                     <td data-label="V Mag">{{body.v_mag|floatformat:1 }}</td>
                     <td data-label="Updated?">
                         {% if body.updated %}
-                        <i class="fa fa-check-circle-o fa-lg" style="color:#339933;" title="True"></i>
+                        <i class="fa fa-check-circle-o fa-lg" style="color:#339933;" title="Yes"></i>
                         {% else %}
-                        <i class="fa fa-minus-circle fa-lg" style="color:#df0000;" title="False"></i>
+                        <i class="fa fa-minus-circle fa-lg" style="color:#df0000;" title="No"></i>
                         {% endif %}
                     </td>
                     <td  data-label="Num. Obs.">{{body.num_obs}}</td>

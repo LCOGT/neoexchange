@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 # Django settings for neox project.
 
-import os, sys
+import os
+import sys
 from django.utils.crypto import get_random_string
+import rollbar
 
-VERSION = '1.3.0 (Comet)'
+VERSION = '3.0.0a (Comet)'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
 DEBUG = False
-BRANCH = os.environ.get('BRANCH',None)
+BRANCH = os.environ.get('BRANCH', None)
 if BRANCH:
     BRANCH = '-' + BRANCH
 else:
@@ -20,9 +22,9 @@ PREFIX = os.environ.get('PREFIX', '')
 if PREFIX != '':
     FORCE_SCRIPT_NAME = '/neoexchange'
 
-BASE_DIR = os.path.dirname(CURRENT_PATH)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-SESSION_COOKIE_NAME='neox.sessionid'
+SESSION_COOKIE_NAME = 'neox.sessionid'
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -73,7 +75,7 @@ MEDIA_URL = '/media/'
 
 STATIC_ROOT = '/var/www/html/static/'
 STATIC_URL = PREFIX + '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core'), ]
 
 # List of finder classes that know how to find static files in
 # various locations.
@@ -83,17 +85,18 @@ STATICFILES_FINDERS = (
  )
 
 MIDDLEWARE_CLASSES = (
-    'opbeat.contrib.django.middleware.OpbeatAPMMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddleware',
 )
 
 AUTHENTICATION_BACKENDS = (
-    'neox.auth_backend.LCOAuthBackend',
-    'django.contrib.auth.backends.ModelBackend',
+    'neox.auth_backend.ValhallaBackend',
+    'django.contrib.auth.backends.ModelBackend'
     )
 
 ROOT_URLCONF = 'neox.urls'
@@ -118,16 +121,28 @@ TEMPLATES = [
     },
 ]
 
-LOGIN_URL = PREFIX +'/accounts/login/'
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+LOGIN_URL = PREFIX + '/accounts/login/'
 
 LOGIN_REDIRECT_URL = PREFIX + '/'
 
 # GRAPPELLI_INDEX_DASHBOARD = 'neox.dashboard.CustomIndexDashboard'
 
 INSTALLED_APPS = (
-    'suit',
-    'neox',
-    'core',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -136,15 +151,16 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.messages',
     'reversion',
-    'opbeat.contrib.django',
+    'core.apps.CoreConfig',
+    'analyser.apps.AstrometerConfig',
 )
 
-OPBEAT = {
-    'ORGANIZATION_ID': os.environ.get('NEOX_OPBEAT_ORGID',''),
-    'APP_ID': os.environ.get('NEOX_OPBEAT_APPID',''),
-    'SECRET_TOKEN': os.environ.get('NEOX_OPBEAT_TOKEN',''),
-    'DEBUG': False,
+ROLLBAR = {
+    'access_token': os.environ.get('ROLLBAR_TOKEN',''),
+    'environment': 'development' if DEBUG else 'production',
+    'root': BASE_DIR,
 }
+rollbar.init(**ROLLBAR)
 
 LOGGING = {
     'version': 1,
@@ -177,43 +193,43 @@ LOGGING = {
             'filters': ['require_debug_false']
         },
         'console': {
-            'level': 'ERROR',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         }
     },
     'loggers': {
+        # 'django.request': {
+        #     'handlers': ['mail_admins'],
+        #     'level': 'ERROR',
+        #     'propagate': True,
+        # },
         'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'django': {
-            'handlers':['file'],
+            'handlers':['console'],
             'propagate': True,
             'level':'ERROR',
         },
         'core' : {
-            'handlers' : ['file','console'],
-            'level'    : 'ERROR',
+            'handlers' : ['console'],
+            'level'    : 'INFO',
         },
         'astrometrics' : {
-            'handlers' : ['file','console'],
+            'handlers' : ['console'],
             'level'    : 'ERROR',
         },
         'photometrics' : {
-            'handlers' : ['file','console'],
+            'handlers' : ['console'],
             'level'    : 'ERROR',
         },
         'neox': {
-            'handlers':['file','console'],
+            'handlers': ['console'],
             'level' : 'ERROR'
         }
     }
 }
 
 chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-SECRET_KEY = get_random_string(50, chars)
+SECRET_KEY = os.environ.get('SECRET_KEY', get_random_string(50, chars))
 
 DATABASES = {
     "default": {
@@ -228,10 +244,43 @@ DATABASES = {
     }
 }
 
+##################
+# Email settings #
+##################
+
+EMAIL_USE_TLS       = True
+EMAIL_HOST          = 'smtp.gmail.com'
+EMAIL_PORT          = 587
+DEFAULT_FROM_EMAIL  = 'NEO Exchange <neox@lco.global>'
+EMAIL_HOST_USER = os.environ.get('NEOX_EMAIL_USERNAME', '')
+EMAIL_HOST_PASSWORD = os.environ.get('NEOX_EMAIL_PASSWORD', '')
+
+####################
+# LCO Api settings #
+####################
+
 NEO_ODIN_USER = os.environ.get('NEOX_ODIN_USER', '')
 NEO_ODIN_PASSWD = os.environ.get('NEOX_ODIN_PASSWD', '')
 
-REQUEST_API_URL = 'https://lcogt.net/observe/service/request/get/userrequeststatus/'
+THUMBNAIL_URL = 'https://thumbnails.lco.global/'
+
+ARCHIVE_API_URL = 'https://archive-api.lco.global/'
+ARCHIVE_FRAMES_URL = ARCHIVE_API_URL + 'frames/'
+ARCHIVE_TOKEN_URL = ARCHIVE_API_URL + 'api-token-auth/'
+ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN', '')
+
+PORTAL_API_URL = 'https://observe.lco.global/api/'
+PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
+PORTAL_USERREQUEST_URL = 'https://observe.lco.global/userrequests/'
+PORTAL_REQUEST_URL = 'https://observe.lco.global/requests/'
+PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
+PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN', '')
+PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
+
+ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER', '')
+ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD', '')
+
+DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
 
 #######################
 # Test Database setup #
@@ -246,26 +295,11 @@ if 'test' in sys.argv:
     DATABASES = { 'default':
         {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'test_db', # Add the name of your SQLite3 database file here.
+        'NAME': 'test.db', # Add the name of your SQLite3 database file here.
         },
-        'rbauth':
-                {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'test_rbauth', # Add the name of your SQLite3 database file here.
-        }
     }
-    OPBEAT['APP_ID'] = None
 
 
-###################
-# OAuth provider  #
-###################
-
-CLIENT_ID = os.environ.get('NEOX_RBAUTH_ID','')
-CLIENT_SECRET = os.environ.get('NEOX_RBAUTH_SECRET','')
-RBAUTH_TOKEN_URL = 'https://lcogt.net/observe/o/token/'
-RBAUTH_PROFILE_API = 'https://lcogt.net/observe/api/profile/'
-RBAUTH_PROPOSAL_API = 'https://lcogt.net/observe/api/proposals/'
 
 ##################
 # LOCAL SETTINGS #
@@ -276,7 +310,7 @@ RBAUTH_PROPOSAL_API = 'https://lcogt.net/observe/api/proposals/'
 # defined per machine.
 if not CURRENT_PATH.startswith('/var/www'):
     try:
-        from local_settings import *
+        from .local_settings import *
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e

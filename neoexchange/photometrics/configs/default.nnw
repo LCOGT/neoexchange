@@ -3,7 +3,7 @@ NNW
 # inputs:	9 for profile parameters + 1 for seeing.
 # outputs:	``Stellarity index'' (0.0 to 1.0)
 # Seeing FWHM range: from 0.025 to 5.5'' (images must have 1.5 < FWHM < 5 pixels)
-# Optimized for Moffat profiles with 2<= beta <= 4. 
+# Optimized for Moffat profiles with 2<= beta <= 4.
 
  3 10 10  1
 

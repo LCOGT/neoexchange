@@ -1,0 +1,25 @@
+#!/bin/bash
+
+source /var/www/apps/neoexchange/cronwrapper
+export PYTHONPATH="/var/www/apps/neoexchange/"
+dataroot=/data/eng/rocks
+umask 002
+
+date_options=""
+if [[ $# -eq 1 ]]; then
+  date=$1
+  if [[ ${#date} -eq 8 ]]; then 
+    date_options="--date ${date}"
+    echo "Processing with ${date_options}"
+    year=${date:0:4}
+    month=${date:4:2}
+    day=${date:6:2}
+  else
+    echo "Incorrect date format; need YYYYMMDD"
+  fi
+fi
+
+cd $PYTHONPATH
+python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options} --proposal LCOEngineering
+python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options} --proposal LCO2019A-006
+python3 manage.py download_archive_data --datadir ${dataroot} --spectraonly ${date_options} --proposal LCO2019A-006b

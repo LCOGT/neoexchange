@@ -1,7 +1,16 @@
 {% extends 'base.html' %}
-{% load staticfiles %}
+{% load staticfiles basic_tags %}
 
-{% block header %}Block details{% endblock %}
+{% block header %}
+    {% if object.cadence %}
+    Cadence details
+    {% else %}
+    Block details
+    {% endif %}
+{% endblock %}
+
+{% block script-content %}
+{% endblock %}
 
 {% block bodyclass %}page{% endblock %}
 
@@ -16,21 +25,37 @@
     <div class="container" id="main">
             <div class="row">
                 <div class="eight columns">
-                    <h5 class="section-title">Details of the Block</h5>
+                    {% if object.cadence %}
+                        <h5 class="section-title">Details of the Cadence</h5>
+                    {% else %}
+                         <h5 class="section-title">Details of the Block</h5>
+                    {% endif %}
                     <table class="keyvalue-table" id="id_blockdetail">
                         <tbody>
                             <tr>
                                 <td class="kv-key">Telescope class</td>
-                                <td class="kv-value">{{object.telclass}}</td>
+                                <td class="kv-value">{{object.get_telclass}}</td>
                             </tr>
                             <tr>
                                 <td class="kv-key">Site</td>
-                                <td class="kv-value">{{object.site|upper}}</td>
+                                <td class="kv-value">{{object.get_sites|upper}}</td>
                             </tr>
-                            <tr>
-                                <td class="kv-key">Body</td>
-                                <td class="kv-value"><a href="{% url 'target' object.body.pk %}">{{object.body.current_name}}</a></td>
-                            </tr>
+                            {% if object.body %}
+                                <tr>
+                                    <td class="kv-key">Body</td>
+                                    <td class="kv-value"><a href="{% url 'target' object.body.pk %}">{{object.body.current_name}}</a></td>
+                                </tr>
+                            {% elif object.calibsource %}
+                                <tr>
+                                    <td class="kv-key">Calibration Source</td>
+                                    <td class="kv-value"><a href="{% url 'calibsource' object.calibsource.pk %}">{{object.calibsource.current_name}}</a></td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td class="kv-key">Target</td>
+                                    <td class="kv-value">None!?</td>
+                                </tr>
+                            {% endif %}
                             <tr>
                                 <td class="kv-key">Proposal</td>
                                 <td class="kv-value">{{object.proposal.title}} ({{object.proposal.code}})</td>
@@ -49,15 +74,11 @@
                             </tr>
                             <tr>
                                 <td class="kv-key">Number of exposures</td>
-                                <td class="kv-value">{{object.num_exposures}}</td>
-                            </tr>
-                            <tr>
-                                <td class="kv-key">Exposure length</td>
-                                <td class="kv-value">{{object.exp_length}} seconds</td>
+                                <td class="kv-value">{{object.get_obsdetails}}</td>
                             </tr>
                             <tr>
                                 <td class="kv-key">Last observed</td>
-                                <td class="kv-value">{% if object.num_observed > 0 %}{{object.when_observed|date:"Y-m-d H:i"}}{% else %}Not Observed{% endif %}</td>
+                                <td class="kv-value">{% if object.get_num_observed.0 > 0 %}{{object.get_last_observed|date:"Y-m-d H:i"}}{% else %}Not Observed{% endif %}</td>
                             </tr>
                             <tr>
                                 <td class="kv-key">Active?</td>
@@ -65,40 +86,75 @@
                             </tr>
                             <tr>
                                 <td class="kv-key">Reported?</td>
-                                <td class="kv-value"><span class="">{% if object.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
+                                <td class="kv-value"><span class="">{% if object.get_num_reported.0 > 0 %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
                             </tr>
                             <tr>
                                 <td class="kv-key">When Reported</td>
-                                <td class="kv-value"><span class="">{% if object.reported %}<span class="warning msgpadded">{{object.when_reported|date:"Y-m-d H:i"}}</span>{% else %}Not Reported{% endif %}</span></td>
+                                <td class="kv-value"><span class="">{% if object.get_num_reported.0 > 0 %}<span class="warning msgpadded">{{object.get_last_reported|date:"Y-m-d H:i"}}</span>{% else %}Not Reported{% endif %}</span></td>
                             </tr>
                       </tbody>
                     </table>
                 </div>
                 <div class="four columns">
-                    <h5 class="section-title">Actions</h5>
+                    <h5 class="section-title">{% if object.block_set.all%}Observation Blocks{% else%}Controls{% endif %}</h5>
                         {% if request.user.is_authenticated %}
-                          {% if not object.reported and object.num_observed > 0 %}
-{% comment "Needs astrometry branch merging" %}
-                            <a class="button button-primary" href="{% url 'block-ast' object.id %}">Astrometer</a><br/>
-{% endcomment %}
-                            <a class="button button-primary" href="{% url 'report-block' object.id %}">Report</a><br/>
-                          {% elif object.reported %}
-                            <a class="button button-primary" href="{% url 'view-report' object.id %}">View report in MPC format</a><br/>
-                            <a class="button button-primary" href="{% url 'upload-report' object.id %}">Upload MPC format</a>
-                          {%else%}
-                          No actions available
-                          {% endif %}
+                        <ul class="block-status">
+                        {% for blk in object.block_set.all %}
+                        <li class="{% cycle 'odd' 'even' %}">
+                            <span class="block-control">Request Number: <a href="{{blk.make_obsblock_link}}">{{blk.tracking_number}}</a></span><br/>
+                            <span class="block-status-line">
+                              <span class="block-status-item">
+                              {% if blk.reported and blk.when_observed %}
+                              <i class="fa fa-check-circle-o fa-lg" style="color:#339933;"></i>
+                              {% elif blk.when_observed and not blk.reported %}
+                              <i class="fa fa-clock-o fa-lg" style="color: #FF9933;"></i>
+                              {% elif not blk.reported and not blk.when_observed and blk.active %}
+                              <i class="fa fa-circle-o fa-lg" style="color:#263c6f;"></i>
+                              {% elif not blk.reported and not blk.when_observed and  not blk.active %}
+                              <i class="fa fa-minus-circle fa-lg" style="color:#df0000;"></i>
+                              {% endif %}
+                              </span>
+                              <span class="block-status-item">{{blk.block_start|date:"Y-m-d"}}<br/>{{blk.block_start|date:"H:i"}}</span>
+                              <span class="block-status-item"><i class="fa fa-long-arrow-right"></i></span>
+                              <span class="block-status-item">{{blk.block_end|date:"Y-m-d"}}<br/>{{blk.block_end|date:"H:i"}}</span>
+                              <ul>
+                              {% if blk.obstype == blk.OPT_SPECTRA or blk.obstype == blk.OPT_SPECTRA_CALIB %}
+                                <div class="block-control">{{blk.num_spectro_frames}}</div>
+                                <div class="block-control">Target: {{blk.current_name}}</div>
+                                {% if "TAR" in blk.num_spectro_frames %}
+                                    {% if blk.num_spectra_complete > 1 %}
+                                        {% for obs_num in blk.num_spectra_complete|make_int_list %}
+                                            <div class="block-control"><a href="{% url 'plotspec' blk.pk obs_num %}">Spectrum Plot {{obs_num}}</a></div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="block-control"><a href="{% url 'plotspec' blk.pk 1 %}">Spectrum Plot</a></div>
+                                    {% endif %}
+                                  <div class="block-control"><a href="{% url 'guidemovie' blk.pk %}">Guide Movie</a></div>
+                                {% endif %}
+                              {% else %}
+                                  {% if blk.num_observed > 0 and blk.num_unique_red_frames < 10 and blk.num_candidates > 0 %}
+                                  <li class="block-control"><a href="{% url 'block-ast' blk.id %}" id="analyse-btn">Analyse Images</a></li>
+                                  {% if not blk.reported %}
+                                  <li class="block-control"><a href="{% url 'block-report' blk.id %}">Report</a></li>
+                                  {% endif %}
+                                  {% if blk.num_candidates > 0 %}
+                                  <li class="block-control"><a href="{% url 'view-candidates' blk.id %}">Candidates ({{blk.num_candidates}})</a></li>
+                                  {% endif %}
+                                  {% elif blk.reported %}
+                                  <li class="block-control"><a href="{% url 'block-report-mpc' blk.id %}">View report in MPC format</a></li>
+                                  <li class="block-control"><a href="{% url 'upload-report' blk.id %}">Upload MPC format</a></li>
+                                  {% elif not blk.reported and blk.when_observed %}
+                                  <li class="block-control"><a href="{% url 'report-block' blk.id %}">Mark as Reported</a></li>
+                                  {% endif %}
+                              {% endif %}
+                            </ul>
+                            </span>
+                        </li>
+                        {% endfor %}
+                      </ul>
                         {% else %}
                         <a href="{% url 'auth_login' %}?next={{request.path}}">Log in to see actions</a>
                         {% endif %}
-                    {% if images and request.user.is_authenticated %}
-                    <h5 class="section-title">Observations</h5>
-                        <ul class="observations">
-                        {% for img in images %}
-                        <li class="thumb"><a href="http://lcogt.net/observations/identity/?origname={{img.1}}.fits"><img src="http://data.lcogt.net/thumbnail/{{img.1}}/?width=150&height=150&gamma=2.5&label=0"></a></li>
-                        {% endfor %}
-                        </ul>
-                    {% endif %}
                 </div>
             </div>
         </div>

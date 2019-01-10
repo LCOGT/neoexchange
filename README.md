@@ -1,120 +1,247 @@
-NEO Exchange
-============
+## NEO Exchange
 
-Portal for scheduling observations of NEOs using LCOGT
+Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
-Local Setup
------------
+## History
 
-Construct a Python Virtual Environment (virtualenv) by executing:  
-```bash
-virtualenv <path to virtualenv>
-source <path to virtualenv>/bin/activate # for bash-shells
-```
+### 2.7.8
+Comet elements are now selected based on nearest in time.
 
-or:  
+### 2.7.7
+Several patches for tests and minor issue fixes
 
-`source <path to virtualenv>/bin/activate.csh # for (t)csh-shells`  
+### 2.7.6
+Add Generic Telescope Classes
 
-then:
+### 2.7.5
+Update the scheduling interface to allow for more options
+* Display UT time on website
+* Display Site/Telescope class on Confirmation page
+* Display Visibility of requested target
+* Allow for Exposure time Adjustment
+* Display Moon info
+* Adjust Max Airmass
+* Adjust IPP
+* Adjust Minimum Moon Distance
+* Adjust Acceptability Threshold
 
-`pip install -r neoexchange/requirements.txt`
+### 2.7.4
 
-You will need to create a `neox/local_settings.py` file which has details of your database setup and local filesystem e.g.
+Improve the cross-identification code for multiply desiginated objects and periodic comets.
 
-```
-import os, sys
+### 2.7.3
 
-CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.dirname(CURRENT_PATH)
-
-SECRET_KEY = '<50 random characters>'
-
-PREFIX =""
-DEBUG = True
-PRODUCTION = False
-STATIC_ROOT =  '<filesystem path>'
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
-
-OPBEAT = {
-    'ORGANIZATION_ID': '',
-    'APP_ID': '',
-    'SECRET_TOKEN': '',
-}
-
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": "neoexchange.db",
-        "USER": "",
-        "PASSWORD":  "",
-        "HOST": "",
-    }
-}
-```
-
-Deployment
-----------
-
-You will need to set up 3 environment variables before deploying (if you are just locally testing see instructions below).
-
-If you are using BASH or ZSH add the following to your .profile or .zshrc files:
-```bash
-export NEOX_DB_USER='<insert your DB username>'
-export NEOX_DB_PASSWD='<insert your DB password>'
-export NEOX_DB_HOST='<insert the name of your DB server>'
-```
-
-Docker
-------
-If you are building a Docker container use the following syntax:
-```bash
-docker build -t docker.lcogt.net/neoexchange:latest .
-```
-This will build a Docker image which will need to be pushed into a Docker registry with:
-```bash
-docker push docker.lcogt.net/neoexchange:latest
-```
-Starting a Docker container from this image can be done with a `docker run` command or using `docker-compose`.
+Fix issues with interactions between FindOrb and candidates/comets
+* Remove Perturbation Code
 
 
-Local Testing
--------------
+### 2.7.2
 
-For local testing you will probably want to create a
-`neoexchange/neox/local_settings.py` file to point at a local test database and
-to switch on `DEBUG` for easier testing. An example file would look like:
-```python
-import sys, os
+Spectroscopic Graphical tools
+* Create and display a gif of the guidefreames during an observation
+* Create and display a spectroscopic trace based on the reduced data
 
-CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.dirname(CURRENT_PATH)
+### 2.7.1
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'neox.db',                      # Or path to database file if using sqlite3.
-        'USER': '',                      # Not used with sqlite3.
-        'PASSWORD': '',                  # Not used with sqlite3.
-        'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
-        'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-    }
-}
+Add latitude, longitude, height for 0m4b at Tenerife (Z17). Update find_orb build procedure.
 
-DEBUG = True
+### 2.7.0
 
-# Use a different database file when testing or exploring in the shell.
-if 'test' in sys.argv or 'test_coverage' in sys.argv or 'shell' in sys.argv:
-    DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
-    DATABASES['default']['NAME'] = 'test.db'
-    DATABASES['default']['USER'] = ''
-    DATABASES['default']['PASSWORD'] = ''
+Flux Standards
+* Add Static Source Model to hold flux, spectral, solar and RV standards.
+* Add Calibrations List page.
+* Add Calibration detail descriptions.
+* Allow for sorting out and scheduling spectra for Solar analogs.
 
-STATIC_ROOT = os.path.abspath(os.path.join(BASE_DIR, '../../static/'))
-```
+### 2.6.0
 
-To prepare the local SQLite DB for use, you should follow these steps:
+Calculate and forward more precise orbital elements for spectroscopic observations.
 
-1. `cd neoexchange\neoexchange`
-2. Run `python manage.py syncdb`. This will perform migrations as necessary.
+### 2.5.3
+
+Update light curve extraction.
+* Pull from Tracking Number rather than block number
+* Capable of incorporating any number of blocks for a given target within a given time frame.
+Add motion details to characterization page.
+
+### 2.5.2
+
+Robotic scheduler and low-level ToO support.
+
+### 2.5.1
+Add block record keeping for spectroscopy.
+
+### 2.5.0
+Create a characterization page for spectroscopy support
+* Pull out targets of interest.
+* Check of previous spectroscopy from SMASS and MANOS.
+* Calculate observing window for the next 3 months for each target.
+
+### 2.4.1
+
+* Change default binning for 0.4m's to bin 1x1.
+* Change default proposals for 2018B semester.
+* Switch from OpBeat to Rollbar.
+
+### 2.4.0
+
+Add basic spectroscopy support to NEOexchange:
+* Added a SNR estimator which can transform the predicted V mag to a variety of different magnitudes for several different taxonomic types (SDSS-i and a Mean taxonomic class is assumed right now) and include the effects of the Moon and zodiacal light. The SNR estimator includes a generalized telescope and instrument model which can be adapted to other telescopes/instruments in the future.
+* Added ability to submit spectroscopic observations and associated calibrations to the LCO Network.
+
+### 2.3.6
+
+Bite the Bullet and Update to Python 3.6
+
+### 2.2.0
+
+Added capability of requesting multiple filters when making a user request.
+
+### 2.1.6
+
+Reduce connection maximum age to 60 seconds. Switch off perturbations in ephemeris computation calls.
+
+### 2.1.5
+
+Update Selenium to 3.11 and Django to 1.11. Refactor functional tests for Valhalla/JavaScript-based authentication. Add functionality to ingest targets from text file list of target names.
+
+### 2.1.4
+
+Better separate Block Registration from SuperBlock Registation so that Blocks only see frames taken during that individual Block and Block times are separate from SuperBlock Start and End times.
+
+### 2.1.3
+
+Add support and new object type for hyperbolic asteroids such as A/2017 U7 and A/2018 C2. Increase ephemeris spacing to 15 mins prevent timeouts.
+
+### 2.1.2
+
+Add support for the 0.4m telescopes at Cerro Tololo, Sutherland and McDonald.
+
+### 2.1.1
+
+Fix for missing absolute magnitudes breaking the diameter calculation.
+
+### 2.1.0
+
+Fixes for non-cadence submitting. Improved error message passthrough from scheduling endpoints. Fixes for block reporting. First part of spectroscopy support for storing spectral taxonomies.
+
+### 1.9.0
+
+Add cadence support.
+
+### 1.8.3
+
+Add check for and marking of 'was not a minor planet' in the Previous NEOCP page
+as spacecraft.
+Fixes for POND submitted blocks and lightcurve extraction.
+Changes for the new semester boundaries.
+
+### 1.8.2
+
+Bug fix for zooming Analyser view. Feature update on making markers for candidates clickable.
+
+### 1.8.1
+
+New MPC site codes for the second 0.4m telescopes at Tenerife and Maui.
+
+### 1.8.0
+
+- Adding ability to push candidates to Agent NEO on the Zooniverse platform
+- Change ReqDB observation submission to Valhalla API submission
+
+### 1.7.2
+
+New MPC site code (Q58) for the 0.4m telescope at Siding Spring. Use case-sensitive searches for updating NEOCP Bodies.
+
+### 1.7.1
+
+Bug fixes in zeropoint determination for newer versions of astroquery. Deploy mtdlink into the container.
+
+### 1.7.0
+
+Astrometry in the browser
+
+### 1.6.9
+
+Change overheads for Sinisto observations. Handle scheduling problems at semester changover at CPT.
+
+### 1.6.8
+
+Cleanups for leaner docker containers.
+
+### 1.6.7.1
+
+Lower the default IPP values. Round arc and not-seen values on the home page.
+
+### 1.6.7
+
+Trap the submission of objects that have no visibility windows.
+
+### 1.6.6
+
+Fix for incorrect revisions being created and clean up script
+
+### 1.6.5
+
+Add fix and trap for a site which has no working telescopes.
+
+### 1.6.4
+
+Addition of 0.4m telescope support.
+
+### 1.6.0-1.6.3
+
+Internal version numbers during addition of 0.4m telescope support.
+
+### 1.5.5
+
+Switch over telescope at Cerro Tololo (W85) to Sinistro. Increase the InterProposal Priority (IPP) value for requests at McDonald (V37). Switch imports to newer pySLALIB module.
+
+### 1.5.4
+
+Update for LCO rebranding.
+
+### 1.5.3
+
+Switch over 2 telescopes at South Africa (K91 & K92) to Sinistro. Filter out proposals with <10 blocks from the block efficiency plot.
+
+### 1.5.2
+
+### 1.5.1
+
+Correct a long-running problem where we didn't correct the Frame midpoint for
+half of the exposure time for our own frames. Store FWHM in the Frame objects
+when creating.
+
+### 1.5.0
+
+Django 1.10 release
+
+### 1.4.6
+Prevent creation of Bodies without orbital elements. Add 0.4m site codes for
+proper attribution when creating frames. Fix missing `.fits` extensions in archive
+replies when creating Frames.
+
+### 1.4.5
+Fix for Arecibo object parsing.
+
+### 1.4.4
+Adding short delay when polling MPC for object info.
+
+### 1.4.3
+Adding support for new Sinistro (K93) camera at CPT
+
+### 1.4.2
+Better comet handling
+
+### 1.4.1
+Better support for new request and frame APIs
+
+### 1.4.0
+- Adding support for new request and frame APIs
+
+### 1.3.0
+- Restructuring frame parsing out of `views.py`
+
+### 1.2.5alpha
+- Moon phase on homepage
