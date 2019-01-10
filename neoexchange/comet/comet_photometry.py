@@ -15,8 +15,16 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 from photutils import CircularAperture, SkyCircularAperture, aperture_photometry
-from photutils.utils import calculate_total_error
-from photutils.background import Background
+try:
+    # Renamed in 0.3
+    from photutils.utils import calculate_total_error as calc_total_error
+except ImportError:
+    from photutils.utils import calc_total_error
+
+try:
+    from photutils.background import Background
+except ImportError:
+    from photutils.background import Background2D as Background
 
 path.insert(0, os.path.join(os.getenv('HOME'), 'GIT/neoexchange/neoexchange'))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
