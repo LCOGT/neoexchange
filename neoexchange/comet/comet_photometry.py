@@ -39,6 +39,8 @@ from comet_subs import *
 comet = '243P'
 datadir = os.path.join(os.getenv('HOME'), 'Asteroids', comet, 'Pipeline', 'Temp')
 datadir = os.path.join(os.path.abspath(datadir), '')
+if not os.path.exists(datadir):
+    os.makedirs(datadir)
 bkg_map = True
 
 FLUX2MAG = 2.5/log(10)

@@ -27,12 +27,12 @@ def determine_images_and_catalogs(datadir, output=True):
         fits_catalogs = sorted(glob(datadir + '*e??_cat.fits'))
         if len(fits_files) == 0 and len(fits_catalogs) == 0:
             print("No FITS files and catalogs found in directory %s" % datadir)
-            fits_files, fits_catalogs = None, None
+            fits_files, fits_catalogs = [], []
         else:
             print("Found %d FITS files and %d catalogs" % ( len(fits_files), len(fits_catalogs)))
     else:
         print("Could not open directory %s" % datadir)
-        fits_files, fits_catalogs = None, None
+        fits_files, fits_catalogs = [], []
 
     return fits_files, fits_catalogs
 
