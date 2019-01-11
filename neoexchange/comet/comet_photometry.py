@@ -47,7 +47,7 @@ log_file = os.path.join(datadir, comet + '_phot.log')
 if os.path.exists(log_file):
     os.remove(log_file)
 log_fh = open(log_file, 'w')
-print("# Filename                           Filter JD            MJD-57000.0         RA (J2000.0) Dec        X (pixels) Y        Radius  Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr     ZP      ZPerr", file=log_fh)
+print("# Filename                               Filter JD            MJD-57000.0         RA (J2000.0) Dec        X (pixels) Y        Radius  Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr     ZP      ZPerr", file=log_fh)
 #                  elp1m008-fl05-20160127-0273-e90.fits   r'   2457416.02037 415.520368588 185.611169209 +08.200143039 2001.3375 2067.4000   23.4026 -11.84046 +16.11954   +0.08323 -11.84523 +16.11477  +0.08284   27.96000
 
 # Loop over all images
