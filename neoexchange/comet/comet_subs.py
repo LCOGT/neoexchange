@@ -75,7 +75,13 @@ def determine_aperture_size(delta, pixscale):
     return aperture_size
 
 def interpolate_ephemeris(ephem_file, jd):
-
+    '''Interpolate a JPL ephemeris CSV file
+    This needs to be generated from the website with the 'Table Settings' showing:
+        `Table Settings [change] :  	QUANTITIES=1,3,4,8,19,20,24; date/time format=BOTH; extra precision=YES`
+    and then turned into a CSV file via:
+        cut -c 2-18,19-36,38,39,41-54,55-68,69-77,79-87,88-97,98-106,107-113,114-120,121-137,148-165,177- --output-delimiter="," \
+        horizons_results.txt > [comet]_ephem
+    '''
     ra = dec = delta = phase = None
     try:
         ephem_fh = open(ephem_file)

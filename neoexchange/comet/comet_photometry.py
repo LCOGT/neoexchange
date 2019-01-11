@@ -83,12 +83,22 @@ for fits_fpath in images:
         image_sub = image - median
 
     #   Determine position of comet in this frame
-    sitecode = LCOGT_domes_to_site_codes(header['siteid'], header['encid'], header['telid'])
-    ephem_file = comet + "_ephem_%s_%s_%s.txt" % ( header['siteid'].upper(), header['instrume'].lower(), sitecode.upper())
+    if 'mpccode' in header:
+        sitecode = header['mpccode']
+        siteid = 'CSS'
+        instrument = '703_STA10k'
+    else:
+        sitecode = LCOGT_domes_to_site_codes(header['siteid'], header['encid'], header['telid'])
+        siteid = header['siteid'].upper()
+        instrument = header['instrume'].lower()
+    ephem_file = comet + "_ephem_%s_%s_%s.txt" % ( siteid, instrument, sitecode.upper())
     print("Reading ephemeris from", ephem_file)
     ephem_file = os.path.join(os.getenv('HOME'), 'Asteroids', ephem_file)
 
-    mjd_utc_mid = header['mjd-obs'] + (header['exptime']/2.0/86400.0)
+    if 'mjdmid' in header:
+        mjd_utc_mid = header['mjdmid']
+    else:
+        mjd_utc_mid = header['mjd-obs'] + (header['exptime']/2.0/86400.0)
     jd_utc_mid = mjd_utc_mid + 2400000.5
     print("JD=", jd_utc_mid, header['date-obs'], header['exptime'], header['exptime']/2.0/86400.0)
     ra, dec, del_ra, del_dec, delta, phase = interpolate_ephemeris(ephem_file, jd_utc_mid)
