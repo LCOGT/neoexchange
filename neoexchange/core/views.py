@@ -840,8 +840,6 @@ def schedule_check(data, body, ok_to_schedule=True):
     if data.get('start_time') and data.get('end_time'):
         dark_start = data.get('start_time')
         dark_end = data.get('end_time')
-        if dark_end < dark_start:
-            dark_end = dark_start + timedelta(hours=1)
         utc_date = data.get('utc_date', dark_start.date())
     else:
         dark_start, dark_end = determine_darkness_times(data['site_code'], data['utc_date'])
