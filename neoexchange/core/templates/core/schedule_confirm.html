@@ -305,9 +305,9 @@
       <div class="four columns">
         {% if form.errors%}
           {% if form.spectroscopy.value == 'True' %}
-            <a href="{% url 'schedule-body-spectra' body.id %}">Return to schedule spectra page</a>
+            <a href="{% url 'schedule-body-spectra' body.id %}" id="id_return_spec_link">Return to schedule spectra page</a>
           {% else %}
-            <a href="{% url 'schedule-body' body.id %}">Return to schedule parameters page</a>
+            <a href="{% url 'schedule-body' body.id %}{% if cadence %}?cadence=true{% endif%}" id="id_return_link">Return to schedule parameters page</a>
           {% endif %}
         {% else %}
         <input type="submit" class="button button-primary" value="Schedule this Object" id="id_submit_button" name="submit">
