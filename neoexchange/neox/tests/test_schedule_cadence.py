@@ -129,9 +129,28 @@ class ScheduleCadence(FunctionalTest):
 
         proposal_choices.select_by_visible_text(self.neo_proposal.title)
 
+        # He submits with a typo in the date box
+        MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
+        datebox = self.get_item_input_box('id_start_time')
+        datebox.clear()
+        datebox.send_keys('2005-04-21 01:30:00')
+
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_xpath('//button[@id="cadence-submit"]').click()
+
+        # he sees an error message, and a link to return him to the cadence page
+        error_msg = self.browser.find_element_by_class_name('errorlist').text
+        self.assertIn("Window cannot start in the past", error_msg)
+
+        link = self.browser.find_element_by_id('id_return_link')
+        target_url = "{0}{1}{2}".format(self.live_server_url, reverse('schedule-body', kwargs={'pk': 1}), '?cadence=true')
+        link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), target_url)
+
+        # He fixes his mistake and enters the correct details
         site_choices = Select(self.browser.find_element_by_id('id_site_code_cad'))
         self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
-
         site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         MockDateTime.change_datetime(2015, 4, 20, 1, 30, 00)
