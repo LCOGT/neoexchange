@@ -10,6 +10,7 @@ from astropy.io import fits
 import numpy as np
 from astropy.stats import sigma_clipped_stats, mad_std
 from astropy.wcs import WCS
+from astropy.wcs._wcs import InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
 from astropy.coordinates import SkyCoord
 from astropy import units as u
@@ -97,17 +98,29 @@ for fits_fpath in images:
 
     if 'mjdmid' in header:
         mjd_utc_mid = header['mjdmid']
+        date_obs = header['date-mid']
     else:
         mjd_utc_mid = header['mjd-obs'] + (header['exptime']/2.0/86400.0)
+        date_obs =  header['date-obs']
     jd_utc_mid = mjd_utc_mid + 2400000.5
-    print("JD=", jd_utc_mid, header['date-obs'], header['exptime'], header['exptime']/2.0/86400.0)
+    print("JD=", jd_utc_mid, date_obs, header['exptime'], header['exptime']/2.0/86400.0)
     ra, dec, del_ra, del_dec, delta, phase = interpolate_ephemeris(ephem_file, jd_utc_mid)
     print("RA, Dec, delta for frame=", ra, dec, delta)
 
-    fits_wcs = WCS(header)
+    try:
+        fits_wcs = WCS(header)
+    except InvalidTransformError:
+        print("Changing WCS CTYPEi to TPV")
+        if 'CTYPE1' in header and 'CTYPE2' in header:
+            header['CTYPE1'] = 'RA---TPV'
+            header['CTYPE2'] = 'DEC--TPV'
+            fits_wcs = WCS(header)
+        else:
+            print("Could not find needed WCS header keywords")
+            exit(-2)
     x, y = fits_wcs.wcs_world2pix(ra, dec, 1)
     pixscale = proj_plane_pixel_scales(fits_wcs).mean()*3600.0
-    print("Pixelscales=", pixscale, header['secpix'])
+    print("Pixelscales=", pixscale, header.get('secpix', ''))
 
     #   Determine aperture size and perform aperture photometry at the position
     radius = determine_aperture_size(delta, pixscale)
