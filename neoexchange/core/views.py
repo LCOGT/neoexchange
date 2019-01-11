@@ -641,7 +641,7 @@ class ScheduleParametersCadence(LoginRequiredMixin, LookUpBodyMixin, FormView):
     def form_valid(self, form, request):
         data = schedule_check(form.cleaned_data, self.body, self.ok_to_schedule)
         new_form = ScheduleBlockForm(data)
-        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body})
+        return render(request, 'core/schedule_confirm.html', {'form': new_form, 'data': data, 'body': self.body, 'cadence':True})
 
 
 class ScheduleParametersSpectra(LoginRequiredMixin, LookUpBodyMixin, FormView):
@@ -1843,7 +1843,7 @@ def update_crossids(astobj, dbg=False):
     # but don't have a blank 'name'
     bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
     if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
-    
+
     if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
         created = True
