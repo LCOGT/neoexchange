@@ -162,21 +162,21 @@ class ScheduleCadence(FunctionalTest):
 
         # He notices that a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear
-        magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
+        magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('20.39', magnitude)
-        speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.63 "/min', speed)
-        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
-        num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
+        num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('13', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('55.0', exp_length)
-        jitter = self.browser.find_element_by_name('jitter').get_attribute('value')
+        jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
         self.assertIn('0.5', jitter)
-        period = self.browser.find_element_by_name('period').get_attribute('value')
+        period = self.browser.find_element_by_id('id_period').get_attribute('value')
         self.assertIn('3.0', period)
-        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('kv-value').text
+        cadence_cost = self.browser.find_element_by_id('id_cadence_cost_row').find_element_by_class_name('kv-value').text
         self.assertIn('2 / 0.75', cadence_cost)
 
         # At this point, a 'Schedule this object' button appears
@@ -278,46 +278,46 @@ class ScheduleCadence(FunctionalTest):
 
         # He notices that a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear
-        magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
+        magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('20.39', magnitude)
-        speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.63 "/min', speed)
-        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
-        num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
+        num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('13', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('55.0', exp_length)
-        jitter = self.browser.find_element_by_name('jitter').get_attribute('value')
+        jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
         self.assertIn('0.5', jitter)
-        period = self.browser.find_element_by_name('period').get_attribute('value')
+        period = self.browser.find_element_by_id('id_period').get_attribute('value')
         self.assertIn('3.0', period)
-        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('kv-value').text
+        cadence_cost = self.browser.find_element_by_id('id_cadence_cost_row').find_element_by_class_name('kv-value').text
         self.assertIn('2 / 0.75', cadence_cost)
 
         # Bart wants to change the slot length and recalculate the number of exposures
-        slot_length_box = self.browser.find_element_by_name('slot_length')
+        slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
         slot_length_box.send_keys('25.')
 
         # He also wants to change the period to 0 because he thinks it will be funny
-        periodbox = self.browser.find_element_by_name('period')
+        periodbox = self.browser.find_element_by_id('id_period')
         periodbox.clear()
         periodbox.send_keys('0')
         self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and we get correct slot length and the Schedule button again
-        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('25.', slot_length)
-        jitter = self.browser.find_element_by_name('jitter').get_attribute('value')
+        jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
         self.assertIn('0.5', jitter)
-        period = self.browser.find_element_by_name('period').get_attribute('value')
+        period = self.browser.find_element_by_id('id_period').get_attribute('value')
         self.assertIn('0.02', period)
 
         # He sees a warning about the large number of hours now required for this cadence. As well as a message about potential overlap
-        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('warning').text
+        cadence_cost = self.browser.find_element_by_id('id_cadence_cost_row').find_element_by_class_name('warning').text
         self.assertIn('300 / 125', cadence_cost)
-        period_warning = self.browser.find_element_by_id('id_period').find_element_by_class_name('warning').text
+        period_warning = self.browser.find_element_by_id('id_period_row').find_element_by_class_name('warning').text
         self.assertIn('PERIOD', period_warning)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
@@ -399,34 +399,34 @@ class ScheduleCadence(FunctionalTest):
 
         # He notices that a series of values for magnitude, speed, slot
         # length, number and length of exposures, period, and jitter appear
-        magnitude = self.browser.find_element_by_id('id_magnitude').find_element_by_class_name('kv-value').text
+        magnitude = self.browser.find_element_by_id('id_magnitude_row').find_element_by_class_name('kv-value').text
         self.assertIn('20.39', magnitude)
-        speed = self.browser.find_element_by_id('id_speed').find_element_by_class_name('kv-value').text
+        speed = self.browser.find_element_by_id('id_speed_row').find_element_by_class_name('kv-value').text
         self.assertIn('2.63 "/min', speed)
-        slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
-        num_exp = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('kv-value').text
+        num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
         self.assertIn('13', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('55.0', exp_length)
 
         # He notices the Jitter automatically adjusts to fit the slot length.
-        jitter = self.browser.find_element_by_name('jitter').get_attribute('value')
+        jitter = self.browser.find_element_by_id('id_jitter').get_attribute('value')
         self.assertIn('0.39', jitter)
-        period = self.browser.find_element_by_name('period').get_attribute('value')
+        period = self.browser.find_element_by_id('id_period').get_attribute('value')
         self.assertIn('3.0', period)
-        cadence_cost = self.browser.find_element_by_id('id_cadence_cost').find_element_by_class_name('kv-value').text
+        cadence_cost = self.browser.find_element_by_id('id_cadence_cost_row').find_element_by_class_name('kv-value').text
         self.assertIn('2 / 0.75', cadence_cost)
 
         # Bart wants to change the slot length so it is very short and recalculate the number of exposures
-        slot_length_box = self.browser.find_element_by_name('slot_length')
+        slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
         slot_length_box.send_keys('2.')
         with self.wait_for_page_load(timeout=10):
             self.browser.find_element_by_id("id_edit_button").click()
 
         # The page refreshes and slot length is automatically adjusted to minimum possible length
-        new_slot_length = self.browser.find_element_by_name('slot_length').get_attribute('value')
+        new_slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('3.5', new_slot_length)
-        warn_num = self.browser.find_element_by_id('id_no_of_exps').find_element_by_class_name('warning').text
+        warn_num = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('warning').text
         self.assertIn('1', warn_num)
