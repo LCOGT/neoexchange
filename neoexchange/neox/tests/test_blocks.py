@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from .base import FunctionalTest
 from mock import patch
 
@@ -393,7 +408,7 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
 
         side_text = self.browser.find_element_by_class_name('block-status').text
         block_lines = side_text.splitlines()
-        testlines = ['SPECTRUM: 2, LAMPFLAT: 1, ARC: 1',
+        testlines = ['TAR: 1, SPECTRUM: 1, LAMPFLAT: 1, ARC: 1',
                     ]
         for line in testlines:
             self.assertIn(line, block_lines)

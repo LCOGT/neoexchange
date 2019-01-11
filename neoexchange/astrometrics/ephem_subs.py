@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 ephem_subs.py -- Asteroid ephemeris related routines.
 
@@ -148,7 +148,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
     logger.debug("Site code/name, lat/long/height=%s %s %f %f %.1f" % (sitecode, site_name, site_long, site_lat, site_hgt))
 
-    if site_name == '?' or sitecode == '500':
+    if site_name == '?' or site_name == 'Geocenter':
         if site_name == '?':
             logger.warning("WARN: No site co-ordinates found, computing for geocenter")
         pvobs = zeros(6)
@@ -218,6 +218,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
 
     r3 = -100.
     delta = 0.0
+    delta_dot = 0.0
     ltt = 0.0
     pos = zeros(3)
     vel = zeros(3)
@@ -304,6 +305,9 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         # Calculate magnitude of comet
         # Here 'H' is the absolute magnitude, 'kappa' the slope parameter defined in Meeus
         # _Astronomical Algorithms_ p. 231, is equal to 2.5 times the 'G' read from the elements
+        # For JPL HORIZONS, we have:
+        #   T(otal)-mag = M1 + 5*log10(delta) + k1*log10(r)
+        # N(uclear)-mag = M2 + 5*log10(delta) + k2*log10(r) + phcof*beta (not implemented)
         if p_orbelems['H'] and p_orbelems['G']:
             mag = p_orbelems['H'] + 5.0 * log10(delta) + 2.5 * p_orbelems['G'] * log10(r)
             mag_dot = 5.0 * delta_dot / log(10) / delta + 2.5 * p_orbelems['G'] * r_dot / log(10) / r
@@ -311,13 +315,19 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     else:
         # Compute phase angle, beta (Sun-Target-Earth angle)
         beta = compute_phase_angle(r, delta, es_Rsq)
-        beta_dot = -1/sqrt(1-(cos(beta))**2)*(r*(delta**2-r**2+1)*delta_dot-delta*(delta**2-r**2-1)*r_dot)/(2*delta*delta*r*r)
 
         phi1 = exp(-3.33 * (tan(beta/2.0))**0.63)
         phi2 = exp(-1.87 * (tan(beta/2.0))**1.22)
 
-        phi1_dot = phi1 * -3.33 * 0.63 * (tan(beta/2.0))**(0.63-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
-        phi2_dot = phi1 * -1.87 * 1.22 * (tan(beta/2.0))**(1.22-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
+        try:
+            beta_dot = -1 / sqrt(1 - (cos(beta)) ** 2) * (r * (delta ** 2 - r ** 2 + es_Rsq) * delta_dot - delta * (delta ** 2 - r ** 2 - es_Rsq) * r_dot) / \
+                   (2 * delta * delta * r * r)
+            phi1_dot = phi1 * -3.33 * 0.63 * (tan(beta/2.0))**(0.63-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
+            phi2_dot = phi1 * -1.87 * 1.22 * (tan(beta/2.0))**(1.22-1) * 0.5 * beta_dot * (cos(beta/2.0))**(-2)
+        except ZeroDivisionError:
+            beta_dot = float('-inf')
+            phi1_dot = float('inf')
+            phi2_dot = float('inf')
 
         #    logger.debug("Phi1, phi2=%s" % phi1,phi2)
 
@@ -387,7 +397,7 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
     the Heliocenter->Observer vector from the Heliocenter->Asteroid vector and
     so we don't need to do this when we form the first 3 elements of matrix."""
 
-    obj_vel = obj_vel * 86400.0
+    obj_vel *= 86400.0
     j2000_vel = zeros(3)
     matrix = zeros(9)
     i = 0
@@ -440,6 +450,25 @@ def compute_sky_motion(sky_vel, delta, dbg=True):
     return total_motion, sky_pa, ra_motion, dec_motion
 
 
+def calc_moon_sep(obsdate, obj_ra, obj_dec, site_code):
+
+    # Get site and mount parameters
+    (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
+
+    # Compute apparent RA, Dec of the Moon
+    (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(obsdate, site_long, site_lat, site_hgt)
+    # Convert to alt, az (only the alt is actually needed)
+    (moon_az, moon_alt) = moon_alt_az(obsdate, moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
+    moon_alt = degrees(moon_alt)
+    # Compute object<->Moon seperation and convert to degrees
+    moon_obj_sep = S.sla_dsep(obj_ra, obj_dec, moon_app_ra, moon_app_dec)
+    moon_obj_sep = degrees(moon_obj_sep)
+    # Calculate Moon phase (in range 0.0..1.0)
+    moon_phase = moonphase(obsdate, site_long, site_lat, site_hgt)
+
+    return moon_alt, moon_obj_sep, moon_phase
+
+
 def format_emp_line(emp_line, site_code):
 
     # Convert radians for RA, Dec into strings for printing
@@ -447,7 +476,9 @@ def format_emp_line(emp_line, site_code):
     # Format time and print out the overall ephemeris
     emp_time = datetime.strftime(emp_line[0], '%Y %m %d %H:%M')
 
-    if str(site_code) == '500':
+    (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
+
+    if site_name == 'Geocenter':
         # Geocentric position, so no altitude. moon parameters, score or hour angle
         geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|N/A|N/A|N/A|N/A|N/A|N/A"
 
@@ -456,22 +487,13 @@ def format_emp_line(emp_line, site_code):
 
     else:
         # Get site and mount parameters
-        (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
         (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(site_code)
 
 #                         Date  RA Dec Mag   Motion P.A  Alt Mphase Msep Malt   Score HA
         blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
-# Compute apparent RA, Dec of the Moon
-        (moon_app_ra, moon_app_dec, diam) = moon_ra_dec(emp_line[0], site_long, site_lat, site_hgt)
-# Convert to alt, az (only the alt is actually needed)
-        (moon_az, moon_alt) = moon_alt_az(emp_line[0], moon_app_ra, moon_app_dec, site_long, site_lat, site_hgt)
-        moon_alt = degrees(moon_alt)
-# Compute object<->Moon seperation and convert to degrees
-        moon_obj_sep = S.sla_dsep(emp_line[1], emp_line[2], moon_app_ra, moon_app_dec)
-        moon_obj_sep = degrees(moon_obj_sep)
-# Calculate Moon phase (in range 0.0..1.0)
-        moon_phase = moonphase(emp_line[0], site_long, site_lat, site_hgt)
+# get moon info
+        moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(emp_line[0], emp_line[1], emp_line[2], site_code)
 
 # Compute H.A.
         ha = compute_hourangle(emp_line[0], site_long, site_lat, site_hgt, emp_line[1], emp_line[2])
@@ -522,7 +544,12 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
 
     full_emp = []
     while ephem_time < dark_end:
-        emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=True, display=False)
+        if 'epochofel' in elements:
+            emp_line = compute_ephem(ephem_time, elements, site_code, dbg=False, perturb=True, display=False)
+        elif 'ra' in elements and 'dec' in elements:
+            emp_line = compute_sidereal_ephem(ephem_time, elements, site_code)
+        else:
+            break
         full_emp.append(emp_line)
         ephem_time = ephem_time + timedelta(seconds=step_size_secs)
 
@@ -556,17 +583,12 @@ def read_findorb_ephem(empfile):
                     chunks.remove(' ')
                 except ValueError:
                     pass
-                obj_id = ''
-                for chunk in chunks[::-1]:
-                    if chunk.isdigit():
-                        obj_id = chunk
-                        break
-                if not obj_id:
-                    if '19' in chunks[-1] or '20' in chunks[-1]:
-                        obj_id = chunks[-1].replace(' ', '').replace('=', '')
+                obj_id = chunks[-1].strip()
+                if '=' in obj_id:
+                    if chunks[-2].isdigit():
+                        obj_id = chunks[-2]
                     else:
-                        logger.warning("Could not pull Object ID from header line1 ({:s})".format(line))
-                        return None, None
+                        obj_id = obj_id.replace('=', '')
                 ephem_info = {'obj_id' : obj_id,
                               'emp_sitecode' : chunks[0]}
             elif line.lstrip()[0:4] == 'Date':
@@ -605,10 +627,14 @@ def read_findorb_ephem(empfile):
                 try:
                     emp_alt = float(chunks[16])
                 except ValueError:
+                    # Units of ephemeris uncertainty are normally arcseconds; convert
+                    # other units
                     if 'm' in chunks[16]:
                         emp_alt = float(chunks[16][:-1])/1000
                     elif "'" in chunks[16]:
                         emp_alt = float(chunks[16][:-1])*60
+                    elif 'd' in chunks[16]:
+                        emp_alt = float(chunks[16][:-1])*3600
                     else:
                         logger.warning("Unable to read Ephemeris sig err {}".format(chunks[16]))
                         return None, None
@@ -747,6 +773,9 @@ def crude_astro_darkness(sitecode, utc_date):
     elif sitecode == 'K91' or sitecode == 'K92' or sitecode == 'K93':
         ad_start = utc_date + timedelta(hours=0, minutes=0)
         ad_end = utc_date + timedelta(hours=4, minutes=39)
+    elif sitecode == '1m0' or sitecode == '0m4' or sitecode == '2m0':
+        ad_start = utc_date + timedelta(hours=0, minutes=0)
+        ad_end = utc_date + timedelta(hours=24, minutes=00)
     else:
         print("Unsupported sitecode", sitecode)
         return None, None
@@ -812,13 +841,14 @@ def accurate_astro_darkness(sitecode, utc_date, solar_pos=False, debug=False):
         print(sunset, sunrise)
 
     if sunrise < sunset:
-        sunrise = sunrise + 1
+        sunrise += 1
     if debug:
         to_return = [T, sun_mean_long, sun_mean_anom, earth_e, sun_eqcent,
             sun_true_long, degrees(omega), sun_app_long, degrees(eps0), eps,
             degrees(sun_app_ra), degrees(sun_app_dec), eqtime, hourangle]
         print(to_return)
-
+    elif site_name == 'Geocenter':
+        to_return = (utc_date, utc_date+timedelta(days=1))
     else:
         to_return = (utc_date+timedelta(days=sunset), utc_date+timedelta(days=sunrise))
 
@@ -835,9 +865,18 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
 
     for x in emp:
         visible = False
-        if (dark_start <= x[0] <= dark_end - timedelta(minutes=slot_length)) and x[5] >= float(alt_limit):
-            visible = True
-            dark_up_emp.append(x)
+        emp_time = x[0]
+        current_alt = x[5]
+        try:
+            if isinstance(emp_time, str):
+                emp_time = datetime.strptime(x[0], '%Y %m %d %H:%M')
+            if isinstance(current_alt, str):
+                current_alt = float(x[6])
+            if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= float(alt_limit):
+                visible = True
+                dark_up_emp.append(x)
+        except ValueError:
+            return emp
         if debug:
             print(x[0].date(), x[0].time(), (dark_start <= x[0] < dark_end - timedelta(minutes=slot_length)), x[5], alt_limit, visible)
 
@@ -854,16 +893,13 @@ class MagRangeError(Exception):
         return self.value
 
 
-BRIGHTEST_ALLOWABLE_MAG = 6
-
-
 def get_mag_mapping(site_code):
     """Defines the site-specific mappings from target magnitude to desired
     slot length (in minutes) assuming minimum exposure count is 4. A null
     dictionary is returned if the site name isn't recognized"""
 
-    twom_site_codes = ['F65', 'E10', '2M']
-    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M']
+    twom_site_codes = ['F65', 'E10', '2M', '2M0']
+    good_onem_site_codes = ['V37', 'K91', 'K92', 'K93', 'W85', 'W86', 'W87', 'Q63', 'Q64', 'GOOD1M', '1M0']
     # COJ normally has bad seeing, allow more time
     # Disabled by TAL 2018/8/10 after mirror recoating
 #    bad_onem_site_codes = ['Q63', 'Q64']
@@ -875,7 +911,7 @@ def get_mag_mapping(site_code):
     if site_code in twom_site_codes:
         # Mappings for FTN/FTS. Assumes Spectral+Solar filter
         mag_mapping = {
-                17   : 5.5,
+                17   : 6.0,
                 17.5 : 7.5,
                 18   : 10,
                 19   : 15,
@@ -884,7 +920,8 @@ def get_mag_mapping(site_code):
                 21   : 25,
                 21.5 : 27.5,
                 22   : 30,
-                23.3 : 35
+                23.3 : 35,
+                99   : 60
                }
     elif site_code in good_onem_site_codes:
         # Mappings for McDonald. Assumes kb74+w
@@ -899,7 +936,8 @@ def get_mag_mapping(site_code):
                 21   : 25,
                 21.5 : 30,
                 22.0 : 40,
-                22.5 : 45
+                22.5 : 45,
+                99   : 60
                }
     elif site_code in bad_onem_site_codes:
         # COJ normally has bad seeing, allow more time
@@ -914,7 +952,8 @@ def get_mag_mapping(site_code):
                 20.5 : 25,
                 21   : 27.5,
                 21.5 : 32.5,
-                22.0 : 35
+                22.0 : 35,
+                99   : 60
                }
     elif site_code in point4m_site_codes:
         mag_mapping = {
@@ -925,7 +964,8 @@ def get_mag_mapping(site_code):
                 19.5 : 25,
                 20   : 27.5,
                 20.5 : 32.5,
-                21.0 : 35
+                21.0 : 35,
+                99   : 60
                }
     else:
         mag_mapping = {}
@@ -935,10 +975,7 @@ def get_mag_mapping(site_code):
 
 def determine_slot_length(mag, site_code, debug=False):
 
-    if mag < BRIGHTEST_ALLOWABLE_MAG:
-        raise MagRangeError("Target too bright")
-
-# Obtain magnitude->slot length mapping dictionary
+    # Obtain magnitude->slot length mapping dictionary
     mag_mapping = get_mag_mapping(site_code)
     if debug:
         print(mag_mapping)
@@ -995,10 +1032,36 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
     except MagRangeError:
         max_exp_time = site_max_exp_time
     # pretify max exposure time to nearest 5 seconds
-
     max_exp_time = ceil(max_exp_time/5)*5
 
     exp_time = determine_exptime(speed, pixel_scale, max_exp_time)
+    # Make first estimate for exposure count ignoring molecule creation
+    exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
+    # Reduce exposure count by number of exposures necessary to accomidate molecule overhead
+    mol_overhead = molecule_overhead(build_filter_blocks(filter_pattern, exp_count))
+    exp_count = int(ceil(exp_count * (1.0-(mol_overhead / ((( exp_time + exp_overhead ) * exp_count) + mol_overhead)))))
+    # Safety while loop for edge cases
+    while setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, exp_count)) + (exp_overhead * float(exp_count)) + exp_time * float(exp_count) > slot_length:
+        exp_count -= 1
+    if exp_count < min_exp_count:
+        exp_count = min_exp_count
+        exp_time = (slot_length - setup_overhead - molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)) - (exp_overhead * float(exp_count))) / exp_count
+        logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count))
+    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" %
+        ( slot_length/60.0, slot_length, exp_count, exp_time))
+    if exp_time is None or exp_time <= 0.1 or exp_count < 1:
+        logger.debug("Invalid exposure count")
+        exp_time = 0.1
+        exp_count = min_exp_count
+    return exp_time, exp_count
+
+
+def determine_exp_count(slot_length_in_mins, exp_time, site_code, filter_pattern, min_exp_count=1):
+    exp_count = None
+
+    (chk_site_code, setup_overhead, exp_overhead, pixel_scale, ccd_fov, site_max_exp_time, alt_limit) = get_sitecam_params(site_code)
+
+    slot_length = slot_length_in_mins * 60.0
 
     # Make first estimate for exposure count ignoring molecule creation
     exp_count = int((slot_length - setup_overhead)/(exp_time + exp_overhead))
@@ -1011,16 +1074,26 @@ def determine_exp_time_count(speed, site_code, slot_length_in_mins, mag, filter_
 
     if exp_count < min_exp_count:
         exp_count = min_exp_count
-        exp_time = (slot_length - setup_overhead - molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)) - (exp_overhead * float(exp_count))) / exp_count
-        logger.debug("Reducing exposure time to %.1f secs to allow %d exposures in group" % ( exp_time, exp_count))
-    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" %
-        ( slot_length/60.0, slot_length, exp_count, exp_time))
+        slot_length = ((exp_time + exp_overhead) * float(exp_count)) + (setup_overhead + molecule_overhead(build_filter_blocks(filter_pattern, min_exp_count)))
+        logger.debug("increasing slot length to %.1f minutes to allow %.1f exposure time" % ( slot_length/60.0, exp_time))
+    logger.debug("Slot length of %.1f mins (%.1f secs) allows %d x %.1f second exposures" % ( slot_length/60.0, slot_length, exp_count, exp_time))
     if exp_time is None or exp_time <= 0.0 or exp_count < 1:
         logger.debug("Invalid exposure count")
-        exp_time = None
         exp_count = None
 
-    return exp_time, exp_count
+    # pretify slotlength to nearest .5 min
+    slot_length_in_mins = slot_length/60
+    slot_length_in_mins = ceil(slot_length_in_mins*2)/2
+    return slot_length_in_mins, exp_count
+
+
+def determine_star_trails(speed, exp_time):
+    """gives the estimated stellar elongation in arcseconds due to object motion"""
+    if exp_time:
+        elongation = speed/60 * exp_time
+    else:
+        elongation = None
+    return elongation
 
 
 def determine_spectro_slot_length(exp_time, calibs, exp_count=1):
@@ -1294,7 +1367,7 @@ def get_sitepos(site_code, dbg=False):
         (site_long, status) =  S.sla_daf2r(20, 48, 35.54)
         site_hgt = 1804.0
         site_name = 'LCO CPT Node 0m4a Aqawan A at Sutherland'
-    elif site_code == '500':
+    elif site_code == '500' or site_code == '1M0' or site_code == '0M4' or site_code == '2M0':
         site_lat = 0.0
         site_long = 0.0
         site_hgt = 0.0
@@ -1327,6 +1400,7 @@ def moon_ra_dec(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     logger.debug("Moon RA, Dec, diam=%s %s %s" % (moon_ra, moon_dec, diam))
     return moon_ra, moon_dec, diam
 
+
 def atmos_params(airless):
     """Atmospheric parameters either airless or average"""
     if airless:
@@ -1350,8 +1424,7 @@ def atmos_params(airless):
     return temp_k, pres_mb, rel_humid, wavel, tlr
 
 
-def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat,
-    obsvr_hgt, dbg=False):
+def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     """Calculate Moon's (or any other object's) Azimuth, Altitude (returned in radians).
     No refraction or polar motion is assumed.
 
@@ -1415,6 +1488,55 @@ def moonphase(date, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
     mphase = (1.0 + cosi) / 2.0
 
     return mphase
+
+
+def target_rise_set(date, app_ra, app_dec, sitecode, min_alt, step_size='30m'):
+    """Calculate the visibility start/end time of a given RA/DEC for a particular site on a particular day."""
+
+    step_size_secs = 300
+    if str(step_size)[-1] == 'm':
+        try:
+            step_size_secs = float(step_size[0:-1]) * 60
+        except ValueError:
+            pass
+    else:
+        step_size_secs = step_size
+
+    ephem_time, sun_set = determine_darkness_times(sitecode, date)
+
+    # Get site and mount parameters
+    (site_name, site_long, site_lat, site_hgt) = get_sitepos(sitecode)
+    (ha_neg_limit, ha_pos_limit, mount_alt_limit) = get_mountlimits(sitecode)
+
+    rise_time = None
+    set_time = None
+    max_alt = None
+    while ephem_time < sun_set:
+        obs_az, obs_alt = moon_alt_az(ephem_time, app_ra, app_dec, site_long, site_lat, site_hgt)
+        hour_angle = compute_hourangle(ephem_time, site_long, site_lat, site_hgt, app_ra, app_dec, dbg=False)
+        obs_alt = degrees(obs_alt)
+        hour_angle = degrees(hour_angle)
+
+        # calculate max altitude
+        if max_alt is None or obs_alt > max_alt:
+            max_alt = obs_alt
+
+        # Check HA is in limits, skip this slot if not
+        if hour_angle >= ha_pos_limit or hour_angle <= ha_neg_limit:
+            ha_limit = True
+        else:
+            ha_limit = False
+
+        if obs_alt > min_alt and not ha_limit and rise_time is None:
+            rise_time = ephem_time
+        elif (obs_alt < min_alt or ha_limit) and rise_time is not None:
+            break
+        ephem_time = ephem_time + timedelta(seconds=step_size_secs)
+
+    if rise_time is not None:
+        set_time = ephem_time - timedelta(seconds=step_size_secs)
+
+    return rise_time, set_time, max_alt
 
 
 def compute_hourangle(date, obsvr_long, obsvr_lat, obsvr_hgt, mean_ra, mean_dec, dbg=False):
@@ -1516,7 +1638,6 @@ def MPC_site_code_to_domes(site):
     """ Returns the mapped value of the MPC site code to LCO Site, Eclosure, and telescope"""
 
     key = cfg.valid_telescope_codes.get(site.upper(), '--')
-
     key = key.split('-')
     siteid = key[0].lower()
     encid = key[1].lower()
@@ -1532,10 +1653,18 @@ def get_sitecam_params(site):
     unrecognized site."""
 
     valid_site_codes = LCOGT_site_codes()
-    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']
+    valid_point4m_codes = ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']
 
     site = site.upper()
-    if site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
+    if site == '2M0':
+        site_code = '2M0'
+        setup_overhead = cfg.tel_overhead['twom_setup_overhead']
+        exp_overhead = cfg.inst_overhead['twom_exp_overhead']
+        pixel_scale = cfg.tel_field['twom_pixscale']
+        fov = arcmins_to_radians(cfg.tel_field['twom_fov'])
+        max_exp_length = 300.0
+        alt_limit = cfg.tel_alt['twom_alt_limit']
+    elif site == 'FTN' or 'OGG-CLMA-2M0' in site or site == 'F65':
         site_code = 'F65'
         setup_overhead = cfg.tel_overhead['twom_setup_overhead']
         exp_overhead = cfg.inst_overhead['twom_exp_overhead']
@@ -1573,7 +1702,7 @@ def get_sitecam_params(site):
         fov = arcmins_to_radians(cfg.tel_field['point4m_fov'])
         max_exp_length = 300.0
         alt_limit = cfg.tel_alt['point4m_alt_limit']
-    elif site in valid_site_codes:
+    elif site in valid_site_codes or site == '1M0':
         setup_overhead = cfg.tel_overhead['onem_setup_overhead']
         exp_overhead = cfg.inst_overhead['sinistro_exp_overhead']
         pixel_scale = cfg.tel_field['onem_sinistro_pixscale']
@@ -1621,34 +1750,35 @@ def comp_FOM(orbelems, emp_line):
             logger.error(str(emp_line))
     return FOM
 
-def determine_sites_to_schedule(sched_date = datetime.utcnow()):
-    '''Determines which sites should be attempted for scheduling based on the
+
+def determine_sites_to_schedule(sched_date=datetime.utcnow()):
+    """Determines which sites should be attempted for scheduling based on the
     time of day.
     Returns a dictionary with keys of 'north' and 'south', each of which will
     have two keys of '0m4' and '1m0' which will contain a list of sites (or an
-    empty list) that can be scheduled.'''
+    empty list) that can be scheduled."""
 
     N_point4m_sites = N_onem_sites = S_point4m_sites = S_onem_sites = []
 
-    if sched_date.hour >= 17 and sched_date.hour < 23:
+    if 17 <= sched_date.hour < 23:
         N_point4m_sites = ['Z21', 'Z17']
         N_onem_sites = ['V37', ]
-        S_point4m_sites = ['L09',]
+        S_point4m_sites = ['L09', ]
         S_onem_sites = ['K93', 'K92', 'K91']
-    elif sched_date.hour >= 23 or ( sched_date.hour >= 0 and sched_date.hour < 8):
+    elif sched_date.hour >= 23 or (0 <= sched_date.hour < 8):
         N_point4m_sites = ['T04', 'T03', 'V38']
         N_onem_sites = ['V37', ]
         S_point4m_sites = ['W89', 'W79']
         S_onem_sites = ['W87', 'W85']
-    elif sched_date.hour >= 8 and sched_date.hour < 12:
+    elif 8 <= sched_date.hour < 12:
         N_point4m_sites = ['T04', 'T03']
         N_onem_sites = [ ]
-        S_point4m_sites = ['Q58',]
+        S_point4m_sites = ['Q58', ]
         S_onem_sites = ['Q63', 'Q64']
-    elif sched_date.hour >= 12 and sched_date.hour < 17:
+    elif 12 <= sched_date.hour < 17:
         N_point4m_sites = [ ]
         N_onem_sites = [ ]
-        S_point4m_sites = ['Q58',]
+        S_point4m_sites = ['Q58', ]
         S_onem_sites = ['Q63', 'Q64']
 
     sites = {   'north' : { '0m4' : N_point4m_sites, '1m0' : N_onem_sites},
@@ -1656,6 +1786,7 @@ def determine_sites_to_schedule(sched_date = datetime.utcnow()):
             }
 
     return sites
+
 
 def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow(), date_range=30, dark_and_up_time_limit=3.0, slot_length=20, ephem_step_size='5 m'):
     """Determine when it's best to observe Yarkovsky & radar/ARM
@@ -1680,7 +1811,7 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
             moon_alt_start = int(emp_dark_and_up[0][9])
             moon_alt_end = int(emp_dark_and_up[-1][9])
             moon_up = False
-            if moon_alt_start>=30 or moon_alt_end >= 30:
+            if moon_alt_start >= 30 or moon_alt_end >= 30:
                 moon_up = True
 
             moon_phase = float(emp_dark_and_up[0][7])
@@ -1706,29 +1837,41 @@ def monitor_long_term_scheduling(site_code, orbelems, utc_date=datetime.utcnow()
     return visible_dates, emp_visible_dates, dark_and_up_time_all, max_alt_all
 
 
-def compute_dark_and_up_time(emp):
+def compute_dark_and_up_time(emp, step_size='180 m'):
     """Computes the amount of time a target is up and the
     sky is dark from emp"""
 
-    dark_and_up_time = None
+    dark_and_up_time = 0
     dark_and_up_time_start = None
     dark_and_up_time_end = None
     emp_dark_and_up = []
     start = None
+
+    if str(step_size)[-1] == 'm':
+        try:
+            step_size_secs = float(step_size[0:-1]) * 60
+        except ValueError:
+            pass
+    else:
+        step_size_secs = float(step_size)
 
     if emp != []:
         for line in emp:
             if 'Limits' not in line[11] and start is None:
                 dark_and_up_time_start = datetime.strptime(line[0], '%Y %m %d %H:%M')
                 dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
+                dark_and_up_time = dark_and_up_time_end-dark_and_up_time_start
                 start = 1
                 emp_dark_and_up.append(line)
             elif 'Limits' not in line[11]:
+                dark_and_up_time_start = dark_and_up_time_end
                 dark_and_up_time_end = datetime.strptime(line[0], '%Y %m %d %H:%M')
                 emp_dark_and_up.append(line)
+                additional_time = dark_and_up_time_end-dark_and_up_time_start
+                if additional_time.total_seconds() <= step_size_secs * 2:
+                    dark_and_up_time += additional_time
         if dark_and_up_time_start is not None and dark_and_up_time_end is not None:
-            dark_and_up_time = dark_and_up_time_end - dark_and_up_time_start
-            dark_and_up_time = dark_and_up_time.seconds/3600.0  # in hrs
+            dark_and_up_time = dark_and_up_time.total_seconds()/3600.0  # in hrs
 
     return dark_and_up_time, emp_dark_and_up
 
@@ -1747,3 +1890,57 @@ def compute_max_altitude(emp_dark_and_up):
         prev_max_alt = max_alt
 
     return max_alt
+
+
+def compute_sidereal_ephem(ephem_time, elements, site_code):
+    site_name, site_long, site_lat, site_hgt = get_sitepos(site_code)
+    az_rad, alt_rad = moon_alt_az(ephem_time, radians(elements['ra']), radians(elements['dec']), site_long, site_lat, site_hgt, dbg=False)
+    alt_deg = degrees(alt_rad)
+
+    #               0   1   2   3       4           5       6       7
+    emp_line = (ephem_time, radians(elements['ra']), radians(elements['dec']), elements['vmag'], 0, alt_deg, 0, 0)
+    return emp_line
+
+
+def get_alt_from_airmass(airmass):
+    """Return the equivalent altitude (in degrees) of a given airmass."""
+    altitude = degrees((pi/2.0) - acos(1/airmass))
+    return altitude
+
+
+def get_visibility(ra, dec, date, site_code, step_size='30 m', alt_limit=30, quick_n_dirty=True, body_elements=None):
+    """Calculate hours of visibility and max altitude for an object over an observing window"""
+
+    # For generic sites, include northern and southern site for visibility calculation
+    if site_code == '1M0':
+        site_list = ['V37', 'W85']
+    elif site_code == '2M0':
+        site_list = ['F65', 'E10']
+    elif site_code == '0M4':
+        site_list = ['V38', 'W89']
+    else:
+        site_list = [site_code]
+
+    dark_and_up_time = 0
+    max_alt = 0
+    for site in site_list:
+        if quick_n_dirty:
+            start_time, end_time, test_alt = target_rise_set(date, ra, dec, site, alt_limit, step_size)
+            if start_time and end_time:
+                vis_time = (end_time-start_time).total_seconds()/3600.0
+            else:
+                vis_time = 0
+        else:
+            dark_start, dark_end = determine_darkness_times(site, date)
+            emp = call_compute_ephem(body_elements, dark_start, dark_end, site, step_size)
+            emp_dark_and_up = dark_and_object_up(emp, dark_start, dark_end, 0, alt_limit=alt_limit)
+            vis_time, emp_dark_and_up = compute_dark_and_up_time(emp_dark_and_up, step_size)
+            try:
+                test_alt = compute_max_altitude(emp)
+            except ValueError:
+                test_alt = 0
+        if vis_time > dark_and_up_time:
+            dark_and_up_time = vis_time
+        if test_alt > max_alt:
+            max_alt = test_alt
+    return dark_and_up_time, max_alt

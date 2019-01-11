@@ -64,7 +64,10 @@ valid_site_codes = { 'ELP-DOMA-1M0A' : 'V37',
                      'LSC-AQWB-0M4A' : 'W79',
                      'ELP-AQWA-0M4A' : 'V38',
                      'CPT-AQWA-0M4A' : 'L09',
-                     'SQA-DOMA-0M8A' : 'G51'}
+                     'SQA-DOMA-0M8A' : 'G51',
+                     'XXX-XXXX-1M0X' : '1M0',
+                     'XXX-XXXX-0M4X' : '0M4',
+                     'XXX-XXXX-2M0X' : '2M0'}
 
 # Reverse site code dictionary
 valid_telescope_codes = {v: k for k, v in valid_site_codes.items()}

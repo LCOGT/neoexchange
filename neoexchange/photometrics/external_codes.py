@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2018 LCO
+Copyright (C) 2016-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@ from datetime import datetime
 from subprocess import call
 from collections import OrderedDict
 import warnings
+from shutil import unpack_archive
+from glob import glob
 
 from astropy.io import fits
 from astropy.io.votable import parse
@@ -264,9 +266,11 @@ def determine_findorb_options(site_code):
     -z: use config directory for files (in $HOME/.find_orb),
     -q: quiet,
     -C <code>: set MPC site code for ephemeris to <code>,
-    -e new.ephem: output ephemeris to new.ephem"""
+    -e new.ephem: output ephemeris to new.ephem
+    -c combine designations
+    """
 
-    options = "-z -q -C {} -e new.ephem".format(site_code)
+    options = "-z -c -q -C {} -e new.ephem".format(site_code)
 
     return options
 
@@ -433,7 +437,6 @@ def run_mtdlink(source_dir, dest_dir, fits_file_list, num_fits_files, param_file
 
     cmdline = "%s %s %s %s %s" % ( 'time', binary, '-verbose', options, linked_fits_files)
     cmdline = cmdline.rstrip()
-    print(cmdline)
 
     if dbg is True:
         retcode_or_cmdline = cmdline
@@ -683,3 +686,16 @@ def read_mtds_file(mtdsfile, dbg=False):
            }
 
     return dets
+
+
+def unpack_tarball(tar_path, unpack_dir):
+    """unpacks tarballs and puts files in appropriately named directory with appropriate permissions"""
+    unpack_archive(tar_path, extract_dir=unpack_dir, format="gztar")
+
+    os.chmod(unpack_dir, 0o775)
+    files = glob(unpack_dir+'/*')
+
+    for file in files:
+        os.chmod(file, 0o664)
+
+    return files

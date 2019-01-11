@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -127,7 +127,6 @@ class TestClean_NEOCP_Object(TestCase):
                               'longascnode' : 335.41846,
                               'orbinc'      :   3.06258,
                               'eccentricity':  0.1506159,
-                             # 'MDM':   0.29656016,
                               'meandist'    :  2.2270374,
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'L',
@@ -157,7 +156,6 @@ class TestClean_NEOCP_Object(TestCase):
                               'longascnode' : 172.85027,
                               'orbinc'      :  25.18528,
                               'eccentricity':  0.0920324,
-                             # 'MDM':   0.36954350,
                               'meandist'    :  1.9232054,
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'L',
@@ -167,6 +165,154 @@ class TestClean_NEOCP_Object(TestCase):
                               'not_seen'    : 12.25
                             }
         elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_with_min_units(self):
+
+        MockDateTime.change_datetime(2018, 3, 10, 6, 00, 00)
+
+        obs_page = [u'ZTF00HU 32.92  0.15 K1837 199.07689  171.91365  166.14977    2.83538  0.4561885  1.73092232   0.6869909    FO 180921     8   1 87.0 min  1.21         Find_Orb   0000 ZTF00HU                     20180307',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 32.92,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2018, 3,  7, 0, 0, 0),
+                              'meananom'    : 199.07689,
+                              'argofperih'  : 171.91365,
+                              'longascnode' : 166.14977,
+                              'orbinc'      :   2.83538,
+                              'eccentricity':  0.4561885,
+                              'meandist'    :  0.6869909,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'arc_length'  : 87/1440.0,
+                              'not_seen'    :  3.25
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_with_hrs_units(self):
+
+        MockDateTime.change_datetime(2018, 3, 10, 6, 00, 00)
+
+        obs_page = [u'ZTF00HU 32.92  0.15 K1837 199.07689  171.91365  166.14977    2.83538  0.4561885  1.73092232   0.6869909    FO 180921     8   1 87.0 hrs  1.21         Find_Orb   0000 ZTF00HU                     20180307',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 32.92,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2018, 3,  7, 0, 0, 0),
+                              'meananom'    : 199.07689,
+                              'argofperih'  : 171.91365,
+                              'longascnode' : 166.14977,
+                              'orbinc'      :   2.83538,
+                              'eccentricity':  0.4561885,
+                              'meandist'    :  0.6869909,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'arc_length'  : 87/24.0,
+                              'not_seen'    :  3.25
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_with_permnumber(self):
+
+        MockDateTime.change_datetime(2015, 9, 27, 6, 00, 00)
+
+        obs_page = [u'h6724   19.6   0.16 K156R 349.64418    8.64714  286.27302    4.64985  0.3751307  0.47926447   1.6171584  0 MPO342195   185   3 2011-2015 0.37 M-h 3Eh Find_Orb   0000         (436724) 2011 UW158 20150629',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 19.6,
+                              'slope'       : 0.16,
+                              'epochofel'   : datetime(2015, 6, 27, 0, 0, 0),
+                              'meananom'    : 349.64418,
+                              'argofperih'  :   8.64714,
+                              'longascnode' : 286.27302,
+                              'orbinc'      :   4.64985,
+                              'eccentricity':  0.3751307,
+                              'meandist'    :  1.6171584,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'num_obs'     : 185,
+                              'arc_length'  : 1826.0,
+                              'not_seen'    : 90.25
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_with_permplusprov(self):
+
+        MockDateTime.change_datetime(2015, 9, 27, 6, 00, 00)
+
+        obs_page = [u'h6724K11UF8W19.55  0K157A 355.88753    8.63457  286.27078    4.65085  0.3756709  0.47863758   1.6185701    FO 180921   339   1 2011-2015 0.33         Find_Orb   0000 (436724) = 2011 UW158       20150710',
+                   ]
+        obs_page[0] = obs_page[0].replace('Find_Orb  ', 'NEOCPNomin')
+
+        expected_elements = { 'abs_mag'     : 19.55,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2015, 7, 10, 0, 0, 0),
+                              'meananom'    : 355.88753,
+                              'argofperih'  :   8.63457,
+                              'longascnode' : 286.27078,
+                              'orbinc'      :   4.65085,
+                              'eccentricity':  0.3756709,
+                              'meandist'    :  1.6185701,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'M',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'num_obs'     : 339,
+                              'arc_length'  : 1826.0,
+                              'not_seen'    : 79.25
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_findorb_local_discovery(self):
+
+        MockDateTime.change_datetime(2016, 11, 19, 18, 00, 00)
+
+        obs_page_list = [u'LSCTLGj 16.54  0.15 K16B8 258.25752   52.27105  101.57581   16.82829  0.0258753  0.17697056   3.1419699    FO 161108    11   1    3 days 0.09         NEOCPNomin 0000 LSCTLGj                     20161108',
+                         u'',
+                         u'']
+
+        expected_elements = { 'provisional_name' : 'LSCTLGj',
+                              'abs_mag'     : 16.54,
+                              'slope'       : 0.15,
+                              'epochofel'   : datetime(2016,11,  8, 0, 0, 0),
+                              'meananom'    : 258.25752,
+                              'argofperih'  :  52.27105,
+                              'longascnode' : 101.57581,
+                              'orbinc'      :  16.82829,
+                              'eccentricity':  0.0258753,
+                              'meandist'    :  3.1419699,
+                              'elements_type': 'MPC_MINOR_PLANET',
+                              'origin'      : 'L',
+                              'source_type' : 'U',
+                              'active'      : True,
+                              'arc_length'  : 3.0,
+                              'not_seen'    : 11.75,
+                            }
+        elements = clean_NEOCP_object(obs_page_list)
         for element in expected_elements:
             self.assertEqual(expected_elements[element], elements[element])
 
@@ -270,12 +416,98 @@ class TestClean_NEOCP_Object(TestCase):
                               'epochofperih': datetime(2018, 7, 18, 16, 0, 8, 802657),
                               'perihdist'   : 1136.349844 * (1.0 - 0.9976479),
                               'meananom'    : None,
-                             # 'MDM':   0.36954350,
                               'elements_type': 'MPC_COMET',
                               'origin'      : 'M',
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 35.0,
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_should_be_comet_lowE(self):
+
+        MockDateTime.change_datetime(2018, 9, 21, 3, 00, 00)
+
+        obs_page = [u'0046PJ54R02013.38  0K034B  41.15662  356.39037   82.16911   11.73795  0.6578477  0.18109548   3.0940760    FO 180921   621   1 1991-2003 53.4 M-N 06  NEOCPNomin 0000 P/46                        20030411',
+                   ]
+
+        expected_elements = { 'abs_mag'     : 13.38,
+                              'slope'       : 4.0,
+                              'epochofel'   : datetime(2003, 4, 11, 0, 0, 0),
+                              'argofperih'  : 356.39037,
+                              'longascnode' :  82.16911,
+                              'orbinc'      :  11.73795,
+                              'eccentricity':  0.6578477,
+                              'epochofperih': datetime(2002, 8, 26, 17, 38, 45, 1858),
+                              'perihdist'   : 3.0940760 * (1.0 - 0.6578477),
+                              'meananom'    : None,
+                              'elements_type': 'MPC_COMET',
+                              'origin'      : 'M',
+                              'source_type' : 'C',
+                              'active'      : True,
+                              'num_obs'     : 621,
+                              'arc_length'  : 4748,
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_should_be_comet_bad_start_year(self):
+
+        MockDateTime.change_datetime(2018, 9, 21, 3, 00, 00)
+
+        obs_page = [u'0046PJ54R02013.38  0K034B  41.15662  356.39037   82.16911   11.73795  0.6578477  0.18109548   3.0940760    FO 180921   621   1 cRap-2003 53.4 M-N 06  NEOCPNomin 0000 P/46                        20030411',
+                   ]
+
+        expected_elements = { 'abs_mag'     : 13.38,
+                              'slope'       : 4.0,
+                              'epochofel'   : datetime(2003, 4, 11, 0, 0, 0),
+                              'argofperih'  : 356.39037,
+                              'longascnode' :  82.16911,
+                              'orbinc'      :  11.73795,
+                              'eccentricity':  0.6578477,
+                              'epochofperih': datetime(2002, 8, 26, 17, 38, 45, 1858),
+                              'perihdist'   : 3.0940760 * (1.0 - 0.6578477),
+                              'meananom'    : None,
+                              'elements_type': 'MPC_COMET',
+                              'origin'      : 'M',
+                              'source_type' : 'C',
+                              'active'      : True,
+                              'num_obs'     : 621,
+                              'arc_length'  : None
+                            }
+        elements = clean_NEOCP_object(obs_page)
+        for element in expected_elements:
+            self.assertEqual(expected_elements[element], elements[element])
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_should_be_comet_bad_last_year(self):
+
+        MockDateTime.change_datetime(2018, 9, 21, 3, 00, 00)
+
+        obs_page = [u'0046PJ54R02013.38  0K034B  41.15662  356.39037   82.16911   11.73795  0.6578477  0.18109548   3.0940760    FO 180921   621   1 1991-CRAP 53.4 M-N 06  NEOCPNomin 0000 P/46                        20030411',
+                   ]
+
+        expected_elements = { 'abs_mag'     : 13.38,
+                              'slope'       : 4.0,
+                              'epochofel'   : datetime(2003, 4, 11, 0, 0, 0),
+                              'argofperih'  : 356.39037,
+                              'longascnode' :  82.16911,
+                              'orbinc'      :  11.73795,
+                              'eccentricity':  0.6578477,
+                              'epochofperih': datetime(2002, 8, 26, 17, 38, 45, 1858),
+                              'perihdist'   : 3.0940760 * (1.0 - 0.6578477),
+                              'meananom'    : None,
+                              'elements_type': 'MPC_COMET',
+                              'origin'      : 'M',
+                              'source_type' : 'C',
+                              'active'      : True,
+                              'num_obs'     : 621,
+                              'arc_length'  : None
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -929,7 +1161,23 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 6.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.75712514525094,
+                        'moon_alt': -58.300710434796706,
+                        'moon_phase': 0.011439155504957221,
+                        'moon_sep': 170.66180769265674,
+                        'trail_len': 2.41774558756957,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0802297303647255,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -948,7 +1196,8 @@ class TestSchedule_Check(TestCase):
                  'spectroscopy' : True,
                  'calibs' : 'both',
                  'exp_length' : 300.0,
-                 'exp_count' : 1
+                 'exp_count' : 1,
+                 'max_airmass': 2.0
                }
 
         expected_resp = {
@@ -980,7 +1229,23 @@ class TestSchedule_Check(TestCase):
                         'too_mode': False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 7.5,
+                        'lco_enc': 'CLMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '2M0',
+                        'max_alt': 67.75685165409215,
+                        'moon_alt': -58.30060609532361,
+                        'moon_phase': 0.011439162208279174,
+                        'moon_sep': 170.66180760224114,
+                        'trail_len': 0.48354895802581555,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': 10,
+                        'max_airmass': 2.0,
+                        'max_alt_airmass': 1.0802318346065136,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1032,7 +1297,23 @@ class TestSchedule_Check(TestCase):
                         'too_mode': False,
                         'calibsource' : {'separation_deg' : 11.551868532224177, **model_to_dict(self.solar_analog)},
                         'calibsource_id' : 1,
-                        'solar_analog' : True
+                        'solar_analog' : True,
+                        'vis_time': 6.5,
+                        'lco_enc': 'CLMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '2M0',
+                        'max_alt': 67.75685165409215,
+                        'moon_alt': -58.30060609532361,
+                        'moon_phase': 0.011439162208279174,
+                        'moon_sep': 170.66180760224114,
+                        'trail_len': 0.48354895802581555,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': 10,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0802318346065136,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1087,7 +1368,94 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 6.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.70515036289103,
+                        'moon_alt': -43.42555786736966,
+                        'moon_phase': 0.00890997165773788,
+                        'moon_sep': 171.79313958425425,
+                        'trail_len': 2.395258014908864,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0806302130727632,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
+                        }
+
+        resp = schedule_check(data, self.body_mp)
+
+        self.assertEqual(expected_resp, resp)
+        self.assertLessEqual(len(resp['group_id']), 50)
+
+    @patch('core.views.fetch_filter_list', mock_fetch_filter_list)
+    @patch('core.views.datetime', MockDateTime)
+    def test_mp_cadence_bad_jitter(self):
+        MockDateTime.change_datetime(2016, 4, 6, 2, 0, 0)
+        self.body_mp.name = '2009 HA'
+        self.body_mp.save()
+
+        data = { 'site_code' : 'Q63',
+                 'utc_date' : datetime(2016, 4, 6),
+                 'proposal_code' : self.neo_proposal.code,
+                 'period' : 4.0,
+                 'jitter' : 0.1,
+                 'start_time' : datetime(2016, 4, 6, 9, 0, 0),
+                 'end_time' : datetime(2016, 4, 6, 23, 0, 0),
+               }
+
+        expected_resp = {
+                        'target_name': self.body_mp.current_name(),
+                        'magnitude': 19.111452844407932,
+                        'speed': 2.8743096178906367,
+                        'slot_length': 20,
+                        'filter_pattern': 'w',
+                        'pattern_iterations': 12.0,
+                        'available_filters': 'air, U, B, V, R, I, up, gp, rp, ip, zs, Y, w',
+                        'exp_count': 12,
+                        'exp_length': 50.0,
+                        'schedule_ok': True,
+                        'site_code': data['site_code'],
+                        'proposal_code': data['proposal_code'],
+                        'group_id': '2009 HA_Q63-cad-20160406-0406',
+                        'utc_date': data['utc_date'].isoformat(),
+                        'start_time': '2016-04-06T09:00:00',
+                        'end_time': '2016-04-06T23:00:00',
+                        'mid_time': '2016-04-06T16:00:00',
+                        'ra_midpoint': 3.3110137022045336,
+                        'dec_midpoint': -0.15949643713664577,
+                        'period' : 4.0,
+                        'jitter' : .34,
+                        'num_times' : 3,
+                        'total_time' : 1.0,
+                        'instrument_code' : '',
+                        'snr' : None,
+                        'too_mode': False,
+                        'calibs' : '',
+                        'spectroscopy' : False,
+                        'calibsource' : {},
+                        'calibsource_id' : -1,
+                        'solar_analog' : False,
+                        'vis_time': 6.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.70515036289103,
+                        'moon_alt': -43.42555786736966,
+                        'moon_phase': 0.00890997165773788,
+                        'moon_sep': 171.79313958425425,
+                        'trail_len': 2.395258014908864,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0806302130727632,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1140,7 +1508,23 @@ class TestSchedule_Check(TestCase):
                         'spectroscopy' : False,
                         'calibsource' : {},
                         'calibsource_id' : -1,
-                        'solar_analog' : False
+                        'solar_analog' : False,
+                        'vis_time': 6.5,
+                        'lco_enc': 'DOMA',
+                        'lco_site': 'COJ',
+                        'lco_tel': '1M0',
+                        'max_alt': 67.70515036289103,
+                        'moon_alt': -43.42555786736966,
+                        'moon_phase': 0.00890997165773788,
+                        'moon_sep': 171.79313958425425,
+                        'trail_len': 2.395258014908864,
+                        'typical_seeing': 2.0,
+                        'ipp_value': 1.0,
+                        'ag_exp_time': None,
+                        'max_airmass': 1.74,
+                        'max_alt_airmass': 1.0806302130727632,
+                        'min_lunar_dist': 30,
+                        'acceptability_threshold': 90
                         }
 
         resp = schedule_check(data, self.body_mp)
@@ -1840,6 +2224,12 @@ class TestClean_mpcorbit(TestCase):
 
         self.test_comet_elements = parse_mpcorbit(test_mpcdb_page)
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
+        self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.test_comet_elements_2018Aug_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,9,25))
+        self.test_comet_elements_2018Mar_epoch = parse_mpcorbit(self.test_multiple_epochs_page, epoch_now=datetime(2018,2,14))
+
         self.test_hyperbolic_elements = {
                                          'argument of perihelion': '325.96205',
                                          'ascending node': '276.22261',
@@ -1935,6 +2325,51 @@ class TestClean_mpcorbit(TestCase):
                                         'updated' : True
                                      }
 
+        self.expected_mulepoch_params = {
+                                        'elements_type': 'MPC_COMET',
+                                        'argofperih': '283.55482',
+                                        'longascnode' : '87.65877',
+                                        'eccentricity' : '0.3593001',
+                                        'epochofel': datetime(2018, 8, 30, 0),
+                                        'meandist' : None,
+                                        'orbinc' : '7.64145',
+                                        'meananom': None,
+                                        'perihdist' : '2.4544438',
+                                        'epochofperih': datetime(2018, 8, 26, 0,  9, 55, int(0.296*1e6)),
+                                        'slope': '4.0',
+                                        'origin' : 'M',
+                                        'active' : True,
+                                        'source_type' : 'C',
+                                        'discovery_date': datetime(2003, 8, 1, 0),
+                                        'num_obs': '334',
+                                        'arc_length': '5528',
+                                        'not_seen' :  6.75,
+                                        'update_time' : datetime(2018, 9, 19, 0),
+                                        'updated' : True
+                                    }
+
+        self.expected_mulepoch_Mar18_params = {
+                                        'elements_type': 'MPC_COMET',
+                                        'argofperih': '283.56217',
+                                        'longascnode' : '87.66076',
+                                        'eccentricity' : '0.3591386',
+                                        'epochofel': datetime(2018, 3, 23, 0),
+                                        'meandist' : None,
+                                        'orbinc' : '7.64150',
+                                        'meananom': None,
+                                        'perihdist' : '2.4544160',
+                                        'epochofperih': datetime(2018, 8, 26, 0, 59, 55, int(0.968*1e6)),
+                                        'slope': '4.0',
+                                        'origin' : 'M',
+                                        'active' : True,
+                                        'source_type' : 'C',
+                                        'discovery_date': datetime(2003, 8, 1, 0),
+                                        'num_obs': '334',
+                                        'arc_length': '5528',
+                                        'not_seen' :  -216.87383101851853,
+                                        'update_time' : datetime(2018, 9, 19, 0),
+                                        'updated' : True
+                                    }
         self.maxDiff = None
 
     @patch('core.views.datetime', MockDateTime)
@@ -1994,6 +2429,22 @@ class TestClean_mpcorbit(TestCase):
         params = clean_mpcorbit(self.test_hyperbolic_elements)
 
         self.assertEqual(self.expected_hyperbolic_params, params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_243P_postAug18_epoch(self):
+
+        MockDateTime.change_datetime(2018, 9, 25, 18, 0, 0)
+        params = clean_mpcorbit(self.test_comet_elements_2018Aug_epoch)
+
+        self.assertEqual(self.expected_mulepoch_params, params)
+
+    @patch('core.views.datetime', MockDateTime)
+    def test_clean_243P_preMar18_epoch(self):
+
+        MockDateTime.change_datetime(2018, 2, 14, 3, 1, 41)
+        params = clean_mpcorbit(self.test_comet_elements_2018Mar_epoch)
+
+        self.assertEqual(self.expected_mulepoch_Mar18_params, params)
 
 
 class TestCreate_sourcemeasurement(TestCase):
@@ -2996,6 +3447,32 @@ class TestClean_crossid(TestCase):
 
         self.assertEqual(expected_params, params)
 
+    def test_comet_numbered(self):
+        MockDateTime.change_datetime(2018, 9, 19, 0, 30, 0)
+
+        crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
+        expected_params = { 'active' : True,
+                            'name' : '46P',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
+    def test_comet_numbered_past_time(self):
+        MockDateTime.change_datetime(2018, 9, 29, 0, 30, 0)
+
+        crossid = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
+        expected_params = { 'active' : False,
+                            'name' : '46P',
+                            'source_type' : 'C'
+                          }
+
+        params = clean_crossid(crossid)
+
+        self.assertEqual(expected_params, params)
+
     def test_hyperbolic_asteroid1(self):
         crossid = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Nov. 4.95 UT)']
         expected_params = { 'active' : True,
@@ -3637,6 +4114,11 @@ class TestUpdate_Crossids(TestCase):
                     }
         cls.blank_body, created = Body.objects.get_or_create(**params)
 
+        neo_proposal_params = { 'code'  : 'LCO2015B-005',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        cls.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
     def setUp(self):
         self.body.refresh_from_db()
 
@@ -3856,6 +4338,275 @@ class TestUpdate_Crossids(TestCase):
         self.assertEqual('M', body.origin)
         self.assertEqual('A/2018 C2', body.name)
         self.assertEqual('MPC_COMET', body.elements_type)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_same_obj_different_provids(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.provisional_name = 'P10jZsv'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('A', body.origin)
+        self.assertEqual('2015 FP118', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+        self.assertIs(None, body.perihdist)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_same_obj_multiple_copies_different_provids(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.provisional_name = 'P10jZsv'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+        self.body.save()
+
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'A9999'
+        body.origin = 'N'
+        body.ingest = datetime(2018, 9, 2, 12, 13, 14)
+        body.save()
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count(), msg="After update_crossids; should be 2 Bodies")
+
+        body = Body.objects.get(name='2015 FP118')
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('A', body.origin)
+        self.assertEqual('2015 FP118', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+        self.assertIs(None, body.perihdist)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_same_obj_multiple_copies_different_provids_from_MPC(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.provisional_name = 'P10jZsv'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+        self.body.save()
+
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'A9999'
+        body.origin = 'M'
+        body.ingest = datetime(2018, 9, 2, 12, 13, 14)
+        body.save()
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(3, Body.objects.count(), msg="After update_crossids; should still be 3 Bodies (MPC origin)")
+
+        body = Body.objects.get(pk=1)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('A', body.origin)
+        self.assertEqual('2015 FP118', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+        self.assertIs(None, body.perihdist)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_same_obj_multiple_copies_with_block(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.provisional_name = 'P10jZsv'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+
+        self.body.save()
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'A9999'
+        body.origin = 'M'
+        body.ingest = datetime(2018, 9, 2, 12, 13, 14)
+        body.save()
+
+        block,created = Block.objects.get_or_create(body=body, proposal=self.neo_proposal)
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(3, Body.objects.count(), msg="After update_crossids; should still be 3 Bodies")
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_same_obj_multiple_copies_with_superblock(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  5, 10, 40, 0)
+
+        crossid_info = ['ZTF00Y8 ', '2015 FP118', '', '(Sept. 3.50 UT)']
+
+        self.body.origin = u'A'
+        self.body.source_type = u'N'
+        self.body.provisional_name = 'P10jZsv'
+        self.body.name = '2015 FP118'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+
+        self.body.save()
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'A9999'
+        body.origin = 'M'
+        body.ingest = datetime(2018, 9, 2, 12, 13, 14)
+        body.save()
+
+        sblock,created = SuperBlock.objects.get_or_create(body=body, proposal=self.neo_proposal)
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(3, Body.objects.count(), msg="After update_crossids; should still be 3 Bodies")
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_NEO_to_numbered_comet_match(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  17, 10, 40, 0)
+
+        crossid_info = ['ZS9E891 ', '0046P  ', '', '(Sept. 16.62 UT)']
+
+        self.body.origin = 'M'
+        self.body.source_type = 'U'
+        self.body.provisional_name = 'ZS9E891'
+        self.body.name = None
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('46P', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        q = self.body.meandist * (1.0 - self.body.eccentricity)
+        self.assertAlmostEqual(q, body.perihdist, 7)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_NEO_to_numbered_comet_match2(self):
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2018, 9,  19, 10, 40, 0)
+
+        crossid_info = ['ZS0B8B9 ', '0060P  ', '', '(Sept. 18.83 UT)']
+
+        self.body.origin = 'M'
+        self.body.source_type = 'U'
+        self.body.provisional_name = 'ZS0B8B9'
+        self.body.name = None
+        self.body.epochofel = datetime(2018, 9, 18, 0, 0)
+        self.body.eccentricity = 0.5377759
+        self.body.meandist = 3.5105122
+        self.body.meananom = 347.37843
+        self.body.perihdist = None
+        self.body.epochofperih = None
+
+        q = self.body.meandist * (1.0 - self.body.eccentricity)
+        self.body.save()
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(2, Body.objects.count())
+
+        body = Body.objects.get(provisional_name=self.body.provisional_name)
+
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('60P', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertAlmostEqual(q, body.perihdist, 7)
+        self.assertIs(None, body.meananom)
+
 
 class TestStoreDetections(TestCase):
 

@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2015-2018 LCO
+Copyright (C) 2015-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,11 +14,13 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime
-from django.test import TestCase
-from core.models import Body, Proposal, Block, SuperBlock
-from mock import patch, Mock
 
-from neox.tests.mocks import mock_fetch_archive_frames
+from django.test import TestCase
+from mock import patch, Mock
+from astropy.wcs import WCS
+
+from core.models import Body, Proposal, Block, SuperBlock
+from neox.tests.mocks import mock_fetch_archive_frames, mock_archive_frame_header
 from core.frames import *
 
 # Disable logging during testing
@@ -26,6 +28,7 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL
 logging.disable(logging.CRITICAL)
+
 
 class TestBlockStatus(TestCase):
 
@@ -156,9 +159,9 @@ class TestBlockStatus(TestCase):
                                }
         self.spec_test_block1 = Block.objects.create(**spec_block_params1)
 
-    #Create Mocked output to image request from Valhala.
-    #Header URL and Reqnum have been changed for easy tracking.
-    #no images for last block
+    # Create Mocked output to image request from Valhala.
+    # Header URL and Reqnum have been changed for easy tracking.
+    # no images for last block
     def mock_check_for_archive_images(request_id, obstype='EXPOSE'):
         result_images_out = [{u'BLKUID': 226770074,
                               u'DATE_OBS': u'2018-02-27T04:10:51.702000Z',
@@ -259,8 +262,8 @@ class TestBlockStatus(TestCase):
         else:
             return result_images_out, 3
 
-    #Mock Header output read from Valhalla
-    #modified Origname for easy tracking
+    # Mock Header output read from Valhalla
+    # modified Origname for easy tracking
     def mock_lco_api_call(link):
         header_out= {u'data': {u'AGCAM': u'kb80',
                               u'AGDEC': u'',
@@ -848,6 +851,7 @@ class TestBlockStatus(TestCase):
 
     @patch('core.frames.check_request_status', mock_check_request_status_spectro)
     @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
+    @patch('core.frames.lco_api_call', mock_archive_frame_header)
     def test_check_spectro_block(self):
         self.insert_spectro_blocks()
 
@@ -857,3 +861,119 @@ class TestBlockStatus(TestCase):
         self.assertEqual(True, status)
         spec_block = Block.objects.get(id=self.spec_test_block1.id)
         self.assertEqual(1, spec_block.num_observed)
+
+
+class TestFrameParamsFromHeader(TestCase):
+
+    def setUp(self):
+        # Initialise with a test body, test proposal, and SuperBlock
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2015-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        self.body, created = Body.objects.get_or_create(**params)
+
+        neo_proposal_params = { 'code'  : 'LCO2015A-009',
+                                'title' : 'LCOGT NEO Follow-up Network'
+                              }
+        self.neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+
+        sb_params = {  'cadence'       : False,
+                       'body'          : self.body,
+                       'proposal'      : self.neo_proposal,
+                       'block_start'   : '2015-04-20 13:00:00',
+                       'block_end'     : '2015-04-21 03:00:00',
+                       'tracking_number' : '00042',
+                       'active'        : True
+                    }
+        self.super_block, created = SuperBlock.objects.get_or_create(**sb_params)
+
+        # Create test blocks
+        block_params = { 'telclass' : '0m4',
+                         'site'     : 'elp',
+                         'body'     : self.body,
+                         'proposal' : self.neo_proposal,
+                         'superblock'  : self.super_block,
+                         'block_start' : '2015-04-20 13:00:00',
+                         'block_end'   : '2015-04-21 03:00:00',
+                         'tracking_number' : '00003',
+                         'num_exposures' : 5,
+                         'exp_length' : 42.0,
+                         'active'   : True,
+                         'num_observed' : 0,
+                         'reported' : False
+                       }
+        self.test_block = Block.objects.create(**block_params)
+
+        self.maxDiff = None
+
+    def test_expose_red_good_rlevel(self):
+        expected_params = {  'midpoint' : datetime(2015, 4, 20, 16, 00, 14, int(0.409*1e6)),
+                             'sitecode' : 'V38',
+                             'filter'   : 'w',
+                             'frametype': 91,
+                             'block'    : self.test_block,
+                             'instrument': 'kb92',
+                             'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
+                             'exptime'   : 20.0,
+                             'wcs'       : WCS() }
+
+        header_params = { 'SITEID'   : 'elp',
+                          'ENCID'    : 'aqwa',
+                          'TELID'    : '0m4a',
+                          'DATE_OBS' : '2015-04-20T16:00:04.409',
+                          'EXPTIME'  : 20.0,
+                          'INSTRUME' : 'kb92',
+                          'FILTER'   : 'w',
+                          'OBSTYPE'  : 'EXPOSE',
+                          'ORIGNAME' : 'elp0m411-kb92-20150420-0236-e00',
+                          'RLEVEL'   : 91,
+                          'L1FWHM'   : 1.42
+                        }
+
+        frame_params = frame_params_from_header(header_params, self.test_block)
+
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_params[key], "Comparison failed on " + key)
+
+    def test_expose_red_bad_rlevel(self):
+        expected_params = {  'midpoint' : datetime(2015, 4, 20, 16, 00, 14, int(0.409*1e6)),
+                             'sitecode' : 'V38',
+                             'filter'   : 'w',
+                             'frametype': 91,
+                             'block'    : self.test_block,
+                             'instrument': 'kb92',
+                             'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
+                             'exptime'   : 20.0,
+                             'wcs'       : WCS() }
+
+        header_params = { 'SITEID'   : 'elp',
+                          'ENCID'    : 'aqwa',
+                          'TELID'    : '0m4a',
+                          'DATE_OBS' : '2015-04-20T16:00:04.409',
+                          'EXPTIME'  : 20.0,
+                          'INSTRUME' : 'kb92',
+                          'FILTER'   : 'w',
+                          'OBSTYPE'  : 'EXPOSE',
+                          'ORIGNAME' : 'elp0m411-kb92-20150420-0236-e00',
+                          'RLEVEL'   : '91',
+                          'L1FWHM'   : 1.42
+                        }
+
+        frame_params = frame_params_from_header(header_params, self.test_block)
+
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_params[key], "Comparison failed on " + key)

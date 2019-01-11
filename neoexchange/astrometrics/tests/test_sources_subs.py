@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,11 +28,11 @@ from django.forms.models import model_to_dict
 
 from core.models import Body, Proposal, Block
 from astrometrics.ephem_subs import determine_darkness_times
+from astrometrics.time_subs import datetime2mjd_utc
 from neox.tests.mocks import MockDateTime, mock_expand_cadence
-from core.views import record_block, create_calib_sources
+from core.views import record_block, create_calib_sources, compute_vmag_pa
 # Import module to test
 from astrometrics.sources_subs import *
-from astrometrics.time_subs import datetime2mjd_utc
 
 
 # Disable logging during testing
@@ -40,6 +40,7 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
+
 
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
@@ -223,14 +224,18 @@ class TestFetchGoldstoneTargets(TestCase):
 
         self.maxDiff = None
 
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_basics(self):
+        MockDateTime.change_datetime(2018, 4, 6, 2, 0, 0)
         expected_length = 49
 
         targets = fetch_goldstone_targets(self.test_goldstone_page)
 
         self.assertEqual(expected_length, len(targets))
 
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
     def test_targets(self):
+        MockDateTime.change_datetime(2018, 4, 6, 2, 0, 0)
         expected_targets = [ '3200',
                              '2017 VT14',
                              '2017 WX12',
@@ -540,6 +545,32 @@ class TestSubmitBlockToScheduler(TestCase):
         self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
         self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
 
+    def test_make_generic_userrequest(self):
+
+        site_code = '2M0'
+        utc_date = datetime(2015, 6, 19, 00, 00, 00) + timedelta(days=1)
+        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
+        params = {  'proposal_id' : 'LCO2015A-009',
+                    'exp_count' : 18,
+                    'exp_time' : 50.0,
+                    'site_code' : site_code,
+                    'start_time' : dark_start,
+                    'end_time' : dark_end,
+                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
+                    'user_id'  : 'bsimpson',
+                    'filter_pattern' : 'w'
+                 }
+
+        user_request = make_userrequest(self.body_elements, params)
+
+        self.assertEqual(user_request['submitter'], 'bsimpson')
+        self.assertEqual(user_request['requests'][0]['windows'][0]['start'], dark_start.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(user_request['requests'][0]['windows'][0]['end'], dark_end.strftime('%Y-%m-%dT%H:%M:%S'))
+        self.assertEqual(dark_start + timedelta(days=1), dark_end)
+        self.assertEqual(user_request['requests'][0]['location'].get('telescope', None), None)
+        self.assertEqual(user_request['requests'][0]['location'].get('site', None), None)
+        self.assertEqual(user_request['requests'][0]['location']['telescope_class'], '2m0')
+
     def test_make_spectra_userrequest(self):
         body_elements = model_to_dict(self.body)
         body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
@@ -560,7 +591,7 @@ class TestSubmitBlockToScheduler(TestCase):
                     'spectra_slit' : 'slit_6.0as'
                  }
 
-        body_elements = check_for_perturbation(body_elements, params)
+        body_elements = compute_vmag_pa(body_elements, params)
         user_request = make_userrequest(body_elements, params)
 
         self.assertAlmostEqual(user_request['requests'][0]['target']['vmag'], 20.88, 2)
@@ -1567,6 +1598,10 @@ class TestFetchMPCOrbit(TestCase):
         self.test_mpcdb_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcdb_Comet243P.html'), 'r')
+        self.test_multiple_epochs_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         # Set to None to show all differences
         self.maxDiff = None
 
@@ -1612,6 +1647,182 @@ class TestFetchMPCOrbit(TestCase):
                              'uncertainty': '1'}
 
         elements = parse_mpcorbit(self.test_mpcdb_page)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_post2018Aug_epoch(self):
+
+        epoch = datetime(2018, 9, 5, 18, 0, 0)
+
+        expected_elements = {'epoch': '2018-08-30.0',
+                             'epoch JD': '2458360.5',
+                             'perihelion date': '2018-08-26.00689',
+                             'perihelion JD': '2458356.50689',
+                             'argument of perihelion': '283.55482',
+                             'ascending node': '87.65877',
+                             'inclination': '7.64145',
+                             'eccentricity': '0.3593001',
+                             'perihelion distance': '2.4544438',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8308789',
+                             'mean anomaly': '0.52489',
+                             'mean daily motion': '0.13144867',
+                             'aphelion distance': '5.207',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97228322',
+                             'P-vector [y]': '0.23016404',
+                             'P-vector [z]': '-0.04110774',
+                             'Q-vector [x]': '-0.19238738',
+                             'Q-vector [y]': '0.88749145',
+                             'Q-vector [z]': '0.41874339',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPC 111774',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_pre2018Aug_epoch(self):
+
+        # Set epoch to 1 second after the 160/2=80 days between the 2018-03-23
+        # and 2018-08-30 elements sets
+        epoch = datetime(2018, 6, 11, 0, 0, 1)
+
+        expected_elements = {'epoch': '2018-08-30.0',
+                             'epoch JD': '2458360.5',
+                             'perihelion date': '2018-08-26.00689',
+                             'perihelion JD': '2458356.50689',
+                             'argument of perihelion': '283.55482',
+                             'ascending node': '87.65877',
+                             'inclination': '7.64145',
+                             'eccentricity': '0.3593001',
+                             'perihelion distance': '2.4544438',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8308789',
+                             'mean anomaly': '0.52489',
+                             'mean daily motion': '0.13144867',
+                             'aphelion distance': '5.207',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97228322',
+                             'P-vector [y]': '0.23016404',
+                             'P-vector [z]': '-0.04110774',
+                             'Q-vector [x]': '-0.19238738',
+                             'Q-vector [y]': '0.88749145',
+                             'Q-vector [z]': '0.41874339',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPC 111774',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_post2018Mar_epoch(self):
+
+        # Set epoch to 1 second before the 160/2=80 days between the 2018-03-23
+        # and 2018-08-30 elements sets
+        epoch = datetime(2018, 6, 10, 23, 59, 59)
+
+        expected_elements = {'epoch': '2018-03-23.0',
+                             'epoch JD': '2458200.5',
+                             'perihelion date': '2018-08-26.04162',
+                             'perihelion JD': '2458356.54162',
+                             'argument of perihelion': '283.56217',
+                             'ascending node': '87.66076',
+                             'inclination': '7.64150',
+                             'eccentricity': '0.3591386',
+                             'perihelion distance': '2.4544160',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8298701',
+                             'mean anomaly': '339.48043',
+                             'mean daily motion': '0.13150061',
+                             'aphelion distance': '5.205',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97225165',
+                             'P-vector [y]': '0.23030922',
+                             'P-vector [z]': '-0.04104137',
+                             'Q-vector [x]': '-0.19254615',
+                             'Q-vector [y]': '0.88745569',
+                             'Q-vector [z]': '0.4187462',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPEC 2018-S50',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
+        self.assertEqual(expected_elements, elements)
+
+    def test_fetch_243P_pre2018Mar_epoch(self):
+
+        epoch = datetime(2018, 2, 14,  1,  2,  3)
+
+        expected_elements = {'epoch': '2018-03-23.0',
+                             'epoch JD': '2458200.5',
+                             'perihelion date': '2018-08-26.04162',
+                             'perihelion JD': '2458356.54162',
+                             'argument of perihelion': '283.56217',
+                             'ascending node': '87.66076',
+                             'inclination': '7.64150',
+                             'eccentricity': '0.3591386',
+                             'perihelion distance': '2.4544160',
+                             'radial non-grav. param.': None,
+                             'transverse non-grav. param.': None,
+                             'semimajor axis': '3.8298701',
+                             'mean anomaly': '339.48043',
+                             'mean daily motion': '0.13150061',
+                             'aphelion distance': '5.205',
+                             'period': '7.5',
+                             'P-vector [x]': '0.97225165',
+                             'P-vector [y]': '0.23030922',
+                             'P-vector [z]': '-0.04104137',
+                             'Q-vector [x]': '-0.19254615',
+                             'Q-vector [y]': '0.88745569',
+                             'Q-vector [z]': '0.4187462',
+                             'recip semimajor axis orig': None,
+                             'recip semimajor axis future': None,
+                             'recip semimajor axis error': None,
+                             'reference': 'MPEC 2018-S50',
+                             'observations used': '334',
+                             'residual rms': '0.60',
+                             'perturbers coarse indicator': 'M-v',
+                             'perturbers precise indicator': '0038h',
+                             'first observation date used': '2003-08-01.0',
+                             'last observation date used': '2018-09-19.0',
+                             'computer name': 'MPCW',
+                             'orbit quality code': None,
+                             'obj_id': '243P/NEAT'}
+
+        elements = parse_mpcorbit(self.test_multiple_epochs_page, epoch)
         self.assertEqual(expected_elements, elements)
 
     def test_badpage(self):
@@ -2887,7 +3098,7 @@ class TestMakeMolecule(TestCase):
         expected_molecule = {
                              'type' : 'LAMP_FLAT',
                              'exposure_count' : 1,
-                             'exposure_time' : 60.0,
+                             'exposure_time' : 20.0,
                              'bin_x'       : 1,
                              'bin_y'       : 1,
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
@@ -2911,7 +3122,7 @@ class TestMakeMolecule(TestCase):
         expected_molecule = {
                              'type' : 'LAMP_FLAT',
                              'exposure_count' : 1,
-                             'exposure_time' : 60.0,
+                             'exposure_time' : 20.0,
                              'bin_x'       : 1,
                              'bin_y'       : 1,
                              'instrument_name' : '2M0-FLOYDS-SCICAM',
@@ -2964,6 +3175,7 @@ class TestMakeMolecules(TestCase):
                                                        'exp_time' : 60.0,
                                                        'exp_count' : 12,
                                                        'filter_pattern' : 'w'})
+
         self.filt_1m0_imaging = build_filter_blocks(self.params_1m0_imaging['filter_pattern'],
                                                     self.params_1m0_imaging['exp_count'])[0]
         self.params_0m4_imaging = configure_defaults({ 'site_code': 'Z21',
@@ -3010,6 +3222,7 @@ class TestMakeMolecules(TestCase):
 
         self.assertEqual(expected_num_molecules, len(molecules))
         self.assertEqual(expected_type, molecules[0]['type'])
+
 
     def test_2m_spectroscopy_nocalibs(self):
 
@@ -3620,158 +3833,3 @@ class TestReadSolarStandards(TestCase):
                     self.assertAlmostEqual(expected_standards[solstd][key], standards[solstd][key], places=self.precision, msg="Mismatch for {} on {}".format(solstd, key))
                 else:
                     self.assertEqual(expected_standards[solstd][key], standards[solstd][key])
-
-class TestCheckForPerturbation(TestCase):
-
-    def setUp(self):
-        params = {  'provisional_name' : 'N999r0q',
-                    'abs_mag'       : 21.0,
-                    'slope'         : 0.15,
-                    'epochofel'     : datetime(2015, 3, 19, 00, 00, 00),
-                    'meananom'      : 325.2636,
-                    'argofperih'    : 85.19251,
-                    'longascnode'   : 147.81325,
-                    'orbinc'        : 8.34739,
-                    'eccentricity'  : 0.1896865,
-                    'meandist'      : 1.2176312,
-                    'source_type'   : 'U',
-                    'elements_type' : 'MPC_MINOR_PLANET',
-                    'active'        : True,
-                    'origin'        : 'M',
-                    }
-        self.body, created = Body.objects.get_or_create(**params)
-
-        self.body_elements = model_to_dict(self.body)
-        self.body_elements['epochofel_mjd'] = self.body.epochofel_mjd()
-        self.body_elements['current_name'] = self.body.current_name()
-        site_code = 'K92'
-        utc_date = datetime(2015, 3, 19, 00, 00, 00)
-        dark_start, dark_end = determine_darkness_times(site_code, utc_date)
-        self.params = {  'proposal_id' : 'LCO2015A-009',
-                    'exp_count' : 18,
-                    'exp_time' : 50.0,
-                    'site_code' : site_code,
-                    'start_time' : dark_start,
-                    'end_time' : dark_end,
-                    'filter_pattern' : 'w',
-                    'group_id' : self.body_elements['current_name'] + '_' + 'CPT' + '-' + datetime.strftime(utc_date, '%Y%m%d'),
-                    'user_id'  : 'bsimpson',
-                    'spectroscopy' : False
-                 }
-
-    def test_close_in_time(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=1)
-
-        expected_e = self.body_elements['eccentricity']
-        expected_a = self.body_elements['meandist']
-        expected_i = self.body_elements['orbinc']
-        expected_long = self.body_elements['longascnode']
-        expected_epoch = self.body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(self.body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_far_away(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=100)
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 4.8
-        body_elements['eccentricity'] = 0.001
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_bad_calc(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=100)
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = .2
-        body_elements['eccentricity'] = 0.01
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_needs_perturb(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=81)
-        params['spectroscopy'] = True
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 1.5349659
-        body_elements['eccentricity'] = 0.5182788
-        body_elements['orbinc'] = 4.75381
-        body_elements['longascnode'] = 117.60203
-        body_elements['argofperih'] = 229.36323
-        body_elements['meananom'] = 286.18972
-
-        expected_e = 0.5183245048558996
-        expected_a = 1.5350441058040079
-        expected_i = 4.754401449955707
-        expected_long = 117.59466442936079
-        expected_epoch = params['start_time']
-
-        elements = check_for_perturbation(body_elements, params)
-        self.assertEqual(expected_epoch.year, elements['epochofel'].year)
-        self.assertEqual(expected_epoch.month, elements['epochofel'].month)
-        self.assertEqual(expected_epoch.day, elements['epochofel'].day)
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])
-
-    def test_needs_new_orbit(self):
-        params = self.params
-        params['start_time'] = params['start_time'] + relativedelta(days=810)
-        params['spectroscopy'] = True
-
-        body_elements = self.body_elements
-        body_elements['meandist'] = 1.5349659
-        body_elements['eccentricity'] = 0.5182788
-        body_elements['orbinc'] = 4.75381
-        body_elements['longascnode'] = 117.60203
-        body_elements['argofperih'] = 229.36323
-        body_elements['meananom'] = 286.18972
-
-        expected_e = body_elements['eccentricity']
-        expected_a = body_elements['meandist']
-        expected_i = body_elements['orbinc']
-        expected_long = body_elements['longascnode']
-        expected_epoch = body_elements['epochofel_mjd']
-
-        elements = check_for_perturbation(body_elements, params)
-
-        self.assertEqual(expected_epoch, elements['epochofel_mjd'])
-        self.assertEqual(expected_e, elements['eccentricity'])
-        self.assertEqual(expected_a, elements['meandist'])
-        self.assertEqual(expected_i, elements['orbinc'])
-        self.assertEqual(expected_long, elements['longascnode'])

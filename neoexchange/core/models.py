@@ -1,12 +1,10 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
-
+Copyright (C) 2014-2019 LCO
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -91,7 +89,8 @@ SITE_CHOICES = (
                     ('cpt', 'Sutherland'),
                     ('tfn', 'Tenerife'),
                     ('sbg', 'SBIG cameras'),
-                    ('sin', 'Sinistro cameras')
+                    ('sin', 'Sinistro cameras'),
+                    ('spc', 'Spectral cameras')
     )
 
 TAX_SCHEME_CHOICES = (
@@ -112,17 +111,17 @@ TAX_REFERENCE_CHOICES = (
                      )
 
 SPECTRAL_WAV_CHOICES = (
-                        ('Vis','Visible'),
-                        ('NIR','Near Infrared'),
-                        ('Vis+NIR','Both Visible and Near IR'),
-                        ('NA','None Yet.'),
+                        ('Vis', 'Visible'),
+                        ('NIR', 'Near Infrared'),
+                        ('Vis+NIR', 'Both Visible and Near IR'),
+                        ('NA', 'None Yet.'),
                      )
 
 SPECTRAL_SOURCE_CHOICES = (
-                        ('S','SMASS'),
-                        ('M','MANOS'),
-                        ('U','Unknown'),
-                        ('O','Other')
+                        ('S', 'SMASS'),
+                        ('M', 'MANOS'),
+                        ('U', 'Unknown'),
+                        ('O', 'Other')
                      )
 
 
@@ -185,20 +184,20 @@ class Body(models.Model):
         else:
             return False
 
-    def diameter(self):        
+    def diameter(self):
         m = self.abs_mag
         avg = 0.167
         d_avg = asteroid_diameter(avg, m)
         return d_avg
-        
+
     def diameter_range(self):
         m = self.abs_mag
         mn = 0.01
-        mx = 0.6       
+        mx = 0.6
         d_max = asteroid_diameter(mn, m)
         d_min = asteroid_diameter(mx, m)
         return d_min, d_max
-        
+
     def epochofel_mjd(self):
         mjd = None
         try:
@@ -498,13 +497,16 @@ class SuperBlock(models.Model):
     def make_obsblock_link(self):
         url = ''
         if self.tracking_number is not None and self.tracking_number != '':
-            url = urljoin(settings.PORTAL_REQUEST_URL, self.tracking_number)
+            url = urljoin(settings.PORTAL_USERREQUEST_URL, self.tracking_number)
         return url
 
     def get_sites(self):
         qs = Block.objects.filter(superblock=self.id).values_list('site', flat=True).distinct()
-
-        return ", ".join(qs)
+        qs = [q for q in qs if q is not None]
+        if qs:
+            return ", ".join(qs)
+        else:
+            return None
 
     def get_telclass(self):
         qs = Block.objects.filter(superblock=self.id).values_list('telclass', 'obstype').distinct()
@@ -595,7 +597,7 @@ class Block(models.Model):
                       )
 
     telclass        = models.CharField(max_length=3, null=False, blank=False, default='1m0', choices=TELESCOPE_CHOICES)
-    site            = models.CharField(max_length=3, choices=SITE_CHOICES)
+    site            = models.CharField(max_length=3, choices=SITE_CHOICES, null=True)
     body            = models.ForeignKey(Body, null=True, blank=True)
     calibsource     = models.ForeignKey('StaticSource', null=True, blank=True)
     proposal        = models.ForeignKey(Proposal)
@@ -643,15 +645,24 @@ class Block(models.Model):
         return total_exposure_number
 
     def num_spectro_frames(self):
-        '''Returns the numbers of different types of spectroscopic frames'''
+        """Returns the numbers of different types of spectroscopic frames"""
         num_moltypes_string = 'No data'
         data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
         if num_frames > 0:
-            moltypes = [x['OBSTYPE'] for x in data]
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
             num_moltypes = {x : moltypes.count(x) for x in set(moltypes)}
-            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(),reverse=True))
+            num_moltypes_sort = OrderedDict(sorted(num_moltypes.items(), reverse=True))
             num_moltypes_string = ", ".join([x+": "+str(num_moltypes_sort[x]) for x in num_moltypes_sort])
         return num_moltypes_string
+
+    def num_spectra_complete(self):
+        """Returns the number of actually completed spectra excluding lamps/arcs"""
+        num_spectra = 0
+        data, num_frames = check_for_archive_images(self.tracking_number, obstype='')
+        if num_frames > 0:
+            moltypes = [x['OBSTYPE'] if x['RLEVEL'] != 90 else "TAR" for x in data]
+            num_spectra = moltypes.count('SPECTRUM')
+        return num_spectra
 
     def num_candidates(self):
         return Candidate.objects.filter(block=self.id).count()
@@ -703,8 +714,13 @@ def pickle_wcs(wcs_object):
         wcs_header = wcs_object.to_header()
         # Add back missing NAXIS keywords, change back to CD matrix
         wcs_header.insert(0, ("NAXIS", 2, "number of array dimensions"))
-        wcs_header.insert(1, ("NAXIS1", wcs_object._naxis1, ""))
-        wcs_header.insert(2, ("NAXIS2", wcs_object._naxis2, ""))
+        naxis1 = 0
+        naxis2 = 0
+        if wcs_object.pixel_shape is not None and wcs_object.naxis == 2:
+            naxis1 = wcs_object.pixel_shape[0]
+            naxis2 = wcs_object.pixel_shape[1]
+        wcs_header.insert(1, ("NAXIS1", naxis1, ""))
+        wcs_header.insert(2, ("NAXIS2", naxis2, ""))
         wcs_header.remove("CDELT1")
         wcs_header.remove("CDELT2")
         # Some of these may be missing depending on whether there was any rotation
@@ -827,7 +843,7 @@ class Frame(models.Model):
     def get_x_size(self):
         x_size = None
         try:
-            x_size = self.wcs._naxis1
+            x_size = self.wcs.pixel_shape[0]
         except AttributeError:
             pass
         return x_size
@@ -835,7 +851,7 @@ class Frame(models.Model):
     def get_y_size(self):
         y_size = None
         try:
-            y_size = self.wcs._naxis2
+            y_size = self.wcs.pixel_shape[1]
         except AttributeError:
             pass
         return y_size
@@ -1117,8 +1133,8 @@ class CatalogSources(models.Model):
         2:  The object was originally blended with another one,
         4:  At least one pixel of the object is saturated (or very close to),
         8:  The object is truncated (too close to an image boundary),
-        16: Object’s aperture data are incomplete or corrupted,
-        32: Object’s isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
+        16: Object's aperture data are incomplete or corrupted,
+        32: Object's isophotal data are incomplete or corrupted (SExtractor V1 compat; no consequence),
         64: A memory overflow occurred during deblending,
         128:A memory overflow occurred during extraction.
         """

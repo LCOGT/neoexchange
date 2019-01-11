@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2016-2018 LCO
+Copyright (C) 2016-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -111,16 +111,17 @@ class TestCheckForExistingFile(TestCase):
         self.test_ql_file_uncomp = os.path.join(tempfile.gettempdir(), 'cpt1m010-fl16-20170111-0211-e11.fits')
         self.test_red_file_comp = os.path.join(tempfile.gettempdir(), 'cpt1m010-fl16-20170111-0211-e91.fits.fz')
         self.test_red_file_uncomp = os.path.join(tempfile.gettempdir(), 'cpt1m010-fl16-20170111-0211-e91.fits')
+        self.test_FLOYDS_comp_tarball = os.path.join(tempfile.gettempdir(), 'LCOEngineering_0001651275_ftn_20181005_58397.tar.gz')
+        self.test_FLOYDS_uncomp_tarball = os.path.join(tempfile.gettempdir(), 'LCOEngineering_0001651275_ftn_20181005_58397.tar')
+        self.test_files = [ self.test_ql_file_comp, self.test_ql_file_uncomp,
+                            self.test_red_file_comp, self.test_red_file_uncomp,
+                            self.test_FLOYDS_comp_tarball, self.test_FLOYDS_uncomp_tarball
+                          ]
 
     def tearDown(self):
-        if os.path.exists(self.test_ql_file_comp):
-            os.remove(self.test_ql_file_comp)
-        if os.path.exists(self.test_red_file_comp):
-            os.remove(self.test_red_file_comp)
-        if os.path.exists(self.test_ql_file_uncomp):
-            os.remove(self.test_ql_file_uncomp)
-        if os.path.exists(self.test_red_file_uncomp):
-            os.remove(self.test_red_file_uncomp)
+        for test_file in self.test_files:
+            if os.path.exists(test_file):
+                os.remove(test_file)
 
     def test_ql_exists_noMD5(self):
         md5sum = self.create_temp(self.test_ql_file_comp)
@@ -174,8 +175,17 @@ class TestCheckForExistingFile(TestCase):
         md5sum = self.create_temp(self.test_red_file_comp)
         self.assertTrue(check_for_existing_file(self.test_red_file_comp, md5sum), "Wrong result")
 
+    def test_FLOYDS_comp_tarball(self):
+        md5sum = self.create_temp(self.test_FLOYDS_comp_tarball)
+        self.assertTrue(check_for_existing_file(self.test_FLOYDS_comp_tarball, md5sum), "Wrong result")
+
+    def test_FLOYDS_uncomp_tarball(self):
+        md5sum = self.create_temp(self.test_FLOYDS_uncomp_tarball)
+        self.assertFalse(check_for_existing_file(self.test_FLOYDS_uncomp_tarball, md5sum), "Wrong result")
+
     def test_badfile(self):
         self.assertFalse(check_for_existing_file('wibble'), "Wrong result")
+
 
 @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
 class TestFetchArchiveFrames(TestCase):
@@ -188,12 +198,13 @@ class TestFetchArchiveFrames(TestCase):
         expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
                           'redlevels' : [90, 0]}
 
-        data = fetch_archive_frames(auth_header, archive_url, [])
+        data = mock_fetch_archive_frames(auth_header, archive_url, [])
 
         self.assertEqual(2, len(data))
         self.assertEqual(expected_data['obstypes'], [x['OBSTYPE'] for x in data])
         self.assertEqual([request_id, request_id], [x['REQNUM'] for x in data])
         self.assertEqual(expected_data['redlevels'], [x['RLEVEL'] for x in data])
+
 
 @patch('core.archive_subs.fetch_archive_frames', mock_fetch_archive_frames)
 class TestCheckArchiveImages(TestCase):
@@ -201,9 +212,9 @@ class TestCheckArchiveImages(TestCase):
     def test_fetch_imaging(self):
         request_id = 42
 
-        expected_data = { 'obstypes' : ['EXPOSE',],
+        expected_data = { 'obstypes' : ['EXPOSE', ],
                           'redlevels' : [91, ],
-                          'files' : ['ogg0m406-kb27-20160531-0063-e91.fits.fz',]
+                          'files' : ['ogg0m406-kb27-20160531-0063-e91.fits.fz', ]
                         }
         frames, num_frames = check_for_archive_images(request_id)
 
@@ -218,7 +229,7 @@ class TestCheckArchiveImages(TestCase):
 
         expected_data = { 'obstypes' : ['SPECTRUM', 'SPECTRUM'],
                           'redlevels' : [90, 0],
-                          'files' : ['LCOEngineering_0001391169_ftn_20180111_58130.tar.gz', 'ogg2m001-en06-20180110-0005-e00.fits.fz',]
+                          'files' : ['LCOEngineering_0001391169_ftn_20180111_58130.tar.gz', 'ogg2m001-en06-20180110-0005-e00.fits.fz', ]
                           }
 
         frames, num_frames = check_for_archive_images(request_id, obstype)

@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -26,8 +26,10 @@ from core.views import BodySearchView, BodyDetailView, BlockDetailView, BlockLis
     UploadReport, BlockTimeSummary, ScheduleParametersCadence, ScheduleParametersSpectra, \
     plotframe, make_plot, CandidatesViewBlock, BlockReportMPC, \
     SuperBlockListView, SuperBlockDetailView, characterization, SpectroFeasibility, \
+    display_spec, PlotSpec, display_movie, GuideMovie, \
     StaticSourceView, StaticSourceDetailView, ScheduleCalibSpectra, ScheduleCalibSubmit, \
     make_standards_plot, make_solar_standards_plot, CalibSpectroFeasibility, ScheduleCalibParameters
+
 from analyser.views import BlockFramesView, ProcessCandidates
 
 
@@ -41,6 +43,10 @@ urlpatterns = [
     url(r'^make-solar-standards-plot/$', make_solar_standards_plot, name='make-solar-standards-plot'),
     url(r'^block/summary/$', BlockTimeSummary.as_view(), name='block-summary'),
     url(r'^block/list/$', SuperBlockListView.as_view(model=SuperBlock, queryset=SuperBlock.objects.order_by('-block_start'), context_object_name="block_list"), name='blocklist'),
+    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/spectra.png$', display_spec, name='display_spec'),
+    url(r'^block/(?P<pk>\d+)/spectra/(?P<obs_num>\d+)/$', PlotSpec.as_view(), name='plotspec'),
+    url(r'^block/(?P<pk>\d+)/guidemovie/$', GuideMovie.as_view(), name='guidemovie'),
+    url(r'^block/(?P<pk>\d+)/spectra/guidemovie.gif$', display_movie, name='display_movie'),
     url(r'^block/(?P<pk>\d+)/source/(?P<source>\d+)/report/submit/$', BlockReportMPC.as_view(), name='block-submit-mpc'),
     url(r'^block/(?P<pk>\d+)/report/$', BlockReport.as_view(), name='report-block'),
     url(r'^block/(?P<pk>\d+)/upload/$', UploadReport.as_view(), name='upload-report'),

@@ -28,12 +28,19 @@ var rejected = Array();
 var data_url = 'https://thumbnails.lco.global/';
 var img_params = '?width=1000&height=1000&median=true&percentile=98';
 var analysed = {% if analysed %}true{% else %}false{% endif %};
+var archive_token = "{{archive_token}}";
 var blockcandidate;
 
-	$(document).ready(function(){
+$(document).ajaxStop(function() {
+  // Load all thumbnails once the ajax call to get their URLs has completed
+  loadThumbnails(frames);
+});
 
+	$(document).ready(function(){
 		setUp();
-		loadThumbnails(frames);
+    for(i=0; i<frames.length; i++){
+      frames[i] = get_images(frames[i], options=img_params)
+    }
 
 		$('.candidate-select').click(function(){
 			var ind = $(this).data('cand_id');

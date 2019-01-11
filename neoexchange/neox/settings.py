@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '2.7.1'
+VERSION = '2.7.9'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -240,7 +240,6 @@ DATABASES = {
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "CONN_MAX_AGE" : 300,
         "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
 
     }
@@ -273,13 +272,16 @@ ARCHIVE_TOKEN = os.environ.get('ARCHIVE_TOKEN', '')
 
 PORTAL_API_URL = 'https://observe.lco.global/api/'
 PORTAL_REQUEST_API = PORTAL_API_URL + 'userrequests/'
-PORTAL_REQUEST_URL = 'https://observe.lco.global/userrequests/'
+PORTAL_USERREQUEST_URL = 'https://observe.lco.global/userrequests/'
+PORTAL_REQUEST_URL = 'https://observe.lco.global/requests/'
 PORTAL_TOKEN_URL = PORTAL_API_URL + 'api-token-auth/'
 PORTAL_TOKEN = os.environ.get('VALHALLA_TOKEN', '')
 PORTAL_PROFILE_URL = PORTAL_API_URL + 'profile/'
 
 ZOONIVERSE_USER = os.environ.get('ZOONIVERSE_USER', '')
 ZOONIVERSE_PASSWD = os.environ.get('ZOONIVERSE_PASSWD', '')
+
+DATA_ROOT = os.getenv('DATA_ROOT', '/apophis/eng/rocks/')
 
 #######################
 # Test Database setup #
@@ -313,4 +315,3 @@ if not CURRENT_PATH.startswith('/var/www'):
     except ImportError as e:
         if "local_settings" not in str(e):
             raise e
-

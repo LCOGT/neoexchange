@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -125,10 +125,11 @@ def create_frame(params, block=None, frameid=None):
     # Update catalogue information if we have it
     if params.get('astrometric_catalog', None):
         frame.astrometric_catalog = params.get('astrometric_catalog')
-        frame.save()
     if params.get('photometric_catalog', None):
         frame.photometric_catalog = params.get('photometric_catalog')
-        frame.save()
+    if params.get('L1FWHM', None):
+        frame.fwhm = params.get('L1FWHM')
+    frame.save()
 
     if frame_created:
         msg = "created"
@@ -140,18 +141,25 @@ def create_frame(params, block=None, frameid=None):
 
 def frame_params_from_header(params, block):
     # In these cases we are parsing the FITS header
-    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
+    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', ''), params.get('ENCID', ''), params.get('TELID', ''))
     spectro_obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
+
+    # Extract and convert reduction level to integer
+    rlevel = params.get('RLEVEL', 0)
+    try:
+        rlevel = int(rlevel)
+    except ValueError:
+        logger.warning("Error converting RLEVEL to integer in frame " + frame_params['filename'])
+        rlevel = 0
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
-                     'frametype': params.get('RLEVEL', 0),
+                     'frametype': rlevel,
                      'block'    : block,
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
-                     'fwhm'      : params.get('L1FWHM', None),
                  }
     if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
         aperture_type = params.get('APERTYPE', 'SLIT').rstrip()
@@ -183,7 +191,6 @@ def frame_params_from_header(params, block):
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
-    rlevel = params.get('RLEVEL', 0)
     frame_extn = "{0:02d}.fits".format(rlevel)
     frame_params['filename'] = frame_params['filename'].replace('00.fits', frame_extn)
     # Correct midpoint for 1/2 the exposure time
@@ -298,7 +305,7 @@ def block_status(block_id):
         if r['id'] == int(block.tracking_number) or len(data['requests']) < 2:
             obstype = 'EXPOSE'
             try:
-                if block.obstype == Block.OPT_SPECTRA:
+                if block.obstype == Block.OPT_SPECTRA or block.obstype == Block.OPT_SPECTRA_CALIB:
                     # Set OBSTYPE to null string for archive search so we get all
                     # types of frames
                     obstype = ''
@@ -335,11 +342,11 @@ def block_status(block_id):
                 # If we got at least 3 frames (i.e. usable for astrometry reporting) and
                 # at least frames for at least one block were ingested, update the blocks'
                 # observed count.
-                if len(images) >= 3 and len(block_ids) >= 1:
-                    logger.info("More than 3 reduced frames found - setting to observed")
-                    block.num_observed = len(block_ids)
-                elif len(images) >=1 and 'SPECTRUM' in obs_types and len(block_ids) >= 1:
+                if len(images) >= 1 and 'SPECTRUM' in obs_types and len(block_ids) >= 1:
                     logger.info("Spectra data found - setting to observed")
+                    block.num_observed = len(block_ids)
+                elif len(images) >= 3 and len(block_ids) >= 1:
+                    logger.info("More than 3 reduced frames found - setting to observed")
                     block.num_observed = len(block_ids)
                 block.save()
                 status = True

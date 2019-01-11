@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2015-2018 LCO
+Copyright (C) 2015-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -954,8 +954,8 @@ class TestFrame(TestCase):
         frame.refresh_from_db()     # Ensure pickling happens
 
         self.assertEqual(self.w.naxis, frame.wcs.naxis)
-        self.assertEqual(self.w._naxis1, frame.wcs._naxis1)
-        self.assertEqual(self.w._naxis2, frame.wcs._naxis2)
+        self.assertEqual(self.w.pixel_shape[0], frame.wcs.pixel_shape[0])
+        self.assertEqual(self.w.pixel_shape[1], frame.wcs.pixel_shape[1])
 
 
 class TestWCSField(TestCase):

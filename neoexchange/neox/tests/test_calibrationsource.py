@@ -1,5 +1,21 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2018-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 import os
 from math import radians
+
 from .base import FunctionalTest
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
@@ -89,10 +105,10 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn('Calibration Sources', header_text)
 
         # He notices the position of the Solar antinode is given.
-        expected_coords=['15:55:45.42', '-20:22:15.3']
+        expected_coords = ['15:55:45.42', '-20:22:15.3']
         coords_text = self.browser.find_element_by_id('anti_solar_point').text
         for coor in expected_coords:
-            self.assertIn(coor,coords_text)
+            self.assertIn(coor, coords_text)
 
         # He notices there are several calibration sources that are listed
         self.check_for_header_in_table('id_calibsources',
@@ -160,8 +176,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("HR9087: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')
@@ -226,8 +242,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("CD-34d241: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')
@@ -330,8 +346,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("Landolt SA98-978: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')

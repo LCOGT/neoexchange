@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 sources_subs.py -- Code to retrieve asteroid infomation from various sources.
 
@@ -676,30 +676,56 @@ def fetch_mpcdb_page(asteroid, dbg=False):
     return page
 
 
-def parse_mpcorbit(page, dbg=False):
+def parse_mpcorbit(page, epoch_now=None, dbg=False):
+    """Parses a page of elements tables return from the Minor Planet Center (MPC)
+    database search page and returns an element set as a dictionary.
+    In the case of multiple element sets (normally comets), the closest in time
+    to [epoch_now] is returned."""
+    if epoch_now is None:
+        epoch_now = datetime.utcnow()
 
     data = []
     # Find the table of elements and then the subtables within it
-    elements_table = page.find('table', {'class' : 'nb'})
-    if elements_table is None:
-        if dbg:
-            logger.debug("No element tables found")
+    elements_tables = page.find_all('table', {'class' : 'nb'})
+    if elements_tables is None or len(elements_tables) == 0:
+        logger.warning("No element tables found")
         return {}
-    data_tables = elements_table.find_all('table')
-    for table in data_tables:
-        rows = table.find_all('tr')
-        for row in rows:
-            cols = row.find_all('td')
-            cols = [elem.text.strip() for elem in cols]
-            data.append([elem for elem in cols if elem])
 
-    elements = dict(clean_element(elem) for elem in data)
+    min_elements_dt = timedelta.max
+    best_elements = {}
+    for elements_table in elements_tables:
+        data_tables = elements_table.find_all('table')
+        for table in data_tables:
+            rows = table.find_all('tr')
+            for row in rows:
+                cols = row.find_all('td')
+                cols = [elem.text.strip() for elem in cols]
+                data.append([elem for elem in cols if elem])
 
+        elements = dict(clean_element(elem) for elem in data)
+        # Look for nearest element set in time
+        epoch = elements.get('epoch', None)
+        if dbg: print(epoch)
+        if epoch is not None:
+            try:
+                epoch_datetime = datetime.strptime(epoch, "%Y-%m-%d.0")
+                epoch_dt = epoch_now - epoch_datetime
+                if epoch_dt < min_elements_dt:
+                    # Closer match found, update best elements and minimum time
+                    # separation
+                    if dbg: print("Found closer element match", epoch_dt, min_elements_dt, epoch)
+                    best_elements = elements
+                    min_elements_dt = abs(epoch_dt)
+                else:
+                    if dbg: print("No closer match found")
+            except ValueError:
+                msg = "Couldn't parse epoch: " + epoch
+                logger.warning(msg)
     name_element = page.find('h3')
     if name_element is not None:
-        elements['obj_id'] = name_element.text.strip()
+        best_elements['obj_id'] = name_element.text.strip()
 
-    return elements
+    return best_elements
 
 
 class PackedError(Exception):
@@ -733,6 +759,24 @@ def validate_packcode(packcode):
     if not packcode[6].isupper() or not packcode[6].isalpha():
         raise PackedError("Invalid half-month order character")
     return True
+
+
+def validate_text(text_string):
+    valid_symbols = '`~!@#$%^&*()_+- ={}|[]\:;<,>.?/"'+"'"
+    valid_characters = 'abcdefghijklmnopqrstuvwxyz'
+    if text_string is None:
+        return ''
+
+    out_string = ''
+    for char in text_string:
+        if char.isdigit():
+            out_string += char
+        elif char in valid_characters or char in valid_characters.upper():
+            out_string += char
+        elif char in valid_symbols:
+            out_string += char
+
+    return out_string
 
 
 def packed_to_normal(packcode):
@@ -1107,13 +1151,14 @@ def fetch_NASA_targets(mailbox, folder='NASA-ARM', date_cutoff=1):
         return []
     return NASA_targets
 
+
 def get_site_status(site_code):
-    '''Queries the Valhalla telescope states end point to determine if the
+    """Queries the Valhalla telescope states end point to determine if the
     passed <site_code> is available for scheduling.
     Returns True if the site/telescope is available for scheduling and
     assumed True if the status can't be determined. Otherwise if the
     last event for the telescope can be found and it does not show
-    'AVAILABLE', then the good_to_schedule status is set to False.'''
+    'AVAILABLE', then the good_to_schedule status is set to False."""
 
     good_to_schedule = True
     reason = ''
@@ -1198,10 +1243,9 @@ def fetch_sfu(page=None):
 
 
 def make_location(params):
-    location = {
-        'site'            : params['site'].lower(),
-        'telescope_class' : params['pondtelescope'][0:3]
-    }
+    location = {'telescope_class' : params['pondtelescope'][0:3]}
+    if params.get('site', None):
+        location['site'] = params['site'].lower()
     if params['site_code'] == 'W85':
         location['telescope'] = '1m0a'
         location['observatory'] = 'doma'
@@ -1304,13 +1348,13 @@ def make_molecule(params, exp_filter):
             ag_mode = 'OFF'
             molecule['exposure_count'] = 1
             molecule['exposure_time'] = 60.0
-            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit'] and 'COJ' in params['site'].upper():
+            if params['exp_type'].upper() == 'LAMP_FLAT' and 'slit_6.0as' in params['spectra_slit']:
                 molecule['exposure_time'] = 20.0
         molecule['spectra_slit'] = params['spectra_slit']
         molecule['ag_mode'] = ag_mode
         molecule['ag_name'] = ''
         molecule['acquire_mode'] = 'BRIGHTEST'
-        molecule['ag_exp_time'] = 10
+        molecule['ag_exp_time'] = params.get('ag_exp_time', 10)
         if 'source_type' in params:  # then Sidereal target (use smaller window)
             molecule['acquire_radius_arcsec'] = 5.0
         else:
@@ -1361,10 +1405,12 @@ def make_molecules(params):
 def make_constraints(params):
     constraints = {
                     # 'max_airmass' : 2.0,    # 30 deg altitude (The maximum airmass you are willing to accept)
-                    'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
+                    # 'max_airmass' : 1.74,   # 35 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 1.55,   # 40 deg altitude (The maximum airmass you are willing to accept)
                     # 'max_airmass' : 2.37,   # 25 deg altitude (The maximum airmass you are willing to accept)
-                    'min_lunar_distance': 30
+                    # 'min_lunar_distance': 30
+                    'max_airmass' : params.get('max_airmass', 1.74),
+                    'min_lunar_distance' : params.get('min_lunar_distance', 30)
                   }
     return constraints
 
@@ -1480,7 +1526,7 @@ def make_cadence_valhalla(request, params, ipp_value, debug=False):
             print('Request {0} window start: {1} window end: {2}'.format(
                 i, request['windows'][0]['start'], request['windows'][0]['end']
             ))
-            i = i + 1
+            i += 1
 
     return cadence_user_request
 
@@ -1513,12 +1559,15 @@ def configure_defaults(params):
 
     params['pondtelescope'] = '1m0'
     params['observatory'] = ''
-    params['site'] = site_list[params['site_code']]
+    try:
+        params['site'] = site_list[params['site_code']]
+    except KeyError:
+        pass
     params['binning'] = 1
     params['instrument'] = '1M0-SCICAM-SINISTRO'
     params['exp_type'] = 'EXPOSE'
 
-    if params['site_code'] == 'F65' or params['site_code'] == 'E10':
+    if params['site_code'] in ['F65', 'E10', '2M0']:
         params['instrument'] = '2M0-SCICAM-SPECTRAL'
         params['binning'] = 2
         params['pondtelescope'] = '2m0'
@@ -1526,12 +1575,13 @@ def configure_defaults(params):
             params['exp_type'] = 'SPECTRUM'
             params['instrument'] = '2M0-FLOYDS-SCICAM'
             params['binning'] = 1
+            # params['ag_exp_time'] = 10
             if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
                 params['calibsrc_exptime'] = 60.0
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'
-    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09']:
+    elif params['site_code'] in ['Z17', 'Z21', 'W89', 'W79', 'T03', 'T04', 'Q58', 'Q59', 'V38', 'L09', '0M4']:
         params['instrument'] = '0M4-SCICAM-SBIG'
         params['pondtelescope'] = '0m4'
         params['binning'] = 1
@@ -1579,6 +1629,7 @@ def make_userrequest(elements, params):
 
     request = {
             "location": location,
+            "acceptability_threshold": params.get('acceptability_threshold', 90),
             "constraints": constraints,
             "target": target,
             "molecules": molecule_list,
@@ -1608,10 +1659,7 @@ def make_userrequest(elements, params):
     else:
         cal_request = {}
 
-# If site is ELP, increase IPP value
-    ipp_value = 1.00
-    if params['site_code'] == 'V37':
-        ipp_value = 1.00
+    ipp_value = params.get('ipp_value', 1.0)
 
 # Add the Request to the outer User Request
     if 'period' in params.keys() and 'jitter' in params.keys():
@@ -1626,83 +1674,7 @@ def make_userrequest(elements, params):
     return user_request
 
 
-def check_for_perturbation(elements, params):
-    """
-    Check if target orbit needs perturbed elements sent to telescope
-    """
-
-    # compare unperturbed and perturbed coordinates at begining of night
-    emp_line_base = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=False, display=False)
-    emp_line_perturb = compute_ephem(params['start_time'], elements, params['site_code'], dbg=False, perturb=True, display=False)
-
-    # assaign Magnitude and position angle
-    if emp_line_base[3] and emp_line_base[3] > 0:
-        elements['v_mag'] = emp_line_base[3]
-    elements['sky_pa'] = emp_line_base[7]
-
-    # Calculate offset in arcseconds between two coordinates
-    try:
-        offset = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_line_perturb[1], emp_line_perturb[2])) * 3600
-    except IndexError:
-        logger.error("Could not compute perturbation coordinates")
-        offset = 0
-
-    # Compare with find_orb generated ephemeris
-    offset2 = 0
-    if params.get('findorb_ephem', None) is not None:
-        emp_start = params['findorb_ephem']
-        if emp_start is not None:
-            offset2 = degrees(S.sla_dsep(emp_line_base[1], emp_line_base[2], emp_start[1], emp_start[2])) * 3600
-
-    logger.info("Offset between perturbed and unperturbed position is %s arcseconds" % offset)
-    logger.info("Offset between find_orb  and unperturbed position is %s arcseconds" % offset2)
-
-    # Check if offset is "reasonable"
-    # Ignore if too small (won't matter)
-    # Ignore if too large (possible error. Should calculate new orbit instead)
-    if 1 < offset < 300:
-        logger.info("Perturbing Elements")
-        comet = False
-        if 'elements_type' in elements and str(elements['elements_type']).upper() == 'MPC_COMET':
-            comet = True
-
-        # Convert MJD(UTC) to MJD(TT)
-        mjd_utc = datetime2mjd_utc(params['start_time'])
-        mjd_tt = mjd_utc2mjd_tt(mjd_utc)
-
-        p_orbelems, p_epoch_mjd, j = perturb_elements(elements, elements['epochofel_mjd'], mjd_tt, comet, True)
-
-        if j != 0:
-            logger.error("Perturbing error=%s" % j)
-            return elements
-        if comet is True:
-            elements['epochofperih'] = p_epoch_mjd
-            elements['perihdist']    = p_orbelems['SemiAxisOrQ']
-        else:
-            elements['epochofel'] = mjd_utc2datetime(p_epoch_mjd)
-            elements['epochofel_mjd'] = p_epoch_mjd
-            elements['meandist']  = p_orbelems['SemiAxisOrQ']
-        elements['longascnode'] = degrees(p_orbelems['LongNode'])
-        elements['orbinc']      = degrees(p_orbelems['Inc'])
-        elements['argofperih']  = degrees(p_orbelems['ArgPeri'])
-        elements['eccentricity']= p_orbelems['Ecc']
-        elements['meananom']    = degrees(p_orbelems['MeanAnom'])
-        if emp_line_perturb[3] and emp_line_perturb[3] > 0:
-            elements['v_mag'] = emp_line_perturb[3]
-        elements['sky_pa'] = emp_line_perturb[7]
-    elif offset >= 100:
-        logger.error("Position offset large (%s arcsec). Consider updating orbit." % offset)
-
-    return elements
-
-
 def submit_block_to_scheduler(elements, params):
-
-    try:
-        if params['spectroscopy'] is not False and abs(elements['epochofel'] - params['start_time']) > timedelta(days=1):
-            elements = check_for_perturbation(elements, params)
-    except KeyError:
-        pass
 
     user_request = make_userrequest(elements, params)
 
@@ -1721,18 +1693,27 @@ def submit_block_to_scheduler(elements, params):
         return False, params
 
     if resp.status_code not in [200, 201]:
-        msg = "Parsing error"
-        logger.error(msg)
         logger.error(resp.json())
+        msg = "Parsing error"
         try:
-            error_msg = resp.json()
-            error_msg = error_msg.get('requests', msg)
+            error_json = resp.json()
+            error_msg = error_json.get('requests', msg)
             if len(error_msg) == 1:
                 error_msg = error_msg[0].get('non_field_errors', msg)
                 msg = error_msg[0]
+            elif error_json.get('non_field_errors', None) is not None:
+                error_msg = error_json.get('non_field_errors', msg)
+                msg = error_msg[0]
         except AttributeError:
-            msg = "Unable to decode response from Valhalla"
+            try:
+                msg = user_request['errors']
+            except KeyError:
+                try:
+                    msg = user_request['proposal'][0]
+                except KeyError:
+                    msg = "Unable to decode response from Valhalla"
         params['error_msg'] = msg
+        logger.error(msg)
         return False, params
 
     response = resp.json()
@@ -1791,7 +1772,7 @@ def parse_filter_file(site, spec, camera_list=None):
             chunks = line.split(' ')
             chunks = list(filter(None, chunks))
             if len(chunks) == 13:
-                if chunks[0] == siteid and chunks[2][:-1] == telid[:-1]:
+                if (chunks[0] == siteid or siteid == 'xxx') and chunks[2][:-1] == telid[:-1]:
                     filt_list = chunks[12].split(',')
                     for filt in filter_list:
                         if filt in filt_list and filt not in site_filters:
@@ -2145,6 +2126,7 @@ def fetch_flux_standards(page=None, filter_optical_model=True, dbg=False):
     else:
         logger.warning("Passed page object was not a BeautifulSoup object")
     return flux_standards
+
 
 def read_solar_standards(standards_file):
 

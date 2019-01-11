@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -27,18 +27,21 @@ from .models import Body, Proposal, Block, StaticSource
 logger = logging.getLogger(__name__)
 
 
-SITES = (('V37', 'McDonald, Texas (ELP - V37; Sinistro)'),
-         ('F65', 'Maui, Hawaii (FTN - F65)'),
-         ('E10', 'Siding Spring, Aust. (FTS - E10)'),
-         ('W86', 'CTIO, Chile (LSC - W85-87; Sinistro)'),
-         ('K92', 'Sutherland, S. Africa (CPT - K91-93; Sinistro)'),
-         ('Q63', 'Siding Spring, Aust. (COJ - Q63-64; Sinistro)'),
-         ('Q58', 'Siding Spring, Aust. (COJ - Q58-59; 0.4m)'),
-         ('Z21', 'Tenerife, Spain (TFN - Z17,Z21; 0.4m)'),
-         ('T04', 'Maui, Hawaii (OGG - T03-04; 0.4m)'),
-         ('W89', 'CTIO, Chile (LSC - W89,W79; 0.4m)'),
-         ('V38', 'McDonald, Texas (ELP - V38; 0.4m)'),
-         ('L09', 'Sutherland, S. Africa (CPT - L09; 0.4m)'))
+SITES = (('1M0', '------------ Any 1.0m ------------'),
+         ('W86', 'LSC 1.0m - W85-87; (CTIO, Chile)'),
+         ('V37', 'ELP 1.0m - V37; (McDonald, Texas)'),
+         ('Q63', 'COJ 1.0m - Q63-64; (Siding Spring, Aust.)'),
+         ('K92', 'CPT 1.0m - K91-93; (Sutherland, S. Africa)'),
+         ('0M4', '------------ Any 0.4m ------------'),
+         ('W89', 'LSC 0.4m - W89,W79; (CTIO, Chile)'),
+         ('V38', 'ELP 0.4m - V38; (McDonald, Texas)'),
+         ('T04', 'OGG 0.4m - T03-04; (Maui, Hawaii)'),
+         ('Q58', 'COJ 0.4m - Q58-59; (Siding Spring, Aust.)'),
+         ('L09', 'CPT 0.4m - L09; (Sutherland, S. Africa)'),
+         ('Z21', 'TFN 0.4m - Z17,Z21; (Tenerife, Spain)'),
+         ('2M0', '------------ Any 2.0m ------------'),
+         ('E10', 'FTS 2.0m - E10; (Siding Spring, Aust.)'),
+         ('F65', 'FTN 2.0m - F65; (Maui, Hawaii )'))
 
 
 SPECTRO_SITES = (('F65-FLOYDS', 'Maui, Hawaii (FTN - F65)'),
@@ -102,9 +105,9 @@ class ScheduleCadenceForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad', }))
     site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad', }))
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                     initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
+                                     initial=datetime.today(), required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                   initial=datetime.today, required=True, error_messages={'required': _(u'UTC end date is required')})
+                                   initial=datetime.today()+timedelta(days=1), required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
 
@@ -120,12 +123,22 @@ class ScheduleCadenceForm(forms.Form):
     #         raise forms.ValidationError("Window cannot end in the past")
     #     return end
 
+    def clean_period(self):
+        if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0.02:
+            return 0.02
+        else:
+            return self.cleaned_data['period']
+
     def clean(self):
         cleaned_data = super(ScheduleCadenceForm, self).clean()
-        start = cleaned_data['start_time']
-        end = cleaned_data['end_time']
-        if end < start:
-            raise forms.ValidationError("End date must be after start date")
+        try:
+            start = cleaned_data['start_time']
+            end = cleaned_data['end_time']
+            if end < start:
+                raise forms.ValidationError("End date must be after start date")
+        except KeyError:
+            # Bad datetimes should be caught by Django validation
+            pass
 
     def __init__(self, *args, **kwargs):
         self.proposal_code = kwargs.pop('proposal_code', None)
@@ -139,21 +152,70 @@ class ScheduleBlockForm(forms.Form):
     start_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     end_time = forms.DateTimeField(widget=forms.HiddenInput(), input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S'])
     exp_count = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    exp_length = forms.FloatField(widget=forms.HiddenInput(), required=False)
-    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
+    exp_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}))
+    slot_length = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     filter_pattern = forms.CharField(widget=forms.TextInput(attrs={'size': '20'}))
     pattern_iterations = forms.FloatField(widget=forms.HiddenInput(), required=False)
     proposal_code = forms.CharField(max_length=20, widget=forms.HiddenInput())
     site_code = forms.CharField(max_length=5, widget=forms.HiddenInput())
-    group_id = forms.CharField(max_length=50, widget=forms.HiddenInput())
+    group_id = forms.CharField(max_length=50, widget=forms.TextInput(attrs={'style': 'text-align: right; width: -webkit-fill-available; width: -moz-available;'}))
     utc_date = forms.DateField(input_formats=['%Y-%m-%d', ], widget=forms.HiddenInput(), required=False)
-    jitter = forms.FloatField(widget=forms.HiddenInput(), required=False)
-    period = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    jitter = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
+    period = forms.FloatField(widget=forms.NumberInput(attrs={'size': '5'}), required=False)
     spectroscopy = forms.BooleanField(required=False, widget=forms.HiddenInput())
     calibs = forms.ChoiceField(required=False, widget=forms.HiddenInput(), choices=CALIBS)
     instrument_code = forms.CharField(max_length=10, widget=forms.HiddenInput(), required=False)
     solar_analog = forms.BooleanField(initial=True, widget=forms.HiddenInput(), required=False)
     calibsource_id = forms.IntegerField(widget=forms.HiddenInput(), required=False)
+    max_airmass = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    ipp_value = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    min_lunar_dist = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    acceptability_threshold = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+    ag_exp_time = forms.FloatField(widget=forms.NumberInput(attrs={'style': 'width: 75px;'}), required=False)
+
+    def clean_exp_length(self):
+        if not self.cleaned_data['exp_length'] or self.cleaned_data['exp_length'] < 0.1:
+            return 0.1
+        else:
+            return self.cleaned_data['exp_length']
+
+    def clean_min_lunar_dist(self):
+        if self.cleaned_data['min_lunar_dist'] > 180:
+            return 180
+        elif self.cleaned_data['min_lunar_dist'] < 0:
+            return 0
+        else:
+            return self.cleaned_data['min_lunar_dist']
+
+    def clean_acceptability_threshold(self):
+        if self.cleaned_data['acceptability_threshold'] > 100:
+            return 100
+        elif self.cleaned_data['acceptability_threshold'] < 0:
+            return 0
+        else:
+            return self.cleaned_data['acceptability_threshold']
+
+    def clean_ag_exp_time(self):
+        if self.cleaned_data['ag_exp_time'] is not None and self.cleaned_data['ag_exp_time'] < 0.1:
+            return 0.1
+        elif self.cleaned_data['ag_exp_time'] is None:
+            return None
+        else:
+            return self.cleaned_data['ag_exp_time']
+
+    def clean_ipp_value(self):
+        if self.cleaned_data['ipp_value'] < 0.5:
+            return 0.5
+        elif self.cleaned_data['ipp_value'] > 2:
+            return 2.0
+        else:
+            return self.cleaned_data['ipp_value']
+
+    def clean_max_airmass(self):
+        if self.cleaned_data['max_airmass'] < 1:
+            return 1.0
+        else:
+            return self.cleaned_data['max_airmass']
 
     def clean_start_time(self):
         start = self.cleaned_data['start_time']
@@ -186,7 +248,14 @@ class ScheduleBlockForm(forms.Form):
             cleaned_filter_pattern = ''
         return cleaned_filter_pattern
 
+    def clean_period(self):
+        if self.cleaned_data['period'] is not None and self.cleaned_data['period'] < 0.02:
+            return 0.02
+        else:
+            return self.cleaned_data['period']
+
     def clean(self):
+        cleaned_data = super(ScheduleBlockForm, self).clean()
         site = self.cleaned_data['site_code']
         spectra = self.cleaned_data['spectroscopy']
         if not fetch_filter_list(site, spectra):
@@ -205,15 +274,9 @@ class ScheduleBlockForm(forms.Form):
                 raise forms.ValidationError('%(bad)s is not an acceptable filter at this site.', params={'bad': ",".join(bad_filters)})
             else:
                 raise forms.ValidationError('%(bad)s are not acceptable filters at this site.', params={'bad': ",".join(bad_filters)})
-        elif not self.cleaned_data['exp_length'] and not self.cleaned_data['exp_count']:
-            raise forms.ValidationError("The slot length is too short")
         elif self.cleaned_data['exp_count'] == 0:
             raise forms.ValidationError("There must be more than 1 exposure")
-        elif self.cleaned_data['exp_length'] < 0.1:
-            raise forms.ValidationError("Exposure length is too short")
-        elif self.cleaned_data['period'] is not None and self.cleaned_data['jitter'] is not None:
-            if self.cleaned_data['period'] > 0.0 and self.cleaned_data['slot_length'] / 60.0 > self.cleaned_data['jitter']:
-                raise forms.ValidationError("Jitter must be larger than slot length")
+        return cleaned_data
 
 
 class ScheduleSpectraForm(forms.Form):
