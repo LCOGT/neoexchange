@@ -102,7 +102,7 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             query_service = Vizier(row_limit=set_row_limit, column_filters={"Gmag": rmag_limit}, columns=['RAJ2000', 'DEJ2000','e_RAJ2000', 'e_DEJ2000', 'Gmag', 'e_Gmag', 'Dup'])
         else:
             query_service = Vizier(row_limit=set_row_limit, column_filters={"r2mag": rmag_limit, "r1mag": rmag_limit}, columns=['RAJ2000', 'DEJ2000', 'r2mag', 'fl'])
-        query_service.VIZIER_SERVER = 'vizier.cfa.harvard.edu'
+        query_service.VIZIER_SERVER = 'vizier.cfa.harvard.edu' # 'vizier.hia.nrc.ca'
         query_service.TIMEOUT = 60
         try:
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
@@ -444,32 +444,31 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
     units = set_width[-1]
     try:
         ref_width = float(set_width[:-1]) * 1.5
-        ref_width = "{:s}{}".format(ref_width, units)
+        ref_width = "{:s}{}".format(str(ref_width), units)
     except ValueError:
         ref_width = set_width
     units = set_height[-1]
     try:
         ref_height = float(set_height[:-1]) * 1.5
-        ref_height = "{:s}{}".format(ref_height, units)
+        ref_height = "{:s}{}".format(str(ref_height), units)
     except ValueError:
         ref_height = set_height
 
     cat_table, final_cat_name = get_vizier_catalog_table(ra, dec, ref_width, ref_height, cat_name, set_row_limit, rmag_limit)
 
-    # Rename and standardize column names, add error units and convert to degrees
-    cat_table.rename_column('Gmag', 'mag')
-    cat_table.rename_column('e_Gmag', 'e_mag')
-    if type(cat_table['e_RAJ2000'].unit) == 'str':
-        cat_table['e_RAJ2000'] = cat_table['e_RAJ2000'] * u.mas
-    cat_table['e_RAJ2000'] = cat_table['e_RAJ2000'].to(u.deg)
-    if type(cat_table['e_DEJ2000'].unit) == 'str':
-        cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'] * u.mas
-    cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'].to(u.deg)
-
     if final_cat_name != cat_name:
         logger.warning("Did not get catalog type that was expected ({} vs {})".format(final_cat_name, cat_name))
         refcat = None
     else:
+        # Rename and standardize column names, add error units and convert to degrees
+        cat_table.rename_column('Gmag', 'mag')
+        cat_table.rename_column('e_Gmag', 'e_mag')
+        if type(cat_table['e_RAJ2000'].unit) == 'str':
+            cat_table['e_RAJ2000'] = cat_table['e_RAJ2000'] * u.mas
+        cat_table['e_RAJ2000'] = cat_table['e_RAJ2000'].to(u.deg)
+        if type(cat_table['e_DEJ2000'].unit) == 'str':
+            cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'] * u.mas
+        cat_table['e_DEJ2000'] = cat_table['e_DEJ2000'].to(u.deg)
         num_sources = write_ldac(cat_table, refcat)
     return refcat, num_sources
 
