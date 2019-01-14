@@ -6,14 +6,16 @@ from sys import path, exit
 from glob import glob
 from math import log10, log, sqrt, pow
 
-from astropy.io import fits
 import numpy as np
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+from astropy.io import fits
 from astropy.stats import sigma_clipped_stats, mad_std
+from astropy.time import Time
 from astropy.wcs import WCS
 from astropy.wcs._wcs import InvalidTransformError
 from astropy.wcs.utils import proj_plane_pixel_scales
-from astropy.coordinates import SkyCoord
-from astropy import units as u
+
 
 from photutils import CircularAperture, SkyCircularAperture, aperture_photometry
 from photutils.utils import calc_total_error
@@ -98,7 +100,8 @@ for fits_fpath in images:
 
     if 'mjdmid' in header:
         mjd_utc_mid = header['mjdmid']
-        date_obs = header['date-mid']
+        date_obs = Time(mjd_utc_mid, format='mjd', scale='utc')
+        date_obs.format = 'isot'
     else:
         mjd_utc_mid = header['mjd-obs'] + (header['exptime']/2.0/86400.0)
         date_obs =  header['date-obs']
@@ -169,7 +172,7 @@ for fits_fpath in images:
         print(mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
 
 
-    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %9.4f %9.4f %9.4f %+8.5f %8.5f  %9.5f %+9.5f %+9.5f %+9.5f  %7.3f %7.3f"
+    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %9.4f %9.4f %9.4f %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f"
     log_line = log_format % (fits_frame, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, ra, dec, x, y, radius, mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
     print(log_line, file=log_fh)
     print
