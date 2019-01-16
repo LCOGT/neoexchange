@@ -45,6 +45,10 @@
                         <td class="kv-key">Proposal</td>
                         <td class="kv-value">{{ data.proposal_code }}</td>
                     </tr>
+                    <tr id="id_group_id_row">
+                        <td class="kv-key">Group ID</td>
+                        <td class="kv-value">{{ form.group_id }}</td>
+                    </tr>
                     {% if data.instrument_code %}
                         <tr id="id_site">
                             <td class="kv-key">Site/Instrument</td>
@@ -63,7 +67,7 @@
                     <tr id="id_visibility">
                         {% if data.vis_time and data.max_alt_airmass < data.max_airmass %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
-                            <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt}}&deg</td>
+                            <td class="kv-value">{{ data.vis_time}} hrs / {{ data.max_alt|floatformat:0}}&deg</td>
                         {% else %}
                             <td class="kv-key">Hours Visible / Max Altitude</td>
                         <td class="kv-value">
@@ -236,19 +240,9 @@
           </table>
           </div>
         {% endif%}
-          {{form.start_time}}
-          {{form.end_time}}
-          {{form.exp_count}}
-          {{form.proposal_code}}
-          {{form.site_code}}
-          {{form.instrument_code}}
-          {{form.group_id}}
-          {{form.utc_date}}
-          {{form.jitter}}
-          {{form.period}}
-          {{forms.pattern_iterations}}
-          {{form.spectroscopy}}
-          {{form.calibs}}
+          {% for hidden in form.hidden_fields %}
+            {{ hidden }}
+          {% endfor %}
         </div>
       </div>
 
