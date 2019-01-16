@@ -880,8 +880,8 @@ def schedule_check(data, body, ok_to_schedule=True):
     else:
         magnitude = body.vmag
         speed = 0.0
-        ra = body.ra
-        dec = body.dec
+        ra = radians(body.ra)
+        dec = radians(body.dec)
 
     # Determine filter pattern
     if data.get('filter_pattern'):
