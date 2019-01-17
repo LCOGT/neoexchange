@@ -33,9 +33,10 @@ class Command(BaseCommand):
         mag_errs = np.array([])
         for line in lines:
             try:
-                times = np.append(times, float(day1+line[1:7]))
-                mags = np.append(mags, float(line[8:13]))
-                mag_errs = np.append(mag_errs, float(line[15:20]))
+                chunks = line.split(' ')
+                times = np.append(times, float(day1+chunks[0]))
+                mags = np.append(mags, float(chunks[1]))
+                mag_errs = np.append(mag_errs, float(chunks[2]))
             except ValueError:
                 continue
 

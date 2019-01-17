@@ -70,6 +70,7 @@ geckodriver.log
 
 lightcurve*.png
 lightcurve_data.txt
+phased_lc.png
 mpc_positions.txt
 *.json
 environ.dat
