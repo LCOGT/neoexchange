@@ -74,13 +74,15 @@ def determine_aperture_size(delta, pixscale):
 
     return aperture_size
 
-def interpolate_ephemeris(ephem_file, jd):
+def interpolate_ephemeris(ephem_file, jd, with_rdot=True):
     '''Interpolate a JPL ephemeris CSV file
     This needs to be generated from the website with the 'Table Settings' showing:
         `Table Settings [change] :  	QUANTITIES=1,3,4,8,19,20,24; date/time format=BOTH; extra precision=YES`
     and then turned into a CSV file via:
         cut -c 2-18,19-36,38,39,41-54,55-68,69-77,79-87,88-97,98-106,107-113,114-120,121-137,148-165,177- --output-delimiter="," \
         horizons_results.txt > [comet]_ephem
+    Returns: RA and Dec (in degrees), RA and Dec rates, Earth-object distance (delta; in AU), phase
+
     '''
     ra = dec = delta = phase = None
     try:
@@ -103,7 +105,10 @@ def interpolate_ephemeris(ephem_file, jd):
     # Read last two lines (one after the passed JD and the one before) and 
     # interpolate RA, Dec between the two.
     # XXX TODO Interpolate other values also
-    (edate,ejd2,sun,moon,ra2,dec2,delta_ra,delta_dec,amass,ext,r,rdot,delta,deldot,phase) = line.split(',',15)[0:15]
+    if with_rdot is True:
+        (edate,ejd2,sun,moon,ra2,dec2,delta_ra,delta_dec,amass,ext,r,rdot,delta,deldot,phase) = line.split(',',15)[0:15]
+    else:
+        (edate,ejd2,sun,moon,ra2,dec2,delta_ra,delta_dec,az,alt,amass,ext,r,delta,phase) = line.split(',',15)[0:15]
     (edate,ejd1,sun,moon,ra1,dec1) = lastline.split(',', 6)[0:6]
 
     ra_dec_2 = SkyCoord(ra2, dec2, unit=(u.hourangle, u.deg))

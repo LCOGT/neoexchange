@@ -129,7 +129,9 @@ class TestInterpolateEphemeris(TestCase):
 
         self.test_ELP_ephem_file = os.path.join('comet', 'tests', '67P_ephem_ELP_fl05_V37.txt')
 
-    def test1(self):
+        self.test_703_ephem_file = os.path.join('comet', 'tests', '243P_ephem_CSS_703_STA10k_703.txt')
+
+    def test_67P_kb71(self):
 
         expected_values = (184.090475019278, 7.46493421991147, 25.11074, -3.79655, 1.63499738548543, 29.1990)
 
@@ -142,12 +144,24 @@ class TestInterpolateEphemeris(TestCase):
             self.assertAlmostEqual(expected_values[i], values[i], 8)
             i+=1
 
-    def test2(self):
+    def test_67P_fl05(self):
 
         expected_values = (185.6111692090867, 8.2001430387953246, -12.7807, 10.75357,1.51289568602651, 21.1041)
         jd = 2457416.02002136574 + (60.0/2.0/86400.0)
 
         values = interpolate_ephemeris(self.test_ELP_ephem_file, jd)
+
+        i = 0
+        while i < len(expected_values):
+            self.assertAlmostEqual(expected_values[i], values[i], 8)
+            i+=1
+
+    def test_243P_CSS_703(self):
+
+        expected_values = (25.1692075, 2.35757083333, 3.131203, 14.41583, 1.84309341556570, 18.1863)
+        jd = 2458462.5 + (4.0/24.0)
+
+        values = interpolate_ephemeris(self.test_703_ephem_file, jd, with_rdot=False)
 
         i = 0
         while i < len(expected_values):

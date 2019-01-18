@@ -49,7 +49,7 @@ log_file = os.path.join(datadir, comet + '_phot.log')
 if os.path.exists(log_file):
     os.remove(log_file)
 log_fh = open(log_file, 'w')
-print("# Filename                               Filter JD            MJD-57000.0         RA (J2000.0) Dec             RA (J2000.0) Dec         X (pixels) Y        Radius  Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr    ZP       ZPerr", file=log_fh)
+print('# Filename                               Filter JD            MJD-57000.0         RA (J2000.0) Dec             RA (J2000.0) Dec         X (pixels) Y      Radius (pixels/") Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr    ZP       ZPerr', file=log_fh)
 #                  elp1m008-fl05-20160127-0273-e90.fits   r'   2457416.02037 415.520368588 185.611169209 +08.200143039 2001.3375 2067.4000   23.4026 -11.84046 +16.11954   +0.08323 -11.84523 +16.11477  +0.08284   27.96000
 
 # Loop over all images
@@ -127,7 +127,7 @@ for fits_fpath in images:
 
     #   Determine aperture size and perform aperture photometry at the position
     radius = determine_aperture_size(delta, pixscale)
-    print("X, Y, Radius=", x, y, radius)
+    print("X, Y, Radius (pixels, arcsec)= {:.3f} {:.3f} {:9.5f} {:9.5f}".format(x, y, radius, radius*pixscale))
 
     apertures = CircularAperture((x,y), r=radius)
     phot_table = aperture_photometry(image_sub, apertures, mask=mask, error=error)
@@ -152,7 +152,7 @@ for fits_fpath in images:
         print("-ve flux value")
         skypos_mag = skypos_magerr = -99.0
 
-    # Get observed filter, Connvert 'p' to prime
+    # Get observed filter, Convert 'p' to prime
     obs_filter = header['filter']
     obs_filter = obs_filter[:-1] + obs_filter[-1].replace("p", "'")
     if zp < 0 and zp_err < 0:
@@ -160,7 +160,7 @@ for fits_fpath in images:
         abs_mag = abs_mag_err = -99.0
         abs_skypos_mag = abs_skypos_mag_err = -99.0
     elif mag < -90:
-        print("Bad magntiude determination")
+        print("Bad magnitude determination")
     else:
         abs_mag = mag+zp
         abs_mag_err = sqrt(pow(magerr, 2) + pow(zp_err, 2))
@@ -172,8 +172,8 @@ for fits_fpath in images:
         print(mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
 
 
-    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %9.4f %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f"
-    log_line = log_format % (fits_frame, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, ra, dec, sky_position.to_string('hmsdms', sep=' ', precision=4), x, y, radius, mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
+    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %8.3f (%6.3f) %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f"
+    log_line = log_format % (fits_frame, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, ra, dec, sky_position.to_string('hmsdms', sep=' ', precision=4), x, y, radius, radius*pixscale, mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
     print(log_line, file=log_fh)
     print
 
