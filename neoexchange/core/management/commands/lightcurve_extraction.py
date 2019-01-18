@@ -51,7 +51,7 @@ class Command(BaseCommand):
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
 
     def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title=''):
-        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True,gridspec_kw={'height_ratios': [15, 4]})
+        fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
         ax0.invert_yaxis()
@@ -115,6 +115,42 @@ class Command(BaseCommand):
             source.delete()
         return mpc_line
 
+    def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors):
+        obj_name = block.body.current_name()
+        mid_time = (dates[-1] - dates[0])/2 + dates[0]
+        metadata_dict = {'ObjectNumber': 0,
+                         'ObjectName'  : obj_name,
+                         'MPCDesig'    : obj_name,
+                         'ReviseData'  : 'FALSE',
+                         'AllowSharing': 'TRUE',
+                         'MPCCode'     : site,
+                         'Delimiter'   : 'PIPE',
+                         'ContactInfo' : '[neo@lcogt.net]',
+                         'ContactName' : block.proposal.pi,
+                         'DifferMags'  : 'FALSE',
+                         'Facility'    : 'Las Cumbres Observatory',
+                         'LTCApp'      : 'NONE',
+                         'LTCType'     : 'NONE',
+                         'Observers'   : 'T. Lister; J. Chatelain; E. Gomez',
+                         'ReducedMags' : 'NONE',
+                         'SessionDate' : mid_time.strftime('%Y-%m-%d'),
+                         'SessionTime' : mid_time.strftime('%H:%M:%S')
+                        }
+        if obj_name.isdigit():
+            metadata_dict['ObjectNumber'] = obj_name
+            metadata_dict['MPCDesig'] = block.body.old_name()
+            metadata_dict['ObjectName'] = block.body.old_name()
+        lightcurve_file.write('STARTMETADATA\n')
+        for key, value in metadata_dict.items():
+            lightcurve_file.write('{}={}\n'.format(key.upper(), value))
+        lightcurve_file.write('ENDMETADATA\n')
+        i = 0
+        for date in dates:
+            jd = datetime2mjd_utc(date)+2400000.5
+            lightcurve_file.write('DATA={:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i]))
+            i += 1
+        lightcurve_file.write('ENDDATA\n')
+
     def handle(self, *args, **options):
 
         self.stdout.write("==== Light curve building %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
@@ -127,7 +163,7 @@ class Command(BaseCommand):
         start_blocks = Block.objects.filter(superblock=start_super_block.id)
         start_block = start_blocks[0]
         if options['single'] is True:
-            super_blocks = [start_super_block,]
+            super_blocks = [start_super_block, ]
         else:
             super_blocks = SuperBlock.objects.filter(body=start_super_block.body, block_start__gte=start_super_block.block_start-timedelta(days=options['timespan']))
 
@@ -142,12 +178,19 @@ class Command(BaseCommand):
         mpc_site = []
         fwhm = []
         air_mass = []
+        obj_name = start_super_block.body.current_name()
+        filename = 'ALCDEF_{}.txt'.format(obj_name)
+        alcdef_file = open(filename, 'w')
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
+            block_mags = []
+            block_mag_errs = []
+            block_times = []
             for block in block_list:
                 self.stdout.write("Analyzing Block# %d" % block.id)
 
+                obs_site = block.site
                 frames_red = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_RED_FRAMETYPE]).order_by('midpoint')
                 frames_ql = Frame.objects.filter(block=block.id, frametype__in=[Frame.BANZAI_QL_FRAMETYPE]).order_by('midpoint')
                 if len(frames_red) >= len(frames_ql):
@@ -188,25 +231,29 @@ class Command(BaseCommand):
                                         best_source = source
 
                             if best_source and best_source.obs_mag > 0.0 and abs(mag_estimate - best_source.obs_mag) <= 3 * options['deltamag']:
-                                times.append(frame.midpoint)
+                                block_times.append(frame.midpoint)
                                 mpc_line = self.make_source_measurement(block.body, frame, best_source, persist=options['persist'])
                                 mpc_lines.append(mpc_line)
-                                mags.append(best_source.obs_mag)
-                                mag_errs.append(best_source.err_obs_mag)
+                                block_mags.append(best_source.obs_mag)
+                                block_mag_errs.append(best_source.err_obs_mag)
                                 zps.append(frame.zeropoint)
                                 zp_errs.append(frame.zeropoint_err)
                         # We append these even if we don't have a matching source or zeropoint
                         # so we can plot conditions for all frames
                         alltimes.append(frame.midpoint)
                         fwhm.append(frame.fwhm)
-                        azimuth, altitude = moon_alt_az(frame.midpoint, ra, dec, \
-                            *get_sitepos(frame.sitecode)[1:])
+                        azimuth, altitude = moon_alt_az(frame.midpoint, ra, dec, *get_sitepos(frame.sitecode)[1:])
                         zenith_distance = radians(90) - altitude
                         air_mass.append(S.sla_airmas(zenith_distance))
-
-                    if frame.sitecode not in mpc_site:
-                        mpc_site.append(frame.sitecode)
-
+                        obs_site = frame.sitecode
+                        if obs_site not in mpc_site:
+                            mpc_site.append(obs_site)
+                    if len(block_times) > 1:
+                        self.output_alcdef(alcdef_file, block, obs_site, block_times, block_mags, block_mag_errs)
+                        mags += block_mags
+                        mag_errs += block_mag_errs
+                        times += block_times
+        alcdef_file.close()
         self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))
 
         # Write light curve data out in similar format to Make_lc.csh
