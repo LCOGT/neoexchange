@@ -115,7 +115,12 @@ class Command(BaseCommand):
             source.delete()
         return mpc_line
 
-    def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors):
+    def clean_filter(self, filt):
+        if filt[1] == 'p':
+            filt = 's'+filt[0]
+        return filt.upper()
+
+    def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt):
         obj_name = block.body.current_name()
         mid_time = (dates[-1] - dates[0])/2 + dates[0]
         metadata_dict = {'ObjectNumber': 0,
@@ -125,12 +130,14 @@ class Command(BaseCommand):
                          'AllowSharing': 'TRUE',
                          'MPCCode'     : site,
                          'Delimiter'   : 'PIPE',
-                         'ContactInfo' : '[neo@lcogt.net]',
-                         'ContactName' : block.proposal.pi,
+                         'ContactInfo' : '[{}]'.format(block.proposal.pi),
+                         'ContactName' : 'T. Lister',
                          'DifferMags'  : 'FALSE',
                          'Facility'    : 'Las Cumbres Observatory',
+                         'Filter'      : self.clean_filter(filt),
                          'LTCApp'      : 'NONE',
                          'LTCType'     : 'NONE',
+                         'MagBand'     : 'GG',
                          'Observers'   : 'T. Lister; J. Chatelain; E. Gomez',
                          'ReducedMags' : 'NONE',
                          'SessionDate' : mid_time.strftime('%Y-%m-%d'),
@@ -203,7 +210,7 @@ class Command(BaseCommand):
                 total_frame_count += frames.count()
                 if frames_all_zp.count() != 0:
                     elements = model_to_dict(block.body)
-
+                    filter_list=[]
                     for frame in frames_all_zp:
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
                         ra = emp_line[1]
@@ -236,6 +243,7 @@ class Command(BaseCommand):
                                 mpc_lines.append(mpc_line)
                                 block_mags.append(best_source.obs_mag)
                                 block_mag_errs.append(best_source.err_obs_mag)
+                                filter_list.append(frame.filter)
                                 zps.append(frame.zeropoint)
                                 zp_errs.append(frame.zeropoint_err)
                         # We append these even if we don't have a matching source or zeropoint
@@ -249,7 +257,12 @@ class Command(BaseCommand):
                         if obs_site not in mpc_site:
                             mpc_site.append(obs_site)
                     if len(block_times) > 1:
-                        self.output_alcdef(alcdef_file, block, obs_site, block_times, block_mags, block_mag_errs)
+                        filter_set = list(set(filter_list))
+                        for filt in filter_set:
+                            mag_set = [m for m, f in zip(block_mags, filter_list) if f == filt]
+                            time_set = [t for t, f in zip(block_times, filter_list) if f == filt]
+                            error_set = [e for e, f in zip(block_mag_errs, filter_list) if f == filt]
+                            self.output_alcdef(alcdef_file, block, obs_site, time_set, mag_set, error_set, filt)
                         mags += block_mags
                         mag_errs += block_mag_errs
                         times += block_times
