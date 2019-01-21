@@ -5141,3 +5141,39 @@ class TestDetermineActiveProposals(TestCase):
         self.assertEqual(expected_num, len(proposals))
         self.assertEqual(expected_code_1, proposals[0])
         self.assertEqual(expected_code_2, proposals[1])
+
+    def test_default_existing_active(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2019A-005'
+
+        proposals = determine_active_proposals('LCO2019A-005')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_default_existing_inactive(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2018B-010'
+
+        proposals = determine_active_proposals('LCO2018B-010')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_default_not_existing(self):
+        expected_num = 0
+        expected_proposals = []
+
+        proposals = determine_active_proposals('LCO2019A-905')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_proposals, proposals)
+
+    def test_default_existing_active_lc(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2019A-005'
+
+        proposals = determine_active_proposals('lco2019a-005')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])

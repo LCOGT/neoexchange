@@ -104,12 +104,20 @@ def user_proposals(user):
     return proposals
 
 
-def determine_active_proposals(proposal=None):
-    """Determine and return the active Proposals or verify the passed [proposal]
+def determine_active_proposals(proposal_code=None):
+    """Determine and return the active Proposals or verify the passed [proposal_code]
     exists.
     """
 
-    proposals = Proposal.objects.filter(active=True).order_by('code').values_list('code', flat=True)
+    if proposal_code is not None:
+        try:
+            proposal = Proposal.objects.get(code=proposal_code.upper())
+            proposals = [proposal.code,]
+        except Proposal.DoesNotExist:
+            logger.warn("Proposal {} does not exist".format(proposal_code))
+            proposals = []
+    else:
+        proposals = Proposal.objects.filter(active=True).order_by('code').values_list('code', flat=True)
 
     return proposals
 
