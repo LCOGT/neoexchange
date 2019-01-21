@@ -104,6 +104,16 @@ def user_proposals(user):
     return proposals
 
 
+def determine_active_proposals(proposal=None):
+    """Determine and return the active Proposals or verify the passed [proposal]
+    exists.
+    """
+
+    proposals = Proposal.objects.filter(active=True).values_list('code', flat=True)
+
+    return proposals
+
+
 class MyProposalsMixin(object):
 
     def get_context_data(self, **kwargs):
