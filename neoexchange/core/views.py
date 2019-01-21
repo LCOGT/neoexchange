@@ -109,7 +109,7 @@ def determine_active_proposals(proposal=None):
     exists.
     """
 
-    proposals = Proposal.objects.filter(active=True).values_list('code', flat=True)
+    proposals = Proposal.objects.filter(active=True).order_by('code').values_list('code', flat=True)
 
     return proposals
 

@@ -5108,31 +5108,36 @@ class Test_Export_Measurements(TestCase):
 
 class TestDetermineActiveProposals(TestCase):
 
-    def setUp(self):
-        neo_proposal_params = { 'code'   : 'LCO2019A-005',
+    @classmethod
+    def setUpTestData(cls):
+        proposal_params = { 'code'   : 'LCO2019A-005',
                                 'title'  : 'LCOGT NEO Follow-up Network',
                                 'active' : True
                               }
-        self.active_neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
-        neo_proposal_params['code'] = 'LCO2018B-010'
-        neo_proposal_params['active'] = False
-        self.inactive_neo_proposal, created = Proposal.objects.get_or_create(**neo_proposal_params)
+        cls.active_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCOEngineering'
+        cls.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCO2018B-010'
+        proposal_params['active'] = False
+        cls.inactive_proposal, created = Proposal.objects.get_or_create(**proposal_params)
 
     def test_setup(self):
         proposals = Proposal.objects.all()
-        self.assertEqual(2, proposals.count())
+        self.assertEqual(3, proposals.count())
 
         active_proposals = proposals.filter(active=True)
-        self.assertEqual(1, active_proposals.count())
+        self.assertEqual(2, active_proposals.count())
 
         inactive_proposals = proposals.filter(active=False)
         self.assertEqual(1, inactive_proposals.count())
 
     def test_nodefault(self):
-        expected_num = 1
-        expected_code = 'LCO2019A-005'
+        expected_num = 2
+        expected_code_1 = 'LCO2019A-005'
+        expected_code_2 = 'LCOEngineering'
 
         proposals = determine_active_proposals()
 
         self.assertEqual(expected_num, len(proposals))
-        self.assertEqual(expected_code, proposals[0])
+        self.assertEqual(expected_code_1, proposals[0])
+        self.assertEqual(expected_code_2, proposals[1])
