@@ -1,4 +1,4 @@
-"""Analyses output of lightcure_extraction for period and plots folded lightcurve"""
+"""Analyzes output of lightcurve_extraction for period and plots folded lightcurve"""
 
 import os
 from datetime import datetime, timedelta, time
@@ -13,18 +13,18 @@ from astropy.stats import LombScargle
 import astropy.units as u
 from astropy.time import Time
 
-
 class Command(BaseCommand):
 
     help = 'Takes in the output of \'lightcurve_extraction\' and analyses it for period while producing phase folded lightcurve plots. \'lightcure_extraction\' must have been run first.'
 
     def add_arguments(self, parser):
+        parser.add_argument('lc_file', type=str, help='location of lightcurve data (e.g. /apophis/eng/rocks/Reduction/aster123/aster123_###_lightcurve_data.txt)')
         parser.add_argument('-p', '--period', type=float, default=0.0, help='Known Asteroid Rotation Period to fold plot against')
         parser.add_argument('-e', '--epoch', type=float, default=0.0, help='Epoch (MJD) to set initial phase with respect to')
 
     def read_data(self):
-        """ reads lightcurve_data.txt outputed by lightcurve_extraction"""
-        f = open('lightcurve_data.txt')
+        """ reads lightcurve_data.txt output by lightcurve_extraction"""
+        f = open(options['lc_file'])
         lines = f.readlines()
         body = lines[0][8:-1]
         day1 = lines[1][5:10]
@@ -86,11 +86,12 @@ class Command(BaseCommand):
         return
 
     def handle(self, *args, **options):
+        raise CommandError('This code requires more work before use.')
 
         try:
             times, mags, mag_errs, body = self.read_data()
         except FileNotFoundError:
-            raise FileNotFoundError('\"lightcurve_data.txt\" not found. Please make sure you are in the correct directory and that \"lightcurve_extraction\" command has run')
+            raise FileNotFoundError('{} not found. Please make sure you have included the correct directory and that lightcurve_extraction command has run'.format(options['lc_file']))
         if options['period'] == 0:
             period = self.find_period(times, mags, mag_errs)
         else:
