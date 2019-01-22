@@ -30,6 +30,7 @@ from matplotlib.dates import HourLocator, DateFormatter
 from astropy.stats import LombScargle
 import astropy.units as u
 from astropy.time import Time
+from django.conf import settings
 
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
@@ -49,8 +50,10 @@ class Command(BaseCommand):
         parser.add_argument('--title', type=str, default=None, help='plot title')
         parser.add_argument('--persist', action="store_true", default=False, help='Whether to store cross-matches as SourceMeasurements for the body')
         parser.add_argument('--single', action="store_true", default=False, help='Whether to only analyze a single SuperBlock')
+        base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
+        parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
 
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title=''):
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', super_block=''):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
@@ -69,7 +72,13 @@ class Command(BaseCommand):
         ax1.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
         ax1.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         fig.autofmt_xdate()
-        fig.savefig("lightcurve.png")
+        try:
+            obj_name = super_block.current_name()
+            tn = super_block.tracking_number
+        except AttributeError:
+            obj_name = 'UNKNOWN'
+            tn = 'NNN'
+        fig.savefig(os.path.join(datadir, '{}_{}_lightcurve.png'.format(obj_name, tn)))
 
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
@@ -88,7 +97,7 @@ class Command(BaseCommand):
         ax3.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
         ax3.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         fig2.autofmt_xdate()
-        fig2.savefig("lightcurve_cond.png")
+        fig2.savefig(os.path.join(datadir, '{}_{}_lightcurve_cond.png'.format(obj_name, tn)))
 
         plt.show()
 
@@ -186,7 +195,14 @@ class Command(BaseCommand):
         fwhm = []
         air_mass = []
         obj_name = start_super_block.body.current_name()
-        filename = 'ALCDEF_{}.txt'.format(obj_name)
+        datadir = os.path.join(options['datadir'], obj_name)
+        if not os.path.exists(datadir):
+            try:
+                os.makedirs(datadir)
+            except:
+                msg = "Error creating output path %s" % data_dir
+                raise CommandError(msg)
+        filename = os.path.join(datadir, '{}_{}_ALCDEF.txt'.format(obj_name, start_super_block.tracking_number))
         alcdef_file = open(filename, 'w')
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
@@ -271,8 +287,8 @@ class Command(BaseCommand):
 
         # Write light curve data out in similar format to Make_lc.csh
         i = 0
-        lightcurve_file = open('lightcurve_data.txt', 'w')
-        mpc_file = open('mpc_positions.txt', 'w')
+        lightcurve_file = open(os.path.join(datadir, '{}_{}_lightcurve_data.txt'.format(obj_name, start_super_block.tracking_number)), 'w')
+        mpc_file = open(os.path.join(datadir, '{}_{}_mpc_positions.txt'.format(obj_name, start_super_block.tracking_number)), 'w')
 
         # Calculate integer part of JD for first frame and use this as a
         # constant in case of wrapover to the next day
@@ -310,6 +326,6 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
-            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle)
+            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, super_block=start_super_block)
         else:
             self.stdout.write("No sources matched.")
