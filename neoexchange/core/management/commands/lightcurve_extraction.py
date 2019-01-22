@@ -73,7 +73,7 @@ class Command(BaseCommand):
         ax1.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         fig.autofmt_xdate()
         try:
-            obj_name = super_block.current_name()
+            obj_name = super_block.current_name().replace(' ', '_')
             tn = super_block.tracking_number
         except AttributeError:
             obj_name = 'UNKNOWN'
@@ -194,7 +194,7 @@ class Command(BaseCommand):
         mpc_site = []
         fwhm = []
         air_mass = []
-        obj_name = start_super_block.body.current_name()
+        obj_name = start_super_block.body.current_name().replace(' ', '_')
         datadir = os.path.join(options['datadir'], obj_name)
         if not os.path.exists(datadir):
             try:
@@ -207,10 +207,11 @@ class Command(BaseCommand):
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
             self.stdout.write("Analyzing SuperblockBlock# %s for %s" % (super_block.tracking_number, super_block.body.current_name()))
-            block_mags = []
-            block_mag_errs = []
-            block_times = []
+
             for block in block_list:
+                block_mags = []
+                block_mag_errs = []
+                block_times = []
                 self.stdout.write("Analyzing Block# %d" % block.id)
 
                 obs_site = block.site
@@ -226,7 +227,7 @@ class Command(BaseCommand):
                 total_frame_count += frames.count()
                 if frames_all_zp.count() != 0:
                     elements = model_to_dict(block.body)
-                    filter_list=[]
+                    filter_list = []
                     for frame in frames_all_zp:
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
                         ra = emp_line[1]
@@ -240,7 +241,6 @@ class Command(BaseCommand):
                         if len(sources) != 0 and frame.zeropoint is not None:
                             if len(sources) == 1:
                                 best_source = sources[0]
-            #                    print("%.3f+/-%.3f" % (source.obs_mag, source.err_obs_mag))
                             elif len(sources) > 1:
                                 min_sep = options['boxwidth'] * options['boxwidth']
                                 for source in sources:
@@ -309,16 +309,17 @@ class Command(BaseCommand):
             mpc_file.close()
 
             if options['title'] is None:
+                sites = ', '.join(mpc_site)
                 try:
                     if options['timespan'] < 1:
                         plot_title = '%s from %s (%s) on %s' % (start_super_block.body.current_name(),
-                                                                start_block.site.upper(), frame.sitecode, start_super_block.block_end.strftime("%Y-%m-%d"))
+                                                                start_block.site.upper(), sites, start_super_block.block_end.strftime("%Y-%m-%d"))
                         subtitle = ''
                     else:
                         plot_title = '%s from %s to %s' % (start_block.body.current_name(),
                                                            (start_super_block.block_end - timedelta(days=options['timespan'])).strftime("%Y-%m-%d"),
                                                            start_super_block.block_end.strftime("%Y-%m-%d"))
-                        subtitle = 'Sites: ' + ", ".join(mpc_site)
+                        subtitle = 'Sites: ' + sites
                 except TypeError:
                     plot_title = 'LC for %s' % (start_super_block.body.current_name())
                     subtitle = ''
