@@ -249,7 +249,7 @@ class Command(BaseCommand):
                                     src_ra_string, src_dec_string = radec2strings(radians(source.obs_ra), radians(source.obs_dec))
                                     delta_mag = abs(mag_estimate - source.obs_mag)
                                     self.stdout.write("%s %s %s %s %.1f %.1f-%.1f %.1f" % ( ra_string, dec_string, src_ra_string, src_dec_string, sep, mag_estimate, source.obs_mag, delta_mag))
-                                    if sep < min_sep and delta_mag <= options['deltamag']:
+                                    if sep < min_sep and delta_mag <= 3 * options['deltamag']:
                                         min_sep = sep
                                         best_source = source
 
@@ -279,9 +279,9 @@ class Command(BaseCommand):
                             time_set = [t for t, f in zip(block_times, filter_list) if f == filt]
                             error_set = [e for e, f in zip(block_mag_errs, filter_list) if f == filt]
                             self.output_alcdef(alcdef_file, block, obs_site, time_set, mag_set, error_set, filt)
-                        mags += block_mags
-                        mag_errs += block_mag_errs
-                        times += block_times
+                    mags += block_mags
+                    mag_errs += block_mag_errs
+                    times += block_times
         alcdef_file.close()
         self.stdout.write("Found matches in %d of %d frames" % ( len(times), total_frame_count))
 
