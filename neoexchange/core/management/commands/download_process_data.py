@@ -25,6 +25,7 @@ from core.models import Frame
 from core.management.commands import download_archive_data, pipeline_astrometry
 from astrometrics.ephem_subs import determine_rates_pa
 from photometrics.catalog_subs import get_fits_files, sort_rocks, find_first_last_frames
+from core.views import determine_active_proposals
 
 class Command(BaseCommand):
 
@@ -33,7 +34,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
-        parser.add_argument('--proposal', action="store", default="LCO2019A-006", help='Proposal code to query for data (e.g. LCO2019A-006)')
+        parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
         parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
@@ -55,7 +56,9 @@ class Command(BaseCommand):
             obs_date = options['date']
 
         obs_date = obs_date.strftime('%Y%m%d')
-        proposal = options['proposal']
+        proposals = determine_active_proposals(options['proposal'])
+        if len(proposals) == 0:
+            raise CommandError("No valid proposals found")
         dataroot = options['datadir']
         verbose = True
         if options['verbosity'] < 1:
@@ -70,13 +73,18 @@ class Command(BaseCommand):
                 raise CommandError(msg)
 
 # Step 1: Download data
-
+        proposal_text = ""
+        if len(proposals) == 1:
+            # Single proposal specified
+            proposal_text = " from" + proposals[0]
         if options['skip_download']:
-            self.stdout.write("Skipping download data for %s from %s" % ( obs_date, proposal ))
+            self.stdout.write("Skipping download data for %s%s" % ( obs_date, proposal_text))
         else:
-            self.stdout.write("Download data for %s from %s" % ( obs_date, proposal ))
-            call_command('download_archive_data', '--date', obs_date, '--proposal', proposal, '--datadir', dataroot )
-
+            self.stdout.write("Downloading data for %s%s" % ( obs_date, proposal_text ))
+            if len(proposals) == 1:
+                call_command('download_archive_data', '--date', obs_date, '--proposal', proposals[0], '--datadir', dataroot )
+            else:
+                call_command('download_archive_data', '--date', obs_date, '--datadir', dataroot )
 
         # Append date to the data directory
         dataroot = os.path.join(dataroot, obs_date)
