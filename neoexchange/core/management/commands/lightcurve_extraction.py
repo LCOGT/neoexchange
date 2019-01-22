@@ -125,7 +125,7 @@ class Command(BaseCommand):
         return mpc_line
 
     def clean_filter(self, filt):
-        if filt[1] == 'p':
+        if len(filt) > 1 and filt[1] == 'p':
             filt = 's'+filt[0]
         return filt.upper()
 
