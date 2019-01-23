@@ -104,6 +104,30 @@ def user_proposals(user):
     return proposals
 
 
+def determine_active_proposals(proposal_code=None, filter_epo=True):
+    """Determine and return the active Proposals or verify the passed [proposal_code]
+    exists. If [filter_epo] is set to True (the default), proposals of the form
+    'xxxEPO20yy' are excluded from the returned proposal list.
+
+    Returns a list of proposal codes.
+    """
+
+    if proposal_code is not None:
+        try:
+            proposal = Proposal.objects.get(code=proposal_code.upper())
+            proposals = [proposal.code,]
+        except Proposal.DoesNotExist:
+            logger.warn("Proposal {} does not exist".format(proposal_code))
+            proposals = []
+    else:
+        proposals = Proposal.objects.filter(active=True)
+        if filter_epo:
+            proposals = proposals.exclude(code__contains='EPO')
+        proposals = proposals.order_by('code').values_list('code', flat=True)
+
+    return proposals
+
+
 class MyProposalsMixin(object):
 
     def get_context_data(self, **kwargs):
