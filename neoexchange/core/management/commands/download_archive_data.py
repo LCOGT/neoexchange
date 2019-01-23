@@ -16,7 +16,10 @@ GNU General Public License for more details.
 import os
 from sys import argv
 from datetime import datetime, timedelta
+
 from django.core.management.base import BaseCommand, CommandError
+from django.conf import settings
+
 from core.archive_subs import archive_login, get_frame_data, get_catalog_data, \
     determine_archive_start_end, download_files
 from core.views import make_movie, make_spec, determine_active_proposals
@@ -29,7 +32,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
-        out_path = os.path.join(os.environ.get('HOME'), 'Asteroids')
+        out_path = settings.DATA_ROOT
         parser.add_argument('--datadir', default=out_path, help='Place to save data (e.g. %s)' % out_path)
         parser.add_argument('--spectraonly', default=False, action='store_true', help='Whether to only download spectra')
 

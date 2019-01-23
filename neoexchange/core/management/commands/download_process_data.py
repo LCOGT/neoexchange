@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.core.management import call_command
 from django.forms import model_to_dict
+from django.conf import settings
 
 from core.models import Frame
 from core.management.commands import download_archive_data, pipeline_astrometry
@@ -32,10 +33,10 @@ class Command(BaseCommand):
     help = 'Download and pipeline process data from the LCO Archive'
 
     def add_arguments(self, parser):
-        default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
+        default_path = settings.DATA_ROOT
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
-        parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
+        parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. %s)' % out_path)
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
         parser.add_argument('--object', action="store", help="Which object to analyze")
