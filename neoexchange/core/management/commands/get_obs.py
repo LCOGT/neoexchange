@@ -5,51 +5,51 @@
 import os
 import numpy as np
 from django.core.management.base import BaseCommand, CommandError
-from core.models import SuperBlock, Block, Body,Frame
+from core.models import SuperBlock, Block, Body, Frame
 from astropy.table import Table
-#from astropy.Time import now
+
 
 class Command(BaseCommand):
 
     help = 'Prints a table of successful observation blocks in the DB that fit the given arguments. If given no arguments, this will print all successful blocks.'
 
     def add_arguments(self, parser):
-        parser.add_argument('-t','--total_time',type=float, default=0.0, help='Minimum total exposure time (m) of block')
-        #parser.add_argument('-s','--start',type=float,default=0, help='Starting time (JD) of included observations')
-        #parser.add_argument('-e','--end',type=float,default=Time.now().jd, help='Ending time (JD) of included observations')
-        parser.add_argument('-b','--body',type=str, default=None, help='Find observations of specific object only')
-        parser.add_argument('-o','--obs',type=str,default=None, help='Find specific observation based on tracking number')
+        parser.add_argument('-t', '--total_time', type=float, default=0.0, help='Minimum total exposure time (m) of block')
+        # parser.add_argument('-s','--start',type=float,default=0, help='Starting time (JD) of included observations')
+        # parser.add_argument('-e','--end',type=float,default=Time.now().jd, help='Ending time (JD) of included observations')
+        parser.add_argument('-b', '--body', type=str, default=None, help='Find observations of specific object only')
+        parser.add_argument('-o', '--obs', type=str, default=None, help='Find specific observation based on tracking number')
 
     def handle(self, *args, **options):
-        #initial filtering
+        # initial filtering
         if options['body']:
-            blocks = list(SuperBlock.objects.filter(body=Body.objects.filter(name=options['body'])))
+            blocks = SuperBlock.objects.filter(body=Body.objects.filter(name=options['body']))
         else:
             if options['obs']:
-                blocks = list(SuperBlock.objects.filter(tracking_number=options['obs']))
+                blocks = SuperBlock.objects.filter(tracking_number=options['obs'])
             else:
-                blocks = list(SuperBlock.objects.all())
+                blocks = SuperBlock.objects.all()
         long_obs = np.array([])
-        tab = Table(names=('Superblock ID', 'Group ID', 'Object', 'total subblocks', 'red frames', 'good frames', 'exposure time (m)'),
-        dtype= ('S','S','S','i4','i4','i4','f4'))
-        #finding number of frames and their type (total, reduced, good zp)
+        tab = Table(names=('Superblock ID', 'Group ID', 'Object', 'total subblocks', 'red frames', 'good frames',
+                           'exposure time (m)'), dtype=('S', 'S', 'S', 'i4', 'i4', 'i4', 'f4'))
+        # finding number of frames and their type (total, reduced, good zp)
         for block in blocks:
-            num_exps = list(Block.objects.filter(superblock=block.id).values_list('num_exposures'))
-            len_exps = list(Block.objects.filter(superblock=block.id).values_list('exp_length'))
+            num_exps = Block.objects.filter(superblock=block.id).values_list('num_exposures')
+            len_exps = Block.objects.filter(superblock=block.id).values_list('exp_length')
             obs = block.get_num_observed()[0]
             redframes = 0
             goodframes = 0
             if obs:
-                for subblock in list(Block.objects.filter(superblock=block.id)):
+                for subblock in Block.objects.filter(superblock=block.id):
                     redframe = subblock.num_unique_red_frames()
-                    goodframe = Frame.objects.filter(block=subblock.id,frametype__in=[Frame.BANZAI_RED_FRAMETYPE],zeropoint__isnull=False,zeropoint__gt=-99).count()
+                    goodframe = Frame.objects.filter(block=subblock.id, frametype__in=[Frame.BANZAI_RED_FRAMETYPE], zeropoint__isnull=False, zeropoint__gt=-99).count()
                     redframes += redframe
                     goodframes += goodframe
-                #calculating exposure time
+                # calculating exposure time
                 total_exp = redframes*float(len_exps[0][0])/60
                 if total_exp >= options['total_time']:
-                    tab.add_row((block.tracking_number,block.groupid,block.body.current_name(),
-                    len(num_exps),redframes,goodframes,round(total_exp,2)))
+                    tab.add_row((block.tracking_number, block.groupid, block.body.current_name(),
+                    len(num_exps), redframes, goodframes, round(total_exp, 2)))
                     long_obs = np.append(long_obs, block)
 
         tab.pprint(max_lines=-1)
