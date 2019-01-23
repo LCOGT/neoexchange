@@ -35,7 +35,7 @@ from django.conf import settings
 from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSources
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
-from photometrics.catalog_subs import search_box, open_fits_catalog
+from photometrics.catalog_subs import search_box
 
 
 class Command(BaseCommand):
@@ -162,8 +162,8 @@ class Command(BaseCommand):
         lightcurve_file.write('ENDMETADATA\n')
         i = 0
         for date in dates:
-            jd = datetime2mjd_utc(date)+2400000.5
-            lightcurve_file.write('DATA={:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i]))
+            jd = datetime2mjd_utc(date)+0.5
+            lightcurve_file.write('DATA=24{:.6f}|{:+.3f}|{:+.3f}\n'.format(jd, mags[i], mag_errors[i]))
             i += 1
         lightcurve_file.write('ENDDATA\n')
 
