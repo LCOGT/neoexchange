@@ -1,4 +1,19 @@
-"""Analyzes output of lightcurve_extraction for period and plots folded lightcurve"""
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2016-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+Analyzes output of lightcurve_extraction for period and plots folded lightcurve
+"""
 
 import os
 from datetime import datetime, timedelta, time
@@ -12,6 +27,7 @@ from matplotlib.dates import HourLocator, DateFormatter
 from astropy.stats import LombScargle
 import astropy.units as u
 from astropy.time import Time
+
 
 class Command(BaseCommand):
 
