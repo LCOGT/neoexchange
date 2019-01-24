@@ -129,8 +129,9 @@ class Command(BaseCommand):
             filt = 's'+filt[0]
         return filt.upper()
 
-    def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt):
+    def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt, outmag):
         obj_name = block.body.current_name()
+
         mid_time = (dates[-1] - dates[0])/2 + dates[0]
         metadata_dict = {'ObjectNumber': 0,
                          'ObjectName'  : obj_name,
@@ -146,7 +147,7 @@ class Command(BaseCommand):
                          'Filter'      : self.clean_filter(filt),
                          'LTCApp'      : 'NONE',
                          'LTCType'     : 'NONE',
-                         'MagBand'     : 'GG',
+                         'MagBand'     : outmag,
                          'Observers'   : 'T. Lister; J. Chatelain; E. Gomez',
                          'ReducedMags' : 'NONE',
                          'SessionDate' : mid_time.strftime('%Y-%m-%d'),
@@ -212,6 +213,7 @@ class Command(BaseCommand):
                 block_mags = []
                 block_mag_errs = []
                 block_times = []
+                outmag = "NONE"
                 self.stdout.write("Analyzing Block# %d" % block.id)
 
                 obs_site = block.site
@@ -270,6 +272,11 @@ class Command(BaseCommand):
                         zenith_distance = radians(90) - altitude
                         air_mass.append(S.sla_airmas(zenith_distance))
                         obs_site = frame.sitecode
+                        catalog = frame.photometric_catalog
+                        if catalog == 'GAIA-DR2':
+                            outmag = 'GG'
+                        elif catalog == 'UCAC4':
+                            outmag = 'SR'
                         if obs_site not in mpc_site:
                             mpc_site.append(obs_site)
                     if len(block_times) > 1:
@@ -278,7 +285,7 @@ class Command(BaseCommand):
                             mag_set = [m for m, f in zip(block_mags, filter_list) if f == filt]
                             time_set = [t for t, f in zip(block_times, filter_list) if f == filt]
                             error_set = [e for e, f in zip(block_mag_errs, filter_list) if f == filt]
-                            self.output_alcdef(alcdef_file, block, obs_site, time_set, mag_set, error_set, filt)
+                            self.output_alcdef(alcdef_file, block, obs_site, time_set, mag_set, error_set, filt, outmag)
                     mags += block_mags
                     mag_errs += block_mag_errs
                     times += block_times
