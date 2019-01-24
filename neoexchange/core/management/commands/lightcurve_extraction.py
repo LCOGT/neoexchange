@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 
 import os
+import stat
 from sys import exit
 from datetime import datetime, timedelta, time
 from math import degrees, radians, floor
@@ -200,6 +201,9 @@ class Command(BaseCommand):
         if not os.path.exists(datadir):
             try:
                 os.makedirs(datadir)
+                # Set directory permissions correctly for shared directories
+                # Sets to (r)ead,(w)rite,e(x)ecute for owner & group, r-x for others
+                os.chmod(datadir, stat.S_IRWXU|stat.S_IRWXG|stat.S_IROTH|stat.S_IXOTH)
             except:
                 msg = "Error creating output path %s" % data_dir
                 raise CommandError(msg)
