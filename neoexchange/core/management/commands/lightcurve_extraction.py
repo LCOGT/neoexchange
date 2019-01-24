@@ -224,7 +224,7 @@ class Command(BaseCommand):
                     frames_all_zp = frames_ql
                 frames = frames_all_zp.filter(zeropoint__isnull=False)
                 self.stdout.write("Found %d frames (of %d total) for Block# %d with good ZPs" % (frames.count(), frames_all_zp.count(), block.id))
-                self.stdout.write("Searching within %.1f arcseconds and +/-%.1f delta magnitudes" % (options['boxwidth'], options['deltamag']))
+                self.stdout.write("Searching within %.1f arcseconds and +/-%.2f delta magnitudes" % (options['boxwidth'], options['deltamag']))
                 total_frame_count += frames.count()
                 if frames_all_zp.count() != 0:
                     elements = model_to_dict(block.body)
