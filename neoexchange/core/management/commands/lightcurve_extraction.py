@@ -125,11 +125,6 @@ class Command(BaseCommand):
             source.delete()
         return mpc_line
 
-    def clean_filter(self, filt):
-        if len(filt) > 1 and filt[1] == 'p':
-            filt = 's'+filt[0]
-        return filt.upper()
-
     def output_alcdef(self, lightcurve_file, block, site, dates, mags, mag_errors, filt, outmag):
         obj_name = block.body.current_name()
 
@@ -145,7 +140,7 @@ class Command(BaseCommand):
                          'ContactName' : 'T. Lister',
                          'DifferMags'  : 'FALSE',
                          'Facility'    : 'Las Cumbres Observatory',
-                         'Filter'      : self.clean_filter(filt),
+                         'Filter'      : filt,
                          'LTCApp'      : 'NONE',
                          'LTCType'     : 'NONE',
                          'MagBand'     : outmag,
@@ -265,7 +260,7 @@ class Command(BaseCommand):
                                 mpc_lines.append(mpc_line)
                                 block_mags.append(best_source.obs_mag)
                                 block_mag_errs.append(best_source.err_obs_mag)
-                                filter_list.append(frame.filter)
+                                filter_list.append(frame.ALCDEF_filter_format())
                                 zps.append(frame.zeropoint)
                                 zp_errs.append(frame.zeropoint_err)
                         # We append these even if we don't have a matching source or zeropoint
