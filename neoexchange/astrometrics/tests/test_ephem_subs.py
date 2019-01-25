@@ -498,7 +498,9 @@ class TestDarkAndObjectUp(TestCase):
         cls.dark_start = datetime(2019, 1, 25, 19, 40)
         cls.dark_end = datetime(2019, 1, 26, 6, 40)
         cls.site_code = 'Z21'
-        step_size_secs = 600
+        cls.slot_length = 10 # minutes
+        step_size_secs = 60 * cls.slot_length # seconds
+
 
         params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
@@ -530,14 +532,18 @@ class TestDarkAndObjectUp(TestCase):
 
         expected_num_lines = 32
 
-        slot_length = 10 #minutes
-
-        visible_emp = dark_and_object_up(self.full_emp, self.dark_start, self.dark_end, slot_length, alt_limit=30.0, debug=False)
+        visible_emp = dark_and_object_up(self.full_emp, self.dark_start, self.dark_end, self.slot_length, alt_limit=30.0, debug=False)
 
         self.assertEqual(expected_num_lines, len(visible_emp))
         self.assertEqual(expected_first_line, visible_emp[0])
         self.assertEqual(expected_last_line, visible_emp[-1])
 
+    def test_empty_ephem(self):
+        expected_num_lines = 0
+
+        visible_emp = dark_and_object_up([[], [], ], self.dark_start, self.dark_end, self.slot_length, alt_limit=30.0, debug=False)
+
+        self.assertEqual(expected_num_lines, len(visible_emp))
 
 class TestComputeFOM(TestCase):
 
