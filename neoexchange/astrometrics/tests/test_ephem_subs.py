@@ -154,7 +154,8 @@ class TestGetMountLimits(TestCase):
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
 
-class TestComputeEphem(TestCase):
+class TestComputeEphemerides(TestCase):
+    """Tests both `compute_ephem()` and the `call_compute_ephem()` wrapper"""
 
     def setUp(self):
         params = {  'provisional_name' : 'N999r0q',
