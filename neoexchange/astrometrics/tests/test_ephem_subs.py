@@ -205,6 +205,36 @@ class TestComputeEphemerides(TestCase):
                          'urgency': None}
         self.comet, created = Body.objects.get_or_create(**comet_params)
 
+        params = {  'provisional_name': 'A10bMLz',
+                     'provisional_packed': None,
+                     'name': None,
+                     'origin': 'M',
+                     'source_type': 'U',
+                     'elements_type': 'MPC_MINOR_PLANET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2019, 1, 17, 0, 0),
+                     'orbinc': 1.05958,
+                     'longascnode': 122.3243,
+                     'argofperih': 229.33573,
+                     'eccentricity': 0.0627231,
+                     'meandist': 0.9472805,
+                     'meananom': 118.75832,
+                     'perihdist': None,
+                     'epochofperih': None,
+                     'abs_mag': 29.3,
+                     'slope': 0.15,
+                     'score': 100,
+                     'discovery_date': datetime(2019, 1, 25, 9, 36),
+                     'num_obs': 5,
+                     'arc_length': 0.02,
+                     'not_seen': 0.261,
+                     'updated': False,
+                     'ingest': datetime(2019, 1, 25, 15, 50, 7),
+                     'update_time': datetime(2019, 1, 25, 15, 38, 2)}
+        self.body_close, created = Body.objects.get_or_create(**params)
+
         self.elements = {'slope': 0.15,
                          'abs_mag': 21.0,
                          'MDM': 0.74394528,
@@ -236,12 +266,12 @@ class TestComputeEphemerides(TestCase):
 
         body_dict['provisional_name'] = 'N999z0z'
         body_dict['eccentricity'] = 0.42
-        body_dict['id'] += 2
+        body_dict['id'] += 3
         second_body = Body.objects.create(**body_dict)
         second_body.save()
 
         saved_items = Body.objects.all()
-        self.assertEqual(saved_items.count(), 3)
+        self.assertEqual(saved_items.count(), 4)
 
         first_saved_item = saved_items[0]
         second_saved_item = saved_items[1]
@@ -444,6 +474,22 @@ class TestComputeEphemerides(TestCase):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
 
+    def test_call_compute_ephem_for_close1(self):
+        start = datetime(2019, 1, 25, 19, 40)
+        end = datetime(2019, 1, 25, 20, 0)
+        site_code = 'Z21'
+        step_size = 600
+        alt_limit = 30
+        body_elements = model_to_dict(self.body_close)
+        expected_ephem_lines = []
+
+        ephem_lines = call_compute_ephem(body_elements, start, end,
+            site_code, step_size, alt_limit)
+        line = 0
+        self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
+        while line < len(expected_ephem_lines):
+            self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
+            line += 1
 
 class TestComputeFOM(TestCase):
 
