@@ -110,6 +110,11 @@ def get_vizier_catalog_table(ra, dec, set_width, set_height, cat_name="UCAC4", s
             logger.warning("Timeout seen querying {}".format(query_service.VIZIER_SERVER))
             query_service.TIMEOUT = 120
             result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
+        except ConnectTimeout:
+            old_server = query_service.VIZIER_SERVER
+            query_service.VIZIER_SERVER = 'vizier.hia.nrc.ca'
+            logger.warning("Timeout querying {}. Switching to {}".format(old_server, query_service.VIZIER_SERVER))
+            result = query_service.query_region(coord.SkyCoord(ra, dec, unit=(u.deg, u.deg), frame='icrs'), width=set_width, height=set_height, catalog=[cat_name])
         # resulting catalog table
         # if resulting catalog table is empty or the r mag column has only masked values, try the other catalog and redo
         # the query; if the resulting catalog table is still empty, fill the table with zeros
@@ -1262,7 +1267,7 @@ def get_or_create_CatalogSources(table, frame):
                                         position_angle=source['ccd_pa'], ellipticity=1.0-(source['minor_axis']/source['major_axis']), 
                                         aperture_size=3.0, flags=source['flags'], flux_max=source['flux_max'], threshold=source['threshold'])
             new_sources.append(new_source)
-        CatalogSources.objects.bulk_create(new_sources)
+        CatalogSources.objects.bulk_create(new_sources, batch_size=5000)
         num_sources_created = len(new_sources)
     elif num_in_table != num_cat_sources:
         for source in table:
