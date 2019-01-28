@@ -62,7 +62,9 @@ def default_sextractor_config_files(catalog_type='ASCII'):
     if catalog_type == 'FITS_LDAC':
         config_files = ['sextractor_neox_ldac.conf',
                         'sextractor_ldac.params']
-
+    elif catalog_type == 'CSS:ASCII_HEAD':
+        config_files = ['sextractor_CSS_ascii.conf',
+                        'sextractor_CSS_ascii.params']
     config_files = config_files + common_config_files
     return config_files
 

@@ -1,21 +1,31 @@
 from __future__ import print_function
+
 import os
 from glob import glob
 from math import atan2, degrees
 from sys import path, exit
+import requests
+import io
+import logging
 
 import numpy as np
-from astropy.io import fits
+from astropy.io import fits, votable
 from astropy.constants import au
 from astropy import units as u
 from astropy.coordinates import SkyCoord
+from astropy.table import Table
+import matplotlib.pyplot as plt
+import calviacat as cvc
 
-path.insert(0, os.path.join(os.getenv('HOME'), 'GIT/neoexchange/neoexchange'))
+path.insert(0, os.path.join(os.getenv('HOME'), 'git/neoexchange_stable/neoexchange'))
 os.environ['DJANGO_SETTINGS_MODULE'] = 'neox.settings'
 import django
 from django.conf import settings
 django.setup()
 from core.models import Frame
+from photometrics.external_codes import run_sextractor
+
+logger = logging.getLogger(__name__)
 
 def determine_images_and_catalogs(datadir, output=True):
 
@@ -129,3 +139,142 @@ def retrieve_zp_err(fits_frame):
         print("Multiple processed frame records found for %s" % fits_frame)
         exit(-1)
     return frame.zeropoint, frame.zeropoint_err
+
+
+def make_CSS_catalogs(source_dir, dest_dir, fits_file, catalog_type='CSS:ASCII_HEAD'):
+
+    new_output_catalog = os.path.basename(fits_file)
+    new_output_catalog = new_output_catalog.replace('[SCI]', '').replace('.fits', '_cat.ascii')
+    new_output_catalog_path = os.path.join(dest_dir, new_output_catalog)
+
+    if os.path.exists(new_output_catalog_path):
+        if os.path.getsize(new_output_catalog_path) > 0:
+            logger.info("Catalog {} already exists".format(new_output_catalog))
+            return 0, new_output_catalog_path
+    print("source_dir= {}\ndest_dir= {}\nfits_file= {}".format(source_dir, dest_dir, fits_file))
+    logger.info("Creating new SExtractor catalog for {}".format(fits_file))
+    sext_status = run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type=catalog_type, dbg=False)
+    print(sext_status)
+    if sext_status == 0:
+        output_catalog = 'test.cat'
+        output_catalog_path = os.path.join(dest_dir, output_catalog)
+
+        # Rename catalog to permanent name
+
+        logger.debug("Renaming %s to %s" % (output_catalog_path, new_output_catalog_path))
+        os.rename(output_catalog_path, new_output_catalog_path)
+
+    else:
+        logger.error("Execution of SExtractor failed")
+        return sext_status, -4
+
+    return sext_status, new_output_catalog_path
+
+def great_circle_distance(ra1, dec1, ra2, dec2):
+    """Calculates the great circle distance between two points specified by
+    (ra1, dec1) and (ra2, dec2) (assumed to be in degrees).
+    Resulting separation is returned in degrees
+    """
+
+    ra1_rad, dec1_rad = np.deg2rad([ra1, dec1])
+    ra2_rad, dec2_rad = np.deg2rad([ra2, dec2])
+    distance_rad = np.arccos(np.sin(dec1_rad) * np.sin(dec2_rad) + np.cos(dec1_rad) * np.cos(dec2_rad) * np.cos(ra2_rad - ra1_rad))
+    return np.rad2deg(distance_rad)
+
+def calibrate_catalog(catfile, cat_center, table_format='ascii.sextractor', radius=0.5 ):
+
+    # Read in SExtractor catalog and rename columns
+    logger.info("Reading catalog {}".format(catfile))
+    phot = Table.read(catfile, format=table_format)
+    phot['ALPHAWIN_J2000'].name = 'RA'
+    phot['DELTAWIN_J2000'].name = 'DEC'
+    # Filter out sources without good extraction FLAGS
+    clean_phot = phot[phot['FLAGS'] == 0]
+
+    # Create SkyCoord and filter down to find sources within the specified
+    # radius (since out field is bigger than the maximum allowed in the PS1
+    # catalog query)
+    lco = SkyCoord(clean_phot['RA'], clean_phot['DEC'], unit='deg')
+    lco_cut = clean_phot[great_circle_distance(cat_center.ra.deg, cat_center.dec.deg, clean_phot['RA'], clean_phot['DEC']) <= radius]
+    lco_cut_coords = SkyCoord(lco_cut['RA'], lco_cut['DEC'], unit='deg')
+
+    ps1_db_file = catfile.replace('.ascii', '.db')
+    if os.path.exists(ps1_db_file):
+        logger.info("Using existing PS1 DB")
+        ps1 = cvc.PanSTARRS1(ps1_db_file)
+    else:
+        logger.info("Fetching PS1 catalog around {} with radius {} deg".format(cat_center, radius))
+        ps1 = fetch_ps1_field(cat_center, radius)
+    objids, distances = ps1.xmatch(lco_cut_coords)
+    r_inst = -2.5 * np.log10(lco_cut['FLUX_ISOCOR'])
+    r_err = lco_cut['FLUXERR_ISOCOR'] / lco_cut['FLUX_ISOCOR'] * 1.0857
+    zp, C, unc, r, gmr, gmi = ps1.cal_color(objids, r_inst, 'r', 'g-r',  mlim=[11, 18], gmi_lim=[0.2, 1.4])
+    plotfile = catfile.replace('cat.ascii', 'ps1_cc.png')
+    plot_color_correction(C, zp, r, gmr, r_inst, filename=plotfile, filter_name='r')
+
+    return zp, C, unc, r, gmr, gmi
+
+def fetch_ps1_field(cat_center, radius=0.5, max_records=50001, db_name='cat.db'):
+
+    ps1 = cvc.PanSTARRS1(db_name)
+    ps1.max_records = max_records
+
+    params = dict(RA=cat_center.ra.deg, DEC=cat_center.dec.deg,
+                      SR=radius, max_records=ps1.max_records,
+                      ordercolumn1='ndetections',
+                      descending1='on',
+                      selectedColumnsCsv=','.join(ps1.table.columns))
+    q = requests.get('https://archive.stsci.edu/panstarrs/search.php',
+                         params=params)
+    with io.BytesIO(q.text.encode()) as xml:
+        try:
+            tab = votable.parse_single_table(xml).to_table()
+        except Exception as e:
+            logger.error(q.text)
+            return None
+
+    tab['objname'] = np.array(
+        [str(x.decode()) for x in tab['objname']])
+    tab['objid'] = np.array(
+        [str(x.decode()) for x in tab['objid']], int)
+    tab['rastack'] = np.array(
+        [str(x.decode()) for x in tab['rastack']])
+    tab['decstack'] = np.array(
+        [str(x.decode()) for x in tab['decstack']])
+
+    logger.debug('Updating {} with {} sources.'.format(
+        ps1.table.name, len(tab)))
+
+    ps1.db.executemany('''
+    INSERT OR IGNORE INTO {}
+      VALUES({})
+    '''.format(ps1.table.name, ','.join('?' * len(ps1.table.columns))),
+        tab)
+    ps1.db.commit()
+
+    return ps1
+
+def plot_color_correction(C, zp, mag, color_index, mag_inst, filename='lco-ps1-color-corrected.png', filter_name='g'):
+    fig = plt.figure(1)
+    fig.clear()
+    ax = fig.gca()
+    ax.scatter(color_index, mag - mag_inst, marker='.', color='k')
+    x = np.linspace(0, 1.5)
+    ax.plot(x, C * x + zp, 'r-')
+    ylabel_text = r'$'+filter_name+'-'+filter_name+r'_{\rm inst}$ (mag)'
+    plt.setp(ax, xlabel='$g-r$ (mag)', ylabel=ylabel_text)
+    plt.tight_layout()
+    plt.savefig(filename, dpi=150)
+
+    # Plot zoomed version
+    fig.clear()
+    ax = fig.gca()
+    ax.scatter(color_index, mag - mag_inst, marker='.', color='k')
+    x = np.linspace(0, 1.5)
+    ax.plot(x, C * x + zp, 'r-')
+    ax.set_ylim(zp-0.25, zp+0.5)
+    plt.setp(ax, xlabel='$g-r$ (mag)', ylabel=ylabel_text)
+    plt.tight_layout()
+    filename_clip = os.path.splitext(filename)[0] + '_clip' + os.path.splitext(filename)[1]
+    plt.savefig(filename_clip, dpi=150)
+    return

@@ -32,11 +32,15 @@ from comet_subs import *
 
 #comet = '67P'
 comet = '243P'
+comet_color = 0.56
+
 datadir = os.path.join(os.getenv('HOME'), 'Asteroids', comet, 'Pipeline', 'Temp')
 datadir = os.path.join(os.path.abspath(datadir), '')
 if not os.path.exists(datadir):
     os.makedirs(datadir)
 bkg_map = True
+
+configs_dir = os.path.abspath(os.path.join('photometrics', 'configs'))
 
 FLUX2MAG = 2.5/log(10)
 
@@ -49,7 +53,7 @@ log_file = os.path.join(datadir, comet + '_phot.log')
 if os.path.exists(log_file):
     os.remove(log_file)
 log_fh = open(log_file, 'w')
-print('# Filename                               Filter JD            MJD-57000.0         RA (J2000.0) Dec             RA (J2000.0) Dec         X (pixels) Y      Radius (pixels/") Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr    ZP       ZPerr', file=log_fh)
+print('# Filename                               Filter JD            MJD-57000.0         RA (J2000.0) Dec             RA (J2000.0) Dec         X (pixels) Y      Radius (pixels/") Mag (coords) Mag+ZP   Magerr   Mag (Skypos) Mag+ZP  Magerr    ZP       ZPerr Mag(PS1 CC) ZP(PS1) ZPerr(PS1) C(PS1)', file=log_fh)
 #                  elp1m008-fl05-20160127-0273-e90.fits   r'   2457416.02037 415.520368588 185.611169209 +08.200143039 2001.3375 2067.4000   23.4026 -11.84046 +16.11954   +0.08323 -11.84523 +16.11477  +0.08284   27.96000
 
 # Loop over all images
@@ -107,7 +111,7 @@ for fits_fpath in images:
         date_obs =  header['date-obs']
     jd_utc_mid = mjd_utc_mid + 2400000.5
     print("JD=", jd_utc_mid, date_obs, header['exptime'], header['exptime']/2.0/86400.0)
-    ra, dec, del_ra, del_dec, delta, phase = interpolate_ephemeris(ephem_file, jd_utc_mid)
+    ra, dec, del_ra, del_dec, delta, phase = interpolate_ephemeris(ephem_file, jd_utc_mid, with_rdot=False)
     print("RA, Dec, delta for frame=", ra, dec, delta)
 
     try:
@@ -171,9 +175,16 @@ for fits_fpath in images:
             abs_mag = abs_mag - 0.2105
         print(mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
 
-
-    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %8.3f (%6.3f) %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f"
-    log_line = log_format % (fits_frame, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, ra, dec, sky_position.to_string('hmsdms', sep=' ', precision=4), x, y, radius, radius*pixscale, mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err)
+    status, catalog = make_CSS_catalogs(configs_dir, datadir, fits_fpath, catalog_type='CSS:ASCII_HEAD')
+    if status == 0:
+        zp_PS1, C_PS1, zp_err_PS1, r, gmr, gmi = calibrate_catalog(catalog, sky_position)
+        print("ZP, color slope, uncertainty= {:7.3f} {:.6f} {:.3f}".format(zp_PS1, C_PS1, zp_err_PS1))
+        rmag_cc = (C_PS1 * comet_color) + zp_PS1 + mag
+    log_format = "%s   %3s  %.5f %.9f %013.9f %+013.9f %s %9.4f %9.4f %8.3f (%6.3f) %+9.5f %8.5f  %9.5f %+9.5f %9.5f %9.5f  %7.3f %7.3f %7.4f    %7.3f %7.3f    %+7.5f"
+    log_line = log_format % (fits_frame, obs_filter, jd_utc_mid, mjd_utc_mid-57000.0, \
+        ra, dec, sky_position.to_string('hmsdms', sep=' ', precision=4), x, y, radius, radius*pixscale, \
+        mag, abs_mag, abs_mag_err, skypos_mag, abs_skypos_mag, abs_skypos_mag_err, zp, zp_err,\
+        rmag_cc, zp_PS1, zp_err_PS1, C_PS1)
     print(log_line, file=log_fh)
     print
 
