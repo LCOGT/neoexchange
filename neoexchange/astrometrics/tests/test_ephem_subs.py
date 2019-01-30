@@ -545,6 +545,15 @@ class TestDarkAndObjectUp(TestCase):
 
         self.assertEqual(expected_num_lines, len(visible_emp))
 
+    def test_too_short_ephem(self):
+        expected_num_lines = 0
+        emp = [[datetime(2019,1,25,19,40,0), 1.23, -1.23, 17.0, 4.2, 42.0], [], ]
+
+        visible_emp = dark_and_object_up(emp, self.dark_start, self.dark_end, self.slot_length, alt_limit=30.0, debug=False)
+
+        self.assertEqual(expected_num_lines, len(visible_emp))
+
+
 class TestComputeFOM(TestCase):
 
     def setUp(self):

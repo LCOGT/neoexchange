@@ -864,7 +864,7 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
     dark_up_emp = []
 
     for x in emp:
-        if len(x) > 0:
+        if len(x) >= 7:
             visible = False
             emp_time = x[0]
             current_alt = x[5]
