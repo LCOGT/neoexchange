@@ -172,9 +172,9 @@ function display_info_panel(cindex, ind) {
   $('.coords-table').hide();
   $('.candidate-row').hide();
   // Only show info tables for current index
-  $('.candidate-'+cindex).show();
-  $('.candidate-'+cindex +' '+'#img-coords-'+index).show();
-  $('.candidate-'+cindex +' '+'#img-skycoords-'+index).show();
+  $('#candidate-info-'+cindex).show();
+  $('#img-coords-'+index).show();
+  $('#img-skycoords-'+index).show();
 }
 
 function blinkCandidate(ind) {

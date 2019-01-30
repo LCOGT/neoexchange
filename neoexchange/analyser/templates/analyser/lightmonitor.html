@@ -194,6 +194,59 @@ $(document).ajaxStop(function() {
 									</li>
 								</ul>
 							</div>
+              {% for c in candidates %}
+            		<table class="keyvalue-table-minimal" id="candidate-info-{{forloop.counter0}}"  style="display:none;">
+            			<tbody>
+            				<tr>
+            					<td class="kv-key">Position Angle</td>
+            					<td class="kv-value">{{c.motion.pos_angle|floatformat:"1"}}</td>
+            					<td class="kv-key">Speed</td>
+            					<td class="kv-value">{{c.motion.speed|floatformat:"2"}} "/min</td>
+            					<td class="kv-key">Speed (raw)</td>
+            					<td class="kv-value">{{c.motion.speed_raw|floatformat:"2"}} deg/day</td>
+            				</tr>
+            			</tbody>
+            	</table>
+              {% for sc in c.sky_coords %}
+              <table class="keyvalue-table coords-table"  id="img-skycoords-{{forloop.counter0}}" style="display:none;">
+                  <tbody>
+                    <tr>
+                      <td class="kv-key">RA</td>
+                      <td class="kv-value">{{sc.ra|degreestohms:" "}}</td>
+                    </tr>
+                    <tr>
+                      <td class="kv-key">Dec</td>
+                      <td class="kv-value">{{sc.dec|degreestodms:" "}}</td>
+                    </tr>
+                    <tr>
+                      <td class="kv-key">Mag</td>
+                      <td class="kv-value">{{sc.mag|floatformat:"2"}}</td>
+                    </tr>
+                </tbody>
+              </table>
+              {% endfor %}
+              {% for cc in c.coords %}
+            	<table class="keyvalue-table coords-table"  id="img-coords-{{forloop.counter0}}" style="display:none;">
+            		<tbody>
+            			<tr>
+            				<td class="kv-key">X</td>
+            				<td class="kv-value">{{cc.x|floatformat:"2"}}</td>
+            			</tr>
+            			<tr>
+            				<td class="kv-key">Y</td>
+            				<td class="kv-value">{{cc.y|floatformat:"2"}}</td>
+            			</tr>
+            			<tr>
+            				<td class="kv-key">Time</td>
+            				<td class="kv-value">{{cc.time}}</td>
+            			</tr>
+                </tbody>
+              </table>
+              {% endfor %}
+
+            {% endfor %}
+
+
 				</div>
 				{% else %}
 				<h3 class="section-title">Looking for {{object.body.current_name}}</h3>
@@ -204,68 +257,5 @@ $(document).ajaxStop(function() {
 {% endblock %}
 
 {% block content %}
-<div class="container">
-	{% for c in candidates %}
-	<div class="row candidate-row candidate-{{forloop.counter0}}"  style="display:none;">
-		<div class="eight columns">
-		<table class="keyvalue-table-minimal">
-			<tbody>
-				<tr>
-					<td class="kv-key">Position Angle</td>
-					<td class="kv-value">{{c.motion.pos_angle|floatformat:"1"}}</td>
-					<td class="kv-key">Speed</td>
-					<td class="kv-value">{{c.motion.speed|floatformat:"2"}} "/min</td>
-					<td class="kv-key">Speed (raw)</td>
-					<td class="kv-value">{{c.motion.speed_raw|floatformat:"2"}} deg/day</td>
-				</tr>
-			</tbody>
-			</table>
-		</div>
-	</div>
-
-	<div class="row candidate-row candidate-{{forloop.counter0}}">
-		<div class="four columns">
-	{% for sc in c.sky_coords %}
-	<table class="keyvalue-table coords-table" id="img-skycoords-{{forloop.counter0}}" style="display:none;">
-		<tbody>
-			<tr>
-				<td class="kv-key">RA</td>
-				<td class="kv-value">{{sc.ra|degreestohms:" "}}</td>
-			</tr>
-			<tr>
-				<td class="kv-key">Dec</td>
-				<td class="kv-value">{{sc.dec|degreestodms:" "}}</td>
-			</tr>
-			<tr>
-				<td class="kv-key">Mag</td>
-				<td class="kv-value">{{sc.mag|floatformat:"2"}}</td>
-			</tr>
-		</tbody>
-	</table>
-	{% endfor %}
-</div>
-	<div class="four columns">
-	{% for cc in c.coords %}
-	<table class="keyvalue-table coords-table"  id="img-coords-{{forloop.counter0}}" style="display:none;">
-		<tbody>
-			<tr>
-				<td class="kv-key">X</td>
-				<td class="kv-value">{{cc.x|floatformat:"2"}}</td>
-			</tr>
-			<tr>
-				<td class="kv-key">Y</td>
-				<td class="kv-value">{{cc.y|floatformat:"2"}}</td>
-			</tr>
-			<tr>
-				<td class="kv-key">Time</td>
-				<td class="kv-value">{{cc.time}}</td>
-			</tr>
-		</tbody>
-	</table>
-	{% endfor %}
-	</div>
-</div>
-{% endfor %}
-</div>
 
 {% endblock %}
