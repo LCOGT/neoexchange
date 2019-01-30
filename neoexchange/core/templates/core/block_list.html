@@ -24,10 +24,7 @@
                                                         <span class="sortable" id="site_id">Site</span>
                                                 </th>
                                                 <th>
-                                                        <span class="sortable" id="telescope_type">Telescope Type</span>
-                                                </th>
-                                                <th>
-                                                        <span class="sortable" id="proposal">Proposal</span>
+                                                        <span class="sortable" id="telescope_type">Class</span>
                                                 </th>
                                                 <th>
                                                         <span class="sortable" id="tracknum">Tracking Number</span>
@@ -47,6 +44,9 @@
                                                 <th>
                                                         <span class="sortable" id="block_reported">Reported?</span>
                                                 </th>
+                                                <th>
+                                                        <span class="sortable" id="block_analyser">Analyser?</span>
+                                                </th>
                                         </tr>
                                 </thead>
                                 <tbody>
@@ -62,13 +62,13 @@
                                                 {% endif %}
                                                 <td data-label="Site">{{block.get_sites|upper}}</td>
                                                 <td data-label="Telescope Type">{{block.get_telclass}}</td>
-                                                <td data-label="Proposal">{{block.proposal.code}}</td>
                                                 <td data-label="Tracking #"><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
                                                 <td data-label="Obs. details">{{block.get_obsdetails}}</td>
-                                                <td data-label="Cadence?"><span class="">{% if block.cadence %}<span class="warning msgpadded">Yes</span>{% else %}No{% endif %}</span></td>
-                                                <td data-label="Active?"><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
+                                                <td data-label="Cadence?" {% if block.cadence %}class="warning"{%endif%}><span class="tablecell">{% if block.cadence %}Y{% else %}N{% endif %}</span></td>
+                                                <td data-label="Active?" {% if block.active %}class="warning"{%endif%}><span class="tablecell">{% if block.active %}Y{% else %}N{% endif %}</span></td>
                                                 <td data-label="Observed?">{{block.get_num_observed.0}} / {{block.get_num_observed.1}}</td>
-                                                <td data-label="Reported?"><span class="">{% if block.get_num_reported.0 >= 1 %}<span class="warning msgpadded">{{block.get_num_reported.0}} / {{block.get_num_reported.1}}</span>{% else %}{{block.get_num_reported.0}} / {{block.get_num_reported.1}}{% endif %}</span></td>
+                                                <td data-label="Reported?" {% if block.get_num_reported.0 >= 1 %}class="warning"{%endif%}><span class="tablecell">{{block.get_num_reported.0}} / {{block.get_num_reported.1}}</span></td>
+                                                <td data-label="Analyser?" {% if block.analyser_enabled %}class="warning"{%endif%}><span class="tablecell">{% if block.analyser_enabled %}Y{% else %}N{% endif %}</td>
                         </tr>
                                 {% endfor %}
                                 </tbody>

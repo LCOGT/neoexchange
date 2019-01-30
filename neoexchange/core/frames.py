@@ -43,6 +43,12 @@ def measurements_from_block(blockid, bodyid=None):
     return {'body': block.body, 'measures': measures, 'slot': block, 'extra_bodies': extra_bodies}
 
 
+def reorder_candidates(frames, candidates):
+    """
+    Create img_stack: for each image, list candidate coordinates, ordered by candidate id
+    """
+    return
+
 def find_images_for_block(blockid):
     """
     Look up Frames and Candidates in Block.
@@ -298,7 +304,7 @@ def block_status(block_id):
         logger.error("No VALHALLA_TOKEN set")
         return False
 
-    # This loops through all BLOCKS in the SUPERBLOCK so we need to filter out 
+    # This loops through all BLOCKS in the SUPERBLOCK so we need to filter out
     # only the one block used to call this procedure.
     exposure_count = 0
     for r in data['requests']:

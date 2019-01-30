@@ -76,7 +76,7 @@ MEDIA_URL = '/media/'
 
 STATIC_ROOT = '/var/www/html/static/'
 STATIC_URL = PREFIX + '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core'), ]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core'), os.path.join(BASE_DIR, 'analyser') ]
 
 # List of finder classes that know how to find static files in
 # various locations.

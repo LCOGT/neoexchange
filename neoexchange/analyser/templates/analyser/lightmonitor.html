@@ -7,33 +7,37 @@
 {%block header %}Light Monitor for block {{object.id}} ({{object.body.current_name}}){%endblock%}
 
 {% block script-content %}
-<script src="{% static "core/js/createjs-2015.11.26.min.js" %}"  type="text/javascript" ></script>
-<script src="{% static "core/js/astrometer.js" %}"  type="text/javascript" ></script>
+<script type="text/javascript" src="{% static "analyser/js/astrometry.js" %}"></script>
+<script type="text/javascript" src="{% static "analyser/js/raphael.js" %}"></script>
+<script type="text/javascript" src="{% static "analyser/js/g.raphael.js" %}"></script>
+<script type="text/javascript" src="{% static "analyser/js/g.line.js" %}"></script>
+<script type="text/javascript" src="{% static "analyser/js/raphael.sizer.js" %}"></script>
+<script type="text/javascript" src="{% static "analyser/js/lightmonitor.js" %}"></script>
+
 <script>
-var stage;
-var ministage;
-var point_size = 10;
 var blinker;
-var img_holder;
-var mini_img;
-var zoom_origin=[0,0];
+var zoomcal;
 var frames = {{images|safe}};
 var candidates = {{candidates|safe}};
+var img_stack= Array();
 var candids = Array();
-var zoomLevel=1.0;
-var default_image_scale = {{xaxis|default:"1024"}}/600;
-var image_scale = default_image_scale/zoomLevel;
 var accepted = Array();
 var rejected = Array();
 var data_url = 'https://thumbnails.lco.global/';
-var img_params = '?width=1000&height=1000&median=true&percentile=98';
+var x_size = 1000;
+var y_size = 1000;
+var img_params = '?width='+x_size+'&height='+y_size+'&median=true&percentile=98';
 var analysed = {% if analysed %}true{% else %}false{% endif %};
 var archive_token = "{{archive_token}}";
 var blockcandidate;
+var photo;
+var img_scale = {x: {{xaxis}}/x_size, y:{{yaxis}}/y_size};
+var current_candid;
+
 
 $(document).ajaxStop(function() {
   // Load all thumbnails once the ajax call to get their URLs has completed
-  loadThumbnails(frames);
+  setupImages();
 });
 
 	$(document).ready(function(){
@@ -41,11 +45,6 @@ $(document).ajaxStop(function() {
     for(i=0; i<frames.length; i++){
       frames[i] = get_images(frames[i], options=img_params)
     }
-
-		$('.candidate-select').click(function(){
-			var ind = $(this).data('cand_id');
-      blinkCandidate(ind);
-		});
 
 		$('#blink-stop').click(function(){
 			resetCandidateOptions();
@@ -57,14 +56,12 @@ $(document).ajaxStop(function() {
 		})
 
 		$('#cand-accept').click(function(){
-			var cand_id = $(this).data('cand_id');
-			acceptCandidate(cand_id);
+			acceptCandidate(current_candid);
 			resetCandidateOptions();
 		})
 
 		$('#cand-reject').click(function(){
-			var cand_id = $(this).data('cand_id');
-			rejectCandidate(cand_id);
+			rejectCandidate(current_candid);
 			resetCandidateOptions();
 		})
 
@@ -80,7 +77,29 @@ $(document).ajaxStop(function() {
 		});
 {% endif %}
 
-	});
+
+  $('#blink-stop').click(function(){
+    stopBlink();
+  })
+
+  $('#blink-start').click(function(){
+    startBlink();
+    $('#candidate-list').hide();
+  })
+
+  $('.candidate-select').click(function(){
+      current_candid = $(this).data('cand_id');
+      zoomcal = $(this).data('zoomcalid');
+      window.clearTimeout(blinker);
+      var checkBox = document.getElementById("blink-check");
+      checkBox.checked = true;
+      startBlink();
+      $('#candidate-list').hide();
+      $('.candidate-accept').show();
+  })
+
+});
+
 
 </script>
 {% endblock %}
@@ -108,32 +127,30 @@ $(document).ajaxStop(function() {
 								{% endif %}
 
 								<div id="middle">
-									<div id="image-loading">
-										<i class="fa fa-refresh fa-spin fa-fw fa-4x"></i>
-										<p>Loading Image...</p>
-									</div>
+                  <div id="astrometric">
+                    <div id="astrometric_imageholder_small"><img src="" style="width:100%" alt="Image from telescope" id="analyser_image" /></div>
+                  </div>
 									<div id="wrapper">
-										<canvas id="imgCanvas" width="600" height="600" src=""><p>Image has failed to load.</p></canvas>
 										<div class="button-holder">
-											<button id="zoom-img-btn" onclick="addCrossHairs();"><i class="fa fa-crosshairs fa-2x" aria-hidden="true"></i></button>
-											<button id="zoom-img-btn" onclick="mainImageZoomLevel('add');"><i class="fa fa-plus fa-2x" aria-hidden="true"></i></button>
-											<button id="zoom-img-btn" onclick="mainImageZoomLevel('minus');"><i class="fa fa-minus fa-2x" aria-hidden="true"></i></button>
-											<button id="zoom-img-btn" onclick="mainImageZoomLevel('revert');"><i class="fa fa-rotate-left fa-2x" aria-hidden="true"></i></button>
 										</div>
 									</div>
 								</div>
 				</div>
 
 				<div class="four columns">
-					<canvas id="zoomCanvas" width="200" height="200"><p>Image has failed to load.</p></canvas>
-
-							<div class="button-holder">
-								<button id="prev-img-btn" onclick="prevImage();"><i class="fa fa-arrow-circle-left fa-2x" aria-hidden="true"></i></button>
-								<span id="current_image_index"></span> of <span id="number_images"></span>
-								<button id="next-img-btn" onclick="nextImage();"><i class="fa fa-arrow-circle-right fa-2x" aria-hidden="true"></i></button>
-							</div>
-
-							<div class="button-holder">
+							<div class="button-holder" id="number_images_holder" style="display:none;">
+								<p>Image <span id="current_image_index"></span> of <span id="number_images"></span></p>
+                Reset Zoom <button id="zoom-img-btn" onclick="resetZoomLevel();"><i class="fa fa-rotate-left fa-2x" aria-hidden="true"></i></button>
+                <form>
+                  <span class='block-status-item'>Blink </span>
+                  <!-- Rounded switch -->
+                  <span class='block-status-item'>
+                  <label class="switch">
+                    <input type="checkbox" onclick="changeBlink()" id="blink-check">
+                    <span class="slider round"></span>
+                  </label>
+                </span>
+                </form>
 								<ul class="candidate-controls">
 									<li style="display:none;" id="block-candidate">
 										<span class='block-status-item'>{{object.body.current_name}} is </span>
@@ -143,16 +160,7 @@ $(document).ajaxStop(function() {
 											</select>
 										</span>
 									</li>
-									<li class='grey-dark blink-all-candidates'>
-										<span class='candidate' id="blink-start">
-											<span class="block-status-item"><i class="fa fa-refresh"></i></span>
-											<span class='block-status-item'>Blink all Candidates</span>
-										</span>
-										<span class='candidate' id="blink-stop">
-											<span class="block-status-item"><i class="fa fa-stop-circle" aria-hidden="true"></i></span>
-											<span class='block-status-item'>Stop Blinking</span>
-										</span>
-									</li>
+
 									{% if not object.reported %}
 									<li class='blue' id="cand-submit">
 										<span class="candidate">
@@ -163,6 +171,17 @@ $(document).ajaxStop(function() {
 									{% endif %}
 								</ul>
 								<ul id="candidate-list" class="candidate-controls">
+                  {% for c in candidates %}
+                  <li class='grey-dark'>
+                  <span class='candidate'>
+                  <span data-cand_id='{{c.id}}' class='candidate-select' data-zoomcalid="{{forloop.revcounter0}}">
+                  <span class='block-status-item' ><i class='fa fa-refresh'></i></span>
+                  <span class='block-status-item' class='zoom-cal'>Blink Candidate {{forloop.counter}}</span></span>
+                  <span class='block-status-item block-status-icon text-red' id='cand-{{c.id}}-reject' style='display:none;'><i class='fa fa-ban'></i></span>
+                  <span class='block-status-item block-status-icon text-green' id='cand-{{c.id}}-accept' style='display:none;'><i class='fa fa-check'></i></span>
+                  </span>
+                  </li>
+                  {% endfor %}
 								</ul>
 								<ul class="candidate-controls candidate-accept" style="display:none;">
 									<li class='green'>

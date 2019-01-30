@@ -568,6 +568,12 @@ class SuperBlock(models.Model):
 
         return ",".join([str(x) for x in obstypes])
 
+    def analyser_enabled(self):
+        for sb in self.block_set.all():
+            if sb.candidate_set.all():
+                return True
+        return False
+
     class Meta:
         verbose_name = _('SuperBlock')
         verbose_name_plural = _('SuperBlocks')
