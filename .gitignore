@@ -73,6 +73,7 @@ lightcurve_data.txt
 mpc_positions.txt
 *.json
 environ.dat
+phasecurve*.png
 
 ingest/static/ingest/css/admin.css
 ingest/static/ingest/css/dashboard.css
