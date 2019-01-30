@@ -880,6 +880,8 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
                 return emp
             if debug:
                 print(x[0].date(), x[0].time(), (dark_start <= x[0] < dark_end - timedelta(minutes=slot_length)), x[5], alt_limit, visible)
+        else:
+            logger.warning("Too short ephemeris encountered: " + x)
 
     return dark_up_emp
 
