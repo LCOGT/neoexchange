@@ -246,9 +246,12 @@ class Command(BaseCommand):
                                     sep = S.sla_dsep(ra, dec, radians(source.obs_ra), radians(source.obs_dec))
                                     sep = degrees(sep) * 3600.0
                                     src_ra_string, src_dec_string = radec2strings(radians(source.obs_ra), radians(source.obs_dec))
-                                    delta_mag = abs(mag_estimate - source.obs_mag)
+                                    if len(block_mags) > 0:
+                                        delta_mag = abs(block_mags[-1] - source.obs_mag)
+                                    else:
+                                        delta_mag = abs(mag_estimate - source.obs_mag)
                                     self.stdout.write("%s %s %s %s %.1f %.1f-%.1f %.1f" % ( ra_string, dec_string, src_ra_string, src_dec_string, sep, mag_estimate, source.obs_mag, delta_mag))
-                                    if sep < min_sep and delta_mag <= 3 * options['deltamag']:
+                                    if sep < min_sep and delta_mag <= options['deltamag']:
                                         min_sep = sep
                                         best_source = source
 
