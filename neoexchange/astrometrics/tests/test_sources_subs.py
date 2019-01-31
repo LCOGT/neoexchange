@@ -132,6 +132,10 @@ class TestFetchAreciboTargets(TestCase):
         self.test_arecibo_page_v2 = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
 
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_arecibo_page_v3.html'), 'r')
+        self.test_arecibo_page_v3 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+
         self.maxDiff = None
 
     def test_basics(self):
@@ -213,6 +217,24 @@ class TestFetchAreciboTargets(TestCase):
 
         self.assertEqual(expected_targets, targets)
 
+    def test_targets_v3(self):
+        expected_targets = [ u'2016 AZ8',
+                             u'433',
+                             u'2013 CW32',
+                             u'455176',
+                             u'2015 EG',
+                             u'88254',
+                             u'2019 AV2',
+                             u'2019 AP11',
+                             u'2019 BJ1',
+                             u'2019 BW1',
+                             u'2019 BH1',
+                             u'2019 BF1',
+                             u'2018 VX8']
+
+        targets = fetch_arecibo_targets(self.test_arecibo_page_v3)
+
+        self.assertEqual(expected_targets, targets)
 
 class TestFetchGoldstoneTargets(TestCase):
 
