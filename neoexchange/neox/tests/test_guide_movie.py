@@ -235,7 +235,9 @@ class GuideMovieTest(FunctionalTest):
             self.assertEqual(target_url, actual_url)
 
             self.wait_for_element_with_id('page')
-            self.browser.back()
+            with self.wait_for_page_load(timeout=10):
+                self.browser.back()
+
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_elements_by_link_text('Guide Movie')[1].click()
             # note: this movie is same as first one. really just checking if pages are different.
