@@ -200,7 +200,7 @@ class Command(BaseCommand):
                 # Sets to (r)ead,(w)rite,e(x)ecute for owner & group, r-x for others
                 os.chmod(datadir, stat.S_IRWXU|stat.S_IRWXG|stat.S_IROTH|stat.S_IXOTH)
             except:
-                msg = "Error creating output path %s" % data_dir
+                msg = "Error creating output path %s" % datadir
                 raise CommandError(msg)
         filename = os.path.join(datadir, '{}_{}_ALCDEF.txt'.format(obj_name, start_super_block.tracking_number))
         alcdef_file = open(filename, 'w')
