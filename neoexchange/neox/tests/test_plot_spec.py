@@ -263,7 +263,9 @@ class SpectraplotTest(FunctionalTest):
             self.assertEqual(target_url, actual_url)
 
             self.wait_for_element_with_id('page')
-            self.browser.back()
+            with self.wait_for_page_load(timeout=10):
+                self.browser.back()
+
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_element_by_link_text('Spectrum Plot 2').click()
                 actual_url2 = self.browser.current_url
