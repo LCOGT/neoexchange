@@ -68,10 +68,12 @@ class Command(BaseCommand):
         ax1.set_title('Zero Point', size='medium')
         ax0.minorticks_on()
         ax1.minorticks_on()
-        ax0.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
-        ax0.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
-        ax1.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
-        ax1.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
+
+        date_string = self.format_date(times)
+        ax0.xaxis.set_major_formatter(DateFormatter(date_string))
+        ax0.fmt_xdata = DateFormatter(date_string)
+        ax1.xaxis.set_major_formatter(DateFormatter(date_string))
+        ax1.fmt_xdata = DateFormatter(date_string)
         fig.autofmt_xdate()
 
         fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
@@ -88,16 +90,29 @@ class Command(BaseCommand):
         ax2.minorticks_on()
         ax3.minorticks_on()
         ax3.invert_yaxis()
-        ax2.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
-        ax2.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
-        ax3.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
-        ax3.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
+        ax2.xaxis.set_major_formatter(DateFormatter(date_string))
+        ax2.fmt_xdata = DateFormatter(date_string)
+        ax3.xaxis.set_major_formatter(DateFormatter(date_string))
+        ax3.fmt_xdata = DateFormatter(date_string)
         fig2.autofmt_xdate()
         fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
 
         plt.show()
 
         return
+
+    def format_date(self, dates):
+        start = dates[0]
+        end = dates[-1]
+        time_diff = end - start
+        if time_diff > timedelta(days=3):
+            return "%Y/%m/%d"
+        elif time_diff > timedelta(hours=6):
+            return "%m/%d %H:%M"
+        elif time_diff > timedelta(minutes=30):
+            return "%H:%M"
+        else:
+            return "%H:%M:%S"
 
     def make_source_measurement(self, body, frame, cat_source, persist=False):
         source_params = { 'body' : body,
