@@ -5104,3 +5104,100 @@ class Test_Export_Measurements(TestCase):
 
         self.assertEqual(expected_filename, filename)
         self.assertEqual(expected_num_lines, num_lines)
+
+
+class TestDetermineActiveProposals(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        proposal_params = { 'code'   : 'LCO2019A-005',
+                                'title'  : 'LCOGT NEO Follow-up Network',
+                                'active' : True
+                              }
+        cls.active_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCOEngineering'
+        cls.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCOEPO2014B-010'
+        cls.epo_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCO2018B-010'
+        proposal_params['active'] = False
+        cls.inactive_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+
+    def test_setup(self):
+        proposals = Proposal.objects.all()
+        self.assertEqual(4, proposals.count())
+
+        active_proposals = proposals.filter(active=True)
+        self.assertEqual(3, active_proposals.count())
+
+        inactive_proposals = proposals.filter(active=False)
+        self.assertEqual(1, inactive_proposals.count())
+
+    def test_nodefault(self):
+        expected_num = 2
+        expected_code_1 = 'LCO2019A-005'
+        expected_code_2 = 'LCOEngineering'
+
+        proposals = determine_active_proposals()
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+        self.assertEqual(expected_code_2, proposals[1])
+
+    def test_default_existing_active(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2019A-005'
+
+        proposals = determine_active_proposals('LCO2019A-005')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_default_existing_inactive(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2018B-010'
+
+        proposals = determine_active_proposals('LCO2018B-010')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_default_not_existing(self):
+        expected_num = 0
+        expected_proposals = []
+
+        proposals = determine_active_proposals('LCO2019A-905')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_proposals, proposals)
+
+    def test_default_existing_active_lc(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2019A-005'
+
+        proposals = determine_active_proposals('lco2019a-005')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_include_epo_proposal(self):
+        expected_num = 3
+        expected_code_1 = 'LCO2019A-005'
+        expected_code_2 = 'LCOEPO2014B-010'
+        expected_code_3 = 'LCOEngineering'
+
+        proposals = determine_active_proposals(filter_epo=False)
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+        self.assertEqual(expected_code_2, proposals[1])
+        self.assertEqual(expected_code_3, proposals[2])
+
+    def test_specific_epo_proposal(self):
+        expected_num = 1
+        expected_code_1 = 'LCOEPO2014B-010'
+
+        proposals = determine_active_proposals('LCOEPO2014B-010')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])

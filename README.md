@@ -4,6 +4,12 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.10
+Several bug fixes
+* Allow Download for all Programs
+* Allow for no visible ephemeris for very close objects
+* Fix data pull from Arecibo page
+
 ### 2.7.9
 Improve Cadence scheduling
 * Default end-date is current date + 24 hours
