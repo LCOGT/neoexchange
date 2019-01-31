@@ -54,7 +54,7 @@ class Command(BaseCommand):
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
 
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', super_block=''):
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', filename='tmp_'):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
@@ -73,13 +73,8 @@ class Command(BaseCommand):
         ax1.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
         ax1.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         fig.autofmt_xdate()
-        try:
-            obj_name = super_block.current_name().replace(' ', '_')
-            tn = super_block.tracking_number
-        except AttributeError:
-            obj_name = 'UNKNOWN'
-            tn = 'NNN'
-        fig.savefig(os.path.join(datadir, '{}_{}_lightcurve.png'.format(obj_name, tn)))
+
+        fig.savefig(os.path.join(datadir, filename + 'lightcurve.png'))
 
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
@@ -98,7 +93,7 @@ class Command(BaseCommand):
         ax3.xaxis.set_major_formatter(DateFormatter('%m/%d %H:%M:%S'))
         ax3.fmt_xdata = DateFormatter('%m/%d %H:%M:%S')
         fig2.autofmt_xdate()
-        fig2.savefig(os.path.join(datadir, '{}_{}_lightcurve_cond.png'.format(obj_name, tn)))
+        fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
 
         plt.show()
 
@@ -202,7 +197,10 @@ class Command(BaseCommand):
             except:
                 msg = "Error creating output path %s" % datadir
                 raise CommandError(msg)
-        filename = os.path.join(datadir, '{}_{}_ALCDEF.txt'.format(obj_name, start_super_block.tracking_number))
+        sb_day = start_super_block.block_start.strftime("%Y%m%d")
+        sb_site = start_super_block.get_sites().replace(',', '')
+        base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, sb_day, start_super_block.tracking_number)
+        filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
         alcdef_file = open(filename, 'w')
         for super_block in super_blocks:
             block_list = Block.objects.filter(superblock=super_block.id)
@@ -293,8 +291,9 @@ class Command(BaseCommand):
 
         # Write light curve data out in similar format to Make_lc.csh
         i = 0
-        lightcurve_file = open(os.path.join(datadir, '{}_{}_lightcurve_data.txt'.format(obj_name, start_super_block.tracking_number)), 'w')
-        mpc_file = open(os.path.join(datadir, '{}_{}_mpc_positions.txt'.format(obj_name, start_super_block.tracking_number)), 'w')
+
+        lightcurve_file = open(os.path.join(datadir, base_name + 'lightcurve_data.txt'), 'w')
+        mpc_file = open(os.path.join(datadir, base_name + 'mpc_positions.txt'), 'w')
 
         # Calculate integer part of JD for first frame and use this as a
         # constant in case of wrapover to the next day
@@ -333,6 +332,6 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
-            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, super_block=start_super_block)
+            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name)
         else:
             self.stdout.write("No sources matched.")
