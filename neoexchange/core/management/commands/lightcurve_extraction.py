@@ -37,6 +37,7 @@ from core.models import Block, Frame, SuperBlock, SourceMeasurement, CatalogSour
 from astrometrics.ephem_subs import compute_ephem, radec2strings, moon_alt_az, get_sitepos
 from astrometrics.time_subs import datetime2mjd_utc
 from photometrics.catalog_subs import search_box
+from photometrics.photometry_subs import compute_fwhm, map_filter_to_wavelength
 
 
 class Command(BaseCommand):
@@ -54,7 +55,33 @@ class Command(BaseCommand):
         base_dir = os.path.join(settings.DATA_ROOT, 'Reduction')
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
 
-    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', filename='tmp_'):
+    def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
+        '''Compute the expected FWHM and the variation with airmass and observing
+        wavelength. Assumes the first value of FWHM (fwhm_0, in arcsec) is
+        representative and converts it to seeing.
+        Returns a list of expected FWHM values (in arcsec but not as Quantity's
+        for easier plotting)'''
+
+        expected_fwhm = []
+        filter_cwave = map_filter_to_wavelength(obs_filter)
+        # Convert first value of FWHM to seeing by correcting to airmass 1.0 and 500nm
+        seeing = fwhm_0 / (airmasses[0]**0.6)
+        seeing /= ((filter_cwave.to(u.nm) / (500.0*u.nm))**-0.2)
+        seeing *= u.arcsec
+        msg = "Initial FWHM, seeing= {:.3f} {:.3f} {}".format(fwhm_0, seeing.value, seeing.unit)
+        self.stdout.write(msg)
+
+        for time,airmass in zip(times, airmasses):
+            tic_params = {  'seeing' : seeing,
+                            'airmass' : airmass,
+                            'wavelength' : filter_cwave,
+                            'm1_diameter' : tel_diameter}
+            fwhm = compute_fwhm(tic_params)
+            expected_fwhm.append(fwhm.value)
+
+        return expected_fwhm
+
+    def plot_timeseries(self, times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, colors='r', title='', sub_title='', datadir='./', filename='tmp_', diameter=0.4*u.m):
         fig, (ax0, ax1) = plt.subplots(nrows=2, sharex=True, gridspec_kw={'height_ratios': [15, 4]})
         ax0.errorbar(times, mags, yerr=mag_errs, marker='.', color=colors, linestyle=' ')
         ax1.errorbar(times, zps, yerr=zp_errs, marker='.', color=colors, linestyle=' ')
@@ -80,6 +107,9 @@ class Command(BaseCommand):
 
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
+        expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
+        ax2.plot(alltimes, expected_fwhm, color='black', linestyle='dashed', linewidth=0.75)
+
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
         fig2.suptitle('Conditions for obs: '+title)
@@ -214,6 +244,21 @@ class Command(BaseCommand):
                 raise CommandError(msg)
         sb_day = start_super_block.block_start.strftime("%Y%m%d")
         sb_site = start_super_block.get_sites().replace(',', '')
+
+        # Turn telescope class into a diameter for theoretical FWHM curve
+        tel_classes = start_super_block.get_telclass()
+        if len(tel_classes.split(",")) > 1:
+            self.stdout.write("Multiple telescope sizes found; theoretical FWHM curve will be wrong")
+            tel_class = tel_classes.split(",")[0]
+        else:
+            tel_class = tel_classes
+        try:
+            tel_diameter = float(tel_class.replace('m', '.'))
+            tel_diameter *= u.m
+        except ValueError:
+            self.stdout.write("Error determining telescope diameter, assuming 0.4m")
+            tel_diameter = 0.4*u.m
+
         base_name = '{}_{}_{}_{}_'.format(obj_name, sb_site, sb_day, start_super_block.tracking_number)
         filename = os.path.join(datadir, base_name + 'ALCDEF.txt')
         alcdef_file = open(filename, 'w')
@@ -350,6 +395,6 @@ class Command(BaseCommand):
                 plot_title = options['title']
                 subtitle = ''
 
-            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name)
+            self.plot_timeseries(times, alltimes, mags, mag_errs, zps, zp_errs, fwhm, air_mass, title=plot_title, sub_title=subtitle, datadir=datadir, filename=base_name, diameter=tel_diameter)
         else:
             self.stdout.write("No sources matched.")
