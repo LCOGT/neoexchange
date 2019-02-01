@@ -56,11 +56,11 @@ class Command(BaseCommand):
         parser.add_argument('--datadir', default=base_dir, help='Place to save data (e.g. %s)' % base_dir)
 
     def generate_expected_fwhm(self, times, airmasses, fwhm_0=2.0, obs_filter='w', tel_diameter=0.4*u.m):
-        '''Compute the expected FWHM and the variation with airmass and observing
+        """Compute the expected FWHM and the variation with airmass and observing
         wavelength. Assumes the first value of FWHM (fwhm_0, in arcsec) is
         representative and converts it to seeing.
         Returns a list of expected FWHM values (in arcsec but not as Quantity's
-        for easier plotting)'''
+        for easier plotting)"""
 
         expected_fwhm = []
         filter_cwave = map_filter_to_wavelength(obs_filter)
@@ -71,7 +71,7 @@ class Command(BaseCommand):
         msg = "Initial FWHM, seeing= {:.3f} {:.3f} {}".format(fwhm_0, seeing.value, seeing.unit)
         self.stdout.write(msg)
 
-        for time,airmass in zip(times, airmasses):
+        for time, airmass in zip(times, airmasses):
             tic_params = {  'seeing' : seeing,
                             'airmass' : airmass,
                             'wavelength' : filter_cwave,
@@ -108,7 +108,7 @@ class Command(BaseCommand):
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
         expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
-        ax2.plot(alltimes, expected_fwhm, color='black', linestyle='dashed', linewidth=0.75)
+        ax2.plot(alltimes, expected_fwhm, color='black', linestyle='', marker='+', markersize=3, label="Predicted")
 
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
@@ -126,7 +126,7 @@ class Command(BaseCommand):
         ax3.fmt_xdata = DateFormatter(date_string)
         fig2.autofmt_xdate()
         fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
-
+        ax2.legend()
         plt.show()
 
         return
