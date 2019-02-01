@@ -108,7 +108,10 @@ class Command(BaseCommand):
         fig2, (ax2, ax3) = plt.subplots(nrows=2, sharex=True)
         ax2.plot(alltimes, fwhm, marker='.', color=colors, linestyle=' ')
         expected_fwhm = self.generate_expected_fwhm(alltimes, air_mass, fwhm_0=fwhm[0], tel_diameter=diameter)
-        ax2.plot(alltimes, expected_fwhm, color='black', linestyle='', marker='+', markersize=3, label="Predicted")
+        if (times[-1] - times[0]) < timedelta(hours=12):
+            ax2.plot(alltimes, expected_fwhm, color='black', linestyle='--', linewidth=0.75, label="Predicted")
+        else:
+            ax2.plot(alltimes, expected_fwhm, color='black', linestyle=' ', marker='+', markersize=2, label="Predicted")
 
         ax2.set_ylabel('FWHM (")')
         # ax2.set_title('FWHM')
@@ -125,8 +128,9 @@ class Command(BaseCommand):
         ax3.xaxis.set_major_formatter(DateFormatter(date_string))
         ax3.fmt_xdata = DateFormatter(date_string)
         fig2.autofmt_xdate()
-        fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
         ax2.legend()
+        fig2.savefig(os.path.join(datadir, filename + 'lightcurve_cond.png'))
+
         plt.show()
 
         return
