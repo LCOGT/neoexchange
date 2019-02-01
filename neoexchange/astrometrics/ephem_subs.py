@@ -1428,10 +1428,18 @@ def atmos_params(airless):
     return temp_k, pres_mb, rel_humid, wavel, tlr
 
 
-def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat,
-        obsvr_hgt, dbg=False):
-    """Calculate Moon's Azimuth, Altitude (returned in radians).
-    No refraction or polar motion is assumed."""
+def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
+    """Calculate Moon's (or any other object's) Azimuth, Altitude (returned in radians).
+    No refraction or polar motion is assumed.
+
+    Inputs:
+        date: UTC datetime to compute for
+        moon_app_ra: Apparent RA of the Moon (or other object) (radians)
+        moon_app_dec: Apparent Dec of the Moon (or other object) (radians)
+        obsvr_long: Observer's longitude (East +ve; radians)
+        obsvr_lat: Observer's latitude (North +ve; radians)
+        obsvr_hgt: Observer's altitude (meters)
+    """
 
 # No atmospheric refraction...
     airless = True

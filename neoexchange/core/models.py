@@ -957,6 +957,13 @@ class Frame(models.Model):
                 new_filter = 'G'
         return new_filter
 
+    def ALCDEF_filter_format(self):
+        """Formats current filter into acceptable name for printing in ALCDEF output."""
+        new_filt = self.filter
+        if len(new_filt) > 1 and new_filt[1] == 'p':
+            new_filt = 's'+new_filt[0]
+        return new_filt.upper()
+
     class Meta:
         verbose_name = _('Observed Frame')
         verbose_name_plural = _('Observed Frames')
