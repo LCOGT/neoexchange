@@ -61,8 +61,8 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'discovery_date': '2015-05-10 12:00:00',
                     'update_time'   : '2015-05-18 05:00:00',
                     'num_obs'       : 17,
-                    'arc_length'    : 3.0,
-                    'not_seen'      : 0.42,
+                    'arc_length'    : 3.123456789,
+                    'not_seen'      : 0.423456789,
                     'updated'       : True,
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)

@@ -181,7 +181,7 @@
                                                                         {% if body.arc_length %}
                                     <tr>
                                         <td class="kv-key">Arc length (days)</td>
-                                        <td class="kv-value">{{body.arc_length}}</td>
+                                        <td class="kv-value">{{body.arc_length|floatformat:2}}</td>
                                     </tr>
                                                                         {% endif %}
                                                                         {% if body.not_seen %}
