@@ -1515,7 +1515,7 @@ class TestGetSiteCamParams(TestCase):
     onem_sbig_fov = radians(15.5/60.0)
     onem_setup_overhead = 90.0
     onem_exp_overhead = 15.5
-    sinistro_exp_overhead = 38.0
+    sinistro_exp_overhead = 28.0
     onem_sinistro_fov = radians(26.4/60.0)
     point4m_fov = radians(29.1/60.0)
     point4m_exp_overhead = 14.0
@@ -1704,7 +1704,7 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 17.58
 
         expected_exptime = 60.0
-        expected_expcount = 12
+        expected_expcount = 14
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1734,7 +1734,7 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 16.58
 
         expected_exptime = 6.5
-        expected_expcount = 24
+        expected_expcount = 31
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1748,7 +1748,7 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 21.2
 
-        expected_exptime = 235.0
+        expected_exptime = 245.0
         expected_expcount = 4
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
@@ -2260,7 +2260,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         filter_pattern = 'V,I'
 
         expected_exptime = 60.0
-        expected_expcount = 10
+        expected_expcount = 11
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2276,7 +2276,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
 
         expected_exptime = 60.0
-        expected_expcount = 12
+        expected_expcount = 13
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2292,7 +2292,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         filter_pattern = 'V,V,I,I'
 
         expected_exptime = 60.0
-        expected_expcount = 11
+        expected_expcount = 12
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
