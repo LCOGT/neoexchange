@@ -23,6 +23,7 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 from astrometrics.sources_subs import fetch_sfu, fetch_filter_list
 from .models import Body, Proposal, Block, StaticSource
+from astrometrics.time_subs import tomorrow
 
 logger = logging.getLogger(__name__)
 
@@ -105,9 +106,9 @@ class ScheduleCadenceForm(forms.Form):
     proposal_code = forms.ChoiceField(required=True, widget=forms.Select(attrs={'id': 'id_proposal_code_cad', }))
     site_code = forms.ChoiceField(required=True, choices=SITES, widget=forms.Select(attrs={'id': 'id_site_code_cad', }))
     start_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                     initial=datetime.today(), required=True, error_messages={'required': _(u'UTC start date is required')})
+                                     initial=datetime.today, required=True, error_messages={'required': _(u'UTC start date is required')})
     end_time = forms.DateTimeField(input_formats=['%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M', '%Y-%m-%dT%H:%M'],
-                                   initial=datetime.today()+timedelta(days=1), required=True, error_messages={'required': _(u'UTC end date is required')})
+                                   initial=tomorrow, required=True, error_messages={'required': _(u'UTC end date is required')})
     period = forms.FloatField(initial=2.0, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Period is required')})
     jitter = forms.FloatField(initial=0.25, required=True, widget=forms.TextInput(attrs={'size': '10'}), error_messages={'required': _(u'Jitter is required')})
 
