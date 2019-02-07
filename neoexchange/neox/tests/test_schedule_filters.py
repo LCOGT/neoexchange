@@ -124,7 +124,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('12', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
 
@@ -146,7 +146,7 @@ class ScheduleObservations(FunctionalTest):
             pattern_iterations = self.browser.find_element_by_id('id_pattern_iterations_row').find_element_by_class_name('kv-value').text
 
         # Updating filter pattern updates the number of iterations
-        iterations_expected = u'3.33'
+        iterations_expected = u'3.67'
         filter_pattern_box = self.browser.find_element_by_id('id_filter_pattern')
         filter_pattern_box.clear()
         filter_pattern_box.send_keys('V,I,R')
@@ -156,7 +156,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertEqual(iterations_expected, pattern_iterations)
 
         # updating the slot length increases the number of iterations
-        iterations_expected = u'17.0'
+        iterations_expected = u'18.67'
         slot_length_box = self.browser.find_element_by_id('id_slot_length')
         slot_length_box.clear()
         slot_length_box.send_keys('102')
