@@ -21,6 +21,7 @@ from django.db.models import Q
 from astrometrics.sources_subs import fetch_arecibo_targets, random_delay
 from core.views import update_MPC_orbit
 
+
 class Command(BaseCommand):
     help = 'Fetch Arecibo target list for the current year'
 
