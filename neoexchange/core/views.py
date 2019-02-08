@@ -1763,7 +1763,7 @@ def clean_NEOCP_object(page_list):
             if arc_length:
                 params['arc_length'] = arc_length
 
-        elif len(current) >= 21 and len(current) <= 25:
+        elif 21 <= len(current) <= 25:
             # The first 20 characters can get very messy if there is a temporary
             # and permanent desigination as the absolute magntiude and slope gets
             # pushed up and partially overwritten. Sort this mess out and then the
@@ -1785,7 +1785,7 @@ def clean_NEOCP_object(page_list):
                 readable_desig = line[166:194].strip()
             elements_type = 'MPC_MINOR_PLANET'
             source_type = 'U'
-            if readable_desig and readable_desig[0:2] =='P/':
+            if readable_desig and readable_desig[0:2] == 'P/':
                 elements_type = 'MPC_COMET'
                 source_type = 'C'
 
@@ -1872,7 +1872,8 @@ def update_crossids(astobj, dbg=False):
     # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
     # but don't have a blank 'name'
     bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
-    if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
+    if dbg:
+        print("temp_id={},desig={},bodies={}".format(temp_id, desig, bodies))
 
     if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
@@ -1914,7 +1915,8 @@ def update_crossids(astobj, dbg=False):
             logger.warning("Not downgrading type for %s from %s to %s" % (body.current_name(), body.source_type, kwargs['source_type']))
             kwargs['source_type'] = body.source_type
         if kwargs['source_type'] in ['C', 'H']:
-            if dbg: print("Converting to comet")
+            if dbg:
+                print("Converting to comet")
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
@@ -1958,27 +1960,31 @@ def clean_crossid(astobj, dbg=False):
     active = True
     objtype = ''
     if obj_id != '' and desig == 'wasnotconfirmed':
-        if dbg: print("Case 1")
+        if dbg:
+            print("Case 1")
         # Unconfirmed, no longer interesting so set inactive
         objtype = 'U'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'doesnotexist':
         # Did not exist, no longer interesting so set inactive
-        if dbg: print("Case 2")
+        if dbg:
+            print("Case 2")
         objtype = 'X'
         desig = ''
         active = False
     elif obj_id != '' and desig == 'wasnotminorplanet':
         # "was not a minor planet"; set to satellite and no longer interesting
-        if dbg: print("Case 3")
+        if dbg:
+            print("Case 3")
         objtype = 'J'
         desig = ''
         active = False
     elif obj_id != '' and desig == '' and reference == '':
         # "Was not interesting" (normally a satellite), no longer interesting
         # so set inactive
-        if dbg: print("Case 4")
+        if dbg:
+            print("Case 4")
         objtype = 'W'
         desig = ''
         active = False
@@ -1987,14 +1993,16 @@ def clean_crossid(astobj, dbg=False):
         if ('CBET' in reference or 'IAUC' in reference or 'MPEC' in reference) and 'C/' in desig:
             # There is a reference to an CBET or IAUC so we assume it's "very
             # interesting" i.e. a comet
-            if dbg: print("Case 5a")
+            if dbg:
+                print("Case 5a")
             objtype = 'C'
             if time_from_confirm > interesting_cutoff:
                 active = False
         elif 'MPEC' in reference:
             # There is a reference to an MPEC so we assume it's
             # "interesting" i.e. an NEO
-            if dbg: print("Case 5b")
+            if dbg:
+                print("Case 5b")
             objtype = 'N'
             if 'A/' in desig:
                 # Check if it is an inactive hyperbolic asteroid
@@ -2003,7 +2011,8 @@ def clean_crossid(astobj, dbg=False):
                 active = False
         elif desig[-1] == 'P' and desig[0:-1].isdigit():
             # Crossid from NEO candidate to comet
-            if dbg: print("Case 5c")
+            if dbg:
+                print("Case 5c")
             objtype = 'C'
             try:
                 desig = str(int(desig[0:-1]))
@@ -2013,7 +2022,8 @@ def clean_crossid(astobj, dbg=False):
             if time_from_confirm > interesting_cutoff:
                 active = False
         else:
-            if dbg: print("Case 5z")
+            if dbg:
+                print("Case 5z")
             objtype = 'A'
             active = False
 
@@ -2649,16 +2659,18 @@ def plotframe(request):
     return render(request, 'core/frame_plot.html')
 
 
-def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R', 'Y'], updated_time=2, ingest_limit=90, start_time=datetime.utcnow()):
+def update_neos(origins=None, updated_time=2, ingest_limit=90, start_time=datetime.utcnow()):
         """This is the main portion of the update_targets command.'origins' are the list of origins
-	    to be updated. The default list contains every origin except MPC and LCO. 'update_time' is 
-	    in days and its default is set to 2 days. 'ingest_limit' is the number of days from the 
-	    'start_time' limiting the NEOs in the Query Set to be updated. 'start_time' is set at the 
-	    default of datetime.utcnow(), but it can be changed to any datetime value.
+        to be updated. The default list contains every origin except MPC and LCO. 'update_time' is
+        in days and its default is set to 2 days. 'ingest_limit' is the number of days from the
+        'start_time' limiting the NEOs in the Query Set to be updated. 'start_time' is set at the
+        default of datetime.utcnow(), but it can be changed to any datetime value.
         Note: if you need the list of objects you can edit this code to call the list 'were_updated'"""
         now = datetime.utcnow()
         were_updated = []
-        
+        if origins is None:
+            origins = ['N', 'S', 'D', 'G', 'A', 'R', 'Y']
+
         if type(start_time) is str:
             try:
                 time = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S") 
@@ -2668,20 +2680,20 @@ def update_neos(origins=['N', 'S', 'D', 'G', 'A', 'R', 'Y'], updated_time=2, ing
         else:
             time = start_time
             
-        updated = time - timedelta(days=updated_time)#time to put into query
-        ingested = time - timedelta(days=ingest_limit)#time to put into query
+        updated = time - timedelta(days=updated_time)  # time to put into query
+        ingested = time - timedelta(days=ingest_limit)  # time to put into query
         logger.info("==== Preparing to Update Targets %s ====" % (now.strftime('%Y-%m-%d %H:%M')))
         targets = Body.objects.filter(origin__in=origins, ingest__lte=ingested, update_time__gte=updated, active=True)
         logger.info("Length of target query set to update is {length}".format(length=targets.count()))
     
         for target in targets:
             logger.info('Updating {name} from {origin} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, date=target.update_time))
-            #here is where the update happens and it adds the body to list of updated objects
-            #update_MPC_orbit(target.name, target.origin)
-            #delay = random_delay(10, 20)
+            # here is where the update happens and it adds the body to list of updated objects
+            # update_MPC_orbit(target.name, target.origin)
+            # delay = random_delay(10, 20)
             were_updated.append(target.name)
         # generates message after bodies updated to state how many were updated        
-        if were_updated == []:
+        if not were_updated:
             logger.info("==== No NEOs to be updated ====")
         else:      
             logger.info("==== Updated {number} NEOs ====".format(number=len(were_updated)))
@@ -2934,10 +2946,10 @@ def update_taxonomy(taxobj, dbg=False):
     body_all = Body.objects.all()
     try:
         body = Body.objects.get(name=obj_id)
-    except:
+    except Body.DoesNotExist:
         try:
             body = Body.objects.get(provisional_name=obj_id)
-        except:
+        except Body.DoesNotExist:
             if dbg is True:
                 logger.debug("No such Body as %s" % obj_id)
                 print("number of bodies: %i" % body_all.count())
@@ -2978,10 +2990,10 @@ def update_previous_spectra(specobj, source='U', dbg=False):
     body_char = Body.objects.filter(active=True).exclude(origin='M')
     try:
         body = body_char.get(name=obj_id)
-    except:
+    except Body.DoesNotExist:
         try:
             body = body_char.get(provisional_name=obj_id)
-        except:
+        except Body.DoesNotExist:
             if dbg is True:
                 print("%s is not a Characterization Target" % obj_id)
                 print("Number of Characterization Targets: %i" % body_char.count())
@@ -3102,4 +3114,3 @@ def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=No
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = min_sep
     return close_standard, close_params
-
