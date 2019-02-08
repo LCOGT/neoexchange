@@ -85,9 +85,8 @@ def random_delay(lower_limit=10, upper_limit=20):
         upper_limit = 20
 
     delay = randint(lower_limit, upper_limit)
-    print "Going to sleep for %d seconds" % delay
+    print("Going to sleep for %d seconds" % delay)
     sleep(delay)
-    
 
     return delay
 
