@@ -50,9 +50,9 @@ class BlocksListValidationTest(FunctionalTest):
 
         # He notices there are several blocks that are listed
         self.check_for_header_in_table('id_blocks',
-            'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
-        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
-                     u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1']
+            'Block # Target Name Site Class Tracking Number Obs. Details Cadence? Active? Observed? Reported? Analyser?')
+        testlines = [u'1 N999r0q CPT 1m0 00042 5x42.0 secs Y Y 0 / 1 0 / 1 N',
+                     u'2 N999r0q COJ 2m0 00043 7x30.0 secs N N 1 / 1 1 / 1 N']
         self.check_for_row_in_table('id_blocks', testlines[0])
         self.check_for_row_in_table('id_blocks', testlines[1])
 
@@ -142,9 +142,9 @@ class SuperBlockListValidationTest(FunctionalTest):
 
         # He sees that there are both cadence and non-cadence Blocks scheduled.
         self.check_for_header_in_table('id_blocks',
-            'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
-        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 1 of 5x42.0 secs, 1 of 5x40.0 secs Yes Active 0 / 2 0 / 2',
-                     u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1']
+            'Block # Target Name Site Class Tracking Number Obs. Details Cadence? Active? Observed? Reported? Analyser?')
+        testlines = [u'1 N999r0q CPT 1m0 00042 1 of 5x42.0 secs, 1 of 5x40.0 secs Y Y 0 / 2 0 / 2 N',
+                     u'2 N999r0q COJ 2m0 00043 7x30.0 secs N N 1 / 1 1 / 1 N']
         self.check_for_row_in_table('id_blocks', testlines[0])
         self.check_for_row_in_table('id_blocks', testlines[1])
 
@@ -190,9 +190,9 @@ class SuperBlockListValidationTest(FunctionalTest):
 
         # He sees that there are both cadence and non-cadence Blocks scheduled.
         self.check_for_header_in_table('id_blocks',
-            'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
-        testlines = [u'1 N999r0q CPT 1m0 LCO2015A-009 00042 1 of 5x42.0 secs, 1 of 5x40.0 secs Yes Active 0 / 2 0 / 2',
-                     u'2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1']
+            'Block # Target Name Site Class Tracking Number Obs. Details Cadence? Active? Observed? Reported? Analyser?')
+        testlines = [u'1 N999r0q CPT 1m0 00042 1 of 5x42.0 secs, 1 of 5x40.0 secs Y Y 0 / 2 0 / 2 N',
+                     u'2 N999r0q COJ 2m0 00043 7x30.0 secs N N 1 / 1 1 / 1 N']
         self.check_for_row_in_table('id_blocks', testlines[0])
         self.check_for_row_in_table('id_blocks', testlines[1])
 
@@ -279,10 +279,10 @@ class SpectroBlocksListValidationTest(FunctionalTest):
 
         # He sees that there are both spectroscopic and non-spectroscopic Blocks scheduled.
         self.check_for_header_in_table('id_blocks',
-            'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
-        testlines = ['1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
-                     '2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
-                     '3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 0 / 1 0 / 1']
+            'Block # Target Name Site Class Tracking Number Obs. Details Cadence? Active? Observed? Reported? Analyser?')
+        testlines = ['1 N999r0q CPT 1m0 00042 5x42.0 secs Y Y 0 / 1 0 / 1 N',
+                     '2 N999r0q COJ 2m0 00043 7x30.0 secs N N 1 / 1 1 / 1 N',
+                     '3 N999r0q OGG 2m0(S) 4242 1x1800.0 secs N Y 0 / 1 0 / 1 N']
         self.check_for_row_in_table('id_blocks', testlines[2])
 
 
@@ -374,10 +374,10 @@ class SpectroBlocksDetailValidationTest(FunctionalTest):
 
         # He sees that there are both spectroscopic and non-spectroscopic Blocks scheduled.
         self.check_for_header_in_table('id_blocks',
-            'Block # Target Name Site Telescope Type Proposal Tracking Number Obs. Details Cadence? Active? Observed? Reported?')
-        testlines = ['1 N999r0q CPT 1m0 LCO2015A-009 00042 5x42.0 secs Yes Active 0 / 1 0 / 1',
-                     '2 N999r0q COJ 2m0 LCOEngineering 00043 7x30.0 secs No Not Active 1 / 1 1 / 1',
-                     '3 N999r0q OGG 2m0(S) LCOEngineering 4242 1x1800.0 secs No Active 1 / 1 0 / 1']
+            'Block # Target Name Site Class Tracking Number Obs. Details Cadence? Active? Observed? Reported? Analyser?')
+        testlines = ['1 N999r0q CPT 1m0 00042 5x42.0 secs Y Y 0 / 1 0 / 1 N',
+                     '2 N999r0q COJ 2m0 00043 7x30.0 secs N N 1 / 1 1 / 1 N',
+                     '3 N999r0q OGG 2m0(S) 4242 1x1800.0 secs N Y 1 / 1 0 / 1 N']
         self.check_for_row_in_table('id_blocks', testlines[2])
 
         # He wishes to get more details on the spectroscopic block that is scheduled

@@ -46,7 +46,7 @@ def mock_convert_coords(x, y, quad, xscale, yscale, xsize, ysize):
     return 195.0, 205.0, 340., 345.0
 
 
-class TestPanoptes(TestCase):
+class _TestPanoptes(TestCase):
 
     def setUp(self):
         neo_proposal_params = { 'code'  : 'LCO2015A-009',
