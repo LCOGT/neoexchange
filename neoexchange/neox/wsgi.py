@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -13,9 +13,11 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
 import os
+#import sys
+#print("Python version=",sys.version)
 
 # Astropy needs to write config and cache files into its home directory. When
-# running under uwsgi and the uwsgi user, it doesn't have a home (aaah). Need
+# running under nginx+gunicorn and the nginx user, it doesn't have a home (aaah). Need
 # to set environment variables to give these files somewhere to go.
 
 try:

@@ -2,7 +2,7 @@
 
 Construct a Python Virtual Environment (virtualenv) by executing:  
 ```bash
-virtualenv <path to virtualenv>
+python3 -m venv <path to virtualenv>
 source <path to virtualenv>/bin/activate # for bash-shells
 ```
 
@@ -12,12 +12,13 @@ or:
 
 then:
 
-`pip install -r neoexchange/requirements.txt`
+`pip3 install -r neoexchange/requirements.txt`
 
 You will need to create a `neox/local_settings.py` file which has details of your database setup and local filesystem e.g.
 
 ```
 import os, sys
+import rollbar
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.dirname(CURRENT_PATH)
@@ -31,11 +32,12 @@ STATIC_ROOT =  '<filesystem path>'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR,'core'),]
 
-OPBEAT = {
-    'ORGANIZATION_ID': '',
-    'APP_ID': '',
-    'SECRET_TOKEN': '',
+ROLLBAR = {
+    'access_token': os.environ.get('ROLLBAR_TOKEN',''),
+    'environment': 'development' if DEBUG else 'production',
+    'root': BASE_DIR,
 }
+rollbar.init(**ROLLBAR)
 
 DATABASES = {
     "default": {
@@ -72,6 +74,13 @@ docker push docker.lco.global/neoexchange:latest
 ```
 Starting a Docker container from this image can be done with a `docker run` command or using `docker-compose`.
 
+In order for the updating of orbital elements for close-passing objects to work,
+there needs to be a mapping of a filesystem containing the JPL DE430 binary
+ephemeris into the container. This needs to be available under `/ephemerides`.
+This can be done with e.g.
+`-v /mnt/docker/neoexchange/ephemerides:/ephemerides:ro`
+on the Docker command line or adding this to the 'Volumes' tab in Rancher when
+upgrading.
 
 Local Testing
 -------------

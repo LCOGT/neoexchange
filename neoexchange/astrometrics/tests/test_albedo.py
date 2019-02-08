@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2017-2017 LCO
+Copyright (C) 2017-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ class TestAsteroidDiameter(TestCase):
         self.assertAlmostEqual(expected_diameter, diameter, 4)
         
     def test_negative_albedo(self):
-        expected_diameter = 'You cannot have a negative albedo!'
+        expected_diameter = False
         
         albedo = -0.3
         H_mag = 17.1
@@ -102,7 +102,7 @@ class TestAsteroidAlbedoDistribution(TestCase):
         self.assertAlmostEqual(expected_distribution, distribution, 4)
     
     def test_negative_albedo(self):
-        expected_distribution = 'Check your albedo!'
+        expected_distribution = False
         
         albedo = -0.20
         distribution = albedo_distribution(a = albedo)
@@ -116,7 +116,7 @@ class TestAsteroidAlbedoDistribution(TestCase):
         self.assertAlmostEqual(expected_distribution, distribution, 4)
         
     def test_not_in_albedo_range(self):
-        expected_distribution = 'Check your albedo!'
+        expected_distribution = False
 
         albedo = 5.20
         distribution = albedo_distribution(a = albedo)

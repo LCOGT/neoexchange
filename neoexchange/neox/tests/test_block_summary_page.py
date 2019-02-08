@@ -1,10 +1,23 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2016-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from .base import FunctionalTest
 from django.test import TestCase
 from django.core.urlresolvers import reverse
-from selenium import webdriver
-from mock import patch
-from neox.tests.mocks import MockDateTime, mock_rbauth_login
 from django.contrib.auth.models import User
+from selenium import webdriver
 
 class BlockSummaryTest(FunctionalTest):
 
@@ -22,12 +35,11 @@ class BlockSummaryTest(FunctionalTest):
 
 
     def test_can_view_block_summary(self):
-
         # A seasoned user comes along to the site.
         self.browser.get(self.live_server_url)
 
 	# He sees a link to EFFICIENCY on the front page.
-        link = self.browser.find_element_by_link_text('EFFICIENCY')
+        link = self.browser.find_element_by_xpath(u'//a[text()="Efficiency"]')
         url = self.live_server_url + '/block/' + 'summary/'
         self.assertEqual(link.get_attribute('href'), url)
 
@@ -40,7 +52,8 @@ class BlockSummaryTest(FunctionalTest):
         username_input.send_keys(self.username)
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
-        self.browser.find_element_by_xpath('//button[@id="login-btn"]').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
         self.assertEqual(str(new_url), url)

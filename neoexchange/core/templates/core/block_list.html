@@ -36,6 +36,9 @@
                                                         <span class="sortable" id="obs_details">Obs. Details</span>
                                                 </th>
                                                 <th>
+                                                        <span class="sortable" id="block_active">Cadence?</span>
+                                                </th>
+                                                <th>
                                                         <span class="sortable" id="block_active">Active?</span>
                                                 </th>
                                                 <th>
@@ -50,15 +53,22 @@
                                 {% for block in block_list %}
                                         <tr class="{% cycle 'odd' 'even' %}">
                                                 <td class="list_title"  data-label="Block #"><a href="{% url 'block-view' block.pk %}">{{block.pk}}</a></td>
-                                                <td class="list_title"  data-label="Target Name"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
-                                                <td data-label="Site">{{block.site|upper}}</td>
-                                                <td data-label="Telescope Type">{{block.telclass}}</td>
+                                                {% if block.body %}
+                                                    <td class="list_title"  data-label="Target Name"><a href="{% url 'target' block.body.pk %}">{{block.body.current_name}}</a></td>
+                                                {% elif block.calibsource %}
+                                                    <td class="list_title"  data-label="Target Name"><a href="{% url 'calibsource' block.calibsource.pk %}">{{block.calibsource.current_name}}</a></td>
+                                                {% else %}
+                                                    <td class="list_title"  data-label="Target Name">None!?</td>
+                                                {% endif %}
+                                                <td data-label="Site">{{block.get_sites|upper}}</td>
+                                                <td data-label="Telescope Type">{{block.get_telclass}}</td>
                                                 <td data-label="Proposal">{{block.proposal.code}}</td>
                                                 <td data-label="Tracking #"><a href="{{block.make_obsblock_link}}">{{block.tracking_number}}</a></td>
-                                                <td data-label="Obs. details">{{block.num_exposures}}x{{block.exp_length}} secs</td>
+                                                <td data-label="Obs. details">{{block.get_obsdetails}}</td>
+                                                <td data-label="Cadence?"><span class="">{% if block.cadence %}<span class="warning msgpadded">Yes</span>{% else %}No{% endif %}</span></td>
                                                 <td data-label="Active?"><span class="">{% if block.active %}<span class="warning msgpadded">Active</span>{% else %}Not Active{% endif %}</span></td>
-                                                <td  data-label="Observed?">{{block.num_observed}}</td>
-                                                <td data-label="Reported?"><span class="">{% if block.reported %}<span class="warning msgpadded">Reported</span>{% else %}Not Reported{% endif %}</span></td>
+                                                <td data-label="Observed?">{{block.get_num_observed.0}} / {{block.get_num_observed.1}}</td>
+                                                <td data-label="Reported?"><span class="">{% if block.get_num_reported.0 >= 1 %}<span class="warning msgpadded">{{block.get_num_reported.0}} / {{block.get_num_reported.1}}</span>{% else %}{{block.get_num_reported.0}} / {{block.get_num_reported.1}}{% endif %}</span></td>
                         </tr>
                                 {% endfor %}
                                 </tbody>

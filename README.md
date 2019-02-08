@@ -1,9 +1,166 @@
-# NEO Exchange
+## NEO Exchange
 
 Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.10
+Several bug fixes
+* Allow Download for all Programs
+* Allow for no visible ephemeris for very close objects
+* Fix data pull from Arecibo page
+
+### 2.7.9
+Improve Cadence scheduling
+* Default end-date is current date + 24 hours
+* Adjust jitter/Period from the confirmation page
+* Handle bad dates rather than crashing
+* Various warnings and tips to help with scheduling
+
+### 2.7.8
+Comet elements are now selected based on nearest in time.
+
+### 2.7.7
+Several patches for tests and minor issue fixes
+
+### 2.7.6
+Add Generic Telescope Classes
+
+### 2.7.5
+Update the scheduling interface to allow for more options
+* Display UT time on website
+* Display Site/Telescope class on Confirmation page
+* Display Visibility of requested target
+* Allow for Exposure time Adjustment
+* Display Moon info
+* Adjust Max Airmass
+* Adjust IPP
+* Adjust Minimum Moon Distance
+* Adjust Acceptability Threshold
+
+### 2.7.4
+
+Improve the cross-identification code for multiply desiginated objects and periodic comets.
+
+### 2.7.3
+
+Fix issues with interactions between FindOrb and candidates/comets
+* Remove Perturbation Code
+
+
+### 2.7.2
+
+Spectroscopic Graphical tools
+* Create and display a gif of the guidefreames during an observation
+* Create and display a spectroscopic trace based on the reduced data
+
+### 2.7.1
+
+Add latitude, longitude, height for 0m4b at Tenerife (Z17). Update find_orb build procedure.
+
+### 2.7.0
+
+Flux Standards
+* Add Static Source Model to hold flux, spectral, solar and RV standards.
+* Add Calibrations List page.
+* Add Calibration detail descriptions.
+* Allow for sorting out and scheduling spectra for Solar analogs.
+
+### 2.6.0
+
+Calculate and forward more precise orbital elements for spectroscopic observations.
+
+### 2.5.3
+
+Update light curve extraction.
+* Pull from Tracking Number rather than block number
+* Capable of incorporating any number of blocks for a given target within a given time frame.
+Add motion details to characterization page.
+
+### 2.5.2
+
+Robotic scheduler and low-level ToO support.
+
+### 2.5.1
+Add block record keeping for spectroscopy.
+
+### 2.5.0
+Create a characterization page for spectroscopy support
+* Pull out targets of interest.
+* Check of previous spectroscopy from SMASS and MANOS.
+* Calculate observing window for the next 3 months for each target.
+
+### 2.4.1
+
+* Change default binning for 0.4m's to bin 1x1.
+* Change default proposals for 2018B semester.
+* Switch from OpBeat to Rollbar.
+
+### 2.4.0
+
+Add basic spectroscopy support to NEOexchange:
+* Added a SNR estimator which can transform the predicted V mag to a variety of different magnitudes for several different taxonomic types (SDSS-i and a Mean taxonomic class is assumed right now) and include the effects of the Moon and zodiacal light. The SNR estimator includes a generalized telescope and instrument model which can be adapted to other telescopes/instruments in the future.
+* Added ability to submit spectroscopic observations and associated calibrations to the LCO Network.
+
+### 2.3.6
+
+Bite the Bullet and Update to Python 3.6
+
+### 2.2.0
+
+Added capability of requesting multiple filters when making a user request.
+
+### 2.1.6
+
+Reduce connection maximum age to 60 seconds. Switch off perturbations in ephemeris computation calls.
+
+### 2.1.5
+
+Update Selenium to 3.11 and Django to 1.11. Refactor functional tests for Valhalla/JavaScript-based authentication. Add functionality to ingest targets from text file list of target names.
+
+### 2.1.4
+
+Better separate Block Registration from SuperBlock Registation so that Blocks only see frames taken during that individual Block and Block times are separate from SuperBlock Start and End times.
+
+### 2.1.3
+
+Add support and new object type for hyperbolic asteroids such as A/2017 U7 and A/2018 C2. Increase ephemeris spacing to 15 mins prevent timeouts.
+
+### 2.1.2
+
+Add support for the 0.4m telescopes at Cerro Tololo, Sutherland and McDonald.
+
+### 2.1.1
+
+Fix for missing absolute magnitudes breaking the diameter calculation.
+
+### 2.1.0
+
+Fixes for non-cadence submitting. Improved error message passthrough from scheduling endpoints. Fixes for block reporting. First part of spectroscopy support for storing spectral taxonomies.
+
+### 1.9.0
+
+Add cadence support.
+
+### 1.8.3
+
+Add check for and marking of 'was not a minor planet' in the Previous NEOCP page
+as spacecraft.
+Fixes for POND submitted blocks and lightcurve extraction.
+Changes for the new semester boundaries.
+
+### 1.8.2
+
+Bug fix for zooming Analyser view. Feature update on making markers for candidates clickable.
+
+### 1.8.1
+
+New MPC site codes for the second 0.4m telescopes at Tenerife and Maui.
+
+### 1.8.0
+
+- Adding ability to push candidates to Agent NEO on the Zooniverse platform
+- Change ReqDB observation submission to Valhalla API submission
 
 ### 1.7.2
 

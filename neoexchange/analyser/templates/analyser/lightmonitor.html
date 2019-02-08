@@ -12,7 +12,6 @@
 <script>
 var stage;
 var ministage;
-var index = 0;
 var point_size = 10;
 var blinker;
 var img_holder;
@@ -29,22 +28,23 @@ var rejected = Array();
 var data_url = 'https://thumbnails.lco.global/';
 var img_params = '?width=1000&height=1000&median=true&percentile=98';
 var analysed = {% if analysed %}true{% else %}false{% endif %};
+var archive_token = "{{archive_token}}";
 var blockcandidate;
 
-	$(document).ready(function(){
+$(document).ajaxStop(function() {
+  // Load all thumbnails once the ajax call to get their URLs has completed
+  loadThumbnails(frames);
+});
 
+	$(document).ready(function(){
 		setUp();
-		loadThumbnails(frames);
+    for(i=0; i<frames.length; i++){
+      frames[i] = get_images(frames[i], options=img_params)
+    }
 
 		$('.candidate-select').click(function(){
 			var ind = $(this).data('cand_id');
-			stopBlink();
-			startBlink(ind, false);
-			$('#candidate-list').hide();
-			$('.candidate-accept').show();
-
-			$("#cand-accept").data('cand_id', ind);
-			$("#cand-reject").data('cand_id', ind);
+      blinkCandidate(ind);
 		});
 
 		$('#blink-stop').click(function(){

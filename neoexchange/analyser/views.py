@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 '''
-
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.messages.views import SuccessMessageMixin
@@ -44,6 +44,7 @@ class BlockFramesView(DetailView):
             context['xaxis'] = images[2]
             context['yaxis'] = images[3]
             context['analysed'] = analysed
+            context['archive_token'] = settings.ARCHIVE_TOKEN
         return context
 
     def get(self, request, *args, **kwargs):
@@ -79,7 +80,7 @@ def analyser_to_source_measurement(block, cand_ids, blockcandidate):
     if not frames:
         return False
     for cand_id in cand_ids:
-        cand = Candidate.objects.get(pk=cand_id)
+        cand = Candidate.objects.get(id=cand_id)
         # If this candidate (cand_id) is the intended target of the Block, use
         # that. Otherwise generate a new Body/asteroid candidate
         discovery = False

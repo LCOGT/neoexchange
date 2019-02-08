@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block header %}Spectrum for block: {{pk}}{% endblock %}
+
+{% block bodyclass %}page{% endblock %}
+
+{% block extramenu %}
+    <div class="headingleft">
+        <h1>Block: <a href="{% url 'block-view' sb_id %}">{{pk}}</a></h1>
+    </div>
+{% endblock%}
+
+{% block main-content %}
+<!-- Main body -->
+<div class="container" id="main">
+    {% block graphic %}
+        <img src="{% url 'display_spec' pk  obs_num %}" alt="Could not find or create spectra file to plot."> <!-- TO DO: Make alternate when image not found-->
+    {% endblock %}
+</div>
+{% endblock %}

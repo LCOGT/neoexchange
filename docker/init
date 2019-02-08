@@ -4,23 +4,29 @@
 echo "Running with PREFIX=${PREFIX}"
 sed -i -e "s:@PREFIX@:${PREFIX}:g" /etc/nginx/nginx.conf
 
+# Turn off core dumps
+ulimit -c 0
+
 # Generate cron wrapper to set correct environment variables
 cat > /var/www/apps/neoexchange/cronwrapper << EOF
+export PATH=/opt/lcogt-python36/bin:$PATH
 export PYTHONPATH="${PYTHONPATH}"
 export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE}"
 export PREFIX="${PREFIX}"
 
+export SECRET_KEY="${SECRET_KEY}"
 export NEOX_DB_NAME="${NEOX_DB_NAME}"
 export NEOX_DB_HOST="${NEOX_DB_HOST}"
 export NEOX_DB_USER="${NEOX_DB_USER}"
 export NEOX_DB_PASSWD="${NEOX_DB_PASSWD}"
 export NEOX_ODIN_USER="${NEOX_ODIN_USER}"
 export NEOX_ODIN_PASSWD="${NEOX_ODIN_PASSWD}"
-export NEOX_OPBEAT_TOKEN="${NEOX_OPBEAT_TOKEN}"
-export NEOX_OPBEAT_ORGID="${NEOX_OPBEAT_ORGID}"
-export NEOX_OPBEAT_APPID="${NEOX_OPBEAT_APPID}"
+export ROLLBAR_TOKEN="${ROLLBAR_TOKEN}"
 export NEOX_EMAIL_USERNAME="${NEOX_EMAIL_USERNAME}"
 export NEOX_EMAIL_PASSWORD="${NEOX_EMAIL_PASSWORD}"
+export ARCHIVE_TOKEN="${ARCHIVE_TOKEN}"
+export VALHALLA_TOKEN="${VALHALLA_TOKEN}"
+export DATA_ROOT="${DATA_ROOT}"
 
 EOF
 
@@ -30,12 +36,15 @@ chmod +x /var/www/apps/neoexchange/cronwrapper
 # Setup locations for AstroPy's config and caches
 mkdir -p /var/www/apps/astropyconfig/astropy
 mkdir -p /var/www/apps/astropycache/astropy
-chown -R uwsgi:uwsgi /var/www/apps/astropy*
+chown -R nginx:nginx /var/www/apps/astropy*
 
 # Setup the LCOGT NEOx webapp
-chown -R uwsgi:uwsgi /var/www/apps/neoexchange
-python /var/www/apps/neoexchange/manage.py migrate --noinput
-python /var/www/apps/neoexchange/manage.py collectstatic --noinput
+chown -R nginx:nginx /var/www/apps/neoexchange
+python3 /var/www/apps/neoexchange/manage.py migrate --noinput
+python3 /var/www/apps/neoexchange/manage.py collectstatic --noinput
+
+chown -R nginx:nginx /data/eng
+chmod g+s /data/eng/rocks
 
 # Run under supervisord
 exec /usr/bin/supervisord -n -c /etc/supervisord.conf

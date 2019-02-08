@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2015-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -69,6 +69,7 @@ class Command(BaseCommand):
                     msg = "Mismatch between filename (%s) and provisional id (%s).\nAssuming provisional id is a final designation." % (obj_id, kwargs['provisional_name'])
                     self.stdout.write(msg)
                     kwargs['name'] = packed_to_normal(kwargs['provisional_name'])
+                    kwargs['provisional_packed'] = kwargs['provisional_name']
                     kwargs['provisional_name'] = obj_id
                     kwargs['source_type'] = 'D'
             else:

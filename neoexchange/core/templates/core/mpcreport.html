@@ -8,7 +8,7 @@
 
 {% block extramenu %}
 <div class="headingleft">
-  <h1>Source Measurements for: {{body.current_name}}{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
+  <h1>Source Measurements for: <a href="{% url 'target' body.id %}">{{body.current_name}}</a>{% if slot %} in block <a href="{% url 'block-view' pk=slot.id %}">&#35;{{slot.id}}</a>{% endif %}</h1>
 </div>
 {% endblock%}
 
@@ -29,7 +29,7 @@ lines matter. A Lot.
 {% endcomment %}
 
 <pre>{% for line in measures %}
-{{line.format_mpc_line}}{% endfor %}
+{% if slot %}{% format_mpc_line_upload line %}{% else %}{% format_mpc_line_catcode line %}{%endif%}{% endfor %}
 </pre>
               {% else %}
               <h3>No report has been made for this block.</h3>

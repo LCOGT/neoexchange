@@ -1,6 +1,6 @@
 '''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2016-2016 LCOGT
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2016-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -92,7 +92,7 @@ class TestReversion(TestCase):
         versions = Version.objects.get_for_object(body)
         self.assertEqual(1, len(versions))
 
-    def test_cleaner_findordb(self):
+    def test_cleaner_findorb(self):
         obs_page_list = [u'LSCTLGj 16.54  0.15 K16B8 258.25752   52.27105  101.57581   16.82829  0.0258753  0.17697056   3.1419699    FO 161108    11   1    3 days 0.09         NEOCPNomin 0000 LSCTLGj                     20161108',
                          u'',
                          u'']

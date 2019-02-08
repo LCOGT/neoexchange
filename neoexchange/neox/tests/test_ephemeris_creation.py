@@ -1,12 +1,28 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from mock import patch
 from neox.tests.mocks import MockDateTime
-#from datetime import datetime as real_datetime
+# from datetime import datetime as real_datetime
 from datetime import datetime
 from core.models import Body
+
 
 class NewVisitorTest(FunctionalTest):
 
@@ -51,7 +67,7 @@ class NewVisitorTest(FunctionalTest):
         self.check_for_header_in_table('id_neo_targets',
             'Rank Target Name Type R.A. Dec. Mag. Num.Obs. Arc Not Seen (days) NEOCP Score Updated?')
         # Position below computed for 2015-07-01 17:00:00
-        testlines =[u'1 N999r0q Candidate 23 43 12.75 +19 58 55.6 20.7 None None None None',]
+        testlines =[u'1 N999r0q Candidate 23 43 14.40 +19 59 08.2 20.7 None None None None', ]
         self.check_for_row_in_table('id_neo_targets', testlines[0])
 
         # he goes to the page from N999r0q and computes the ephemeris
@@ -59,11 +75,15 @@ class NewVisitorTest(FunctionalTest):
         with self.wait_for_page_load(timeout=10):
             link.click()
 
-        # He decides to using the the ephemeris formte
+        # He decides to use the ephemeris form
         inputbox = self.get_item_input_box()
 
         datebox = self.get_item_input_box_and_clear('id_utc_date')
         datebox.send_keys('2015-04-21')
+
+        site_choices = Select(self.get_item_input_box('id_site_code'))
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         # When he hits Enter, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
@@ -92,7 +112,6 @@ class NewVisitorTest(FunctionalTest):
 
         # Satisfied, he goes back to sleep
 
-
     def test_can_compute_ephemeris_for_specific_site(self):
 
         # Eduardo has heard about a new website for NEOs. He goes to the
@@ -106,7 +125,7 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses FTN (F65)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.browser.find_element_by_id('id_site_code'))
-        self.assertIn('Maui, Hawaii (FTN - F65)', [option.text for option in site_choices.options])
+        self.assertIn('FTN 2.0m - F65; (Maui, Hawaii )', [option.text for option in site_choices.options])
 
         # site_choices.select_by_visible_text('Maui, Hawaii (FTN - F65)')
         site_choices.select_by_value("F65")
@@ -141,9 +160,8 @@ class NewVisitorTest(FunctionalTest):
             '2015 04 21 11:30 20 10 38.15 +29 56 52.1 20.4 2.45 89.0 +20 0.09 108 -47 -999 -05:09'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 21 11:35 20 10 39.09 +29 56 52.4 20.4 2.45 89.0 +21 0.09 108 -48 -999 -05:04'
+            '2015 04 21 11:45 20 10 40.97 +29 56 52.8 20.4 2.44 89.0 +24 0.10 108 -49 -999 -04:54'
         )
-
 
     def test_can_compute_ephemeris_for_specific_date(self):
 
@@ -159,9 +177,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses ELP (V37)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('McDonald, Texas (ELP - V37; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('ELP 1.0m - V37; (McDonald, Texas)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('McDonald, Texas (ELP - V37; Sinistro)')
+        site_choices.select_by_visible_text('ELP 1.0m - V37; (McDonald, Texas)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
@@ -197,12 +215,11 @@ class NewVisitorTest(FunctionalTest):
 
         # Check the values are correct for F65
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 28 10:20 20 40 36.53 +29 36 33.1 20.6 2.08 93.4 +52 0.72 136 -15 +058 -02:53'
+            '2015 04 28 10:15 20 40 35.73 +29 36 33.7 20.6 2.09 93.3 +51 0.72 136 -14 +056 -02:58'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 04 28 10:25 20 40 37.32 +29 36 32.5 20.6 2.08 93.4 +54 0.72 136 -16 +059 -02:48'
+            '2015 04 28 10:30 20 40 38.12 +29 36 31.9 20.6 2.08 93.5 +55 0.72 136 -17 +060 -02:43'
         )
-
 
     def test_can_compute_ephemeris_for_specific_alt_limit(self):
 
@@ -218,9 +235,9 @@ class NewVisitorTest(FunctionalTest):
         # He notices a new selection for the site code and chooses CPT (K91)
         # XXX Code smell: Too many static text constants
         site_choices = Select(self.get_item_input_box('id_site_code'))
-        self.assertIn('Sutherland, S. Africa (CPT - K91-93; Sinistro)', [option.text for option in site_choices.options])
+        self.assertIn('CPT 1.0m - K91-93; (Sutherland, S. Africa)', [option.text for option in site_choices.options])
 
-        site_choices.select_by_visible_text('Sutherland, S. Africa (CPT - K91-93; Sinistro)')
+        site_choices.select_by_visible_text('CPT 1.0m - K91-93; (Sutherland, S. Africa)')
 
         # He notices a new textbox for the date that is wanted which is filled
         # in with the current date
@@ -242,7 +259,6 @@ class NewVisitorTest(FunctionalTest):
         datebox = self.get_item_input_box('id_alt_limit')
         self.assertEqual(datebox.get_attribute('value'), str(30.0))
 
-
         # When he clicks submit, he is taken to a new page and now the page shows an ephemeris
         # for the target with a column header and a series of rows for the position
         # as a function of time.
@@ -262,15 +278,12 @@ class NewVisitorTest(FunctionalTest):
         # Check the default settings are not present
         self.assertNotIn('2015 04 21 08:45 20 10 05.99 +29 56 57.5 20.4 2.43 89.2 +33 0.09 107 -42 +047 -04:25', [row.text for row in rows])
         # Check values before the altitude cutoff are not present
-        self.assertNotIn('2015 09 03 17:20 23 53 43.05 -12 42 22.9 19.3 1.84 211.7 +2 0.68 56 -53 -999 Limits', [row.text for row in rows])
+        self.assertNotIn('2015 09 03 17:30 23 53 42.39 -12 42 38.6 19.3 1.84 211.8 +4 0.68 56 -51 -999 Limits', [row.text for row in rows])
 
         # Check the values are correct for K92
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 03 19:35 23 53 33.81 -12 45 53.8 19.3 1.87 213.7 +30 0.67 57 -26 +039 -04:05'
+            '2015 09 03 19:45 23 53 33.10 -12 46 09.4 19.3 1.87 213.8 +33 0.67 58 -24 +041 -03:55'
         )
         self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 03 19:40 23 53 33.46 -12 46 01.6 19.3 1.87 213.7 +32 0.67 58 -25 +040 -04:00'
-        )
-        self.check_for_row_in_table('id_ephemeris_table',
-            '2015 09 04 03:20 23 52 59.34 -12 57 44.9 19.3 1.83 215.1 +35 0.64 61 +41 +022 +03:41'
+            '2015 09 04 03:30 23 52 58.62 -12 57 59.8 19.3 1.83 215.0 +33 0.64 62 +41 +019 +03:51'
         )

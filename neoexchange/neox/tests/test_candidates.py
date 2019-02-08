@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2016-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from .base import FunctionalTest
 from datetime import datetime
 
@@ -88,15 +103,16 @@ class TestBlockCandidates(FunctionalTest):
         username_input.send_keys(self.username)
         password_input = self.browser.find_element_by_id("password")
         password_input.send_keys(self.password)
-        self.browser.find_element_by_xpath('//button[@id="login-btn"]').click()
+        with self.wait_for_page_load(timeout=10):
+            self.browser.find_element_by_id('login-btn').click()
         # Wait until response is recieved
         self.wait_for_element_with_id('page')
         new_url = self.browser.current_url
         self.assertEqual(cands_url, new_url)
 
         # Check for the UTC midpoint
-        self.check_for_row_in_table('id_canddetail', 'UTC MIDPOINT: 2015 04 20.75424' )
- 
+        self.check_for_row_in_table('id_canddetail', 'UTC MIDPOINT: 2015-04-20T18:06:06 (2015 04 20.75424 )' )
+
         self.check_for_header_in_table('id_candidates',\
             'ID Score R.A. Dec. Separation (") CCD X CCD Y Magnitude Speed Position Angle')
         # Position below computed for 2015-07-01 17:00:00

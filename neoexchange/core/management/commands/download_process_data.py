@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2017-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 import os
 from sys import argv
 from datetime import datetime, timedelta
@@ -5,22 +20,24 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.core.management import call_command
 from django.forms import model_to_dict
+from django.conf import settings
 
 from core.models import Frame
 from core.management.commands import download_archive_data, pipeline_astrometry
 from astrometrics.ephem_subs import determine_rates_pa
 from photometrics.catalog_subs import get_fits_files, sort_rocks, find_first_last_frames
+from core.views import determine_active_proposals
 
 class Command(BaseCommand):
 
     help = 'Download and pipeline process data from the LCO Archive'
 
     def add_arguments(self, parser):
-        default_path = os.path.join(os.path.sep, 'data', 'eng', 'rocks')
+        default_path = settings.DATA_ROOT
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
-        parser.add_argument('--proposal', action="store", default="LCO2017AB-016", help='Proposal code to query for data (e.g. LCO2017AB-016)')
-        parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. /data/eng/rocks)')
-        parser.add_argument('--mtdlink_file_limit', action="store", default=9, help='Maximum number of images for running mtdlink')
+        parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
+        parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. %s)' % out_path)
+        parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
         parser.add_argument('--object', action="store", help="Which object to analyze")
         parser.add_argument('--skip-download', action="store_true", help='Whether to skip downloading data')
@@ -40,7 +57,9 @@ class Command(BaseCommand):
             obs_date = options['date']
 
         obs_date = obs_date.strftime('%Y%m%d')
-        proposal = options['proposal']
+        proposals = determine_active_proposals(options['proposal'])
+        if len(proposals) == 0:
+            raise CommandError("No valid proposals found")
         dataroot = options['datadir']
         verbose = True
         if options['verbosity'] < 1:
@@ -55,13 +74,18 @@ class Command(BaseCommand):
                 raise CommandError(msg)
 
 # Step 1: Download data
-
+        proposal_text = ""
+        if len(proposals) == 1:
+            # Single proposal specified
+            proposal_text = " from" + proposals[0]
         if options['skip_download']:
-            self.stdout.write("Skipping download data for %s from %s" % ( obs_date, proposal ))
+            self.stdout.write("Skipping download data for %s%s" % ( obs_date, proposal_text))
         else:
-            self.stdout.write("Download data for %s from %s" % ( obs_date, proposal ))
-            call_command('download_archive_data', '--date', obs_date, '--proposal', proposal, '--datadir', dataroot )
-
+            self.stdout.write("Downloading data for %s%s" % ( obs_date, proposal_text ))
+            if len(proposals) == 1:
+                call_command('download_archive_data', '--date', obs_date, '--proposal', proposals[0], '--datadir', dataroot )
+            else:
+                call_command('download_archive_data', '--date', obs_date, '--datadir', dataroot )
 
         # Append date to the data directory
         dataroot = os.path.join(dataroot, obs_date)
@@ -76,7 +100,7 @@ class Command(BaseCommand):
 # Step 3: For each object:
         for rock in objects:
 # Skip if a specific object was specified on the commandline and this isn't it
-            if options['object'] != None:
+            if options['object'] is not None:
                 if options['object'] not in rock:
                     continue
             datadir = os.path.join(dataroot, rock)
@@ -86,7 +110,7 @@ class Command(BaseCommand):
             fits_files = get_fits_files(datadir)
             self.stdout.write("Found %d FITS files in %s" % (len(fits_files), datadir) )
             first_frame, last_frame = find_first_last_frames(fits_files)
-            if first_frame == None or last_frame == None:
+            if first_frame is None or last_frame is None:
                 self.stderr.write("Couldn't determine first and last frames, skipping target")
                 continue
             self.stdout.write("Timespan %s->%s" % ( first_frame.midpoint, last_frame.midpoint))

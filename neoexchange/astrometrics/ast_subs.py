@@ -1,6 +1,6 @@
-'''
-NEO exchange: NEO observing portal for Las Cumbres Observatory Global Telescope Network
-Copyright (C) 2014-2016 LCOGT
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2014-2019 LCO
 
 ast_subs.py -- Asteroid desigination related routines.
 
@@ -13,23 +13,25 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-'''
+"""
 
 import re
 from math import degrees, sqrt
 from datetime import timedelta
 
+
 class PackedError(Exception):
-    '''Raised when an invalid pack code is found'''
+    """Raised when an invalid pack code is found"""
 
     def __init__(self, value):
         self.value = value
 
     def __str__(self):
         return self.value
-    
+
+
 class MutantError(Exception):
-    '''Raised when an invalid mutant hex code is found'''
+    """Raised when an invalid mutant hex code is found"""
 
     def __init__(self, value):
         self.value = value
@@ -39,31 +41,34 @@ class MutantError(Exception):
     
 
 def mutant_hex_char_to_int(c):
-    '''"Mutant hex" is frequently used by MPC.  It uses the usual hex digits
+    """"Mutant hex" is frequently used by MPC.  It uses the usual hex digits
     0123456789ABCDEF for numbers 0 to 15,  followed by G...Z for 16...35
     and a...z for 36...61.
-    This routine turns a mutant hex char into an integer'''
+    This routine turns a mutant hex char into an integer"""
    
 # Test for something other than a single char
     if len(c) != 1:
-    	return -1
+        return -1
     
 # Decode char to integer       
-    if c >= '0' and c <= '9':
-    	return ord(c) - ord('0')
-    elif c >= 'A' and c <= 'Z':
-    	return (ord(c)-ord('A') +10)
-    elif c >= 'a' and c <= 'z':
-    	return (ord(c)-ord('a') + 36)
+    if '0' <= c <= '9':
+        return ord(c) - ord('0')
+    elif 'A' <= c <= 'Z':
+        return ord(c)-ord('A') + 10
+    elif 'a' <= c <= 'z':
+        return ord(c)-ord('a') + 36
     else:
-    	return -1
+        return -1
+
 
 def int_to_mutant_hex_char(number):
-    '''"Mutant hex" is frequently used by MPC.  It uses the usual hex digits
+    """"Mutant hex" is frequently used by MPC.  It uses the usual hex digits
     0123456789ABCDEF for numbers 0 to 15,  followed by G...Z for 16...35
     and a...z for 36...61.
-    This routine turns an integer into a mutant hex char.'''
+    This routine turns an integer into a mutant hex char."""
 
+    if type(number) != int:
+        raise MutantError("Not an integer")
     if number < 0 or number > 61:
         raise MutantError("Number out of range 0...61")
     
@@ -76,11 +81,12 @@ def int_to_mutant_hex_char(number):
 
     return chr(rval + number)
 
+
 def normal_to_packed(obj_name, dbg=False):
-    '''Routine to convert normal names for a comet/asteroid into packed 
-    desiginations. It should handle all normal asteroid and comet desiginations 
+    """Routine to convert normal names for a comet/asteroid into packed
+    desiginations. It should handle all normal asteroid and comet desiginations
     but does not handle natural satellites. The code has been converted (badly)
-    from Bill Gray's find_orb C routine.'''
+    from Bill Gray's find_orb C routine."""
     
     rval = 0
     comet = False
@@ -91,16 +97,28 @@ def normal_to_packed(obj_name, dbg=False):
         comet = True
         comet_type = obj_name[0]
         obj_name = obj_name[2:]
-    
+    elif obj_name.rstrip()[-1] in 'PCXDA' and obj_name.rstrip()[:-1].isdigit():
+        comet = True
+        comet_type = obj_name.rstrip()[-1]
+        obj_name = obj_name.rstrip()[:-1]
+
     buff = obj_name.replace(" ", "")
-    if dbg: print "len(buff)=", len(buff)
-    
+    if dbg: print("len(buff)=", len(buff))
+
+    if buff.isdigit():
+        # Simple numbered asteroid or comet
+        number = int(buff)
+
+        if comet:
+            packed_desig = "%04d%c       " % ( number, comet_type)
+        else:
+            packed_desig = "%c%04d       " % ( int_to_mutant_hex_char( number // 10000), number % 10000);
     # If the name starts with four digits followed by an uppercase letter, it's
     # a provisional (un-numbered) designation e.g. '1984 DA' or '2015 BM510'
-    if len(buff) >= 4 and buff[0:4].isdigit() and buff[4].isupper():
+    elif len(buff) >= 4 and buff[0:4].isdigit() and buff[4].isupper():
         year = int(buff[0:4])
 
-        if comet == False:
+        if comet is False:
             comet_type = " "
         pack11 = '0'
         i=5
@@ -109,36 +127,29 @@ def normal_to_packed(obj_name, dbg=False):
             i = i+1
         
         sub_designator_str = re.sub('(\d*)([a-zA-Z]*)$', r'\1', buff[i:])
-        if dbg: print 'sub_designator_str=', sub_designator_str,len(sub_designator_str)
+        if dbg: print('sub_designator_str=', sub_designator_str, len(sub_designator_str))
         sub_designator = 0
         if sub_designator_str != '':
             sub_designator = int(sub_designator_str)
-        pack10 = chr(ord('0')  + sub_designator % 10)
+        pack10 = chr(ord('0') + sub_designator % 10)
         if sub_designator < 100:
-            pack9 = chr(ord('0')  + sub_designator / 10)
+            pack9 = chr(ord('0') + sub_designator // 10)
         elif sub_designator < 360:
-            pack9 = chr(ord('A')  + sub_designator / 10 - 10)
+            pack9 = chr(ord('A') + sub_designator // 10 - 10)
         else:
-            pack9 = chr(ord('a')  + sub_designator / 10 - 36)
+            pack9 = chr(ord('a') + sub_designator // 10 - 36)
         packed_desig = "    %c%c%02d%c%c%c%c" % ( comet_type, 
-            ord('A') - 10 + year / 100, year % 100,
+            ord('A') - 10 + year // 100, year % 100,
             str(buff[4]).upper(), pack9, pack10, pack11)
-    elif buff.isdigit():
-        # Simple numbered asteroid or comet
-        number = int(buff)
-
-        if comet:
-            packed_desig = "%04d%c       " % ( number, comet_type)
-        else:
-            packed_desig = "%c%04d       " % ( int_to_mutant_hex_char( number / 10000), number % 10000);
     else:
         # Bad id
         packed_desig = ' ' * 12
         rval = -1
-    return ( packed_desig, rval)
+    return packed_desig, rval
+
 
 def determine_asteroid_type(perihdist, eccentricity):
-    '''Determines the object class from the perihelion distance <perihdist> and
+    """Determines the object class from the perihelion distance <perihdist> and
     the eccentricity <eccentricity> and returns it as a single character code
     as defined in core/models.py.
 
@@ -146,7 +157,7 @@ def determine_asteroid_type(perihdist, eccentricity):
     1) NEO (perihelion < 1.3 AU)
     2) Centaur (perihelion > 5.5 AU (orbit of Jupiter) & semi-major axis < 30.1 AU
         (orbit of Neptune)
-    3) KBO (perihelion > 30.1 AU (orbit of Neptune)'''
+    3) KBO (perihelion > 30.1 AU (orbit of Neptune)"""
 
     jupiter_semidist = 5.5
     neptune_semidist = 30.1
@@ -158,35 +169,60 @@ def determine_asteroid_type(perihdist, eccentricity):
         obj_type = 'N'  # NEO
     else:
         # Test for eccentricity close to or greater than 1.0
-        if abs(eccentricity-1.0) >=  1e-3 and eccentricity < 1.0:
+        if abs(eccentricity-1.0) >= 1e-3 and eccentricity < 1.0:
             semi_axis = perihdist / (1.0 - eccentricity )
-            if perihdist >= jupiter_semidist and semi_axis >= jupiter_semidist \
-                and semi_axis <= neptune_semidist:
-                obj_type = 'E' # Centaur
+            if perihdist >= jupiter_semidist and jupiter_semidist <= semi_axis <= neptune_semidist:
+                obj_type = 'E'  # Centaur
             elif perihdist > neptune_semidist:
                 obj_type = 'K'
-            elif semi_axis >= juptrojan_lowlimit and semi_axis <= juptrojan_hilimit:
+            elif juptrojan_lowlimit <= semi_axis <= juptrojan_hilimit:
                 obj_type = 'T'
         else:
             obj_type = 'C'  # Comet
     return obj_type
 
+
 def determine_time_of_perih(meandist, meananom, epochofel):
-    '''Calculate time of perihelion passage from passed semimajor axis (<meandist>:in AU),
-    mean anomaly (<meananom>:in degrees), and the epoch of the elements 
+    """Calculate time of perihelion passage from passed semimajor axis (<meandist>:in AU),
+    mean anomaly (<meananom>:in degrees), and the epoch of the elements
     (<epochofel>:as a datetime).
-    Returns the epoch of perihelion as a datetime.'''
+    Returns the epoch of perihelion as a datetime."""
 
     gauss_k = degrees(0.01720209895) # Gaussian gravitional constant
 
     # Compute 'n', the mean daily motion
-    n = gauss_k / (meandist * sqrt( meandist ))
+    n = gauss_k / (meandist * sqrt(meandist))
 
-    if meananom > 180.0 and meananom < 360.0:
+    if 180.0 < meananom < 360.0:
         days_from_perihelion = (360.0 - meananom) / n
     else:
-        days_from_perihelion = -( meananom / n )
+        days_from_perihelion = -(meananom / n)
     epochofperih = epochofel + timedelta(days=days_from_perihelion)
 #    print n, days_from_perihelion, epochofperih
 
     return epochofperih
+
+def convert_ast_to_comet(kwargs, body):
+    """Converts the parameters of an object initially identified as an asteroid
+    to a comet.
+    A dictionary of updated parameters is returned, suitable for update a Body
+    model object.
+    """
+    params = kwargs
+    if kwargs['source_type'] in ['C', 'H'] or kwargs.get('eccentricity', 0.0) > 0.9:
+        if body:
+            params['meandist'] = params.get('meandist', body.meandist)
+            params['eccentricity'] = params.get('eccentricity', body.eccentricity)
+            params['meananom'] = params.get('meananom', body.meananom)
+            params['epochofel'] = params.get('epochofel', body.epochofel)
+            params['slope'] = params.get('slope', body.slope)
+        if params.get('slope', 0.15) == 0.15:
+            params['slope'] = 4.0
+        params['elements_type'] = 'MPC_COMET'
+        if params['eccentricity'] is not None and params['meandist'] is not None and \
+            params['meananom'] is not None and params['epochofel'] is not None:
+            if params['eccentricity'] < 1.0:
+                params['perihdist'] = params['meandist'] * (1.0 - params['eccentricity'])
+            params['epochofperih'] = determine_time_of_perih(params['meandist'], params['meananom'], params['epochofel'])
+            params['meananom'] = None
+    return params
