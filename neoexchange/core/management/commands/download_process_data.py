@@ -33,10 +33,10 @@ class Command(BaseCommand):
     help = 'Download and pipeline process data from the LCO Archive'
 
     def add_arguments(self, parser):
-        default_path = settings.DATA_ROOT
+        out_path = settings.DATA_ROOT
         parser.add_argument('--date', action="store", default=datetime.utcnow(), help='Date of the data to download (YYYYMMDD)')
         parser.add_argument('--proposal', action="store", default=None, help="Proposal code to query for data (e.g. LCO2019A-006; default is for all active proposals)")
-        parser.add_argument('--datadir', action="store", default=default_path, help='Path for processed data (e.g. %s)' % out_path)
+        parser.add_argument('--datadir', action="store", default=out_path, help='Path for processed data (e.g. %s)' % out_path)
         parser.add_argument('--mtdlink_file_limit', action="store", type=int, default=9, help='Maximum number of images for running mtdlink')
         parser.add_argument('--keep-temp-dir', action="store_true", help='Whether to remove the temporary directories')
         parser.add_argument('--object', action="store", help="Which object to analyze")
@@ -44,7 +44,7 @@ class Command(BaseCommand):
 
 
     def handle(self, *args, **options):
-        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --data-dir [path]" % ( argv[1] )
+        usage = "Incorrect usage. Usage: %s --date [YYYYMMDD] --proposal [proposal code] --datadir [path]" % ( argv[1] )
 
         self.stdout.write("==== Download and process astrometry %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
 
