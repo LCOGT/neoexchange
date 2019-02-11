@@ -30,3 +30,4 @@ class Command(BaseCommand):
     help = 'Retrieve Zooniverse classifications and parse them'
 
     def handle(self, *args, **options):
+        pass

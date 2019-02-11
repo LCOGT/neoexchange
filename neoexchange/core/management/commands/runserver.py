@@ -53,7 +53,7 @@ class Command(BaseRunserverCommand):
 
         try:
             self.stdout.write(banner())
-        except Exception, e:
+        except Exception as e:
             print(e)
             pass
         super(Command, self).inner_run(*args, **kwargs)
