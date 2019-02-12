@@ -32,20 +32,20 @@ class TestUpdateTargets(TestCase):
 
     def setUp(self):
         """These are the times that the bodies ingest_time, update_age, and date can be set to."""
-        one_day = datetime.now() - timedelta(days=1)  
+        one_day = datetime.now() - timedelta(days=1)
         two_days = datetime.now() - timedelta(days=2)
-        three_days = datetime.now() - timedelta(days=3)  
-        five_days = datetime.now() - timedelta(days=5)  
-        seven_days = datetime.now() - timedelta(days=7)  
-        fourteen_days = datetime.now() - timedelta(days=14)  
+        three_days = datetime.now() - timedelta(days=3)
+        five_days = datetime.now() - timedelta(days=5)
+        seven_days = datetime.now() - timedelta(days=7)
+        fourteen_days = datetime.now() - timedelta(days=14)
         twentyone_days = datetime.now() - timedelta(days=21)
-        one_month = datetime.now() - timedelta(days=30)      
+        one_month = datetime.now() - timedelta(days=30)
         three_months = datetime.now() - timedelta(days=95)
         six_months = datetime.now() - timedelta(days=185)
-        year = datetime.now() - timedelta(days=365)    
-    
+        year = datetime.now() - timedelta(days=365)
+
         """These are the fake Bodies that will be tested above"""
-        
+
         object1 = Body.objects.create(
             name='NASA1',
             origin='N',
@@ -54,7 +54,7 @@ class TestUpdateTargets(TestCase):
             ingest=six_months,
             update_time=one_day
             )
-            
+
         object2 = Body.objects.create(
             name='NASA2',
             origin='N',
@@ -63,7 +63,7 @@ class TestUpdateTargets(TestCase):
             ingest=seven_days,
             update_time=two_days
             )
-        
+
         object3 = Body.objects.create(
             name='NASA3',
             origin='N',
@@ -72,7 +72,7 @@ class TestUpdateTargets(TestCase):
             ingest=three_months,
             update_time=three_days
             )
-        
+
         object4 = Body.objects.create(
             name='ARECIBO1',
             origin='A',
@@ -81,7 +81,7 @@ class TestUpdateTargets(TestCase):
             ingest=year,
             update_time=twentyone_days
             )
-        
+
         object5 = Body.objects.create(
             name='ARECIBO2',
             origin='A',
@@ -90,7 +90,7 @@ class TestUpdateTargets(TestCase):
             ingest=year,
             update_time=fourteen_days
             )
-        
+
         object6 = Body.objects.create(
             name='ARECIBO3',
             origin='A',
@@ -99,7 +99,7 @@ class TestUpdateTargets(TestCase):
             ingest=six_months,
             update_time=three_days
             )
-        
+
         object7 = Body.objects.create(
             name='GOLDSTONE1',
             origin='G',
@@ -108,7 +108,7 @@ class TestUpdateTargets(TestCase):
             ingest=year,
             update_time=seven_days
             )
-        
+
         object8 = Body.objects.create(
             name='GOLDSTONE2',
             origin='G',
@@ -117,7 +117,7 @@ class TestUpdateTargets(TestCase):
             ingest=two_days,
             update_time=three_days
             )
-        
+
         object9 = Body.objects.create(
             name='GOLDSTONE3',
             origin='G',
@@ -126,7 +126,7 @@ class TestUpdateTargets(TestCase):
             ingest=six_months,
             update_time=five_days
             )
-       
+
         object10 = Body.objects.create(
             name='MPC1',
             origin='M',
@@ -135,7 +135,7 @@ class TestUpdateTargets(TestCase):
             ingest=twentyone_days,
             update_time=five_days
             )
-        
+
         object11 = Body.objects.create(
             name='MPC2',
             origin='M',
@@ -144,7 +144,7 @@ class TestUpdateTargets(TestCase):
             ingest=three_months,
             update_time=one_month
             )
-        
+
         object12 = Body.objects.create(
             name='MPC3',
             origin='M',
@@ -153,7 +153,7 @@ class TestUpdateTargets(TestCase):
             ingest=six_months,
             update_time=one_day
             )
-        
+
         object13 = Body.objects.create(
             name='SPACEWATCH',
             origin='S',
@@ -162,7 +162,7 @@ class TestUpdateTargets(TestCase):
             ingest=three_months,
             update_time=twentyone_days
             )
-            
+
         object14 = Body.objects.create(
             name='A&G1',
             origin='R',
@@ -171,7 +171,7 @@ class TestUpdateTargets(TestCase):
             ingest=year,
             update_time=three_days
             )
-        
+
         object15 = Body.objects.create(
             name='A&G2',
             origin='R',
@@ -180,7 +180,7 @@ class TestUpdateTargets(TestCase):
             ingest=three_months,
             update_time=fourteen_days
             )
-        
+
         object16 = Body.objects.create(
             name='A&G3',
             origin='R',
@@ -189,7 +189,7 @@ class TestUpdateTargets(TestCase):
             ingest=six_months,
             update_time=two_days
             )
-            
+
         object17 = Body.objects.create(
             name='NEODSYS',
             origin='D',
@@ -198,7 +198,7 @@ class TestUpdateTargets(TestCase):
             ingest=year,
             update_time=seven_days
             )
-        
+
         object18 = Body.objects.create(
             name='LCO1',
             origin='L',
@@ -207,7 +207,7 @@ class TestUpdateTargets(TestCase):
             ingest=six_months,
             update_time=seven_days
             )
-            
+
         object19 = Body.objects.create(
             name='LCO2',
             origin='L',
@@ -216,7 +216,7 @@ class TestUpdateTargets(TestCase):
             ingest=three_months,
             update_time=two_days
             )
-            
+
         object20 = Body.objects.create(
             name='LCO3',
             origin='L',
@@ -239,7 +239,7 @@ class TestUpdateTargets(TestCase):
 
         for i in updated:
             self.assertIn(i, update)
-        
+
     def test_command_nasa_oldies_nine(self, mock_update_MPC_orbit, mock_random_delay):
         update = update_neos(origins=['N', 'G'], updated_time=29, ingest_limit=180)
         updated = ['NASA1', 'GOLDSTONE1', 'GOLDSTONE3']

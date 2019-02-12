@@ -2673,31 +2673,31 @@ def update_neos(origins=None, updated_time=2, ingest_limit=90, start_time=dateti
 
         if type(start_time) is str:
             try:
-                time = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S") 
+                time = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
             except ValueError:
-                logger.error("start_time error! Check the format of your date!")          
+                logger.error("start_time error! Check the format of your date!")
                 raise ValueError('Check the format of your date; it should look like this:%y-%m-%d %H:%M:%S')
         else:
             time = start_time
-            
+
         updated = time - timedelta(days=updated_time)  # time to put into query
         ingested = time - timedelta(days=ingest_limit)  # time to put into query
         logger.info("==== Preparing to Update Targets %s ====" % (now.strftime('%Y-%m-%d %H:%M')))
         targets = Body.objects.filter(origin__in=origins, ingest__lte=ingested, update_time__gte=updated, active=True)
         logger.info("Length of target query set to update is {length}".format(length=targets.count()))
-    
+
         for target in targets:
             logger.info('Updating {name} from {origin} on {date}'.format(name=target.name or target.provisional_name, origin=target.origin, date=target.update_time))
             # here is where the update happens and it adds the body to list of updated objects
             # update_MPC_orbit(target.name, target.origin)
             # delay = random_delay(10, 20)
             were_updated.append(target.name)
-        # generates message after bodies updated to state how many were updated        
+        # generates message after bodies updated to state how many were updated
         if not were_updated:
             logger.info("==== No NEOs to be updated ====")
-        else:      
+        else:
             logger.info("==== Updated {number} NEOs ====".format(number=len(were_updated)))
-        
+
         return were_updated
 
 
