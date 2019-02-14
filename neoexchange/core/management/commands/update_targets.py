@@ -17,32 +17,34 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 
-from astrometrics.source_subs import random_delay
-from core.views import update_MPC_orbit
+from astrometrics.sources_subs import random_delay
+from core.views import update_MPC_orbit, update_MPC_obs, refit_with_findorb
+from core.models import Body
 
 
+class Command(BaseCommand):
+    help = 'Update Characterization Targets'
 
-def object_update(self, time_diff=12):
-    for Body.objects.origin != 'M' or 'L':
-        
-        if Body.updated == False:
-            self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-            update_MPC_orbit(obj_id, origin=Body.objects.origin)
-            # Wait between 10 and 20 seconds
-            delay = random_delay(10, 20)
-            self.stdout.write("Slept for %d seconds" % delay)
+    def handle(self, *args, **options):
+        bodies = Body.objects.filter(active=True).exclude(origin='M')
+        i = 0
+        for body in bodies:
+            self.stdout.write("{} ==== Updating {} ====".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name()))
+            # Get new observations from MPC
+            update_MPC_obs(body.current_name())
 
-        elif Body.updated = True:
-        #checks when it has been last updated 
-            if Body.update_time => datetime.now() - timedelta(hours=time_diff):
-                self.stdout.write("==== Updating Targets %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-                update_MPC_orbit(obj_id, origin=Body.objects.origin)
-                # Wait between 10 and 20 seconds
-                delay = random_delay(10, 20)
-                self.stdout.write("Slept for %d seconds" % delay)
-            else:
-                pass
-        else:
-            pass
-       
+            # Use new observations to refit elements with findorb.
+            # Will update epoch to date of most recent obs.
+            # Will not overwrite later elements
+            refit_with_findorb(body.id, 500)
 
+            # Pull most recent orbit from MPC
+            # Updated infrequently for most targets
+            # Will not overwrite later elements
+            update_MPC_orbit(body.current_name(), origin=body.origin)
+
+            # add random 10-20s delay to keep MPC happy
+            random_delay()
+            i += 1
+
+        self.stdout.write("{} ==== Updating Complete: {} Objects Updated ====".format(datetime.now().strftime('%Y-%m-%d %H:%M'), i))

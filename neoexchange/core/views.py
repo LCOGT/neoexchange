@@ -1872,7 +1872,8 @@ def update_crossids(astobj, dbg=False):
     # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
     # but don't have a blank 'name'
     bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
-    if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
+    if dbg:
+        print("temp_id={},desig={},bodies={}".format(temp_id, desig, bodies))
 
     if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
@@ -2148,6 +2149,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         origin = 'R'
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
+
     # Save, make revision, or do not update depending on the what has happened
     # to the object
     if not body.epochofel or body.epochofel <= kwargs['epochofel']:

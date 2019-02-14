@@ -1147,13 +1147,14 @@ class CatalogSources(models.Model):
         """
 
         flag = ' '
-        if self.flags >= 1 and self.flags <=3:
+        if 1 <= self.flags <= 3:
             # Set 'Involved with star'
             flag = 'I'
         elif self.flags >= 8:
             # Set 'close to Edge'
             flag = 'E'
         return flag
+
 
 def detections_array_dtypes():
     """Declare the columns and types of the structured numpy array for holding

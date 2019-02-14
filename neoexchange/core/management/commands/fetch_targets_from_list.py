@@ -24,6 +24,7 @@ from core.models import ORIGINS
 
 origin_help = '['+', '.join(['"{}":{}'.format(i[0], i[1]) for i in ORIGINS])+']'
 
+
 class Command(BaseCommand):
     help = 'Fetch targets text file or command line list'
 
