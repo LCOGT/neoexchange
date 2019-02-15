@@ -2158,8 +2158,9 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
 
     # Save, make revision, or do not update depending on the what has happened
     # to the object
-    time_to_current_epoch = abs(body.epochofel - datetime.now())
-    time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
+    if body.epochofel:
+        time_to_current_epoch = abs(body.epochofel - datetime.now())
+        time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
     if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
         save_and_make_revision(body, kwargs)
         if not created:

@@ -385,7 +385,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
 #               0   1   2   3       4           5       6       7
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
     if detailed:
-        return emp_line + (mag_dot, separation, delta, delta_dot)
+        return emp_line, mag_dot, separation
 
     return emp_line
 
