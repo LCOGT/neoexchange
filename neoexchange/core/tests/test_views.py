@@ -4607,6 +4607,68 @@ class TestUpdate_Crossids(TestCase):
         self.assertAlmostEqual(q, body.perihdist, 7)
         self.assertIs(None, body.meananom)
 
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_multiple_NEOCP_to_same_object(self):
+        """Test for case from Issue #269 where:
+        P10L6Vl -> 2001 QS108 Jan 7.90
+        P10KIyZ -> 2001 QS108 Dec 31.91
+        and 2001 QS108 is not an NEO
+        """
+
+        # Set Mock time to less than 3 days past the time of the cross ident.
+        MockDateTime.change_datetime(2019, 1,  8, 10, 40, 0)
+
+        crossid_info = ['P10L6Vl ', '2001 QS108', '', '(Jan. 7.90 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'A'
+        self.body.provisional_name = 'P10KIyZ'
+        self.body.name = '2001 QS108'
+        self.body.epochofel = datetime(2018, 9, 5, 0, 0)
+        self.body.eccentricity = 0.5415182
+        self.body.meandist = 5.8291288
+        self.body.meananom = 7.63767
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2018, 9, 1, 1, 2, 3)
+        self.body.update_time = datetime(2018, 12, 31, 21, 50, 24)
+        self.body.save()
+        self.body.refresh_from_db()
+
+        # Create duplicate with different info
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'P10L6Vl'
+        body.name = None
+        body.source_type = u'U'
+        body.origin = 'M'
+        body.ingest = datetime(2019, 5, 2, 12, 13, 14)
+        body.save()
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+        bodies = Body.objects.all()
+        print
+        print("Before")
+        for body in bodies:
+            print(body.pk, body.provisional_name, body.name)
+
+        status = update_crossids(crossid_info, dbg=True)
+        self.assertEqual(3, Body.objects.count(), msg="After update_crossids; should be 3 Bodies")
+        bodies = Body.objects.all()
+        for body in bodies:
+            print(body.pk, body.provisional_name, body.name)
+
+        bodies = Body.objects.filter(name='2001 QS108')
+
+        self.assertEqual(2, bodies.count())
+        for body in bodies:
+            self.assertEqual(True, status)
+            self.assertEqual(False, body.active)
+            self.assertEqual('A', body.source_type)
+            self.assertEqual('M', body.origin)
+            self.assertEqual('2001 QS108', body.name)
+            self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+            self.assertIs(None, body.perihdist)
 
 class TestStoreDetections(TestCase):
 
