@@ -16,8 +16,12 @@ GNU General Public License for more details.
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
+from django.forms.models import model_to_dict
+import pyslalib.slalib as S
+from math import degrees
 
 from astrometrics.sources_subs import random_delay
+from astrometrics.ephem_subs import compute_ephem
 from core.views import update_MPC_orbit, update_MPC_obs, refit_with_findorb
 from core.models import Body
 
@@ -29,22 +33,25 @@ class Command(BaseCommand):
         bodies = Body.objects.filter(active=True).exclude(origin='M')
         i = 0
         for body in bodies:
-            self.stdout.write("{} ==== Updating {} ====".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name()))
+            self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
             # Get new observations from MPC
-            update_MPC_obs(body.current_name())
+            measures = update_MPC_obs(body.current_name())
 
-            # Use new observations to refit elements with findorb.
+            # If new observations, use them to refit elements with findorb.
             # Will update epoch to date of most recent obs.
-            # Will not overwrite later elements
-            refit_with_findorb(body.id, 500)
+            # Will only update if new epoch closer to present than previous.
+            if measures:
+                refit_with_findorb(body.id, 500)
+                body.refresh_from_db()
 
-            # Pull most recent orbit from MPC
+            # If new obs pull most recent orbit from MPC
             # Updated infrequently for most targets
             # Will not overwrite later elements
-            update_MPC_orbit(body.current_name(), origin=body.origin)
+            if measures or abs(body.epochofel-datetime.now()) >= timedelta(days=200):
+                update_MPC_orbit(body.current_name(), origin=body.origin)
+                body.refresh_from_db()
 
             # add random 10-20s delay to keep MPC happy
             random_delay()
             i += 1
-
         self.stdout.write("{} ==== Updating Complete: {} Objects Updated ====".format(datetime.now().strftime('%Y-%m-%d %H:%M'), i))

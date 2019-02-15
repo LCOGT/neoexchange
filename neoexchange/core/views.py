@@ -393,11 +393,17 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                 new_elements['provisional_name'] = body.provisional_name
                 new_elements['origin'] = body.origin
                 new_elements['source_type'] = body.source_type
-                updated = save_and_make_revision(body, new_elements)
+
+                time_to_current_epoch = abs(body.epochofel - datetime.now())
+                time_to_new_epoch = abs(new_elements['epochofel'] - datetime.now())
+                if time_to_new_epoch <= time_to_current_epoch:
+                    updated = save_and_make_revision(body, new_elements)
+                else:
+                    updated = False
                 message = "Did not update"
                 if updated is True:
                     message = "Updated"
-                logger.info("%s Body #%d (%s)" % (message, body.pk, body.current_name()))
+                logger.info("%s Body #%d (%s) with FindOrb" % (message, body.pk, body.current_name()))
 
                 # Read in ephemeris file
                 ephem_file = os.path.join(dest_dir, 'new.ephem')
@@ -1763,7 +1769,7 @@ def clean_NEOCP_object(page_list):
             if arc_length:
                 params['arc_length'] = arc_length
 
-        elif len(current) >= 21 and len(current) <= 25:
+        elif 21 <= len(current) <= 25:
             # The first 20 characters can get very messy if there is a temporary
             # and permanent desigination as the absolute magntiude and slope gets
             # pushed up and partially overwritten. Sort this mess out and then the
@@ -2152,12 +2158,14 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
 
     # Save, make revision, or do not update depending on the what has happened
     # to the object
-    if not body.epochofel or body.epochofel <= kwargs['epochofel']:
+    time_to_current_epoch = abs(body.epochofel - datetime.now())
+    time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
+    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
         save_and_make_revision(body, kwargs)
         if not created:
-            logger.info("Updated elements for %s" % obj_id)
+            logger.info("Updated elements for %s from MPC" % obj_id)
         else:
-            logger.info("Added new orbit for %s" % obj_id)
+            logger.info("Added new orbit for %s from MPC" % obj_id)
     else:
         body.origin = origin
         body.save()
@@ -2197,7 +2205,7 @@ def count_useful_obs(obs_lines):
     """Function to determine max number of obs_lines will be read """
     i = 0
     for obs_line in obs_lines:
-        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 's']:
+        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 'A']:
             i += 1
     return i
 
