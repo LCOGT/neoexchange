@@ -4719,6 +4719,72 @@ class TestUpdate_Crossids(TestCase):
             self.assertIs(None, body.perihdist)
         self.assertNotEqual(bodies[0].provisional_name, bodies[1].provisional_name)
 
+    @patch('core.views.datetime', MockDateTime)
+    @patch('astrometrics.time_subs.datetime', MockDateTime)
+    def test_case_sensitivity(self):
+        """Test for case reported by Rob Weryk where:
+        P10LweA -> 2019 AS13 Jan. 17.67 UT [see MPEC 2019-B39]
+        P10Lwea -> C/2019 A9 Feb 7.68 UT  [see MPEC 2019-C53]
+        """
+
+        # Set Mock time to less than 3 days past the time of the 2nd cross ident.
+        MockDateTime.change_datetime(2019, 2,  8, 10, 40, 0)
+
+        crossid_info = ['P10Lwea', 'C/2019 A9', 'MPEC 2019-C53', '(Feb. 7.68 UT)']
+
+        self.body.origin = u'M'
+        self.body.source_type = u'N'
+        self.body.provisional_name = 'P10LweA'
+        self.body.name = '2019 AS13'
+        self.body.epochofel = datetime(2019, 4,27, 0, 0)
+        self.body.eccentricity = 0.1835035
+        self.body.meandist = 1.2804501
+        self.body.meananom = 56.96653
+        self.body.perihdist = None
+        self.body.epochofperih = None
+        self.body.ingest = datetime(2019,  1, 15, 1, 2, 3)
+        self.body.update_time = datetime(2019, 1, 17, 16,  4, 48)
+        self.body.active = False
+        self.body.save()
+        self.body.refresh_from_db()
+
+        # Create duplicate with similar provisional except for case
+        body = Body.objects.get(pk=self.body.pk)
+        body.pk = None
+        body.provisional_name = 'P10Lwea'
+        body.name = None
+        body.source_type = u'U'
+        body.origin = 'M'
+        body.eccentricity = 0.9633142
+        body.orbinc = 84.34272
+        body.meandist = 38.88291927666837
+        body.ingest = datetime(2019, 2, 2, 12, 13, 14)
+        body.save()
+        self.assertEqual(3, Body.objects.count(), msg="Before update_crossids; should be 3 Bodies")
+
+        status = update_crossids(crossid_info, dbg=False)
+        self.assertEqual(3, Body.objects.count(), msg="After update_crossids; should be 3 Bodies")
+
+        body = Body.objects.get(provisional_name='P10LweA')
+        self.assertEqual(True, status)
+        self.assertEqual(False, body.active)
+        self.assertEqual('N', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('2019 AS13', body.name)
+        self.assertEqual('MPC_MINOR_PLANET', body.elements_type)
+        self.assertIs(None, body.perihdist)
+
+        body = Body.objects.get(provisional_name='P10Lwea')
+        self.assertEqual(True, status)
+        self.assertEqual(True, body.active)
+        self.assertEqual('C', body.source_type)
+        self.assertEqual('M', body.origin)
+        self.assertEqual('C/2019 A9', body.name)
+        self.assertEqual('MPC_COMET', body.elements_type)
+        self.assertAlmostEqual(1.4264510, body.perihdist,5)
+        self.assertIsNot(None, body.epochofperih)
+
+
 class TestStoreDetections(TestCase):
 
     def setUp(self):
