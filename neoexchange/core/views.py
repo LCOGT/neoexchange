@@ -1918,10 +1918,10 @@ def update_crossids(astobj, dbg=False):
             kwargs = convert_ast_to_comet(kwargs, body)
         if dbg:
             print(kwargs)
-        check_body = Body.objects.filter(provisional_name=temp_id, **kwargs)
-        if check_body.count() == 0:
-            save_and_make_revision(body, kwargs)
-            logger.info("Updated cross identification for %s" % body.current_name())
+        check_body = Body.objects.filter(provisional_name=temp_id) #, **kwargs)
+        if check_body.count() == 1:
+            save_and_make_revision(check_body[0], kwargs)
+            logger.info("Updated cross identification for %s" % check_body[0].current_name())
     elif kwargs != {}:
         # Didn't know about this object before so create but make inactive
         kwargs['active'] = False
