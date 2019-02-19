@@ -348,6 +348,35 @@ def export_measurements(body_id, output_path=''):
     return filename, output.count('\n')-1
 
 
+def update_elements_with_findorb(source_dir, dest_dir, filename, site_code, start_time):
+    """Handle the refitting of a set of MPC1992 format observations in <filename>
+    located in <dest_dir> with original config files in <source_dir>. The ephemeris
+    is computed for <site_code> starting at <start_time>
+
+    Either a parsed dictionary of elements or a status code is returned.
+    """
+
+    elements_or_status = None
+
+    status = run_findorb(source_dir, dest_dir, filename, site_code, start_time)
+    if status != 0:
+        logger.error("Error running find_orb on the data")
+        elements_or_status = status
+    else:
+        orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
+        try:
+            orbfile_fh = open(orbit_file, 'r')
+        except IOError:
+            logger.warning("File %s not found" % orbit_file)
+            return None
+
+        orblines = orbfile_fh.readlines()
+        orbfile_fh.close()
+        orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
+        elements_or_status = clean_NEOCP_object(orblines)
+
+    return elements_or_status
+
 def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_dir=None, remove=False):
     """Refit all the SourceMeasurements for a body with find_orb and update the elements.
     Inputs:

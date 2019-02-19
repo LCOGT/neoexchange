@@ -5106,6 +5106,45 @@ class Test_Export_Measurements(TestCase):
         self.assertEqual(expected_num_lines, num_lines)
 
 
+class TestUpdateElementsWithFindOrb(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        pass
+
+    def setUp(self):
+        self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+        self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        orig_filename = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'))
+        self.filename = os.path.basename(orig_filename)
+        os.symlink(orig_filename, os.path.join(self.dest_dir, self.filename))
+        self.debug_print = False
+        print(self.dest_dir)
+    def tearDown(self):
+        remove = False
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.dest_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.dest_dir)
+            try:
+                os.rmdir(self.dest_dir)
+                if self.debug_print:
+                    print("Removed", self.dest_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.dest_dir)
+
+    def test_goodelements(self):
+        expected_elements = {}
+
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+        elements_or_status = update_elements_with_findorb(self.source_dir, self.dest_dir, self.filename, site_code, start_time)
+
+        self.assertEqual(expected_elements, elements_or_status)
+
 class TestDetermineActiveProposals(TestCase):
 
     @classmethod
