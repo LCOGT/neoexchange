@@ -31,7 +31,8 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
-    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
+    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
+    mock_update_elements_with_findorb
 
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
@@ -5108,10 +5109,6 @@ class Test_Export_Measurements(TestCase):
 
 class TestUpdateElementsWithFindOrb(TestCase):
 
-    @classmethod
-    def setUpTestData(cls):
-        pass
-
     def setUp(self):
         self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
         self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
@@ -5139,9 +5136,13 @@ class TestUpdateElementsWithFindOrb(TestCase):
                 print("Error removing temporary test directory", self.dest_dir)
 
     @patch('core.views.datetime', MockDateTime)
+    @patch('neox.tests.mocks.datetime', MockDateTime)
     def test_goodelements(self):
 
         MockDateTime.change_datetime(2015, 11, 18, 12, 0, 0)
+        # Overwrite real method with Mock. Not sure why 'patch' isn't working
+        # but it isn't...
+        update_elements_with_findorb = mock_update_elements_with_findorb
 
         expected_elements = {   'abs_mag' : 21.91,
                                 'slope' : 0.15,
