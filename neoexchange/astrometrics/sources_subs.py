@@ -630,6 +630,9 @@ def parse_mpcobs(line):
     elif obs_type.upper() == 'R':
         # Radar observations, skip
         logger.debug("Found radar observation, skipping")
+    elif obs_type.upper() == 'M':
+        # Micrometer observations, skip
+        logger.debug("Found micrometer observation, skipping")
     elif obs_type == 's':
         # Second line of satellite-based observation, stuff whole line into
         # 'extrainfo' and parse what we can (so we can identify the corresponding

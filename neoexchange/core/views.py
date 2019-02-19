@@ -2307,7 +2307,7 @@ def create_source_measurement(obs_lines, block=None):
                         frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
                                                                     params['obs_date'] == frm.midpoint and
                                                                     frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
-                    if not frame_list and not frame:
+                    if not frame_list or not frame:
                         try:
                             prior_frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
                                                             midpoint=params['obs_date'],
@@ -2334,7 +2334,7 @@ def create_source_measurement(obs_lines, block=None):
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
                                                                         params['obs_date'] == frm.midpoint and
                                                                         frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
-                        if not frame_list and not frame:
+                        if not frame_list or not frame:
                             try:
                                 frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
                                                                 midpoint=params['obs_date'],
