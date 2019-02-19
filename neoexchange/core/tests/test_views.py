@@ -5118,7 +5118,9 @@ class TestUpdateElementsWithFindOrb(TestCase):
         orig_filename = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'))
         self.filename = os.path.basename(orig_filename)
         os.symlink(orig_filename, os.path.join(self.dest_dir, self.filename))
+
         self.debug_print = False
+        self.maxDiff = None
 
     def tearDown(self):
         remove = True
@@ -5136,8 +5138,30 @@ class TestUpdateElementsWithFindOrb(TestCase):
             except OSError:
                 print("Error removing temporary test directory", self.dest_dir)
 
+    @patch('core.views.datetime', MockDateTime)
     def test_goodelements(self):
-        expected_elements = {}
+
+        MockDateTime.change_datetime(2015, 11, 18, 12, 0, 0)
+
+        expected_elements = {   'abs_mag' : 21.91,
+                                'slope' : 0.15,
+                                'active' : True,
+                                'origin' : 'M',
+                                'source_type' : 'U',
+                                'elements_type' : 'MPC_MINOR_PLANET',
+                                'provisional_name' : 'P10pqB2',
+                                'epochofel' : datetime(2015, 11, 18),
+                                'meananom' : 270.89733,
+                                'argofperih' : 339.47051,
+                                'longascnode' : 197.11047,
+                                'orbinc' : 10.74649,
+                                'eccentricity' :  0.3001867,
+                                'meandist' :  1.1896136,
+                                'arc_length' : 22.5/24.0,
+                                'num_obs' : 9,
+                                'not_seen' : 0.5,
+                                'update_time' : datetime(2015, 11, 18, 12, 0, 0)
+                            }
 
         start_time = datetime(2015, 11, 19)
         site_code = 'Z21'
