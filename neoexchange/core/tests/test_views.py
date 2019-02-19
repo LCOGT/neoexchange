@@ -5119,9 +5119,9 @@ class TestUpdateElementsWithFindOrb(TestCase):
         self.filename = os.path.basename(orig_filename)
         os.symlink(orig_filename, os.path.join(self.dest_dir, self.filename))
         self.debug_print = False
-        print(self.dest_dir)
+
     def tearDown(self):
-        remove = False
+        remove = True
         if remove:
             try:
                 files_to_remove = glob(os.path.join(self.dest_dir, '*'))
