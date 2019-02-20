@@ -5170,6 +5170,22 @@ class TestUpdateElementsWithFindOrb(TestCase):
 
         self.assertEqual(expected_elements, elements_or_status)
 
+    def test_bad_filename(self):
+
+        # Overwrite real method with Mock. Not sure why 'patch' isn't working
+        # but it isn't...
+        update_elements_with_findorb = mock_update_elements_with_findorb
+
+        expected_status = 255
+
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        elements_or_status = update_elements_with_findorb(self.source_dir, self.dest_dir, 'i_am_broken', site_code, start_time)
+
+        self.assertEqual(expected_status, elements_or_status)
+
+
 class TestRefitWithFindOrb(TestCase):
 
     @classmethod
