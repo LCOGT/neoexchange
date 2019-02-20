@@ -402,21 +402,12 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
 
     if filename is not None:
         if num_lines > 0:
-            status = run_findorb(source_dir, dest_dir, filename, site_code, start_time)
-            if status != 0:
+            status_or_elements = update_elements_with_findorb(source_dir, dest_dir, filename, site_code, start_time)
+            if type(status_or_elements) != dict:
                 logger.error("Error running find_orb on the data")
             else:
-                orbit_file = os.path.join(os.getenv('HOME'), '.find_orb', 'mpc_fmt.txt')
-                try:
-                    orbfile_fh = open(orbit_file, 'r')
-                except IOError:
-                    logger.warning("File %s not found" % orbit_file)
-                    return None
 
-                orblines = orbfile_fh.readlines()
-                orbfile_fh.close()
-                orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
-                new_elements = clean_NEOCP_object(orblines)
+                new_elements = status_or_elements
                 # Reset some fields to avoid overwriting
                 body = Body.objects.get(pk=body_id)
                 new_elements['provisional_name'] = body.provisional_name
