@@ -5170,6 +5170,80 @@ class TestUpdateElementsWithFindOrb(TestCase):
 
         self.assertEqual(expected_elements, elements_or_status)
 
+class TestRefitWithFindOrb(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        P10pqB2_params = { 'provisional_name' : 'P10pqB2',
+                           'source_type' : 'U'
+                         }
+
+        cls.test_body = Body.objects.create(**P10pqB2_params)
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'), 'r')
+        test_obslines = test_fh.readlines()
+        test_fh.close()
+        source_measures = create_source_measurement(test_obslines)
+
+    def setUp(self):
+        self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+        self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.debug_print = False
+        self.remove = False
+
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.dest_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.dest_dir)
+            try:
+                os.rmdir(self.dest_dir)
+                if self.debug_print:
+                    print("Removed", self.dest_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.dest_dir)
+
+    def test_Z21(self):
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        expected_emp_info = { 'obj_id' : self.test_body.current_name(),
+                              'emp_sitecode' : site_code,
+                              'emp_timesys' : '(UTC)',
+                              'emp_rateunits' : "'/hr"}
+        expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646629670872465, -0.14939257239592119,  21.1, 2.25, 3.16),
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9644540366313723, -0.14964646932071826, 21.1, 2.25, 3.24)
+                         ]
+        expected_ephem_length = 24
+        expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
+        expected_meananom = 270.99926
+        expected_epoch = datetime(2015, 11, 18)
+        expected_src_type = 'U'
+        expected_origin = 'M'
+
+        emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
+
+        self.assertEqual(expected_emp_info, emp_info)
+        self.assertEqual(expected_ephem_length, len(new_ephem))
+        i = 0
+        while i < len(expected_ephem):
+            self.assertEqual(expected_ephem[i], new_ephem[i])
+            i += 1
+
+        body = Body.objects.get(provisional_name = self.test_body.current_name())
+
+        self.assertEqual(expected_num_srcmeas, body.num_obs)
+        self.assertEqual(expected_epoch, body.epochofel)
+        self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_src_type, body.source_type)
+        self.assertEqual(expected_origin, body.origin)
+
 class TestDetermineActiveProposals(TestCase):
 
     @classmethod
