@@ -463,6 +463,10 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     for line in scamp_head_fh:
         if 'HISTORY' in line:
             wcssolvr = str(line[34:39]+'-'+line[48:53])
+        if 'CTYPE1' in line:
+            ctype1 = line[9:31].strip().replace("'", "")
+        if 'CTYPE2' in line:
+            ctype2 = line[9:31].strip().replace("'", "")
         if 'CUNIT1' in line:
             # Trim spaces, remove single quotes
             cunit1 = line[9:31].strip().replace("'", "")
@@ -505,6 +509,8 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     #header keywords we have
     header['WCSDELRA'] = header['CRVAL1'] - crval1
     header['WCSDELDE'] = header['CRVAL2'] - crval2
+    header['CTYPE1'] = ctype1
+    header['CTYPE2'] = ctype2
     header['CRVAL1'] = crval1
     header['CRVAL2'] = crval2
     header['CRPIX1'] = crpix1
