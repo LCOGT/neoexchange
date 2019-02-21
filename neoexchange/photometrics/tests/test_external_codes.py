@@ -549,6 +549,8 @@ class TestUpdateFITSWCS(TestCase):
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
         self.test_externscamp_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
         self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
+        self.test_externscamp_TPV_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')        
         self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
         self.fits_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-sbig-e10_output.fits'))
         self.banzai_file_output = os.path.abspath(os.path.join(self.test_dir, 'example-banzai-e92_output.fits'))
@@ -819,6 +821,84 @@ class TestUpdateFITSWCS(TestCase):
         wcsdelde = header['WCSDELDE']
         wcserr   = header['WCSERR']
 
+        self.assertEqual(expected_units, cunit1)
+        self.assertEqual(expected_units, cunit2)
+        self.assertEqual(expected_crval1, crval1)
+        self.assertEqual(expected_crval2, crval2)
+        self.assertEqual(expected_crpix1, crpix1)
+        self.assertEqual(expected_crpix2, crpix2)
+        self.assertEqual(expected_cd1_1, cd1_1)
+        self.assertEqual(expected_cd1_2, cd1_2)
+        self.assertEqual(expected_cd2_1, cd2_1)
+        self.assertEqual(expected_cd2_2, cd2_2)
+        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
+        self.assertEqual(expected_wcssolvr, wcssolvr)
+        self.assertEqual(expected_wcsrfcat, wcsrfcat)
+        self.assertEqual(expected_wcsimcat, wcsimcat)
+        self.assertEqual(expected_wcsnref, wcsnref)
+        self.assertEqual(expected_wcsmatch, wcsmatch)
+        self.assertEqual(expected_wccattyp, wccattyp)
+        self.assertEqual(expected_wcsrdres, wcsrdres)
+        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
+        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
+        self.assertEqual(expected_wcserr, wcserr)
+
+    def test_update_FITS_WCS_GAIADR2_TPV_new_header(self):
+
+        status, new_header = updateFITSWCS(self.test_banzai_file, self.test_externscamp_TPV_headfile, self.test_externcat_TPV_xml, self.banzai_file_output)
+
+        self.assertEqual(status, 0)
+
+        expected_crval1 = 2.283330189100E+02
+        expected_crval2 = 3.839546339622E+01
+        expected_crpix1 = 7.621032903029E+02
+        expected_crpix2 = 5.105117960168E+02
+        expected_cd1_1 = -1.024825024633E-06
+        expected_cd1_2 = 3.162727554070E-04
+        expected_cd2_1 = -3.162997037181E-04
+        expected_cd2_2 = -1.075429228793E-06
+        expected_secpix = 1.13853
+        expected_wcssolvr = 'SCAMP-2.0.4'
+        expected_wcsrfcat = 'GAIA-DR2.cat'
+        expected_wcsimcat = 'tfn0m414-kb99-20180529-0202-e91_ldac.fits'
+        expected_wcsnref = 280
+        expected_wcsmatch = 23
+        expected_wccattyp = 'GAIA-DR2@CDS'
+        expected_wcsrdres = '0.31469/0.30167' # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+        expected_wcsdelra = 44.619981558
+        expected_wcsdelde = -37.1150613409
+        expected_wcserr = 0
+        expected_units = 'deg'
+        expected_ctype1 = 'RA---TPV'
+        expected_ctype2 = 'DEC--TPV'
+
+        header = new_header
+        ctype1 = header['CTYPE1']
+        ctype2 = header['CTYPE2']
+        cunit1 = header['CUNIT1']
+        cunit2 = header['CUNIT2']
+        crval1 = header['CRVAL1']
+        crval2 = header['CRVAL2']
+        crpix1 = header['CRPIX1']
+        crpix2 = header['CRPIX2']
+        cd1_1 = header['CD1_1']
+        cd1_2 = header['CD1_2']
+        cd2_1 = header['CD2_1']
+        cd2_2 = header['CD2_2']
+        secpix   = header['SECPIX']
+        wcssolvr = header['WCSSOLVR']
+        wcsrfcat = header['WCSRFCAT']
+        wcsimcat = header['WCSIMCAT']
+        wcsnref  = header['WCSNREF']
+        wcsmatch = header['WCSMATCH']
+        wccattyp = header['WCCATTYP']
+        wcsrdres = header['WCSRDRES']
+        wcsdelra = header['WCSDELRA']
+        wcsdelde = header['WCSDELDE']
+        wcserr   = header['WCSERR']
+
+        self.assertEqual(expected_ctype1, ctype1)
+        self.assertEqual(expected_ctype2, ctype2)
         self.assertEqual(expected_units, cunit1)
         self.assertEqual(expected_units, cunit2)
         self.assertEqual(expected_crval1, crval1)
