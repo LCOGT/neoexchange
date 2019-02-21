@@ -45,6 +45,8 @@ class ExternalCodeUnitTest(TestCase):
         self.test_fits_file = os.path.abspath(os.path.join('photometrics', 'tests', 'example-sbig-e10.fits'))
         self.test_fits_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'ldac_test_catalog.fits'))
 
+        self.test_GAIADR2_catalog = os.path.abspath(os.path.join('photometrics', 'tests', 'GAIA-DR2.cat'))
+
         self.test_fits_file_set1_1 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0098-e90.fits'))
         self.test_fits_file_set1_2 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0099-e90.fits'))
         self.test_fits_file_set1_3 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'cpt1m010-kb70-20160225-0100-e90.fits'))
@@ -62,10 +64,10 @@ class ExternalCodeUnitTest(TestCase):
         self.test_fits_file_set2_6 = os.path.abspath(os.path.join(os.environ['HOME'], 'test_mtdlink', 'elp1m008-fl05-20160225-0100-e90.fits'))
 
         self.debug_print = False
+        self.remove = True
 
     def tearDown(self):
-        remove = True
-        if remove:
+        if self.remove:
             try:
                 files_to_remove = glob(os.path.join(self.test_dir, '*'))
                 for file_to_rm in files_to_remove:
@@ -413,6 +415,32 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
+    @skipIf(find_binary("scamp") == None, "Could not find SCAMP binary ('scamp') in PATH")
+    def test_run_scamp_realfile(self):
+        # Symlink in DR2 and LDAC catalogs into test directory
+        os.symlink(self.test_GAIADR2_catalog, os.path.join(self.test_dir,os.path.basename(self.test_GAIADR2_catalog)))
+        os.symlink(self.test_fits_catalog, os.path.join(self.test_dir,os.path.basename(self.test_fits_catalog)))
+
+        expected_status = 0
+        expected_line1 = 'EQUINOX =        2000.00000000 / Mean equinox'
+
+        status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
+
+        self.assertEqual(expected_status, status)
+        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
+
+        header_file = os.path.basename(self.test_fits_catalog).replace('fits', 'head')
+        output_header = os.path.join(self.test_dir, header_file)
+        self.assertTrue(os.path.exists(output_header), msg=output_header + ' is missing')
+        self.assertFalse(os.path.exists(self.test_fits_catalog.replace('fits', 'head')), msg=output_header + ' exists in the wrong place')
+
+        test_fh = open(output_header, 'r')
+        test_lines = test_fh.readlines()
+        test_fh.close()
+
+        # Expected value is 29 lines of FITS header
+        self.assertEqual(29, len(test_lines))
+        self.assertEqual(expected_line1, test_lines[3].rstrip())
 
 
 class TestSExtractorRunner(ExternalCodeUnitTest):
@@ -493,30 +521,6 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
         for config_file in expected_configs:
             test_file = os.path.join(self.test_dir, config_file)
             self.assertTrue(os.path.exists(test_file), msg=config_file + ' is missing')
-
-    @skipIf(find_binary("scamp") == None, "Could not find SCAMP binary ('scamp') in PATH")
-    def test_run_scamp_realfile(self):
-
-        expected_status = 0
-        expected_line1 = 'EQUINOX =        2000.00000000 / Mean equinox'
-
-        status = run_scamp(self.source_dir, self.test_dir, self.test_fits_catalog)
-
-        self.assertEqual(expected_status, status)
-        if self.debug_print: print(glob(os.path.join(self.test_dir, '*')))
-
-        header_file = os.path.basename(self.test_fits_catalog).replace('fits', 'head')
-        output_header = os.path.join(self.test_dir, header_file)
-        self.assertTrue(os.path.exists(output_header), msg=output_header + ' is missing')
-        self.assertFalse(os.path.exists(self.test_fits_catalog.replace('fits', 'head')), msg=output_header + ' exists in the wrong place')
-
-        test_fh = open(output_header, 'r')
-        test_lines = test_fh.readlines()
-        test_fh.close()
-
-        # Expected value is 29 lines of FITS header
-        self.assertEqual(29, len(test_lines))
-        self.assertEqual(expected_line1, test_lines[3].rstrip())
 
 
 class TestDetermineSExtOptions(ExternalCodeUnitTest):
