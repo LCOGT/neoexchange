@@ -279,7 +279,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
     return retcode_or_cmdline
 
 @timeit
-def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
+def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False, distort_degrees=None):
     '''Run SCAMP (using either the binary specified by [binary] or by
     looking for 'scamp' in the PATH) on the passed <fits_catalog_path> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -295,7 +295,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False):
         return -42
 
     scamp_config_file = default_scamp_config_files()[0]
-    options = determine_scamp_options(fits_catalog_path)
+    options = determine_scamp_options(fits_catalog_path, distort_degrees=distort_degrees)
 
     # SCAMP writes the output header file to the path that the FITS file is in,
     # not to the directory SCAMP is being run from...

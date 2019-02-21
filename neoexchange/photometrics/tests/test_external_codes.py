@@ -611,10 +611,10 @@ class TestUpdateFITSWCS(TestCase):
 
         self.precision = 7
         self.debug_print = False
+        self.remove =True
 
     def tearDown(self):
-        remove = True
-        if remove:
+        if self.remove:
             try:
                 files_to_remove = glob(os.path.join(self.test_dir, '*'))
                 for file_to_rm in files_to_remove:
@@ -685,72 +685,31 @@ class TestUpdateFITSWCS(TestCase):
 
         self.assertEqual(status, 0)
 
-        expected_crval1 = 1.783286919001E+02
-        expected_crval2 = 1.169387882835E+01
-        expected_crpix1 = 2.047592457311E+03
-        expected_crpix2 = 2.048419571848E+03
-        expected_cd1_1 = 1.082433886779E-04
-        expected_cd1_2 = 6.824629998000E-07
-        expected_cd2_1 = 7.053875928440E-07
-        expected_cd2_2 = -1.082408809463E-04
-        expected_secpix = 0.389669
-        expected_wcssolvr = 'SCAMP-2.0.4'
-        expected_wcsrfcat = '<Vizier/aserver.cgi?ucac4@cds>'
-        expected_wcsimcat = 'ldac_test_catalog.fits'
-        expected_wcsnref = 606
-        expected_wcsmatch = 64
-        expected_wccattyp = 'UCAC4@CDS'
-        expected_wcsrdres = '0.21947/0.20434'
-        expected_wcsdelra = 37.175
-        expected_wcsdelde = -51.299
-        expected_wcserr = 0
-        expected_units = 'deg'
+        expected = {
+                     'crval1' : 1.783286919001E+02, 'crval2' : 1.169387882835E+01,
+                     'crpix1' : 2.047592457311E+03, 'crpix2' : 2.048419571848E+03,
+                     'cd1_1'  : 1.082433886779E-04,  'cd1_2' : 6.824629998000E-07,
+                     'cd2_1'  : 7.053875928440E-07,  'cd2_2' : -1.082408809463E-04,
+                     'secpix' : 0.389669,
+                     'wcssolvr' : 'SCAMP-2.0.4',
+                     'wcsrfcat' : '<Vizier/aserver.cgi?ucac4@cds>',
+                     'wcsimcat' : 'ldac_test_catalog.fits',
+                     'wcsnref' : 606, 'wcsmatch' : 64,
+                     'wccattyp' : 'UCAC4@CDS',
+                     'wcsrdres' : '0.21947/0.20434',
+                     'wcsdelra' : 37.1754196, 'wcsdelde' : -51.2994992,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg', 'cunit2' : 'deg'
+                    }
 
         hdu_number = 0
         header = fits.getheader(self.fits_file_output, hdu_number)
-        cunit1 = header['CUNIT1']
-        cunit2 = header['CUNIT2']
-        crval1 = header['CRVAL1']
-        crval2 = header['CRVAL2']
-        crpix1 = header['CRPIX1']
-        crpix2 = header['CRPIX2']
-        cd1_1 = header['CD1_1']
-        cd1_2 = header['CD1_2']
-        cd2_1 = header['CD2_1']
-        cd2_2 = header['CD2_2']
-        secpix   = header['SECPIX']
-        wcssolvr = header['WCSSOLVR']
-        wcsrfcat = header['WCSRFCAT']
-        wcsimcat = header['WCSIMCAT']
-        wcsnref  = header['WCSNREF']
-        wcsmatch = header['WCSMATCH']
-        wccattyp = header['WCCATTYP']
-        wcsrdres = header['WCSRDRES']
-        wcsdelra = header['WCSDELRA']
-        wcsdelde = header['WCSDELDE']
-        wcserr   = header['WCSERR']
 
-        self.assertEqual(expected_units, cunit1)
-        self.assertEqual(expected_units, cunit2)
-        self.assertEqual(expected_crval1, crval1)
-        self.assertEqual(expected_crval2, crval2)
-        self.assertEqual(expected_crpix1, crpix1)
-        self.assertEqual(expected_crpix2, crpix2)
-        self.assertEqual(expected_cd1_1, cd1_1)
-        self.assertEqual(expected_cd1_2, cd1_2)
-        self.assertEqual(expected_cd2_1, cd2_1)
-        self.assertEqual(expected_cd2_2, cd2_2)
-        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
-        self.assertEqual(expected_wcssolvr, wcssolvr)
-        self.assertEqual(expected_wcsrfcat, wcsrfcat)
-        self.assertEqual(expected_wcsimcat, wcsimcat)
-        self.assertEqual(expected_wcsnref, wcsnref)
-        self.assertEqual(expected_wcsmatch, wcsmatch)
-        self.assertEqual(expected_wccattyp, wccattyp)
-        self.assertEqual(expected_wcsrdres, wcsrdres)
-        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
-        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
-        self.assertEqual(expected_wcserr, wcserr)
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], header[key], self.precision, msg="Failure on {}".format(key))
 
     def test_update_FITS_WCS_GAIADR2(self):
 
@@ -758,72 +717,33 @@ class TestUpdateFITSWCS(TestCase):
 
         self.assertEqual(status, 0)
 
-        expected_crval1 = 2.283330189100E+02
-        expected_crval2 = 3.839546339622E+01
-        expected_crpix1 = 7.621032903029E+02
-        expected_crpix2 = 5.105117960168E+02
-        expected_cd1_1 = -1.024825024633E-06
-        expected_cd1_2 = 3.162727554070E-04
-        expected_cd2_1 = -3.162997037181E-04
-        expected_cd2_2 = -1.075429228793E-06
-        expected_secpix = 1.13853
-        expected_wcssolvr = 'SCAMP-2.0.4'
-        expected_wcsrfcat = 'GAIA-DR2.cat'
-        expected_wcsimcat = 'tfn0m414-kb99-20180529-0202-e91_ldac.fits'
-        expected_wcsnref = 280
-        expected_wcsmatch = 23
-        expected_wccattyp = 'GAIA-DR2@CDS'
-        expected_wcsrdres = '0.31469/0.30167' # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
-        expected_wcsdelra = 44.619981558
-        expected_wcsdelde = -37.1150613409
-        expected_wcserr = 0
-        expected_units = 'deg'
+        expected = {
+                     'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crpix1' : 7.621032903029E+02, 'crpix2' : 5.105117960168E+02,
+                     'cd1_1'  : -1.024825024633E-06, 'cd1_2' : 3.162727554070E-04,
+                     'cd2_1'  : -3.162997037181E-04, 'cd2_2' : -1.075429228793E-06,
+                     'secpix' : 1.13853,
+                     'wcssolvr' : 'SCAMP-2.0.4',
+                     'wcsrfcat' : 'GAIA-DR2.cat',
+                     'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                     'wcsnref' : 280, 'wcsmatch' : 23,
+                     'wccattyp' : 'GAIA-DR2@CDS',
+                     'wcsrdres' : '0.31469/0.30167', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+                     'wcsdelra' : 44.619981558,
+                     'wcsdelde' : -37.1150613409,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg',
+                     'cunit2' : 'deg'
+                    }
 
         hdu_number = 0
         header = fits.getheader(self.banzai_file_output, hdu_number)
-        cunit1 = header['CUNIT1']
-        cunit2 = header['CUNIT2']
-        crval1 = header['CRVAL1']
-        crval2 = header['CRVAL2']
-        crpix1 = header['CRPIX1']
-        crpix2 = header['CRPIX2']
-        cd1_1 = header['CD1_1']
-        cd1_2 = header['CD1_2']
-        cd2_1 = header['CD2_1']
-        cd2_2 = header['CD2_2']
-        secpix   = header['SECPIX']
-        wcssolvr = header['WCSSOLVR']
-        wcsrfcat = header['WCSRFCAT']
-        wcsimcat = header['WCSIMCAT']
-        wcsnref  = header['WCSNREF']
-        wcsmatch = header['WCSMATCH']
-        wccattyp = header['WCCATTYP']
-        wcsrdres = header['WCSRDRES']
-        wcsdelra = header['WCSDELRA']
-        wcsdelde = header['WCSDELDE']
-        wcserr   = header['WCSERR']
 
-        self.assertEqual(expected_units, cunit1)
-        self.assertEqual(expected_units, cunit2)
-        self.assertEqual(expected_crval1, crval1)
-        self.assertEqual(expected_crval2, crval2)
-        self.assertEqual(expected_crpix1, crpix1)
-        self.assertEqual(expected_crpix2, crpix2)
-        self.assertEqual(expected_cd1_1, cd1_1)
-        self.assertEqual(expected_cd1_2, cd1_2)
-        self.assertEqual(expected_cd2_1, cd2_1)
-        self.assertEqual(expected_cd2_2, cd2_2)
-        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
-        self.assertEqual(expected_wcssolvr, wcssolvr)
-        self.assertEqual(expected_wcsrfcat, wcsrfcat)
-        self.assertEqual(expected_wcsimcat, wcsimcat)
-        self.assertEqual(expected_wcsnref, wcsnref)
-        self.assertEqual(expected_wcsmatch, wcsmatch)
-        self.assertEqual(expected_wccattyp, wccattyp)
-        self.assertEqual(expected_wcsrdres, wcsrdres)
-        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
-        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
-        self.assertEqual(expected_wcserr, wcserr)
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], header[key], self.precision, msg="Failure on {}".format(key))
 
     def test_update_FITS_WCS_GAIADR2_new_header(self):
 
@@ -831,71 +751,28 @@ class TestUpdateFITSWCS(TestCase):
 
         self.assertEqual(status, 0)
 
-        expected_crval1 = 2.283330189100E+02
-        expected_crval2 = 3.839546339622E+01
-        expected_crpix1 = 7.621032903029E+02
-        expected_crpix2 = 5.105117960168E+02
-        expected_cd1_1 = -1.024825024633E-06
-        expected_cd1_2 = 3.162727554070E-04
-        expected_cd2_1 = -3.162997037181E-04
-        expected_cd2_2 = -1.075429228793E-06
-        expected_secpix = 1.13853
-        expected_wcssolvr = 'SCAMP-2.0.4'
-        expected_wcsrfcat = 'GAIA-DR2.cat'
-        expected_wcsimcat = 'tfn0m414-kb99-20180529-0202-e91_ldac.fits'
-        expected_wcsnref = 280
-        expected_wcsmatch = 23
-        expected_wccattyp = 'GAIA-DR2@CDS'
-        expected_wcsrdres = '0.31469/0.30167' # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
-        expected_wcsdelra = 44.619981558
-        expected_wcsdelde = -37.1150613409
-        expected_wcserr = 0
-        expected_units = 'deg'
+        expected = {
+                     'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crpix1' : 7.621032903029E+02, 'crpix2' : 5.105117960168E+02,
+                     'cd1_1'  : -1.024825024633E-06, 'cd1_2' : 3.162727554070E-04,
+                     'cd2_1'  : -3.162997037181E-04, 'cd2_2' : -1.075429228793E-06,
+                     'secpix' : 1.13853,
+                     'wcssolvr' : 'SCAMP-2.0.4',
+                     'wcsrfcat' : 'GAIA-DR2.cat',
+                     'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                     'wcsnref'  : 280, 'wcsmatch' : 23,
+                     'wccattyp' : 'GAIA-DR2@CDS',
+                     'wcsrdres' : '0.31469/0.30167', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+                     'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg', 'cunit2' : 'deg'
+                    }
 
-        header = new_header
-        cunit1 = header['CUNIT1']
-        cunit2 = header['CUNIT2']
-        crval1 = header['CRVAL1']
-        crval2 = header['CRVAL2']
-        crpix1 = header['CRPIX1']
-        crpix2 = header['CRPIX2']
-        cd1_1 = header['CD1_1']
-        cd1_2 = header['CD1_2']
-        cd2_1 = header['CD2_1']
-        cd2_2 = header['CD2_2']
-        secpix   = header['SECPIX']
-        wcssolvr = header['WCSSOLVR']
-        wcsrfcat = header['WCSRFCAT']
-        wcsimcat = header['WCSIMCAT']
-        wcsnref  = header['WCSNREF']
-        wcsmatch = header['WCSMATCH']
-        wccattyp = header['WCCATTYP']
-        wcsrdres = header['WCSRDRES']
-        wcsdelra = header['WCSDELRA']
-        wcsdelde = header['WCSDELDE']
-        wcserr   = header['WCSERR']
-
-        self.assertEqual(expected_units, cunit1)
-        self.assertEqual(expected_units, cunit2)
-        self.assertEqual(expected_crval1, crval1)
-        self.assertEqual(expected_crval2, crval2)
-        self.assertEqual(expected_crpix1, crpix1)
-        self.assertEqual(expected_crpix2, crpix2)
-        self.assertEqual(expected_cd1_1, cd1_1)
-        self.assertEqual(expected_cd1_2, cd1_2)
-        self.assertEqual(expected_cd2_1, cd2_1)
-        self.assertEqual(expected_cd2_2, cd2_2)
-        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
-        self.assertEqual(expected_wcssolvr, wcssolvr)
-        self.assertEqual(expected_wcsrfcat, wcsrfcat)
-        self.assertEqual(expected_wcsimcat, wcsimcat)
-        self.assertEqual(expected_wcsnref, wcsnref)
-        self.assertEqual(expected_wcsmatch, wcsmatch)
-        self.assertEqual(expected_wccattyp, wccattyp)
-        self.assertEqual(expected_wcsrdres, wcsrdres)
-        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
-        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
-        self.assertEqual(expected_wcserr, wcserr)
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], new_header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], new_header[key], self.precision, msg="Failure on {}".format(key))
 
     def test_update_FITS_WCS_GAIADR2_TPV_new_header(self):
 
@@ -903,77 +780,27 @@ class TestUpdateFITSWCS(TestCase):
 
         self.assertEqual(status, 0)
 
-        expected_crval1 = 2.283330189100E+02
-        expected_crval2 = 3.839546339622E+01
-        expected_crpix1 = 7.621032903029E+02
-        expected_crpix2 = 5.105117960168E+02
-        expected_cd1_1 = -1.024825024633E-06
-        expected_cd1_2 = 3.162727554070E-04
-        expected_cd2_1 = -3.162997037181E-04
-        expected_cd2_2 = -1.075429228793E-06
-        expected_secpix = 1.13853
-        expected_wcssolvr = 'SCAMP-2.0.4'
-        expected_wcsrfcat = 'GAIA-DR2.cat'
-        expected_wcsimcat = 'tfn0m414-kb99-20180529-0202-e91_ldac.fits'
-        expected_wcsnref = 280
-        expected_wcsmatch = 23
-        expected_wccattyp = 'GAIA-DR2@CDS'
-        expected_wcsrdres = '0.31469/0.30167' # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
-        expected_wcsdelra = 44.619981558
-        expected_wcsdelde = -37.1150613409
-        expected_wcserr = 0
-        expected_units = 'deg'
-        expected_ctype1 = 'RA---TPV'
-        expected_ctype2 = 'DEC--TPV'
+        expected = { 'crval1' : 2.283330189100E+02, 'crval2' : 3.839546339622E+01,
+                     'crpix1' : 7.620000000000E+02, 'crpix2' : 5.105000000000E+02,
+                     'cd1_1'  : -1.083049787920E-06, 'cd1_2' : 3.162568176201E-04,
+                     'cd2_1'  : -3.162568176201E-04, 'cd2_2' : -1.083049787920E-06,
+                     'secpix' : 1.13853,
+                     'wcssolvr' : 'SCAMP-2.0.4',
+                     'wcsrfcat' : 'GAIA-DR2.cat',
+                     'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                     'wcsnref' : 280, 'wcsmatch' : 23, 'wccattyp' : 'GAIA-DR2@CDS',
+                     'wcsrdres' : '0.30803/0.34776', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
+                     'wcsdelra' : 44.619981558, 'wcsdelde' : -37.1150613409,
+                     'wcserr' : 0,
+                     'cunit1' : 'deg', 'cunit2' : 'deg',
+                     'ctype1' : 'RA---TPV', 'ctype2' : 'DEC--TPV'
+                    }
 
-        header = new_header
-        ctype1 = header['CTYPE1']
-        ctype2 = header['CTYPE2']
-        cunit1 = header['CUNIT1']
-        cunit2 = header['CUNIT2']
-        crval1 = header['CRVAL1']
-        crval2 = header['CRVAL2']
-        crpix1 = header['CRPIX1']
-        crpix2 = header['CRPIX2']
-        cd1_1 = header['CD1_1']
-        cd1_2 = header['CD1_2']
-        cd2_1 = header['CD2_1']
-        cd2_2 = header['CD2_2']
-        secpix   = header['SECPIX']
-        wcssolvr = header['WCSSOLVR']
-        wcsrfcat = header['WCSRFCAT']
-        wcsimcat = header['WCSIMCAT']
-        wcsnref  = header['WCSNREF']
-        wcsmatch = header['WCSMATCH']
-        wccattyp = header['WCCATTYP']
-        wcsrdres = header['WCSRDRES']
-        wcsdelra = header['WCSDELRA']
-        wcsdelde = header['WCSDELDE']
-        wcserr   = header['WCSERR']
-
-        self.assertEqual(expected_ctype1, ctype1)
-        self.assertEqual(expected_ctype2, ctype2)
-        self.assertEqual(expected_units, cunit1)
-        self.assertEqual(expected_units, cunit2)
-        self.assertEqual(expected_crval1, crval1)
-        self.assertEqual(expected_crval2, crval2)
-        self.assertEqual(expected_crpix1, crpix1)
-        self.assertEqual(expected_crpix2, crpix2)
-        self.assertEqual(expected_cd1_1, cd1_1)
-        self.assertEqual(expected_cd1_2, cd1_2)
-        self.assertEqual(expected_cd2_1, cd2_1)
-        self.assertEqual(expected_cd2_2, cd2_2)
-        self.assertAlmostEqual(expected_secpix, secpix, self.precision)
-        self.assertEqual(expected_wcssolvr, wcssolvr)
-        self.assertEqual(expected_wcsrfcat, wcsrfcat)
-        self.assertEqual(expected_wcsimcat, wcsimcat)
-        self.assertEqual(expected_wcsnref, wcsnref)
-        self.assertEqual(expected_wcsmatch, wcsmatch)
-        self.assertEqual(expected_wccattyp, wccattyp)
-        self.assertEqual(expected_wcsrdres, wcsrdres)
-        self.assertAlmostEqual(expected_wcsdelra, wcsdelra, 3)
-        self.assertAlmostEqual(expected_wcsdelde, wcsdelde, 3)
-        self.assertEqual(expected_wcserr, wcserr)
+        for key in expected:
+            if type(expected[key]) == str:
+                self.assertEqual(expected[key], new_header[key], msg="Failure on {}".format(key))
+            else:
+                self.assertAlmostEqual(expected[key], new_header[key], self.precision, msg="Failure on {}".format(key))
 
 class TestGetSCAMPXMLInfo(TestCase):
 
