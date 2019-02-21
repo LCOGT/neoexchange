@@ -202,9 +202,23 @@ def determine_mtdlink_options(num_fits_files, param_file, pa_rate_dict):
     options = options.rstrip()
     return options
 
-def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat'):
-
+def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', distort_degrees=None):
+    """Assemble the command line options for SCAMP.
+    Focal plane distortions are turned on by default if the filename contains
+    '1m0' - this can be overridden by setting [distort_degrees].
+    If [distort_degrees] is not equal to 1 (the default), then additional
+    options are set to change the degree of polynomial order and switch to
+    the TPV distorted tangent plane projection.
+    Reference: https://fits.gsfc.nasa.gov/registry/tpvwcs/tpv.html
+    """
     options = "-ASTREF_CATALOG FILE -ASTREFCAT_NAME {}".format(external_cat_name)
+    if '1m0' in fits_catalog or distort_degrees is not None:
+        if distort_degrees is None:
+            distort_degrees = 3
+    else:
+        distort_degrees = 1
+    if (distort_degrees != 1 and distort_degrees <= 7):
+            options += " -DISTORT_DEGREES {} -PROJECTION_TYPE TPV".format(distort_degrees)
 
     return options
 

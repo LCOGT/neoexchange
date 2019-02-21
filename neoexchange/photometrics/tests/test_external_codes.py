@@ -365,6 +365,56 @@ class TestSCAMPRunner(ExternalCodeUnitTest):
 
         self.assertEqual(expected_options, options)
 
+    def test_scamp_options_0m4_no_distortion(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+
+        options = determine_scamp_options('foo_0m4.ldac')
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_2m0_no_distortion(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+
+        options = determine_scamp_options('foo_0m4.ldac')
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_1m0_distortion(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 3 -PROJECTION_TYPE TPV'
+
+        options = determine_scamp_options('foo_1m0.ldac')
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_1m0_distortion_4th_order(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 4 -PROJECTION_TYPE TPV'
+
+        options = determine_scamp_options('foo_1m0.ldac', distort_degrees=4)
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_0m4_distortion_5th_order(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat -DISTORT_DEGREES 5 -PROJECTION_TYPE TPV'
+
+        options = determine_scamp_options('foo_0m4.ldac', distort_degrees=5)
+
+        self.assertEqual(expected_options, options)
+
+    def test_scamp_options_1m0_no_distortion(self):
+
+        expected_options = '-ASTREF_CATALOG FILE -ASTREFCAT_NAME GAIA-DR2.cat'
+
+        options = determine_scamp_options('foo_1m0.ldac', distort_degrees=1)
+
+        self.assertEqual(expected_options, options)
+
+
+
 class TestSExtractorRunner(ExternalCodeUnitTest):
 
     def test_setup_sextractor_dir_bad_destdir(self):
