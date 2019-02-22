@@ -2107,6 +2107,11 @@ class TestUpdate_MPC_orbit(TestCase):
 
 class TestUpdate_MPC_obs(TestCase):
     def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.debug_print = False
+        self.maxDiff = None
+
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
         self.test_mpcobs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
@@ -2172,16 +2177,16 @@ class TestUpdate_MPC_obs(TestCase):
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test2_multiple_designations(self):
-        expected_measures = 27
+        expected_measures = 28
         measures = update_MPC_obs(self.test_mpcobs_page2)
         self.assertEqual(len(measures), expected_measures)
 
     def test_repeat_sources(self):
-        expected_measures = 15
-        total_measures = 27
-        expected_frames = 27
+        expected_measures = 16
+        total_measures = 28
+        expected_frames = 28
         first_date = datetime(1992, 6, 3, 5, 27, 4, 896000)
-        last_date = datetime(2018, 7, 10, 3, 35, 44, 448000)
+        last_date = datetime(2018, 12, 4, 21, 4, 6, 240000)
 
         # Read in old measures
         initial_measures = update_MPC_obs(self.test_mpcobs_page3)
@@ -2205,6 +2210,27 @@ class TestUpdate_MPC_obs(TestCase):
 
         measures = update_MPC_obs(self.test_mpcobs_page4)
         self.assertEqual(len(measures), expected_measures)
+
+    def test_obs_export(self):
+        measures = update_MPC_obs(self.test_mpcobs_page2)
+        expected_filename = os.path.join(self.test_dir, '13553.mpc')
+        expected_out = '13553         C1998 02 21.09248010 31 21.78 +03 20 23.2          20.1 V      557\n'
+        expected_num_lines = 23
+
+        body = Body.objects.get(name='13553')
+        filename, num_lines = export_measurements(body.id, self.test_dir)
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_num_lines, num_lines)
+
+        lines = []
+        with open(filename, 'r') as test_mpc_out:
+            line = test_mpc_out.readline()
+            while line:
+                lines.append(line)
+                line = test_mpc_out.readline()
+        self.assertEqual(expected_out, lines[0])
+        self.assertEqual(num_lines, len(lines)-1)
 
 
 class TestClean_mpcorbit(TestCase):
@@ -5055,10 +5081,10 @@ class TestFindBestSolarAnalog(TestCase):
         self.assertEqual(expected_params, close_params)
 
 
-class Test_Export_Measurements(TestCase):
+class TestExportMeasurements(TestCase):
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
         self.maxDiff = None

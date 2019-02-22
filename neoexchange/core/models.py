@@ -1020,7 +1020,10 @@ class SourceMeasurement(models.Model):
         except TypeError:
             mag = "    "
 
-        obs_type = 'C'
+        if self.frame.extrainfo:
+            obs_type = self.frame.extrainfo
+        else:
+            obs_type = 'C'
         microday = True
         if self.frame.frametype == Frame.SATELLITE_FRAMETYPE:
             obs_type = 'S'
