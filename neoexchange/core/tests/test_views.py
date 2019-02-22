@@ -2172,15 +2172,15 @@ class TestUpdate_MPC_obs(TestCase):
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test2_multiple_designations(self):
-        expected_measures = 23
+        expected_measures = 27
         measures = update_MPC_obs(self.test_mpcobs_page2)
         self.assertEqual(len(measures), expected_measures)
 
     def test_repeat_sources(self):
-        expected_measures = 11
-        total_measures = 23
-        expected_frames = 23
-        first_date = datetime(1998, 2, 21, 2, 13, 10, 272000)
+        expected_measures = 15
+        total_measures = 27
+        expected_frames = 27
+        first_date = datetime(1992, 6, 3, 5, 27, 4, 896000)
         last_date = datetime(2018, 7, 10, 3, 35, 44, 448000)
 
         # Read in old measures
