@@ -605,7 +605,12 @@ def read_findorb_ephem(empfile):
                 # Read main ephemeris
                 line = line.strip()
                 chunks = line.split()
-                emp_datetime = datetime(int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3][0:2]), int(chunks[3][3:5]))
+                try:
+                    emp_datetime = datetime(int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3][0:2]), int(chunks[3][3:5]))
+                except ValueError:
+                    logger.error("Couldn't parse line:")
+                    logger.error(line)
+                    raise ValueError("Error converting to datetime")
                 emp_ra, status = S.sla_dtf2r(chunks[4], chunks[5], chunks[6])
                 if status != 0:
                     logger.error("Error converting RA value")

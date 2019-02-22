@@ -52,7 +52,6 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
-
 class TestClean_NEOCP_Object(TestCase):
 
     def test_X33656(self):
@@ -73,7 +72,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'M',
                               'source_type' : 'U',
-                              'active'      : True
+                              'active'      : True,
+                              'orbit_rms'   : 0.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -98,7 +98,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'M',
                               'source_type' : 'U',
-                              'active'      : True
+                              'active'      : True,
+                              'orbit_rms'   : 0.34
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -134,7 +135,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 10.4/1440.0,
-                              'not_seen'    : 1.5
+                              'not_seen'    : 1.5,
+                              'orbit_rms'   : 0.08
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -163,7 +165,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 3.0,
-                              'not_seen'    : 12.25
+                              'not_seen'    : 12.25,
+                              'orbit_rms'   : 0.14
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -192,7 +195,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 87/1440.0,
-                              'not_seen'    :  3.25
+                              'not_seen'    :  3.25,
+                              'orbit_rms'   : 1.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -221,7 +225,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 87/24.0,
-                              'not_seen'    :  3.25
+                              'not_seen'    :  3.25,
+                              'orbit_rms'   : 1.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -251,7 +256,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'num_obs'     : 185,
                               'arc_length'  : 1826.0,
-                              'not_seen'    : 90.25
+                              'not_seen'    : 90.25,
+                              'orbit_rms'   : 0.37
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -281,7 +287,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'num_obs'     : 339,
                               'arc_length'  : 1826.0,
-                              'not_seen'    : 79.25
+                              'not_seen'    : 79.25,
+                              'orbit_rms'   : 0.33
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -312,6 +319,7 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'arc_length'  : 3.0,
                               'not_seen'    : 11.75,
+                              'orbit_rms'   : 0.09
                             }
         elements = clean_NEOCP_object(obs_page_list)
         for element in expected_elements:
@@ -5161,7 +5169,8 @@ class TestUpdateElementsWithFindOrb(TestCase):
                                 'arc_length' : 22.5/24.0,
                                 'num_obs' : 9,
                                 'not_seen' : 0.5,
-                                'update_time' : datetime(2015, 11, 18, 12, 0, 0)
+                                'update_time' : datetime(2015, 11, 18, 12, 0, 0),
+                                'orbit_rms' : 0.08
                             }
 
         start_time = datetime(2015, 11, 19)
@@ -5206,7 +5215,7 @@ class TestRefitWithFindOrb(TestCase):
         self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
-        self.remove = False
+        self.remove = True
 
         self.maxDiff = None
 
@@ -5224,6 +5233,8 @@ class TestRefitWithFindOrb(TestCase):
                     print("Removed", self.dest_dir)
             except OSError:
                 print("Error removing temporary test directory", self.dest_dir)
+        else:
+            print("dest_dir=", self.dest_dir)
 
     def test_Z21(self):
         start_time = datetime(2015, 11, 19)
@@ -5238,8 +5249,8 @@ class TestRefitWithFindOrb(TestCase):
                          ]
         expected_ephem_length = 24
         expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
-        expected_meananom = 270.99926
-        expected_epoch = datetime(2015, 11, 18)
+        expected_meananom = 272.51789
+        expected_epoch = datetime(2015, 11, 20)
         expected_src_type = 'U'
         expected_origin = 'M'
 

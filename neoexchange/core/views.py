@@ -1770,7 +1770,8 @@ def clean_NEOCP_object(page_list):
                 'origin': 'M',
                 'update_time' : datetime.utcnow(),
                 'arc_length' : None,
-                'not_seen' : None
+                'not_seen' : None,
+                'orbit_rms' : float(current[15])
             }
             arc_length = None
             arc_units = current[14]
@@ -1830,6 +1831,7 @@ def clean_NEOCP_object(page_list):
                 'origin': origin,
                 'provisional_name' : provisional_name,
                 'num_obs' : int(line[117:122]),
+                'orbit_rms' : float(line[137:141]),
                 'update_time' : datetime.utcnow(),
                 'arc_length' : None,
                 'not_seen' : None
