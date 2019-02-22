@@ -134,6 +134,10 @@ def setup_findorb_environ_file(source_dir, site_code=500, start_time=datetime.ut
                 line = "EPHEM_START={}".format(start_time.strftime("%Y-%m-%d %H:%M"))
             elif line.lstrip()[0:14] == 'EPHEM_MPC_CODE':
                 line = "EPHEM_MPC_CODE=1 {:3s}".format(str(site_code).upper())
+            elif line.lstrip()[0:11] == 'EPHEM_STEPS':
+                line = "EPHEM_STEPS=24 30m"
+            elif line.lstrip()[0:9] == 'SETTINGS=':
+                line = 'SETTINGS=N,4,5,65568,2.000000,1.000000'
             print(line.rstrip(), file=out_fh)
 
     return
