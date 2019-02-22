@@ -32,7 +32,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
     mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
-    mock_update_elements_with_findorb
+    mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms
 
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
@@ -5170,7 +5170,7 @@ class TestUpdateElementsWithFindOrb(TestCase):
                                 'num_obs' : 9,
                                 'not_seen' : 0.5,
                                 'update_time' : datetime(2015, 11, 18, 12, 0, 0),
-                                'orbit_rms' : 0.08
+                                'orbit_rms' : 0.1
                             }
 
         start_time = datetime(2015, 11, 19)
@@ -5219,6 +5219,8 @@ class TestRefitWithFindOrb(TestCase):
 
         self.maxDiff = None
 
+        self.test_body.refresh_from_db()
+
     def tearDown(self):
         if self.remove:
             try:
@@ -5251,6 +5253,42 @@ class TestRefitWithFindOrb(TestCase):
         expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
         expected_meananom = 272.51789
         expected_epoch = datetime(2015, 11, 20)
+        expected_src_type = 'U'
+        expected_origin = 'M'
+
+        emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
+
+        self.assertEqual(expected_emp_info, emp_info)
+        self.assertEqual(expected_ephem_length, len(new_ephem))
+        i = 0
+        while i < len(expected_ephem):
+            self.assertEqual(expected_ephem[i], new_ephem[i])
+            i += 1
+
+        body = Body.objects.get(provisional_name = self.test_body.current_name())
+
+        self.assertEqual(expected_num_srcmeas, body.num_obs)
+        self.assertEqual(expected_epoch, body.epochofel)
+        self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_src_type, body.source_type)
+        self.assertEqual(expected_origin, body.origin)
+
+    @patch('core.views.update_elements_with_findorb', mock_update_elements_with_findorb_badrms)
+    def test_with_bad_RMS(self):
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        expected_emp_info = { 'obj_id' : self.test_body.current_name(),
+                              'emp_sitecode' : site_code,
+                              'emp_timesys' : '(UTC)',
+                              'emp_rateunits' : "'/hr"}
+        expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646629670872465, -0.14939257239592119,  21.1, 2.25, 3.16),
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9644540366313723, -0.14964646932071826, 21.1, 2.25, 3.24)
+                         ]
+        expected_ephem_length = 2
+        expected_num_srcmeas = None
+        expected_meananom = None
+        expected_epoch = None
         expected_src_type = 'U'
         expected_origin = 'M'
 

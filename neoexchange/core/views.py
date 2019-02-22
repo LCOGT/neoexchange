@@ -396,7 +396,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
 
     source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
     dest_dir = dest_dir or tempfile.mkdtemp(prefix='tmp_neox_')
-    new_ephem = None
+    new_ephem = (None, None)
 
     filename, num_lines = export_measurements(body_id, dest_dir)
 
@@ -408,15 +408,25 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
             else:
 
                 new_elements = status_or_elements
-                # Reset some fields to avoid overwriting
                 body = Body.objects.get(pk=body_id)
-                new_elements['provisional_name'] = body.provisional_name
-                new_elements['origin'] = body.origin
-                new_elements['source_type'] = body.source_type
-                updated = save_and_make_revision(body, new_elements)
-                message = "Did not update"
-                if updated is True:
-                    message = "Updated"
+                if new_elements['epochofel'] >= start_time and new_elements['orbit_rms'] < 1.0:
+                    # Reset some fields to avoid overwriting
+
+                    new_elements['provisional_name'] = body.provisional_name
+                    new_elements['origin'] = body.origin
+                    new_elements['source_type'] = body.source_type
+                    updated = save_and_make_revision(body, new_elements)
+                    message = "Did not update"
+                    if updated is True:
+                        message = "Updated"
+                else:
+                    # Fit was bad or for an old epoch
+                    message = ""
+                    if new_elements['epochofel'] < start_time:
+                        message = "Epoch of elements was too old"
+                    if new_elements['orbit_rms'] >= 1.0:
+                        message += " and rms was too high"
+                    message += ". Did not update"
                 logger.info("%s Body #%d (%s)" % (message, body.pk, body.current_name()))
 
                 # Read in ephemeris file

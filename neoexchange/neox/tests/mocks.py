@@ -959,8 +959,46 @@ def mock_update_elements_with_findorb(source_dir, dest_dir, filename, site_code,
                         'arc_length' : 22.5/24.0,
                         'num_obs' : 9,
                         'not_seen' : not_seen,
+                        'orbit_rms' : 0.10,
                         'update_time' : datetime.utcnow()
                     }
         elements_or_status = elements
+
+    return elements_or_status
+
+def mock_update_elements_with_findorb_badrms(source_dir, dest_dir, filename, site_code, start_time):
+
+    not_seen_td = datetime.utcnow()-datetime(2015,11,18)
+    not_seen = not_seen_td.total_seconds() / 86400.0
+    elements = {
+                    'abs_mag' : 21.91,
+                    'slope' : 0.15,
+                    'active' : True,
+                    'origin' : 'M',
+                    'source_type' : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'provisional_name' : 'P10pqB2',
+                    'epochofel' : datetime(2015, 11, 18),
+                    'meananom' : 270.89733,
+                    'argofperih' : 339.47051,
+                    'longascnode' : 197.11047,
+                    'orbinc' : 10.74649,
+                    'eccentricity' :  0.3001867,
+                    'meandist' :  1.1896136,
+                    'arc_length' : 22.5/24.0,
+                    'num_obs' : 9,
+                    'not_seen' : not_seen,
+                    'orbit_rms' : 1.0,
+                    'update_time' : datetime.utcnow()
+                }
+    elements_or_status = elements
+
+    ephem_filename = os.path.join(dest_dir, 'new.ephem')
+    with open(ephem_filename, 'w') as f:
+        print("#(Z21) Tenerife-LCO Aqawan A #1: P10pqB2", file=f)
+        print("Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  '/hr    PA   \" sig PA", file=f)
+        print("---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---", file=f)
+        print("2015 11 19 00:00  03 41 05.068   -08 33 34.43  .32187 1.2819 152.1 21.1   2.25 219.1  3.16  35", file=f)
+        print("2015 11 19 00:30  03 41 02.195   -08 34 26.80  .32182 1.2818 152.1 21.1   2.25 219.2  3.24  34", file=f)
 
     return elements_or_status
