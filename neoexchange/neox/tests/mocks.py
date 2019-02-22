@@ -1002,3 +1002,40 @@ def mock_update_elements_with_findorb_badrms(source_dir, dest_dir, filename, sit
         print("2015 11 19 00:30  03 41 02.195   -08 34 26.80  .32182 1.2818 152.1 21.1   2.25 219.2  3.24  34", file=f)
 
     return elements_or_status
+
+def mock_update_elements_with_findorb_badepoch(source_dir, dest_dir, filename, site_code, start_time):
+
+    not_seen_td = datetime.utcnow()-datetime(2015,11,18)
+    not_seen = not_seen_td.total_seconds() / 86400.0
+    elements = {
+                    'abs_mag' : 21.91,
+                    'slope' : 0.15,
+                    'active' : True,
+                    'origin' : 'M',
+                    'source_type' : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'provisional_name' : 'P10pqB2',
+                    'epochofel' : datetime(2015, 11, 16),
+                    'meananom' : 269.48064,
+                    'argofperih' : 339.46074,
+                    'longascnode' : 197.07906,
+                    'orbinc' : 10.74064,
+                    'eccentricity' :  0.3006183,
+                    'meandist' :  1.1899464,
+                    'arc_length' : 22.5/24.0,
+                    'num_obs' : 9,
+                    'not_seen' : not_seen,
+                    'orbit_rms' : 0.10,
+                    'update_time' : datetime.utcnow()
+                }
+    elements_or_status = elements
+
+    ephem_filename = os.path.join(dest_dir, 'new.ephem')
+    with open(ephem_filename, 'w') as f:
+        print("#(T03) Haleakala-LCO Clamshell #3: P10pqB2", file=f)
+        print("Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  '/hr    PA   \" sig PA", file=f)
+        print("---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---", file=f)
+        print("2015 11 19 00:00  03 41 05.422   -08 33 24.33  .32194 1.2819 152.1 21.1   2.13 214.8  3.45  34", file=f)
+        print("2015 11 19 00:30  03 41 02.956   -08 34 16.84  .32189 1.2818 152.1 21.1   2.14 214.9  3.62  35", file=f)
+
+    return elements_or_status
