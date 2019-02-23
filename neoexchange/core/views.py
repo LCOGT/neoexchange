@@ -2891,47 +2891,35 @@ def make_solar_standards_plot(request):
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
 
-def update_taxonomy(taxobj, dbg=False):
-    """Update the passed <taxobj> for a new taxonomy update.
-    <taxobj> is expected to be a list of:
-    designation/provisional designation, taxonomy, taxonomic scheme, reference, notes
-    normally produced by the fetch_taxonomy_page() method.
-    Will only add (never remove) taxonomy fields that are not already in Taxonomy database and match objects in DB."""
+def update_taxonomy(body, tax_table, dbg=False):
+    """Update taxonomy for given body based on passed taxonomy table."""
 
-    if len(taxobj) != 5:
-        return False
-
-    obj_id = taxobj[0].rstrip()
-    body_all = Body.objects.all()
-    try:
-        body = Body.objects.get(name=obj_id)
-    except:
-        try:
-            body = Body.objects.get(provisional_name=obj_id)
-        except:
-            if dbg is True:
-                logger.debug("No such Body as %s" % obj_id)
-                print("number of bodies: %i" % body_all.count())
-            return False
-    # Must be a better way to do this next bit, but I don't know what it is off the top of my head.
-    check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2],
-                                            tax_reference=taxobj[3], tax_notes=taxobj[4])
-    if check_tax.count() != 0:
+    name = [body.current_name(), body.name, body.provisional_name]
+    taxonomies = [tax for tax in tax_table if tax[0].rstrip() in name]
+    if not taxonomies:
         if dbg is True:
-            print("Data already in DB")
+            print("No taxonomy for %s" % body.current_name())
         return False
-    params = {  'body'          : body,
-                'taxonomic_class' : taxobj[1],
-                'tax_scheme'    : taxobj[2],
-                'tax_reference' : taxobj[3],
-                'tax_notes'     : taxobj[4],
-                }
-    tax, created = SpectralInfo.objects.get_or_create(**params)
-    if not created:
-        if dbg is True:
-            print("Did not write for some reason.")
-        return False
-    return True
+    else:
+        c = 0
+        for taxobj in taxonomies:
+            check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2], tax_reference=taxobj[3], tax_notes=taxobj[4])
+            if check_tax.count() == 0:
+                params = {  'body'          : body,
+                            'taxonomic_class' : taxobj[1],
+                            'tax_scheme'    : taxobj[2],
+                            'tax_reference' : taxobj[3],
+                            'tax_notes'     : taxobj[4],
+                            }
+                tax, created = SpectralInfo.objects.get_or_create(**params)
+                if not created:
+                    if dbg is True:
+                        print("Did not write for some reason.")
+                else:
+                    c += 1
+            elif dbg is True:
+                print("Data already in DB")
+        return c
 
 
 def update_previous_spectra(specobj, source='U', dbg=False):

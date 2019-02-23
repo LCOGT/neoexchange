@@ -14,11 +14,13 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime
-
+import os
 from django.core.management.base import BaseCommand, CommandError
 
 from astrometrics.sources_subs import fetch_taxonomy_page
 from core.views import update_taxonomy
+from core.models import Body
+from sty import fg
 
 
 class Command(BaseCommand):
@@ -26,9 +28,26 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("==== Fetching Taxonomy Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-        new_tax_data = fetch_taxonomy_page()
-        for tax_id in new_tax_data:
-            resp = update_taxonomy(tax_id,dbg=False)
+        pds_tax = os.path.join('photometrics', 'data', 'taxonomy10.tab.dat')
+        new_tax_data = fetch_taxonomy_page(pds_tax)
+        bodies = Body.objects.filter(active=True)
+        # bodies = Body.objects.all()
+        i = 0
+        for body in bodies:
+            i += 1
+            self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i, len(bodies)))
+            resp = update_taxonomy(body, new_tax_data, dbg=False)
             if resp:
-                msg = "Updated Taxonomy for %s" % tax_id[0]
-                self.stdout.write(msg)
+                msg = fg.green + "Updated {} Taxonomic measurements for {}".format(resp, body.name) + fg.rs
+            elif resp is 0:
+                msg = fg.li_blue + "All Taxonomy for {} has been previously recorded.".format(body.name) + fg.rs
+            else:
+                msg = "No Taxonomy available for {}".format(body.name)
+            self.stdout.write(msg)
+
+
+        # for tax_id in new_tax_data:
+        #     resp = update_taxonomy(tax_id, dbg=True)
+        #     if resp:
+        #         msg = "Updated Taxonomy for %s" % tax_id[0]
+        #         self.stdout.write(msg)
