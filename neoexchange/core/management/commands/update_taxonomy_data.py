@@ -31,7 +31,6 @@ class Command(BaseCommand):
         pds_tax = os.path.join('photometrics', 'data', 'taxonomy10.tab.dat')
         new_tax_data = fetch_taxonomy_page(pds_tax)
         bodies = Body.objects.filter(active=True)
-        # bodies = Body.objects.all()
         i = 0
         for body in bodies:
             i += 1
@@ -44,10 +43,3 @@ class Command(BaseCommand):
             else:
                 msg = "No Taxonomy available for {}".format(body.name)
             self.stdout.write(msg)
-
-
-        # for tax_id in new_tax_data:
-        #     resp = update_taxonomy(tax_id, dbg=True)
-        #     if resp:
-        #         msg = "Updated Taxonomy for %s" % tax_id[0]
-        #         self.stdout.write(msg)

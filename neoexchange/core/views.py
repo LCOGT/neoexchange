@@ -2892,7 +2892,16 @@ def make_solar_standards_plot(request):
 
 
 def update_taxonomy(body, tax_table, dbg=False):
-    """Update taxonomy for given body based on passed taxonomy table."""
+    """Update taxonomy for given body based on passed taxonomy table.
+    tax_table should be a 5 element list and have the format of
+    [body_name, taxonomic_class, tax_scheme, tax_reference, tax_notes]
+    where:
+    body_name       := number or provisional designation
+    taxonomic_class := string <= 6 characters (X, Sq, etc.)
+    tax_scheme      := 2 character string (T, Ba, Td, H, S, B, 3T, 3B, BD)
+    tax_reference   := Source of taxonomic data
+    tax_notes       := other information/details
+    """
 
     name = [body.current_name(), body.name, body.provisional_name]
     taxonomies = [tax for tax in tax_table if tax[0].rstrip() in name]
