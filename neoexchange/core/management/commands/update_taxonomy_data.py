@@ -34,6 +34,7 @@ class Command(BaseCommand):
         sdss_tax_data = fetch_taxonomy_page(sdss_tax)
         bodies = Body.objects.filter(active=True)
         i = 0
+        c = 0
         for body in bodies:
             i += 1
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i, len(bodies)))
@@ -41,8 +42,10 @@ class Command(BaseCommand):
             resp2 = update_taxonomy(body, sdss_tax_data, dbg=False)
             if resp + resp2:
                 msg = fg.green + "Updated {} Taxonomic measurements for {}".format(resp + resp2, body.current_name()) + fg.rs
+                c += 1
             elif resp is 0 or resp2 is 0:
                 msg = fg.li_blue + "All Taxonomies for {} have been previously recorded.".format(body.current_name()) + fg.rs
             else:
                 msg = "No Taxonomies available for {}".format(body.current_name())
             self.stdout.write(msg)
+        self.stdout.write("{} ==== Updated Taxonomies for {} of {} objects.".format(datetime.now().strftime('%Y-%m-%d %H:%M'), c, i))

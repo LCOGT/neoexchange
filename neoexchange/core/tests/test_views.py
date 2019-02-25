@@ -4793,36 +4793,36 @@ class Test_Add_New_Taxonomy_Data(TestCase):
         self.test_spectra = SpectralInfo.objects.create(pk=1, **tax_params)
 
     def test_one_body(self):
-        expected_res = True
-        test_obj = ['LNX0003', 'SU', "T", "PDS6", "7G"]
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 1
+        test_obj = [['LNX0003', 'SU', "T", "PDS6", "7G"]]
+        new_tax = update_taxonomy(self.body, test_obj,dbg=True)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_new_target(self):
         expected_res = False
-        test_obj = ['4702', 'S', "B", "PDS6", "s"]
-        new_tax = update_taxonomy(test_obj)
+        test_obj = [['4702', 'S', "B", "PDS6", "s"]]
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data(self):
-        expected_res = False
-        test_obj = ['980', 'S3', "Ba", "PDS6", "7I"]
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 0
+        test_obj = [['980', 'S3', "Ba", "PDS6", "7I"]]
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data_twice(self):
-        expected_res = False
-        test_obj = ['980', 'SU', "T", "PDS6", "7G"]
-        new_tax = update_taxonomy(test_obj)
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 0
+        test_obj = [['980', 'SU', "T", "PDS6", "7G"]]
+        new_tax = update_taxonomy(self.body, test_obj)
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
 
-class Test_Add_External_Spectroscopy_Data(TestCase):
+class TestAddExternalSpectroscopyData(TestCase):
 
     def setUp(self):
 
