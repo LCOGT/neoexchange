@@ -1832,64 +1832,61 @@ def parse_binzel_data(tax_text=None):
 def parse_taxonomy_data(tax_text=None):
     """Parses the online taxonomy database for targets and pulls a list
     of these targets back.
+    PDS table has 125 characters/line (chunks = 16 once names/notes removed)
+    SDSS table has 117 characters/line (chunks = 6 once names/extra removed)
     """
 
     tax_text = str(tax_text).replace("\r", '\n').split("\n")
     tax_text = list(filter(None, tax_text))
-    # print(len(tax_text))
+
     tax_scheme = ['T',
                 'Ba',
                 'Td',
                 'H',
                 'S',
                 'B',
-                '3T/3B',
+                ['3T', '3B'],
                 'BD',
                 ]
     tax_table = []
+    if len(tax_text[0]) == 117:
+            offset = -1
+    else:
+        offset = 0
     for line in tax_text:
-        name = line[8:25]
-        end = line[103:]
-        line = line[:8]+line[26:104]
+        number = line[:8+offset].strip()
+        name = line[8+offset:25+offset].strip()
+        prov = line[25+offset:37+offset].strip()
+        end = line[103+offset*44:].strip()
+        line = line[36+offset:103+offset*44]
         chunks = line.split(' ')
         chunks = list(filter(None, chunks))
-        if chunks[0] != '':
-            if chunks[1] != '-':
-                chunks[1] = chunks[1]+' '+chunks[2]
-                del chunks[2]
-            chunks.insert(1, name)
-            if ',' in chunks[18]:
-                chunks[18] = chunks[18][:2]
-                chunks.insert(19, chunks[18][3:])
-            # print(chunks[0],len(chunks))
-            # parse Object ID=Object Number or Provisional designation if no number
-            if chunks[0] != '0':
-                obj_id = (chunks[0])
-            else:
-                obj_id = (chunks[2])
-            # Build Taxonomy reference table. This is clunky. Better to search table for matching values first?
-            index = range(1, 7)
-            index = [2*x+1 for x in index]+[17]
+        # parse Object ID=Object Number or Provisional designation if no number
+        if number != '0':
+            obj_id = number
+        else:
+            obj_id = prov
+        # Build Taxonomy reference table.
+        if len(chunks) == 6:
+            out = '{}|{}|{}'.format(chunks[1], chunks[2], chunks[5])
+            row = [obj_id, chunks[0], 'Sd', "SDSS", out]
+            tax_table.append(row)
+        elif len(chunks) == 16:
+            index = range(0, 8)
+            index = [2*x for x in index]+[13]
             for i in index:
+                out = ' '
                 if chunks[i] != '-':
-                    if end[0] != '-':
-                        chunks[i+1] = chunks[i+1] + "|" + end
-                    row = [obj_id, chunks[i], tax_scheme[(i-1)//2-1], "PDS6", chunks[i+1]]
+                    if i == 12 or i == 13:
+                        scheme = tax_scheme[6][i-12]
+                    else:
+                        if end[0] != '-':
+                            out = chunks[i+1] + "|" + end
+                        else:
+                            out = chunks[i+1]
+                        scheme = tax_scheme[i//2]
+                    row = [obj_id, chunks[i], scheme, "PDS6", out]
                     tax_table.append(row)
-            if chunks[15] != '-':
-                if end[0] != '-':
-                    out = end
-                else:
-                    out = ' '
-                row = [obj_id, chunks[15], "3T", "PDS6", out]
-                tax_table.append(row)
-            if chunks[16] != '-':
-                if end[0] != '-':
-                    out = end
-                else:
-                    out = ' '
-                row = [obj_id, chunks[16], "3B", "PDS6", out]
-                tax_table.append(row)
     return tax_table
 
 

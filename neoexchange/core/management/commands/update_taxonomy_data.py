@@ -29,17 +29,20 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write("==== Fetching Taxonomy Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
         pds_tax = os.path.join('photometrics', 'data', 'taxonomy10.tab.dat')
-        new_tax_data = fetch_taxonomy_page(pds_tax)
+        sdss_tax = os.path.join('photometrics', 'data', 'sdsstax_ast_table.tab.dat')
+        pds_tax_data = fetch_taxonomy_page(pds_tax)
+        sdss_tax_data = fetch_taxonomy_page(sdss_tax)
         bodies = Body.objects.filter(active=True)
         i = 0
         for body in bodies:
             i += 1
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i, len(bodies)))
-            resp = update_taxonomy(body, new_tax_data, dbg=False)
-            if resp:
-                msg = fg.green + "Updated {} Taxonomic measurements for {}".format(resp, body.name) + fg.rs
-            elif resp is 0:
-                msg = fg.li_blue + "All Taxonomy for {} has been previously recorded.".format(body.name) + fg.rs
+            resp = update_taxonomy(body, pds_tax_data, dbg=False)
+            resp2 = update_taxonomy(body, sdss_tax_data, dbg=False)
+            if resp + resp2:
+                msg = fg.green + "Updated {} Taxonomic measurements for {}".format(resp + resp2, body.current_name()) + fg.rs
+            elif resp is 0 or resp2 is 0:
+                msg = fg.li_blue + "All Taxonomies for {} have been previously recorded.".format(body.current_name()) + fg.rs
             else:
-                msg = "No Taxonomy available for {}".format(body.name)
+                msg = "No Taxonomies available for {}".format(body.current_name())
             self.stdout.write(msg)

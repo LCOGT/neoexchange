@@ -102,12 +102,14 @@ TAX_SCHEME_CHOICES = (
                         ('B', 'Bus'),
                         ('3T', 'S3OS2_TH'),
                         ('3B', 'S3OS2_BB'),
-                        ('BD', 'Bus-DeMeo')
+                        ('BD', 'Bus-DeMeo'),
+                        ('Sd', 'SDSS')
                      )
 
 TAX_REFERENCE_CHOICES = (
-                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0. (2010).'),
+                        ('PDS6', 'Neese, Asteroid Taxonomy V6.0, (2010).'),
                         ('BZ04', 'Binzel, et al. (2004).'),
+                        ('SDSS', 'Hasselmann, et al. Asteroid Taxonomy V1.1, (2012).')
                      )
 
 SPECTRAL_WAV_CHOICES = (
@@ -411,34 +413,43 @@ class SpectralInfo(models.Model):
                     else:
                         text_out = text_out + ' %s color indices were used.\n' % (text[0])
                 if "G" in text:
-                    text_out = text_out + ' Used groundbased radiometric albedo.'
+                    text_out += ' Used groundbased radiometric albedo.'
                 if "I" in text:
-                    text_out = text_out + ' Used IRAS radiometric albedo.'
+                    text_out += ' Used IRAS radiometric albedo.'
                 if "A" in text:
-                    text_out = text_out + ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
+                    text_out += ' An Unspecified albedo was used to eliminate Taxonomic degeneracy.'
                 if "S" in text:
-                    text_out = text_out + ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
+                    text_out += ' Used medium-resolution spectrum by Chapman and Gaffey (1979).'
                 if "s" in text:
-                    text_out = text_out + ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
+                    text_out += ' Used high-resolution spectrum by Xu et al (1995) or Bus and Binzel (2002).'
             elif self.tax_scheme == "BD":
                 if "a" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b). NIR: DeMeo et al. (2009).'
                 if "b" in text:
-                    text_out = text_out + ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
                 if "c" in text:
-                    text_out = text_out + ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Burbine (2000), Burbine and Binzel (2002). NIR: DeMeo et al. (2009).'
                 if "d" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004c). NIR: DeMeo et al. (2009).'
                 if "e" in text:
-                    text_out = text_out + ' Visible and NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible and NIR: DeMeo et al. (2009).'
                 if "f" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2004b).  NIR: DeMeo et al. (2009).'
                 if "g" in text:
-                    text_out = text_out + ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
+                    text_out += ' Visible: Binzel et al. (2001).  NIR: DeMeo et al. (2009).'
                 if "h" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Binzel et al. (2004a).'
                 if "i" in text:
-                    text_out = text_out + ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+                    text_out += ' Visible: Bus (1999), Bus and Binzel (2002a), Bus and Binzel (2002b).  NIR: Rivkin et al. (2005).'
+        elif self.tax_reference == 'SDSS':
+            chunks = text.split('|')
+            if int(chunks[1]) > 1:
+                plural = 's'
+            else:
+                plural = ''
+            text_out = 'Probability score of {} found using {} observation{}.'.format(chunks[0], chunks[1], plural)
+            if chunks[2] != '-' and chunks[2] != self.taxonomic_class:
+                text_out += ' | Other less likely taxonomies also found ({})'.format(chunks[2].replace(self.taxonomic_class, ''))
         text_out = text_out+end
         return text_out
 
