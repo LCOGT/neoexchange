@@ -267,7 +267,10 @@ class Body(models.Model):
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
 
-                emp_line, mag_dot, separation = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+                ephem_out = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
+                emp_line = ephem_out[0]
+                mag_dot = ephem_out[1]
+                separation = ephem_out[2]
                 vmag = emp_line[3]
 
                 # Eliminate bad magnitudes
