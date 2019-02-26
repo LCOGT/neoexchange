@@ -27,10 +27,17 @@ from core.models import Body
 
 
 class Command(BaseCommand):
-    help = 'Update Characterization Targets'
+    help = 'Update Observations and elements. Use no arguments to update all Characterization Targets'
+
+    def add_arguments(self, parser):
+        parser.add_argument('target', type=str, nargs='?', default=None, help='Target to update (enter Provisional Designations w/ an underscore, i.e. 2002_DF3)')
 
     def handle(self, *args, **options):
-        bodies = Body.objects.filter(active=True).exclude(origin='M')
+        if options['target']:
+            obj_id = str(options['target']).replace('_', ' ')
+            bodies = Body.objects.filter(name=obj_id)
+        else:
+            bodies = Body.objects.filter(active=True).exclude(origin='M')
         i = f = 0
         for body in bodies:
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
