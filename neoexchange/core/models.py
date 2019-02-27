@@ -1038,7 +1038,8 @@ class SourceMeasurement(models.Model):
 
         if self.frame.extrainfo:
             obs_type = self.frame.extrainfo
-            microday = False
+            if obs_type == 'A':
+                microday = False
         else:
             obs_type = 'C'
 

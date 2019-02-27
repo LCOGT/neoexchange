@@ -128,7 +128,7 @@ class BodyDetailsTest(FunctionalTest):
             self.check_for_row_in_table('id_spectralinfo', line)
 
         expected_tooltip = self.browser.find_element_by_class_name("tooltiptext").get_attribute('innerHTML')
-        tooltips = ['Neese, Asteroid Taxonomy V6.0. (2010).',
+        tooltips = ['Neese, Asteroid Taxonomy V6.0, (2010).',
                     'Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
                     ]
         for tool in tooltips:

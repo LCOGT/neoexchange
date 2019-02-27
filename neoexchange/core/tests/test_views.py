@@ -2214,8 +2214,9 @@ class TestUpdate_MPC_obs(TestCase):
     def test_obs_export(self):
         measures = update_MPC_obs(self.test_mpcobs_page2)
         expected_filename = os.path.join(self.test_dir, '13553.mpc')
-        expected_out = '13553         C1998 02 21.09248010 31 21.78 +03 20 23.2          20.1 V      557\n'
-        expected_num_lines = 23
+        expected_out1 = '13553         C1998 02 21.09248010 31 21.78 +03 20 23.2          20.1 V      557\n'
+        expected_out0 = '13553         A1994 06 05.27986 14 24 59.76 -00 36 53.4                      675\n'
+        expected_num_lines = 24
 
         body = Body.objects.get(name='13553')
         filename, num_lines = export_measurements(body.id, self.test_dir)
@@ -2229,7 +2230,8 @@ class TestUpdate_MPC_obs(TestCase):
             while line:
                 lines.append(line)
                 line = test_mpc_out.readline()
-        self.assertEqual(expected_out, lines[0])
+        self.assertEqual(expected_out0, lines[0])
+        self.assertEqual(expected_out1, lines[1])
         self.assertEqual(num_lines, len(lines)-1)
 
 

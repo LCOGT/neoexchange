@@ -581,10 +581,10 @@ def parse_mpcobs(line):
     prov_or_temp = str(line[5:12])
 
     if len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
-        # Number and provisional/temp. desigination
+        # Number and provisional/temp. designation
         body = number
     elif len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
-        # No number but provisional/temp. desigination
+        # No number but provisional/temp. designation
         body = prov_or_temp
     else:
         body = number

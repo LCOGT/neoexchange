@@ -41,6 +41,7 @@ class Command(BaseCommand):
         i = f = 0
         for body in bodies:
             self.stdout.write("{} ==== Updating {} ==== ({} of {}) ".format(datetime.now().strftime('%Y-%m-%d %H:%M'), body.current_name(), i+1, len(bodies)))
+
             # Get new observations from MPC
             measures = update_MPC_obs(body.current_name())
 
