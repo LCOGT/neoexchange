@@ -2617,6 +2617,8 @@ class TestCheckCatalogAndRefitNew(TestCase):
 
         self.test_externscamp_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp.head')
         self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
+        self.test_externscamp_TPV_headfile  = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.head')
+        self.test_externcat_TPV_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
 
         shutil.copyfile(original_test_banzai_fits, self.test_banzai_fits)
         shutil.copyfile(original_test_cat_bad_wcs, self.test_cat_bad_wcs)
@@ -2954,6 +2956,32 @@ class TestCheckCatalogAndRefitNew(TestCase):
         self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
         self.assertEqual(' ', frame.photometric_catalog)
         self.assertEqual(0.30818, frame.rms_of_fit)
+        self.assertEqual(23, frame.nstars_in_fit)
+
+        frame_wcs = frame.wcs.wcs
+        assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+        assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+        assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_make_new_catalog_entry_gaiadr2_tpv(self):
+        fits_header, junk_table, cattype = open_fits_catalog(self.test_banzai_fits, header_only=True)
+        (status, new_ldac_catalog) = run_sextractor_make_catalog(self.configs_dir, self.temp_dir, self.test_banzai_fits.replace('.fits', '.fits[SCI]'))
+
+        fits_file_output = self.test_banzai_fits.replace('_frame', '_frame_new')
+        status, new_header = updateFITSWCS(self.test_banzai_fits, self.test_externscamp_TPV_headfile, self.test_externcat_TPV_xml, fits_file_output)
+        print(fits_file_output)
+        header = get_catalog_header(new_header, cattype)
+        new_wcs = WCS(new_header)
+        print(new_wcs)
+        expected_wcs = new_wcs.wcs
+        num_new_frames = make_new_catalog_entry(new_ldac_catalog, header, self.test_block)
+
+        frames = Frame.objects.filter(frametype=Frame.BANZAI_LDAC_CATALOG)
+        self.assertEqual(1, frames.count())
+        frame = frames[0]
+        self.assertEqual('GAIA-DR2', frame.astrometric_catalog)
+        self.assertEqual(' ', frame.photometric_catalog)
+        self.assertAlmostEqual(0.327896797481046, frame.rms_of_fit, 7)
         self.assertEqual(23, frame.nstars_in_fit)
 
         frame_wcs = frame.wcs.wcs

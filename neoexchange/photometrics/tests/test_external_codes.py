@@ -611,7 +611,7 @@ class TestUpdateFITSWCS(TestCase):
 
         self.precision = 7
         self.debug_print = False
-        self.remove =True
+        self.remove = True
 
     def tearDown(self):
         if self.remove:
@@ -784,6 +784,26 @@ class TestUpdateFITSWCS(TestCase):
                      'crpix1' : 7.620000000000E+02, 'crpix2' : 5.105000000000E+02,
                      'cd1_1'  : -1.083049787920E-06, 'cd1_2' : 3.162568176201E-04,
                      'cd2_1'  : -3.162568176201E-04, 'cd2_2' : -1.083049787920E-06,
+                     'pv1_0'  : -3.493949558753E-05,
+                     'pv1_1'  :  9.990845948728E-01,
+                     'pv1_2'  :  5.944161242327E-04,
+                     'pv1_4'  :  1.641289702411E-03,
+                     'pv1_5'  :  2.859739464233E-03,
+                     'pv1_6'  : -8.338448819528E-05,
+                     'pv1_7'  :  4.778142218367E-02,
+                     'pv1_8'  : -3.120516918032E-02,
+                     'pv1_9'  :  1.005901992058E-02,
+                     'pv1_10' : -1.475386390540E-02,
+                     'pv2_0'  :  1.238320321566E-04,
+                     'pv2_1'  :  9.992102543642E-01,
+                     'pv2_2'  :  2.505722546811E-04,
+                     'pv2_4'  : -1.613190458709E-03,
+                     'pv2_5'  : -3.765739615064E-03,
+                     'pv2_6'  : -6.917769250557E-03,
+                     'pv2_7'  :  2.493514752913E-02,
+                     'pv2_8'  :  1.947400823739E-02,
+                     'pv2_9'  :  2.222081573598E-02,
+                     'pv2_10' : -2.704416488002E-02,
                      'secpix' : 1.13853,
                      'wcssolvr' : 'SCAMP-2.0.4',
                      'wcsrfcat' : 'GAIA-DR2.cat',
@@ -795,12 +815,17 @@ class TestUpdateFITSWCS(TestCase):
                      'cunit1' : 'deg', 'cunit2' : 'deg',
                      'ctype1' : 'RA---TPV', 'ctype2' : 'DEC--TPV'
                     }
+        expected_pv_comment = 'TPV distortion coefficient'
 
         for key in expected:
             if type(expected[key]) == str:
                 self.assertEqual(expected[key], new_header[key], msg="Failure on {}".format(key))
             else:
                 self.assertAlmostEqual(expected[key], new_header[key], self.precision, msg="Failure on {}".format(key))
+                if 'pv1_' in key or 'pv2_' in key:
+                    self.assertEqual(expected_pv_comment, new_header.comments[key])
+                else:
+                    self.assertNotEqual(expected_pv_comment, new_header.comments[key])
 
 class TestGetSCAMPXMLInfo(TestCase):
 

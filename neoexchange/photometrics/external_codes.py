@@ -459,6 +459,7 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
         logger.error("Unable to open SCAMP header file %s (Reason=%s)" % (scamp_file, e))
         return -3, None
 
+    pv_terms = []
     # Read in SCAMP .head file
     for line in scamp_head_fh:
         if 'HISTORY' in line:
@@ -496,6 +497,10 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
             astrrms1 = round(float(line[9:31])*3600.0,5)
         if 'ASTRRMS2' in line:
             astrrms2 = round(float(line[9:31])*3600.0,5)
+        if 'PV1_' in line or 'PV2_' in line:
+            keyword = line[0:8].rstrip()
+            value = float(line[9:31])
+            pv_terms.append((keyword, value))
     scamp_head_fh.close()
 
     #update from scamp xml VOTable
@@ -535,6 +540,11 @@ def updateFITSWCS(fits_file, scamp_file, scamp_xml_file, fits_file_output):
     if header.get('CUNIT2', None) == None:
         header.insert('CUNIT1', ('CUNIT2', cunit2, 'Unit of 2nd axis'), after=True)
 
+    # Add distortion keywords if present
+    prior_keyword = 'CD2_2'
+    for keyword, value in pv_terms:
+        header.insert(prior_keyword, (keyword, value, 'TPV distortion coefficient'), after=True)
+        prior_keyword = keyword
     # Need to force the CHECKSUM to be recomputed. Trap for young players..
     fits.writeto(fits_file_output, data, header, overwrite=True, checksum=True)
 
