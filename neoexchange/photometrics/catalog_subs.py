@@ -1058,7 +1058,7 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     catalog <fits_catalog> with a new WCS read from a FITS image
     <fits_image_file>.
     The transformation is done using the CCD XWIN_IMAGE, YWIN_IMAGE values
-    passed through astropy's wcs_pix2world().
+    passed through astropy's all_pix2world().
     """
 
     needed_cols = ['ccd_x', 'ccd_y', 'obs_ra', 'obs_dec']
@@ -1100,7 +1100,7 @@ def update_ldac_catalog_wcs(fits_image_file, fits_catalog, overwrite=True):
     ccd_x = tbl_table[tbl_mapping['ccd_x']]
     ccd_y = tbl_table[tbl_mapping['ccd_y']]
 
-    new_ra, new_dec = new_wcs.wcs_pix2world(ccd_x, ccd_y, 1)
+    new_ra, new_dec = new_wcs.all_pix2world(ccd_x, ccd_y, 1)
 
     tbl_table[tbl_mapping['obs_ra']] = new_ra
     tbl_table[tbl_mapping['obs_dec']] = new_dec

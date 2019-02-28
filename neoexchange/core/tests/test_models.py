@@ -621,8 +621,8 @@ class TestFrame(TestCase):
 
         pix_coord = array([[512.0, 512.0]])
         assert_allclose(null_wcs.wcs.pc, frame.wcs.wcs.cd, rtol=1e-8)
-        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
-        self.assertEqual(null_wcs.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertEqual(null_wcs.all_pix2world(pix_coord, 1)[0][0], frame.wcs.all_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(null_wcs.all_pix2world(pix_coord, 1)[0][1], frame.wcs.all_pix2world(pix_coord, 1)[0][1])
         self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[0], 10)
         self.assertAlmostEqual(1.0, proj_plane_pixel_scales(frame.wcs)[1], 10)
 
@@ -641,8 +641,8 @@ class TestFrame(TestCase):
 
         pix_coord = array([[512.0, 512.0]])
         assert_allclose(self.w.wcs.cd, frame.wcs.wcs.cd, rtol=1e-8)
-        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][0], frame.wcs.wcs_pix2world(pix_coord, 1)[0][0])
-        self.assertEqual(self.w.wcs_pix2world(pix_coord, 1)[0][1], frame.wcs.wcs_pix2world(pix_coord, 1)[0][1])
+        self.assertEqual(self.w.all_pix2world(pix_coord, 1)[0][0], frame.wcs.all_pix2world(pix_coord, 1)[0][0])
+        self.assertEqual(self.w.all_pix2world(pix_coord, 1)[0][1], frame.wcs.all_pix2world(pix_coord, 1)[0][1])
         self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[0], 10)
         self.assertAlmostEqual(self.pixel_scale, proj_plane_pixel_scales(frame.wcs)[1], 10)
 
