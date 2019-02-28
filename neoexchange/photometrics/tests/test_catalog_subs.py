@@ -37,6 +37,12 @@ from core.models import Body, Proposal, Block, Frame
 from photometrics.catalog_subs import *
 from core.views import check_catalog_and_refit
 
+# Disable logging during testing
+import logging
+logger = logging.getLogger(__name__)
+# Disable anything below CRITICAL level
+logging.disable(logging.CRITICAL)
+
 class ZeropointUnitTest(TestCase):
 
     def setUp(self):
