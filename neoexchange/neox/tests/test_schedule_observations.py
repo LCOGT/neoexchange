@@ -277,7 +277,7 @@ class ScheduleObservations(FunctionalTest):
 
         # The page refreshes and we get correct slot length and the Schedule button again
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
-        self.assertIn('25.', slot_length)
+        self.assertIn('25', slot_length)
         submit = self.browser.find_element_by_id('id_submit_button').get_attribute("value")
         self.assertIn('Schedule this Object', submit)
 
