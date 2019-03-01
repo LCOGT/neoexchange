@@ -377,6 +377,7 @@ def update_elements_with_findorb(source_dir, dest_dir, filename, site_code, star
 
     return elements_or_status
 
+
 def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_dir=None, remove=False):
     """Refit all the SourceMeasurements for a body with find_orb and update the elements.
     Inputs:
@@ -409,7 +410,10 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
 
                 new_elements = status_or_elements
                 body = Body.objects.get(pk=body_id)
-                time_to_current_epoch = abs(body.epochofel - start_time)
+                if body.epochofel:
+                    time_to_current_epoch = abs(body.epochofel - start_time)
+                else:
+                    time_to_current_epoch = abs(datetime.min - start_time)
                 time_to_new_epoch = abs(new_elements['epochofel'] - start_time)
                 if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] < 1.0:
                     # Reset some fields to avoid overwriting

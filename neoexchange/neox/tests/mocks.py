@@ -934,6 +934,7 @@ def mock_fetch_sfu(sfu_value=None):
 def mock_submit_to_scheduler(elements, params):
     return -42, params
 
+
 def mock_update_elements_with_findorb(source_dir, dest_dir, filename, site_code, start_time):
 
     if filename.lower() == 'i_am_broken':
@@ -966,9 +967,10 @@ def mock_update_elements_with_findorb(source_dir, dest_dir, filename, site_code,
 
     return elements_or_status
 
+
 def mock_update_elements_with_findorb_badrms(source_dir, dest_dir, filename, site_code, start_time):
 
-    not_seen_td = datetime.utcnow()-datetime(2015,11,18)
+    not_seen_td = datetime.utcnow()-datetime(2015, 11, 18)
     not_seen = not_seen_td.total_seconds() / 86400.0
     elements = {
                     'abs_mag' : 21.91,
@@ -1003,9 +1005,10 @@ def mock_update_elements_with_findorb_badrms(source_dir, dest_dir, filename, sit
 
     return elements_or_status
 
+
 def mock_update_elements_with_findorb_badepoch(source_dir, dest_dir, filename, site_code, start_time):
 
-    not_seen_td = datetime.utcnow()-datetime(2015,11,18)
+    not_seen_td = datetime.utcnow()-datetime(2015, 11, 18)
     not_seen = not_seen_td.total_seconds() / 86400.0
     elements = {
                     'abs_mag' : 21.91,
@@ -1015,7 +1018,7 @@ def mock_update_elements_with_findorb_badepoch(source_dir, dest_dir, filename, s
                     'source_type' : 'U',
                     'elements_type' : 'MPC_MINOR_PLANET',
                     'provisional_name' : 'P10pqB2',
-                    'epochofel' : datetime(2015, 11, 16),
+                    'epochofel' : datetime(2013, 11, 16),
                     'meananom' : 269.48064,
                     'argofperih' : 339.46074,
                     'longascnode' : 197.07906,

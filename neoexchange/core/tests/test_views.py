@@ -1896,6 +1896,7 @@ class TestUpdate_MPC_orbit(TestCase):
                              'longascnode': 24.87559,
                              'eccentricity': 0.0120915,
                              'epochofel': datetime(2016, 1, 13, 0),
+                             'orbit_rms': 99,
                              'meandist': 0.9967710,
                              'orbinc': 8.25708,
                              'meananom': 221.74204,
@@ -5229,7 +5230,8 @@ class TestRefitWithFindOrb(TestCase):
     @classmethod
     def setUpTestData(cls):
         P10pqB2_params = { 'provisional_name' : 'P10pqB2',
-                           'source_type' : 'U'
+                           'source_type' : 'U',
+                           'epochofel' : datetime(2014, 12, 23)
                          }
 
         cls.test_body = Body.objects.create(**P10pqB2_params)
@@ -5286,7 +5288,6 @@ class TestRefitWithFindOrb(TestCase):
         expected_origin = 'M'
 
         emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
-
         self.assertEqual(expected_emp_info, emp_info)
         self.assertEqual(expected_ephem_length, len(new_ephem))
         i = 0
@@ -5294,7 +5295,7 @@ class TestRefitWithFindOrb(TestCase):
             self.assertEqual(expected_ephem[i], new_ephem[i])
             i += 1
 
-        body = Body.objects.get(provisional_name = self.test_body.current_name())
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
 
         self.assertEqual(expected_num_srcmeas, body.num_obs)
         self.assertEqual(expected_epoch, body.epochofel)
@@ -5317,7 +5318,7 @@ class TestRefitWithFindOrb(TestCase):
         expected_ephem_length = 2
         expected_num_srcmeas = None
         expected_meananom = None
-        expected_epoch = None
+        expected_epoch = datetime(2014, 12, 23)
         expected_src_type = 'U'
         expected_origin = 'M'
 
@@ -5330,7 +5331,7 @@ class TestRefitWithFindOrb(TestCase):
             self.assertEqual(expected_ephem[i], new_ephem[i])
             i += 1
 
-        body = Body.objects.get(provisional_name = self.test_body.current_name())
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
 
         self.assertEqual(expected_num_srcmeas, body.num_obs)
         self.assertEqual(expected_epoch, body.epochofel)
@@ -5353,7 +5354,7 @@ class TestRefitWithFindOrb(TestCase):
         expected_ephem_length = 2
         expected_num_srcmeas = None
         expected_meananom = None
-        expected_epoch = None
+        expected_epoch = datetime(2014, 12, 23)
         expected_src_type = 'U'
         expected_origin = 'M'
 
@@ -5366,13 +5367,14 @@ class TestRefitWithFindOrb(TestCase):
             self.assertEqual(expected_ephem[i], new_ephem[i])
             i += 1
 
-        body = Body.objects.get(provisional_name = self.test_body.current_name())
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
 
         self.assertEqual(expected_num_srcmeas, body.num_obs)
         self.assertEqual(expected_epoch, body.epochofel)
         self.assertEqual(expected_meananom, body.meananom)
         self.assertEqual(expected_src_type, body.source_type)
         self.assertEqual(expected_origin, body.origin)
+
 
 class TestDetermineActiveProposals(TestCase):
 
