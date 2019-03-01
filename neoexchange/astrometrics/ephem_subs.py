@@ -385,7 +385,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
 #               0   1   2   3       4           5       6       7
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
     if detailed:
-        return emp_line, mag_dot, separation
+        return emp_line, mag_dot, separation, delta
 
     return emp_line
 
@@ -1204,7 +1204,7 @@ def get_sitepos(site_code, dbg=False):
     name or a MPC sitecode (FTN, FTS and SQA currently defined).
     Be *REALLY* careful over longitude sign conventions..."""
 
-    site_code = site_code.upper()
+    site_code = str(site_code).upper()
     if site_code == 'F65' or site_code == 'FTN':
         # MPC code for FTN. Positions from JPL HORIZONS, longitude converted from 203d 44' 32.6" East
         # 156d 15' 27.4" W

@@ -239,7 +239,8 @@ def frame_params_from_log(params, block):
                      'sitecode' : sitecode,
                      'block'    : block,
                      'filter'   : params.get('filter', "B"),
-                     'frametype' : frame_type
+                     'frametype' : frame_type,
+                     'extrainfo' : params.get('obs_type', None)
                    }
     return frame_params
 

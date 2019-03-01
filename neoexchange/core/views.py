@@ -334,7 +334,7 @@ def export_measurements(body_id, output_path=''):
     except Body.DoesNotExist:
         logger.warning("Could not find Body with pk={}".format(body_id))
         return None, -1
-    measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).order_by('frame__midpoint')
+    measures = SourceMeasurement.objects.filter(body=body).exclude(frame__frametype=Frame.SATELLITE_FRAMETYPE).exclude(frame__midpoint__lt=datetime(1993, 1, 1, 0, 0, 0, 0)).order_by('frame__midpoint')
     data = { 'measures' : measures}
 
     filename = "{}.mpc".format(body.current_name().replace(' ', '').replace('/', '_'))
@@ -409,7 +409,9 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
 
                 new_elements = status_or_elements
                 body = Body.objects.get(pk=body_id)
-                if new_elements['epochofel'] >= start_time and new_elements['orbit_rms'] < 1.0:
+                time_to_current_epoch = abs(body.epochofel - start_time)
+                time_to_new_epoch = abs(new_elements['epochofel'] - start_time)
+                if time_to_new_epoch <= time_to_current_epoch and new_elements['orbit_rms'] < 1.0:
                     # Reset some fields to avoid overwriting
 
                     new_elements['provisional_name'] = body.provisional_name
@@ -427,7 +429,7 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
                     if new_elements['orbit_rms'] >= 1.0:
                         message += " and rms was too high"
                     message += ". Did not update"
-                logger.info("%s Body #%d (%s)" % (message, body.pk, body.current_name()))
+                logger.info("%s Body #%d (%s) with FIndOrb" % (message, body.pk, body.current_name()))
 
                 # Read in ephemeris file
                 ephem_file = os.path.join(dest_dir, 'new.ephem')
@@ -1794,7 +1796,7 @@ def clean_NEOCP_object(page_list):
             if arc_length:
                 params['arc_length'] = arc_length
 
-        elif len(current) >= 21 and len(current) <= 25:
+        elif 21 <= len(current) <= 25:
             # The first 20 characters can get very messy if there is a temporary
             # and permanent desigination as the absolute magntiude and slope gets
             # pushed up and partially overwritten. Sort this mess out and then the
@@ -1904,7 +1906,8 @@ def update_crossids(astobj, dbg=False):
     # Find Bodies that have the 'provisional name' of <temp_id> OR (final)'name' of <desig>
     # but don't have a blank 'name'
     bodies = Body.objects.filter(Q(provisional_name=temp_id) | Q(name=desig) & ~Q(name=''))
-    if dbg: print("temp_id={},desig={},bodies={}".format(temp_id,desig,bodies))
+    if dbg:
+        print("temp_id={},desig={},bodies={}".format(temp_id, desig, bodies))
 
     if bodies.count() == 0:
         body = Body.objects.create(provisional_name=temp_id, name=desig)
@@ -2180,14 +2183,18 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         origin = 'R'
     # Determine what type of new object it is and whether to keep it active
     kwargs = clean_mpcorbit(elements, dbg, origin)
+
     # Save, make revision, or do not update depending on the what has happened
     # to the object
-    if not body.epochofel or body.epochofel <= kwargs['epochofel']:
+    if body.epochofel:
+        time_to_current_epoch = abs(body.epochofel - datetime.now())
+        time_to_new_epoch = abs(kwargs['epochofel'] - datetime.now())
+    if not body.epochofel or time_to_new_epoch <= time_to_current_epoch:
         save_and_make_revision(body, kwargs)
         if not created:
-            logger.info("Updated elements for %s" % obj_id)
+            logger.info("Updated elements for %s from MPC" % obj_id)
         else:
-            logger.info("Added new orbit for %s" % obj_id)
+            logger.info("Added new orbit for %s from MPC" % obj_id)
     else:
         body.origin = origin
         body.save()
@@ -2227,7 +2234,7 @@ def count_useful_obs(obs_lines):
     """Function to determine max number of obs_lines will be read """
     i = 0
     for obs_line in obs_lines:
-        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 's']:
+        if len(obs_line) > 15 and obs_line[14] in ['C', 'S', 'A']:
             i += 1
     return i
 
@@ -2328,7 +2335,7 @@ def create_source_measurement(obs_lines, block=None):
                         frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
                                                                     params['obs_date'] == frm.midpoint and
                                                                     frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
-                    if not frame_list and not frame:
+                    if not frame_list or not frame:
                         try:
                             prior_frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
                                                             midpoint=params['obs_date'],
@@ -2355,7 +2362,7 @@ def create_source_measurement(obs_lines, block=None):
                             frame = next((frm for frm in frame_list if frm.sitecode == params['site_code'] and
                                                                         params['obs_date'] == frm.midpoint and
                                                                         frm.frametype == Frame.SATELLITE_FRAMETYPE), None)
-                        if not frame_list and not frame:
+                        if not frame_list or not frame:
                             try:
                                 frame = Frame.objects.get(frametype=Frame.SATELLITE_FRAMETYPE,
                                                                 midpoint=params['obs_date'],
@@ -2912,47 +2919,44 @@ def make_solar_standards_plot(request):
     return HttpResponse(buffer.getvalue(), content_type="Image/png")
 
 
-def update_taxonomy(taxobj, dbg=False):
-    """Update the passed <taxobj> for a new taxonomy update.
-    <taxobj> is expected to be a list of:
-    designation/provisional designation, taxonomy, taxonomic scheme, reference, notes
-    normally produced by the fetch_taxonomy_page() method.
-    Will only add (never remove) taxonomy fields that are not already in Taxonomy database and match objects in DB."""
+def update_taxonomy(body, tax_table, dbg=False):
+    """Update taxonomy for given body based on passed taxonomy table.
+    tax_table should be a 5 element list and have the format of
+    [body_name, taxonomic_class, tax_scheme, tax_reference, tax_notes]
+    where:
+    body_name       := number or provisional designation
+    taxonomic_class := string <= 6 characters (X, Sq, etc.)
+    tax_scheme      := 2 character string (T, Ba, Td, H, S, B, 3T, 3B, BD)
+    tax_reference   := Source of taxonomic data
+    tax_notes       := other information/details
+    """
 
-    if len(taxobj) != 5:
-        return False
-
-    obj_id = taxobj[0].rstrip()
-    body_all = Body.objects.all()
-    try:
-        body = Body.objects.get(name=obj_id)
-    except:
-        try:
-            body = Body.objects.get(provisional_name=obj_id)
-        except:
-            if dbg is True:
-                logger.debug("No such Body as %s" % obj_id)
-                print("number of bodies: %i" % body_all.count())
-            return False
-    # Must be a better way to do this next bit, but I don't know what it is off the top of my head.
-    check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2],
-                                            tax_reference=taxobj[3], tax_notes=taxobj[4])
-    if check_tax.count() != 0:
+    name = [body.current_name(), body.name, body.provisional_name]
+    taxonomies = [tax for tax in tax_table if tax[0].rstrip() in name]
+    if not taxonomies:
         if dbg is True:
-            print("Data already in DB")
+            print("No taxonomy for %s" % body.current_name())
         return False
-    params = {  'body'          : body,
-                'taxonomic_class' : taxobj[1],
-                'tax_scheme'    : taxobj[2],
-                'tax_reference' : taxobj[3],
-                'tax_notes'     : taxobj[4],
-                }
-    tax, created = SpectralInfo.objects.get_or_create(**params)
-    if not created:
-        if dbg is True:
-            print("Did not write for some reason.")
-        return False
-    return True
+    else:
+        c = 0
+        for taxobj in taxonomies:
+            check_tax = SpectralInfo.objects.filter(body=body, taxonomic_class=taxobj[1], tax_scheme=taxobj[2], tax_reference=taxobj[3], tax_notes=taxobj[4])
+            if check_tax.count() == 0:
+                params = {  'body'          : body,
+                            'taxonomic_class' : taxobj[1],
+                            'tax_scheme'    : taxobj[2],
+                            'tax_reference' : taxobj[3],
+                            'tax_notes'     : taxobj[4],
+                            }
+                tax, created = SpectralInfo.objects.get_or_create(**params)
+                if not created:
+                    if dbg is True:
+                        print("Did not write for some reason.")
+                else:
+                    c += 1
+            elif dbg is True:
+                print("Data already in DB")
+        return c
 
 
 def update_previous_spectra(specobj, source='U', dbg=False):
