@@ -159,6 +159,7 @@ class Body(models.Model):
     fast_moving         = models.BooleanField('Is this object fast?', default=False)
     urgency             = models.IntegerField(help_text='how urgent is this?', blank=True, null=True)
     epochofel           = models.DateTimeField('Epoch of elements', blank=True, null=True)
+    orbit_rms           = models.FloatField('Orbit quality of fit', blank=True, null=True, default=99.0)
     orbinc              = models.FloatField('Orbital inclination in deg', blank=True, null=True)
     longascnode         = models.FloatField('Longitude of Ascending Node (deg)', blank=True, null=True)
     argofperih          = models.FloatField('Arg of perihelion (deg)', blank=True, null=True)
