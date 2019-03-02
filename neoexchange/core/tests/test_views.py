@@ -5203,7 +5203,7 @@ class TestUpdateElementsWithFindOrb(TestCase):
                                 'orbit_rms' : 0.1
                             }
 
-        start_time = datetime(2015, 11, 19)
+        start_time = datetime(2015, 11, 18, 23)
         site_code = 'Z21'
         elements_or_status = update_elements_with_findorb(self.source_dir, self.dest_dir, self.filename, site_code, start_time)
 
@@ -5269,6 +5269,7 @@ class TestRefitWithFindOrb(TestCase):
         else:
             print("dest_dir=", self.dest_dir)
 
+    @patch('core.views.update_elements_with_findorb', mock_update_elements_with_findorb)
     def test_Z21(self):
         start_time = datetime(2015, 11, 19)
         site_code = 'Z21'
@@ -5278,11 +5279,14 @@ class TestRefitWithFindOrb(TestCase):
                               'emp_timesys' : '(UTC)',
                               'emp_rateunits' : "'/hr"}
         expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646629670872465, -0.14939257239592119,  21.1, 2.25, 3.16),
-                          (datetime(2015, 11, 19, 0, 30, 0), 0.9644540366313723, -0.14964646932071826, 21.1, 2.25, 3.24)
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9644540366313723, -0.14964646932071826, 21.1, 2.25, 3.24),
+                          (datetime(2015, 11, 19, 1,  0, 0), 0.9642447425652374, -0.14990002687593854, 21.1, 2.25, 3.33),
+                          (datetime(2015, 11, 19, 1, 30, 0), 0.9640354484991024, -0.15015324506158206, 21.1, 2.25, 3.42)
                          ]
-        expected_ephem_length = 24
+        expected_ephem_length = 4
         expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
         expected_meananom = 272.51789
+        expected_eccentricity =  0.3006186
         expected_epoch = datetime(2015, 11, 20)
         expected_src_type = 'U'
         expected_origin = 'M'
@@ -5300,6 +5304,7 @@ class TestRefitWithFindOrb(TestCase):
         self.assertEqual(expected_num_srcmeas, body.num_obs)
         self.assertEqual(expected_epoch, body.epochofel)
         self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_eccentricity, body.eccentricity)
         self.assertEqual(expected_src_type, body.source_type)
         self.assertEqual(expected_origin, body.origin)
 
