@@ -32,7 +32,8 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
-    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
+    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
+    mock_get_vizier_catalog_table
 
 #Import module to test
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
@@ -45,7 +46,8 @@ from core.views import home, clean_NEOCP_object, save_and_make_revision, \
     store_detections, update_crossids, \
     check_catalog_and_refit, find_matching_image_file, \
     run_sextractor_make_catalog, find_block_for_frame, \
-    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy, updateFITSWCS
+    make_new_catalog_entry, generate_new_candidate_id, update_taxonomy, updateFITSWCS, \
+    get_reference_catalog
 from core.frames import block_status, create_frame, frame_params_from_block
 from core.models import Body, Proposal, Block, SourceMeasurement, Frame, Candidate, SuperBlock, SpectralInfo
 from core.forms import EphemQuery
@@ -3445,4 +3447,54 @@ class Test_Add_New_Taxonomy_Data(TestCase):
         self.assertEqual(expected_res, new_tax)
 
 
+class Test_Get_Reference_Catalog(TestCase):
 
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.remove = True
+        self.debug_print = False
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.temp_dir)
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print: print("Removed", self.temp_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.temp_dir)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_SH(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.75mx39.75m.cat')
+        expected_numsrcs = 2
+
+        ra = 122.5
+        dec = -57.75
+        frame_width = '26.5m'
+        frame_height = '26.5m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_numsrcs = 2
+
+        ra = 0.12345
+        dec = 0.752
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)

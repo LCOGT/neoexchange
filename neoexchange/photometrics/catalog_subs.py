@@ -438,12 +438,6 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
 
     num_sources = None
 
-    refcat = cat_name + '.cat'
-    refcat = os.path.join(dest_dir, refcat)
-    if os.path.exists(refcat):
-        logger.debug("Reference catalog {} already exists".format(refcat))
-        return refcat, -1
-
     # Add 50% to passed width and height in lieu of actual calculation of extent
     # of a series of frames
     units = set_width[-1]
@@ -458,6 +452,15 @@ def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GA
         ref_height = "{:s}{}".format(str(ref_height), units)
     except ValueError:
         ref_height = set_height
+
+    # Rewrite name of catalog to include position and size
+
+    refcat = "{}_{ra:.2f}{dec:+.2f}_{width}x{height}.cat".format(cat_name, ra=ra, dec=dec, width=ref_width, height=ref_height)
+    refcat = os.path.join(dest_dir, refcat)
+
+    if os.path.exists(refcat):
+        logger.debug("Reference catalog {} already exists".format(refcat))
+        return refcat, -1
 
     cat_table, final_cat_name = get_vizier_catalog_table(ra, dec, ref_width, ref_height, cat_name, set_row_limit, rmag_limit)
 
