@@ -3469,6 +3469,10 @@ class Test_Get_Reference_Catalog(TestCase):
             except OSError:
                 print("Error removing temporary test directory", self.temp_dir)
 
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_SH(self):
 
@@ -3490,6 +3494,22 @@ class Test_Get_Reference_Catalog(TestCase):
         expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
         expected_numsrcs = 2
 
+        ra = 0.12345
+        dec = 0.752
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH_existing(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_numsrcs = -1
+
+        self.touch(expected_refcat)
         ra = 0.12345
         dec = 0.752
         frame_width = '26.48m'
