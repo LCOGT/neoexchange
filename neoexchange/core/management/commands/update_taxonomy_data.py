@@ -14,6 +14,7 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime
+from django.conf import settings
 import os
 from django.core.management.base import BaseCommand, CommandError
 
@@ -28,8 +29,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("==== Fetching Taxonomy Tables %s ====" % (datetime.now().strftime('%Y-%m-%d %H:%M')))
-        pds_tax = os.path.join(os.getcwd(), 'photometrics', 'data', 'taxonomy10.tab.dat')
-        sdss_tax = os.path.join(os.getcwd(), 'photometrics', 'data', 'sdsstax_ast_table.tab.dat')
+        pds_tax = os.path.join(settings.BASE_DIR, 'photometrics', 'data', 'taxonomy10.tab.dat')
+        sdss_tax = os.path.join(settings.BASE_DIR, 'photometrics', 'data', 'sdsstax_ast_table.tab.dat')
         pds_tax_data = fetch_taxonomy_page(pds_tax)
         sdss_tax_data = fetch_taxonomy_page(sdss_tax)
         bodies = Body.objects.filter(active=True)
