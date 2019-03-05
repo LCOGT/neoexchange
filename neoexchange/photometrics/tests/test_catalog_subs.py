@@ -20,7 +20,7 @@ import os
 from glob import glob
 import tempfile
 
-import mock
+from mock import patch
 from django.test import TestCase
 from django.forms.models import model_to_dict
 from astropy.io import fits
@@ -32,6 +32,7 @@ from numpy import where, array
 from numpy.testing import assert_allclose
 
 from core.models import Body, Proposal, Block, Frame
+from neox.tests.mocks import mock_get_vizier_catalog_table
 
 # Import module to test
 from photometrics.catalog_subs import *
@@ -59,7 +60,7 @@ class ZeropointUnitTest(TestCase):
 #           print(i,num_to_check+1)
             self.assertAlmostEqual(expected_table[column][i], table[column][i], precision)
 
-    # @mock.patch('photometrics.catalog_subs.Vizier')
+    # @patch('photometrics.catalog_subs.Vizier')
     # def test_get_cat_ra_dec(self, mock_vizier):
     def test_get_cat_ra_dec(self):
         # test getting a single ra, dec, and rmag out of the default UCAC4 catalog
@@ -102,7 +103,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_no_cat(self, mock_vizier):
     def test_no_cat(self):
 
@@ -127,7 +128,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_third_source, rmag_third_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_not_default(self, mock_vizier):
     def test_get_cat_ra_dec_not_default(self):
 
@@ -152,7 +153,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 3)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_rmag_limit(self, mock_vizier):
     def test_get_cat_diff_rmag_limit(self):
 
@@ -177,7 +178,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 1)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_row_limit(self, mock_vizier):
     def test_get_cat_diff_row_limit(self):
 
@@ -202,7 +203,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_first_source, rmag_first_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_diff_width(self, mock_vizier):
     def test_get_cat_diff_width(self):
 
@@ -227,7 +228,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_3rdlast_source, rmag_3rdlast_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_above_row_limit(self, mock_vizier):
     def test_get_cat_ra_dec_above_row_limit(self):
 
@@ -252,7 +253,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_PPMXL(self, mock_vizier):
     def test_get_cat_ra_dec_empty_list_PPMXL(self):
 
@@ -277,7 +278,7 @@ class ZeropointUnitTest(TestCase):
         self.assertAlmostEqual(expected_rmag_last_source, rmag_last_source, 2)
         self.assertEqual(expected_len_cat_table, len(cat_table))
 
-#    @mock.patch('photometrics.catalog_subs.Vizier')
+#    @patch('photometrics.catalog_subs.Vizier')
 #    def test_get_cat_ra_dec_empty_list_UCAC4(self, mock_vizier):
     def test_get_cat_ra_dec_empty_list_UCAC4(self):
 
@@ -910,54 +911,120 @@ class ZeropointUnitTest(TestCase):
 class Test_GetReferenceCatalog(TestCase):
 
     def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
         self.header = { 'ra' : 228.33284875,
                         'dec': 38.395874166666665,
                         'width': '4.5m',
                         'height': '3.0m',
                       }
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.33+38.40_6.75mx4.5m.cat')
 
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
-
+        self.remove = True
         self.debug_print = False
 
     def tearDown(self):
-        remove = True
-        if remove:
+        if self.remove:
             try:
-                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
                 for file_to_rm in files_to_remove:
                     os.remove(file_to_rm)
             except OSError:
-                print("Error removing files in temporary test directory", self.test_dir)
+                print("Error removing files in temporary test directory", self.temp_dir)
             try:
-                os.rmdir(self.test_dir)
-                if self.debug_print: print("Removed", self.test_dir)
+                os.rmdir(self.temp_dir)
+                if self.debug_print: print("Removed", self.temp_dir)
             except OSError:
-                print("Error removing temporary test directory", self.test_dir)
+                print("Error removing temporary test directory", self.temp_dir)
+        else:
+            print("Temporary directory=", self.temp_dir)
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
 
     def test_fetch_catalog(self):
-        expected_ref_catalog = os.path.join(self.test_dir, 'GAIA-DR2.cat')
-        expected_num_sources = 8
 
-        refcat, num_sources = get_reference_catalog(self.test_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+        expected_num_sources = 10
 
-        self.assertTrue(os.path.exists(expected_ref_catalog))
-        self.assertEqual(expected_ref_catalog, refcat)
+        refcat, num_sources = get_reference_catalog(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertTrue(os.path.exists(self.expected_ref_catalog))
+        self.assertEqual(self.expected_ref_catalog, refcat)
         self.assertEqual(expected_num_sources, num_sources)
 
     def test_fetch_catalog_existing(self):
-        expected_ref_catalog = os.path.join(self.test_dir, 'GAIA-DR2.cat')
-        try:
-            open(expected_ref_catalog, 'x')
-        except FileExistsError:
-            pass
+
+        self.touch(self.expected_ref_catalog)
         expected_num_sources = -1
 
-        refcat, num_sources = get_reference_catalog(self.test_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+        refcat, num_sources = get_reference_catalog(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
 
-        self.assertTrue(os.path.exists(expected_ref_catalog))
-        self.assertEqual(expected_ref_catalog, refcat)
+        self.assertTrue(os.path.exists(self.expected_ref_catalog))
+        self.assertEqual(self.expected_ref_catalog, refcat)
         self.assertEqual(expected_num_sources, num_sources)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_SH(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.75mx39.75m.cat')
+        expected_numsrcs = 2
+
+        ra = 122.5
+        dec = -57.75
+        frame_width = '26.5m'
+        frame_height = '26.5m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_numsrcs = 2
+
+        ra = 0.12345
+        dec = 0.752
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH_existing(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_numsrcs = -1
+
+        self.touch(expected_refcat)
+        ra = 0.12345
+        dec = 0.752
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH_existing_overlap(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_numsrcs = -1
+
+        self.touch(expected_refcat)
+        ra = 0.134
+        dec = 0.743
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
 
 
 class FITSUnitTest(TestCase):
