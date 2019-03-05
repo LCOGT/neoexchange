@@ -211,7 +211,7 @@ def determine_scamp_options(fits_catalog, external_cat_name='GAIA-DR2.cat', dist
     the TPV distorted tangent plane projection.
     Reference: https://fits.gsfc.nasa.gov/registry/tpvwcs/tpv.html
     """
-    options = "-ASTREF_CATALOG FILE -ASTREFCAT_NAME {}".format(external_cat_name)
+    options = "-ASTREF_CATALOG FILE -ASTREFCAT_NAME {}".format(os.path.basename(external_cat_name))
     if '1m0' in fits_catalog or distort_degrees is not None:
         if distort_degrees is None:
             distort_degrees = 3
@@ -279,7 +279,7 @@ def run_sextractor(source_dir, dest_dir, fits_file, binary=None, catalog_type='A
     return retcode_or_cmdline
 
 @timeit
-def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False, distort_degrees=None):
+def run_scamp(source_dir, dest_dir, fits_catalog_path, refcatalog='GAIA-DR2.cat', binary=None, dbg=False, distort_degrees=None):
     '''Run SCAMP (using either the binary specified by [binary] or by
     looking for 'scamp' in the PATH) on the passed <fits_catalog_path> with the
     results and any temporary files created in <dest_dir>. <source_dir> is the
@@ -295,7 +295,7 @@ def run_scamp(source_dir, dest_dir, fits_catalog_path, binary=None, dbg=False, d
         return -42
 
     scamp_config_file = default_scamp_config_files()[0]
-    options = determine_scamp_options(fits_catalog_path, distort_degrees=distort_degrees)
+    options = determine_scamp_options(fits_catalog_path, external_cat_name=refcatalog, distort_degrees=distort_degrees)
 
     # SCAMP writes the output header file to the path that the FITS file is in,
     # not to the directory SCAMP is being run from...
@@ -420,7 +420,11 @@ def get_scamp_xml_info(scamp_xml_file):
         # to get the actual catalog used
         reference_catalog = votable.get_field_by_id_or_name('AstRefCat_Name').value
         reference_catalog = reference_catalog.decode("utf-8")
-        wcs_refcat_name = reference_catalog
+        print("reference_catalog = ", reference_catalog)
+        if '_' in reference_catalog:
+            # If it's new format catalog file with position and size, strip
+            # these out.
+            reference_catalog = reference_catalog.split('_')[0]
         reference_catalog = reference_catalog.replace('.cat', '')
     else:
         wcs_refcat_name = "<Vizier/aserver.cgi?%s@cds>" % reference_catalog.lower()

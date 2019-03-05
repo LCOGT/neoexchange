@@ -806,7 +806,7 @@ class TestUpdateFITSWCS(TestCase):
                      'pv2_10' : -2.704416488002E-02,
                      'secpix' : 1.13853,
                      'wcssolvr' : 'SCAMP-2.0.4',
-                     'wcsrfcat' : 'GAIA-DR2.cat',
+                     'wcsrfcat' : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
                      'wcsimcat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
                      'wcsnref' : 280, 'wcsmatch' : 23, 'wccattyp' : 'GAIA-DR2@CDS',
                      'wcsrdres' : '0.30803/0.34776', # ASTRRMS1*3600/ASTRRMS2*3600 from .head file
@@ -833,6 +833,7 @@ class TestGetSCAMPXMLInfo(TestCase):
 
         self.test_scamp_xml = os.path.join('photometrics', 'tests', 'example_scamp.xml')
         self.test_externcat_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp.xml')
+        self.test_externcat_tpv_xml = os.path.join('photometrics', 'tests', 'example_externcat_scamp_tpv.xml')
 
         self.maxDiff = None
 
@@ -871,6 +872,24 @@ class TestGetSCAMPXMLInfo(TestCase):
                 self.assertAlmostEqual(expected_results[key], results[key], 6)
             else:
                 self.assertEqual(expected_results[key], results[key])
+
+    def test_read_extern_cat_TPV(self):
+
+        expected_results = { 'num_refstars' : 280,
+                             'num_match'    : 23,
+                             'wcs_refcat'   : 'GAIA-DR2_228.33+38.40_43.3488mx29.0321m.cat',
+                             'wcs_cattype'  : 'GAIA-DR2@CDS',
+                             'wcs_imagecat' : 'tfn0m414-kb99-20180529-0202-e91_ldac.fits',
+                             'pixel_scale'  : 1.13853
+                           }
+
+        results = get_scamp_xml_info(self.test_externcat_tpv_xml)
+
+        for key in expected_results.keys():
+            if key == 'pixel_scale':
+                self.assertAlmostEqual(expected_results[key], results[key], 6)
+            else:
+                self.assertEqual(expected_results[key], results[key], "Failure on " + key)
 
 
 class TestReadMTDSFile(TestCase):
