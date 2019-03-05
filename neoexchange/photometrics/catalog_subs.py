@@ -435,7 +435,6 @@ def convert_catfile_to_corners(cat_file):
 
     m = regex.search(cat_file)
     if len(m.groups()) == 5:
-        print(m.groups())
         ra = float(m.group(2))
         dec = float(m.group(3))
         width = float(m.group(4)) / 60.0 / 2.0
@@ -444,7 +443,7 @@ def convert_catfile_to_corners(cat_file):
         bottom_right = (ra-width, dec-height)
     return top_left, bottom_right
 
-def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2"):
+def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2", dbg=False):
     """Search in <dest_dir> for catalogs of type [cat_name] that cover the
     pointing specified by <ra, dec> and with area <width, height>. The first
     match that covers the area is returned otherwise None is returned"""
@@ -471,16 +470,17 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
 
             top_left = (ra + half_width, dec + half_height)
             bottom_right = (ra - half_width, dec - half_height)
-            print(top_left, bottom_right)
+            if dbg: print("Frame=",top_left, bottom_right)
             for test_file in cat_files:
                 cat_top_left, cat_bottom_right = convert_catfile_to_corners(test_file)
+                if dbg: print("Catalog=",cat_top_left, cat_bottom_right)
                 if cat_top_left is not None and cat_bottom_right is not None:
                     if cat_top_left[0] >= top_left[0] and cat_bottom_right[0] <= bottom_right[0] and\
                         cat_top_left[1] >= top_left[1] and cat_bottom_right[1] <= bottom_right[1]:
                         cat_file = test_file
-                        print(" Inside bounds")
+                        if dbg: print(" Inside bounds")
                     else:
-                        print("Outside bounds")
+                        if dbg: print("Outside bounds")
     return cat_file
 
 def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0"):

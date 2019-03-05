@@ -1086,8 +1086,8 @@ class TestExistingCatalogCoverage(TestCase):
     def test_1cat(self):
         self.touch(self.expected_ref_catalog)
 
-        ra = self.header['ra'] + 0.25
-        dec = self.header['dec'] - 0.01
+        ra = self.header['ra'] + 0.0125
+        dec = self.header['dec'] - 0.005
         existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
 
         self.assertEqual(self.expected_ref_catalog, existing_catalog)
@@ -1101,6 +1101,15 @@ class TestExistingCatalogCoverage(TestCase):
 
         self.assertEqual(None, existing_catalog)
 
+    def test_2cat(self):
+        self.touch(self.expected_ref_catalog)
+
+        ra = self.header['ra'] + 0.25
+        dec = self.header['dec'] - 0.01
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
+
+        self.assertEqual(self.expected_ref_catalog, existing_catalog)
+
 
 class Test_Convert_Catfile_To_Corners(TestCase):
 
@@ -1109,6 +1118,17 @@ class Test_Convert_Catfile_To_Corners(TestCase):
         expected_br = (228.0, 38.15)
 
         cat_file = 'GAIA-DR2_228.25+38.40_30.0mx30.0m.cat'
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_withpath1(self):
+        expected_tl = (228.5, 38.65)
+        expected_br = (228.0, 38.15)
+
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2_228.25+38.40_30.0mx30.0m.cat')
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
