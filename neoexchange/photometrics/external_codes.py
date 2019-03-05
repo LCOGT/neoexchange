@@ -420,7 +420,7 @@ def get_scamp_xml_info(scamp_xml_file):
         # to get the actual catalog used
         reference_catalog = votable.get_field_by_id_or_name('AstRefCat_Name').value
         reference_catalog = reference_catalog.decode("utf-8")
-        print("reference_catalog = ", reference_catalog)
+        wcs_refcat_name = reference_catalog
         if '_' in reference_catalog:
             # If it's new format catalog file with position and size, strip
             # these out.
