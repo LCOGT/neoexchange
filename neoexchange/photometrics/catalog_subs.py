@@ -24,6 +24,7 @@ from math import sqrt, log10, log, degrees
 from collections import OrderedDict
 import time
 from requests.exceptions import ReadTimeout
+import re
 
 from astropy.io import fits
 from astropy.table import Table
@@ -427,6 +428,22 @@ def write_ldac(table, output_file):
 
     return num_sources
 
+def convert_catfile_to_corners(cat_file):
+    regex = re.compile(r"([a-zA-Z0-9-]+)_(\d{0,3}.\d*)([+-]\d*.\d*)_(\d*.\d*)mx(\d*.\d*)m.cat")
+    top_left = None
+    bottom_right = None
+
+    m = regex.search(cat_file)
+    if len(m.groups()) == 5:
+        print(m.groups())
+        ra = float(m.group(2))
+        dec = float(m.group(3))
+        width = float(m.group(4)) / 60.0 / 2.0
+        height = float(m.group(5)) / 60.0 / 2.0
+        top_left = (ra+width, dec+height)
+        bottom_right = (ra-width, dec-height)
+    return top_left, bottom_right
+
 def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2"):
     """Search in <dest_dir> for catalogs of type [cat_name] that cover the
     pointing specified by <ra, dec> and with area <width, height>. The first
@@ -437,7 +454,33 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
     if os.path.isdir(cat_path):
         cat_files = glob(cat_path + cat_name + '*.cat')
         if len(cat_files) >= 1:
-            cat_file = cat_files[0]
+            unit = width[-1]
+            if unit == 'm':
+                half_width = float(width[0:-1]) / 60.0 /2.0
+            elif unit == 'd':
+                half_width = float(width[0:-1]) /2.0
+            else:
+                logger.error("Unrecognized unit")
+            unit = height[-1]
+            if unit == 'm':
+                half_height = float(height[0:-1]) / 60.0 /2.0
+            elif unit == 'd':
+                half_height = float(height[0:-1]) / 2.0
+            else:
+                logger.error("Unrecognized unit")
+
+            top_left = (ra + half_width, dec + half_height)
+            bottom_right = (ra - half_width, dec - half_height)
+            print(top_left, bottom_right)
+            for test_file in cat_files:
+                cat_top_left, cat_bottom_right = convert_catfile_to_corners(test_file)
+                if cat_top_left is not None and cat_bottom_right is not None:
+                    if cat_top_left[0] >= top_left[0] and cat_bottom_right[0] <= bottom_right[0] and\
+                        cat_top_left[1] >= top_left[1] and cat_bottom_right[1] <= bottom_right[1]:
+                        cat_file = test_file
+                        print(" Inside bounds")
+                    else:
+                        print("Outside bounds")
     return cat_file
 
 def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0"):

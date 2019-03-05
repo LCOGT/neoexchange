@@ -1032,12 +1032,12 @@ class TestExistingCatalogCoverage(TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
 
-        self.header = { 'ra' : 228.33284875,
-                        'dec': 38.395874166666665,
+        self.header = { 'ra' : 228.25,
+                        'dec': 38.40,
                         'width': '4.5m',
                         'height': '3.0m',
                       }
-        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.33+38.40_6.75mx4.5m.cat')
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.25+38.40_6.75mx4.5m.cat')
 
         self.remove = True
         self.debug_print = False
@@ -1083,7 +1083,7 @@ class TestExistingCatalogCoverage(TestCase):
 
         self.assertEqual(None, existing_catalog)
 
-    def test1(self):
+    def test_1cat(self):
         self.touch(self.expected_ref_catalog)
 
         ra = self.header['ra'] + 0.25
@@ -1091,6 +1091,29 @@ class TestExistingCatalogCoverage(TestCase):
         existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
 
         self.assertEqual(self.expected_ref_catalog, existing_catalog)
+
+    def test_1cat_nooverlap(self):
+        self.touch(self.expected_ref_catalog)
+
+        ra = self.header['ra'] + 10
+        dec = self.header['dec'] - 10
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
+
+        self.assertEqual(None, existing_catalog)
+
+
+class Test_Convert_Catfile_To_Corners(TestCase):
+
+    def test_nopath1(self):
+        expected_tl = (228.5, 38.65)
+        expected_br = (228.0, 38.15)
+
+        cat_file = 'GAIA-DR2_228.25+38.40_30.0mx30.0m.cat'
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
 
 
 class FITSUnitTest(TestCase):
