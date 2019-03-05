@@ -918,7 +918,7 @@ class Test_GetReferenceCatalog(TestCase):
                         'width': '4.5m',
                         'height': '3.0m',
                       }
-        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.33+38.40_6.75mx4.5m.cat')
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.33+38.40_6.7500mx4.5000m.cat')
 
         self.remove = True
         self.debug_print = False
@@ -967,7 +967,7 @@ class Test_GetReferenceCatalog(TestCase):
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_SH(self):
 
-        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.75mx39.75m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_122.50-57.75_39.7500mx39.7500m.cat')
         expected_numsrcs = 2
 
         ra = 122.5
@@ -982,7 +982,7 @@ class Test_GetReferenceCatalog(TestCase):
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_NH(self):
 
-        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.7200mx39.7200m.cat')
         expected_numsrcs = 2
 
         ra = 0.12345
@@ -997,7 +997,23 @@ class Test_GetReferenceCatalog(TestCase):
     @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
     def test_Sinistro_NH_existing(self):
 
-        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.72mx39.72m.cat')
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_10.12+0.75_39.7200mx39.7200m.cat')
+        expected_numsrcs = -1
+
+        self.touch(expected_refcat)
+        ra = 10.12345
+        dec = 0.752
+        frame_width = '26.48m'
+        frame_height = '26.48m'
+        refcat, num_ref_srcs = get_reference_catalog(self.temp_dir, ra, dec, frame_width, frame_height, cat_name="GAIA-DR2")
+
+        self.assertEqual(expected_refcat, refcat)
+        self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+    @patch('photometrics.catalog_subs.get_vizier_catalog_table', mock_get_vizier_catalog_table)
+    def test_Sinistro_NH_existing_RAwrap(self):
+
+        expected_refcat = os.path.join(self.temp_dir, 'GAIA-DR2_0.12+0.75_39.7200mx39.7200m.cat')
         expected_numsrcs = -1
 
         self.touch(expected_refcat)
@@ -1037,7 +1053,7 @@ class TestExistingCatalogCoverage(TestCase):
                         'width': '4.5m',
                         'height': '3.0m',
                       }
-        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.25+38.40_6.75mx4.5m.cat')
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.25+38.40_6.7500mx4.5000m.cat')
 
         self.remove = True
         self.debug_print = False
@@ -1103,7 +1119,7 @@ class TestExistingCatalogCoverage(TestCase):
 
     def test_2cat_lhs(self):
         self.touch(self.expected_ref_catalog)
-        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.75mx4.5m.cat')
+        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.7500mx4.500m.cat')
         self.touch(second_cat)
 
         ra = self.header['ra'] + 0.01
@@ -1114,7 +1130,7 @@ class TestExistingCatalogCoverage(TestCase):
 
     def test_2cat_rhs(self):
         self.touch(self.expected_ref_catalog)
-        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.75mx4.5m.cat')
+        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.7500mx4.500m.cat')
         self.touch(second_cat)
 
         ra = self.header['ra'] - 0.10
@@ -1123,6 +1139,18 @@ class TestExistingCatalogCoverage(TestCase):
 
         self.assertEqual(second_cat, existing_catalog)
 
+    def test_1cat_SH(self):
+        ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_120.55-59.00_40.000mx40.000m.cat')
+
+        self.touch(ref_catalog)
+
+        ra = 120.58
+        dec = -59.01
+        width = '26.4m'
+        height = '26.4m'
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, width, height)
+
+        self.assertEqual(ref_catalog, existing_catalog)
 
 class Test_Convert_Catfile_To_Corners(TestCase):
 
@@ -1130,7 +1158,29 @@ class Test_Convert_Catfile_To_Corners(TestCase):
         expected_tl = (228.5, 38.65)
         expected_br = (228.0, 38.15)
 
-        cat_file = 'GAIA-DR2_228.25+38.40_30.0mx30.0m.cat'
+        cat_file = 'GAIA-DR2_228.25+38.40_30.0000mx30.0000m.cat'
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_nopath2(self):
+        expected_tl = (28.5, -38.15)
+        expected_br = (28.0, -38.65)
+
+        cat_file = 'GAIA-DR2_28.25-38.40_30.0000mx30.0000m.cat'
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_nopath3(self):
+        expected_tl = (328.503525, -38.229465)
+        expected_br = (327.996475, -38.570535)
+
+        cat_file = 'GAIA-DR2_328.25-38.40_30.4230mx20.4642m.cat'
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
@@ -1141,7 +1191,18 @@ class Test_Convert_Catfile_To_Corners(TestCase):
         expected_tl = (228.5, 38.65)
         expected_br = (228.0, 38.15)
 
-        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2_228.25+38.40_30.0mx30.0m.cat')
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2_228.25+38.40_30.0000mx30.0000m.cat')
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
+    def test_withpath2(self):
+        expected_tl = (120.8, -58.75)
+        expected_br = (120.3, -59.25)
+
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2_120.55-59.00_30.0000mx30.0000m.cat')
 
         top_left, bottom_right = convert_catfile_to_corners(cat_file)
 
