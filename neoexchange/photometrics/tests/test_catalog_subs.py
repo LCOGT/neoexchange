@@ -1101,14 +1101,27 @@ class TestExistingCatalogCoverage(TestCase):
 
         self.assertEqual(None, existing_catalog)
 
-    def test_2cat(self):
+    def test_2cat_lhs(self):
         self.touch(self.expected_ref_catalog)
+        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.75mx4.5m.cat')
+        self.touch(second_cat)
 
-        ra = self.header['ra'] + 0.25
+        ra = self.header['ra'] + 0.01
         dec = self.header['dec'] - 0.01
         existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
 
         self.assertEqual(self.expected_ref_catalog, existing_catalog)
+
+    def test_2cat_rhs(self):
+        self.touch(self.expected_ref_catalog)
+        second_cat = os.path.join(self.temp_dir, 'GAIA-DR2_228.14+38.40_6.75mx4.5m.cat')
+        self.touch(second_cat)
+
+        ra = self.header['ra'] - 0.10
+        dec = self.header['dec'] + 0.01
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
+
+        self.assertEqual(second_cat, existing_catalog)
 
 
 class Test_Convert_Catfile_To_Corners(TestCase):
