@@ -937,7 +937,7 @@ class Test_GetReferenceCatalog(TestCase):
             except OSError:
                 print("Error removing temporary test directory", self.temp_dir)
         else:
-            print("Temporary directory=", self.temp_dir)
+            print("Temporary test directory=", self.temp_dir)
 
     def touch(self, fname, times=None):
         with open(fname, 'a'):
@@ -1025,6 +1025,52 @@ class Test_GetReferenceCatalog(TestCase):
 
         self.assertEqual(expected_refcat, refcat)
         self.assertEqual(expected_numsrcs, num_ref_srcs)
+
+
+class TestExistingCatalogCoverage(TestCase):
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+
+        self.header = { 'ra' : 228.33284875,
+                        'dec': 38.395874166666665,
+                        'width': '4.5m',
+                        'height': '3.0m',
+                      }
+        self.expected_ref_catalog = os.path.join(self.temp_dir, 'GAIA-DR2_228.33+38.40_6.75mx4.5m.cat')
+
+        self.remove = True
+        self.debug_print = False
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.temp_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.temp_dir)
+            try:
+                os.rmdir(self.temp_dir)
+                if self.debug_print: print("Removed", self.temp_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.temp_dir)
+        else:
+            print("Temporary test directory=", self.temp_dir)
+
+    def touch(self, fname, times=None):
+        with open(fname, 'a'):
+            os.utime(fname, times)
+
+    def test1(self):
+        self.touch(self.expected_ref_catalog)
+
+
+        ra = self.header['ra'] + 0.25
+        dec = self.header['dec'] - 0.01
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'])
+
+        self.assertEqual(self.expected_ref_catalog, existing_catalog)
 
 
 class FITSUnitTest(TestCase):

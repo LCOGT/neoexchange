@@ -427,6 +427,9 @@ def write_ldac(table, output_file):
 
     return num_sources
 
+def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2"):
+    return
+
 def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0"):
     """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR2') into
     the passed <dest_dir> around the passed (ra, dec) co-ordinates and width and
