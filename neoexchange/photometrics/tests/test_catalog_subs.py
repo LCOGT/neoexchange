@@ -1062,9 +1062,29 @@ class TestExistingCatalogCoverage(TestCase):
         with open(fname, 'a'):
             os.utime(fname, times)
 
-    def test1(self):
+    def test_empty_dir(self):
+
+        existing_catalog = existing_catalog_coverage(self.temp_dir, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertEqual(None, existing_catalog)
+
+    def test_not_a_dir(self):
+
+        existing_catalog = existing_catalog_coverage(self.expected_ref_catalog, self.header['ra'], self.header['dec'], self.header['width'], self.header['height'])
+
+        self.assertEqual(None, existing_catalog)
+
+    def test_wrong_cattype(self):
         self.touch(self.expected_ref_catalog)
 
+        ra = self.header['ra'] + 0.25
+        dec = self.header['dec'] - 0.01
+        existing_catalog = existing_catalog_coverage(self.temp_dir, ra, dec, self.header['width'], self.header['height'], cat_name='PPMXL')
+
+        self.assertEqual(None, existing_catalog)
+
+    def test1(self):
+        self.touch(self.expected_ref_catalog)
 
         ra = self.header['ra'] + 0.25
         dec = self.header['dec'] - 0.01

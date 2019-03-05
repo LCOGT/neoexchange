@@ -428,7 +428,17 @@ def write_ldac(table, output_file):
     return num_sources
 
 def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2"):
-    return
+    """Search in <dest_dir> for catalogs of type [cat_name] that cover the
+    pointing specified by <ra, dec> and with area <width, height>. The first
+    match that covers the area is returned otherwise None is returned"""
+
+    cat_file = None
+    cat_path = os.path.join(dest_dir, '')
+    if os.path.isdir(cat_path):
+        cat_files = glob(cat_path + cat_name + '*.cat')
+        if len(cat_files) >= 1:
+            cat_file = cat_files[0]
+    return cat_file
 
 def get_reference_catalog(dest_dir, ra, dec, set_width, set_height, cat_name="GAIA-DR2", set_row_limit=10000, rmag_limit="<=18.0"):
     """Download and save a catalog from [cat_name] (defaults to 'GAIA-DR2') into
