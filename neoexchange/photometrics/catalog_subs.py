@@ -434,13 +434,14 @@ def convert_catfile_to_corners(cat_file):
     bottom_right = None
 
     m = regex.search(cat_file)
-    if len(m.groups()) == 5:
-        ra = float(m.group(2))
-        dec = float(m.group(3))
-        width = float(m.group(4)) / 60.0 / 2.0
-        height = float(m.group(5)) / 60.0 / 2.0
-        top_left = (ra+width, dec+height)
-        bottom_right = (ra-width, dec-height)
+    if m:
+        if len(m.groups()) == 5:
+            ra = float(m.group(2))
+            dec = float(m.group(3))
+            width = float(m.group(4)) / 60.0 / 2.0
+            height = float(m.group(5)) / 60.0 / 2.0
+            top_left = (ra+width, dec+height)
+            bottom_right = (ra-width, dec-height)
     return top_left, bottom_right
 
 def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-DR2", dbg=False):
@@ -472,6 +473,7 @@ def existing_catalog_coverage(dest_dir, ra, dec, width, height, cat_name="GAIA-D
             bottom_right = (ra - half_width, dec - half_height)
             if dbg: print("Frame=",top_left, bottom_right)
             for test_file in cat_files:
+                if dbg: print("catalog=", test_file)
                 cat_top_left, cat_bottom_right = convert_catfile_to_corners(test_file)
                 if dbg: print("Catalog=",cat_top_left, cat_bottom_right)
                 if cat_top_left is not None and cat_bottom_right is not None:

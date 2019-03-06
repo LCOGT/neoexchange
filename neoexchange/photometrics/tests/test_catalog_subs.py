@@ -1209,6 +1209,17 @@ class Test_Convert_Catfile_To_Corners(TestCase):
         self.assertEqual(expected_tl, top_left)
         self.assertEqual(expected_br, bottom_right)
 
+    def test_withpath3(self):
+        expected_tl = None
+        expected_br = None
+
+        cat_file = os.path.join('/tmp', 'tmp_neox_cucumber', 'GAIA-DR2.cat')
+
+        top_left, bottom_right = convert_catfile_to_corners(cat_file)
+
+        self.assertEqual(expected_tl, top_left)
+        self.assertEqual(expected_br, bottom_right)
+
 
 class FITSUnitTest(TestCase):
     def __init__(self, *args, **kwargs):
