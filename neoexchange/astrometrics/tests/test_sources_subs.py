@@ -3621,14 +3621,20 @@ class TestFetchTaxonomyData(TestCase):
 
     def setUp(self):
         # Read and make soup from the stored, partial version of the PDS Taxonomy Database
-        # test_fh = open(os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat'), 'r')
-        # self.test_taxonomy_page = test_fh
-        # test_fh.close()
         self.test_taxonomy_page = os.path.join('astrometrics', 'tests', 'test_taxonomy_page.dat')
+
+        # Read and make soup from the stored, partial version of the SDSS Taxonomy Database
+        self.test_sdss_page = os.path.join('astrometrics', 'tests', 'test_sdss_tax_page.dat')
 
     def test_basics(self):
         expected_length = 33
         targets = fetch_taxonomy_page(self.test_taxonomy_page)
+
+        self.assertEqual(expected_length, len(targets))
+
+    def test_basics_sdss(self):
+        expected_length = 25
+        targets = fetch_taxonomy_page(self.test_sdss_page)
 
         self.assertEqual(expected_length, len(targets))
 
@@ -3644,6 +3650,19 @@ class TestFetchTaxonomyData(TestCase):
                              ['4713', 'Sw', "BD", "PDS6", 'a'],
                             ]
         tax_data = fetch_taxonomy_page(self.test_taxonomy_page)
+        for line in expected_targets:
+            self.assertIn(line, tax_data)
+
+    def test_targets_sdss(self):
+        expected_targets = [ ['166', 'C', "Sd", "SDSS", '78|1|-'],
+                             ['183', 'S', "Sd", "SDSS", '00|1|-'],
+                             ['251', 'L', "Sd", "SDSS", '96|2|LS'],
+                             ['1067', 'LS', "Sd", "SDSS", '65|1|-'],
+                             ['60707', 'DL', "Sd", "SDSS", '8|1|-'],
+                             ['2000 QO192', 'C', "Sd", "SDSS", '10|1|-'],
+                             ['962', 'S', "Sd", "SDSS", '96|4|CLSQ'],
+                            ]
+        tax_data = fetch_taxonomy_page(self.test_sdss_page)
         for line in expected_targets:
             self.assertIn(line, tax_data)
 
@@ -3674,8 +3693,8 @@ class TestFetchTaxonomyData(TestCase):
                          'S',
                          'S',
                          'A',
-                         'Sw',
                          'A',
+                         'Sw',
                          'Sl',
                          'Sl',
                          'C',
@@ -3686,10 +3705,36 @@ class TestFetchTaxonomyData(TestCase):
         taxonomy = [row[1] for row in tax_data]
         self.assertEqual(expected_tax, taxonomy)
 
-    def test_tax_site_pull(self):
-        expected_line = ['1', 'G', "T", "PDS6", "7G"]
-        tax_data = fetch_taxonomy_page()
-        self.assertEqual(expected_line, tax_data[0])
+    def test_tax_sdss(self):
+        expected_tax = [ 'C',
+                         'S',
+                         'S',
+                         'X',
+                         'C',
+                         'CX',
+                         'L',
+                         'S',
+                         'C',
+                         'L',
+                         'S',
+                         'LS',
+                         'C',
+                         'V',
+                         'S',
+                         'S',
+                         'DL',
+                         'C',
+                         'D',
+                         'S',
+                         'C',
+                         'LS',
+                         'XL',
+                         'D',
+                         'C',
+                          ]
+        tax_data = fetch_taxonomy_page(self.test_sdss_page)
+        taxonomy = [row[1] for row in tax_data]
+        self.assertEqual(expected_tax, taxonomy)
 
 
 class TestFetchPreviousSpectra(TestCase):

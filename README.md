@@ -4,6 +4,14 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.11
+Allow for automatic updating of targets.
+* Update observations from MPC daily.
+* Update orbits with FindOrb or from MPC daily.
+* Be smarter about when and how FindOrb updates an orbit.
+* Update taxonomy daily.
+* Update external spectroscopy weekly.
+
 ### 2.7.10
 Several bug fixes
 * Allow Download for all Programs

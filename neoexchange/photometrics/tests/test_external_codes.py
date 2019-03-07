@@ -469,18 +469,24 @@ class TestSExtractorRunner(ExternalCodeUnitTest):
 
 class TestFindOrbRunner(ExternalCodeUnitTest):
 
+    # These test use a fake binary name and set dbg=True to echo the generated
+    # command line rather than actually executing the real find_orb code.
     def test_sitecode_default(self):
-        expected_status = "fo_console {} -z -c -q -C 500 -e new.ephem".format(self.test_obs_file)
+        eph_time = datetime(2018, 4, 20)
 
-        status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, binary="fo_console", dbg=True)
+        expected_status = "fo_console {} -z -c -q -C 500 -e new.ephem -tE2018-04-21".format(self.test_obs_file)
+
+        status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, binary="fo_console", start_time=eph_time, dbg=True)
 
         self.assertEqual(expected_status, status)
 
     def test_sitecode_T03(self):
         site_code = 'T03'
-        expected_status = "fo_console {} -z -c -q -C {} -e new.ephem".format(self.test_obs_file, site_code)
+        eph_time = datetime(2018, 12, 31, 23, 59)
 
-        status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, site_code, binary="fo_console", dbg=True)
+        expected_status = "fo_console {} -z -c -q -C {} -e new.ephem -tE2019-01-01".format(self.test_obs_file, site_code)
+
+        status = run_findorb(self.source_dir, self.test_dir, self.test_obs_file, site_code, binary="fo_console", start_time=eph_time, dbg=True)
 
         self.assertEqual(expected_status, status)
 

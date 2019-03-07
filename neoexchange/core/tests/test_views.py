@@ -31,7 +31,9 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_check_request_status_null, mock_check_request_status_notfound, \
     mock_check_for_images_no_millisecs, \
     mock_check_for_images_bad_date, mock_ingest_frames, mock_archive_frame_header, \
-    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list
+    mock_odin_login, mock_run_sextractor_make_catalog, mock_fetch_filter_list, \
+    mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
+    mock_update_elements_with_findorb_badepoch
 
 from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
@@ -50,7 +52,6 @@ import logging
 logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
-
 
 class TestClean_NEOCP_Object(TestCase):
 
@@ -72,7 +73,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'M',
                               'source_type' : 'U',
-                              'active'      : True
+                              'active'      : True,
+                              'orbit_rms'   : 0.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -97,7 +99,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'elements_type': 'MPC_MINOR_PLANET',
                               'origin'      : 'M',
                               'source_type' : 'U',
-                              'active'      : True
+                              'active'      : True,
+                              'orbit_rms'   : 0.34
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -133,7 +136,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 10.4/1440.0,
-                              'not_seen'    : 1.5
+                              'not_seen'    : 1.5,
+                              'orbit_rms'   : 0.08
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -162,7 +166,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 3.0,
-                              'not_seen'    : 12.25
+                              'not_seen'    : 12.25,
+                              'orbit_rms'   : 0.14
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -191,7 +196,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 87/1440.0,
-                              'not_seen'    :  3.25
+                              'not_seen'    :  3.25,
+                              'orbit_rms'   : 1.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -220,7 +226,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'source_type' : 'U',
                               'active'      : True,
                               'arc_length'  : 87/24.0,
-                              'not_seen'    :  3.25
+                              'not_seen'    :  3.25,
+                              'orbit_rms'   : 1.21
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -250,7 +257,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'num_obs'     : 185,
                               'arc_length'  : 1826.0,
-                              'not_seen'    : 90.25
+                              'not_seen'    : 90.25,
+                              'orbit_rms'   : 0.37
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -280,7 +288,8 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'num_obs'     : 339,
                               'arc_length'  : 1826.0,
-                              'not_seen'    : 79.25
+                              'not_seen'    : 79.25,
+                              'orbit_rms'   : 0.33
                             }
         elements = clean_NEOCP_object(obs_page)
         for element in expected_elements:
@@ -311,6 +320,7 @@ class TestClean_NEOCP_Object(TestCase):
                               'active'      : True,
                               'arc_length'  : 3.0,
                               'not_seen'    : 11.75,
+                              'orbit_rms'   : 0.09
                             }
         elements = clean_NEOCP_object(obs_page_list)
         for element in expected_elements:
@@ -1886,6 +1896,7 @@ class TestUpdate_MPC_orbit(TestCase):
                              'longascnode': 24.87559,
                              'eccentricity': 0.0120915,
                              'epochofel': datetime(2016, 1, 13, 0),
+                             'orbit_rms': 99,
                              'meandist': 0.9967710,
                              'orbinc': 8.25708,
                              'meananom': 221.74204,
@@ -2107,6 +2118,11 @@ class TestUpdate_MPC_orbit(TestCase):
 
 class TestUpdate_MPC_obs(TestCase):
     def setUp(self):
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.debug_print = False
+        self.maxDiff = None
+
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_WSAE9A6.dat'), 'r')
         self.test_mpcobs_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
@@ -2172,16 +2188,16 @@ class TestUpdate_MPC_obs(TestCase):
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
 
     def test2_multiple_designations(self):
-        expected_measures = 23
+        expected_measures = 28
         measures = update_MPC_obs(self.test_mpcobs_page2)
         self.assertEqual(len(measures), expected_measures)
 
     def test_repeat_sources(self):
-        expected_measures = 11
-        total_measures = 23
-        expected_frames = 23
-        first_date = datetime(1998, 2, 21, 2, 13, 10, 272000)
-        last_date = datetime(2018, 7, 10, 3, 35, 44, 448000)
+        expected_measures = 16
+        total_measures = 28
+        expected_frames = 28
+        first_date = datetime(1992, 6, 3, 5, 27, 4, 896000)
+        last_date = datetime(2018, 12, 4, 21, 4, 6, 240000)
 
         # Read in old measures
         initial_measures = update_MPC_obs(self.test_mpcobs_page3)
@@ -2205,6 +2221,29 @@ class TestUpdate_MPC_obs(TestCase):
 
         measures = update_MPC_obs(self.test_mpcobs_page4)
         self.assertEqual(len(measures), expected_measures)
+
+    def test_obs_export(self):
+        measures = update_MPC_obs(self.test_mpcobs_page2)
+        expected_filename = os.path.join(self.test_dir, '13553.mpc')
+        expected_out1 = '13553         C1998 02 21.09248010 31 21.78 +03 20 23.2          20.1 V      557\n'
+        expected_out0 = '13553         A1994 06 05.27986 14 24 59.76 -00 36 53.4                      675\n'
+        expected_num_lines = 24
+
+        body = Body.objects.get(name='13553')
+        filename, num_lines = export_measurements(body.id, self.test_dir)
+
+        self.assertEqual(expected_filename, filename)
+        self.assertEqual(expected_num_lines, num_lines)
+
+        lines = []
+        with open(filename, 'r') as test_mpc_out:
+            line = test_mpc_out.readline()
+            while line:
+                lines.append(line)
+                line = test_mpc_out.readline()
+        self.assertEqual(expected_out0, lines[0])
+        self.assertEqual(expected_out1, lines[1])
+        self.assertEqual(num_lines, len(lines)-1)
 
 
 class TestClean_mpcorbit(TestCase):
@@ -4767,36 +4806,36 @@ class Test_Add_New_Taxonomy_Data(TestCase):
         self.test_spectra = SpectralInfo.objects.create(pk=1, **tax_params)
 
     def test_one_body(self):
-        expected_res = True
-        test_obj = ['LNX0003', 'SU', "T", "PDS6", "7G"]
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 1
+        test_obj = [['LNX0003', 'SU', "T", "PDS6", "7G"]]
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_new_target(self):
         expected_res = False
-        test_obj = ['4702', 'S', "B", "PDS6", "s"]
-        new_tax = update_taxonomy(test_obj)
+        test_obj = [['4702', 'S', "B", "PDS6", "s"]]
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data(self):
-        expected_res = False
-        test_obj = ['980', 'S3', "Ba", "PDS6", "7I"]
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 0
+        test_obj = [['980', 'S3', "Ba", "PDS6", "7I"]]
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
     def test_same_data_twice(self):
-        expected_res = False
-        test_obj = ['980', 'SU', "T", "PDS6", "7G"]
-        new_tax = update_taxonomy(test_obj)
-        new_tax = update_taxonomy(test_obj)
+        expected_res = 0
+        test_obj = [['980', 'SU', "T", "PDS6", "7G"]]
+        new_tax = update_taxonomy(self.body, test_obj)
+        new_tax = update_taxonomy(self.body, test_obj)
 
         self.assertEqual(expected_res, new_tax)
 
 
-class Test_Add_External_Spectroscopy_Data(TestCase):
+class TestAddExternalSpectroscopyData(TestCase):
 
     def setUp(self):
 
@@ -5055,10 +5094,10 @@ class TestFindBestSolarAnalog(TestCase):
         self.assertEqual(expected_params, close_params)
 
 
-class Test_Export_Measurements(TestCase):
+class TestExportMeasurements(TestCase):
 
     def setUp(self):
-        self.test_dir = tempfile.mkdtemp(prefix = 'tmp_neox_')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
         self.debug_print = False
         self.maxDiff = None
@@ -5104,6 +5143,242 @@ class Test_Export_Measurements(TestCase):
 
         self.assertEqual(expected_filename, filename)
         self.assertEqual(expected_num_lines, num_lines)
+
+
+class TestUpdateElementsWithFindOrb(TestCase):
+
+    def setUp(self):
+        self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+        self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+        orig_filename = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'))
+        self.filename = os.path.basename(orig_filename)
+        os.symlink(orig_filename, os.path.join(self.dest_dir, self.filename))
+
+        self.debug_print = False
+        self.maxDiff = None
+
+    def tearDown(self):
+        remove = True
+        if remove:
+            try:
+                files_to_remove = glob(os.path.join(self.dest_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.dest_dir)
+            try:
+                os.rmdir(self.dest_dir)
+                if self.debug_print:
+                    print("Removed", self.dest_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.dest_dir)
+
+    @patch('core.views.datetime', MockDateTime)
+    @patch('neox.tests.mocks.datetime', MockDateTime)
+    def test_goodelements(self):
+
+        MockDateTime.change_datetime(2015, 11, 18, 12, 0, 0)
+        # Overwrite real method with Mock. Not sure why 'patch' isn't working
+        # but it isn't...
+        update_elements_with_findorb = mock_update_elements_with_findorb
+
+        expected_elements = {   'abs_mag' : 21.91,
+                                'slope' : 0.15,
+                                'active' : True,
+                                'origin' : 'M',
+                                'source_type' : 'U',
+                                'elements_type' : 'MPC_MINOR_PLANET',
+                                'provisional_name' : 'P10pqB2',
+                                'epochofel' : datetime(2015, 11, 18),
+                                'meananom' : 270.89733,
+                                'argofperih' : 339.47051,
+                                'longascnode' : 197.11047,
+                                'orbinc' : 10.74649,
+                                'eccentricity' :  0.3001867,
+                                'meandist' :  1.1896136,
+                                'arc_length' : 22.5/24.0,
+                                'num_obs' : 9,
+                                'not_seen' : 0.5,
+                                'update_time' : datetime(2015, 11, 18, 12, 0, 0),
+                                'orbit_rms' : 0.1
+                            }
+
+        start_time = datetime(2015, 11, 18, 23)
+        site_code = 'Z21'
+        elements_or_status = update_elements_with_findorb(self.source_dir, self.dest_dir, self.filename, site_code, start_time)
+
+        self.assertEqual(expected_elements, elements_or_status)
+
+    def test_bad_filename(self):
+
+        # Overwrite real method with Mock. Not sure why 'patch' isn't working
+        # but it isn't...
+        update_elements_with_findorb = mock_update_elements_with_findorb
+
+        expected_status = 255
+
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        elements_or_status = update_elements_with_findorb(self.source_dir, self.dest_dir, 'i_am_broken', site_code, start_time)
+
+        self.assertEqual(expected_status, elements_or_status)
+
+
+class TestRefitWithFindOrb(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        P10pqB2_params = { 'provisional_name' : 'P10pqB2',
+                           'source_type' : 'U',
+                           'epochofel' : datetime(2014, 12, 23)
+                         }
+
+        cls.test_body = Body.objects.create(**P10pqB2_params)
+
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_mpcobs_P10pqB2.dat'), 'r')
+        test_obslines = test_fh.readlines()
+        test_fh.close()
+        source_measures = create_source_measurement(test_obslines)
+
+    def setUp(self):
+        self.source_dir = os.path.abspath(os.path.join(os.getenv('HOME'), '.find_orb'))
+        self.dest_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.debug_print = False
+        self.remove = True
+
+        self.maxDiff = None
+
+        self.test_body.refresh_from_db()
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.dest_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.dest_dir)
+            try:
+                os.rmdir(self.dest_dir)
+                if self.debug_print:
+                    print("Removed", self.dest_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.dest_dir)
+        else:
+            print("dest_dir=", self.dest_dir)
+
+    @patch('core.views.update_elements_with_findorb', mock_update_elements_with_findorb)
+    def test_Z21(self):
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        expected_emp_info = { 'obj_id' : self.test_body.current_name(),
+                              'emp_sitecode' : site_code,
+                              'emp_timesys' : '(UTC)',
+                              'emp_rateunits' : "'/hr"}
+        expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646629670872465, -0.14939257239592119,  21.1, 2.25, 3.16),
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9644540366313723, -0.14964646932071826, 21.1, 2.25, 3.24),
+                          (datetime(2015, 11, 19, 1,  0, 0), 0.9642447425652374, -0.14990002687593854, 21.1, 2.25, 3.33),
+                          (datetime(2015, 11, 19, 1, 30, 0), 0.9640354484991024, -0.15015324506158206, 21.1, 2.25, 3.42)
+                         ]
+        expected_ephem_length = 4
+        expected_num_srcmeas = SourceMeasurement.objects.filter(body=self.test_body).count()
+        expected_meananom = 272.51789
+        expected_eccentricity =  0.3006186
+        expected_epoch = datetime(2015, 11, 20)
+        expected_src_type = 'U'
+        expected_origin = 'M'
+
+        emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
+        self.assertEqual(expected_emp_info, emp_info)
+        self.assertEqual(expected_ephem_length, len(new_ephem))
+        i = 0
+        while i < len(expected_ephem):
+            self.assertEqual(expected_ephem[i], new_ephem[i])
+            i += 1
+
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
+
+        self.assertEqual(expected_num_srcmeas, body.num_obs)
+        self.assertEqual(expected_epoch, body.epochofel)
+        self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_eccentricity, body.eccentricity)
+        self.assertEqual(expected_src_type, body.source_type)
+        self.assertEqual(expected_origin, body.origin)
+
+    @patch('core.views.update_elements_with_findorb', mock_update_elements_with_findorb_badrms)
+    def test_with_bad_RMS(self):
+        start_time = datetime(2015, 11, 19)
+        site_code = 'Z21'
+
+        expected_emp_info = { 'obj_id' : self.test_body.current_name(),
+                              'emp_sitecode' : site_code,
+                              'emp_timesys' : '(UTC)',
+                              'emp_rateunits' : "'/hr"}
+        expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646629670872465, -0.14939257239592119,  21.1, 2.25, 3.16),
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9644540366313723, -0.14964646932071826, 21.1, 2.25, 3.24)
+                         ]
+        expected_ephem_length = 2
+        expected_num_srcmeas = None
+        expected_meananom = None
+        expected_epoch = datetime(2014, 12, 23)
+        expected_src_type = 'U'
+        expected_origin = 'M'
+
+        emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
+
+        self.assertEqual(expected_emp_info, emp_info)
+        self.assertEqual(expected_ephem_length, len(new_ephem))
+        i = 0
+        while i < len(expected_ephem):
+            self.assertEqual(expected_ephem[i], new_ephem[i])
+            i += 1
+
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
+
+        self.assertEqual(expected_num_srcmeas, body.num_obs)
+        self.assertEqual(expected_epoch, body.epochofel)
+        self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_src_type, body.source_type)
+        self.assertEqual(expected_origin, body.origin)
+
+    @patch('core.views.update_elements_with_findorb', mock_update_elements_with_findorb_badepoch)
+    def test_with_bad_epoch(self):
+        start_time = datetime(2015, 11, 19)
+        site_code = 'T03'
+
+        expected_emp_info = { 'obj_id' : self.test_body.current_name(),
+                              'emp_sitecode' : site_code,
+                              'emp_timesys' : '(UTC)',
+                              'emp_rateunits' : "'/hr"}
+        expected_ephem = [(datetime(2015, 11, 19, 0,  0, 0), 0.9646887106937134, -0.14934360621412912,  21.1, 2.13, 3.45),
+                          (datetime(2015, 11, 19, 0, 30, 0), 0.9645093781130711, -0.14959818187807974, 21.1, 2.14, 3.62)
+                         ]
+        expected_ephem_length = 2
+        expected_num_srcmeas = None
+        expected_meananom = None
+        expected_epoch = datetime(2014, 12, 23)
+        expected_src_type = 'U'
+        expected_origin = 'M'
+
+        emp_info, new_ephem = refit_with_findorb(self.test_body.pk, site_code, start_time, self.dest_dir)
+
+        self.assertEqual(expected_emp_info, emp_info)
+        self.assertEqual(expected_ephem_length, len(new_ephem))
+        i = 0
+        while i < len(expected_ephem):
+            self.assertEqual(expected_ephem[i], new_ephem[i])
+            i += 1
+
+        body = Body.objects.get(provisional_name=self.test_body.current_name())
+
+        self.assertEqual(expected_num_srcmeas, body.num_obs)
+        self.assertEqual(expected_epoch, body.epochofel)
+        self.assertEqual(expected_meananom, body.meananom)
+        self.assertEqual(expected_src_type, body.source_type)
+        self.assertEqual(expected_origin, body.origin)
 
 
 class TestDetermineActiveProposals(TestCase):
