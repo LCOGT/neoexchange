@@ -254,7 +254,7 @@ class TestComputeEphemerides(TestCase):
                          'type': 'MPC_MINOR_PLANET',
                          'uncertainty': 'U'}
 
-        self.length_emp_line = 8
+        self.length_emp_line = 11
 
     def test_body_is_correct_class(self):
         tbody = Body.objects.get(provisional_name='N999r0q')
@@ -531,7 +531,7 @@ class TestDarkAndObjectUp(TestCase):
                                'ra': 3.13872732667931,
                                'dec': -0.09499609693219863,
                                'mag': 20.600690640173646,
-                               'sky_mag': 1.760842377819953,
+                               'sky_mot': 1.760842377819953,
                                'altitude': 30.206739359560114,
                                'sp_sep': 84.55611111111111,
                                'sky_ang': 88.26314748574852
@@ -540,7 +540,7 @@ class TestDarkAndObjectUp(TestCase):
                                'ra': 3.141344602912528,
                                'dec': -0.09490298162746419,
                                'mag': 20.589568103540817,
-                               'sky_mag': 1.7374161477538685,
+                               'sky_mot': 1.7374161477538685,
                                'altitude': 47.8232397476396,
                                'sp_sep': 84.56222222222222,
                                'sky_ang': 87.63684359362396
@@ -551,8 +551,10 @@ class TestDarkAndObjectUp(TestCase):
         visible_emp = dark_and_object_up(self.full_emp, self.dark_start, self.dark_end, self.slot_length, alt_limit=30.0, debug=False)
 
         self.assertEqual(expected_num_lines, len(visible_emp))
-        self.assertEqual(expected_first_line, visible_emp[0])
-        self.assertEqual(expected_last_line, visible_emp[-1])
+        for key, value in expected_first_line.items():
+            self.assertEqual(value, visible_emp[0][key])
+        for key, value in expected_last_line.items():
+            self.assertEqual(value, visible_emp[-1][key])
 
     def test_empty_ephem(self):
         expected_num_lines = 0

@@ -579,13 +579,13 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
         full_emp.append(emp_line)
         ephem_time = ephem_time + timedelta(seconds=step_size_secs)
 
-# Get subset of ephemeris when it's dark and object is up
+    # Get subset of ephemeris when it's dark and object is up
+    visible_emp = dark_and_object_up(full_emp, dark_start, dark_end, slot_length, alt_limit)
     emp = []
-    for line in full_emp:
+    for line in visible_emp:
         emp.append(format_emp_line(line, site_code))
 
-    visible_emp = dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit)
-    return visible_emp
+    return emp
 
 
 def read_findorb_ephem(empfile):
@@ -897,24 +897,23 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
     for x in emp:
         if len(x) >= 7:
             visible = False
-            emp_time = x[0]
-            current_alt = x[6]
+            if isinstance(x, list):
+                emp_time = datetime.strptime(x[0], '%Y %m %d %H:%M')
+                current_alt = float(x[6])
+            else:
+                emp_time = x['date']
+                current_alt = x['altitude']
             try:
-                if isinstance(emp_time, str):
-                    emp_time = datetime.strptime(x[0], '%Y %m %d %H:%M')
-                if isinstance(current_alt, str):
-                    current_alt = float(x[6])
                 if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= float(alt_limit):
                     visible = True
                     dark_up_emp.append(x)
             except ValueError:
                 return emp
             if debug:
-                print(x[0].date(), x[0].time(), (dark_start <= x[0] < dark_end - timedelta(minutes=slot_length)), x[6], alt_limit, visible)
+                print(emp_time.date(), emp_time.time(), (dark_start <= emp_time < dark_end - timedelta(minutes=slot_length)), current_alt, alt_limit, visible)
         else:
             logger.warning("Too short ephemeris encountered: ")
             logger.warning(x)
-
     return dark_up_emp
 
 
