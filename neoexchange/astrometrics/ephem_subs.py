@@ -103,10 +103,24 @@ def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
     return p_orbelems, p_epoch_mjd, j
 
 
-def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False, detailed=False):
+def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
     """Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
     from a dictionary of orbital elements.
+    OUTPUT:
+    Dictionary of parameters including:
+        'date':       The datetime associated with the coordinates
+        'ra':         Right Ascension (radians)
+        'dec':        Declination (radians)
+        'mag':        Magnitude
+        'mag_dot':    Instantaneous rate of change of Magnitude (Mag/day)
+        'sky_mot':    Total sky motion ("/min)
+        'sky_ang':    Position angle on the sky of the target's motion (degrees East of North)
+        'altitude':   Target's altitude above local horizon (degrees)
+        'sp_sep':     Angular distance from the South Pole (degrees)
+        'sun_sep':    Angular distance from the Solar position (radians)
+        'earth_dist': Delta, distance between Earth and target (AU)
+
     """
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
@@ -384,10 +398,23 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
 
 #               0   1   2   3       4           5       6       7
     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
+    emp_dict = {'date'      : d,
+                'ra'        : ra,
+                'dec'       : dec,
+                'mag'       : mag,
+                'mag_dot'   : mag_dot,
+                'sky_mot'   : total_motion,
+                'sky_ang'   : sky_pa,
+                'altitude'  : alt_deg,
+                'sp_sep'    : spd,
+                'sun_sep'   : separation,
+                'earth_dist': delta,
+                }
+
     if detailed:
         return emp_line, mag_dot, separation, delta
 
-    return emp_line
+    return emp_dict
 
 
 def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel, delta, dbg=True):
@@ -432,7 +459,7 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
 
 def compute_sky_motion(sky_vel, delta, dbg=True):
     """Computes the total motion and Position Angle, along with the RA, Dec
-    components, of an asteroids' sky motion. Motion is in "/min, PA in degrees East of North.
+    components, of an asteroid's sky motion. Motion is in "/min, PA in degrees East of North.
 
     Adapted from the Bill Gray/find_orb routine of the same name."""
 
