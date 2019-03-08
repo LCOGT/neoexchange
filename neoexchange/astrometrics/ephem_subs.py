@@ -395,8 +395,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     else:
         spd = None
 
-#                 0   1   2   3       4           5       6       7
-#     emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
     emp_dict = {'date'      : d,
                 'ra'        : ra,
                 'dec'       : dec,
@@ -409,9 +407,6 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
                 'sun_sep'   : separation,
                 'earth_dist': delta,
                 }
-
-    # if detailed:
-    #     return emp_line, mag_dot, separation, delta
 
     return emp_dict
 
@@ -1931,8 +1926,6 @@ def compute_sidereal_ephem(ephem_time, elements, site_code):
     az_rad, alt_rad = moon_alt_az(ephem_time, radians(elements['ra']), radians(elements['dec']), site_long, site_lat, site_hgt, dbg=False)
     alt_deg = degrees(alt_rad)
 
-    # #               0                  1                        2                       3       4     5      6  7
-    # emp_line = (ephem_time, radians(elements['ra']), radians(elements['dec']), elements['vmag'], 0, alt_deg, 0, 0)
     emp_dict = {'date'      : ephem_time,
                 'ra'        : radians(elements['ra']),
                 'dec'       : radians(elements['dec']),
