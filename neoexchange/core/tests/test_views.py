@@ -35,7 +35,7 @@ from neox.tests.mocks import MockDateTime, mock_check_request_status, mock_check
     mock_update_elements_with_findorb, mock_update_elements_with_findorb_badrms, \
     mock_update_elements_with_findorb_badepoch
 
-from astrometrics.ephem_subs import call_compute_ephem, determine_darkness_times
+from astrometrics.ephem_subs import compute_ephem, determine_darkness_times
 from astrometrics.sources_subs import parse_mpcorbit, parse_mpcobs, \
     fetch_flux_standards, read_solar_standards
 from photometrics.catalog_subs import open_fits_catalog, get_catalog_header
@@ -5046,9 +5046,9 @@ class TestFindBestSolarAnalog(TestCase):
 
         utc_date = datetime(2017, 11, 15, 14, 0, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
-        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
-        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp[1], emp[2])
+        self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
+        self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'])
 
         self.assertEqual(expected_standard, close_standard)
         for key in expected_params:
@@ -5067,9 +5067,9 @@ class TestFindBestSolarAnalog(TestCase):
 
         utc_date = datetime(2014, 4, 20, 13, 30, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
-        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
-        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp[1], emp[2])
+        self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
+        self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'])
 
         self.assertEqual(expected_standard, close_standard)
         for key in expected_params:
@@ -5086,9 +5086,9 @@ class TestFindBestSolarAnalog(TestCase):
 
         utc_date = datetime(2020, 9, 5, 13, 30, 0)
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
-        self.assertAlmostEqual(expected_ra, emp[1], self.precision)
-        self.assertAlmostEqual(expected_dec, emp[2], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp[1], emp[2], min_sep=5.0)
+        self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
+        self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], min_sep=5.0)
 
         self.assertEqual(expected_standard, close_standard)
         self.assertEqual(expected_params, close_params)

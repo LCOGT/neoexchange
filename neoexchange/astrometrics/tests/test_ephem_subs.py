@@ -291,15 +291,15 @@ class TestComputeEphemerides(TestCase):
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
 
         self.assertEqual(self.length_emp_line, len(emp_line))
-        self.assertEqual(d, emp_line[0])
+        self.assertEqual(d, emp_line['date'])
         precision = 11
-        self.assertAlmostEqual(expected_ra, emp_line[1], precision)
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_mag, emp_line[3], precision)
-        self.assertAlmostEqual(expected_motion, emp_line[4], precision)
-        self.assertAlmostEqual(expected_alt, emp_line[5], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
-        self.assertAlmostEqual(expected_pa,  emp_line[7], precision)
+        self.assertAlmostEqual(expected_ra, emp_line['ra'], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_mag, emp_line['mag'], precision)
+        self.assertAlmostEqual(expected_motion, emp_line['sky_mot'], precision)
+        self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
+        self.assertAlmostEqual(expected_pa,  emp_line['sky_ang'], precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -315,15 +315,15 @@ class TestComputeEphemerides(TestCase):
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
 
         self.assertEqual(self.length_emp_line, len(emp_line))
-        self.assertEqual(d, emp_line[0])
+        self.assertEqual(d, emp_line['date'])
         precision = 11
-        self.assertAlmostEqual(expected_ra, emp_line[1], precision)
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_mag, emp_line[3], precision)
-        self.assertAlmostEqual(expected_motion, emp_line[4], precision)
-        self.assertAlmostEqual(expected_alt, emp_line[5], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
-        self.assertAlmostEqual(expected_pa,  emp_line[7], precision)
+        self.assertAlmostEqual(expected_ra, emp_line['ra'], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_mag, emp_line['mag'], precision)
+        self.assertAlmostEqual(expected_motion, emp_line['sky_mot'], precision)
+        self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
+        self.assertAlmostEqual(expected_pa,  emp_line['sky_ang'], precision)
         
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -331,8 +331,8 @@ class TestComputeEphemerides(TestCase):
         expected_spd = 119.94694444444444
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
         
     def test_compute_south_polar_distance_with_body_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -341,8 +341,8 @@ class TestComputeEphemerides(TestCase):
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
 
     def test_compute_south_polar_distance_with_body_in_south(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -352,8 +352,8 @@ class TestComputeEphemerides(TestCase):
         body_elements['meananom'] = 25.2636
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
 
     def test_call_compute_ephem_with_body(self):
         start = datetime(2015, 4, 21, 8, 45, 00)
@@ -491,6 +491,7 @@ class TestComputeEphemerides(TestCase):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
 
+
 class TestDarkAndObjectUp(TestCase):
 
     @classmethod
@@ -498,9 +499,8 @@ class TestDarkAndObjectUp(TestCase):
         cls.dark_start = datetime(2019, 1, 25, 19, 40)
         cls.dark_end = datetime(2019, 1, 26, 6, 40)
         cls.site_code = 'Z21'
-        cls.slot_length = 10 # minutes
-        step_size_secs = 60 * cls.slot_length # seconds
-
+        cls.slot_length = 10  # minutes
+        step_size_secs = 60 * cls.slot_length  # seconds
 
         params = {  'provisional_name' : 'N999r0q',
                     'abs_mag'       : 21.0,
@@ -527,8 +527,24 @@ class TestDarkAndObjectUp(TestCase):
             ephem_time = ephem_time + timedelta(seconds=step_size_secs)
 
     def test1(self):
-        expected_first_line = (datetime(2019, 1, 26, 1, 20), 3.13872732667931, -0.09499609693219863, 20.600690640173646, 1.760842377819953, 30.206739359560114, 84.55611111111111, 88.26314748574852)
-        expected_last_line = (datetime(2019, 1, 26, 6, 30), 3.141344602912528, -0.09490298162746419, 20.589568103540817, 1.7374161477538685, 47.8232397476396, 84.56222222222222, 87.63684359362396)
+        expected_first_line = {'date': datetime(2019, 1, 26, 1, 20),
+                               'ra': 3.13872732667931,
+                               'dec': -0.09499609693219863,
+                               'mag': 20.600690640173646,
+                               'sky_mag': 1.760842377819953,
+                               'altitude': 30.206739359560114,
+                               'sp_sep': 84.55611111111111,
+                               'sky_ang': 88.26314748574852
+                               }
+        expected_last_line = {'date': datetime(2019, 1, 26, 6, 30),
+                               'ra': 3.141344602912528,
+                               'dec': -0.09490298162746419,
+                               'mag': 20.589568103540817,
+                               'sky_mag': 1.7374161477538685,
+                               'altitude': 47.8232397476396,
+                               'sp_sep': 84.56222222222222,
+                               'sky_ang': 87.63684359362396
+                               }
 
         expected_num_lines = 32
 
@@ -547,7 +563,13 @@ class TestDarkAndObjectUp(TestCase):
 
     def test_too_short_ephem(self):
         expected_num_lines = 0
-        emp = [[datetime(2019,1,25,19,40,0), 1.23, -1.23, 17.0, 4.2, 42.0], [], ]
+        emp = [{'date': datetime(2019, 1, 25, 19, 40, 0),
+                'ra': 1.23,
+                'dec': -1.23,
+                'mag': 17.0,
+                'sky_mot': 4.2,
+                'altitude': 42.0},
+               [], ]
 
         visible_emp = dark_and_object_up(emp, self.dark_start, self.dark_end, self.slot_length, alt_limit=30.0, debug=False)
 
@@ -924,8 +946,8 @@ class TestLongTermScheduling(TestCase):
 
         mid_time = datetime(2017, 1, 6, 3, 30, 00)
         emp_line = compute_ephem(mid_time, body_elements, site_code, dbg=False, perturb=True, display=False)
-        app_ra = emp_line[1]
-        app_dec = emp_line[2]
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
         min_alt = 30
         rise_time, set_time, max_alt = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
 
@@ -940,8 +962,8 @@ class TestLongTermScheduling(TestCase):
         expected_up_time = 3.8333333333333335
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
-        app_ra = emp_line[1]
-        app_dec = emp_line[2]
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
         min_alt = 30
         up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
         self.assertAlmostEqual(expected_max_alt, max_alt, 1)
@@ -952,8 +974,8 @@ class TestLongTermScheduling(TestCase):
         body_elements = model_to_dict(self.body2)
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
-        app_ra = emp_line[1]
-        app_dec = emp_line[2]
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
         min_alt = 30
         up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
         true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
@@ -967,8 +989,8 @@ class TestLongTermScheduling(TestCase):
         expected_up_time = 5
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
-        app_ra = emp_line[1]
-        app_dec = emp_line[2]
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
         min_alt = 30
         up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
         true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
@@ -984,8 +1006,8 @@ class TestLongTermScheduling(TestCase):
         expected_up_time = 0
 
         emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
-        app_ra = emp_line[1]
-        app_dec = emp_line[2]
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
         min_alt = 80
         up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
         true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)

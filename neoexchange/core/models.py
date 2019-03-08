@@ -240,7 +240,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line[1], emp_line[2], emp_line[3], emp_line[6], emp_line[4], emp_line[7]
+            return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['sp_sep'], emp_line['sky_mot'], emp_line['sky_ang']
         else:
             # Catch the case where there is no Epoch
             return False
@@ -268,11 +268,10 @@ class Body(models.Model):
             # calculate the ephemeris for each step (delta_t) within the time span df.
             while i <= df / delta_t + 1:
 
-                ephem_out = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False, detailed=True)
-                emp_line = ephem_out[0]
-                mag_dot = ephem_out[1]
-                separation = ephem_out[2]
-                vmag = emp_line[3]
+                ephem_out = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
+                mag_dot = ephem_out['mag_dot']
+                separation = ephem_out['sun_sep']
+                vmag = ephem_out['mag']
 
                 # Eliminate bad magnitudes
                 if vmag < 0:
@@ -1230,7 +1229,7 @@ class Candidate(models.Model):
         try:
             elements = model_to_dict(body)
             emp_line = compute_ephem(time, elements, self.block.site, perturb=False)
-            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line[1], emp_line[2])
+            separation = comp_sep(self.avg_ra, self.avg_dec, emp_line['ra'], emp_line['dec'])
         except AttributeError:
             separation = None
 

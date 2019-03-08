@@ -293,9 +293,9 @@ class Command(BaseCommand):
                     filter_list = []
                     for frame in frames_all_zp:
                         emp_line = compute_ephem(frame.midpoint, elements, frame.sitecode)
-                        ra = emp_line[1]
-                        dec = emp_line[2]
-                        mag_estimate = emp_line[3]
+                        ra = emp_line['ra']
+                        dec = emp_line['dec']
+                        mag_estimate = emp_line['mag']
                         (ra_string, dec_string) = radec2strings(ra, dec, ' ')
                         sources = search_box(frame, ra, dec, options['boxwidth'])
                         midpoint_string = frame.midpoint.strftime('%Y-%m-%d %H:%M:%S')

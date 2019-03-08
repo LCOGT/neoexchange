@@ -924,12 +924,16 @@ def schedule_check(data, body, ok_to_schedule=True):
     if type(body) == Body:
         emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
             dbg=False, perturb=False, display=False)
-        if emp == []:
-            emp = [-99 for x in range(5)]
-        ra = emp[1]
-        dec = emp[2]
-        magnitude = emp[3]
-        speed = emp[4]
+        if emp == {}:
+            emp['date'] = dark_midpoint
+            emp['ra'] = -99
+            emp['dec'] = -99
+            emp['mag'] = -99
+            emp['sky_mot'] = -99
+        ra = emp['ra']
+        dec = emp['dec']
+        magnitude = emp['mag']
+        speed = emp['sky_mot']
         if spectroscopy and solar_analog:
             # Try and find a suitable solar analog "close" to RA, Dec midpoint
             # of block
@@ -1131,9 +1135,9 @@ def schedule_check(data, body, ok_to_schedule=True):
 def compute_vmag_pa(body_elements, data):
     emp_line_base = compute_ephem(data['start_time'], body_elements, data['site_code'], dbg=False, perturb=False, display=False)
     # assign Magnitude and position angle
-    if emp_line_base[3] and emp_line_base[3] > 0:
-        body_elements['v_mag'] = emp_line_base[3]
-    body_elements['sky_pa'] = emp_line_base[7]
+    if emp_line_base['mag'] and emp_line_base['mag'] > 0:
+        body_elements['v_mag'] = emp_line_base['mag']
+    body_elements['sky_pa'] = emp_line_base['sky_ang']
 
     return body_elements
 
