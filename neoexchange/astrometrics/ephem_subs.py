@@ -348,16 +348,15 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
         # If requested, calculate the effective separation between the RA of object and the sun as seen on the sky.
         # We make simplifying assumptions that more or less balance out, such as the observers are located
         # anywhere on the equator, but can see all the way to the horizon.
-        if detailed is not False:
-            # compute RA/Dec of the Sun
-            sun_coord = S.sla_dcc2s(e_pos_hel * -1)
-            sun_ra = S.sla_dranrm(sun_coord[0])
-            sun_dec = sun_coord[1]
-            # rotate object ra to solar position
-            lon_new = ra - sun_ra
-            lon_new = atan2(sin(lon_new-pi/2) * cos(sun_dec) - tan(dec) * sin(sun_dec), cos(lon_new-pi/2)) + pi/2
-            # convert longitude of object to distance in radians
-            separation = abs(S.sla_drange(lon_new))
+        # compute RA/Dec of the Sun
+        sun_coord = S.sla_dcc2s(e_pos_hel * -1)
+        sun_ra = S.sla_dranrm(sun_coord[0])
+        sun_dec = sun_coord[1]
+        # rotate object ra to solar position
+        lon_new = ra - sun_ra
+        lon_new = atan2(sin(lon_new-pi/2) * cos(sun_dec) - tan(dec) * sin(sun_dec), cos(lon_new-pi/2)) + pi/2
+        # convert longitude of object to distance in radians
+        separation = abs(S.sla_drange(lon_new))
 
         # Calculate magnitude of object
         if p_orbelems['H'] and p_orbelems['G']:
@@ -586,7 +585,7 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
         emp.append(format_emp_line(line, site_code))
 
     visible_emp = dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit)
-    return visiible_emp
+    return visible_emp
 
 
 def read_findorb_ephem(empfile):
