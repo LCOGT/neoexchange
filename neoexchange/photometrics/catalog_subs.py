@@ -959,7 +959,8 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
     'UNKNOWN'.
     """
 
-    fixed_values_map = {'<WCCATTYP>'  : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves
+    fixed_values_map = {'<WCCATTYP>'  : '2MASS',  # Hardwire catalog to 2MASS for BANZAI's astrometry.net-based solves 
+                                                  # (but could be modified based on version number further down)
                         '<ZP>'        : -99,      # Hardwire zeropoint to -99.0 for BANZAI catalogs
                         '<ZPSRC>'     : 'N/A',    # Hardwire zeropoint src to 'N/A' for BANZAI catalogs
                         '<WCSRDRES>'  : 0.3,      # Hardwire RMS to 0.3"
@@ -1014,7 +1015,27 @@ def get_catalog_header(catalog_header, catalog_type='LCOGT', debug=False):
                     header_item = { item: new_value}
                 else:
                     if fits_keyword in fixed_values_map:
-                        header_item = {item: fixed_values_map[fits_keyword]}
+                        if fits_keyword == "<WCCATTYP>":
+                            # This now needs special handling as the value
+                            # is BANZAI version dependent...
+                            pipever = catalog_header.get("PIPEVER", None)
+                            if pipever:
+                                # Determine major and minor version
+                                pipe_versions = pipever.split('.')
+                                try:
+                                    major = int(pipe_versions[0])
+                                    minor = int(pipe_versions[1])
+                                    astrom_catalog = fixed_values_map[fits_keyword]
+                                    if major >= 1 or (major == 0 and minor >= 20):
+                                        # BANZAI versions after 0.20.0 use GAIA-DR2
+                                        astrom_catalog = 'GAIA-DR2'
+                                    header_item = {item: astrom_catalog }
+                                except ValueError:
+                                    filename = catalog_header['origname'].replace('00.fits', str(catalog_header['rlevel']) + '.fits')
+                                    logger.warn("Could not extract a pipeline version from " + filename)
+                                    header_item = {item: fixed_values_map[fits_keyword]}
+                        else:
+                            header_item = {item: fixed_values_map[fits_keyword]}
             if header_item:
                 header_items.update(header_item)
         else:

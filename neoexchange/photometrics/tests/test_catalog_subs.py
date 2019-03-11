@@ -1719,6 +1719,314 @@ class FITSReadHeader(FITSUnitTest):
                 assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
                 assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
 
+    def test_banzai_header_gaiadr2(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : 'GAIA-DR2',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to version number after switch to solving with GAIA-DR2
+        header['PIPEVER'] = '0.20.0  '
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_gaiadr2_devversion(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : 'GAIA-DR2',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to version number after switch to solving with GAIA-DR2
+        header['PIPEVER'] = '0.20.0dev1234'
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_gaiadr2_version1_0(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : 'GAIA-DR2',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to version number after switch to solving with GAIA-DR2
+        header['PIPEVER'] = '1.0.42'
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_bad_version(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to version number after switch to solving with GAIA-DR2
+        header['PIPEVER'] = 'wibble'
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_blank_version(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to blank bad version number
+        header['PIPEVER'] = '      '
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_bad_major_version(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to blank bad version number
+        header['PIPEVER'] = 'FOO.42.0'
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
+    def test_banzai_header_bad_minor_version(self):
+        obs_date = datetime.strptime('2016-06-06T22:48:14', '%Y-%m-%dT%H:%M:%S')
+        expected_params = { 'site_code'  : 'K92',
+                            'instrument' : 'kb76',
+                            'filter'     : 'w',
+                            'framename'  : 'cpt1m013-kb76-20160606-0396-e00.fits',
+                            'exptime'    : 100.0,
+                            'obs_date'      : obs_date,
+                            'obs_midpoint'  : obs_date + timedelta(seconds=100.0 / 2.0),
+                            'field_center_ra'  : Angle('18:11:47.017', unit=u.hour).deg,
+                            'field_center_dec' : Angle('+01:16:54.21', unit=u.deg).deg,
+                            'field_width'   : '15.8715m',
+                            'field_height'  : '15.9497m',
+                            'pixel_scale'   : 0.46957,
+                            'fwhm'          : 2.110443536975972,
+                            'astrometric_fit_status' : 0,
+                            'astrometric_catalog'    : '2MASS',
+                            'astrometric_fit_rms'    : 0.3,
+                            'astrometric_fit_nstars' : -4,
+                            'zeropoint'     : -99,
+                            'zeropoint_err' : -99,
+                            'zeropoint_src' : 'N/A',
+                            'wcs'           : self.test_banzaiwcs,
+                            'reduction_level' : 91
+                          }
+        expected_cattype = "BANZAI"
+
+        header, table, cattype = open_fits_catalog(self.test_banzaifilename)
+        self.assertEqual(expected_cattype, cattype)
+        # Modify PIPEVER to blank bad version number
+        header['PIPEVER'] = '0.BAR.42    '
+        frame_header = get_catalog_header(header, "BANZAI")
+
+        self.assertEqual(len(expected_params), len(frame_header))
+        for key in expected_params:
+            if key != 'wcs':
+                self.assertEqual(expected_params[key], frame_header[key])
+            else:
+                expected_wcs = expected_params[key].wcs
+                frame_wcs = frame_header[key].wcs
+                assert_allclose(expected_wcs.crval, frame_wcs.crval, rtol=1e-8)
+                assert_allclose(expected_wcs.crpix, frame_wcs.crpix, rtol=1e-8)
+                assert_allclose(expected_wcs.cd, frame_wcs.cd, rtol=1e-8)
+
 
 class FITSLDACToHeader(FITSUnitTest):
 
