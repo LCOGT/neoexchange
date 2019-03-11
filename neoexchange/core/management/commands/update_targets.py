@@ -50,7 +50,7 @@ class Command(BaseCommand):
             if not measures or body.fast_moving:
                 body_elements = model_to_dict(body)
                 eph = compute_ephem(datetime.now(), body_elements, 500, perturb=False)
-                speed = eph['sky_mot']
+                speed = eph['sky_motion']
                 delta = eph['mag']
                 if speed >= 5 or delta <= 0.1:
                     fast_flag = {'fast_moving': True}

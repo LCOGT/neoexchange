@@ -296,10 +296,10 @@ class TestComputeEphemerides(TestCase):
         self.assertAlmostEqual(expected_ra, emp_line['ra'], precision)
         self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
         self.assertAlmostEqual(expected_mag, emp_line['mag'], precision)
-        self.assertAlmostEqual(expected_motion, emp_line['sky_mot'], precision)
+        self.assertAlmostEqual(expected_motion, emp_line['sky_motion'], precision)
         self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
-        self.assertAlmostEqual(expected_pa,  emp_line['sky_ang'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
+        self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -320,10 +320,10 @@ class TestComputeEphemerides(TestCase):
         self.assertAlmostEqual(expected_ra, emp_line['ra'], precision)
         self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
         self.assertAlmostEqual(expected_mag, emp_line['mag'], precision)
-        self.assertAlmostEqual(expected_motion, emp_line['sky_mot'], precision)
+        self.assertAlmostEqual(expected_motion, emp_line['sky_motion'], precision)
         self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
-        self.assertAlmostEqual(expected_pa,  emp_line['sky_ang'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
+        self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
         
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -332,7 +332,7 @@ class TestComputeEphemerides(TestCase):
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
         self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
         
     def test_compute_south_polar_distance_with_body_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -342,7 +342,7 @@ class TestComputeEphemerides(TestCase):
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
         self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
 
     def test_compute_south_polar_distance_with_body_in_south(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -353,7 +353,7 @@ class TestComputeEphemerides(TestCase):
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
         self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
-        self.assertAlmostEqual(expected_spd, emp_line['sp_sep'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
 
     def test_call_compute_ephem_with_body(self):
         start = datetime(2015, 4, 21, 8, 45, 00)
@@ -531,19 +531,19 @@ class TestDarkAndObjectUp(TestCase):
                                'ra': 3.13872732667931,
                                'dec': -0.09499609693219863,
                                'mag': 20.600690640173646,
-                               'sky_mot': 1.760842377819953,
+                               'sky_motion': 1.760842377819953,
                                'altitude': 30.206739359560114,
-                               'sp_sep': 84.55611111111111,
-                               'sky_ang': 88.26314748574852
+                               'southpole_sep': 84.55611111111111,
+                               'sky_motion_pa': 88.26314748574852
                                }
         expected_last_line = {'date': datetime(2019, 1, 26, 6, 30),
                                'ra': 3.141344602912528,
                                'dec': -0.09490298162746419,
                                'mag': 20.589568103540817,
-                               'sky_mot': 1.7374161477538685,
+                               'sky_motion': 1.7374161477538685,
                                'altitude': 47.8232397476396,
-                               'sp_sep': 84.56222222222222,
-                               'sky_ang': 87.63684359362396
+                               'southpole_sep': 84.56222222222222,
+                               'sky_motion_pa': 87.63684359362396
                                }
 
         expected_num_lines = 32
@@ -569,7 +569,7 @@ class TestDarkAndObjectUp(TestCase):
                 'ra': 1.23,
                 'dec': -1.23,
                 'mag': 17.0,
-                'sky_mot': 4.2,
+                'sky_motion': 4.2,
                 'altitude': 42.0},
                [], ]
 

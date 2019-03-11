@@ -929,11 +929,11 @@ def schedule_check(data, body, ok_to_schedule=True):
             emp['ra'] = -99
             emp['dec'] = -99
             emp['mag'] = -99
-            emp['sky_mot'] = -99
+            emp['sky_motion'] = -99
         ra = emp['ra']
         dec = emp['dec']
         magnitude = emp['mag']
-        speed = emp['sky_mot']
+        speed = emp['sky_motion']
         if spectroscopy and solar_analog:
             # Try and find a suitable solar analog "close" to RA, Dec midpoint
             # of block
@@ -1137,7 +1137,7 @@ def compute_vmag_pa(body_elements, data):
     # assign Magnitude and position angle
     if emp_line_base['mag'] and emp_line_base['mag'] > 0:
         body_elements['v_mag'] = emp_line_base['mag']
-    body_elements['sky_pa'] = emp_line_base['sky_ang']
+    body_elements['sky_pa'] = emp_line_base['sky_motion_pa']
 
     return body_elements
 

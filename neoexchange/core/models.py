@@ -240,7 +240,7 @@ class Body(models.Model):
             sitecode = '500'
             emp_line = compute_ephem(d, orbelems, sitecode, dbg=False, perturb=False, display=False)
             # Return just numerical values
-            return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['sp_sep'], emp_line['sky_mot'], emp_line['sky_ang']
+            return emp_line['ra'], emp_line['dec'], emp_line['mag'], emp_line['southpole_sep'], emp_line['sky_motion'], emp_line['sky_motion_pa']
         else:
             # Catch the case where there is no Epoch
             return False

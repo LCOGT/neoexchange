@@ -109,17 +109,17 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     from a dictionary of orbital elements.
     OUTPUT:
     Dictionary of parameters including:
-        'date':       The datetime associated with the coordinates
-        'ra':         Right Ascension (radians)
-        'dec':        Declination (radians)
-        'mag':        Magnitude
-        'mag_dot':    Instantaneous rate of change of Magnitude (Mag/day)
-        'sky_mot':    Total sky motion ("/min)
-        'sky_ang':    Position angle on the sky of the target's motion (degrees East of North)
-        'altitude':   Target's altitude above local horizon (degrees)
-        'sp_sep':     Angular distance from the South Pole (degrees)
-        'sun_sep':    Angular distance from the Solar position (radians)
-        'earth_dist': Delta, distance between Earth and target (AU)
+        'date':           The datetime associated with the coordinates
+        'ra':             Right Ascension (radians)
+        'dec':            Declination (radians)
+        'mag':            Magnitude
+        'mag_dot':        Instantaneous rate of change of Magnitude (Mag/day)
+        'sky_motion':     Total sky motion ("/min)
+        'sky_motion_pa':  Position angle on the sky of the target's motion (degrees East of North)
+        'altitude':       Target's altitude above local horizon (degrees)
+        'southpole_sep':  Angular distance from the South Pole (degrees)
+        'sun_sep':        Angular distance from the Solar position (radians)
+        'earth_obj_dist': Delta, distance between Earth and target (AU)
 
     """
 # Light travel time for 1 AU (in sec)
@@ -395,17 +395,17 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False)
     else:
         spd = None
 
-    emp_dict = {'date'      : d,
-                'ra'        : ra,
-                'dec'       : dec,
-                'mag'       : mag,
-                'mag_dot'   : mag_dot,
-                'sky_mot'   : total_motion,
-                'sky_ang'   : sky_pa,
-                'altitude'  : alt_deg,
-                'sp_sep'    : spd,
-                'sun_sep'   : separation,
-                'earth_dist': delta,
+    emp_dict = {'date'          : d,
+                'ra'            : ra,
+                'dec'           : dec,
+                'mag'           : mag,
+                'mag_dot'       : mag_dot,
+                'sky_motion'    : total_motion,
+                'sky_motion_pa' : sky_pa,
+                'altitude'      : alt_deg,
+                'southpole_sep' : spd,
+                'sun_sep'       : separation,
+                'earth_obj_dist': delta,
                 }
 
     return emp_dict
@@ -504,7 +504,7 @@ def format_emp_line(emp_line, site_code):
         geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|N/A|N/A|N/A|N/A|N/A|N/A"
 
         formatted_line = geo_row_format % (emp_time, ra_string, dec_string,
-            emp_line['mag'], emp_line['sky_mot'], emp_line['sky_ang'])
+            emp_line['mag'], emp_line['sky_motion'], emp_line['sky_motion_pa'])
 
     else:
         # Get site and mount parameters
@@ -534,7 +534,7 @@ def format_emp_line(emp_line, site_code):
 #    num_fov = int(pointings_sep/ccd_fov)
 
         formatted_line = blk_row_format % (emp_time, ra_string, dec_string,
-            emp_line['mag'], emp_line['sky_mot'],  emp_line['sky_ang'], emp_line['altitude'],
+            emp_line['mag'], emp_line['sky_motion'],  emp_line['sky_motion_pa'], emp_line['altitude'],
             moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
 
     line_as_list = formatted_line.split('|')
@@ -706,15 +706,15 @@ def determine_rates_pa(start_time, end_time, elements, site_code):
     # Check for no ephemeris caused by perturbing error
     if not first_frame_emp:
         first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=False, display=True)
-    first_frame_speed = first_frame_emp['sky_mot']
-    first_frame_pa = first_frame_emp['sky_ang']
+    first_frame_speed = first_frame_emp['sky_motion']
+    first_frame_pa = first_frame_emp['sky_motion_pa']
 
     last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=True, display=True)
     # Check for no ephemeris caused by perturbing error
     if not last_frame_emp:
         last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=False, display=True)
-    last_frame_speed = last_frame_emp['sky_mot']
-    last_frame_pa = last_frame_emp['sky_ang']
+    last_frame_speed = last_frame_emp['sky_motion']
+    last_frame_pa = last_frame_emp['sky_motion_pa']
 
     logger.debug("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
     min_rate = min(first_frame_speed, last_frame_speed) - (0.01*min(first_frame_speed, last_frame_speed))
@@ -1772,7 +1772,7 @@ def comp_FOM(orbelems, emp_line):
         try:
             if orbelems['arc_length'] < 0.01:
                 orbelems['arc_length'] = 0.005
-            FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line['mag'])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line['sp_sep']-60.)**2)/180.))
+            FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line['mag'])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line['southpole_sep']-60.)**2)/180.))
         except Exception as e:
             logger.error(e)
             logger.error(str(orbelems))
@@ -1926,14 +1926,14 @@ def compute_sidereal_ephem(ephem_time, elements, site_code):
     az_rad, alt_rad = moon_alt_az(ephem_time, radians(elements['ra']), radians(elements['dec']), site_long, site_lat, site_hgt, dbg=False)
     alt_deg = degrees(alt_rad)
 
-    emp_dict = {'date'      : ephem_time,
-                'ra'        : radians(elements['ra']),
-                'dec'       : radians(elements['dec']),
-                'mag'       : elements['vmag'],
-                'sky_mot'   : 0,
-                'sky_ang'   : 0,
-                'altitude'  : alt_deg,
-                'sp_sep'    : 0,
+    emp_dict = {'date'         : ephem_time,
+                'ra'           : radians(elements['ra']),
+                'dec'          : radians(elements['dec']),
+                'mag'          : elements['vmag'],
+                'sky_motion'   : 0,
+                'sky_motion_pa': 0,
+                'altitude'     : alt_deg,
+                'southpole_sep': 0,
                 }
     return emp_dict
 
