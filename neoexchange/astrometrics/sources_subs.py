@@ -42,7 +42,7 @@ from astropy.io import ascii
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)

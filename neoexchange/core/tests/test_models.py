@@ -30,7 +30,6 @@ from neox.tests.mocks import MockDateTime
 from core.models import Body, Proposal, SuperBlock, Block, Frame, \
     SourceMeasurement, CatalogSources, Candidate, WCSField, PreviousSpectra,\
     StaticSource
-from astrometrics.ephem_subs import compute_ephem
 
 
 class TestBody(TestCase):
