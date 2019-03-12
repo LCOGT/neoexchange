@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from core.models import Body
 from core.views import clean_NEOCP_object, save_and_make_revision
-from astrometrics.sources_subs import packed_to_normal, parse_mpcobs
+from astrometrics.sources_subs import packed_to_normal, parse_mpcobs, read_mpcorbit_file
 import logging
 
 
@@ -34,15 +34,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         new_rock = options['rockfile'][0]
-        try:
-            orbfile_fh = open(new_rock, 'r')
-        except IOError:
-            self.stdout.write("File %s not found" % new_rock)
-            return
 
-        orblines = orbfile_fh.readlines()
-        orbfile_fh.close()
-
+        orblines = read_mpcorbit_file(new_rock)
 
         obsfile = new_rock.replace('neocp', 'dat')
 

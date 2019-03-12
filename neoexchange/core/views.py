@@ -60,7 +60,8 @@ from astrometrics.ephem_subs import call_compute_ephem, compute_ephem, \
     get_visibility, determine_exp_count, determine_star_trails, calc_moon_sep, get_alt_from_airmass
 from astrometrics.sources_subs import fetchpage_and_make_soup, packed_to_normal, \
     fetch_mpcdb_page, parse_mpcorbit, submit_block_to_scheduler, parse_mpcobs,\
-    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text
+    fetch_NEOCP_observations, PackedError, fetch_filter_list, fetch_mpcobs, validate_text,\
+    read_mpcorbit_file
 from astrometrics.time_subs import extract_mpc_epoch, parse_neocp_date, \
     parse_neocp_decimal_date, get_semester_dates, jd_utc2datetime, datetime2st
 from photometrics.external_codes import run_sextractor, run_scamp, updateFITSWCS,\
@@ -2205,6 +2206,70 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
         logger.info("More recent elements already stored for %s" % obj_id)
     return True
 
+
+def ingest_new_object(orbit_file, obs_file=None):
+    """Ingests a new object or updates an existing one from the <orbit_file>
+    If the observation file, which defaults to <orbit_file> with the '.neocp'
+    extension replaced by '.dat' but which can be specified by [obs_file] is
+    also found, additional information such as discovery date will be created or
+    updated.
+    Returns something...XXX
+    """
+    orblines = read_mpcorbit_file(orbit_file)
+
+    if obs_file is None:
+        obs_file = orbit_file.replace('neocp', 'dat')
+
+    try:
+        obsfile_fh = open(obs_file, 'r')
+        obsline = obsfile_fh.readline()
+        obsfile_fh.close()
+        obs_params = parse_mpcobs(obsline)
+        discovery_date = obs_params.get('obs_date', None)
+    except IOError:
+        logger.warn("Unable to find matching observation file (%s)" % obs_file)
+        discovery_date = None
+
+    dbg_msg = orblines[0]
+    logger.debug(dbg_msg)
+    kwargs = clean_NEOCP_object(orblines)
+    if kwargs != {}:
+        obj_file = os.path.basename(orbit_file)
+        file_chunks = obj_file.split('.')
+        if len(file_chunks) == 2:
+            obj_id = file_chunks[0].strip()
+            if obj_id != kwargs['provisional_name']:
+                msg = "Mismatch between filename (%s) and provisional id (%s).\nAssuming provisional id is a final designation." % (obj_id, kwargs['provisional_name'])
+                logger.info(msg)
+                kwargs['name'] = packed_to_normal(kwargs['provisional_name'])
+                kwargs['provisional_packed'] = kwargs['provisional_name']
+                kwargs['provisional_name'] = obj_id
+                kwargs['source_type'] = 'D'
+        else:
+            obj_id = kwargs['provisional_name']
+
+        # Add in discovery date from the observation file
+        kwargs['discovery_date'] = discovery_date
+        # Needs to be __contains to perform case-sensitive lookup on the
+        # provisional name.
+        body, created = Body.objects.get_or_create(provisional_name__contains=obj_id)
+
+        if not created:
+            # Find out if the details have changed, if they have, save a
+            # revision
+            check_body = Body.objects.filter(**kwargs)
+            if check_body.count() == 0:
+                kwargs['updated'] = True
+                if save_and_make_revision(body, kwargs):
+                    msg = "Updated %s" % obj_id
+                else:
+                    msg = "No changes saved for %s" % obj_id
+            else:
+                msg = "No changes needed for %s" % obj_id
+        else:
+            save_and_make_revision(body, kwargs)
+            msg = "Added new local target %s" % obj_id
+    return body, created, msg
 
 def update_MPC_obs(obj_id_or_page):
     """

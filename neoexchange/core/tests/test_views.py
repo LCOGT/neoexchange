@@ -2116,6 +2116,28 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
 
+class TestIngestNewObject(TestCase):
+    def setUp(self):
+
+        self.orbit_file = os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.neocp')
+        self.obs_file = os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.dat')
+
+        self.params = { 'name' : '2019 EN',
+                      }
+        self.body_2019EN = Body(**self.params)
+        self.maxDiff = None
+
+    def test_knownNEO_not_existing_no_obsfile(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "Division by cucumber"
+
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        self.assertEqual(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
 class TestUpdate_MPC_obs(TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
