@@ -2126,9 +2126,15 @@ class TestIngestNewObject(TestCase):
         self.orig_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.dat'))
         self.orbit_file = os.path.join(self.test_dir, '2019EN.neocp')
         self.obs_file = os.path.join(self.test_dir, '2019EN.dat')
-
         os.symlink(self.orig_orbit_file, self.orbit_file)
         os.symlink(self.orig_obs_file, self.obs_file)
+
+        self.orig_disc_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_LSCTLZZ.neocp'))
+        self.orig_disc_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_LSCTLZZ.dat'))
+        self.disc_orbit_file = os.path.join(self.test_dir, 'LSCTLZZ.neocp')
+        self.disc_obs_file = os.path.join(self.test_dir, 'LSCTLZZ.dat')
+        os.symlink(self.orig_disc_orbit_file, self.disc_orbit_file)
+        os.symlink(self.orig_disc_obs_file, self.disc_obs_file)
 
         self.params = { 'id' : 1,
                         'provisional_name' : '2019EN',
@@ -2154,6 +2160,15 @@ class TestIngestNewObject(TestCase):
                         'not_seen' : 3.7052675231018517
                       }
         self.body_2019EN = Body(**self.params)
+
+        self.params_LSCTLZZ = self.params.copy()
+        self.params_LSCTLZZ['provisional_name'] = 'LSCTLZZ'
+        self.params_LSCTLZZ['provisional_packed'] = None
+        self.params_LSCTLZZ['name'] = None
+        self.params_LSCTLZZ['origin'] = 'L'
+        self.params_LSCTLZZ['source_type'] = 'U'
+        self.body_LSCTLZZ = Body(**self.params_LSCTLZZ)
+
         self.remove = True
         self.debug_print = False
 
@@ -2191,6 +2206,17 @@ class TestIngestNewObject(TestCase):
 
         self.assertEqual(expected_body, body)
         self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_discovery_not_existing_no_obsfile(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "Added new local target LSCTLZZ"
+
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 
     def test_knownNEO_not_existing_no_obsfile(self):
