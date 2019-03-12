@@ -735,7 +735,7 @@ def read_mpcorbit_file(orbit_file):
     try:
         orbfile_fh = open(orbit_file, 'r')
     except IOError:
-        self.stdout.write("File %s not found" % orbit_file)
+        logger.warn("File %s not found" % orbit_file)
         return None
 
     orblines = orbfile_fh.readlines()

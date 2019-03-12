@@ -2117,24 +2117,90 @@ class TestUpdate_MPC_orbit(TestCase):
 
 
 class TestIngestNewObject(TestCase):
+
     def setUp(self):
 
-        self.orbit_file = os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.neocp')
-        self.obs_file = os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.dat')
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
 
-        self.params = { 'name' : '2019 EN',
+        self.orig_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.neocp'))
+        self.orig_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.dat'))
+        self.orbit_file = os.path.join(self.test_dir, '2019EN.neocp')
+        self.obs_file = os.path.join(self.test_dir, '2019EN.dat')
+
+        os.symlink(self.orig_orbit_file, self.orbit_file)
+        os.symlink(self.orig_obs_file, self.obs_file)
+
+        self.params = { 'id' : 1,
+                        'provisional_name' : '2019EN',
+                        'provisional_packed' : 'K19E00N',
+                        'name' : '2019 EN',
+                        'source_type' : 'D',
+                        'abs_mag': 21.17,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2019, 3, 9, 0, 0),
+                        'meananom'  : 343.19351,
+                        'argofperih' : 46.63108,
+                        'longascnode' : 192.93185,
+                        'orbinc' : 9.77594,
+                        'eccentricity' : 0.618787,
+                        'meandist' : 2.1786196,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 190,
+                        'orbit_rms' : 0.21,
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 59.0,
+                        'not_seen' : 3.7052675231018517
                       }
         self.body_2019EN = Body(**self.params)
+        self.remove = True
+        self.debug_print = False
+
         self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+        else:
+            print("Not removing. Temporary test directory=", self.test_dir)
+
+    def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
+        d1, d2 = body1.__dict__, body2.__dict__
+        for key,value in d1.items():
+            if key in excluded_keys:
+                continue
+            self.assertEqual(value, d2[key], "Compare failure on " + key)
+
+    def test_no_orbit_file(self):
+        expected_body = None
+        expected_msg = "Could not read orbit file: wibble"
+
+        body, created, msg = ingest_new_object('wibble')
+
+        self.assertEqual(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
 
     def test_knownNEO_not_existing_no_obsfile(self):
 
         expected_body = self.body_2019EN
-        expected_msg = "Division by cucumber"
+        expected_msg = "Added new local target 2019EN"
 
         body, created, msg = ingest_new_object(self.orbit_file)
 
-        self.assertEqual(expected_body, body)
+        self._compare_bodies(expected_body, body)
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 

@@ -2213,9 +2213,16 @@ def ingest_new_object(orbit_file, obs_file=None):
     extension replaced by '.dat' but which can be specified by [obs_file] is
     also found, additional information such as discovery date will be created or
     updated.
-    Returns something...XXX
+    Returns the Body object that was created or retrieved, a boolean for whether
+    the Body was created or not, and a message. In the case of errors,
+    None, False, and the message are returned.
     """
+
     orblines = read_mpcorbit_file(orbit_file)
+
+    if orblines is None:
+        msg = "Could not read orbit file: " + orbit_file
+        return None, False, msg
 
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
