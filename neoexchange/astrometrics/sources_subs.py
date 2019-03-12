@@ -730,6 +730,19 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
 
     return best_elements
 
+def read_mpcorbit_file(orbit_file):
+
+    try:
+        orbfile_fh = open(orbit_file, 'r')
+    except IOError:
+        self.stdout.write("File %s not found" % orbit_file)
+        return None
+
+    orblines = orbfile_fh.readlines()
+    orbfile_fh.close()
+    orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin').rstrip()
+
+    return orblines
 
 class PackedError(Exception):
     """Raised when an invalid pack code is found"""

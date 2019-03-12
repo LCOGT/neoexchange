@@ -1860,6 +1860,24 @@ class TestFetchMPCOrbit(TestCase):
         self.assertEqual(expected_elements, elements)
 
 
+class TestReadMPCOrbitFile(TestCase):
+
+    def setUp(self):
+        self.orbit_file = os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.neocp')
+
+        self.maxDiff = None
+
+    def test1(self):
+
+        expected_orblines = ['K19E00N 21.17  0.15 K1939 343.19351   46.63108  192.93185    9.77594  0.6187870  0.30650105   2.1786196    FO 190311   190   1   59 days 0.21 M-P 06  NEOCPNomin 0000 2019 EN                     20190309',]
+
+        orblines = read_mpcorbit_file(self.orbit_file)
+
+        self.assertEqual(len(expected_orblines), len(orblines))
+        for i, expected_line in enumerate(expected_orblines):
+            self.assertEqual(expected_line, orblines[i])
+
+
 class TestParseMPCObsFormat(TestCase):
 
     def setUp(self):
