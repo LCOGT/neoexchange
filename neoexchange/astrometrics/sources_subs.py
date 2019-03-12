@@ -819,7 +819,7 @@ def packed_to_normal(packcode):
 
 
 def cycle_mpc_character_code(char):
-    """Convert MPC character code into a number 0--9, A--Z, a--z and return interger"""
+    """Convert MPC character code into a number 0--9, A--Z, a--z and return integer"""
     cycle = ord(char)
     if cycle >= ord('a'):
         cycle = cycle - 61
@@ -903,7 +903,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
 
 def fetch_goldstone_page():
-    """Fetches the Goldsotne page of radar targets, returning a BeautifulSoup
+    """Fetches the Goldstone page of radar targets, returning a BeautifulSoup
     page"""
 
     goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
@@ -916,8 +916,8 @@ def fetch_goldstone_page():
 def fetch_goldstone_targets(page=None, dbg=False):
     """Fetches and parses the Goldstone list of radar targets, returning a list
     of object id's for the current year.
-    Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    Takes either a BeautifulSoup page version of the Goldstone target page (from
+    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     """
 
