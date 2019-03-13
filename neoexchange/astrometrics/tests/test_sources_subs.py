@@ -41,6 +41,78 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
+class TestPackedToNormal(TestCase):
+
+    def test_too_short_6(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'K19E00')
+
+    def test_too_long_8(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'K19E0042')
+
+    def test_bad_halfmonth_lc(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99a01A')
+
+    def test_bad_halfmonth_I(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99I01I')
+
+    def test_bad_halfmonth_Z(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99Z01Z')
+
+    def test_bad_halfmonth_order_lc(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99A01a')
+
+    def test_bad_halfmonth_order_space(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99A01 ')
+
+    def test_bad_halfmonth_Zorder_dash(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'J99A01-')
+
+    def test_bad_year(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'JabA01A')
+
+    def test_ast_A0001(self):
+        expected = '100001'
+
+        result = packed_to_normal('A0001')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_a0001(self):
+        expected = '360001'
+
+        result = packed_to_normal('a0001')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_I99A01A(self):
+        expected = '1899 AA1'
+
+        result = packed_to_normal('I99A01A')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_J23P00F(self):
+        expected = '1923 PF'
+
+        result = packed_to_normal('J23P00F')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_K03P00F(self):
+        expected = '2003 PF'
+
+        result = packed_to_normal('K03P00F')
+
+        self.assertEqual(expected, result)
 
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
