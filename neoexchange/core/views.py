@@ -2245,13 +2245,35 @@ def ingest_new_object(orbit_file, obs_file=None):
         file_chunks = obj_file.split('.')
         if len(file_chunks) == 2:
             obj_id = file_chunks[0].strip()
+            # Try to determine if this a local discovery or not by unpacking
+            # the provisional name
+            local_discovery = False
+            try:
+                name = packed_to_normal(obj_id)
+            except PackedError:
+                name = None
+                local_discovery = True
+
+            if local_discovery:
+                print("Setting to local origin")
+                kwargs['origin'] = 'L'
             if obj_id != kwargs['provisional_name']:
                 msg = "Mismatch between filename (%s) and provisional id (%s).\nAssuming provisional id is a final designation." % (obj_id, kwargs['provisional_name'])
-                logger.info(msg)
-                kwargs['name'] = packed_to_normal(kwargs['provisional_name'])
+                print(msg)
+                if name is None:
+                    try:
+                        name = packed_to_normal(kwargs['provisional_name'])
+                    except PackedError:
+                        name = None
+                kwargs['name'] = name
                 kwargs['provisional_packed'] = kwargs['provisional_name']
-                kwargs['provisional_name'] = obj_id
-                kwargs['source_type'] = 'D'
+                if name is not None and obj_id.strip() == name.replace(' ', '') and name.strip().count(' ') == 1:
+                    kwargs['provisional_name'] = None
+                    kwargs['origin'] = 'M'
+                else:
+                    kwargs['provisional_name'] = obj_id
+                if local_discovery:
+                    kwargs['source_type'] = 'D'
         else:
             obj_id = kwargs['provisional_name']
 
@@ -2259,7 +2281,16 @@ def ingest_new_object(orbit_file, obs_file=None):
         kwargs['discovery_date'] = discovery_date
         # Needs to be __contains to perform case-sensitive lookup on the
         # provisional name.
-        body, created = Body.objects.get_or_create(provisional_name__contains=obj_id)
+        print("Looking in the DB for ", obj_id)
+        query = Q(provisional_name__contains=obj_id)
+        if name is not None:
+            query = query | Q(name__contains=name)
+        bodies = Body.objects.filter(query)
+        if bodies.count() == 0:
+            body, created = Body.objects.get_or_create(provisional_name__contains=obj_id)
+        elif bodies.count() == 1:
+            body = bodies[0]
+            created = False
 
         if not created:
             # Find out if the details have changed, if they have, save a

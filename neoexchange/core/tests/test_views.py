@@ -2137,7 +2137,7 @@ class TestIngestNewObject(TestCase):
         os.symlink(self.orig_disc_obs_file, self.disc_obs_file)
 
         self.params = { 'id' : 1,
-                        'provisional_name' : '2019EN',
+                        'provisional_name' : None,
                         'provisional_packed' : 'K19E00N',
                         'name' : '2019 EN',
                         'source_type' : 'D',
@@ -2219,15 +2219,98 @@ class TestIngestNewObject(TestCase):
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 
+    def test_discovery_existing_no_obsfile_no_changes(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "No changes saved for LSCTLZZ"
+
+        self.body_LSCTLZZ.save()
+        num_bodies_before = Body.objects.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        num_bodies_after = Body.objects.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values
+        expected_body.updated = True
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_discovery_existing_no_obsfile_new_provname(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "Updated LSCTLZZ"
+
+        self.body_LSCTLZZ.save()
+        self.body_LSCTLZZ.refresh_from_db()
+        bodies_before = Body.objects.all()
+        print("Before=", bodies_before)
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        self.assertEqual('L', self.body_LSCTLZZ.origin)
+        # Remove symlink to LSCTLZZ.neocp orbit file and re-symlink to the 2019EN.neocp one
+        # so desigination inside the file changes but it stays as LSCTLZZ.neocp
+        os.unlink(self.disc_orbit_file)
+        os.symlink(self.orig_orbit_file, self.disc_orbit_file)
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        bodies = Body.objects.all()
+        print(bodies)
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values
+        expected_body.updated = True
+        expected_body.provisional_packed = 'K19E00N'
+        expected_body.name = '2019 EN'
+        expected_body.origin = 'L'
+        expected_body.source_type = 'D'
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
     def test_knownNEO_not_existing_no_obsfile(self):
 
         expected_body = self.body_2019EN
         expected_msg = "Added new local target 2019EN"
 
+        bodies_before = Body.objects.all()
+        print("Before=", bodies_before)
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
         body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        print(bodies)
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
 
         self._compare_bodies(expected_body, body)
         self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownNEO_existing_no_obsfile(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "No changes saved for 2019EN"
+
+        self.body_2019EN.save()
+        self.body_2019EN.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        print("Before=", bodies_before)
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        print(bodies)
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
 class TestUpdate_MPC_obs(TestCase):
