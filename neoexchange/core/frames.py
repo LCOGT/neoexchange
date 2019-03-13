@@ -161,6 +161,29 @@ def frame_params_from_header(params, block):
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
                  }
+
+    # correct exptime to actual shutter open duration
+    shutter_open = params.get('DATE_OBS', None)
+    shutter_close = params.get('UTSTOP', None)
+    if shutter_open and shutter_close:
+        # start by assuming shutter closed on the same day it opened.
+        shutter_close = shutter_open.split('T')[0] + 'T' + shutter_close
+        # convert to datetime object
+        try:
+            shutter_open = datetime.strptime(shutter_open, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            shutter_open = datetime.strptime(shutter_open, "%Y-%m-%dT%H:%M:%S")
+        try:
+            shutter_close = datetime.strptime(shutter_close, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            shutter_close = datetime.strptime(shutter_close, "%Y-%m-%dT%H:%M:%S")
+        # Increment close-time by 1 day if close happened before open
+        if shutter_close < shutter_open:
+            shutter_close = shutter_close + timedelta(days=1)
+        # Calculate exposure time and save to frame.
+        exptime = shutter_close - shutter_open
+        frame_params['exptime'] = exptime.total_seconds()
+
     if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
         aperture_type = params.get('APERTYPE', 'SLIT').rstrip()
         aperture_length = params.get('APERLEN', 'UNKNOWN')
