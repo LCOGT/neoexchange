@@ -2972,9 +2972,73 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(None, source_measure.err_obs_dec)
         self.assertEqual(None, source_measure.err_obs_mag)
 
+    def test_create_LCO_flagI_and_discovery(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : '*,I',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 31, 40, int(0.08*1e6)),
+                            'obs_ra'    : 325.54225,
+                            'obs_dec'   : -11.541111111111112,
+                            'obs_mag'   : 21.6,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        test_obsline = self.test_obslines[6].replace('6 IC', '6*IC')
+        source_measures = create_source_measurement(test_obsline)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
+
+    def test_create_LCO_flagK_and_discovery(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : '*,K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 24, 46, int(0.4832*1e6)),
+                            'obs_ra'    : 325.540625,
+                            'obs_dec'   : -11.536666666666667,
+                            'obs_mag'   : 21.4,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        test_obsline = self.test_obslines[5].replace('6 KC', '6*KC')
+        source_measures = create_source_measurement(test_obsline)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
+
     def test_create_satellite(self):
         expected_params = { 'body'  : 'N009ags',
-                            'flags' : ' ',
+                            'flags' : '*',
                             'obs_type'  : 'S',
                             'obs_date'  : datetime(2016, 2, 8, 18, 15, 30, int(0.528*1e6)),
                             'obs_ra'    : 228.56833333333333,
