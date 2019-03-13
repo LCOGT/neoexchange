@@ -1214,6 +1214,7 @@ def fetch_yarkovsky_targets(yark_targets):
     yark_target_list = []
 
     for obj_id in yark_targets:
+        obj_id = obj_id.strip()
         if '_' in obj_id:
             obj_id = str(obj_id).replace('_', ' ')
         yark_target_list.append(obj_id)

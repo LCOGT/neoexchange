@@ -502,6 +502,44 @@ class TestFetchGoldstoneTargets(TestCase):
         self.assertEqual(expected_target, targets)
 
 
+class TestFetchYarkovskyTargets(TestCase):
+
+    def test_read_from_file(self):
+        expected_targets = [ '1999 NW2',
+                             '2015 BG4',
+                             '2009 SY',
+                             '455184',
+                             '1998 VS',
+                             '2002 JW15']
+
+        targets = [  '1999 NW2\n',
+                     '2015 BG4\n',
+                     '2009 SY\n',
+                     '455184\n',
+                     '1998 VS\n',
+                     '2002 JW15\n']
+
+        target_list = fetch_yarkovsky_targets(targets)
+
+        self.assertEqual(expected_targets, target_list)
+
+    def test_read_from_commandline(self):
+        expected_targets = [ '433',
+                             '1999 NW2',
+                             '2015 BG4',
+                             '455184',
+                             '2002 JW15']
+
+        targets = [  '433',
+                     '1999_NW2',
+                     '2015_BG4',
+                     '455184',
+                     '2002_JW15']
+
+        target_list = fetch_yarkovsky_targets(targets)
+
+        self.assertEqual(expected_targets, target_list)
+
 class TestSubmitBlockToScheduler(TestCase):
 
     def setUp(self):
@@ -2564,6 +2602,7 @@ class TestIMAPLogin(TestCase):
         expected_targets = ['2016 TQ11', '2016 SR2', '2016 NP56', '2016 ND1']
         targets = fetch_NASA_targets(mailbox, date_cutoff=2)
         self.assertEqual(expected_targets, targets)
+
 
 class TestSFUFetch(TestCase):
 
