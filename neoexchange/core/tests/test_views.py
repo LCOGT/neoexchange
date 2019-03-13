@@ -2143,6 +2143,13 @@ class TestIngestNewObject(TestCase):
         os.symlink(self.orig_eros_orbit_file, self.eros_orbit_file)
         os.symlink(self.orig_eros_obs_file, self.eros_obs_file)
 
+        self.orig_K11H00P_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2011HP.neocp'))
+        self.orig_K11H00P_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2011HP.dat'))
+        self.K11H00P_orbit_file = os.path.join(self.test_dir, '2011HP.neocp')
+        self.K11H00P_obs_file = os.path.join(self.test_dir, '2011HP.dat')
+        os.symlink(self.orig_K11H00P_orbit_file, self.K11H00P_orbit_file)
+        os.symlink(self.orig_K11H00P_obs_file, self.K11H00P_obs_file)
+
         self.params = { 'id' : 1,
                         'provisional_name' : None,
                         'provisional_packed' : 'K19E00N',
@@ -2162,6 +2169,7 @@ class TestIngestNewObject(TestCase):
                         'origin' : 'M',
                         'num_obs' : 190,
                         'orbit_rms' : 0.21,
+                        'discovery_date' : datetime(2019, 1, 10, 12, 54, 59, 97600),
                         'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
                         'arc_length' : 59.0,
                         'not_seen' : 3.7052675231018517
@@ -2200,6 +2208,31 @@ class TestIngestNewObject(TestCase):
                         'not_seen' : 3.7052675231018517
                       }
         self.body_433 = Body(**self.eros_params)
+
+        self.K11H00P_params = { 'id' : 1,
+                        'provisional_name' : None,
+                        'provisional_packed' : 'K11H00P',
+                        'name' : '2011 HP',
+                        'source_type' : 'U',
+                        'abs_mag': 22.23,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2011,10, 1, 0, 0),
+                        'meananom'  :  37.31731,
+                        'argofperih' :  45.96308,
+                        'longascnode' : 229.74785,
+                        'orbinc' :  3.74433,
+                        'eccentricity' : 0.4800081,
+                        'meandist' : 1.9235922,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 213,
+                        'orbit_rms' : 0.35,
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 160.0,
+                        'not_seen' : 3.7052675231018517
+                      }
+        self.body_K11H00P = Body(**self.K11H00P_params)
 
         self.remove = True
         self.debug_print = False
@@ -2240,7 +2273,7 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
-    def test_discovery_not_existing_no_obsfile(self):
+    def test_discovery_not_existing(self):
 
         expected_body = self.body_LSCTLZZ
         expected_msg = "Added new local target LSCTLZZ"
@@ -2251,7 +2284,7 @@ class TestIngestNewObject(TestCase):
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 
-    def test_discovery_existing_no_obsfile_no_changes(self):
+    def test_discovery_existing_no_changes(self):
 
         expected_body = self.body_LSCTLZZ
         expected_msg = "No changes saved for LSCTLZZ"
@@ -2269,7 +2302,7 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
-    def test_discovery_existing_no_obsfile_new_provname(self):
+    def test_discovery_existing_new_provname(self):
 
         expected_body = self.body_LSCTLZZ
         expected_msg = "Updated LSCTLZZ"
@@ -2300,7 +2333,7 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
-    def test_knownNEO_not_existing_no_obsfile(self):
+    def test_knownNEO_not_existing(self):
 
         expected_body = self.body_2019EN
         expected_msg = "Added new local target 2019EN"
@@ -2318,7 +2351,28 @@ class TestIngestNewObject(TestCase):
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 
-    def test_knownNEO_existing_no_obsfile(self):
+    def test_knownNEO_not_existing_no_obsfile(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "Added new local target 2019EN"
+
+        os.unlink(self.obs_file)
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values, deleting discovery date (since no obs file)
+        expected_body.discovery_date = None
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownNEO_existing(self):
 
         expected_body = self.body_2019EN
         expected_msg = "No changes saved for 2019EN"
@@ -2340,7 +2394,7 @@ class TestIngestNewObject(TestCase):
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
 
-    def test_knownnumNEO_not_existing_no_obsfile(self):
+    def test_knownnumNEO_not_existing(self):
 
         expected_body = self.body_433
         expected_msg = "Added new local target 433"
@@ -2358,7 +2412,7 @@ class TestIngestNewObject(TestCase):
         self.assertTrue(created)
         self.assertEqual(expected_msg, msg)
 
-    def test_knownnumNEO_existing_no_obsfile(self):
+    def test_knownnumNEO_existing(self):
 
         expected_body = self.body_433
         expected_msg = "No changes saved for 433"
@@ -2370,6 +2424,46 @@ class TestIngestNewObject(TestCase):
         num_bodies_before = bodies_before.count()
         self.assertEqual(1, num_bodies_before)
         body, created, msg = ingest_new_object(self.eros_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_known_provNEO_not_existing(self):
+
+        expected_body = self.body_K11H00P
+        expected_msg = "Added new local target 2011HP"
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.K11H00P_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_known_provNEO_existing(self):
+
+        expected_body = self.body_K11H00P
+        expected_msg = "No changes saved for 2011HP"
+
+        self.body_K11H00P.save()
+        self.body_K11H00P.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.K11H00P_orbit_file)
 
         bodies = Body.objects.all()
         num_bodies_after = bodies.count()
