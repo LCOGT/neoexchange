@@ -2805,6 +2805,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_nocat(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2831,6 +2836,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_nomag(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2857,6 +2867,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_flags(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2883,6 +2898,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_blankline(self):
 
@@ -2915,6 +2935,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_LCO_flagI(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2941,15 +2966,20 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_satellite(self):
         expected_params = { 'body'  : 'N009ags',
-                            'flags' : '',
+                            'flags' : ' ',
                             'obs_type'  : 'S',
                             'obs_date'  : datetime(2016, 2, 8, 18, 15, 30, int(0.528*1e6)),
                             'obs_ra'    : 228.56833333333333,
                             'obs_dec'   : -9.775,
-                            'obs_mag'   : '19',
+                            'obs_mag'   : 19.0,
                             'filter'    : 'R',
                             'astrometric_catalog' : '2MASS',
                             'site_code' : 'C51',
@@ -2970,6 +3000,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
         self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_non_existant_body(self):
 
@@ -3007,6 +3042,7 @@ class TestCreate_sourcemeasurement(TestCase):
     def test_create_with_trailing_space(self):
 
         expected_params = { 'body' : 'G07212',
+                            'flags' : "'",
                             'filter' : 'G',
                             'obs_date' : datetime(2017, 11, 2, 4, 10, 16, int(0.32*1e6)),
                             'site_code' : '309',
@@ -3030,6 +3066,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
 
 class TestFrames(TestCase):
