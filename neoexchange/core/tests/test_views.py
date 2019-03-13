@@ -2277,7 +2277,6 @@ class TestIngestNewObject(TestCase):
         self.body_LSCTLZZ.save()
         self.body_LSCTLZZ.refresh_from_db()
         bodies_before = Body.objects.all()
-        print("Before=", bodies_before)
         num_bodies_before = bodies_before.count()
         self.assertEqual(1, num_bodies_before)
         self.assertEqual('L', self.body_LSCTLZZ.origin)
@@ -2288,7 +2287,6 @@ class TestIngestNewObject(TestCase):
         body, created, msg = ingest_new_object(self.disc_orbit_file)
 
         bodies = Body.objects.all()
-        print(bodies)
         num_bodies_after = bodies.count()
         self.assertEqual(1, num_bodies_after)
         # Update expected values
@@ -2297,6 +2295,7 @@ class TestIngestNewObject(TestCase):
         expected_body.name = '2019 EN'
         expected_body.origin = 'L'
         expected_body.source_type = 'D'
+
         self._compare_bodies(expected_body, body)
         self.assertFalse(created)
         self.assertEqual(expected_msg, msg)
@@ -2307,13 +2306,11 @@ class TestIngestNewObject(TestCase):
         expected_msg = "Added new local target 2019EN"
 
         bodies_before = Body.objects.all()
-        print("Before=", bodies_before)
         num_bodies_before = bodies_before.count()
         self.assertEqual(0, num_bodies_before)
         body, created, msg = ingest_new_object(self.orbit_file)
 
         bodies = Body.objects.all()
-        print(bodies)
         num_bodies_after = bodies.count()
         self.assertEqual(1, num_bodies_after)
 
@@ -2330,13 +2327,11 @@ class TestIngestNewObject(TestCase):
         self.body_2019EN.refresh_from_db()
 
         bodies_before = Body.objects.all()
-        print("Before=", bodies_before)
         num_bodies_before = bodies_before.count()
         self.assertEqual(1, num_bodies_before)
         body, created, msg = ingest_new_object(self.orbit_file)
 
         bodies = Body.objects.all()
-        print(bodies)
         num_bodies_after = bodies.count()
         self.assertEqual(1, num_bodies_after)
         expected_body.updated = True
@@ -2351,13 +2346,11 @@ class TestIngestNewObject(TestCase):
         expected_msg = "Added new local target 433"
 
         bodies_before = Body.objects.all()
-        print("Before=", bodies_before)
         num_bodies_before = bodies_before.count()
         self.assertEqual(0, num_bodies_before)
         body, created, msg = ingest_new_object(self.eros_orbit_file)
 
         bodies = Body.objects.all()
-        print(bodies)
         num_bodies_after = bodies.count()
         self.assertEqual(1, num_bodies_after)
 
@@ -2374,13 +2367,11 @@ class TestIngestNewObject(TestCase):
         self.body_433.refresh_from_db()
 
         bodies_before = Body.objects.all()
-        print("Before=", bodies_before)
         num_bodies_before = bodies_before.count()
         self.assertEqual(1, num_bodies_before)
         body, created, msg = ingest_new_object(self.eros_orbit_file)
 
         bodies = Body.objects.all()
-        print(bodies)
         num_bodies_after = bodies.count()
         self.assertEqual(1, num_bodies_after)
         expected_body.updated = True
