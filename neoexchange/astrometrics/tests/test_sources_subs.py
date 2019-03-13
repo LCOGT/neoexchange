@@ -79,6 +79,38 @@ class TestPackedToNormal(TestCase):
 
         self.assertRaises(PackedError, packed_to_normal, 'JabA01A')
 
+    def test_bad_chars(self):
+
+        self.assertRaises(PackedError, packed_to_normal, 'abcde')
+
+    def test_ast_00001(self):
+        expected = '1'
+
+        result = packed_to_normal('00001')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_00433(self):
+        expected = '433'
+
+        result = packed_to_normal('00433')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_06478(self):
+        expected = '6478'
+
+        result = packed_to_normal('06478')
+
+        self.assertEqual(expected, result)
+
+    def test_ast_99942(self):
+        expected = '99942'
+
+        result = packed_to_normal('99942')
+
+        self.assertEqual(expected, result)
+
     def test_ast_A0001(self):
         expected = '100001'
 

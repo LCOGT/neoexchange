@@ -762,7 +762,7 @@ def validate_packcode(packcode):
     valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
 
-    if len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
+    if len(packcode) == 5 and ((packcode[0].isalpha() and packcode[1:].isdigit()) or packcode.isdigit()):
         return True
     if len(packcode) != 7:
         raise PackedError("Invalid packcode length")
@@ -806,6 +806,9 @@ def packed_to_normal(packcode):
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
         return None
+    elif len(packcode) == 5 and packcode.isdigit():
+        # Just a number
+        return str(int(packcode))
     elif len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
         cycle = cycle_mpc_character_code(packcode[0])
         normal_code = str(cycle) + packcode[1:]
