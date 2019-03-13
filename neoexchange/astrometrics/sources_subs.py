@@ -42,7 +42,7 @@ from astropy.io import ascii
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements, LCOGT_site_codes
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
@@ -566,8 +566,8 @@ def parse_mpcobs(line):
     """Parse a MPC format 80 column observation record line, returning a
     dictionary of values or an empty dictionary if it couldn't be parsed
 
-    Be ware of potential confusion between obs_type of 'S' and 's'. This
-    enforced by MPC, see
+    Be aware of potential confusion between obs_type of 'S' and 's'. This
+    is enforced by MPC, see
     https://www.minorplanetcenter.net/iau/info/SatelliteObs.html
     """
 
@@ -607,6 +607,19 @@ def parse_mpcobs(line):
     except ValueError:
         obs_mag = None
 
+    site_code = str(line[-3:])
+
+    discovery = False
+    lco_discovery = False
+    if line[12] == '*':
+        discovery = True
+        if site_code in LCOGT_site_codes():
+            lco_discovery = True
+        if flag == ' ':
+            flag = '*'
+        else:
+            flag = '*,' + flag
+
     if obs_type == 'C' or obs_type == 'S' or obs_type == 'A':
         # Regular CCD observations, first line of satellite observations or
         # observations that have been rotated from B1950 to J2000 ('A')
@@ -618,7 +631,9 @@ def parse_mpcobs(line):
                    'obs_mag'  : obs_mag,
                    'filter'   : filter,
                    'astrometric_catalog' : translate_catalog_code(line[71]),
-                   'site_code' : str(line[-3:])
+                   'site_code' : site_code,
+                   'discovery' : discovery,
+                   'lco_discovery' : lco_discovery
                  }
         ptr = 1
         ra_dec_string = line[32:56]

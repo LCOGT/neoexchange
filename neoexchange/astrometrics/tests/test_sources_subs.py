@@ -2047,6 +2047,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_#C_l' :  u'     K15TE5B 5C2015 10 17.34423 04 15 51.57 -02 07 27.4          18.6 VqEU017W88',
                             'p_ C_h' :  u'     K15TE5B  C2015 10 13.08015704 13 52.281-02 06 45.33         19.51Rt~1YjBY28',
                             'p_ S_l' :  u'     N00809b  S2015 06 22.29960 21 02 46.72 +57 58 39.3          20   RLNEOCPC51',
+                            'p_* S_l':  u'     N00809b* S2015 06 22.29960 21 02 46.72 +57 58 39.3          20   RLNEOCPC51',
                             'p_ s_l' :  u'     N00809b  s2015 06 22.29960 1 + 1978.7516 + 1150.7393 + 6468.8442   NEOCPC51',
                             'n_ R_l' :  u'01566         R1968 06 14.229167               +    11541710   2388 252 JPLRS253',
                             'n_ r_l' :  u'01566         r1968 06 14.229167S                        1000       252 JPLRS253',
@@ -2059,8 +2060,12 @@ class TestParseMPCObsFormat(TestCase):
                             'n_pC_l' :  u'01566K15TE5B  C1968 10 13.08015704 13 52.281-02 06 45.33         19.51Rt~1YjBY28',
                             'cp_!C_h':  u'0315PK13V060 !C2013 11 06.14604623 28 19.756-24 20 45.77         21.6 Tt90966705',
                             'np_4A_l' : u'24554PLS2608 4A1960 09 28.39725 00 39 02.51 +00 49 57.8                Kb6053675',
-                            'np_4X_l' : u'24554PLS2608*4X1960 09 24.46184 00 42 27.17 +00 55 44.5          18.1  Kb6053675'
-
+                            'np_4X_l' : u'24554PLS2608*4X1960 09 24.46184 00 42 27.17 +00 55 44.5          18.1  Kb6053675',
+                            'p_* C_l' : u'     K15TE5B* C2015 10 19.36445 04 16 45.66 -02 06 29.9          18.7 RqEU023H45',
+                            'p_*KC_l' : u'     K15TE5B*KC2015 10 18.42125 04 16 20.07 -02 07 27.5          19.2 Vq     Q63',
+                            't_* C_l' : u'     LSCTLZZ* C2018 10 19.36445 04 16 45.66 -02 06 29.9          18.7 Rq     W85',
+                            't_*KC_l' : u'     LSCTLZZ*KC2018 10 18.42125 04 16 20.07 -02 07 27.5          19.2 Vq     W86',
+                            't_*IC_l' : u'     CPTTLAZ*IC2018 10 18.92125 04 16 20.07 -02 07 27.5          19.2 rV     L09',
                           }
         self.maxDiff = None
 
@@ -2082,7 +2087,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 18.7,
                             'filter'    : 'R',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'H45'
+                            'site_code' : 'H45',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_l'])
@@ -2099,7 +2106,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 19.2,
                             'filter'    : 'V',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'H21'
+                            'site_code' : 'H21',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_KC_l'])
@@ -2116,7 +2125,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 18.6,
                             'filter'    : 'V',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'W88'
+                            'site_code' : 'W88',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_#C_l'])
@@ -2133,7 +2144,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 19.51,
                             'filter'    : 'R',
                             'astrometric_catalog' : 'PPMXL',
-                            'site_code' : 'Y28'
+                            'site_code' : 'Y28',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_h'])
@@ -2150,10 +2163,31 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 20.0,
                             'filter'    : 'R',
                             'astrometric_catalog' : '2MASS',
-                            'site_code' : 'C51'
+                            'site_code' : 'C51',
+                            'discovery' : False,
+                            'lco_discovery' : False
                             }
 
         params = parse_mpcobs(self.test_lines['p_ S_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_discovery_spaceS_l(self):
+        expected_params = { 'body'  : 'N00809b',
+                            'flags' : '*',
+                            'obs_type'  : 'S',
+                            'obs_date'  : datetime(2015, 6, 22, 7, 11, 25, int(0.44*1e6)),
+                            'obs_ra'    : 315.69466666666667,
+                            'obs_dec'   : 57.977583333333333,
+                            'obs_mag'   : 20.0,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '2MASS',
+                            'site_code' : 'C51',
+                            'discovery' : True,
+                            'lco_discovery' : False
+                            }
+
+        params = parse_mpcobs(self.test_lines['p_* S_l'])
 
         self.compare_dict(expected_params, params)
 
@@ -2192,7 +2226,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 18.1,
                             'filter'    : 'R',
                             'astrometric_catalog' : 'USNO-A2',
-                            'site_code' : '474'
+                            'site_code' : '474',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['n_tC_l'])
@@ -2209,7 +2245,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : None,
                             'filter'    : ' ',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'G96'
+                            'site_code' : 'G96',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_n'])
@@ -2257,7 +2295,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 20.4,
                             'filter'    : 'V',
                             'astrometric_catalog' : '',
-                            'site_code' : 'W86'
+                            'site_code' : 'W86',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_le'])
@@ -2274,7 +2314,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : None,
                             'filter'    : 'V',
                             'astrometric_catalog' : 'UCAC-4',
-                            'site_code' : 'G96'
+                            'site_code' : 'G96',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_ C_f'])
@@ -2292,7 +2334,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 21.4,
                             'filter'    : 'G',
                             'astrometric_catalog' : 'GAIA-DR1',
-                            'site_code' : '309'
+                            'site_code' : '309',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['p_quoteC_h'])
@@ -2307,7 +2351,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 21.6,
                             'filter'    : 'T',
                             'astrometric_catalog' : 'PPMXL',
-                            'site_code' : '705'
+                            'site_code' : '705',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['cp_!C_h'])
 
@@ -2323,7 +2369,9 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : None,
                             'filter'    : ' ',
                             'astrometric_catalog' : 'Yale',
-                            'site_code' : '675'
+                            'site_code' : '675',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['np_4A_l'])
 
@@ -2340,7 +2388,7 @@ class TestParseMPCObsFormat(TestCase):
         """Tests the case for both a number and a provisional designation"""
 
         expected_params = { 'body'  : '01566',
-                            'flags' : " ",
+                            'flags' : ' ',
                             'obs_type'  : 'C',
                             'obs_date'  : datetime(1968, 10, 13, 1, 55, 25, int(0.5648*1e6)),
                             'obs_ra'    : 63.4678375,
@@ -2348,10 +2396,107 @@ class TestParseMPCObsFormat(TestCase):
                             'obs_mag'   : 19.51,
                             'filter'    : 'R',
                             'astrometric_catalog' : 'PPMXL',
-                            'site_code' : 'Y28'
+                            'site_code' : 'Y28',
+                            'discovery' : False,
+                            'lco_discovery' : False
                           }
 
         params = parse_mpcobs(self.test_lines['n_pC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_discovery_spaceC_l(self):
+        expected_params = { 'body'  : 'K15TE5B',
+                            'flags' : '*',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 10, 19, 8, 44, 48, int(0.48*1e6)),
+                            'obs_ra'    : 64.19025,
+                            'obs_dec'   : -2.1083055555555554,
+                            'obs_mag'   : 18.7,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'H45',
+                            'discovery' : True,
+                            'lco_discovery' : False
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_* C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_p_discovery_KC_l(self):
+        expected_params = { 'body'  : 'K15TE5B',
+                            'flags' : '*,K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 10, 18, 10, 6, 36, 0),
+                            'obs_ra'    : 64.083625,
+                            'obs_dec'   : -2.1243055555555554,
+                            'obs_mag'   : 19.2,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'Q63',
+                            'discovery' : True,
+                            'lco_discovery' : True
+                          }
+
+        params = parse_mpcobs(self.test_lines['p_*KC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_t_discovery_spaceC_l(self):
+        expected_params = { 'body'  : 'LSCTLZZ',
+                            'flags' : '*',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2018, 10, 19, 8, 44, 48, int(0.48*1e6)),
+                            'obs_ra'    : 64.19025,
+                            'obs_dec'   : -2.1083055555555554,
+                            'obs_mag'   : 18.7,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'W85',
+                            'discovery' : True,
+                            'lco_discovery' : True
+                          }
+
+        params = parse_mpcobs(self.test_lines['t_* C_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_t_discovery_KC_l(self):
+        expected_params = { 'body'  : 'LSCTLZZ',
+                            'flags' : '*,K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2018, 10, 18, 10, 6, 36, 0),
+                            'obs_ra'    : 64.083625,
+                            'obs_dec'   : -2.1243055555555554,
+                            'obs_mag'   : 19.2,
+                            'filter'    : 'V',
+                            'astrometric_catalog' : 'UCAC-4',
+                            'site_code' : 'W86',
+                            'discovery' : True,
+                            'lco_discovery' : True
+                          }
+
+        params = parse_mpcobs(self.test_lines['t_*KC_l'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_t_discovery_IC_l(self):
+        expected_params = { 'body'  : 'CPTTLAZ',
+                            'flags' : '*,I',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2018, 10, 18, 22, 6, 36, 0),
+                            'obs_ra'    : 64.083625,
+                            'obs_dec'   : -2.1243055555555554,
+                            'obs_mag'   : 19.2,
+                            'filter'    : 'r',
+                            'astrometric_catalog' : 'GAIA-DR2',
+                            'site_code' : 'L09',
+                            'discovery' : True,
+                            'lco_discovery' : True
+                          }
+
+        params = parse_mpcobs(self.test_lines['t_*IC_l'])
 
         self.compare_dict(expected_params, params)
 
