@@ -2136,6 +2136,13 @@ class TestIngestNewObject(TestCase):
         os.symlink(self.orig_disc_orbit_file, self.disc_orbit_file)
         os.symlink(self.orig_disc_obs_file, self.disc_obs_file)
 
+        self.orig_eros_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_433.neocp'))
+        self.orig_eros_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_433.dat'))
+        self.eros_orbit_file = os.path.join(self.test_dir, '433.neocp')
+        self.eros_obs_file = os.path.join(self.test_dir, '433.dat')
+        os.symlink(self.orig_eros_orbit_file, self.eros_orbit_file)
+        os.symlink(self.orig_eros_obs_file, self.eros_obs_file)
+
         self.params = { 'id' : 1,
                         'provisional_name' : None,
                         'provisional_packed' : 'K19E00N',
@@ -2168,6 +2175,31 @@ class TestIngestNewObject(TestCase):
         self.params_LSCTLZZ['origin'] = 'L'
         self.params_LSCTLZZ['source_type'] = 'U'
         self.body_LSCTLZZ = Body(**self.params_LSCTLZZ)
+
+        self.eros_params = { 'id' : 1,
+                        'provisional_name' : '433',
+                        'provisional_packed' : '00433',
+                        'name' : '433',
+                        'source_type' : 'U',
+                        'abs_mag': 10.59,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2019, 2,10, 0, 0),
+                        'meananom'  :   4.70349,
+                        'argofperih' : 178.80773,
+                        'longascnode' : 304.30790,
+                        'orbinc' : 10.82903,
+                        'eccentricity' : 0.222729,
+                        'meandist' : 1.4580661,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 7707,
+                        'orbit_rms' : 0.51,
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 46385,
+                        'not_seen' : 3.7052675231018517
+                      }
+        self.body_433 = Body(**self.eros_params)
 
         self.remove = True
         self.debug_print = False
@@ -2302,6 +2334,50 @@ class TestIngestNewObject(TestCase):
         num_bodies_before = bodies_before.count()
         self.assertEqual(1, num_bodies_before)
         body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        print(bodies)
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownnumNEO_not_existing_no_obsfile(self):
+
+        expected_body = self.body_433
+        expected_msg = "Added new local target 433"
+
+        bodies_before = Body.objects.all()
+        print("Before=", bodies_before)
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.eros_orbit_file)
+
+        bodies = Body.objects.all()
+        print(bodies)
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownnumNEO_existing_no_obsfile(self):
+
+        expected_body = self.body_433
+        expected_msg = "No changes saved for 433"
+
+        self.body_433.save()
+        self.body_433.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        print("Before=", bodies_before)
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.eros_orbit_file)
 
         bodies = Body.objects.all()
         print(bodies)

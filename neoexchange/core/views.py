@@ -1828,7 +1828,7 @@ def clean_NEOCP_object(page_list):
                 source_type = 'C'
 
             # See if this is a local discovery
-            provisional_name = line[0:7]
+            provisional_name = line[0:7].rstrip()
             origin = 'M'
             if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
                 origin = 'L'
@@ -2252,7 +2252,8 @@ def ingest_new_object(orbit_file, obs_file=None):
                 name = packed_to_normal(obj_id)
             except PackedError:
                 name = None
-                local_discovery = True
+                if obj_id.isdigit() == False:
+                    local_discovery = True
 
             if local_discovery:
                 print("Setting to local origin")
