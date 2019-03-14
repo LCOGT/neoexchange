@@ -182,7 +182,12 @@ def frame_params_from_header(params, block):
             shutter_close = shutter_close + timedelta(days=1)
         # Calculate exposure time and save to frame.
         exptime = shutter_close - shutter_open
-        frame_params['exptime'] = exptime.total_seconds()
+        exptime = exptime.total_seconds()
+        exp_diff = abs(exptime - float(frame_params['exptime']))
+        if exp_diff > 0.2 or exp_diff > exptime * 0.1 :
+            frame_params['quality'] = 'ABORTED'
+            logger.warning("Actual exposure time ({}s) differs significantly from requested exposure time ({}s) for {}.".format(exptime, frame_params['exptime'], frame_params['filename']))
+        frame_params['exptime'] = exptime
 
     if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
         aperture_type = params.get('APERTYPE', 'SLIT').rstrip()

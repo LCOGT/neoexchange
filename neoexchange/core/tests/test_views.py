@@ -2993,6 +2993,7 @@ class TestFrames(TestCase):
         self.assertEqual(frames[0].filename, params['ORIGNAME'].replace('e00', 'e91.fits'))
 
     def test_ingest_frames_banzai_red_badexptime(self):
+        """Test that we preferentially take midpoint from UTSTOP over EXPTIME"""
         params = {
                         "DATE_OBS": "2015-12-31T23:59:28.067",
                         "ENCID": "doma",
@@ -3015,6 +3016,7 @@ class TestFrames(TestCase):
         self.assertEqual(1, frames.count())
         self.assertEqual(frames[0].frametype, Frame.BANZAI_RED_FRAMETYPE)
         self.assertEqual(frames[0].sitecode, 'K91')
+        self.assertEqual(frames[0].quality, 'ABORTED')
         self.assertNotEqual(frames[0].midpoint, midpoint)
         self.assertEqual(frames[0].fwhm, float(params['L1FWHM']))
         self.assertEqual(frames[0].instrument, params['INSTRUME'])
