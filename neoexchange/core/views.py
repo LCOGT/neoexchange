@@ -2281,19 +2281,22 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
 
         # Add in discovery date from the observation file
         kwargs['discovery_date'] = discovery_date
-        # Needs to be __contains to perform case-sensitive lookup on the
-        # provisional name.
+        # Needs to be __exact (and the correct database collation set on Body)
+        # to perform case-sensitive lookup on the provisional name.
         if dbg: print("Looking in the DB for ", obj_id)
-        query = Q(provisional_name__contains=obj_id)
+        query = Q(provisional_name__exact=obj_id)
         if name is not None:
-            query = query | Q(name__contains=name)
+            query = query | Q(name__exact=name)
         bodies = Body.objects.filter(query)
         if bodies.count() == 0:
-            body, created = Body.objects.get_or_create(provisional_name__contains=obj_id)
+            body, created = Body.objects.get_or_create(provisional_name__exact=obj_id)
         elif bodies.count() == 1:
             body = bodies[0]
             created = False
-
+        else:
+            msg = "Multiple bodies found, aborting"
+            logger.error(msg)
+            return None, False, msg
         if not created:
             # Find out if the details have changed, if they have, save a
             # revision
