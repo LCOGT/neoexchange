@@ -2207,7 +2207,7 @@ def update_MPC_orbit(obj_id_or_page, dbg=False, origin='M'):
     return True
 
 
-def ingest_new_object(orbit_file, obs_file=None):
+def ingest_new_object(orbit_file, obs_file=None, dbg=False):
     """Ingests a new object or updates an existing one from the <orbit_file>
     If the observation file, which defaults to <orbit_file> with the '.neocp'
     extension replaced by '.dat' but which can be specified by [obs_file] is
@@ -2253,7 +2253,7 @@ def ingest_new_object(orbit_file, obs_file=None):
             obj_id = file_chunks[0].strip()
             if obj_id != kwargs['provisional_name']:
                 msg = "Mismatch between filename (%s) and provisional id (%s).\nAssuming provisional id is a final designation." % (obj_id, kwargs['provisional_name'])
-                print(msg)
+                logger.info(msg)
                 try:
                     name = packed_to_normal(kwargs['provisional_name'])
                 except PackedError:
@@ -2265,8 +2265,15 @@ def ingest_new_object(orbit_file, obs_file=None):
                     kwargs['origin'] = 'M'
                 else:
                     kwargs['provisional_name'] = obj_id
+                # Determine perihelion distance and asteroid type
+                if kwargs.get('eccentricity', None) is not None and kwargs.get('eccentricity', 2.0) < 1.0\
+                    and kwargs.get('meandist', None) is not None:
+                    perihdist = kwargs['meandist'] * (1.0 - kwargs['eccentricity'])
+                    source_type = determine_asteroid_type(perihdist, kwargs['eccentricity'])
+                    if dbg: print("New source type", source_type)
+                    kwargs['source_type'] = source_type
                 if local_discovery:
-                    print("Setting to local origin")
+                    if dbg: print("Setting to local origin")
                     kwargs['origin'] = 'L'
                     kwargs['source_type'] = 'D'
         else:
@@ -2276,7 +2283,7 @@ def ingest_new_object(orbit_file, obs_file=None):
         kwargs['discovery_date'] = discovery_date
         # Needs to be __contains to perform case-sensitive lookup on the
         # provisional name.
-        print("Looking in the DB for ", obj_id)
+        if dbg: print("Looking in the DB for ", obj_id)
         query = Q(provisional_name__contains=obj_id)
         if name is not None:
             query = query | Q(name__contains=name)
