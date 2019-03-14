@@ -2154,7 +2154,7 @@ class TestIngestNewObject(TestCase):
                         'provisional_name' : None,
                         'provisional_packed' : 'K19E00N',
                         'name' : '2019 EN',
-                        'source_type' : 'D',
+                        'source_type' : 'U',
                         'abs_mag': 21.17,
                         'slope'  : 0.15,
                         'epochofel' : datetime(2019, 3, 9, 0, 0),
@@ -2169,7 +2169,7 @@ class TestIngestNewObject(TestCase):
                         'origin' : 'M',
                         'num_obs' : 190,
                         'orbit_rms' : 0.21,
-                        'discovery_date' : datetime(2019, 1, 10, 12, 54, 59, 97600),
+                        'discovery_date' : datetime(2019, 3,  2,  6, 51,  5, 472000),
                         'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
                         'arc_length' : 59.0,
                         'not_seen' : 3.7052675231018517

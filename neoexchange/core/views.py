@@ -2227,12 +2227,17 @@ def ingest_new_object(orbit_file, obs_file=None):
     if obs_file is None:
         obs_file = orbit_file.replace('neocp', 'dat')
 
+    local_discovery = False
     try:
         obsfile_fh = open(obs_file, 'r')
-        obsline = obsfile_fh.readline()
+        obslines = obsfile_fh.readlines()
         obsfile_fh.close()
-        obs_params = parse_mpcobs(obsline)
+        for obsline in obslines:
+            obs_params = parse_mpcobs(obsline)
+            if obs_params.get('discovery', False) is True:
+                break
         discovery_date = obs_params.get('obs_date', None)
+        local_discovery = obs_params.get('lco_discovery', False)
     except IOError:
         logger.warn("Unable to find matching observation file (%s)" % obs_file)
         discovery_date = None
@@ -2243,29 +2248,16 @@ def ingest_new_object(orbit_file, obs_file=None):
     if kwargs != {}:
         obj_file = os.path.basename(orbit_file)
         file_chunks = obj_file.split('.')
+        name = None
         if len(file_chunks) == 2:
             obj_id = file_chunks[0].strip()
-            # Try to determine if this a local discovery or not by unpacking
-            # the provisional name
-            local_discovery = False
-            try:
-                name = packed_to_normal(obj_id)
-            except PackedError:
-                name = None
-                if obj_id.isdigit() == False:
-                    local_discovery = True
-
-            if local_discovery:
-                print("Setting to local origin")
-                kwargs['origin'] = 'L'
             if obj_id != kwargs['provisional_name']:
                 msg = "Mismatch between filename (%s) and provisional id (%s).\nAssuming provisional id is a final designation." % (obj_id, kwargs['provisional_name'])
                 print(msg)
-                if name is None:
-                    try:
-                        name = packed_to_normal(kwargs['provisional_name'])
-                    except PackedError:
-                        name = None
+                try:
+                    name = packed_to_normal(kwargs['provisional_name'])
+                except PackedError:
+                    name = None
                 kwargs['name'] = name
                 kwargs['provisional_packed'] = kwargs['provisional_name']
                 if name is not None and obj_id.strip() == name.replace(' ', '') and name.strip().count(' ') == 1:
@@ -2274,6 +2266,8 @@ def ingest_new_object(orbit_file, obs_file=None):
                 else:
                     kwargs['provisional_name'] = obj_id
                 if local_discovery:
+                    print("Setting to local origin")
+                    kwargs['origin'] = 'L'
                     kwargs['source_type'] = 'D'
         else:
             obj_id = kwargs['provisional_name']
