@@ -118,7 +118,7 @@ def determine_active_proposals(proposal_code=None, filter_epo=True):
             proposal = Proposal.objects.get(code=proposal_code.upper())
             proposals = [proposal.code,]
         except Proposal.DoesNotExist:
-            logger.warn("Proposal {} does not exist".format(proposal_code))
+            logger.warning("Proposal {} does not exist".format(proposal_code))
             proposals = []
     else:
         proposals = Proposal.objects.filter(active=True)
@@ -2239,7 +2239,7 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
         discovery_date = obs_params.get('obs_date', None)
         local_discovery = obs_params.get('lco_discovery', False)
     except IOError:
-        logger.warn("Unable to find matching observation file (%s)" % obs_file)
+        logger.warning("Unable to find matching observation file (%s)" % obs_file)
         discovery_date = None
 
     dbg_msg = orblines[0]
