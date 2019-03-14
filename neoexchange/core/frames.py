@@ -187,13 +187,13 @@ def frame_params_from_header(params, block):
         if exp_diff > 0.5 or exp_diff > exptime * 0.1:
             # If FLOYDS data, subtract readtime from exposure time. Otherwise, label as problematic.
             if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
-                exptime -= 21.
+                exptime = max(exptime - 21., 0)
             else:
                 frame_params['quality'] = 'ABORTED'
                 logger.warning("Actual exposure time ({}s) differs significantly from requested exposure time ({}s) for {}.".format(exptime, frame_params['exptime'], frame_params['filename']))
         frame_params['exptime'] = exptime
 
-    # Make adjustments for Spectra frames
+    # Make adjustments for spectroscopy frames
     if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
         aperture_type = params.get('APERTYPE', 'SLIT').rstrip()
         aperture_length = params.get('APERLEN', 'UNKNOWN')
