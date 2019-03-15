@@ -2116,6 +2116,364 @@ class TestUpdate_MPC_orbit(TestCase):
                 self.assertEqual(expected_elements[key], new_body_elements[key])
 
 
+class TestIngestNewObject(TestCase):
+
+    def setUp(self):
+
+        self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
+
+        self.orig_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.neocp'))
+        self.orig_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2019EN.dat'))
+        self.orbit_file = os.path.join(self.test_dir, '2019EN.neocp')
+        self.obs_file = os.path.join(self.test_dir, '2019EN.dat')
+        os.symlink(self.orig_orbit_file, self.orbit_file)
+        os.symlink(self.orig_obs_file, self.obs_file)
+
+        self.orig_disc_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_LSCTLZZ.neocp'))
+        self.orig_disc_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_LSCTLZZ.dat'))
+        self.disc_orbit_file = os.path.join(self.test_dir, 'LSCTLZZ.neocp')
+        self.disc_obs_file = os.path.join(self.test_dir, 'LSCTLZZ.dat')
+        os.symlink(self.orig_disc_orbit_file, self.disc_orbit_file)
+        os.symlink(self.orig_disc_obs_file, self.disc_obs_file)
+
+        self.orig_eros_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_433.neocp'))
+        self.orig_eros_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_433.dat'))
+        self.eros_orbit_file = os.path.join(self.test_dir, '433.neocp')
+        self.eros_obs_file = os.path.join(self.test_dir, '433.dat')
+        os.symlink(self.orig_eros_orbit_file, self.eros_orbit_file)
+        os.symlink(self.orig_eros_obs_file, self.eros_obs_file)
+
+        self.orig_K11H00P_orbit_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2011HP.neocp'))
+        self.orig_K11H00P_obs_file = os.path.abspath(os.path.join('astrometrics', 'tests', 'test_mpcorbit_2011HP.dat'))
+        self.K11H00P_orbit_file = os.path.join(self.test_dir, '2011HP.neocp')
+        self.K11H00P_obs_file = os.path.join(self.test_dir, '2011HP.dat')
+        os.symlink(self.orig_K11H00P_orbit_file, self.K11H00P_orbit_file)
+        os.symlink(self.orig_K11H00P_obs_file, self.K11H00P_obs_file)
+
+        self.params = { 'id' : 1,
+                        'provisional_name' : None,
+                        'provisional_packed' : 'K19E00N',
+                        'name' : '2019 EN',
+                        'source_type' : 'N',
+                        'abs_mag': 21.17,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2019, 3, 9, 0, 0),
+                        'meananom'  : 343.19351,
+                        'argofperih' : 46.63108,
+                        'longascnode' : 192.93185,
+                        'orbinc' : 9.77594,
+                        'eccentricity' : 0.618787,
+                        'meandist' : 2.1786196,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 190,
+                        'orbit_rms' : 0.21,
+                        'discovery_date' : datetime(2019, 3,  2,  6, 51,  5, 472000),
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 59.0,
+                        'not_seen' : 3.7052675231018517
+                      }
+        self.body_2019EN = Body(**self.params)
+
+        self.params_LSCTLZZ = self.params.copy()
+        self.params_LSCTLZZ['provisional_name'] = 'LSCTLZZ'
+        self.params_LSCTLZZ['provisional_packed'] = None
+        self.params_LSCTLZZ['name'] = None
+        self.params_LSCTLZZ['origin'] = 'L'
+        self.params_LSCTLZZ['source_type'] = 'U'
+        self.body_LSCTLZZ = Body(**self.params_LSCTLZZ)
+
+        self.eros_params = { 'id' : 1,
+                        'provisional_name' : '433',
+                        'provisional_packed' : '00433',
+                        'name' : '433',
+                        'source_type' : 'N',
+                        'abs_mag': 10.59,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2019, 2,10, 0, 0),
+                        'meananom'  :   4.70349,
+                        'argofperih' : 178.80773,
+                        'longascnode' : 304.30790,
+                        'orbinc' : 10.82903,
+                        'eccentricity' : 0.222729,
+                        'meandist' : 1.4580661,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 7707,
+                        'orbit_rms' : 0.51,
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 46385,
+                        'not_seen' : 3.7052675231018517
+                      }
+        self.body_433 = Body(**self.eros_params)
+
+        self.K11H00P_params = { 'id' : 1,
+                        'provisional_name' : None,
+                        'provisional_packed' : 'K11H00P',
+                        'name' : '2011 HP',
+                        'source_type' : 'N',
+                        'abs_mag': 22.23,
+                        'slope'  : 0.15,
+                        'epochofel' : datetime(2011,10, 1, 0, 0),
+                        'meananom'  :  37.31731,
+                        'argofperih' :  45.96308,
+                        'longascnode' : 229.74785,
+                        'orbinc' :  3.74433,
+                        'eccentricity' : 0.4800081,
+                        'meandist' : 1.9235922,
+                        'elements_type' : 'MPC_MINOR_PLANET',
+                        'active' : True,
+                        'origin' : 'M',
+                        'num_obs' : 213,
+                        'orbit_rms' : 0.35,
+                        'update_time' : datetime(2019, 3, 12, 16, 55, 35, 113989),
+                        'arc_length' : 160.0,
+                        'not_seen' : 3.7052675231018517
+                      }
+        self.body_K11H00P = Body(**self.K11H00P_params)
+
+        self.remove = True
+        self.debug_print = False
+
+        self.maxDiff = None
+
+    def tearDown(self):
+        if self.remove:
+            try:
+                files_to_remove = glob(os.path.join(self.test_dir, '*'))
+                for file_to_rm in files_to_remove:
+                    os.remove(file_to_rm)
+            except OSError:
+                print("Error removing files in temporary test directory", self.test_dir)
+            try:
+                os.rmdir(self.test_dir)
+                if self.debug_print:
+                    print("Removed", self.test_dir)
+            except OSError:
+                print("Error removing temporary test directory", self.test_dir)
+        else:
+            print("Not removing. Temporary test directory=", self.test_dir)
+
+    def _compare_bodies(self, body1, body2, excluded_keys={'_state', 'not_seen', 'ingest', 'update_time'}):
+        d1, d2 = body1.__dict__, body2.__dict__
+        for key,value in d1.items():
+            if key in excluded_keys:
+                continue
+            self.assertEqual(value, d2[key], "Compare failure on " + key)
+
+    def test_no_orbit_file(self):
+        expected_body = None
+        expected_msg = "Could not read orbit file: wibble"
+
+        body, created, msg = ingest_new_object('wibble')
+
+        self.assertEqual(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_discovery_not_existing(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "Added new local target LSCTLZZ"
+
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_discovery_existing_no_changes(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "No changes saved for LSCTLZZ"
+
+        self.body_LSCTLZZ.save()
+        num_bodies_before = Body.objects.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        num_bodies_after = Body.objects.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values
+        expected_body.updated = True
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_discovery_existing_new_provname(self):
+
+        expected_body = self.body_LSCTLZZ
+        expected_msg = "Updated LSCTLZZ"
+
+        self.body_LSCTLZZ.save()
+        self.body_LSCTLZZ.refresh_from_db()
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        self.assertEqual('L', self.body_LSCTLZZ.origin)
+        # Remove symlink to LSCTLZZ.neocp orbit file and re-symlink to the 2019EN.neocp one
+        # so desigination inside the file changes but it stays as LSCTLZZ.neocp
+        os.unlink(self.disc_orbit_file)
+        os.symlink(self.orig_orbit_file, self.disc_orbit_file)
+        body, created, msg = ingest_new_object(self.disc_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values
+        expected_body.updated = True
+        expected_body.provisional_packed = 'K19E00N'
+        expected_body.name = '2019 EN'
+        expected_body.origin = 'L'
+        expected_body.source_type = 'D'
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownNEO_not_existing(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "Added new local target 2019EN"
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownNEO_not_existing_no_obsfile(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "Added new local target 2019EN"
+
+        os.unlink(self.obs_file)
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        # Update expected values, deleting discovery date (since no obs file)
+        expected_body.discovery_date = None
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownNEO_existing(self):
+
+        expected_body = self.body_2019EN
+        expected_msg = "No changes saved for 2019EN"
+
+        self.body_2019EN.save()
+        self.body_2019EN.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownnumNEO_not_existing(self):
+
+        expected_body = self.body_433
+        expected_msg = "Added new local target 433"
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.eros_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_knownnumNEO_existing(self):
+
+        expected_body = self.body_433
+        expected_msg = "No changes saved for 433"
+
+        self.body_433.save()
+        self.body_433.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.eros_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_known_provNEO_not_existing(self):
+
+        expected_body = self.body_K11H00P
+        expected_msg = "Added new local target 2011HP"
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(0, num_bodies_before)
+        body, created, msg = ingest_new_object(self.K11H00P_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+
+        self._compare_bodies(expected_body, body)
+        self.assertTrue(created)
+        self.assertEqual(expected_msg, msg)
+
+    def test_known_provNEO_existing(self):
+
+        expected_body = self.body_K11H00P
+        expected_msg = "No changes saved for 2011HP"
+
+        self.body_K11H00P.save()
+        self.body_K11H00P.refresh_from_db()
+
+        bodies_before = Body.objects.all()
+        num_bodies_before = bodies_before.count()
+        self.assertEqual(1, num_bodies_before)
+        body, created, msg = ingest_new_object(self.K11H00P_orbit_file)
+
+        bodies = Body.objects.all()
+        num_bodies_after = bodies.count()
+        self.assertEqual(1, num_bodies_after)
+        expected_body.updated = True
+
+        self._compare_bodies(expected_body, body)
+        self.assertFalse(created)
+        self.assertEqual(expected_msg, msg)
+
 class TestUpdate_MPC_obs(TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp(prefix='tmp_neox_')
@@ -2541,6 +2899,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_nocat(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2567,6 +2930,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_nomag(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2593,6 +2961,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_nonLCO_flags(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2619,6 +2992,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_blankline(self):
 
@@ -2651,6 +3029,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_LCO_flagI(self):
         expected_params = { 'body'  : 'WSAE9A6',
@@ -2677,15 +3060,84 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
+
+    def test_create_LCO_flagI_and_discovery(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : '*,I',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 31, 40, int(0.08*1e6)),
+                            'obs_ra'    : 325.54225,
+                            'obs_dec'   : -11.541111111111112,
+                            'obs_mag'   : 21.6,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        test_obsline = self.test_obslines[6].replace('6 IC', '6*IC')
+        source_measures = create_source_measurement(test_obsline)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
+
+    def test_create_LCO_flagK_and_discovery(self):
+        expected_params = { 'body'  : 'WSAE9A6',
+                            'flags' : '*,K',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2015, 9, 20, 23, 24, 46, int(0.4832*1e6)),
+                            'obs_ra'    : 325.540625,
+                            'obs_dec'   : -11.536666666666667,
+                            'obs_mag'   : 21.4,
+                            'filter'    : 'R',
+                            'astrometric_catalog' : '',
+                            'site_code' : 'K93'
+                          }
+
+        test_obsline = self.test_obslines[5].replace('6 KC', '6*KC')
+        source_measures = create_source_measurement(test_obsline)
+        source_measure = source_measures[0]
+
+        self.assertEqual(SourceMeasurement, type(source_measure))
+        self.assertEqual(Body, type(source_measure.body))
+        self.assertEqual(expected_params['body'], source_measure.body.current_name())
+        self.assertEqual(expected_params['filter'], source_measure.frame.filter)
+        self.assertEqual(Frame.SINGLE_FRAMETYPE, source_measure.frame.frametype)
+        self.assertEqual(expected_params['obs_date'], source_measure.frame.midpoint)
+        self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
+        self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
+        self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_satellite(self):
         expected_params = { 'body'  : 'N009ags',
-                            'flags' : '',
+                            'flags' : '*',
                             'obs_type'  : 'S',
                             'obs_date'  : datetime(2016, 2, 8, 18, 15, 30, int(0.528*1e6)),
                             'obs_ra'    : 228.56833333333333,
                             'obs_dec'   : -9.775,
-                            'obs_mag'   : '19',
+                            'obs_mag'   : 19.0,
                             'filter'    : 'R',
                             'astrometric_catalog' : '2MASS',
                             'site_code' : 'C51',
@@ -2706,6 +3158,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
         self.assertEqual(expected_extrainfo, source_measure.frame.extrainfo)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
     def test_create_non_existant_body(self):
 
@@ -2743,6 +3200,7 @@ class TestCreate_sourcemeasurement(TestCase):
     def test_create_with_trailing_space(self):
 
         expected_params = { 'body' : 'G07212',
+                            'flags' : "'",
                             'filter' : 'G',
                             'obs_date' : datetime(2017, 11, 2, 4, 10, 16, int(0.32*1e6)),
                             'site_code' : '309',
@@ -2766,6 +3224,11 @@ class TestCreate_sourcemeasurement(TestCase):
         self.assertEqual(expected_params['site_code'], source_measure.frame.sitecode)
         self.assertAlmostEqual(expected_params['obs_ra'], source_measure.obs_ra, 7)
         self.assertAlmostEqual(expected_params['obs_dec'], source_measure.obs_dec, 7)
+        self.assertEqual(expected_params['obs_mag'], source_measure.obs_mag)
+        self.assertEqual(expected_params['flags'], source_measure.flags)
+        self.assertEqual(None, source_measure.err_obs_ra)
+        self.assertEqual(None, source_measure.err_obs_dec)
+        self.assertEqual(None, source_measure.err_obs_mag)
 
 
 class TestFrames(TestCase):

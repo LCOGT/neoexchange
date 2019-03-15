@@ -42,7 +42,7 @@ from astropy.io import ascii
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements, LCOGT_site_codes
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
@@ -566,8 +566,8 @@ def parse_mpcobs(line):
     """Parse a MPC format 80 column observation record line, returning a
     dictionary of values or an empty dictionary if it couldn't be parsed
 
-    Be ware of potential confusion between obs_type of 'S' and 's'. This
-    enforced by MPC, see
+    Be aware of potential confusion between obs_type of 'S' and 's'. This
+    is enforced by MPC, see
     https://www.minorplanetcenter.net/iau/info/SatelliteObs.html
     """
 
@@ -607,6 +607,19 @@ def parse_mpcobs(line):
     except ValueError:
         obs_mag = None
 
+    site_code = str(line[-3:])
+
+    discovery = False
+    lco_discovery = False
+    if line[12] == '*':
+        discovery = True
+        if site_code in LCOGT_site_codes():
+            lco_discovery = True
+        if flag == ' ':
+            flag = '*'
+        else:
+            flag = '*,' + flag
+
     if obs_type == 'C' or obs_type == 'S' or obs_type == 'A':
         # Regular CCD observations, first line of satellite observations or
         # observations that have been rotated from B1950 to J2000 ('A')
@@ -618,7 +631,9 @@ def parse_mpcobs(line):
                    'obs_mag'  : obs_mag,
                    'filter'   : filter,
                    'astrometric_catalog' : translate_catalog_code(line[71]),
-                   'site_code' : str(line[-3:])
+                   'site_code' : site_code,
+                   'discovery' : discovery,
+                   'lco_discovery' : lco_discovery
                  }
         ptr = 1
         ra_dec_string = line[32:56]
@@ -730,6 +745,19 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
 
     return best_elements
 
+def read_mpcorbit_file(orbit_file):
+
+    try:
+        orbfile_fh = open(orbit_file, 'r')
+    except IOError:
+        logger.warn("File %s not found" % orbit_file)
+        return None
+
+    orblines = orbfile_fh.readlines()
+    orbfile_fh.close()
+    orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin').rstrip()
+
+    return orblines
 
 class PackedError(Exception):
     """Raised when an invalid pack code is found"""
@@ -749,7 +777,7 @@ def validate_packcode(packcode):
     valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
 
-    if len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
+    if len(packcode) == 5 and ((packcode[0].isalpha() and packcode[1:].isdigit()) or packcode.isdigit()):
         return True
     if len(packcode) != 7:
         raise PackedError("Invalid packcode length")
@@ -793,6 +821,9 @@ def packed_to_normal(packcode):
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
         return None
+    elif len(packcode) == 5 and packcode.isdigit():
+        # Just a number
+        return str(int(packcode))
     elif len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
         cycle = cycle_mpc_character_code(packcode[0])
         normal_code = str(cycle) + packcode[1:]
@@ -819,7 +850,7 @@ def packed_to_normal(packcode):
 
 
 def cycle_mpc_character_code(char):
-    """Convert MPC character code into a number 0--9, A--Z, a--z and return interger"""
+    """Convert MPC character code into a number 0--9, A--Z, a--z and return integer"""
     cycle = ord(char)
     if cycle >= ord('a'):
         cycle = cycle - 61
@@ -903,7 +934,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
 
 def fetch_goldstone_page():
-    """Fetches the Goldsotne page of radar targets, returning a BeautifulSoup
+    """Fetches the Goldstone page of radar targets, returning a BeautifulSoup
     page"""
 
     goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
@@ -916,8 +947,8 @@ def fetch_goldstone_page():
 def fetch_goldstone_targets(page=None, dbg=False):
     """Fetches and parses the Goldstone list of radar targets, returning a list
     of object id's for the current year.
-    Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    Takes either a BeautifulSoup page version of the Goldstone target page (from
+    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     """
 
@@ -1198,6 +1229,7 @@ def fetch_yarkovsky_targets(yark_targets):
     yark_target_list = []
 
     for obj_id in yark_targets:
+        obj_id = obj_id.strip()
         if '_' in obj_id:
             obj_id = str(obj_id).replace('_', ' ')
         yark_target_list.append(obj_id)

@@ -1047,15 +1047,27 @@ class SourceMeasurement(models.Model):
             obs_type = 'S'
             microday = False
         flags = self.flags
-        if len(self.flags) == 1:
-            if self.flags == '*':
+        num_flags = flags.split(',')
+        if len(num_flags) == 1:
+            if num_flags[0] == '*':
                 # Discovery asterisk needs to go into column 13
                 flags = '* '
             else:
-                flags = ' ' + self.flags
-        elif len(self.flags) > 2:
+                flags = ' ' + num_flags[0]
+        elif len(num_flags) == 2:
+            if '*' in num_flags:
+                asterisk_index = num_flags.index('*')
+                flags = '*' + num_flags[1-asterisk_index]
+            else:
+                logger.warning("Flags longer than will fit into field - needs mapper")
+                flags = ' ' + num_flags[0]
+        else:
             logger.warning("Flags longer than will fit into field - needs mapper")
-            flags = self.flags[0:2]
+            if '*' in num_flags:
+                num_flags.remove('*')
+                flags = '*' + num_flags[0]
+            else:
+                flags = ' ' + num_flags[0]
 
         # Catalog code for column 72 (if desired)
         catalog_code = ' '
