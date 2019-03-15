@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.13
+Calculate frame midpoint based on UTSTOP rather than EXPTIME
+
 ### 2.7.12
 Output of compute_ephem is now a dictionary.
 
