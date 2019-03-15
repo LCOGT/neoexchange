@@ -919,15 +919,16 @@ class TestFrameParamsFromHeader(TestCase):
         self.maxDiff = None
 
     def test_expose_red_good_rlevel(self):
-        expected_params = {  'midpoint' : datetime(2015, 4, 20, 16, 00, 14, int(0.409*1e6)),
+        expected_params = {  'midpoint' : datetime(2015, 4, 20, 16, 00, 14, int(0.4105*1e6)),
                              'sitecode' : 'V38',
                              'filter'   : 'w',
                              'frametype': 91,
                              'block'    : self.test_block,
                              'instrument': 'kb92',
                              'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
-                             'exptime'   : 20.0,
-                             'wcs'       : WCS() }
+                             'exptime'   : 20.003,
+                             'wcs'       : WCS()
+                             }
 
         header_params = { 'SITEID'   : 'elp',
                           'ENCID'    : 'aqwa',
@@ -939,11 +940,11 @@ class TestFrameParamsFromHeader(TestCase):
                           'OBSTYPE'  : 'EXPOSE',
                           'ORIGNAME' : 'elp0m411-kb92-20150420-0236-e00',
                           'RLEVEL'   : 91,
-                          'L1FWHM'   : 1.42
+                          'L1FWHM'   : 1.42,
+                          'UTSTOP'   : '16:00:24.412'
                         }
 
         frame_params = frame_params_from_header(header_params, self.test_block)
-
         for key in expected_params:
             if key != 'wcs':
                 self.assertEqual(expected_params[key], frame_params[key], "Comparison failed on " + key)
@@ -957,7 +958,8 @@ class TestFrameParamsFromHeader(TestCase):
                              'instrument': 'kb92',
                              'filename'  : 'elp0m411-kb92-20150420-0236-e91.fits',
                              'exptime'   : 20.0,
-                             'wcs'       : WCS() }
+                             'wcs'       : WCS()
+                             }
 
         header_params = { 'SITEID'   : 'elp',
                           'ENCID'    : 'aqwa',
