@@ -4,6 +4,9 @@ Portal for scheduling observations of NEOs using Las Cumbres Observatory.
 
 ## History
 
+### 2.7.12
+Output of compute_ephem is now a dictionary.
+
 ### 2.7.11
 Allow for automatic updating of targets.
 * Update observations from MPC daily.
