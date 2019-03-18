@@ -2318,6 +2318,7 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
             msg = "Added new local target %s" % obj_id
     return body, created, msg
 
+
 def update_MPC_obs(obj_id_or_page):
     """
     Performs remote look up of observations for object with id obj_id_or_page,
