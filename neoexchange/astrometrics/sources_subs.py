@@ -468,7 +468,8 @@ def fetch_mpcobs(asteroid, debug=False):
     resulting observation as a list of text observations."""
 
     asteroid = asteroid.strip().replace(' ', '+')
-    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid.replace('/', '%2F')
+    html_id = asteroid.replace('/', '%2F')
+    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + html_id
 
     page = fetchpage_and_make_soup(query_url)
     if page is None:
