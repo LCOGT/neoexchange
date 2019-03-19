@@ -2505,7 +2505,8 @@ def create_source_measurement(obs_lines, block=None):
                                             'obs_ra'  : params['obs_ra'],
                                             'obs_dec' : params['obs_dec'],
                                             'obs_mag' : params['obs_mag'],
-                                            'flags'   : params['flags']
+                                            'flags'   : params['flags'],
+                                            'astrometric_catalog': params['astrometric_catalog'],
                                          }
                         if source_list and next((src for src in source_list if src.frame == measure_params['frame']), None):
                             measure_created = False

@@ -551,10 +551,13 @@ def translate_catalog_code(code_or_name):
                   "T" : "URAT-2",
                   "U" : "GAIA-DR1",
                   "V" : "GAIA-DR2",
+                  "W" : "UCAC5",
                   }
     catalog_or_code = ''
-    if len(code_or_name) == 1:
+    if len(code_or_name.strip()) == 1:
         catalog_or_code = catalog_codes.get(code_or_name, '')
+        if not catalog_or_code:
+            logger.warning("{} is not in our accepted list of astrometric catalog codes.".format(code_or_name))
     else:
         for code, catalog in catalog_codes.items():
             if code_or_name == catalog:
