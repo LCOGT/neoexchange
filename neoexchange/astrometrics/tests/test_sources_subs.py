@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 # Disable anything below CRITICAL level
 logging.disable(logging.CRITICAL)
 
+
 class TestPackedToNormal(TestCase):
 
     def test_too_short_6(self):
@@ -145,6 +146,42 @@ class TestPackedToNormal(TestCase):
         result = packed_to_normal('K03P00F')
 
         self.assertEqual(expected, result)
+
+    def test_com_PK05Y020(self):
+        expected = 'P/2005 Y2'
+
+        result = packed_to_normal('PK05Y020')
+
+        self.assertEqual(expected, result)
+
+    def test_com_PK16B14A(self):
+        expected = 'P/2016 BA14'
+
+        result = packed_to_normal('PK16B14A')
+
+        self.assertEqual(expected, result)
+
+    def test_com_PK11WB3G(self):
+        expected = 'P/2011 WG113'
+
+        result = packed_to_normal('PK11WB3G')
+
+        self.assertEqual(expected, result)
+
+    def test_com_CJ83J010(self):
+        expected = 'C/1983 J1'
+
+        result = packed_to_normal('CJ83J010')
+
+        self.assertEqual(expected, result)
+
+    def test_com_PK13R03b(self):
+        expected = 'P/2013 R3-B'
+
+        result = packed_to_normal('PK13R03b')
+
+        self.assertEqual(expected, result)
+
 
 class TestGoldstoneChunkParser(TestCase):
     """Unit tests for the sources_subs.parse_goldstone_chunks() method"""
@@ -2059,6 +2096,7 @@ class TestParseMPCObsFormat(TestCase):
                             'p_quoteC_h': u"     G07212  'C2017 11 02.17380 03 13 37.926+19 27 47.07         21.4 GUNEOCP309",
                             'n_pC_l' :  u'01566K15TE5B  C1968 10 13.08015704 13 52.281-02 06 45.33         19.51Rt~1YjBY28',
                             'cp_!C_h':  u'0315PK13V060 !C2013 11 06.14604623 28 19.756-24 20 45.77         21.6 Tt90966705',
+                            'cp_C_h':   u'    PK05Y020  C2006 12 25.86945 01 38 12.14 -09 52 27.0          18.9 Nr58738130',
                             'np_4A_l' : u'24554PLS2608 4A1960 09 28.39725 00 39 02.51 +00 49 57.8                Kb6053675',
                             'np_4X_l' : u'24554PLS2608*4X1960 09 24.46184 00 42 27.17 +00 55 44.5          18.1  Kb6053675',
                             'p_* C_l' : u'     K15TE5B* C2015 10 19.36445 04 16 45.66 -02 06 29.9          18.7 RqEU023H45',
@@ -2356,6 +2394,25 @@ class TestParseMPCObsFormat(TestCase):
                             'lco_discovery' : False
                           }
         params = parse_mpcobs(self.test_lines['cp_!C_h'])
+
+        self.compare_dict(expected_params, params)
+
+    def test_cp_C_h(self):
+        """Test for comet with no number, only provisional designation"""
+        expected_params = { 'body'  : 'PK05Y020',
+                            'flags' : ' ',
+                            'obs_type'  : 'C',
+                            'obs_date'  : datetime(2006, 12,  25, 20, 52, 0, int(0.4800*1e6)),
+                            'obs_ra'    : 24.5505833333333,
+                            'obs_dec'   : -9.87416666666,
+                            'obs_mag'   : 18.9,
+                            'filter'    : 'N',
+                            'astrometric_catalog' : 'UCAC-2',
+                            'site_code' : '130',
+                            'discovery' : False,
+                            'lco_discovery' : False
+                          }
+        params = parse_mpcobs(self.test_lines['cp_C_h'])
 
         self.compare_dict(expected_params, params)
 

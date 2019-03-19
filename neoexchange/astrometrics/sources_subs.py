@@ -468,7 +468,8 @@ def fetch_mpcobs(asteroid, debug=False):
     resulting observation as a list of text observations."""
 
     asteroid = asteroid.strip().replace(' ', '+')
-    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+    html_id = asteroid.replace('/', '%2F')
+    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + html_id
 
     page = fetchpage_and_make_soup(query_url)
     if page is None:
@@ -482,7 +483,7 @@ def fetch_mpcobs(asteroid, debug=False):
 
 # Use a list comprehension to find the 'tmp/<asteroid>.dat' link in among all
 # the other links. Turn any pluses (which were spaces) into underscores.
-    link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_') in x.get('href')]
+    link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_').replace('/', '_') in x.get('href')]
 
     if len(link) == 1:
         # Replace the '..' part with proper URL
@@ -579,8 +580,12 @@ def parse_mpcobs(line):
         return params
     number = str(line[0:5])
     prov_or_temp = str(line[5:12])
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
-    if len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
+    if number.strip() in comet_desig and len(prov_or_temp.strip()) != 0:
+        # Comet with no number
+        body = number.strip() + prov_or_temp.strip()
+    elif len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
         # Number and provisional/temp. designation
         body = number
     elif len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
@@ -745,6 +750,7 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
 
     return best_elements
 
+
 def read_mpcorbit_file(orbit_file):
 
     try:
@@ -758,6 +764,7 @@ def read_mpcorbit_file(orbit_file):
     orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin').rstrip()
 
     return orblines
+
 
 class PackedError(Exception):
     """Raised when an invalid pack code is found"""
@@ -776,8 +783,11 @@ def validate_packcode(packcode):
 
     valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
     if len(packcode) == 5 and ((packcode[0].isalpha() and packcode[1:].isdigit()) or packcode.isdigit()):
+        return True
+    if len(packcode) == 8 and packcode[0] in comet_desig and packcode[1] in valid_cent_codes:
         return True
     if len(packcode) != 7:
         raise PackedError("Invalid packcode length")
@@ -817,6 +827,9 @@ def packed_to_normal(packcode):
 
 # Convert initial letter to century
     cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
+    comet_flag = ''
+    frag_tag = ''
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
@@ -828,23 +841,34 @@ def packed_to_normal(packcode):
         cycle = cycle_mpc_character_code(packcode[0])
         normal_code = str(cycle) + packcode[1:]
         return normal_code
+    elif len(packcode) == 8 and packcode[0] in comet_desig:
+        mpc_cent = cent_codes[packcode[1]]
+        comet_flag = '{}/'.format(packcode[0])
+        packcode = packcode[1:]
     else:
         mpc_cent = cent_codes[packcode[0]]
 
 # Convert next 2 digits to year
     mpc_year = packcode[1:3]
-    no_in_halfmonth = packcode[3] + packcode[6]
-# Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
-# consecutive integer by converting to ASCII code and skipping the non-alphanumerics
+    if not comet_flag or (packcode[-1] != "0" and packcode[-1].upper() == packcode[-1]):
+        no_in_halfmonth = packcode[3] + packcode[6]
+    else:
+        no_in_halfmonth = packcode[3]
+        if packcode[-1] != "0":
+            # if non-0 lower case code at the end of comet designation, then we are following a fragment
+            frag_tag = "-{}".format(packcode[-1].upper())
+
+    # Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
+    # consecutive integer by converting to ASCII code and skipping the non-alphanumerics
     cycle = cycle_mpc_character_code(packcode[4])
     digit = int(packcode[5])
     count = cycle * 10 + digit
-# No digits on the end of the unpacked designation if it's the first loop through
+    # No digits on the end of the unpacked designation if it's the first loop through
     if cycle == 0 and digit == 0:
         count = ''
 
 # Assemble unpacked code
-    normal_code = str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count)
+    normal_code = comet_flag + str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count) + frag_tag
 
     return normal_code
 

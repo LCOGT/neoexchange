@@ -375,7 +375,6 @@ def update_elements_with_findorb(source_dir, dest_dir, filename, site_code, star
         orbfile_fh.close()
         orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin')
         elements_or_status = clean_NEOCP_object(orblines)
-
     return elements_or_status
 
 
@@ -408,9 +407,9 @@ def refit_with_findorb(body_id, site_code, start_time=datetime.utcnow(), dest_di
             if type(status_or_elements) != dict:
                 logger.error("Error running find_orb on the data")
             else:
-
                 new_elements = status_or_elements
                 body = Body.objects.get(pk=body_id)
+                logger.info("{}: FindOrb found an orbital rms of {} using {} observations.".format(body.current_name(), new_elements['orbit_rms'], new_elements['num_obs']))
                 if body.epochofel:
                     time_to_current_epoch = abs(body.epochofel - start_time)
                 else:
@@ -2317,6 +2316,7 @@ def ingest_new_object(orbit_file, obs_file=None, dbg=False):
             save_and_make_revision(body, kwargs)
             msg = "Added new local target %s" % obj_id
     return body, created, msg
+
 
 def update_MPC_obs(obj_id_or_page):
     """

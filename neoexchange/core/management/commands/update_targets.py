@@ -65,7 +65,7 @@ class Command(BaseCommand):
             # If new observations, use them to refit elements with findorb.
             # Will update epoch to date of most recent obs.
             # Will only update if new epoch closer to present than previous.
-            if measures or body.fast_moving:
+            if measures or body.fast_moving or options['target']:
                 refit_with_findorb(body.id, 500)
                 f += 1
                 body.refresh_from_db()
