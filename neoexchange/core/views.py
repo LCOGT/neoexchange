@@ -1375,19 +1375,26 @@ def build_unranked_list_params():
 
 def characterization(request):
 
-    char_filter = request.GET.get("filter", "")
+    char_filter = {
+                    'origin':request.GET.get("origin", None)
+                    }
+    char_filter = {k:v for k,v in char_filter.items() if v}
+
     params = build_characterization_list(char_filter)
+    params['origin'] = ORIGINS
     return render(request, 'core/characterization.html', params)
 
 
 def build_characterization_list(disp=None):
     params = {}
+    unranked = []
     # If we don't have any Body instances, return None instead of breaking
     try:
         # If we change the definition of Characterization Target,
         # also update models.Body.characterization_target()
         char_targets = Body.objects.filter(active=True).exclude(origin='M')
-        unranked = []
+        char_targets = char_targets.filter(**disp)
+
         for body in char_targets:
             try:
                 spectra = PreviousSpectra.objects.filter(body=body)
@@ -1466,11 +1473,7 @@ def build_characterization_list(disp=None):
                 body_dict['dec'] = emp_line[1]
                 body_dict['v_mag'] = emp_line[2]
                 body_dict['motion'] = emp_line[4]
-                if disp:
-                    if disp in body_dict['obs_needed']:
-                        unranked.append(body_dict)
-                else:
-                    unranked.append(body_dict)
+                unranked.append(body_dict)
             except Exception as e:
                 logger.error('Characterization target %s failed on %s' % (body.name, e))
     except Body.DoesNotExist as e:
