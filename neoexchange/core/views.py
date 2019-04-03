@@ -1833,7 +1833,7 @@ def clean_NEOCP_object(page_list):
             # See if this is a local discovery
             provisional_name = line[0:7].rstrip()
             origin = 'M'
-            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM' ]:
+            if provisional_name[0:5] in ['CPTTL', 'LSCTL', 'ELPTL', 'COJTL', 'COJAT', 'LSCAT', 'LSCJM', 'LLZ00' ]:
                 origin = 'L'
             params = {
                 'abs_mag': abs_mag,
