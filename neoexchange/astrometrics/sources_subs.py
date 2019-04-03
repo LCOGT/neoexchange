@@ -1421,6 +1421,7 @@ def make_molecule(params, exp_filter):
         molecule['ag_name'] = ''
         molecule['acquire_mode'] = 'BRIGHTEST'
         molecule['ag_exp_time'] = params.get('ag_exp_time', 10)
+        molecule['acquire_exp_time'] = params.get('ag_exp_time', 10)
         if 'source_type' in params:  # then Sidereal target (use smaller window)
             molecule['acquire_radius_arcsec'] = 5.0
         else:
