@@ -61,7 +61,8 @@ class BodyDetailsTest(FunctionalTest):
 
         testlines = [u'NEOCP DIGEST2 SCORE ' + str(self.body.score),
                      u'NUMBER OF OBSERVATIONS ' + str(self.body.num_obs),
-                     u'ARC LENGTH (DAYS) ' + str(self.body.arc_length)]
+                     u'ARC LENGTH (DAYS) ' + str(round(self.body.arc_length,2)),
+                     u'TIME SINCE LAST OBSERVATION (DAYS) ' + str(round(self.body.not_seen,2))]
         for line in testlines:
             self.check_for_row_in_table('id_followup', line)
 
@@ -127,7 +128,7 @@ class BodyDetailsTest(FunctionalTest):
             self.check_for_row_in_table('id_spectralinfo', line)
 
         expected_tooltip = self.browser.find_element_by_class_name("tooltiptext").get_attribute('innerHTML')
-        tooltips = ['Neese, Asteroid Taxonomy V6.0. (2010).',
+        tooltips = ['Neese, Asteroid Taxonomy V6.0, (2010).',
                     'Visible: Xu (1994), Xu et al. (1995). NIR: DeMeo et al. (2009).'
                     ]
         for tool in tooltips:

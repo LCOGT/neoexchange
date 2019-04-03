@@ -103,10 +103,24 @@ def perturb_elements(orbelems, epoch_mjd, mjd_tt, comet, perturb):
     return p_orbelems, p_epoch_mjd, j
 
 
-def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False, detailed=False):
+def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False):
     """Routine to compute the geocentric or topocentric position, magnitude,
     motion and altitude of an asteroid or comet for a specific date and time
     from a dictionary of orbital elements.
+    OUTPUT:
+    Dictionary of parameters including:
+        'date':           The datetime associated with the coordinates
+        'ra':             Right Ascension (radians)
+        'dec':            Declination (radians)
+        'mag':            Magnitude
+        'mag_dot':        Instantaneous rate of change of Magnitude (Mag/day)
+        'sky_motion':     Total sky motion ("/min)
+        'sky_motion_pa':  Position angle on the sky of the target's motion (degrees East of North)
+        'altitude':       Target's altitude above local horizon (degrees)
+        'southpole_sep':  Angular distance from the South Pole (degrees)
+        'sun_sep':        Angular distance from the Solar position (radians)
+        'earth_obj_dist': Delta, distance between Earth and target (AU)
+
     """
 # Light travel time for 1 AU (in sec)
     tau = 499.004783806
@@ -214,7 +228,7 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
 
     if j != 0:
         logger.error("Perturbing error=%s" % j)
-        return []
+        return {}
 
     r3 = -100.
     delta = 0.0
@@ -334,16 +348,15 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
         # If requested, calculate the effective separation between the RA of object and the sun as seen on the sky.
         # We make simplifying assumptions that more or less balance out, such as the observers are located
         # anywhere on the equator, but can see all the way to the horizon.
-        if detailed is not False:
-            # compute RA/Dec of the Sun
-            sun_coord = S.sla_dcc2s(e_pos_hel * -1)
-            sun_ra = S.sla_dranrm(sun_coord[0])
-            sun_dec = sun_coord[1]
-            # rotate object ra to solar position
-            lon_new = ra - sun_ra
-            lon_new = atan2(sin(lon_new-pi/2) * cos(sun_dec) - tan(dec) * sin(sun_dec), cos(lon_new-pi/2)) + pi/2
-            # convert longitude of object to distance in radians
-            separation = abs(S.sla_drange(lon_new))
+        # compute RA/Dec of the Sun
+        sun_coord = S.sla_dcc2s(e_pos_hel * -1)
+        sun_ra = S.sla_dranrm(sun_coord[0])
+        sun_dec = sun_coord[1]
+        # rotate object ra to solar position
+        lon_new = ra - sun_ra
+        lon_new = atan2(sin(lon_new-pi/2) * cos(sun_dec) - tan(dec) * sin(sun_dec), cos(lon_new-pi/2)) + pi/2
+        # convert longitude of object to distance in radians
+        separation = abs(S.sla_drange(lon_new))
 
         # Calculate magnitude of object
         if p_orbelems['H'] and p_orbelems['G']:
@@ -382,12 +395,20 @@ def compute_ephem(d, orbelems, sitecode, dbg=False, perturb=True, display=False,
     else:
         spd = None
 
-#               0   1   2   3       4           5       6       7
-    emp_line = (d, ra, dec, mag, total_motion, alt_deg, spd, sky_pa)
-    if detailed:
-        return emp_line, mag_dot, separation
+    emp_dict = {'date'          : d,
+                'ra'            : ra,
+                'dec'           : dec,
+                'mag'           : mag,
+                'mag_dot'       : mag_dot,
+                'sky_motion'    : total_motion,
+                'sky_motion_pa' : sky_pa,
+                'altitude'      : alt_deg,
+                'southpole_sep' : spd,
+                'sun_sep'       : separation,
+                'earth_obj_dist': delta,
+                }
 
-    return emp_line
+    return emp_dict
 
 
 def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel, delta, dbg=True):
@@ -432,7 +453,7 @@ def compute_relative_velocity_vectors(obs_pos_hel, obs_vel_hel, obj_pos, obj_vel
 
 def compute_sky_motion(sky_vel, delta, dbg=True):
     """Computes the total motion and Position Angle, along with the RA, Dec
-    components, of an asteroids' sky motion. Motion is in "/min, PA in degrees East of North.
+    components, of an asteroid's sky motion. Motion is in "/min, PA in degrees East of North.
 
     Adapted from the Bill Gray/find_orb routine of the same name."""
 
@@ -472,9 +493,9 @@ def calc_moon_sep(obsdate, obj_ra, obj_dec, site_code):
 def format_emp_line(emp_line, site_code):
 
     # Convert radians for RA, Dec into strings for printing
-    (ra_string, dec_string) = radec2strings(emp_line[1], emp_line[2], ' ')
+    (ra_string, dec_string) = radec2strings(emp_line['ra'], emp_line['dec'], ' ')
     # Format time and print out the overall ephemeris
-    emp_time = datetime.strftime(emp_line[0], '%Y %m %d %H:%M')
+    emp_time = datetime.strftime(emp_line['date'], '%Y %m %d %H:%M')
 
     (site_name, site_long, site_lat, site_hgt) = get_sitepos(site_code)
 
@@ -483,7 +504,7 @@ def format_emp_line(emp_line, site_code):
         geo_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|N/A|N/A|N/A|N/A|N/A|N/A"
 
         formatted_line = geo_row_format % (emp_time, ra_string, dec_string,
-            emp_line[3], emp_line[4], emp_line[7])
+            emp_line['mag'], emp_line['sky_motion'], emp_line['sky_motion_pa'])
 
     else:
         # Get site and mount parameters
@@ -493,10 +514,10 @@ def format_emp_line(emp_line, site_code):
         blk_row_format = "%-16s|%s|%s|%04.1f|%5.2f|%5.1f|%+d|%04.2f|%3d|%+02.2d|%+04d|%s"
 
 # get moon info
-        moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(emp_line[0], emp_line[1], emp_line[2], site_code)
+        moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(emp_line['date'], emp_line['ra'], emp_line['dec'], site_code)
 
 # Compute H.A.
-        ha = compute_hourangle(emp_line[0], site_long, site_lat, site_hgt, emp_line[1], emp_line[2])
+        ha = compute_hourangle(emp_line['date'], site_long, site_lat, site_hgt, emp_line['ra'], emp_line['dec'])
         ha_in_deg = degrees(ha)
 # Check HA is in limits, skip this slot if not
         if ha_in_deg >= ha_pos_limit or ha_in_deg <= ha_neg_limit:
@@ -506,14 +527,14 @@ def format_emp_line(emp_line, site_code):
             ha_string = ha_string[0:6]
 
 # Calculate slot score
-        slot_score = compute_score(emp_line[5], moon_alt, moon_obj_sep, mount_alt_limit)
+        slot_score = compute_score(emp_line['altitude'], moon_alt, moon_obj_sep, mount_alt_limit)
 
 # Calculate the no. of FOVs from the starting position
 #    pointings_sep = S.sla_dsep(emp_line[1], emp_line[2], start_ra, start_dec)
 #    num_fov = int(pointings_sep/ccd_fov)
 
         formatted_line = blk_row_format % (emp_time, ra_string, dec_string,
-            emp_line[3], emp_line[4],  emp_line[7], emp_line[5],
+            emp_line['mag'], emp_line['sky_motion'],  emp_line['sky_motion_pa'], emp_line['altitude'],
             moon_phase, moon_obj_sep, moon_alt, slot_score, ha_string)
 
     line_as_list = formatted_line.split('|')
@@ -553,7 +574,7 @@ def call_compute_ephem(elements, dark_start, dark_end, site_code, ephem_step_siz
         full_emp.append(emp_line)
         ephem_time = ephem_time + timedelta(seconds=step_size_secs)
 
-# Get subset of ephemeris when it's dark and object is up
+    # Get subset of ephemeris when it's dark and object is up
     visible_emp = dark_and_object_up(full_emp, dark_start, dark_end, slot_length, alt_limit)
     emp = []
     for line in visible_emp:
@@ -605,7 +626,12 @@ def read_findorb_ephem(empfile):
                 # Read main ephemeris
                 line = line.strip()
                 chunks = line.split()
-                emp_datetime = datetime(int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3][0:2]), int(chunks[3][3:5]))
+                try:
+                    emp_datetime = datetime(int(chunks[0]), int(chunks[1]), int(chunks[2]), int(chunks[3][0:2]), int(chunks[3][3:5]))
+                except ValueError:
+                    logger.error("Couldn't parse line:")
+                    logger.error(line)
+                    raise ValueError("Error converting to datetime")
                 emp_ra, status = S.sla_dtf2r(chunks[4], chunks[5], chunks[6])
                 if status != 0:
                     logger.error("Error converting RA value")
@@ -680,15 +706,15 @@ def determine_rates_pa(start_time, end_time, elements, site_code):
     # Check for no ephemeris caused by perturbing error
     if not first_frame_emp:
         first_frame_emp = compute_ephem(start_time, elements, site_code, dbg=False, perturb=False, display=True)
-    first_frame_speed = first_frame_emp[4]
-    first_frame_pa = first_frame_emp[7]
+    first_frame_speed = first_frame_emp['sky_motion']
+    first_frame_pa = first_frame_emp['sky_motion_pa']
 
     last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=True, display=True)
     # Check for no ephemeris caused by perturbing error
     if not last_frame_emp:
         last_frame_emp = compute_ephem(end_time, elements, site_code, dbg=False, perturb=False, display=True)
-    last_frame_speed = last_frame_emp[4]
-    last_frame_pa = last_frame_emp[7]
+    last_frame_speed = last_frame_emp['sky_motion']
+    last_frame_pa = last_frame_emp['sky_motion_pa']
 
     logger.debug("Speed range %.2f ->%.2f, PA range %.1f->%.1f" % (first_frame_speed , last_frame_speed, first_frame_pa, last_frame_pa))
     min_rate = min(first_frame_speed, last_frame_speed) - (0.01*min(first_frame_speed, last_frame_speed))
@@ -864,22 +890,25 @@ def dark_and_object_up(emp, dark_start, dark_end, slot_length, alt_limit=30.0, d
     dark_up_emp = []
 
     for x in emp:
-        visible = False
-        emp_time = x[0]
-        current_alt = x[5]
-        try:
-            if isinstance(emp_time, str):
+        if len(x) >= 7:
+            visible = False
+            if isinstance(x, list):
                 emp_time = datetime.strptime(x[0], '%Y %m %d %H:%M')
-            if isinstance(current_alt, str):
                 current_alt = float(x[6])
-            if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= float(alt_limit):
-                visible = True
-                dark_up_emp.append(x)
-        except ValueError:
-            return emp
-        if debug:
-            print(x[0].date(), x[0].time(), (dark_start <= x[0] < dark_end - timedelta(minutes=slot_length)), x[5], alt_limit, visible)
-
+            else:
+                emp_time = x['date']
+                current_alt = x['altitude']
+            try:
+                if (dark_start <= emp_time <= dark_end - timedelta(minutes=slot_length)) and current_alt >= float(alt_limit):
+                    visible = True
+                    dark_up_emp.append(x)
+            except ValueError:
+                return emp
+            if debug:
+                print(emp_time.date(), emp_time.time(), (dark_start <= emp_time < dark_end - timedelta(minutes=slot_length)), current_alt, alt_limit, visible)
+        else:
+            logger.warning("Too short ephemeris encountered: ")
+            logger.warning(x)
     return dark_up_emp
 
 
@@ -1195,7 +1224,7 @@ def get_sitepos(site_code, dbg=False):
     name or a MPC sitecode (FTN, FTS and SQA currently defined).
     Be *REALLY* careful over longitude sign conventions..."""
 
-    site_code = site_code.upper()
+    site_code = str(site_code).upper()
     if site_code == 'F65' or site_code == 'FTN':
         # MPC code for FTN. Positions from JPL HORIZONS, longitude converted from 203d 44' 32.6" East
         # 156d 15' 27.4" W
@@ -1424,10 +1453,18 @@ def atmos_params(airless):
     return temp_k, pres_mb, rel_humid, wavel, tlr
 
 
-def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat,
-        obsvr_hgt, dbg=False):
-    """Calculate Moon's Azimuth, Altitude (returned in radians).
-    No refraction or polar motion is assumed."""
+def moon_alt_az(date, moon_app_ra, moon_app_dec, obsvr_long, obsvr_lat, obsvr_hgt, dbg=False):
+    """Calculate Moon's (or any other object's) Azimuth, Altitude (returned in radians).
+    No refraction or polar motion is assumed.
+
+    Inputs:
+        date: UTC datetime to compute for
+        moon_app_ra: Apparent RA of the Moon (or other object) (radians)
+        moon_app_dec: Apparent Dec of the Moon (or other object) (radians)
+        obsvr_long: Observer's longitude (East +ve; radians)
+        obsvr_lat: Observer's latitude (North +ve; radians)
+        obsvr_hgt: Observer's altitude (meters)
+    """
 
 # No atmospheric refraction...
     airless = True
@@ -1735,7 +1772,7 @@ def comp_FOM(orbelems, emp_line):
         try:
             if orbelems['arc_length'] < 0.01:
                 orbelems['arc_length'] = 0.005
-            FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line[3])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line[6]-60.)**2)/180.))
+            FOM = (exp(orbelems['not_seen']/orbelems['arc_length'])-1.) + (exp(1./emp_line['mag'])-1.) + (0.5*exp((-0.5*(orbelems['score']-100.)**2)/10.)) + (exp(1./orbelems['abs_mag'])-1.) + (exp((-0.5*(emp_line['southpole_sep']-60.)**2)/180.))
         except Exception as e:
             logger.error(e)
             logger.error(str(orbelems))
@@ -1889,9 +1926,16 @@ def compute_sidereal_ephem(ephem_time, elements, site_code):
     az_rad, alt_rad = moon_alt_az(ephem_time, radians(elements['ra']), radians(elements['dec']), site_long, site_lat, site_hgt, dbg=False)
     alt_deg = degrees(alt_rad)
 
-    #               0   1   2   3       4           5       6       7
-    emp_line = (ephem_time, radians(elements['ra']), radians(elements['dec']), elements['vmag'], 0, alt_deg, 0, 0)
-    return emp_line
+    emp_dict = {'date'         : ephem_time,
+                'ra'           : radians(elements['ra']),
+                'dec'          : radians(elements['dec']),
+                'mag'          : elements['vmag'],
+                'sky_motion'   : 0,
+                'sky_motion_pa': 0,
+                'altitude'     : alt_deg,
+                'southpole_sep': 0,
+                }
+    return emp_dict
 
 
 def get_alt_from_airmass(airmass):

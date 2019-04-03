@@ -516,6 +516,16 @@ def default_dark_sky_mags():
 
     return sky_mags
 
+def map_filter_to_wavelength(passband='ip'):
+    '''Maps the given [passband] (defaults to 'ip' for SDSS-i') to a wavelength
+    which is returned as an AstroPy Quantity in angstroms'''
+
+    filter_cwave = { 'U': 3600, 'B': 4300, 'V' : 5500, 'R' : 6500, 'I' : 8200, 'Z' : 9500,
+                    'gp' : 4810, 'rp' : 6170, 'ip' : 7520, 'zp' : 8660, 'w' : 6080 }
+    wavelength = filter_cwave.get(passband, filter_cwave['ip']) * u.angstrom
+
+    return wavelength
+
 def construct_tic_params(instrument, passband='ip'):
     '''Builds and returns the dict of telescope, instrument & CCD parameters ("tic_params")
     for the specified <instrument> (one of {F65-FLOYDS, E10-FLOYDS}) and <passband>
@@ -530,8 +540,6 @@ def construct_tic_params(instrument, passband='ip'):
         Readnoise and pixel size from Andor spec sheet
     '''
 
-    filter_cwave = { 'U': 3600, 'B': 4300, 'V' : 5500, 'R' : 6500, 'I' : 8200, 'Z' : 9500,
-                    'gp' : 4810, 'rp' : 6170, 'ip' : 7520, 'zp' : 8660, 'w' : 6080 }
     flux_janskys = { 'U': 1810, 'B': 4260, 'V' : 3640, 'R' : 3080, 'I' : 2550, 'Z' : 2200,
                      'gp': 3631, 'rp': 3631, 'ip': 3631, 'zp': 3631, 'w' : 3631 }
     sky_mags = default_dark_sky_mags()
@@ -547,7 +555,7 @@ def construct_tic_params(instrument, passband='ip'):
     floyds_read_noise = 3.7
     tic_params = {}
 
-    wavelength = filter_cwave.get(passband, filter_cwave['ip']) * u.angstrom
+    wavelength = map_filter_to_wavelength(passband)
     flux_mag0_Jy = flux_janskys.get(passband, flux_janskys['ip']) * u.Jy
     sky_mag = sky_mags.get(passband, sky_mags['ip'])
     ccd_qe = ccd_qe_percent.get(passband, ccd_qe_percent['ip'])

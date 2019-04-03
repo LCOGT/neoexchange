@@ -42,7 +42,7 @@ from astropy.io import ascii
 
 import astrometrics.site_config as cfg
 from astrometrics.time_subs import parse_neocp_decimal_date, jd_utc2datetime, datetime2mjd_utc, mjd_utc2mjd_tt, mjd_utc2datetime
-from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements
+from astrometrics.ephem_subs import build_filter_blocks, MPC_site_code_to_domes, compute_ephem, perturb_elements, LCOGT_site_codes
 from core.urlsubs import get_telescope_states
 
 logger = logging.getLogger(__name__)
@@ -468,7 +468,8 @@ def fetch_mpcobs(asteroid, debug=False):
     resulting observation as a list of text observations."""
 
     asteroid = asteroid.strip().replace(' ', '+')
-    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + asteroid
+    html_id = asteroid.replace('/', '%2F')
+    query_url = 'https://www.minorplanetcenter.net/db_search/show_object?object_id=' + html_id
 
     page = fetchpage_and_make_soup(query_url)
     if page is None:
@@ -482,7 +483,7 @@ def fetch_mpcobs(asteroid, debug=False):
 
 # Use a list comprehension to find the 'tmp/<asteroid>.dat' link in among all
 # the other links. Turn any pluses (which were spaces) into underscores.
-    link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_') in x.get('href')]
+    link = [x.get('href') for x in refs if 'tmp/'+asteroid.replace('+', '_').replace('/', '_') in x.get('href')]
 
     if len(link) == 1:
         # Replace the '..' part with proper URL
@@ -550,10 +551,13 @@ def translate_catalog_code(code_or_name):
                   "T" : "URAT-2",
                   "U" : "GAIA-DR1",
                   "V" : "GAIA-DR2",
+                  "W" : "UCAC5",
                   }
     catalog_or_code = ''
-    if len(code_or_name) == 1:
+    if len(code_or_name.strip()) == 1:
         catalog_or_code = catalog_codes.get(code_or_name, '')
+        if not catalog_or_code:
+            logger.warning("{} is not in our accepted list of astrometric catalog codes.".format(code_or_name))
     else:
         for code, catalog in catalog_codes.items():
             if code_or_name == catalog:
@@ -566,8 +570,8 @@ def parse_mpcobs(line):
     """Parse a MPC format 80 column observation record line, returning a
     dictionary of values or an empty dictionary if it couldn't be parsed
 
-    Be ware of potential confusion between obs_type of 'S' and 's'. This
-    enforced by MPC, see
+    Be aware of potential confusion between obs_type of 'S' and 's'. This
+    is enforced by MPC, see
     https://www.minorplanetcenter.net/iau/info/SatelliteObs.html
     """
 
@@ -579,12 +583,16 @@ def parse_mpcobs(line):
         return params
     number = str(line[0:5])
     prov_or_temp = str(line[5:12])
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
-    if len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
-        # Number and provisional/temp. desigination
+    if number.strip() in comet_desig and len(prov_or_temp.strip()) != 0:
+        # Comet with no number
+        body = number.strip() + prov_or_temp.strip()
+    elif len(number.strip()) != 0 and len(prov_or_temp.strip()) != 0:
+        # Number and provisional/temp. designation
         body = number
     elif len(number.strip()) == 0 or len(prov_or_temp.strip()) != 0:
-        # No number but provisional/temp. desigination
+        # No number but provisional/temp. designation
         body = prov_or_temp
     else:
         body = number
@@ -607,6 +615,19 @@ def parse_mpcobs(line):
     except ValueError:
         obs_mag = None
 
+    site_code = str(line[-3:])
+
+    discovery = False
+    lco_discovery = False
+    if line[12] == '*':
+        discovery = True
+        if site_code in LCOGT_site_codes():
+            lco_discovery = True
+        if flag == ' ':
+            flag = '*'
+        else:
+            flag = '*,' + flag
+
     if obs_type == 'C' or obs_type == 'S' or obs_type == 'A':
         # Regular CCD observations, first line of satellite observations or
         # observations that have been rotated from B1950 to J2000 ('A')
@@ -618,7 +639,9 @@ def parse_mpcobs(line):
                    'obs_mag'  : obs_mag,
                    'filter'   : filter,
                    'astrometric_catalog' : translate_catalog_code(line[71]),
-                   'site_code' : str(line[-3:])
+                   'site_code' : site_code,
+                   'discovery' : discovery,
+                   'lco_discovery' : lco_discovery
                  }
         ptr = 1
         ra_dec_string = line[32:56]
@@ -630,6 +653,9 @@ def parse_mpcobs(line):
     elif obs_type.upper() == 'R':
         # Radar observations, skip
         logger.debug("Found radar observation, skipping")
+    elif obs_type.upper() == 'M':
+        # Micrometer observations, skip
+        logger.debug("Found micrometer observation, skipping")
     elif obs_type == 's':
         # Second line of satellite-based observation, stuff whole line into
         # 'extrainfo' and parse what we can (so we can identify the corresponding
@@ -728,6 +754,21 @@ def parse_mpcorbit(page, epoch_now=None, dbg=False):
     return best_elements
 
 
+def read_mpcorbit_file(orbit_file):
+
+    try:
+        orbfile_fh = open(orbit_file, 'r')
+    except IOError:
+        logger.warn("File %s not found" % orbit_file)
+        return None
+
+    orblines = orbfile_fh.readlines()
+    orbfile_fh.close()
+    orblines[0] = orblines[0].replace('Find_Orb  ', 'NEOCPNomin').rstrip()
+
+    return orblines
+
+
 class PackedError(Exception):
     """Raised when an invalid pack code is found"""
 
@@ -745,8 +786,11 @@ def validate_packcode(packcode):
 
     valid_cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
     valid_half_months = 'ABCDEFGHJKLMNOPQRSTUVWXY'
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
-    if len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
+    if len(packcode) == 5 and ((packcode[0].isalpha() and packcode[1:].isdigit()) or packcode.isdigit()):
+        return True
+    if len(packcode) == 8 and packcode[0] in comet_desig and packcode[1] in valid_cent_codes:
         return True
     if len(packcode) != 7:
         raise PackedError("Invalid packcode length")
@@ -786,37 +830,54 @@ def packed_to_normal(packcode):
 
 # Convert initial letter to century
     cent_codes = {'I' : 18, 'J' : 19, 'K' : 20}
+    comet_flag = ''
+    frag_tag = ''
+    comet_desig = ['C', 'P', 'D', 'X', 'A']
 
     if not validate_packcode(packcode):
         raise PackedError("Invalid packcode %s" % packcode)
         return None
+    elif len(packcode) == 5 and packcode.isdigit():
+        # Just a number
+        return str(int(packcode))
     elif len(packcode) == 5 and packcode[0].isalpha() and packcode[1:].isdigit():
         cycle = cycle_mpc_character_code(packcode[0])
         normal_code = str(cycle) + packcode[1:]
         return normal_code
+    elif len(packcode) == 8 and packcode[0] in comet_desig:
+        mpc_cent = cent_codes[packcode[1]]
+        comet_flag = '{}/'.format(packcode[0])
+        packcode = packcode[1:]
     else:
         mpc_cent = cent_codes[packcode[0]]
 
 # Convert next 2 digits to year
     mpc_year = packcode[1:3]
-    no_in_halfmonth = packcode[3] + packcode[6]
-# Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
-# consecutive integer by converting to ASCII code and skipping the non-alphanumerics
+    if not comet_flag or (packcode[-1] != "0" and packcode[-1].upper() == packcode[-1]):
+        no_in_halfmonth = packcode[3] + packcode[6]
+    else:
+        no_in_halfmonth = packcode[3]
+        if packcode[-1] != "0":
+            # if non-0 lower case code at the end of comet designation, then we are following a fragment
+            frag_tag = "-{}".format(packcode[-1].upper())
+
+    # Turn the character of the cycle count, which runs 0--9, A--Z, a--z into a
+    # consecutive integer by converting to ASCII code and skipping the non-alphanumerics
     cycle = cycle_mpc_character_code(packcode[4])
     digit = int(packcode[5])
     count = cycle * 10 + digit
-# No digits on the end of the unpacked designation if it's the first loop through
+    # No digits on the end of the unpacked designation if it's the first loop through
     if cycle == 0 and digit == 0:
         count = ''
 
 # Assemble unpacked code
-    normal_code = str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count)
+    normal_code = comet_flag + str(mpc_cent) + mpc_year + ' ' + no_in_halfmonth + str(count) + frag_tag
 
     return normal_code
 
 
 def cycle_mpc_character_code(char):
-    """Convert MPC character code into a number 0--9, A--Z, a--z and return interger"""
+    """Convert MPC character code into a number 0--9, A--Z, a--z and return integer"""
     cycle = ord(char)
     if cycle >= ord('a'):
         cycle = cycle - 61
@@ -900,7 +961,7 @@ def parse_goldstone_chunks(chunks, dbg=False):
 
 
 def fetch_goldstone_page():
-    """Fetches the Goldsotne page of radar targets, returning a BeautifulSoup
+    """Fetches the Goldstone page of radar targets, returning a BeautifulSoup
     page"""
 
     goldstone_url = 'http://echo.jpl.nasa.gov/asteroids/goldstone_asteroid_schedule.html'
@@ -913,8 +974,8 @@ def fetch_goldstone_page():
 def fetch_goldstone_targets(page=None, dbg=False):
     """Fetches and parses the Goldstone list of radar targets, returning a list
     of object id's for the current year.
-    Takes either a BeautifulSoup page version of the Arecibo target page (from
-    a call to fetch_arecibo_page() - to allow  standalone testing) or  calls
+    Takes either a BeautifulSoup page version of the Goldstone target page (from
+    a call to fetch_goldstone_page() - to allow  standalone testing) or  calls
     this routine and then parses the resulting page.
     """
 
@@ -1009,43 +1070,47 @@ def fetch_arecibo_targets(page=None):
         if len(tables) != 2 and len(tables) != 3 :
             logger.warning("Unexpected number of tables found in Arecibo page (Found %d)" % len(tables))
         else:
-            targets_table = tables[-1]
-            rows = targets_table.find_all('tr')
-            if len(rows) > 1:
-                for row in rows[1:]:
-                    items = row.find_all('td')
-                    target_object = items[0].text
-                    target_object = target_object.strip()
-                    # See if it is the form "(12345) 2008 FOO". If so, extract
-                    # just the asteroid number
-                    if '(' in target_object and ')' in target_object:
-                        # See if we have parentheses around the number or around the
-                        # temporary desigination.
-                        # If the first character in the string is a '(' we have the first
-                        # case and should split on the closing ')' and take the 0th chunk
-                        # If the first char is not a '(', then we have parentheses around
-                        # the temporary desigination and we should split on the '(', take
-                        # the 0th chunk and strip whitespace
-                        split_char = ')'
-                        if target_object[0] != '(':
-                            split_char = '('
-                        target_object = target_object.split(split_char)[0].replace('(', '')
+            for targets_table in tables[1:]:
+                rows = targets_table.find_all('tr')
+                if len(rows) > 1:
+                    for row in rows[1:]:
+                        items = row.find_all('td')
+                        target_object = items[0].text
                         target_object = target_object.strip()
-                    else:
-                        # No parentheses, either just a number or a number and name
-                        chunks = target_object.split(' ')
-                        if len(chunks) >= 2:
-                            if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
-                                target_object = chunks[0]
-                            else:
-                                target_object = chunks[0] + " " + chunks[1]
+                        # See if it is the form "(12345) 2008 FOO". If so, extract
+                        # just the asteroid number
+                        if '(' in target_object and ')' in target_object:
+                            # See if we have parentheses around the number or around the
+                            # temporary desigination.
+                            # If the first character in the string is a '(' we have the first
+                            # case and should split on the closing ')' and take the 0th chunk
+                            # If the first char is not a '(', then we have parentheses around
+                            # the temporary desigination and we should split on the '(', take
+                            # the 0th chunk and strip whitespace
+                            split_char = ')'
+                            if target_object[0] != '(':
+                                split_char = '('
+                            target_object = target_object.split(split_char)[0].replace('(', '')
+                            target_object = target_object.strip()
                         else:
-                            logger.warning("Unable to parse Arecibo target %s" % target_object)
-                            target_object = None
-                    if target_object:
-                        targets.append(target_object)
-            else:
-                logger.warning("No targets found in Arecibo page")
+                            # No parentheses, either just a number or a number and name
+                            chunks = target_object.split(' ')
+                            if len(chunks) >= 2:
+                                if chunks[0].isalpha() and chunks[1].isalpha():
+                                    logger.warning("All text object found: " + target_object)
+                                    target_object = None
+                                else:
+                                    if chunks[1].replace('-', '').isalpha() and len(chunks[1]) != 2:
+                                        target_object = chunks[0]
+                                    else:
+                                        target_object = chunks[0] + " " + chunks[1]
+                            else:
+                                logger.warning("Unable to parse Arecibo target %s" % target_object)
+                                target_object = None
+                        if target_object:
+                            targets.append(target_object)
+                else:
+                    logger.warning("No targets found in Arecibo page")
     return targets
 
 
@@ -1191,6 +1256,7 @@ def fetch_yarkovsky_targets(yark_targets):
     yark_target_list = []
 
     for obj_id in yark_targets:
+        obj_id = obj_id.strip()
         if '_' in obj_id:
             obj_id = str(obj_id).replace('_', ' ')
         yark_target_list.append(obj_id)
@@ -1825,64 +1891,61 @@ def parse_binzel_data(tax_text=None):
 def parse_taxonomy_data(tax_text=None):
     """Parses the online taxonomy database for targets and pulls a list
     of these targets back.
+    PDS table has 125 characters/line (chunks = 16 once names/notes removed)
+    SDSS table has 117 characters/line (chunks = 6 once names/extra removed)
     """
 
     tax_text = str(tax_text).replace("\r", '\n').split("\n")
     tax_text = list(filter(None, tax_text))
-    # print(len(tax_text))
+
     tax_scheme = ['T',
                 'Ba',
                 'Td',
                 'H',
                 'S',
                 'B',
-                '3T/3B',
+                ['3T', '3B'],
                 'BD',
                 ]
     tax_table = []
+    if len(tax_text[0]) == 117:
+            offset = -1
+    else:
+        offset = 0
     for line in tax_text:
-        name = line[8:25]
-        end = line[103:]
-        line = line[:8]+line[26:104]
+        number = line[:8+offset].strip()
+        name = line[8+offset:25+offset].strip()
+        prov = line[25+offset:37+offset].strip()
+        end = line[103+offset*44:].strip()
+        line = line[36+offset:103+offset*44]
         chunks = line.split(' ')
         chunks = list(filter(None, chunks))
-        if chunks[0] != '':
-            if chunks[1] != '-':
-                chunks[1] = chunks[1]+' '+chunks[2]
-                del chunks[2]
-            chunks.insert(1, name)
-            if ',' in chunks[18]:
-                chunks[18] = chunks[18][:2]
-                chunks.insert(19, chunks[18][3:])
-            # print(chunks[0],len(chunks))
-            # parse Object ID=Object Number or Provisional designation if no number
-            if chunks[0] != '0':
-                obj_id = (chunks[0])
-            else:
-                obj_id = (chunks[2])
-            # Build Taxonomy reference table. This is clunky. Better to search table for matching values first?
-            index = range(1, 7)
-            index = [2*x+1 for x in index]+[17]
+        # parse Object ID=Object Number or Provisional designation if no number
+        if number != '0':
+            obj_id = number
+        else:
+            obj_id = prov
+        # Build Taxonomy reference table.
+        if len(chunks) == 6:
+            out = '{}|{}|{}'.format(chunks[1], chunks[2], chunks[5])
+            row = [obj_id, chunks[0], 'Sd', "SDSS", out]
+            tax_table.append(row)
+        elif len(chunks) == 16:
+            index = range(0, 8)
+            index = [2*x for x in index]+[13]
             for i in index:
+                out = ' '
                 if chunks[i] != '-':
-                    if end[0] != '-':
-                        chunks[i+1] = chunks[i+1] + "|" + end
-                    row = [obj_id, chunks[i], tax_scheme[(i-1)//2-1], "PDS6", chunks[i+1]]
+                    if i == 12 or i == 13:
+                        scheme = tax_scheme[6][i-12]
+                    else:
+                        if end[0] != '-':
+                            out = chunks[i+1] + "|" + end
+                        else:
+                            out = chunks[i+1]
+                        scheme = tax_scheme[i//2]
+                    row = [obj_id, chunks[i], scheme, "PDS6", out]
                     tax_table.append(row)
-            if chunks[15] != '-':
-                if end[0] != '-':
-                    out = end
-                else:
-                    out = ' '
-                row = [obj_id, chunks[15], "3T", "PDS6", out]
-                tax_table.append(row)
-            if chunks[16] != '-':
-                if end[0] != '-':
-                    out = end
-                else:
-                    out = ' '
-                row = [obj_id, chunks[16], "3B", "PDS6", out]
-                tax_table.append(row)
     return tax_table
 
 

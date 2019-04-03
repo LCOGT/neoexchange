@@ -136,7 +136,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('12', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
 
@@ -265,7 +265,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('12', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
 
@@ -334,7 +334,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('12', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
 
@@ -480,7 +480,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('12', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
         vis = self.browser.find_element_by_id('id_visibility_row').find_element_by_class_name('kv-value').text
@@ -599,7 +599,7 @@ class ScheduleObservations(FunctionalTest):
         slot_length = self.browser.find_element_by_id('id_slot_length').get_attribute('value')
         self.assertIn('22.5', slot_length)
         num_exp = self.browser.find_element_by_id('id_no_of_exps_row').find_element_by_class_name('kv-value').text
-        self.assertIn('12', num_exp)
+        self.assertIn('14', num_exp)
         exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
         self.assertIn('60.0', exp_length)
         moon_sep = self.browser.find_element_by_id('id_moon_row').find_element_by_class_name('kv-value').text
