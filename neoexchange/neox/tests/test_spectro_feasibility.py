@@ -79,8 +79,8 @@ class SpectroscopicFeasibility(FunctionalTest):
         self.assertIn('Dark', [option.text for option in moon_choices.options])
 
         moon_choices.select_by_visible_text('Dark')
-        self.browser.implicitly_wait(5)
-        magbox.send_keys(Keys.ENTER)
+        with self.wait_for_page_load(timeout=10):
+            magbox.send_keys(Keys.ENTER)
 
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
@@ -101,7 +101,8 @@ class SpectroscopicFeasibility(FunctionalTest):
         moon_choices.select_by_visible_text('Bright')
         magbox = self.get_item_input_box('id_magnitude')
         calc_button = self.browser.find_element_by_id('id_submit')
-        calc_button.click()
+        with self.wait_for_page_load(timeout=10):
+            calc_button.click()
 
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
@@ -122,8 +123,8 @@ class SpectroscopicFeasibility(FunctionalTest):
         moon_choices.select_by_visible_text('Bright')
         airmassbox = self.get_item_input_box_and_clear('id_airmass')
         airmassbox.send_keys('2.0')
-        calc_button = self.browser.find_element_by_id('id_submit')
-        calc_button.click()
+        with self.wait_for_page_load(timeout=10):
+            airmassbox.send_keys(Keys.ENTER)
 
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
