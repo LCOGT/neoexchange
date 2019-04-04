@@ -168,7 +168,21 @@
                     {% if data.snr %}
                     <tr id="id_snr">
                         <td class="kv-key">SNR</td>
-                        <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                        {% if data.snr > 1500 and data.spectroscopy%}
+                            <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded"> {{ data.snr|floatformat:1 }} </span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Target Might Saturate!</u>
+                                <br>Consider Reducing Exposure Time <br></span></div></td></tr></table></td>
+                        {% else %}
+                            {% if data.snr < 10 and data.spectroscopy%}
+                                <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                    <span class="warning msgpadded"> {{ data.snr|floatformat:1 }} </span>
+                                    <span class="tooltiptext" style="width: 150px;"><u>Target Very Faint!</u>
+                                    <br>Consider Increasing Exposure Time <br></span></div></td></tr></table></td>
+                            {% else %}
+                                <td class="kv-value">{{ data.snr|floatformat:1 }}</td>
+                            {% endif %}
+                        {% endif %}
                     </tr>
                     {% endif %}
                     <tr id="id_window">
