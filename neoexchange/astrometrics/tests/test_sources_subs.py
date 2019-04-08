@@ -384,6 +384,9 @@ class TestFetchGoldstoneTargets(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page.html'), 'r')
         self.test_goldstone_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page_v2.html'), 'r')
+        self.test_goldstone_page_v2 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
 
         self.maxDiff = None
 
@@ -451,6 +454,46 @@ class TestFetchGoldstoneTargets(TestCase):
                              '433']
 
         targets = fetch_goldstone_targets(self.test_goldstone_page)
+
+        self.assertEqual(expected_targets, targets)
+
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_targets_with_extra(self):
+        MockDateTime.change_datetime(2019, 4, 8, 2, 0, 0)
+        expected_targets = [ '163081',
+                             '522684',
+                             '2008 HS3',
+                             '2018 VX8',
+                             '68950',
+                             '66391',
+                             '2011 HP',
+                             '441987',
+                             '494999',
+                             '10145',
+                             '293054',
+                             '2010 PK9',
+                             '2005 CL7',
+                             '454094',
+                             '153814',
+                             '141593',
+                             '66146',
+                             '1620',
+                             '237805',
+                             '467317',
+                             '2100',
+                             '297418',
+                             '2010 CO1',
+                             '1998 FF14',
+                             '162082',
+                             '2015 JD1',
+                             '2010 JG',
+                             '481394',
+                             '2011 YS62',
+                             '2011 WN15',
+                             '264357',
+                             '216258']
+
+        targets = fetch_goldstone_targets(self.test_goldstone_page_v2)
 
         self.assertEqual(expected_targets, targets)
 
