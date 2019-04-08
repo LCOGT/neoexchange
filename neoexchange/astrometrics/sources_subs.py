@@ -1001,6 +1001,9 @@ def fetch_goldstone_targets(page=None, dbg=False):
             in_objects = True
         else:
             if in_objects is True:
+                if line.lstrip()[0:4].isdigit() is False:
+                    # Text comments in the table..
+                    continue
                 # Look for malformed comma-separated dates in the first part of
                 # the line and convert the first occurence to hyphens before
                 # splitting.
