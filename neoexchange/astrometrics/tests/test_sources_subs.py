@@ -1253,6 +1253,13 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_probably_not_real_object(self):
+        items = [' SWAN was probably not a real object (Dec. 9.68 UT)\n']
+        expected = ['SWAN', 'doesnotexist' , '', '(Dec. 9.68 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
     def test_non_neo(self):
 
         items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
@@ -1368,11 +1375,11 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
-    def test_probably_not_real_object(self):
-        items = [' SWAN was probably not a real object (Dec. 9.68 UT)\n']
-        expected = ['SWAN', '' , '' '(Dec. 9.68 UT)']
+    def test_remove_parentheses(self):
+        items = [' (455176) = A10c9Hv (Feb. 15.79 UT)\n']
+        expected = [u'A10c9Hv', '455176', '', '(Feb. 15.79 UT)']
 
-        crossmatch = parse_previous_NEOCP_id(items, dbg=True)
+        crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
 

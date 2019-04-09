@@ -136,7 +136,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         chunks = items[0].split()
         none_id = ''
         body = chunks[0]
-        if chunks[1].find('does') >= 0:
+        if chunks[1].find('does') >= 0 or ('not' in chunks and 'real' in chunks):
             none_id = 'doesnotexist'
         elif chunks[0].find('Comet') >= 0:
             body = chunks[4]
@@ -153,6 +153,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
                 middle = chunks.index('=')
                 body = chunks[middle+1].rstrip()
                 none_id = ' '.join(chunks[:middle]).rstrip()
+        none_id = none_id.replace('(', '').replace(')', '')
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
         if dbg: print("3")
