@@ -15,6 +15,7 @@ import os
 from glob import glob
 from datetime import datetime, timedelta, date
 from math import floor, ceil, degrees, radians, pi, acos
+from astropy import units as u
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
@@ -989,10 +990,26 @@ def schedule_check(data, body, ok_to_schedule=True):
         except MagRangeError:
             slot_length = 60
             ok_to_schedule = False
-    snr = None
 
+    # determine lunar position
+    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
+    min_lunar_dist = data.get('min_lunar_dist', 30)
+    if moon_phase <= .25:
+        moon_phase_code = 'D'
+    elif moon_phase <= .75:
+        moon_phase_code = 'G'
+    else:
+        moon_phase_code = 'B'
+
+    # Calculate slot length, exposure time, SNR
+    snr = None
+    saturated = None
     if spectroscopy:
-        new_mag, new_passband, snr = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'])
+        snr_params = {'airmass': max_airmass,
+                      'slit_width': float(filter_pattern[5:8])*u.arcsec,
+                      'moon_phase' : moon_phase_code
+                      }
+        new_mag, new_passband, snr, saturated = calc_asteroid_snr(magnitude, 'V', data['exp_length'], instrument=data['instrument_code'], params=snr_params)
         exp_count = data['exp_count']
         exp_length = data.get('exp_length', 1)
         slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
@@ -1020,10 +1037,6 @@ def schedule_check(data, body, ok_to_schedule=True):
         typical_seeing = 3.0
     else:
         typical_seeing = 2.0
-
-    # determine lunar position
-    moon_alt, moon_obj_sep, moon_phase = calc_moon_sep(dark_midpoint, ra, dec, data['site_code'])
-    min_lunar_dist = data.get('min_lunar_dist', 30)
 
     # get ipp value
     ipp_value = data.get('ipp_value', 1.00)
@@ -1101,6 +1114,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'period' : period,
         'jitter' : jitter,
         'snr' : snr,
+        'saturated' : saturated,
         'spectroscopy' : spectroscopy,
         'calibs' : data.get('calibs', ''),
         'instrument_code' : data['instrument_code'],
@@ -1321,7 +1335,7 @@ def feasibility_check(data, body):
         spectral_type = 'Mean'
     else:
         spectral_type = 'Solar'
-    data['new_mag'], data['new_passband'], data['snr'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
+    data['new_mag'], data['new_passband'], data['snr'], data['saturated'] = calc_asteroid_snr(data['magnitude'], ast_mag_bandpass, data['exp_length'], instrument=data['instrument_code'], params=snr_params, taxonomy=spectral_type)
     calibs = data.get('calibs', 'both')
     slot_length = determine_spectro_slot_length(data['exp_length'], calibs)
     slot_length /= 60.0
