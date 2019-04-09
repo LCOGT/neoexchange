@@ -1043,6 +1043,7 @@ class SNRTestCase(TestCase):
                                 'wave_scale' : 3.51*(u.angstrom/u.pixel),
                                 'fwhm' : 1.0 * u.arcsec,
                                 'slit_width' : 2.0 * u.arcsec,
+                                'gain'       : 2.0 * u.photon / u.count,
                               }
         self.wht_tic_params = { 
                                 'sky_mag'   : 20.0,
@@ -1058,6 +1059,7 @@ class SNRTestCase(TestCase):
                                 'wave_scale' : 121.0*(u.angstrom/u.mm)*(15*u.micron).to(u.mm)/u.pixel,
                                 'fwhm' : 1.0 * u.arcsec,
                                 'slit_width' : 3.0 * u.arcsec,
+                                'gain'       : 2.0 * u.photon / u.count,
                               }
 
 
@@ -1305,7 +1307,7 @@ class TestComputeFloydsSNR(SNRTestCase):
 
         expected_snr = 5.41718245
 
-        snr = compute_floyds_snr(mag_i, exp_time, self.wht_tic_params, emulate_signal=True)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.wht_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -1319,7 +1321,7 @@ class TestComputeFloydsSNR(SNRTestCase):
 
         expected_snr = 4.47669678294
 
-        snr = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -1337,7 +1339,7 @@ class TestComputeFloydsSNR(SNRTestCase):
 
         expected_snr = 12.84996700
 
-        snr = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -1351,7 +1353,7 @@ class TestComputeFloydsSNR(SNRTestCase):
 
         expected_snr = 23.37279701
 
-        snr = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -1366,7 +1368,7 @@ class TestComputeFloydsSNR(SNRTestCase):
 
         expected_snr = 20.62739182
 
-        snr = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
+        snr, sat = compute_floyds_snr(mag_i, exp_time, self.ftn_tic_params, emulate_signal=True)
 
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -1564,9 +1566,9 @@ class TestCalcAsteroidSNR(SNRTestCase):
         exp_time = 300
         spectrograph = 'F65-FLOYDS'
 
-        expected_mag = mag_V - 0.39
-        expected_passband = 'ip'
-        expected_snr = 324.5039962191117
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 273.31114168039534
 
         mag, new_passband, snr = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph)
 
@@ -1581,9 +1583,9 @@ class TestCalcAsteroidSNR(SNRTestCase):
         exp_time = 300
         spectrograph = 'E10-FLOYDS'
 
-        expected_mag = mag_V - 0.39
-        expected_passband = 'ip'
-        expected_snr = 216.37029315891593
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 273.11891966088837
 
         mag, new_passband, snr = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph)
 
@@ -1599,9 +1601,9 @@ class TestCalcAsteroidSNR(SNRTestCase):
         spectrograph = 'F65-FLOYDS'
         params = {'moon_phase' : 'G'}
 
-        expected_mag = mag_V - 0.39
-        expected_passband = 'ip'
-        expected_snr = 43.1044168884843
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 34.85353763673913
 
         mag, new_passband, snr = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
 
@@ -1617,9 +1619,9 @@ class TestCalcAsteroidSNR(SNRTestCase):
         spectrograph = 'F65-FLOYDS'
         params = {'moon_phase' : 'G', 'airmass' : 2.0}
 
-        expected_mag = mag_V - 0.39
-        expected_passband = 'ip'
-        expected_snr = 41.8965892271482
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 32.91013392758556
 
         mag, new_passband, snr = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
 
