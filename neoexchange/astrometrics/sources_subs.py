@@ -130,7 +130,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
 
     ast = compile('^\s+A/\d{4}')
     if len(items) == 1:
-        if dbg: print("1")
+        if dbg: print("1 item found")
         # Is of the form "<foo> does not exist" or "<foo> was not confirmed". But can
         # now apparently include comets...
         chunks = items[0].split()
@@ -156,7 +156,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         none_id = none_id.replace('(', '').replace(')', '')
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
-        if dbg: print("3")
+        if dbg: print("3 items found")
         # Is of the form "<foo> = <bar>(<date> UT)"
         if items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
             if items[1].string is not None:
@@ -210,6 +210,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         crossmatch = [provid, newid, mpec, date]
     elif len(items) == 5:
         # Is of the form "<foo> = <bar> (date UT) [see MPEC<x>]"
+        if dbg: print("5 items found")
         newid = str(items[0]).lstrip()+items[1].string.strip()
         provid_date = items[2].split()
         provid = provid_date[1]
