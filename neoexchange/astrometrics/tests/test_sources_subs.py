@@ -1338,6 +1338,43 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_new_with_mpec(self):
+        items = [' 2006 GC = P10MSkj (Apr. 7.98 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19G75.html"><i>MPEC</i> 2019-G75</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10MSkj', u'2006 GC', u'MPEC 2019-G75', u'(Apr. 7.98 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch(self):
+        items = ['ZTF02tx = C075WX1 (Apr. 8.66 UT)\n']
+        expected = [u'C075WX1', 'ZTF02tx', '', '(Apr. 8.66 UT)']
+ 
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch2(self):
+        items = [' 2019 GR',  BeautifulSoup('<sub>3</sub>', "html.parser").sub, ' = P10Mrzv (Apr. 8.96 UT)\n']
+        expected = [u'P10Mrzv', '2019 GR3', '', '(Apr. 8.96 UT)']
+ 
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch3(self):
+        items = [' 2017 QE = P10MWVQ (Apr. 7.90 UT)\n']
+        expected = [u'P10MWVQ', '2017 QE', '', '(Apr. 7.90 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_probably_not_real_object(self):
+        items = [' SWAN was probably not a real object (Dec. 9.68 UT)\n']
+        expected = ['SWAN', '' , '' '(Dec. 9.68 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items, dbg=True)
+        self.assertEqual(expected, crossmatch)
+
 
 class TestParseNEOCP(TestCase):
 
