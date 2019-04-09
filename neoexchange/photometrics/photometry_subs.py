@@ -15,7 +15,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 """
 
-from math import sqrt, log10, sin, cos, exp, acos, radians, degrees
+from math import sqrt, log10, sin, cos, exp, acos, radians, degrees, erf, log
 import logging
 
 from astropy import units as u
@@ -492,16 +492,17 @@ def instrument_throughput(tic_params):
     return throughput
 
 
-def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=False):
+def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=True, emulate_signal=False):
     """Compute the per-pixel SNR for FLOYDS based on the passed SDSS/PS-i'
     magnitude (mag_i) for the given exposure time <exp_time>.
     The parameters that are also needed are passed in the <tic_params> dictionary.
-    Not included is the (neglibile) dark current"""
+    Not included is the (negligible) dark current"""
 
     # imaging = tic_params.get('imaging', False)
 
     # Photons per second from the source
     m_0 = compute_photon_rate(mag_i, tic_params, emulate_signal)
+
     eff_area = calculate_effective_area(tic_params, dbg)
     signal = m_0 * (exp_time * u.s) * eff_area
 
@@ -527,15 +528,27 @@ def compute_floyds_snr(mag_i, exp_time, tic_params, dbg=False, emulate_signal=Fa
         print("Slit loss fraction=", vignette)
 
     signal2 = signal * tic_params['wave_scale'] * vignette
+    # Disperse signal across FWHM in spacial direction and determine peak counts in central pixel
+    frac_in_single_pix = erf(sqrt(log(2))/seeing.value)
+    peak_counts = signal2 / tic_params['gain'] * frac_in_single_pix
     if dbg:
         print('Object (photons/pixel-step-in-wavelength)=', signal2)
+        print('Object (counts/pixel)=', peak_counts)
+        print('Proportion of light in single central pixel =', frac_in_single_pix)
+
     noise = signal2.value + seeing.value*(sky2.value + tic_params.get('read_noise', 0.0)**2)
     noise = sqrt(noise)
     snr = signal2.value / noise
     if dbg:
         print('SNR/pixel=', snr)
 
-    return snr
+    # Determine from peak counts if part of the spectrum will saturate
+    if peak_counts.value > 55000:
+        saturated = True
+    else:
+        saturated = False
+
+    return snr, saturated
 
 
 def default_dark_sky_mags():
@@ -588,7 +601,7 @@ def construct_tic_params(instrument, passband='ip'):
     grating_eff_percent = {'U' :  2.6,  'B' : 15.5, 'V' : 60.0, 'R' : 84.0, 'I' : 87.5, 'Z' : 82.5,
                            'gp' : 33.5, 'rp' : 78.0, 'ip': 87.0, 'zp': 85.5, 'w' : 76.5}
 
-    ft_area = 2.84*u.meter**2
+    ft_area = 2.574*u.meter**2
     floyds_read_noise = 3.7
     tic_params = {}
 
@@ -616,7 +629,8 @@ def construct_tic_params(instrument, passband='ip'):
                        'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
                        'wave_scale' : 3.51*(u.angstrom/u.pixel),
                        'fwhm' : 1.3 * u.arcsec,
-                       'slit_width' : 2.0 * u.arcsec,
+                       'slit_width' : 6.0 * u.arcsec,
+                       'gain'       : 2.0 * u.photon / u.count,
                      }
     elif instrument.upper() == 'E10-FLOYDS':
         tic_params = {
@@ -634,8 +648,8 @@ def construct_tic_params(instrument, passband='ip'):
                        'pixel_scale': 24.96*(u.arcsec/u.mm)*(13.5*u.micron).to(u.mm)/u.pixel,
                        'wave_scale' : 3.51*(u.angstrom/u.pixel),
                        'fwhm' : 1.7 * u.arcsec,
-                       'slit_width' : 2.0 * u.arcsec,
-                       'true_vs_pred' : 0.5
+                       'slit_width' : 6.0 * u.arcsec,
+                       'gain'       : 2.0 * u.photon / u.count,
                      }
     # Calculate and store instrument efficiency
     tic_params['instrument_eff'] = instrument_throughput(tic_params)
@@ -650,19 +664,20 @@ def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-
     if not specified in `[params['airmass']]`
     """
 
-    desired_passband = 'i'
+    desired_passband = 'V'
     new_mag = None
     new_passband = None
     snr = -99.0
 
-    # If filter is not 'i', map to new passband
+    # If filter is not 'V', map to new passband
     if passband != desired_passband:
         new_mag = transform_Vmag(mag, desired_passband, taxonomy)
         if dbg:
             print("New object mag=", new_mag)
-        new_passband = 'ip'
+        new_passband = 'V'
     else:
         new_mag = mag
+        new_passband = 'V'
 
     tic_params = construct_tic_params(instrument, new_passband)
     # Add default airmass
@@ -682,5 +697,5 @@ def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-
             if dbg:
                 print("Setting %s to %s" % (key, params[key]))
             tic_params[key] = params[key]
-    snr = compute_floyds_snr(new_mag, exp_time, tic_params, dbg)
+    snr, saturated = compute_floyds_snr(new_mag, exp_time, tic_params, dbg)
     return new_mag, new_passband, snr
