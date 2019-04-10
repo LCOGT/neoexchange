@@ -112,7 +112,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('319.4', snr)
+        self.assertIn('268.3', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
         self.assertIn('12.0', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
@@ -140,7 +140,7 @@ class SpectroscopicFeasibility(FunctionalTest):
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('310.7', snr)
+        self.assertIn('253.9', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
         self.assertIn('12.0', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text

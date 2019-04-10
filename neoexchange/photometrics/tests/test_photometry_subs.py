@@ -1569,10 +1569,12 @@ class TestCalcAsteroidSNR(SNRTestCase):
         expected_mag = mag_v
         expected_passband = 'V'
         expected_snr = 273.31114168039534
+        expected_saturated = False
 
-        mag, new_passband, snr = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph)
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph)
 
         self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -1586,10 +1588,12 @@ class TestCalcAsteroidSNR(SNRTestCase):
         expected_mag = mag_v
         expected_passband = 'V'
         expected_snr = 273.11891966088837
+        expected_saturated = False
 
-        mag, new_passband, snr = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph)
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph)
 
         self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -1604,10 +1608,12 @@ class TestCalcAsteroidSNR(SNRTestCase):
         expected_mag = mag_v
         expected_passband = 'V'
         expected_snr = 34.85353763673913
+        expected_saturated = False
 
-        mag, new_passband, snr = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
 
         self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
 
@@ -1622,9 +1628,31 @@ class TestCalcAsteroidSNR(SNRTestCase):
         expected_mag = mag_v
         expected_passband = 'V'
         expected_snr = 32.91013392758556
+        expected_saturated = False
 
-        mag, new_passband, snr = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
 
         self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
+        self.assertEqual(expected_passband, new_passband)
+        self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+    def test_Vmag_default_taxon_FLOYDS_BRIGHT(self):
+
+        mag_v = 6.0
+        passband = 'V'
+        exp_time = 300
+        spectrograph = 'F65-FLOYDS'
+        params = {'moon_phase' : 'G'}
+
+        expected_mag = mag_v
+        expected_passband = 'V'
+        expected_snr = 4338.323146055366
+        expected_saturated = True
+
+        mag, new_passband, snr, saturated = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, params=params)
+
+        self.assertEqual(expected_mag, mag)
+        self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)

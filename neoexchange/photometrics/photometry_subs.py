@@ -657,7 +657,7 @@ def construct_tic_params(instrument, passband='ip'):
     return tic_params
 
 
-def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', params={}, dbg=True):
+def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', params={}, dbg=False):
     """Wrapper routine to calculate the SNR in <exp_time> seconds for an asteroid of
     magnitude <mag> in <passband> for the specific [taxonomy] (defaults to 'Mean' for S+C)
     and the specific instrument [instrument] (defaults to 'F65-FLOYDS'). Airmass defaults to 1.2
