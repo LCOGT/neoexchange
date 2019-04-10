@@ -922,6 +922,7 @@ def schedule_check(data, body, ok_to_schedule=True):
 
     solar_analog_id = -1
     solar_analog_params = {}
+    solar_analog_exptime = 60
     if type(body) == Body:
         emp = compute_ephem(dark_midpoint, body_elements, data['site_code'],
             dbg=False, perturb=False, display=False)
