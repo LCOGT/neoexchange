@@ -1005,7 +1005,7 @@ def schedule_check(data, body, ok_to_schedule=True):
     snr = None
     saturated = None
     if spectroscopy:
-        snr_params = {'airmass': max_airmass,
+        snr_params = {'airmass': max_alt_airmass,
                       'slit_width': float(filter_pattern[5:8])*u.arcsec,
                       'moon_phase' : moon_phase_code
                       }
