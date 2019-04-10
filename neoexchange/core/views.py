@@ -1126,7 +1126,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         'vis_time' : dark_and_up_time,
         'moon_alt' : moon_alt,
         'moon_sep' : moon_obj_sep,
-        'moon_phase' : moon_phase,
+        'moon_phase' : moon_phase * 100,
         'min_lunar_dist' : min_lunar_dist,
         'max_airmass': max_airmass,
         'ipp_value': ipp_value,

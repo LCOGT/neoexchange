@@ -105,8 +105,8 @@
                                         style="height: 1; overflow: visible" ></svg>
                                         <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
                                         <script type="text/javascript" charset="UTF-8">
-                                            var today = today || new Date();
-                                            document.getElementById('mooncent').innerHTML += (moon_day(today)*100).toFixed(1) + "%";
+                                            var obs_day = new Date('{{ data.mid_time }}'+'Z') || new Date();
+                                            phase_junk(moon_day(obs_day));
                                         </script>
                                     </td>
                                     {% if data.moon_sep < data.min_lunar_dist %}
