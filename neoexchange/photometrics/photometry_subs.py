@@ -657,7 +657,7 @@ def construct_tic_params(instrument, passband='ip'):
     return tic_params
 
 
-def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', params={}, dbg=False):
+def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-FLOYDS', params={}, optimize=False, dbg=True):
     """Wrapper routine to calculate the SNR in <exp_time> seconds for an asteroid of
     magnitude <mag> in <passband> for the specific [taxonomy] (defaults to 'Mean' for S+C)
     and the specific instrument [instrument] (defaults to 'F65-FLOYDS'). Airmass defaults to 1.2
@@ -697,5 +697,28 @@ def calc_asteroid_snr(mag, passband, exp_time, taxonomy='Mean', instrument='F65-
             if dbg:
                 print("Setting %s to %s" % (key, params[key]))
             tic_params[key] = params[key]
-    snr, saturated = compute_floyds_snr(new_mag, exp_time, tic_params, dbg)
-    return new_mag, new_passband, snr, saturated
+    if not optimize:
+        snr, saturated = compute_floyds_snr(new_mag, exp_time, tic_params, dbg)
+        return new_mag, new_passband, snr, saturated
+    else:
+        op_exp_time = optimize_spectro_exp_time(new_mag, exp_time, tic_params, dbg)
+        return op_exp_time
+
+
+def optimize_spectro_exp_time(mag, exptime, tic_params, dbg=False):
+    snr, saturated = compute_floyds_snr(mag, exptime, tic_params, dbg)
+    while saturated:
+        if exptime > 100:
+            exptime -= 10
+        elif exptime > 10:
+            exptime -= 5
+        elif exptime > 1:
+            exptime -= 1
+        elif exptime > .1:
+            exptime -= .1
+        else:
+            return 0.1
+        snr, saturated = compute_floyds_snr(mag, exptime, tic_params, dbg)
+        if dbg:
+            print("New Exposure time:{}s, Saturation is {}".format(exptime, saturated))
+    return exptime

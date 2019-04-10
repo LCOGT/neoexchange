@@ -1656,3 +1656,45 @@ class TestCalcAsteroidSNR(SNRTestCase):
         self.assertEqual(expected_saturated, saturated)
         self.assertEqual(expected_passband, new_passband)
         self.assertAlmostEqual(expected_snr, snr, self.precision)
+
+
+class TestOptimizeExposureTime(SNRTestCase):
+
+    def test_default_exptime_ok(self):
+
+        mag_v = 12.0
+        passband = 'V'
+        exp_time = 300
+        spectrograph = 'F65-FLOYDS'
+
+        expected_exptime = 300
+
+        exptime = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, optimize=True)
+
+        self.assertEqual(expected_exptime, exptime)
+
+    def test_default_exptime_too_long(self):
+
+        mag_v = 8.0
+        passband = 'V'
+        exp_time = 100
+        spectrograph = 'F65-FLOYDS'
+
+        expected_exptime = 90
+
+        exptime = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, optimize=True)
+
+        self.assertEqual(expected_exptime, exptime)
+
+    def test_default_exptime_way_too_long(self):
+
+        mag_v = 5.0
+        passband = 'V'
+        exp_time = 100
+        spectrograph = 'F65-FLOYDS'
+
+        expected_exptime = 5
+
+        exptime = calc_asteroid_snr(mag_v, passband, exp_time, instrument=spectrograph, optimize=True)
+
+        self.assertEqual(expected_exptime, exptime)
