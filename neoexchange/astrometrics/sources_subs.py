@@ -1643,7 +1643,7 @@ def configure_defaults(params):
             params['binning'] = 1
             # params['ag_exp_time'] = 10
             if params.get('solar_analog', False) and len(params.get('calibsource', {})) > 0:
-                params['calibsrc_exptime'] = 60.0
+                params['calibsrc_exptime'] = params['calibsource']['calib_exptime']
             if params.get('filter', None):
                 del(params['filter'])
             params['spectra_slit'] = 'slit_6.0as'

@@ -1015,6 +1015,10 @@ def schedule_check(data, body, ok_to_schedule=True):
         slot_length = determine_spectro_slot_length(data['exp_length'], data['calibs'])
         slot_length /= 60.0
         slot_length = ceil(slot_length)
+        # If automatically finding Solar Analog, calculate exposure time.
+        # Currently assume bright enough that 180s is the maximum exposure time.
+        if solar_analog and solar_analog_params:
+            solar_analog_exptime = calc_asteroid_snr(solar_analog_params['vmag'], 'V', 180, instrument=data['instrument_code'], params=snr_params, optimize=True)
     else:
         # Determine exposure length and count
         if data.get('exp_length', None):
@@ -1136,7 +1140,8 @@ def schedule_check(data, body, ok_to_schedule=True):
         'typical_seeing' : typical_seeing,
         'solar_analog' : solar_analog,
         'calibsource' : solar_analog_params,
-        'calibsource_id' : solar_analog_id
+        'calibsource_id' : solar_analog_id,
+        'calibsource_exptime' : solar_analog_exptime,
     }
 
     if period and jitter:
@@ -1180,7 +1185,8 @@ def schedule_submit(data, body, username):
                                     'pm_dec'  : calibsource.pm_dec,
                                     'parallax': calibsource.parallax,
                                     'source_type' : calibsource.source_type,
-                                    'vmag' : calibsource.vmag
+                                    'vmag' : calibsource.vmag,
+                                    'calib_exptime': data.get('calibsource_exptime', 60)
                                  }
         except StaticSource.DoesNotExist:
             logger.error("Was passed a StaticSource id=%d, but it now can't be found" % data['calibsource_id'])
