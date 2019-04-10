@@ -306,21 +306,35 @@
                         <td class="kv-key">Calibs</td>
                         <td class="kv-value">{{ data.calibs }}</td>
                     </tr>
-                    {% if data.solar_analog %}
-                    <tr id="id_solaranalog_row">
-                        <td class="kv-key">Solar Analog</td>
-                        <td class="kv-value">{{ data.calibsource.name }}</td>
-                    </tr>
-                    <tr id="id_solaranalag_params_row">
-                        <td class="kv-key">Position/V magnitude</td>
-                        <td class="kv-value">{{ data.calibsource.ra|degreestohms:" " }} {{data.calibsource.dec|degreestodms:" "}}/{{data.calibsource.vmag|floatformat:1 }}</td>
-                    </tr>
-                    {% endif %}
                     {% endif %}
                 </tbody>
             </table>
         {% endif %}
+              {% if data.solar_analog %}
+              <h6 class="section-title">Solar Analog: {{ data.calibsource.name }}</h6>
+            <table class="keyvalue-table" style="width:100%">
+                <tbody>
+                    <tr id="id_solaranalag_sep_row">
+                        <td class="kv-key">Separation from Target</td>
+                        <td class="kv-value">{{data.calibsource.separation_deg|floatformat:1 }}&deg</td>
+                    </tr>
+                    <tr id="id_solaranalag_exptime_row">
+                        <td class="kv-key">Exposure time</td>
+                        <td class="kv-value">{{data.calibsource_exptime|floatformat:1 }} secs</td>
+                    </tr>
+                    <tr id="id_solaranalag_mag_row">
+                        <td class="kv-key">V Mag / Spectral Type</td>
+                        <td class="kv-value">{{data.calibsource.vmag|floatformat:1 }} / {{data.calibsource.spectral_type}}</td>
+                    </tr>
+                    <tr id="id_solaranalog_coord_row">
+                        <td class="kv-key">Coordinates</td>
+                        <td class="kv-value">{{ data.calibsource.ra|degreestohms:" " }} {{data.calibsource.dec|degreestodms:" "}}</td>
+                    </tr>
+                </tbody>
+            </table>
+              {% endif %}
       </div>
+
       <div class="four columns">
         {% if form.errors%}
           {% if form.spectroscopy.value == 'True' %}
