@@ -939,7 +939,7 @@ def schedule_check(data, body, ok_to_schedule=True):
         if spectroscopy and solar_analog:
             # Try and find a suitable solar analog "close" to RA, Dec midpoint
             # of block
-            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec)
+            close_solarstd, close_solarstd_params = find_best_solar_analog(ra, dec, data['site_code'])
             if close_solarstd is not None:
                 solar_analog_id = close_solarstd.id
                 solar_analog_params = close_solarstd_params
@@ -3212,10 +3212,10 @@ def find_best_flux_standard(sitecode, utc_date=None, flux_standards=None, debug=
     return close_standard, close_params
 
 
-def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=None, debug=False):
+def find_best_solar_analog(ra_rad, dec_rad, site, ha_sep=4.0, solar_standards=None, debug=False):
     """Finds the "best" solar analog (closest to the passed RA, Dec (in radians,
-    from e.g. compute_ephem)) within [min_sep] degrees (defaults to 60deg (=4 hours
-    of HA).
+    from e.g. compute_ephem)) within [ha_sep] hours (defaults to 4 hours
+    of HA) that can be seen from the appropriate site.
     If a match is found, the StaticSource object is returned along with a
     dictionary of parameters, including the additional 'seperation_deg' with the
     minimum separation found (in degrees)"""
@@ -3225,13 +3225,23 @@ def find_best_solar_analog(ra_rad, dec_rad, min_sep=4.0*15.0, solar_standards=No
     if solar_standards is None:
         solar_standards = StaticSource.objects.filter(source_type=StaticSource.SOLAR_STANDARD)
 
+    if site == 'E10':
+        dec_lim = [-90.0, 20.0]
+    elif site == 'F65':
+        dec_lim = [-20.0, 90.0]
+    else:
+        dec_lim = [-20.0, 20.0]
+
+    min_sep = None
     for standard in solar_standards:
+        ra_diff = abs(standard.ra - degrees(ra_rad)) / 15
         sep = degrees(S.sla_dsep(radians(standard.ra), radians(standard.dec), ra_rad, dec_rad))
         if debug:
-            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, min_sep, close_standard))
-        if sep < min_sep:
-            min_sep = sep
-            close_standard = standard
+            print("%10s %1d %011.7f %+11.7f %7.3f %7.3f (%10s)" % (standard.name.replace("Landolt ", "") , standard.source_type, standard.ra, standard.dec, sep, ha_sep, close_standard))
+        if ra_diff < ha_sep and (dec_lim[0] <= standard.dec <= dec_lim[1]):
+            if min_sep is None or sep < min_sep:
+                min_sep = sep
+                close_standard = standard
     if close_standard is not None:
         close_params = model_to_dict(close_standard)
         close_params['separation_deg'] = min_sep

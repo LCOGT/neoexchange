@@ -105,7 +105,7 @@ class ScheduleObservations(FunctionalTest):
         self.assertEqual(str(new_url), target_url)
 
         # He notices a new selection for the proposal and site code and
-        # chooses the NEO Follow-up Network and ELP (V37)
+        # chooses the NEO Follow-up Network and FTN (F65)
         proposal_choices = Select(self.browser.find_element_by_id('id_proposal_code'))
         self.assertIn(self.neo_proposal.title, [option.text for option in proposal_choices.options])
 
