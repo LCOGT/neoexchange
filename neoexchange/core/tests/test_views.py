@@ -933,7 +933,7 @@ class TestRecordBlock(TestCase):
         self.proposal = Proposal.objects.create(**proposal_params)
         # Create Time-Critical version of proposal
         proposal_params = { 'code' : self.spectro_params['proposal_id'] + 'b',
-                            'timecritical' : True}
+                            'time_critical' : True}
         self.proposal_tc = Proposal.objects.create(**proposal_params)
 
         self.imaging_tracknum = '576013'
