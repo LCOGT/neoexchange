@@ -5956,8 +5956,10 @@ class TestDetermineActiveProposals(TestCase):
         proposal_params['code'] = 'LCOEngineering'
         cls.eng_proposal, created = Proposal.objects.get_or_create(**proposal_params)
         proposal_params['code'] = 'LCOEPO2014B-010'
+        proposal_params['download'] = False
         cls.epo_proposal, created = Proposal.objects.get_or_create(**proposal_params)
         proposal_params['code'] = 'LCO2018B-010'
+        proposal_params['download'] = True
         proposal_params['active'] = False
         cls.inactive_proposal, created = Proposal.objects.get_or_create(**proposal_params)
         proposal_params['code'] = 'LCO2019A-008'
@@ -5970,7 +5972,7 @@ class TestDetermineActiveProposals(TestCase):
         self.assertEqual(5, proposals.count())
 
         active_proposals = proposals.filter(active=True, download=True)
-        self.assertEqual(3, active_proposals.count())
+        self.assertEqual(2, active_proposals.count())
 
         inactive_proposals = proposals.filter(active=False)
         self.assertEqual(1, inactive_proposals.count())
@@ -6023,17 +6025,19 @@ class TestDetermineActiveProposals(TestCase):
         self.assertEqual(expected_code_1, proposals[0])
 
     def test_include_epo_proposal(self):
-        expected_num = 3
+        expected_num = 4
         expected_code_1 = 'LCO2019A-005'
-        expected_code_2 = 'LCOEPO2014B-010'
-        expected_code_3 = 'LCOEngineering'
+        expected_code_2 = 'LCO2019A-008'
+        expected_code_3 = 'LCOEPO2014B-010'
+        expected_code_4 = 'LCOEngineering'
 
-        proposals = determine_active_proposals(filter_epo=False)
+        proposals = determine_active_proposals(filter_proposals=False)
 
         self.assertEqual(expected_num, len(proposals))
         self.assertEqual(expected_code_1, proposals[0])
         self.assertEqual(expected_code_2, proposals[1])
         self.assertEqual(expected_code_3, proposals[2])
+        self.assertEqual(expected_code_4, proposals[3])
 
     def test_specific_epo_proposal(self):
         expected_num = 1

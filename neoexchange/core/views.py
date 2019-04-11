@@ -105,10 +105,10 @@ def user_proposals(user):
     return proposals
 
 
-def determine_active_proposals(proposal_code=None, filter_epo=True):
+def determine_active_proposals(proposal_code=None, filter_proposals=True):
     """Determine and return the active Proposals or verify the passed [proposal_code]
-    exists. If [filter_epo] is set to True (the default), proposals of the form
-    'xxxEPO20yy' are excluded from the returned proposal list.
+    exists. If [filter_proposals] is set to True (the default), proposals
+    with `proposal.download=False` are excluded from the returned proposal list.
 
     Returns a list of proposal codes.
     """
@@ -121,9 +121,9 @@ def determine_active_proposals(proposal_code=None, filter_epo=True):
             logger.warning("Proposal {} does not exist".format(proposal_code))
             proposals = []
     else:
-        proposals = Proposal.objects.filter(active=True, download=True)
-        if filter_epo:
-            proposals = proposals.exclude(code__contains='EPO')
+        proposals = Proposal.objects.filter(active=True)
+        if filter_proposals is True:
+            proposals = proposals.filter(download=True)
         proposals = proposals.order_by('code').values_list('code', flat=True)
 
     return proposals
