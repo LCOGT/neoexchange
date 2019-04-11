@@ -81,6 +81,7 @@
                     </tr>
                 </tbody>
             </table>
+              <h6 class="section-title">Calculated characteristics at {{ data.mid_time }}</h6>
             <table class="keyvalue-table" style="width:100%">
                 <tbody>
                     <tr id="id_ra_row">
@@ -148,16 +149,19 @@
                         <td class="kv-value">{{ form.filter_pattern }}</td>
                     </tr>
                     {% endif %}
-                    <tr id="id_pattern_iterations_row">
-                        <td class="kv-key">Pattern Iterations</td>
-                        {% if data.pattern_iterations < 1 %}
-                        <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">{{ data.pattern_iterations }}
-                            <span class="tooltiptext" style="width: 150px;"><u>Too Few Exposures To Finish Sequence</u>
-                            <br>Consider Increasing Slot Length <br></span></div></td></tr></table></td>
-                        {% else %}
-                        <td class="kv-value">{{ data.pattern_iterations }}</td>
-                        {% endif %}
-                    </tr>
+                    {% if data.pattern_iterations != data.exp_count %}
+                        <tr id="id_pattern_iterations_row">
+                            <td class="kv-key">Pattern Iterations</td>
+                            {% if data.pattern_iterations < 1 %}
+                            <td ><table align="right"  style="margin: 0px"><tr><td></td><td class="kv-value"><div class="tooltip">
+                                <span class="warning msgpadded">{{ data.pattern_iterations }}</span>
+                                <span class="tooltiptext" style="width: 150px;"><u>Too Few Exposures To Finish Sequence</u>
+                                <br>Consider Increasing Slot Length <br></span></div></td></tr></table></td>
+                            {% else %}
+                            <td class="kv-value">{{ data.pattern_iterations }}</td>
+                            {% endif %}
+                        </tr>
+                    {% endif %}
                     <tr id="id_slot_length_row">
                         <td class="kv-key">Slot length</td>
                         {% if data.spectroscopy %}
@@ -266,6 +270,12 @@
                   <td class="kv-key">Acceptability Threshold (%)</td>
                   <td class="kv-value">{{ form.acceptability_threshold }}</td>
               </tr>
+              {% if data.spectroscopy %}
+              <tr id="id_ag_exp_time_row">
+                  <td class="kv-key">GuideCam Exposure time (s)</td>
+                  <td class="kv-value">{{ form.ag_exp_time }}</td>
+              </tr>
+              {% endif %}
           </table>
           </div>
         {% endif%}
