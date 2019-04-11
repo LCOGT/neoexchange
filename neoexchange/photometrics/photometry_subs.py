@@ -387,7 +387,20 @@ def compute_zp(tic_params, dbg=False, emulate_signal=False):
 def slit_vignette(tic_params):
     """Compute the fraction of light entering the slit of width <tic_params['slit_width']>
     for an object described by a FWHM of <tic_params['fwhm']>
-    In the case of imaging mode, 1.0 is always returned"""
+    In the case of imaging mode, 1.0 is always returned.
+
+    The code is taken from the IAC/Chris Benn's SIGNAL code (`slitvign` routine):
+    http://www.ing.iac.es/Astronomy/instruments/signal/help.html
+    http://www.ing.iac.es/Astronomy/instruments/signal/signal_code.html
+    which in turn is an approximation (<5% error) to the numerical simulation
+    from the `light_in_slit` code (http://www.ing.iac.es/~crb/misc/lightinslit.f)
+    Assuming a Gaussian/Normal distribution and ignoring differential refraction,
+    this can also be calculated analytically as:
+        Phi(n) - Phi(-n)
+    where Phi(x) is the normal function cumulative distribution function (e.g.
+    `scipy.stats.norm.cdf()`  and `n` is the slit width sigma/2 (since the
+    distribution is symmetric about 0).
+    """
 
     vign = 1.0
 
