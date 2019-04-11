@@ -121,7 +121,7 @@ def determine_active_proposals(proposal_code=None, filter_epo=True):
             logger.warning("Proposal {} does not exist".format(proposal_code))
             proposals = []
     else:
-        proposals = Proposal.objects.filter(active=True)
+        proposals = Proposal.objects.filter(active=True, download=True)
         if filter_epo:
             proposals = proposals.exclude(code__contains='EPO')
         proposals = proposals.order_by('code').values_list('code', flat=True)

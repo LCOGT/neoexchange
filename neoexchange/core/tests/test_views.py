@@ -5960,12 +5960,16 @@ class TestDetermineActiveProposals(TestCase):
         proposal_params['code'] = 'LCO2018B-010'
         proposal_params['active'] = False
         cls.inactive_proposal, created = Proposal.objects.get_or_create(**proposal_params)
+        proposal_params['code'] = 'LCO2019A-008'
+        proposal_params['active'] = True
+        proposal_params['download'] = False
+        cls.skipped_proposal, created = Proposal.objects.get_or_create(**proposal_params)
 
     def test_setup(self):
         proposals = Proposal.objects.all()
-        self.assertEqual(4, proposals.count())
+        self.assertEqual(5, proposals.count())
 
-        active_proposals = proposals.filter(active=True)
+        active_proposals = proposals.filter(active=True, download=True)
         self.assertEqual(3, active_proposals.count())
 
         inactive_proposals = proposals.filter(active=False)
@@ -6036,6 +6040,15 @@ class TestDetermineActiveProposals(TestCase):
         expected_code_1 = 'LCOEPO2014B-010'
 
         proposals = determine_active_proposals('LCOEPO2014B-010')
+
+        self.assertEqual(expected_num, len(proposals))
+        self.assertEqual(expected_code_1, proposals[0])
+
+    def test_specific_skipped_proposal(self):
+        expected_num = 1
+        expected_code_1 = 'LCO2019A-008'
+
+        proposals = determine_active_proposals('LCO2019A-008')
 
         self.assertEqual(expected_num, len(proposals))
         self.assertEqual(expected_code_1, proposals[0])
