@@ -17,6 +17,7 @@ from .base import FunctionalTest
 from django.test import TestCase
 from django.core.urlresolvers import reverse
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 from core.models import Body
 
 
@@ -133,3 +134,41 @@ class BodyDetailsTest(FunctionalTest):
                     ]
         for tool in tooltips:
             self.assertIn(tool, expected_tooltip)
+
+    def test_can_view_comet_details(self):
+        self.insert_test_comet()
+
+        # A new user comes along to the site who likes comets
+        self.browser.get(self.live_server_url)
+
+        # She sees a link from the targets' name on the results page to a more
+        # detailed view.
+        link = self.browser.find_element_by_link_text('C/2006 F4')
+        body_url = self.live_server_url + reverse('target', kwargs={'pk': 2})
+        self.assertIn(link.get_attribute('href'), body_url)
+
+        # She clicks the link and is taken to a page with the targets' details.
+        with self.wait_for_page_load(timeout=10):
+            link.click()
+        new_url = self.browser.current_url
+        self.assertEqual(str(new_url), body_url)
+
+        # She notices there is a table which lists a lot more details about
+        # the comet with just the right amount of precision.
+
+        testlines = [ 'EPOCH OF PERIHELION (MJD) ' + str(round(self.comet.epochofperih_mjd(), 5)),
+                      'PERIHELION DISTANCE (AU) ' + str(round(self.comet.perihdist,7)),
+                      'TOTAL MAGNITUDE (M1) ' + str(self.comet.abs_mag),
+                      'SLOPE  PARAMETER (K1) ' + str(self.comet.slope*2.5)]
+        for line in testlines:
+            self.check_for_row_in_table('id_orbelements', line)
+
+        # She notices there is another table which lists details about
+        # the follow-up of the .
+
+        testlines = [u'NEOCP DIGEST2 SCORE ' + str(self.comet.score),
+                     u'NUMBER OF OBSERVATIONS ' + str(self.comet.num_obs),
+                     u'ARC LENGTH (DAYS) ' + str(round(self.comet.arc_length,2)),
+                     u'TIME SINCE LAST OBSERVATION (DAYS) ' + str(round(self.comet.not_seen,2))]
+        for line in testlines:
+            self.check_for_row_in_table('id_followup', line)

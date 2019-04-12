@@ -14,6 +14,8 @@ GNU General Public License for more details.
 """
 
 from subprocess import check_output
+from datetime import datetime
+
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.conf import settings
 from contextlib import contextmanager
@@ -66,6 +68,40 @@ class FunctionalTest(StaticLiveServerTestCase):
                     'updated'       : True,
                     }
         self.body, created = Body.objects.get_or_create(pk=1, **params)
+
+    def insert_test_comet(self):
+        params = { 
+                     'provisional_name': 'P10MsRM',
+                     'provisional_packed': None,
+                     'name': 'C/2006 F4',
+                     'origin': 'M',
+                     'source_type': 'C',
+                     'elements_type': 'MPC_COMET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2019, 4, 3, 0, 0),
+                     'orbit_rms': 0.03,
+                     'orbinc': 3.76939,
+                     'longascnode': 195.84794,
+                     'argofperih': 241.31051,
+                     'eccentricity': 0.5418256,
+                     'meandist': 1.8391873,
+                     'meananom': None,
+                     'perihdist': 0.84266853766512,
+                     'epochofperih': datetime(2018, 12, 15, 8, 24, 15),
+                     'abs_mag': 19.4,
+                     'slope': 4.0,
+                     'score': 11,
+                     'discovery_date': datetime(2019, 4, 3, 7, 12),
+                     'num_obs': 4,
+                     'arc_length': 0.03,
+                     'not_seen': 0.372,
+                     'updated': False,
+                     'ingest': datetime(2019, 4, 3, 15, 20, 42),
+                     'update_time': datetime(2019, 4, 3, 14, 50, 28)
+                }
+        self.comet, created = Body.objects.get_or_create(pk=2, **params)
 
     def insert_test_taxonomy(self):
 
@@ -228,7 +264,7 @@ class FunctionalTest(StaticLiveServerTestCase):
     def tearDown(self):
         self.browser.refresh()
 #       self.browser.implicitly_wait(5)
-        self.browser.quit()
+        #self.browser.quit()
 
     def check_for_row_in_table(self, table_id, row_text):
         table = self.browser.find_element_by_id(table_id)
