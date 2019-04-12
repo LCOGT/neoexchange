@@ -51,19 +51,26 @@ class BodyDetailsTest(FunctionalTest):
         # She notices there is a table which lists a lot more details about
         # the Body.
 
-        testlines = [u'ECCENTRICITY ' + str(self.body.eccentricity),
-                     u'MEAN DISTANCE (AU) ' + str(self.body.meandist),
-                     u'ABSOLUTE MAGNITUDE (H) ' + str(self.body.abs_mag)]
+        testlines = [ 'ECCENTRICITY ' + str(self.body.eccentricity),
+                      'MEAN DISTANCE (AU) ' + str(self.body.meandist),
+                      'ABSOLUTE MAGNITUDE (H) ' + str(self.body.abs_mag),
+                      'ALBEDO (AVERAGE) 0.17',
+                      'ALBEDO (RANGE) 0.01 - 0.60',
+                      'DIAMETER IN METERS (AVERAGE) ' + str(int(round(self.body.diameter(), 0))),
+                      'DIAMETER IN METERS (RANGE) ' + str(int(round(self.body.diameter_range()[0], 0))) + ' - ' + str(int(round(self.body.diameter_range()[1], 0)))
+                    ]
         for line in testlines:
             self.check_for_row_in_table('id_orbelements', line)
 
         # She notices there is another table which lists details about
         # the follow-up of the Body.
 
-        testlines = [u'NEOCP DIGEST2 SCORE ' + str(self.body.score),
-                     u'NUMBER OF OBSERVATIONS ' + str(self.body.num_obs),
-                     u'ARC LENGTH (DAYS) ' + str(round(self.body.arc_length,2)),
-                     u'TIME SINCE LAST OBSERVATION (DAYS) ' + str(round(self.body.not_seen,2))]
+        testlines = [ 'NEOCP DIGEST2 SCORE ' + str(self.body.score),
+                      'NUMBER OF OBSERVATIONS ' + str(self.body.num_obs),
+                      'ARC LENGTH (DAYS) ' + str(round(self.body.arc_length,2)),
+                      'TIME SINCE LAST OBSERVATION (DAYS) ' + str(round(self.body.not_seen,2))
+                    ]
+
         for line in testlines:
             self.check_for_row_in_table('id_followup', line)
 
@@ -159,16 +166,20 @@ class BodyDetailsTest(FunctionalTest):
         testlines = [ 'EPOCH OF PERIHELION (MJD) ' + str(round(self.comet.epochofperih_mjd(), 5)),
                       'PERIHELION DISTANCE (AU) ' + str(round(self.comet.perihdist,7)),
                       'TOTAL MAGNITUDE (M1) ' + str(self.comet.abs_mag),
-                      'SLOPE  PARAMETER (K1) ' + str(self.comet.slope*2.5)]
+                      'SLOPE PARAMETER (K1) ' + str(self.comet.slope*2.5)]
         for line in testlines:
             self.check_for_row_in_table('id_orbelements', line)
 
-        # She notices there is another table which lists details about
-        # the follow-up of the .
+        # She notices there are no details about the albedo or diameter, which
+        # are hard to measure for comets.
 
-        testlines = [u'NEOCP DIGEST2 SCORE ' + str(self.comet.score),
-                     u'NUMBER OF OBSERVATIONS ' + str(self.comet.num_obs),
-                     u'ARC LENGTH (DAYS) ' + str(round(self.comet.arc_length,2)),
-                     u'TIME SINCE LAST OBSERVATION (DAYS) ' + str(round(self.comet.not_seen,2))]
+        testlines = [ 'ALBEDO (AVERAGE) 0.17',
+                      'ALBEDO (RANGE) 0.01 - 0.60',
+                      'DIAMETER IN METERS (AVERAGE) ',
+                      'DIAMETER IN METERS (RANGE) '
+                      ]
         for line in testlines:
-            self.check_for_row_in_table('id_followup', line)
+            table = self.browser.find_element_by_id('id_orbelements')
+            table_body = table.find_element_by_tag_name('tbody')
+            rows = table_body.find_elements_by_tag_name('tr')
+            self.assertNotIn(line, [row.text.replace('\n', ' ') for row in rows])

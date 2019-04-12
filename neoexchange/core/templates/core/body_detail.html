@@ -132,7 +132,24 @@
                                         <td class="kv-key">Slope Parameter (G)</td>
                                         <td class="kv-value">{{body.slope}}</td>
                                     </tr>
+                                    <tr>
+                                        <td class="kv-key">Albedo (average)</td>
+                                        <td class="kv-value">0.17</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Albedo (range)</td>
+                                        <td class="kv-value">0.01 - 0.60</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Diameter in meters (average)</td>
+                                        <td class="kv-value">{{body.diameter|floatformat:0}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="kv-key">Diameter in meters<br/>(range)</td>
+                                        <td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
+                                    </tr>
                                     {% else %}
+                                    <!-- Comets -->
                                     <tr>
                                         <td class="kv-key">Perihelion distance (AU)</td>
                                         <td class="kv-value">{{body.perihdist|floatformat:7}}</td>
@@ -154,22 +171,6 @@
                                         <td class="kv-value">{{body.slope|multiply:2.5}}</td>
                                     </tr>
                                     {% endif %}
-                                    <tr>
-                                        <td class="kv-key">Albedo (average)</td>
-                                        <td class="kv-value">0.17</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Albedo (range)</td>
-                                        <td class="kv-value">0.01 - 0.60</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Diameter in meters (average)</td>
-                                        <td class="kv-value">{{body.diameter|floatformat:0}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="kv-key">Diameter in meters<br/>(range)</td>
-                                        <td class="kv-value">{{body.diameter_range.0|floatformat:0}} - {{body.diameter_range.1|floatformat:0}}</td>
-                                    </tr>
                                 </tbody>
                             </table>
                             <h5 class="section-title">Follow-up Details</h5>
