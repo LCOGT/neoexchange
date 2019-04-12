@@ -184,7 +184,7 @@ def region_around_line(w, flux, cont):
     return w[indrange], f
 
 if __name__ == 'main':
-    cdbs = os.getenv('CDBS_PATH', os.path.join(os.path.sep,'data','tlister','cdbs'))
+    cdbs = os.getenv('CDBS_PATH', os.path.join(os.path.sep,'apophis','tlister','cdbs'))
     calspec = os.path.join(cdbs, 'calspec')
     sun_file = os.path.join(calspec, 'sun_reference_stis_002.fits')
     sky_file = os.path.join(cdbs,'extinction','skytable_z1.2_pwv3.5_new_moon.fits')
