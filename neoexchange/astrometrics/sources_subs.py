@@ -130,30 +130,52 @@ def parse_previous_NEOCP_id(items, dbg=False):
 
     ast = compile('^\s+A/\d{4}')
     if len(items) == 1:
+        if dbg: print("1 item found")
         # Is of the form "<foo> does not exist" or "<foo> was not confirmed". But can
         # now apparently include comets...
         chunks = items[0].split()
         none_id = ''
         body = chunks[0]
-        if chunks[1].find('does') >= 0:
+        if chunks[1].find('does') >= 0 or ('not' in chunks and 'real' in chunks):
             none_id = 'doesnotexist'
         elif chunks[0].find('Comet') >= 0:
             body = chunks[4]
             none_id = chunks[1] + ' ' + chunks[2]
-        if len(chunks) >= 5:
+        elif len(chunks) >= 5:
             if chunks[2].lower() == 'not' and chunks[3].lower() == 'confirmed':
                 none_id = 'wasnotconfirmed'
-            if chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
+            elif chunks[2].lower() == 'not' and chunks[4].lower() == 'minor':
                 none_id = 'wasnotminorplanet'
+            elif chunks[2].lower() == 'not' and chunks[3].lower() == 'interesting':
+                none_id = ''
+            else:
+                if dbg: print(chunks)
+                middle = chunks.index('=')
+                body = chunks[middle+1].rstrip()
+                none_id = ' '.join(chunks[:middle]).rstrip()
+        none_id = none_id.replace('(', '').replace(')', '')
         crossmatch = [body, none_id, '', ' '.join(chunks[-3:])]
     elif len(items) == 3:
+        if dbg: print("3 items found")
         # Is of the form "<foo> = <bar>(<date> UT)"
         if items[0].find('Comet') != 1 and len(ast.findall(items[0])) != 1:
-            newid = str(items[0]).lstrip()+items[1].string.strip()
-            provid_date = items[2].split('(')
-            provid = provid_date[0].replace(' = ', '')
-            date = '('+provid_date[1].strip()
-            mpec = ''
+            if items[1].string is not None:
+                newid = str(items[0]).lstrip()+items[1].string.strip()
+                provid_date = items[2].split('(')
+                provid = provid_date[0].replace(' = ', '').rstrip()
+                date = '('+provid_date[1].strip()
+                mpec = ''
+            else:
+                chunks = items[0].split('=')
+                newid = chunks[0].strip()
+                provid_date = chunks[1].split('(')
+                provid = provid_date[0].strip()
+                provid_date = provid_date[1].split(')')
+                date = '('+provid_date[0].strip()+')'
+                mpec = ''
+                if items[1].contents[0].string is not None:
+                    if items[1].contents[0].string == 'MPEC':
+                        mpec = items[1].contents[0].string + items[1].contents[1].string
         else:
             # Now matches comets and 'A/<YYYY>' type objects
             if dbg:
@@ -188,6 +210,7 @@ def parse_previous_NEOCP_id(items, dbg=False):
         crossmatch = [provid, newid, mpec, date]
     elif len(items) == 5:
         # Is of the form "<foo> = <bar> (date UT) [see MPEC<x>]"
+        if dbg: print("5 items found")
         newid = str(items[0]).lstrip()+items[1].string.strip()
         provid_date = items[2].split()
         provid = provid_date[1]
@@ -1001,6 +1024,9 @@ def fetch_goldstone_targets(page=None, dbg=False):
             in_objects = True
         else:
             if in_objects is True:
+                if line.lstrip()[0:4].isdigit() is False:
+                    # Text comments in the table..
+                    continue
                 # Look for malformed comma-separated dates in the first part of
                 # the line and convert the first occurence to hyphens before
                 # splitting.

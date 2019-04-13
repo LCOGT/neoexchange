@@ -384,6 +384,9 @@ class TestFetchGoldstoneTargets(TestCase):
         test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page.html'), 'r')
         self.test_goldstone_page = BeautifulSoup(test_fh, "html.parser")
         test_fh.close()
+        test_fh = open(os.path.join('astrometrics', 'tests', 'test_goldstone_page_v2.html'), 'r')
+        self.test_goldstone_page_v2 = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
 
         self.maxDiff = None
 
@@ -451,6 +454,46 @@ class TestFetchGoldstoneTargets(TestCase):
                              '433']
 
         targets = fetch_goldstone_targets(self.test_goldstone_page)
+
+        self.assertEqual(expected_targets, targets)
+
+    @patch('astrometrics.sources_subs.datetime', MockDateTime)
+    def test_targets_with_extra(self):
+        MockDateTime.change_datetime(2019, 4, 8, 2, 0, 0)
+        expected_targets = [ '163081',
+                             '522684',
+                             '2008 HS3',
+                             '2018 VX8',
+                             '68950',
+                             '66391',
+                             '2011 HP',
+                             '441987',
+                             '494999',
+                             '10145',
+                             '293054',
+                             '2010 PK9',
+                             '2005 CL7',
+                             '454094',
+                             '153814',
+                             '141593',
+                             '66146',
+                             '1620',
+                             '237805',
+                             '467317',
+                             '2100',
+                             '297418',
+                             '2010 CO1',
+                             '1998 FF14',
+                             '162082',
+                             '2015 JD1',
+                             '2010 JG',
+                             '481394',
+                             '2011 YS62',
+                             '2011 WN15',
+                             '264357',
+                             '216258']
+
+        targets = fetch_goldstone_targets(self.test_goldstone_page_v2)
 
         self.assertEqual(expected_targets, targets)
 
@@ -1210,6 +1253,13 @@ class TestPreviousNEOCPParser(TestCase):
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
 
+    def test_probably_not_real_object(self):
+        items = [' SWAN was probably not a real object (Dec. 9.68 UT)\n']
+        expected = ['SWAN', 'doesnotexist' , '', '(Dec. 9.68 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
     def test_non_neo(self):
 
         items = [u' 2015 QF', BeautifulSoup('<sub>   </sub>', "html.parser").sub, u' = WQ39346(Aug. 19.79 UT)\n']
@@ -1291,6 +1341,43 @@ class TestPreviousNEOCPParser(TestCase):
             BeautifulSoup(' <a href="/mpec/K18/K18E18.html"><i>MPEC</i> 2018-E18</a>', "html.parser").a,
             u']\n']
         expected = [u'ZC82561', u'A/2018 C2', u'MPEC 2018-E18', u'(Mar. 4.95 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_with_mpec(self):
+        items = [' 2006 GC = P10MSkj (Apr. 7.98 UT)   [see ',
+            BeautifulSoup('<a href="/mpec/K19/K19G75.html"><i>MPEC</i> 2019-G75</a>', "html.parser").a,
+            ']\n']
+        expected = [u'P10MSkj', u'2006 GC', u'MPEC 2019-G75', u'(Apr. 7.98 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch(self):
+        items = ['ZTF02tx = C075WX1 (Apr. 8.66 UT)\n']
+        expected = [u'C075WX1', 'ZTF02tx', '', '(Apr. 8.66 UT)']
+ 
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch2(self):
+        items = [' 2019 GR',  BeautifulSoup('<sub>3</sub>', "html.parser").sub, ' = P10Mrzv (Apr. 8.96 UT)\n']
+        expected = [u'P10Mrzv', '2019 GR3', '', '(Apr. 8.96 UT)']
+ 
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_new_crossmatch3(self):
+        items = [' 2017 QE = P10MWVQ (Apr. 7.90 UT)\n']
+        expected = [u'P10MWVQ', '2017 QE', '', '(Apr. 7.90 UT)']
+
+        crossmatch = parse_previous_NEOCP_id(items)
+        self.assertEqual(expected, crossmatch)
+
+    def test_remove_parentheses(self):
+        items = [' (455176) = A10c9Hv (Feb. 15.79 UT)\n']
+        expected = [u'A10c9Hv', '455176', '', '(Feb. 15.79 UT)']
 
         crossmatch = parse_previous_NEOCP_id(items)
         self.assertEqual(expected, crossmatch)
