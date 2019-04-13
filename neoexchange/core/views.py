@@ -105,10 +105,10 @@ def user_proposals(user):
     return proposals
 
 
-def determine_active_proposals(proposal_code=None, filter_epo=True):
+def determine_active_proposals(proposal_code=None, filter_proposals=True):
     """Determine and return the active Proposals or verify the passed [proposal_code]
-    exists. If [filter_epo] is set to True (the default), proposals of the form
-    'xxxEPO20yy' are excluded from the returned proposal list.
+    exists. If [filter_proposals] is set to True (the default), proposals
+    with `proposal.download=False` are excluded from the returned proposal list.
 
     Returns a list of proposal codes.
     """
@@ -122,8 +122,8 @@ def determine_active_proposals(proposal_code=None, filter_epo=True):
             proposals = []
     else:
         proposals = Proposal.objects.filter(active=True)
-        if filter_epo:
-            proposals = proposals.exclude(code__contains='EPO')
+        if filter_proposals is True:
+            proposals = proposals.filter(download=True)
         proposals = proposals.order_by('code').values_list('code', flat=True)
 
     return proposals
@@ -1534,8 +1534,9 @@ def record_block(tracking_number, params, form_data, target):
         cadence = False
         if len(params.get('request_numbers', [])) > 1 and params.get('period', -1.0) > 0.0 and params.get('jitter', -1.0) > 0.0:
             cadence = True
+        proposal = Proposal.objects.get(code=form_data['proposal_code'])
         sblock_kwargs = {
-                         'proposal' : Proposal.objects.get(code=form_data['proposal_code']),
+                         'proposal' : proposal,
                          'groupid'  : form_data['group_id'],
                          'block_start' : form_data['start_time'],
                          'block_end'   : form_data['end_time'],
@@ -1551,6 +1552,9 @@ def record_block(tracking_number, params, form_data, target):
             sblock_kwargs['calibsource'] = target
         else:
             sblock_kwargs['body'] = target
+        # Check if this went to a rapid response proposal
+        if proposal.time_critical is True:
+            sblock_kwargs['rapid_response'] = True
         sblock_pk = SuperBlock.objects.create(**sblock_kwargs)
         i = 0
         for request, request_type in params.get('request_numbers', {}).items():
