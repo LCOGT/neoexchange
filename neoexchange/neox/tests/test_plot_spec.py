@@ -226,20 +226,22 @@ class SpectraplotTest(FunctionalTest):
             self.login()
             blocks_url = reverse('blocklist')
             self.browser.get(self.live_server_url + blocks_url)
-            self.browser.find_element_by_link_text('5').click()
             with self.wait_for_page_load(timeout=10):
-                plots = self.browser.find_elements_by_link_text('Spectrum Plot')[0].click()
-                actual_url = self.browser.current_url
-                target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+                self.browser.find_element_by_link_text('5').click()
+            with self.wait_for_page_load(timeout=10):
+                self.browser.find_elements_by_link_text('Spectrum Plot')[0].click()
+            actual_url = self.browser.current_url
+            target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
             self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
 
             self.wait_for_element_with_id('page')
-            self.browser.back()
+            with self.wait_for_page_load(timeout=10):
+                self.browser.back()
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_elements_by_link_text('Spectrum Plot')[1].click()
-                actual_url2 = self.browser.current_url
-                target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/1/'
+            actual_url2 = self.browser.current_url
+            target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/spectra/1/'
             self.assertIn('Spectrum for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url2, actual_url2)
 
@@ -254,11 +256,12 @@ class SpectraplotTest(FunctionalTest):
             self.login()
             blocks_url = reverse('blocklist')
             self.browser.get(self.live_server_url + blocks_url)
-            self.browser.find_element_by_link_text('5').click()
             with self.wait_for_page_load(timeout=10):
-                plots = self.browser.find_element_by_link_text('Spectrum Plot 1').click()
-                actual_url = self.browser.current_url
-                target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
+                self.browser.find_element_by_link_text('5').click()
+            with self.wait_for_page_load(timeout=10):
+                self.browser.find_element_by_link_text('Spectrum Plot 1').click()
+            actual_url = self.browser.current_url
+            target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/1/'
             self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
 
@@ -268,7 +271,7 @@ class SpectraplotTest(FunctionalTest):
 
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_element_by_link_text('Spectrum Plot 2').click()
-                actual_url2 = self.browser.current_url
-                target_url2 = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/2/'
+            actual_url2 = self.browser.current_url
+            target_url2 = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/spectra/2/'
             self.assertIn('Spectrum for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url2, actual_url2)

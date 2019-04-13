@@ -226,11 +226,12 @@ class GuideMovieTest(FunctionalTest):
             self.login()
             blocks_url = reverse('blocklist')
             self.browser.get(self.live_server_url + blocks_url)
-            self.browser.find_element_by_link_text('5').click()
             with self.wait_for_page_load(timeout=10):
-                plots = self.browser.find_elements_by_link_text('Guide Movie')[0].click()
-                actual_url = self.browser.current_url
-                target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/guidemovie/'
+                self.browser.find_element_by_link_text('5').click()
+            with self.wait_for_page_load(timeout=10):
+                self.browser.find_elements_by_link_text('Guide Movie')[0].click()
+            actual_url = self.browser.current_url
+            target_url = self.live_server_url+'/block/'+str(self.test_mblock1.pk)+'/guidemovie/'
             self.assertIn('Guide Movie for block: '+str(self.test_mblock1.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url, actual_url)
 
@@ -241,7 +242,7 @@ class GuideMovieTest(FunctionalTest):
             with self.wait_for_page_load(timeout=10):
                 self.browser.find_elements_by_link_text('Guide Movie')[1].click()
             # note: this movie is same as first one. really just checking if pages are different.
-                actual_url2 = self.browser.current_url
-                target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/guidemovie/'
+            actual_url2 = self.browser.current_url
+            target_url2 = self.live_server_url+'/block/'+str(self.test_mblock2.pk)+'/guidemovie/'
             self.assertIn('Guide Movie for block: '+str(self.test_mblock2.pk)+' | LCO NEOx', self.browser.title)
             self.assertEqual(target_url2, actual_url2)
