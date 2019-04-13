@@ -5591,7 +5591,7 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'F65', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'])
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'F65')
 
         self.assertEqual(expected_standard, close_standard)
         for key in expected_params:
@@ -5612,7 +5612,7 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'])
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10')
 
         self.assertEqual(expected_standard, close_standard)
         for key in expected_params:
@@ -5631,7 +5631,7 @@ class TestFindBestSolarAnalog(TestCase):
         emp = compute_ephem(utc_date, model_to_dict(self.test_body), 'E10', perturb=False)
         self.assertAlmostEqual(expected_ra, emp['ra'], self.precision)
         self.assertAlmostEqual(expected_dec, emp['dec'], self.precision)
-        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], min_sep=5.0)
+        close_standard, close_params = find_best_solar_analog(emp['ra'], emp['dec'], 'E10', ha_sep=0.5)
 
         self.assertEqual(expected_standard, close_standard)
         self.assertEqual(expected_params, close_params)
