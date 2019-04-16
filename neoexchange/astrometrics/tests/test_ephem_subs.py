@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@ GNU General Public License for more details.
 """
 
 from datetime import datetime
-from math import radians, degrees
+from math import radians, degrees, floor
 import os
 import tempfile
 from glob import glob
@@ -154,7 +154,8 @@ class TestGetMountLimits(TestCase):
         self.compare_limits(pos_limit, neg_limit, alt_limit, '0.4m')
 
 
-class TestComputeEphem(TestCase):
+class TestComputeEphemerides(TestCase):
+    """Tests both `compute_ephem()` and the `call_compute_ephem()` wrapper"""
 
     def setUp(self):
         params = {  'provisional_name' : 'N999r0q',
@@ -204,6 +205,36 @@ class TestComputeEphem(TestCase):
                          'urgency': None}
         self.comet, created = Body.objects.get_or_create(**comet_params)
 
+        params = {  'provisional_name': 'A10bMLz',
+                     'provisional_packed': None,
+                     'name': None,
+                     'origin': 'M',
+                     'source_type': 'U',
+                     'elements_type': 'MPC_MINOR_PLANET',
+                     'active': True,
+                     'fast_moving': False,
+                     'urgency': None,
+                     'epochofel': datetime(2019, 1, 17, 0, 0),
+                     'orbinc': 1.05958,
+                     'longascnode': 122.3243,
+                     'argofperih': 229.33573,
+                     'eccentricity': 0.0627231,
+                     'meandist': 0.9472805,
+                     'meananom': 118.75832,
+                     'perihdist': None,
+                     'epochofperih': None,
+                     'abs_mag': 29.3,
+                     'slope': 0.15,
+                     'score': 100,
+                     'discovery_date': datetime(2019, 1, 25, 9, 36),
+                     'num_obs': 5,
+                     'arc_length': 0.02,
+                     'not_seen': 0.261,
+                     'updated': False,
+                     'ingest': datetime(2019, 1, 25, 15, 50, 7),
+                     'update_time': datetime(2019, 1, 25, 15, 38, 2)}
+        self.body_close, created = Body.objects.get_or_create(**params)
+
         self.elements = {'slope': 0.15,
                          'abs_mag': 21.0,
                          'MDM': 0.74394528,
@@ -223,7 +254,7 @@ class TestComputeEphem(TestCase):
                          'type': 'MPC_MINOR_PLANET',
                          'uncertainty': 'U'}
 
-        self.length_emp_line = 8
+        self.length_emp_line = 11
 
     def test_body_is_correct_class(self):
         tbody = Body.objects.get(provisional_name='N999r0q')
@@ -235,12 +266,12 @@ class TestComputeEphem(TestCase):
 
         body_dict['provisional_name'] = 'N999z0z'
         body_dict['eccentricity'] = 0.42
-        body_dict['id'] += 2
+        body_dict['id'] += 3
         second_body = Body.objects.create(**body_dict)
         second_body.save()
 
         saved_items = Body.objects.all()
-        self.assertEqual(saved_items.count(), 3)
+        self.assertEqual(saved_items.count(), 4)
 
         first_saved_item = saved_items[0]
         second_saved_item = saved_items[1]
@@ -260,15 +291,15 @@ class TestComputeEphem(TestCase):
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
 
         self.assertEqual(self.length_emp_line, len(emp_line))
-        self.assertEqual(d, emp_line[0])
+        self.assertEqual(d, emp_line['date'])
         precision = 11
-        self.assertAlmostEqual(expected_ra, emp_line[1], precision)
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_mag, emp_line[3], precision)
-        self.assertAlmostEqual(expected_motion, emp_line[4], precision)
-        self.assertAlmostEqual(expected_alt, emp_line[5], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
-        self.assertAlmostEqual(expected_pa,  emp_line[7], precision)
+        self.assertAlmostEqual(expected_ra, emp_line['ra'], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_mag, emp_line['mag'], precision)
+        self.assertAlmostEqual(expected_motion, emp_line['sky_motion'], precision)
+        self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
+        self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
 
     def test_compute_ephem_with_body(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -284,15 +315,15 @@ class TestComputeEphem(TestCase):
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
 
         self.assertEqual(self.length_emp_line, len(emp_line))
-        self.assertEqual(d, emp_line[0])
+        self.assertEqual(d, emp_line['date'])
         precision = 11
-        self.assertAlmostEqual(expected_ra, emp_line[1], precision)
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_mag, emp_line[3], precision)
-        self.assertAlmostEqual(expected_motion, emp_line[4], precision)
-        self.assertAlmostEqual(expected_alt, emp_line[5], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
-        self.assertAlmostEqual(expected_pa,  emp_line[7], precision)
+        self.assertAlmostEqual(expected_ra, emp_line['ra'], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_mag, emp_line['mag'], precision)
+        self.assertAlmostEqual(expected_motion, emp_line['sky_motion'], precision)
+        self.assertAlmostEqual(expected_alt, emp_line['altitude'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
+        self.assertAlmostEqual(expected_pa,  emp_line['sky_motion_pa'], precision)
         
     def test_compute_south_polar_distance_with_elements_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -300,8 +331,8 @@ class TestComputeEphem(TestCase):
         expected_spd = 119.94694444444444
         emp_line = compute_ephem(d, self.elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
         
     def test_compute_south_polar_distance_with_body_in_north(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -310,8 +341,8 @@ class TestComputeEphem(TestCase):
         body_elements = model_to_dict(self.body)
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
 
     def test_compute_south_polar_distance_with_body_in_south(self):
         d = datetime(2015, 4, 21, 17, 35, 00)
@@ -321,8 +352,8 @@ class TestComputeEphem(TestCase):
         body_elements['meananom'] = 25.2636
         emp_line = compute_ephem(d, body_elements, '500', dbg=False, perturb=True, display=False)
         precision = 11
-        self.assertAlmostEqual(expected_dec, emp_line[2], precision)
-        self.assertAlmostEqual(expected_spd, emp_line[6], precision)
+        self.assertAlmostEqual(expected_dec, emp_line['dec'], precision)
+        self.assertAlmostEqual(expected_spd, emp_line['southpole_sep'], precision)
 
     def test_call_compute_ephem_with_body(self):
         start = datetime(2015, 4, 21, 8, 45, 00)
@@ -442,6 +473,110 @@ class TestComputeEphem(TestCase):
         while line < len(expected_ephem_lines):
             self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
             line += 1
+
+    def test_call_compute_ephem_for_close1(self):
+        start = datetime(2019, 1, 25, 19, 40)
+        end = datetime(2019, 1, 25, 20, 0)
+        site_code = 'Z21'
+        step_size = 600
+        alt_limit = 30
+        body_elements = model_to_dict(self.body_close)
+        expected_ephem_lines = []
+
+        ephem_lines = call_compute_ephem(body_elements, start, end,
+            site_code, step_size, alt_limit)
+        line = 0
+        self.assertEqual(len(expected_ephem_lines), len(ephem_lines))
+        while line < len(expected_ephem_lines):
+            self.assertEqual(expected_ephem_lines[line], ephem_lines[line])
+            line += 1
+
+
+class TestDarkAndObjectUp(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.dark_start = datetime(2019, 1, 25, 19, 40)
+        cls.dark_end = datetime(2019, 1, 26, 6, 40)
+        cls.site_code = 'Z21'
+        cls.slot_length = 10  # minutes
+        step_size_secs = 60 * cls.slot_length  # seconds
+
+        params = {  'provisional_name' : 'N999r0q',
+                    'abs_mag'       : 21.0,
+                    'slope'         : 0.15,
+                    'epochofel'     : '2019-03-19 00:00:00',
+                    'meananom'      : 325.2636,
+                    'argofperih'    : 85.19251,
+                    'longascnode'   : 147.81325,
+                    'orbinc'        : 8.34739,
+                    'eccentricity'  : 0.1896865,
+                    'meandist'      : 1.2176312,
+                    'source_type'   : 'U',
+                    'elements_type' : 'MPC_MINOR_PLANET',
+                    'active'        : True,
+                    'origin'        : 'M',
+                    }
+        cls.body, created = Body.objects.get_or_create(**params)
+
+        ephem_time = cls.dark_start
+        cls.full_emp = []
+        while ephem_time < cls.dark_end:
+            emp_line = compute_ephem(ephem_time, params, cls.site_code, dbg=False, perturb=True, display=False)
+            cls.full_emp.append(emp_line)
+            ephem_time = ephem_time + timedelta(seconds=step_size_secs)
+
+    def test1(self):
+        expected_first_line = {'date': datetime(2019, 1, 26, 1, 20),
+                               'ra': 3.13872732667931,
+                               'dec': -0.09499609693219863,
+                               'mag': 20.600690640173646,
+                               'sky_motion': 1.760842377819953,
+                               'altitude': 30.206739359560114,
+                               'southpole_sep': 84.55611111111111,
+                               'sky_motion_pa': 88.26314748574852
+                               }
+        expected_last_line = {'date': datetime(2019, 1, 26, 6, 30),
+                               'ra': 3.141344602912528,
+                               'dec': -0.09490298162746419,
+                               'mag': 20.589568103540817,
+                               'sky_motion': 1.7374161477538685,
+                               'altitude': 47.8232397476396,
+                               'southpole_sep': 84.56222222222222,
+                               'sky_motion_pa': 87.63684359362396
+                               }
+
+        expected_num_lines = 32
+
+        visible_emp = dark_and_object_up(self.full_emp, self.dark_start, self.dark_end, self.slot_length, alt_limit=30.0, debug=False)
+
+        self.assertEqual(expected_num_lines, len(visible_emp))
+        for key, value in expected_first_line.items():
+            self.assertEqual(value, visible_emp[0][key])
+        for key, value in expected_last_line.items():
+            self.assertEqual(value, visible_emp[-1][key])
+
+    def test_empty_ephem(self):
+        expected_num_lines = 0
+
+        visible_emp = dark_and_object_up([[], [], ], self.dark_start, self.dark_end, self.slot_length, alt_limit=30.0, debug=False)
+
+        self.assertEqual(expected_num_lines, len(visible_emp))
+
+    def test_too_short_ephem(self):
+        expected_num_lines = 0
+        emp = [{'date': datetime(2019, 1, 25, 19, 40, 0),
+                'ra': 1.23,
+                'dec': -1.23,
+                'mag': 17.0,
+                'sky_motion': 4.2,
+                'altitude': 42.0},
+               [], ]
+
+        visible_emp = dark_and_object_up(emp, self.dark_start, self.dark_end, self.slot_length, alt_limit=30.0, debug=False)
+
+        self.assertEqual(expected_num_lines, len(visible_emp))
+
 
 class TestComputeFOM(TestCase):
 
@@ -752,7 +887,7 @@ class TestLongTermScheduling(TestCase):
         site_code = 'K92'
         body_elements = model_to_dict(self.body)
 
-        expected_dark_and_up_time = None
+        expected_dark_and_up_time = 0
         expected_emp_dark_and_up = []
 
         dark_start, dark_end = determine_darkness_times(site_code, utc_date=datetime(2017, 1, 6, 0, 0, 00))
@@ -803,6 +938,85 @@ class TestLongTermScheduling(TestCase):
         max_alt = compute_max_altitude(emp)
 
         self.assertEqual(expected_max_alt, max_alt)
+
+    def test_compute_rise_set(self):
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body)
+        expected_max_alt = 88.9
+        expected_rise_time = datetime(2017, 1, 6, 1, 20, 00)
+        expected_set_time = datetime(2017, 1, 6, 6, 36, 00)
+
+        mid_time = datetime(2017, 1, 6, 3, 30, 00)
+        emp_line = compute_ephem(mid_time, body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
+        min_alt = 30
+        rise_time, set_time, max_alt = target_rise_set(mid_time, app_ra, app_dec, site_code, min_alt, step_size='1m')
+
+        self.assertAlmostEqual(expected_max_alt, max_alt, 1)
+        self.assertEqual(expected_rise_time, rise_time)
+        self.assertEqual(expected_set_time, set_time)
+
+    def test_visibility(self):
+        site_code = 'V37'
+        body_elements = model_to_dict(self.body2)
+        expected_max_alt = 41.3
+        expected_up_time = 3.8333333333333335
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
+        min_alt = 30
+        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=None)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 1)
+        self.assertAlmostEqual(expected_up_time, up_time, 1)
+
+    def test_visibility_general1m(self):
+        site_code = '1M0'
+        body_elements = model_to_dict(self.body2)
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
+        min_alt = 30
+        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+
+    def test_visibility_general1m_single_site(self):
+        site_code = '1M0'
+        body_elements = model_to_dict(self.body)
+        expected_max_alt = 89
+        expected_up_time = 5
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
+        min_alt = 30
+        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '10 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 0)
+        self.assertAlmostEqual(expected_up_time, up_time, 0)
+
+    def test_visibility_general2m_never_up(self):
+        site_code = '0M4'
+        body_elements = model_to_dict(self.body4)
+        expected_max_alt = 61
+        expected_up_time = 0
+
+        emp_line = compute_ephem(datetime(2017, 1, 6, 0, 0, 00), body_elements, site_code, dbg=False, perturb=True, display=False)
+        app_ra = emp_line['ra']
+        app_dec = emp_line['dec']
+        min_alt = 80
+        up_time, max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=True, body_elements=body_elements)
+        true_up_time, true_max_alt = get_visibility(app_ra, app_dec, datetime(2017, 1, 6, 0, 0, 00), site_code, '30 m', min_alt, quick_n_dirty=False, body_elements=body_elements)
+        self.assertEqual(floor(true_max_alt), floor(max_alt))
+        self.assertAlmostEqual(true_up_time, up_time, 1)
+        self.assertAlmostEqual(expected_max_alt, max_alt, 0)
+        self.assertAlmostEqual(expected_up_time, up_time, 0)
 
 
 class TestDetermineRatesAndPA(TestCase):
@@ -1087,15 +1301,17 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'good1m'
         name = 'WH2845B'
         mag = 23.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 60
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toobright_nonNEOWISE_good1m(self):
         site_code = 'good1m'
         name = 'WH2845B'
         mag = 3.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 5.5
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_bad1m(self):
         site_code = 'bad1m'
@@ -1149,22 +1365,25 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'bad1m'
         name = 'WH2845B'
         mag = 22.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 60
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toofaint_nonNEOWISE_bad1m(self):
         site_code = 'bad1m'
         name = 'WH2845B'
         mag = 23.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 60
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toobright_nonNEOWISE_bad1m(self):
         site_code = 'bad1m'
         name = 'WH2845B'
         mag = 3.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 6.5
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_very_bright_nonNEOWISE_2m_lc(self):
         site_code = '2m'
@@ -1234,21 +1453,22 @@ class TestDetermineSlotLength(TestCase):
         site_code = '2m'
         name = 'WH2845B'
         mag = 23.4
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 60
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_toobright_nonNEOWISE_2m(self):
         site_code = '2m'
         name = 'WH2845B'
         mag = 3.1
-        with self.assertRaises(MagRangeError):
-            slot_length = determine_slot_length(mag, site_code)
+        expected_length = 6.0
+        slot_length = determine_slot_length(mag, site_code)
+        self.assertEqual(expected_length, slot_length)
 
     def test_slot_length_basic_tfn_0m4_num1(self):
         site_code = 'Z21'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1266,7 +1486,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'T04'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1275,7 +1494,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'T03'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1284,7 +1502,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'W89'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1293,7 +1510,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'W79'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1302,7 +1518,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'V38'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1311,7 +1526,6 @@ class TestDetermineSlotLength(TestCase):
         site_code = 'L09'
         name = 'A101foo'
         mag = 19.0
-
         expected_length = 25
         slot_length = determine_slot_length(mag, site_code)
         self.assertEqual(expected_length, slot_length)
@@ -1325,7 +1539,7 @@ class TestGetSiteCamParams(TestCase):
     onem_sbig_fov = radians(15.5/60.0)
     onem_setup_overhead = 90.0
     onem_exp_overhead = 15.5
-    sinistro_exp_overhead = 38.0
+    sinistro_exp_overhead = 28.0
     onem_sinistro_fov = radians(26.4/60.0)
     point4m_fov = radians(29.1/60.0)
     point4m_exp_overhead = 14.0
@@ -1514,7 +1728,7 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 17.58
 
         expected_exptime = 60.0
-        expected_expcount = 12
+        expected_expcount = 14
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1544,7 +1758,7 @@ class TestDetermineExpTimeCount(TestCase):
         mag = 16.58
 
         expected_exptime = 6.5
-        expected_expcount = 24
+        expected_expcount = 31
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -1558,7 +1772,7 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 21.2
 
-        expected_exptime = 235.0
+        expected_exptime = 245.0
         expected_expcount = 4
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
@@ -1588,8 +1802,8 @@ class TestDetermineExpTimeCount(TestCase):
         name = 'WH2845B'
         mag = 17.58
 
-        expected_exptime = None
-        expected_expcount = None
+        expected_exptime = 0.1
+        expected_expcount = 4
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, 'V')
 
@@ -2070,7 +2284,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         filter_pattern = 'V,I'
 
         expected_exptime = 60.0
-        expected_expcount = 10
+        expected_expcount = 11
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2086,7 +2300,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         filter_pattern = 'V,V,V,R,R,R,I,I,I,V'
 
         expected_exptime = 60.0
-        expected_expcount = 12
+        expected_expcount = 13
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2102,7 +2316,7 @@ class TestDetermineExpTimeCount_WithFilters(TestCase):
         filter_pattern = 'V,V,I,I'
 
         expected_exptime = 60.0
-        expected_expcount = 11
+        expected_expcount = 12
 
         exp_time, exp_count = determine_exp_time_count(speed, site_code, slot_len, mag, filter_pattern)
 
@@ -2421,7 +2635,7 @@ class TestReadFindorbEphem(TestCase):
         expected_empinfo = { 'emp_rateunits': "'/hr",
                              'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
-                             'obj_id': '2017YE5'}
+                             'obj_id': '2017 YE5'}
 
         expected_emp = [(datetime(2018, 6, 30, 6, 10), 5.52141962907, -0.213430981276, 15.8, 7.26, 0.05)]
 
@@ -2492,12 +2706,12 @@ class TestReadFindorbEphem(TestCase):
 
     def test_F65_numbered_ast_nocrossid(self):
         expected_empinfo = { 'emp_rateunits': "'/hr",
-                             'emp_sitecode': 'E10',
+                             'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
                              'obj_id': '1627'}
         expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, 22.2)]
 
-        lines = [ '#(E10) Faulkes Telescope North: (1627)',
+        lines = [ '#(F65) Faulkes Telescope North: (1627)',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
                   '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
                   '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  22.2  90'
@@ -2508,14 +2722,68 @@ class TestReadFindorbEphem(TestCase):
 
         self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
 
-    def test_F65_numbered_ast_high_certainty(self):
+    def test_F65_numbered_ast_high_uncertainty(self):
         expected_empinfo = { 'emp_rateunits': "'/hr",
-                             'emp_sitecode': 'E10',
+                             'emp_sitecode': 'F65',
                              'emp_timesys': '(UTC)',
                              'obj_id': '1627'}
         expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
 
-        lines = [ '#(E10) Faulkes Telescope North: (1627)',
+        lines = [ '#(F65) Faulkes Telescope North: (1627)',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_Q63_candidate_veryhigh_uncertainty(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'Q63',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': 'ZTF01Ym'}
+        expected_emp = [(datetime(2018, 10, 1, 17, 00), 0.405840538302, -0.581830086206, 20.5, 5.08, 72000.0)]
+
+        lines = [ '#(Q63) Siding Spring-LCO A: ZTF01Ym',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 10 01 17:00  01 33 00.708   -33 20 11.07  .00873 1.0079 140.5 20.5   5.08 121.6   20d  11'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_F65_candidate(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'F65',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': 'ZR9CB15'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
+
+        lines = [ '#(F65) Faulkes Telescope North: ZR9CB15',
+                  'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
+                  '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
+                  '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'
+                ]
+        outfile = self.create_empfile(lines)
+
+        empinfo, emp = read_findorb_ephem(outfile)
+
+        self.compare_ephemeris((expected_empinfo, expected_emp), (empinfo, emp))
+
+    def test_F65_comet(self):
+        expected_empinfo = { 'emp_rateunits': "'/hr",
+                             'emp_sitecode': 'F65',
+                             'emp_timesys': '(UTC)',
+                             'obj_id': 'P/60'}
+        expected_emp = [(datetime(2018, 7, 19, 22, 11), 3.95651109779, -0.00864485819197, 12.8, 2.04, .0022)]
+
+        lines = [ '#(F65) Faulkes Telescope North: P/60',
                   'Date (UTC) HH:MM   RA              Dec         delta   r     elong  mag  \'/hr    PA   " sig PA',
                   '---- -- -- -----  -------------   -----------  ------ ------ -----  --- ------ ------ ---- ---',
                   '2018 07 19 22:11  15 06 45.933   -00 29 43.13  .30297 1.1408 106.7 12.8   2.04 136.9  2.2m  90'

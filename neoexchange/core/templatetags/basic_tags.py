@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2015-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from operator import itemgetter
 from django import template
 from django.conf import settings
@@ -5,6 +20,7 @@ from django.template import Library
 from django.template.defaultfilters import floatformat
 from astrometrics.time_subs import degreestohours, hourstodegrees, degreestodms, \
     degreestohms, radianstohms, radianstodms, dttodecimalday
+from astrometrics.ephem_subs import get_alt_from_airmass
 
 register = Library()
 
@@ -66,6 +82,18 @@ def make_int_list(value):
     return range(1, value+1)
 
 
+@register.filter(is_safe=False)
+def multiply(value, arg):
+    """multiply the arg by the value."""
+    try:
+        return float(value) * float(arg)
+    except (ValueError, TypeError):
+        try:
+            return value * arg
+        except Exception:
+            return ''
+
+
 @register.simple_tag
 def format_mpc_line_upload(measure):
     return measure.format_mpc_line(include_catcode=False)
@@ -87,3 +115,4 @@ register.filter('radianstohms', radianstohms)
 register.filter('radianstodms', radianstodms)
 register.filter('dttodecimalday', dttodecimalday)
 register.filter('roundeddays', roundeddays)
+register.filter('get_alt_from_airmass', get_alt_from_airmass)

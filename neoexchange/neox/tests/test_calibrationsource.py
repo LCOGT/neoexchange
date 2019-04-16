@@ -1,5 +1,21 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2018-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 import os
 from math import radians
+
 from .base import FunctionalTest
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
@@ -20,18 +36,6 @@ from core.models import Proposal, StaticSource
 class TestCalibrationSources(FunctionalTest):
 
     def setUp(self):
-        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
-        test_flux_page = BeautifulSoup(test_fh, "html.parser")
-        test_fh.close()
-        self.flux_standards = fetch_flux_standards(test_flux_page)
-        num_created = create_calib_sources(self.flux_standards)
-        solar_standards = { 'Landolt SA98-978' : { 'ra_rad' : radians(102.8916666666666),
-                                                   'dec_rad' : radians(-0.1925),
-                                                   'mag' : 10.5,
-                                                   'spectral_type' : 'G2V'},
-                          }
-        num_created = create_calib_sources(solar_standards, StaticSource.SOLAR_STANDARD)
-
         # Create a user to test login
         self.insert_test_proposals()
         self.username = 'bart'
@@ -46,6 +50,19 @@ class TestCalibrationSources(FunctionalTest):
         update_proposal_permissions(self.bart, [{'code': self.neo_proposal.code}])
 
         super(TestCalibrationSources, self).setUp()
+
+    def add_new_calib_sources(self):
+        test_fh = open(os.path.join('astrometrics', 'tests', 'flux_standards_lis.html'), 'r')
+        test_flux_page = BeautifulSoup(test_fh, "html.parser")
+        test_fh.close()
+        self.flux_standards = fetch_flux_standards(test_flux_page)
+        num_created = create_calib_sources(self.flux_standards)
+        solar_standards = {'Landolt SA98-978': {'ra_rad': radians(102.8916666666666),
+                                                'dec_rad': radians(-0.1925),
+                                                'mag': 10.5,
+                                                'spectral_type': 'G2V'},
+                           }
+        num_created = create_calib_sources(solar_standards, StaticSource.SOLAR_STANDARD)
 
     @patch('neox.auth_backend.lco_authenticate', mock_lco_authenticate)
     def login(self):
@@ -74,6 +91,7 @@ class TestCalibrationSources(FunctionalTest):
 
     @patch('core.views.datetime', MockDateTime)
     def test_can_view_calibsources(self):
+        self.add_new_calib_sources()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
         # A new user, Daniel, goes to a hidden calibration page on the site
@@ -89,10 +107,10 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn('Calibration Sources', header_text)
 
         # He notices the position of the Solar antinode is given.
-        expected_coords=['15:55:45.42', '-20:22:15.3']
+        expected_coords = ['15:55:45.42', '-20:22:15.3']
         coords_text = self.browser.find_element_by_id('anti_solar_point').text
         for coor in expected_coords:
-            self.assertIn(coor,coords_text)
+            self.assertIn(coor, coords_text)
 
         # He notices there are several calibration sources that are listed
         self.check_for_header_in_table('id_calibsources',
@@ -113,6 +131,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -160,8 +179,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("HR9087: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')
@@ -178,6 +197,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_calibsource_fts(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -226,8 +246,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("CD-34d241: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')
@@ -244,6 +264,7 @@ class TestCalibrationSources(FunctionalTest):
     @patch('core.forms.datetime', MockDateTime)
     @patch('core.views.submit_block_to_scheduler', mock_submit_to_scheduler)
     def test_can_schedule_specific_calibsource(self):
+        self.add_new_calib_sources()
         self.test_login()
         MockDateTime.change_datetime(2018, 5, 22, 5, 0, 0)
 
@@ -330,8 +351,8 @@ class TestCalibrationSources(FunctionalTest):
         self.assertIn("Landolt SA98-978: Confirm Scheduling", header_text)
         filter_pattern = self.browser.find_element_by_id("id_filter_pattern").get_attribute('value')
         self.assertIn("slit_6.0as", filter_pattern)
-        exp_length = self.browser.find_element_by_id('id_exp_length').find_element_by_class_name('kv-value').text
-        self.assertIn('180.0 secs', exp_length)
+        exp_length = self.browser.find_element_by_id('id_exp_length').get_attribute('value')
+        self.assertIn('180.0', exp_length)
         # Liking the selected star parameters, he clicks Submit and is returned to the
         # home page
         button = self.browser.find_element_by_id('id_submit_button')

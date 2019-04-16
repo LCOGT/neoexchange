@@ -7,7 +7,7 @@ from django.utils.crypto import get_random_string
 import rollbar
 
 
-VERSION = '2.7.2'
+VERSION = '2.8.0'
 
 CURRENT_PATH = os.path.dirname(os.path.realpath(__file__))
 PRODUCTION = True if CURRENT_PATH.startswith('/var/www') else False
@@ -240,7 +240,6 @@ DATABASES = {
         "USER": os.environ.get('NEOX_DB_USER',''),
         "PASSWORD": os.environ.get('NEOX_DB_PASSWD',''),
         "HOST": os.environ.get('NEOX_DB_HOST',''),
-        "CONN_MAX_AGE" : 300,
         "OPTIONS"   : {'init_command': 'SET storage_engine=INNODB'},
 
     }

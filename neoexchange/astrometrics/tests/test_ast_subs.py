@@ -1,6 +1,6 @@
 '''
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -177,6 +177,12 @@ class TestNormalToPacked(TestCase):
     def test_comet_t5(self):
         expected_desig = '    CJ83Z150'
         packed_desig, ret_code = normal_to_packed('C/1983 Z15')
+        self.assertEqual(packed_desig, expected_desig)
+        self.assertEqual(ret_code, 0)
+
+    def test_comet_packed1(self):
+        expected_desig = '0060P       '
+        packed_desig, ret_code = normal_to_packed('0060P  ')
         self.assertEqual(packed_desig, expected_desig)
         self.assertEqual(ret_code, 0)
 

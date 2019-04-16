@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -147,7 +147,7 @@ class PreviousSpectraAdmin(VersionAdmin):
 
 
 class ProposalAdmin(admin.ModelAdmin):
-    list_display = ('code', 'title', 'pi', 'tag', 'active')
+    list_display = ('code', 'title', 'pi', 'tag', 'active', 'time_critical', 'download')
 
 
 class SourceMeasurementAdmin(admin.ModelAdmin):

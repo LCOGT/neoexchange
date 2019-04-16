@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2015-2018 LCO
+Copyright (C) 2015-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -30,7 +30,6 @@ from neox.tests.mocks import MockDateTime
 from core.models import Body, Proposal, SuperBlock, Block, Frame, \
     SourceMeasurement, CatalogSources, Candidate, WCSField, PreviousSpectra,\
     StaticSource
-from astrometrics.ephem_subs import compute_ephem
 
 
 class TestBody(TestCase):
@@ -954,8 +953,8 @@ class TestFrame(TestCase):
         frame.refresh_from_db()     # Ensure pickling happens
 
         self.assertEqual(self.w.naxis, frame.wcs.naxis)
-        self.assertEqual(self.w._naxis1, frame.wcs._naxis1)
-        self.assertEqual(self.w._naxis2, frame.wcs._naxis2)
+        self.assertEqual(self.w.pixel_shape[0], frame.wcs.pixel_shape[0])
+        self.assertEqual(self.w.pixel_shape[1], frame.wcs.pixel_shape[1])
 
 
 class TestWCSField(TestCase):
@@ -1289,7 +1288,82 @@ class TestSourceMeasurement(TestCase):
                             'obs_ra' : 157.5,
                             'obs_dec' : -32.75,
                             'obs_mag' : 21.5,
-                            'flags' : '*K',
+                            'flags' : '*,K',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_on_starlover(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : '*,I',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*IC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_on_starlover_reversed_order(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : 'I,*',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*IC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_on_twoflags(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : '*,K,I',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q*KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_too_many_flags(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : 'K,I',
+                            'astrometric_catalog' : "UCAC-4",
+                         }
+
+        measure = SourceMeasurement.objects.create(**measure_params)
+        expected_mpcline = '     N999r0q KC2015 07 13.88184010 30 00.00 -32 45 00.0          21.5 Rq     K93'
+        mpc_line = measure.format_mpc_line(include_catcode=True)
+        self.assertEqual(expected_mpcline, mpc_line)
+
+    def test_discovery_and_too_many_flags(self):
+        measure_params = {  'body' : self.body,
+                            'frame' : self.test_frame,
+                            'obs_ra' : 157.5,
+                            'obs_dec' : -32.75,
+                            'obs_mag' : 21.5,
+                            'flags' : 'K,I,*',
                             'astrometric_catalog' : "UCAC-4",
                          }
 

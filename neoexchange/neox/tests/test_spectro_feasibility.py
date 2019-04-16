@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2018-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from .base import FunctionalTest
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -70,11 +85,11 @@ class SpectroscopicFeasibility(FunctionalTest):
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('324.3', snr)
+        self.assertIn('273.2', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
-        self.assertIn('11.6', magnitude)
+        self.assertIn('12.0', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
-        self.assertIn('ip', new_passband)
+        self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
         self.assertIn('23.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
@@ -97,11 +112,11 @@ class SpectroscopicFeasibility(FunctionalTest):
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('319.4', snr)
+        self.assertIn('268.3', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
-        self.assertIn('11.6', magnitude)
+        self.assertIn('12.0', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
-        self.assertIn('ip', new_passband)
+        self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
         self.assertIn('23.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text
@@ -125,11 +140,11 @@ class SpectroscopicFeasibility(FunctionalTest):
         # The page refreshes and a series of values for SNR, new transformed
         # magnitude, new passband and slot length appear
         snr = self.browser.find_element_by_id('id_snr').find_element_by_class_name('kv-value').text
-        self.assertIn('310.7', snr)
+        self.assertIn('253.9', snr)
         magnitude = self.browser.find_element_by_id('id_newmag').find_element_by_class_name('kv-value').text
-        self.assertIn('11.6', magnitude)
+        self.assertIn('12.0', magnitude)
         new_passband = self.browser.find_element_by_id('id_newpassband').find_element_by_class_name('kv-value').text
-        self.assertIn('ip', new_passband)
+        self.assertIn('V', new_passband)
         slot_length = self.browser.find_element_by_id('id_slot_length').find_element_by_class_name('kv-value').text
         self.assertIn('23.0', slot_length)
         sky_mag = self.browser.find_element_by_id('id_skymag').find_element_by_class_name('kv-value').text

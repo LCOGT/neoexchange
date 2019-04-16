@@ -1,6 +1,6 @@
 """
 NEO exchange: NEO observing portal for Las Cumbres Observatory
-Copyright (C) 2014-2018 LCO
+Copyright (C) 2014-2019 LCO
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -125,10 +125,11 @@ def create_frame(params, block=None, frameid=None):
     # Update catalogue information if we have it
     if params.get('astrometric_catalog', None):
         frame.astrometric_catalog = params.get('astrometric_catalog')
-        frame.save()
     if params.get('photometric_catalog', None):
         frame.photometric_catalog = params.get('photometric_catalog')
-        frame.save()
+    if params.get('L1FWHM', None):
+        frame.fwhm = params.get('L1FWHM')
+    frame.save()
 
     if frame_created:
         msg = "created"
@@ -140,19 +141,59 @@ def create_frame(params, block=None, frameid=None):
 
 def frame_params_from_header(params, block):
     # In these cases we are parsing the FITS header
-    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', None), params.get('ENCID', None), params.get('TELID', None))
+    sitecode = LCOGT_domes_to_site_codes(params.get('SITEID', ''), params.get('ENCID', ''), params.get('TELID', ''))
     spectro_obstypes = ['ARC', 'LAMPFLAT', 'SPECTRUM']
+
+    # Extract and convert reduction level to integer
+    rlevel = params.get('RLEVEL', 0)
+    try:
+        rlevel = int(rlevel)
+    except ValueError:
+        logger.warning("Error converting RLEVEL to integer in frame " + frame_params['filename'])
+        rlevel = 0
 
     frame_params = { 'midpoint' : params.get('DATE_OBS', None),
                      'sitecode' : sitecode,
                      'filter'   : params.get('FILTER', "B"),
-                     'frametype': params.get('RLEVEL', 0),
+                     'frametype': rlevel,
                      'block'    : block,
                      'instrument': params.get('INSTRUME', None),
                      'filename'  : params.get('ORIGNAME', None),
                      'exptime'   : params.get('EXPTIME', None),
-                     'fwhm'      : params.get('L1FWHM', None),
                  }
+
+    # correct exptime to actual shutter open duration
+    shutter_open = params.get('DATE_OBS', None)
+    shutter_close = params.get('UTSTOP', None)
+    if shutter_open and shutter_close:
+        # start by assuming shutter closed on the same day it opened.
+        shutter_close = shutter_open.split('T')[0] + 'T' + shutter_close
+        # convert to datetime object
+        try:
+            shutter_open = datetime.strptime(shutter_open, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            shutter_open = datetime.strptime(shutter_open, "%Y-%m-%dT%H:%M:%S")
+        try:
+            shutter_close = datetime.strptime(shutter_close, "%Y-%m-%dT%H:%M:%S.%f")
+        except ValueError:
+            shutter_close = datetime.strptime(shutter_close, "%Y-%m-%dT%H:%M:%S")
+        # Increment close-time by 1 day if close happened before open
+        if shutter_close < shutter_open:
+            shutter_close = shutter_close + timedelta(days=1)
+        # Calculate exposure time and save to frame.
+        exptime = shutter_close - shutter_open
+        exptime = exptime.total_seconds()
+        exp_diff = abs(exptime - float(frame_params['exptime']))
+        if exp_diff > 0.5 or exp_diff > exptime * 0.1:
+            # If FLOYDS data, subtract readtime from exposure time. Otherwise, label as problematic.
+            if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
+                exptime = max(exptime - 21., 0)
+            else:
+                frame_params['quality'] = 'ABORTED'
+                logger.warning("Actual exposure time ({}s) differs significantly from requested exposure time ({}s) for {}.".format(exptime, frame_params['exptime'], frame_params['filename']))
+        frame_params['exptime'] = exptime
+
+    # Make adjustments for spectroscopy frames
     if params.get('OBSTYPE', 'EXPOSE').upper() in spectro_obstypes:
         aperture_type = params.get('APERTYPE', 'SLIT').rstrip()
         aperture_length = params.get('APERLEN', 'UNKNOWN')
@@ -183,7 +224,6 @@ def frame_params_from_header(params, block):
     # Correct filename for missing trailing .fits extension
     if '.fits' not in frame_params['filename']:
         frame_params['filename'] = frame_params['filename'].rstrip() + '.fits'
-    rlevel = params.get('RLEVEL', 0)
     frame_extn = "{0:02d}.fits".format(rlevel)
     frame_params['filename'] = frame_params['filename'].replace('00.fits', frame_extn)
     # Correct midpoint for 1/2 the exposure time
@@ -232,7 +272,8 @@ def frame_params_from_log(params, block):
                      'sitecode' : sitecode,
                      'block'    : block,
                      'filter'   : params.get('filter', "B"),
-                     'frametype' : frame_type
+                     'frametype' : frame_type,
+                     'extrainfo' : params.get('obs_type', None)
                    }
     return frame_params
 

@@ -34,6 +34,7 @@
                   <script type="text/javascript" src="{% static 'core/js/moon-phase.js' %}" charset="UTF-8"></script>
                   <script type="text/javascript" charset="UTF-8">
                       var today = today || new Date();
+                      phase_junk(moon_day(today));
                       document.getElementById('mooncent').innerHTML += (moon_day(today)*100).toFixed(1) + "%";
                   </script>
             </div>

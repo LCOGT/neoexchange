@@ -1,3 +1,18 @@
+"""
+NEO exchange: NEO observing portal for Las Cumbres Observatory
+Copyright (C) 2017-2019 LCO
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+"""
+
 from datetime import datetime
 
 from django.core.management.base import BaseCommand, CommandError
@@ -8,6 +23,7 @@ from core.views import update_MPC_orbit
 from core.models import ORIGINS
 
 origin_help = '['+', '.join(['"{}":{}'.format(i[0], i[1]) for i in ORIGINS])+']'
+
 
 class Command(BaseCommand):
     help = 'Fetch targets text file or command line list'
